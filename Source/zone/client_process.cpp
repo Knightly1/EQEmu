@@ -186,6 +186,27 @@ int Client::HandlePacket(const APPLAYER *app)
 				SetServerFilter_Struct* filter=(SetServerFilter_Struct*)app->pBuffer;
 				ServerFilter(filter);
 			}
+			else if (app->opcode == OP_SendAATable) {
+				int size=0;
+				for(int i=0;i<zone->GetTotalAAs();i++){
+					SendAA_Struct* saa=zone->GetAAList()->aa[i];
+					saa->seq=i+1;
+					size=sizeof(SendAA_Struct)+sizeof(AA_Ability)*saa->total_abilities;
+					APPLAYER* outapp = new APPLAYER(OP_SendAATable,size);
+					memcpy(outapp->pBuffer,saa,size);
+					
+					//outapp->pBuffer=(uchar*)saa;
+					if(saa->type<8){
+					QueuePacket(outapp);
+					DumpPacket(outapp);
+					}
+					safe_delete(outapp);
+				}
+				/*outapp = new APPLAYER(0x0367,sizeof(blah2));
+				memcpy(outapp->pBuffer,blah2,sizeof(blah2));
+				QueuePacket(outapp);
+				safe_delete(outapp);*/
+			}
 			else if (app->opcode == OP_ReqClientSpawn) {
 				
 				//////////////////////////////////////////////////////
@@ -4182,9 +4203,8 @@ sa->parameter = 0;
 					break;
 				}
 				case OP_AAAction: {
-#ifdef GUILDWARS
-					break;
-#endif
+					DumpPacket(app);
+/*
 					if(app->size < 1) 
 						break;
 					if(strncmp((char *)app->pBuffer,"on ",3) == 0) {
@@ -4201,14 +4221,14 @@ sa->parameter = 0;
 						SendAAStats();
 						SendAATable();
 						//	cout << "UpdateAA packet: OFF." << endl;
-					} else if(strncmp((char *)app->pBuffer,"buy ",4) == 0) {
+					} else if(atoi((char *)&app->pBuffer[0])== 3) {
 						char item_name[128];
 						int buy_item = atoi((char *)&app->pBuffer[4]);
 						
 						int item_cost = 1;
 						int max_level = 1;
 						int bought = 0;
-						if(database.GetAASkillVars(buy_item,item_name,&item_cost,&max_level)) {
+						if(database.GetAASkillVars(buy_item)) {
 							uint8 *aa_item = &(((uint8 *)&aa)[buy_item]);
 							int32 cur_level = (*aa_item)+1;
 							int32 cost = buy_item <= 17 ? item_cost : item_cost * cur_level;
@@ -4270,6 +4290,7 @@ sa->parameter = 0;
 						//cout << " size:" << app->size << endl;
 						//							DumpPacket(app->pBuffer, app->size);
 					}
+					*/
 					break;
 				}
 				case OP_TraderBuy:{
