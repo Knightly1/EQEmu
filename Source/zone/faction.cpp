@@ -185,8 +185,9 @@ FACTION_VALUE NPC::GetReverseFactionCon(Mob* iOther) {
 		return FACTION_INDIFFERENT;
 	
 	//if we are a pet, use our owner's faction stuff
-	if (GetOwnerID())
-		return GetOwner()->GetReverseFactionCon(iOther);
+	Mob *own = GetOwner();
+	if (own != NULL)
+		return own->GetReverseFactionCon(iOther);
 	
 	//make sure iOther is an npc
 	//also, if we dont have a faction, then they arnt gunna think anything of us either

@@ -20,10 +20,10 @@
 #include <iomanip>
 #include <stdio.h>
 #include <fstream>
-#ifdef _CRTDBG_MAP_ALLOC
-	#undef new
-	#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
-#endif
+//#ifdef _CRTDBG_MAP_ALLOC
+//	#undef new
+//	#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
+//#endif
 #include <time.h>
 #include <string.h>
 

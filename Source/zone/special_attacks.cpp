@@ -21,7 +21,6 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemulator.net)
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
-using namespace std;
 
 #include "masterentity.h"
 #include "StringIDs.h"

@@ -4,7 +4,7 @@
 
 # TARGTYPE "Win32 (x86) Console Application" 0x0103
 
-CFG=ZONE - WIN32 RELEASE
+CFG=Zone - Win32 DebugPerl
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
@@ -13,13 +13,14 @@ CFG=ZONE - WIN32 RELEASE
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "Zone.mak" CFG="ZONE - WIN32 RELEASE"
+!MESSAGE NMAKE /f "Zone.mak" CFG="Zone - Win32 DebugPerl"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
 !MESSAGE "Zone - Win32 Release" (based on "Win32 (x86) Console Application")
 !MESSAGE "Zone - Win32 Debug" (based on "Win32 (x86) Console Application")
 !MESSAGE "Zone - Win32 Raid Addicts" (based on "Win32 (x86) Console Application")
+!MESSAGE "Zone - Win32 DebugPerl" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -68,7 +69,8 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /Gm /GX /ZI /Od /D "SHAREMEM" /D _WIN32_WINNT=0x0400 /D "_EQDEBUG" /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "EQDEBUG" /D "FIELD_ITEMS" /FR /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /Gm /GX /Zi /Od /D "SHAREMEM" /D _WIN32_WINNT=0x0400 /D "_EQDEBUG" /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "EQDEBUG" /D "FIELD_ITEMS" /FR /FD /GZ /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -104,6 +106,35 @@ LINK32=link.exe
 # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/Zone.map" /debug /machine:I386 /nodefaultlib:"libc"
 # SUBTRACT LINK32 /pdb:none
 
+!ELSEIF  "$(CFG)" == "Zone - Win32 DebugPerl"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 1
+# PROP BASE Output_Dir "Zone___Win32_DebugPerl"
+# PROP BASE Intermediate_Dir "Zone___Win32_DebugPerl"
+# PROP BASE Ignore_Export_Lib 0
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 1
+# PROP Output_Dir "..\Build"
+# PROP Intermediate_Dir "..\Build\ZonePerl"
+# PROP Ignore_Export_Lib 0
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /MTd /Gm /GX /Zi /Od /D "SHAREMEM" /D _WIN32_WINNT=0x0400 /D "_EQDEBUG" /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "EQDEBUG" /D "FIELD_ITEMS" /FR /FD /GZ /c
+# SUBTRACT BASE CPP /YX
+# ADD CPP /nologo /MTd /Gm /GX /Zi /Od /I "C:\perl\lib\core" /D "EMBPERL" /D "EMBPERL_PLUGIN" /D "SHAREMEM" /D _WIN32_WINNT=0x0400 /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "EQDEBUG" /D "FIELD_ITEMS" /FR /FD /GZ /c
+# SUBTRACT CPP /YX
+# ADD BASE RSC /l 0x409 /d "_DEBUG"
+# ADD RSC /l 0x409 /d "_DEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LINK32=link.exe
+# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /debug /machine:I386 /nodefaultlib:"LIBCMT" /nodefaultlib:"LIBC" /out:"../build/ZoneDebug.exe" /pdbtype:sept
+# SUBTRACT BASE LINK32 /pdb:none
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /debug /machine:I386 /nodefaultlib:"LIBCMT" /nodefaultlib:"LIBC" /out:"../build/ZonePerl.exe" /pdbtype:sept /libpath:"C:\perl\lib\core"
+# SUBTRACT LINK32 /pdb:none
+
 !ENDIF 
 
 # Begin Target
@@ -111,6 +142,7 @@ LINK32=link.exe
 # Name "Zone - Win32 Release"
 # Name "Zone - Win32 Debug"
 # Name "Zone - Win32 Raid Addicts"
+# Name "Zone - Win32 DebugPerl"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
@@ -168,6 +200,18 @@ SOURCE=.\effects.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\embparser.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\embperl.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\embxs.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\entity.cpp
 # End Source File
 # Begin Source File
@@ -176,7 +220,15 @@ SOURCE=..\common\EQEMuError.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\exp.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\faction.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\fearpath.cpp
 # End Source File
 # Begin Source File
 
@@ -193,6 +245,10 @@ SOURCE=.\guilds.cpp
 # Begin Source File
 
 SOURCE=.\hate_list.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\horse.cpp
 # End Source File
 # Begin Source File
 
@@ -232,6 +288,38 @@ SOURCE=.\parser.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pathing.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\perl_client.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\perl_entity.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\perl_groups.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\perl_mob.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\perl_npc.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\perl_PlayerCorpse.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\perlparser.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\petitions.cpp
 # End Source File
 # Begin Source File
@@ -261,6 +349,10 @@ SOURCE=.\spawngroup.cpp
 # Begin Source File
 
 SOURCE=.\spdat.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\special_attacks.cpp
 # End Source File
 # Begin Source File
 
@@ -577,7 +669,26 @@ SOURCE=..\common\types.h
 # Begin Source File
 
 SOURCE=..\common\unix.h
+
+!IF  "$(CFG)" == "Zone - Win32 Release"
+
 # PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Zone - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Zone - Win32 Raid Addicts"
+
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Zone - Win32 DebugPerl"
+
+# PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -590,6 +701,10 @@ SOURCE=..\common\version.h
 # Begin Source File
 
 SOURCE=..\common\classes.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\Condition.cpp
 # End Source File
 # Begin Source File
 
@@ -606,6 +721,11 @@ SOURCE=..\common\database.cpp
 # ADD CPP /Gd /Gm /YX
 
 !ELSEIF  "$(CFG)" == "Zone - Win32 Raid Addicts"
+
+!ELSEIF  "$(CFG)" == "Zone - Win32 DebugPerl"
+
+# ADD BASE CPP /Gd /Gm /YX
+# ADD CPP /Gd /Gm /YX
 
 !ENDIF 
 
@@ -640,6 +760,10 @@ SOURCE=..\common\eqtime.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\extprofile.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\Item.cpp
 # End Source File
 # Begin Source File
@@ -662,6 +786,11 @@ SOURCE=..\common\MiscFunctions.cpp
 
 !ELSEIF  "$(CFG)" == "Zone - Win32 Raid Addicts"
 
+!ELSEIF  "$(CFG)" == "Zone - Win32 DebugPerl"
+
+# ADD BASE CPP /w /W0
+# ADD CPP /w /W0
+
 !ENDIF 
 
 # End Source File
@@ -676,10 +805,6 @@ SOURCE=..\common\Mutex.cpp
 # Begin Source File
 
 SOURCE=..\common\packet_dump.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\common\packet_dump_file.cpp
 # End Source File
 # Begin Source File
 
@@ -699,6 +824,10 @@ SOURCE=..\common\TCPConnection.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\timeoutmgr.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\timer.cpp
 # End Source File
 # Begin Source File
@@ -714,6 +843,11 @@ SOURCE=..\common\unix.cpp
 # PROP Exclude_From_Build 1
 
 !ELSEIF  "$(CFG)" == "Zone - Win32 Raid Addicts"
+
+# PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Zone - Win32 DebugPerl"
 
 # PROP BASE Exclude_From_Build 1
 # PROP Exclude_From_Build 1
@@ -738,6 +872,11 @@ SOURCE=..\readme.txt
 # PROP Exclude_From_Build 1
 
 !ELSEIF  "$(CFG)" == "Zone - Win32 Raid Addicts"
+
+# PROP BASE Exclude_From_Build 1
+# PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "Zone - Win32 DebugPerl"
 
 # PROP BASE Exclude_From_Build 1
 # PROP Exclude_From_Build 1

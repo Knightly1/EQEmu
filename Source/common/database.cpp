@@ -1562,22 +1562,23 @@ char* Database::GetAdventureNPCText(uint32 NPCID){
 //	return "Error loading initial text";
 	return(NULL);
 }
-bool Database::GetLDoNDungeon(uint32 zoneid){
+
+bool Database::GetLDoNDungeon(uint32 zoneid) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
+	bool retval = false;
 	if (RunQuery(query, MakeAnyLenString(&query, "Select ldondungeon from zone where zoneidnumber=%i", zoneid), errbuf, &result)) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {
 			row = mysql_fetch_row(result);
+			if(atoi(row[0])!=0)
+				retval = true;
 			mysql_free_result(result);
-			if(atoi(row[0])==0)return false;
-			else
-				return true;
 		}
 	}
-	return false;
+	return retval;
 }
 
 
