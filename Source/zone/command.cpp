@@ -3925,39 +3925,32 @@ void command_npcspawn(Client *c, const Seperator *sep)
 		c->Message(0, "Error: #npcspawn: You must have a NPC targeted!");
 }
 
-void command_spawnfix(Client *c, const Seperator *sep)
-{
-	// Corrupts zone data
-	// test with a #repop after a #spawnfix
-	if (!c->GetTarget() || !c->GetTarget()->IsNPC())
-		c->Message(0, "Error: #spawnfix: Need an NPC target.");
-	else {
-		int32 tmp = 0;
-		char errbuf[MYSQL_ERRMSG_SIZE];
-		char *query = 0;
-		MYSQL_RES *result;
-		MYSQL_ROW row;
-		if (database.RunQuery(query, MakeAnyLenString(&query, "SELECT id from spawn2 where zone='%s' AND x='%f' AND y='%f' AND heading='%f'", zone->GetShortName(), c->GetTarget()->GetX(), c->GetTarget()->GetY(), c->GetTarget()->GetHeading()), errbuf, &result)) {
-			if (mysql_num_rows(result) == 1) {
-				row = mysql_fetch_row(result);
-				tmp = atoi(row[0]);
-				if(database.RunQuery(query, MakeAnyLenString(&query, "UPDATE spawn2 SET x='%f', y='%f', z='%f', heading='%f' WHERE id='%i'",c->GetX(), c->GetY(), c->GetZ(), c->GetHeading(),tmp), errbuf)) {
-					c->Message(0, "Updating coordinates successful.");
-					c->GetTarget()->Depop(false);
-				}
-				else
-					c->Message(0, "Update failed, UPDATE command error!");
-			}
-			else
-				c->Message(0, "Update failed, duplicate spawns detected!");
-			mysql_free_result(result);
-		}
-		else {
-			c->Message(0, "Update failed, SELECT command error!");
-		}
-		safe_delete_array(query);
-	}
-}
+void command_spawnfix(Client *c, const Seperator *sep) 
+{ 
+	Mob *t = c->GetTarget(); 
+	if (!t || !t->IsNPC()) 
+		c->Message(0, "Error: #spawnfix: Need an NPC target."); 
+	else { 
+		Spawn2* s2 = t->CastToNPC()->respawn2; 
+		char errbuf[MYSQL_ERRMSG_SIZE]; 
+		char *query = 0; 
+
+		if(!s2) 
+			c->Message(0, "#spawnfix FAILED -- cannot determine which spawn entry in the database this mob came from."); 
+		else{
+			if(database.RunQuery(query, MakeAnyLenString(&query, "UPDATE spawn2 SET x='%f', y='%f', z='%f', heading='%f' WHERE id='%i'",c->GetX(), c->GetY(), c->GetZ(), c->GetHeading(),s2->GetID()), errbuf))
+			{   
+				c->Message(0, "Updating coordinates successful."); 
+				t->Depop(false); 
+			} 
+			else{ 
+				c->Message(13, "Update failed! MySQL gave the following error:"); 
+				c->Message(13, errbuf); 
+			} 
+			safe_delete_array(query); 
+		} 
+	} 
+} 
 
 void command_loc(Client *c, const Seperator *sep)
 {
