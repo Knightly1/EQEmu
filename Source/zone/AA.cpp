@@ -582,7 +582,6 @@ void Client::SendAATable() {
 		aa2->aa_list[i].aa_skill = aa[i]->AA;
 		aa2->aa_list[i].aa_value = aa[i]->value;
 	}
-	DumpPacket(outapp);
 	outapp->Deflate();
     QueuePacket(outapp);
     safe_delete(outapp);
@@ -619,7 +618,6 @@ void Client::SendPreviousAA(int32 id, int seq){
 		if(saa->type==1) //general ability
 			saa->abilities[0].increase_amt*=value;
 	}
-	DumpPacket(outapp);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
@@ -671,8 +669,8 @@ void Client::SendAA(int32 id, int seq) {
 	outapp->pBuffer=(uchar*)saa;
 	if(id==0 && value && (orig_val < saa->max_level)) //send previous AA only on zone in
 		SendPreviousAA(id, seq);
-	if(dump)
-		DumpPacket(outapp);
+	//if(dump)
+		//DumpPacket(outapp);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	//will outapp delete the buffer for us even though it didnt make it?  --- Yes, it should

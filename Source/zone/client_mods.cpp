@@ -441,7 +441,7 @@ sint16 Client::acmod() {
 			else
 				return 51;
 		}
-	} else if(agility <= 255) {
+	} else if(agility <= 300) {
 		if(level <= 6) {
 			if(agility <= 139)
 				return(21);

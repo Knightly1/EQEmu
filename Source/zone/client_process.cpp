@@ -5406,6 +5406,8 @@ void Client::CompleteConnect()
 	m_pp.pet_hp = 0;
 	
 	client_data_loaded = true;
+	for(int x=0;x<8;x++)
+		SendWearChange(x);
 }
 
 

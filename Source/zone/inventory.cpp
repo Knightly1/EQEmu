@@ -240,7 +240,6 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 			delitem->from_slot			= slot_id;
 			delitem->to_slot			= 0xFFFFFFFF;
 			delitem->number_in_stack	= 0xFFFFFFFF;
-			DumpPacket(outapp);
 			for(int loop=0;loop<quantity;loop++)
 				QueuePacket(outapp);
 			safe_delete(outapp);
@@ -251,7 +250,6 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 			delitem->from_slot			= slot_id;
 			delitem->to_slot			= 0xFFFFFFFF;
 			delitem->number_in_stack	= 0xFFFFFFFF;
-			DumpPacket(outapp);
 			QueuePacket(outapp);
 			safe_delete(outapp);
 		}
@@ -705,13 +703,12 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	return true;
 }
 
-//this function is not implemented yet
 void Client::DyeArmor(DyeStruct* dye){
 	sint16 slot=0;
 	for(int i=0;i<7;i++){
 		if(m_pp.item_tint[i].rgb.blue!=dye->dye[i].rgb.blue ||
 			m_pp.item_tint[i].rgb.red!=dye->dye[i].rgb.red ||
-			m_pp.item_tint[i].rgb.green!=dye->dye[i].rgb.green){
+			m_pp.item_tint[i].rgb.green != dye->dye[i].rgb.green){
 			slot = m_inv.HasItem(32557, 1, invWherePersonal);
 			if(slot != SLOT_INVALID){
 				DeleteItemInInventory(slot,1,true);
@@ -720,6 +717,7 @@ void Client::DyeArmor(DyeStruct* dye){
 				if(inst){
 					inst->SetColor((dye->dye[i].rgb.red*65536)+(dye->dye[i].rgb.green*256)+(dye->dye[i].rgb.blue));
 					database.SaveInventory(CharacterID(),inst,slot2);
+					m_pp.item_tint[i].rgb.use_tint = 1;
 				}
 				m_pp.item_tint[i].rgb.blue=dye->dye[i].rgb.blue;
 				m_pp.item_tint[i].rgb.red=dye->dye[i].rgb.red;
