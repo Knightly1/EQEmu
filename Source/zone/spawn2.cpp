@@ -84,6 +84,7 @@ int32 Spawn2::resetTimer()
 }
 
 bool Spawn2::Process() {
+	_ZP(Spawn2_Process);
 	if (timer->Check())	{
 		timer->Disable();
 		

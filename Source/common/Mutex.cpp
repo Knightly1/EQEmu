@@ -92,6 +92,7 @@ Mutex::~Mutex() {
 }
 
 void Mutex::lock() {
+	_CP(Mutex_lock);
 #if DEBUG_MUTEX_CLASS >= 9
 	cout << "Locking Mutex" << endl;
 #endif

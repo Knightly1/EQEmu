@@ -3819,12 +3819,12 @@ XS(XS_Mob_GetSpawnHeading)
 	XSRETURN(1);
 }
 
-XS(XS_Mob_GetArrgoRange); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetArrgoRange)
+XS(XS_Mob_GetAggroRange); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_GetAggroRange)
 {
 	dXSARGS;
 	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetArrgoRange(THIS)");
+		Perl_croak(aTHX_ "Usage: Mob::GetAggroRange(THIS)");
 	{
 		Mob *		THIS;
 		float		RETVAL;
@@ -3837,7 +3837,7 @@ XS(XS_Mob_GetArrgoRange)
 		else
 			Perl_croak(aTHX_ "THIS is not of type Mob");
 
-		RETVAL = THIS->GetArrgoRange();
+		RETVAL = THIS->GetAggroRange();
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -5308,7 +5308,7 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "GetSpawnY"), XS_Mob_GetSpawnY, file, "$");
 		newXSproto(strcpy(buf, "GetSpawnZ"), XS_Mob_GetSpawnZ, file, "$");
 		newXSproto(strcpy(buf, "GetSpawnHeading"), XS_Mob_GetSpawnHeading, file, "$");
-		newXSproto(strcpy(buf, "GetArrgoRange"), XS_Mob_GetArrgoRange, file, "$");
+		newXSproto(strcpy(buf, "GetAggroRange"), XS_Mob_GetAggroRange, file, "$");
 		newXSproto(strcpy(buf, "GetAssistRange"), XS_Mob_GetAssistRange, file, "$");
 		newXSproto(strcpy(buf, "SaveGuardSpot"), XS_Mob_SaveGuardSpot, file, "$;$");
 		newXSproto(strcpy(buf, "SaveSpawnSpot"), XS_Mob_SaveSpawnSpot, file, "$");

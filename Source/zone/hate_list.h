@@ -51,6 +51,8 @@ public:
     bool IsOnHateList(Mob *);
     // used to remove or add frenzy hate
     void CheckFrenzyHate();
+    
+    bool IsEmpty();
 
 protected:
     tHateEntry *Find(Mob *ent);

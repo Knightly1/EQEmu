@@ -71,6 +71,7 @@ bool HateList::IsOnHateList(Mob *mob)
 
 tHateEntry *HateList::Find(Mob *ent)
 {
+	_ZP(HateList_Find);
     LinkedListIterator<tHateEntry*> iterator(list);
     iterator.Reset();
 	while(iterator.MoreElements())
@@ -96,6 +97,7 @@ void HateList::Set(Mob* other, int32 in_hate, int32 in_dam)
 
 Mob* HateList::GetDamageTop(Mob* hater)
 {
+	_ZP(HateList_GetDamageTop);
 	Mob* current = NULL;
 	Group* grp = NULL;
 	int32 dmg_amt = 0;
@@ -125,6 +127,7 @@ Mob* HateList::GetDamageTop(Mob* hater)
 }
 
 Mob* HateList::GetClosest(Mob *hater) {
+	_ZP(HateList_GetClosest);
 	Mob* close = NULL;
 	float closedist = 99999.9f;
 	float thisdist;
@@ -208,6 +211,7 @@ void HateList::DoFactionHits(sint32 nfl_id) {
 
 Mob *HateList::GetTop()
 {
+	_ZP(HateList_GetTop);
 	Mob* top = NULL;
 	sint32 hate = -1;
 	
@@ -215,10 +219,11 @@ Mob *HateList::GetTop()
     iterator.Reset();
 	while(iterator.MoreElements())
     {
-		if(iterator.GetData()->ent != NULL && ((iterator.GetData()->hate > hate) || iterator.GetData()->bFrenzy ))
+    	tHateEntry *cur = iterator.GetData();
+		if(cur->ent != NULL && ((cur->hate > hate) || cur->bFrenzy ))
 		{
-            top = iterator.GetData()->ent;
-            hate = iterator.GetData()->hate;
+            top = cur->ent;
+            hate = cur->hate;
 		}
         iterator.Advance();
 	}
@@ -254,4 +259,26 @@ sint32 HateList::GetEntHate(Mob *ent, bool damage)
 		return p->hate;
 	else
 		return 0;
+}
+
+//looking for any mob with hate > -1
+bool HateList::IsEmpty() {
+	_ZP(HateList_IsEmpty);
+	
+    LinkedListIterator<tHateEntry*> iterator(list);
+    iterator.Reset();
+	while(iterator.MoreElements())
+    {
+    	tHateEntry *cur = iterator.GetData();
+		if(cur->ent != NULL
+			&& (
+				(cur->hate > -1) 
+				|| cur->bFrenzy )
+			)
+		{
+			return(false);
+		}
+        iterator.Advance();
+	}
+    return(true);
 }

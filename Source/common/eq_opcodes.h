@@ -385,11 +385,22 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_SafeFallSuccess	0x00ac
 #define OP_DisciplineUpdate	0x02fb	
 
-	//Tribute Master
-#define OP_Tribute			0x02f6
-#define OP_SelectTribute	0x02f7
-#define OP_StartTribute		0x02f9
+//Tribute Master
+
+//send initial tribute update right before inventory
+//send the OP_TributeInfo's in response to OP_ReqClientSpawn
+#define OP_TributeUpdate	0x02f2
+#define OP_TributeItem		0x02f3
+#define OP_TributePointUpdate   0x02f4
 #define OP_SendTributes		0x02f5
+#define OP_TributeInfo		0x02f6
+#define OP_SelectTribute	0x02f7
+#define OP_TributeID		0x02f8		//4 bytes, seems to be from offset 5760 in the PlayerProfile
+#define OP_StartTribute		0x02f9
+#define OP_TributeNPC		0x02fa		//no idea what this is
+#define OP_TributeMoney		0x02fe
+#define OP_TributeToggle	0x0364
+
 //Father Nitwit OpCodes:
 //New Tradeskill Interface
 #define OP_RecipesFavorite	0x0322

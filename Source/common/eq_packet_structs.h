@@ -4196,22 +4196,70 @@ struct ZoneInSendName_Struct2 {
 	char	name[64];
 	int32	unknown68[145];
 };
-struct StartTribute_Struct{
-	int32	client_id;
-	int32	npc_id;
-	int32	response;
+
+#define MAX_TRIBUTE_LEVELS 10
+#define MAX_PLAYER_TRIBUTES 5
+
+struct StartTribute_Struct {
+   int32	client_id;
+   int32	tribute_master_id;
+   int32	response;
 };
-struct Tribute{
-	int32	cost;
-	int32	level;
-	int32	tribute_id;
+
+struct TributeLevel_Struct {
+   int32	cost;	//backwards byte order!
+   uint32	level;	//backwards byte order!
+   int32	tribute_item_id;	//backwards byte order!
 };
+
 struct TributeAbility_Struct {
-	int32	list_id;
-	Tribute tribute[10];
-	int32	unknown124;
+	int32	tribute_id;	//backwards byte order!
+	TributeLevel_Struct levels[MAX_TRIBUTE_LEVELS];
+//the cost of the last tribute takes on a strange value
+//from the set: { 0A 14 15 17 1D 23 25 28 3C }
+	int32 unknown;
 	char	name[0];
 };
+
+struct SelectTributeReq_Struct {
+   int32	client_id;	//? maybe action ID?
+   uint32	tribute_id;
+   int32	unknown8;	//seen E3 00 00 00
+};
+
+struct SelectTributeReply_Struct {
+   int32	client_id;	//echoed from request.
+   uint32	tribute_id;
+   char	desc[0];
+};
+
+struct TributeInfo_Struct {
+	int32	active;		//0 == inactive, 1 == active
+	uint32	tributes[MAX_PLAYER_TRIBUTES];	//-1 == NONE
+	int32	levels[MAX_PLAYER_TRIBUTES];		//all 00's
+	int32	tribute_master_id;
+};
+
+struct TributeItem_Struct {
+	int32   slot;
+	int32   quantity;
+	int32   tribute_master_id;
+	sint32  tribute_points;
+};
+
+struct TributePoint_Struct {
+	sint32   new_value;
+	int32   unknown04;
+	sint32   old_value;
+	int32   unknown12;
+};
+
+struct TributeMoney_Struct {
+	int32   platinum;
+	int32   tribute_master_id;
+	sint32   tribute_points;
+};
+
 
 struct Split_Struct
 {

@@ -19,8 +19,6 @@
 #define MAP_H
 
 
-#define MAP_COUNT_THINGS	//count things and print results
-
 //this is the current version number to expect from the map header
 #define MAP_VERSION 0x01000000
 
@@ -138,6 +136,11 @@ public:
 	inline PFACE		GetFaceFromlist( int _idx) {return &mFinalFaces[ mFaceLists[_idx] ];	}
 	inline NodeRef		GetRoot( ) { return MAP_ROOT_NODE; }
 	inline PNODE		GetNode( NodeRef r ) { return( mNodes + r ); }
+	
+	inline float GetMinX() const { return(_minx); }
+	inline float GetMaxX() const { return(_maxx); }
+	inline float GetMinY() const { return(_miny); }
+	inline float GetMaxY() const { return(_maxy); }
 private:
 //	unsigned long m_Vertex;
 	unsigned long m_Faces;
@@ -151,12 +154,8 @@ private:
 	
 	int mCandFaces[100];
 	
-#ifdef MAP_COUNT_THINGS
-	unsigned long _branches;
-	unsigned long _finals;
-	float _minx, _miny, _maxx, _maxy;
 	float _minz, _maxz;
-#endif
+	float _minx, _miny, _maxx, _maxy;
 	
 	static void Normalize(VERTEX *p);
 

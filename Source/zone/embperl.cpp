@@ -35,13 +35,16 @@ EXTERN_C XS(boot_Client);
 EXTERN_C XS(boot_Corpse);
 EXTERN_C XS(boot_EntityList);
 EXTERN_C XS(boot_Group);
-XS(XS_Client_new);
+/*XS(XS_Client_new);
 //XS(XS_Mob_new);
 XS(XS_NPC_new);
 //XS(XS_Corpse_new);
 XS(XS_EntityList_new);
-//XS(XS_Group_new);
+//XS(XS_Group_new);*/
 #endif
+#endif
+#ifdef EMBPERL_COMMANDS
+XS(XS_command_add);
 #endif
 
 #ifdef EMBPERL_IO_CAPTURE
@@ -68,18 +71,20 @@ EXTERN_C void xs_init(pTHX)
 	newXS(strcpy(buf, "Mob::boot_Mob"), boot_Mob, file);
 	newXS(strcpy(buf, "NPC::boot_Mob"), boot_Mob, file);
 	newXS(strcpy(buf, "NPC::boot_NPC"), boot_NPC, file);
-	newXS(strcpy(buf, "NPC::new"), XS_NPC_new, file);
+///	newXS(strcpy(buf, "NPC::new"), XS_NPC_new, file);
 	newXS(strcpy(buf, "Corpse::boot_Mob"), boot_Mob, file);
 	newXS(strcpy(buf, "Corpse::boot_Corpse"), boot_Corpse, file);
 	newXS(strcpy(buf, "Client::boot_Mob"), boot_Mob, file);
 	newXS(strcpy(buf, "Client::boot_Client"), boot_Client, file);
-	newXS(strcpy(buf, "Client::new"), XS_Client_new, file);
+//	newXS(strcpy(buf, "Client::new"), XS_Client_new, file);
 	newXS(strcpy(buf, "EntityList::boot_EntityList"), boot_EntityList, file);
-	newXS(strcpy(buf, "EntityList::new"), XS_EntityList_new, file);
+//	newXS(strcpy(buf, "EntityList::new"), XS_EntityList_new, file);
 	newXS(strcpy(buf, "Group::boot_Group"), boot_Group, file);
 #endif
 #endif
-
+#ifdef EMBPERL_COMMANDS
+	newXS(strcpy(buf, "commands::command_add"), XS_command_add, file);
+#endif
 #ifdef EMBPERL_IO_CAPTURE
 	newXS(strcpy(buf, "EQEmuIO::PRINT"), XS_EQEmuIO_PRINT, file);
 #endif
@@ -87,8 +92,10 @@ EXTERN_C void xs_init(pTHX)
 
 Embperl::Embperl()
 {
+	in_use = true;	//in case one of these files generates an event
 	//arguments for interpreter start
-	char * args[] = {"", "-e", "0"};
+	char *args[] = { "", "-e", "0" };
+	
 	//setup perl...
 	my_perl = perl_alloc();
 	if(!my_perl)
@@ -171,6 +178,19 @@ Embperl::Embperl()
 		LogFile->write(EQEMuLog::Quest, "Perl warning: %s", err);
 	}
 #endif //EMBPERL_PLUGIN
+#ifdef EMBPERL_COMMANDS
+	LogFile->write(EQEMuLog::Quest, "Loading perl commands...");
+	try
+	{
+		eval_file("commands", "commands.pl");
+		dosub("commands::commands_init");
+	}
+	catch(const char *err)
+	{ 
+		LogFile->write(EQEMuLog::Quest, "Warning - commands.pl: %s", err);
+	}
+#endif //EMBPERL_COMMANDS
+	in_use = false;
 }
 
 Embperl::~Embperl()
@@ -186,7 +206,7 @@ Embperl::~Embperl()
 	perl_free(my_perl);
 }
 
-void Embperl::init_eval_file(void) const
+void Embperl::init_eval_file(void)
 {//ala perlembed
 	eval(
 		"our %Cache;"
@@ -216,7 +236,7 @@ void Embperl::init_eval_file(void) const
 		);
  }
 
-void Embperl::eval_file(const char * packagename, const char * filename) const
+void Embperl::eval_file(const char * packagename, const char * filename)
 {
 	std::vector<std::string> args;
 	args.push_back(packagename);
@@ -224,8 +244,14 @@ void Embperl::eval_file(const char * packagename, const char * filename) const
 	dosub("eval_file", &args);
 }
 
-void Embperl::dosub(const char * subname, const std::vector<std::string> * args, int mode) const
+void Embperl::dosub(const char * subname, const std::vector<std::string> * args, int mode)
 {//as seen in perlembed docs
+#if EQDEBUG >= 5
+	if(InUse()) {
+		LogFile->write(EQEMuLog::Debug, "Warning: Perl dosub called for %s when perl is allready in use.\n", subname);
+	}
+#endif
+	in_use = true;
 	bool err = false;
 	dSP;                            /* initialize stack pointer      */
 	ENTER;                          /* everything created after here */
@@ -247,6 +273,8 @@ void Embperl::dosub(const char * subname, const std::vector<std::string> * args,
 	}
 	FREETMPS;                       /* free temp values        */
 	LEAVE;                       /* ...and the XPUSHed "mortal" args.*/
+	
+	in_use = false;
 	if(err)
 	{
 		errmsg = "Perl runtime error: ";
@@ -256,7 +284,7 @@ void Embperl::dosub(const char * subname, const std::vector<std::string> * args,
 }
 
 //evaluate an expression. throw error on fail
-void Embperl::eval(const char * code) const
+void Embperl::eval(const char * code)
 {
 	std::vector<std::string> arg;
 	arg.push_back(code);

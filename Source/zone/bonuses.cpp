@@ -46,6 +46,7 @@ void Mob::CalcBonuses()
 
 void Client::CalcBonuses()
 {
+	_ZP(Client_CalcBonuses);
 	memset(&itembonuses, 0, sizeof(StatBonuses));
 	CalcItemBonuses(&itembonuses);
 	CalcEdibleBonuses(&itembonuses);
@@ -103,9 +104,19 @@ int Client::CalcRecommendedLevelBonus(int8 level, uint8 reclevel, int basestat)
 void Client::CalcItemBonuses(StatBonuses* newbon) {
 	//memset assumed to be done by caller.
 	
-	for (int i=0; i<21; i++) {
-		if(m_inv[i] == 0) {continue;}
+	int i;
+	for (i=0; i<21; i++) {
 		const ItemInst* inst = m_inv[i];
+		if(inst == 0)
+			continue;
+		AddItemBonuses(inst, newbon);
+	}
+	
+	//tribute items
+	for (i = 400; i < 404; i++) {
+		const ItemInst* inst = m_inv[i];
+		if(inst == 0)
+			continue;
 		AddItemBonuses(inst, newbon);
 	}
 	
@@ -311,7 +322,7 @@ void Mob::CalcSpellBonuses(StatBonuses* newbon)
 	int i;
 
 	memset(newbon, 0, sizeof(StatBonuses));
-	newbon->ArrgoRange = -1;
+	newbon->AggroRange = -1;
 	newbon->AssistRange = -1;
 
 	for(i = 0; i < BUFF_COUNT; i++)
@@ -362,11 +373,11 @@ void Mob::ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newb
 				// take the one with less range in any case
 				if
 				(
-					newbon->ArrgoRange == -1 ||
-					effect_value < newbon->ArrgoRange
+					newbon->AggroRange == -1 ||
+					effect_value < newbon->AggroRange
 				)
 				{
-					newbon->ArrgoRange = effect_value;
+					newbon->AggroRange = effect_value;
 				}
 				break;
 			}

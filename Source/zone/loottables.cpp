@@ -405,6 +405,7 @@ const LootDrop_Struct* Database::GetLootDrop(int32 lootdrop_id) {
 
 // Queries the loottable: adds item & coin to the npc
 void Database::AddLootTableToNPC(NPC* npc,int32 loottable_id, ItemList* itemlist, int32* copper, int32* silver, int32* gold, int32* plat) {
+	_ZP(Database_AddLootTableToNPC);
 //if (loottable_id == 178190)
 //DebugBreak();
 	const LootTable_Struct* lts = 0;

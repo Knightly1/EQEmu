@@ -347,6 +347,7 @@ int MakeRandomInt(int low, int high)
 
 double MakeRandomFloat(double low, double high)
 {
+	_CP(MakeRandomFloat);
 	static bool seeded=0;
 	double diff = high - low;
   

@@ -29,7 +29,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 typedef void (*CmdFuncPtr)(Client *,const Seperator *);
 
 // this is a command list item
-struct cl_struct
+/*struct cl_struct
 {
   char *command[CMDALIASES];			// the command(s)
   char *desc;					// description of command
@@ -40,17 +40,30 @@ struct cl_struct
 };
 
 extern struct cl_struct *commandlist;		// the head of the list
+*/
+
+typedef struct {
+	const char *command[CMDALIASES];			// the command(s)
+	int access;
+	const char *desc;		// description of command
+	CmdFuncPtr function;	//null means perl function
+} CommandRecord;
+
 extern int (*command_dispatch)(Client *,char const*);
 extern int commandcount;			// number of commands loaded
 
-// prototypes
+// the command system:
 int command_init(void);
 void command_deinit(void);
-void command_resetaa(Client* c,const Seperator *sep);
 int command_add(const char *command_string, const char *desc, int access, CmdFuncPtr function);
 int command_notavail(Client *c, const char *message);
 int command_realdispatch(Client *c, char const *message);
 void command_logcommand(Client *c, const char *message);
+int command_add_perl(const char *command_string, const char *desc, int access);
+void command_clear_perl();
+
+//commands
+void command_resetaa(Client* c,const Seperator *sep);
 void command_sendop(Client *c, const Seperator *sep);
 void command_pr(Client* c,const Seperator *sep);
 void command_range(Client* c,const Seperator *sep);
@@ -253,5 +266,10 @@ void command_embperl_plugin(Client *c, const Seperator *sep);
 void command_embperl_eval(Client *c, const Seperator *sep);
 void command_reloadpl(Client *c, const Seperator *sep);
 #endif 
+
+#ifdef EQPROFILE
+void command_profiledump(Client *c, const Seperator *sep);
+void command_profilereset(Client *c, const Seperator *sep);
+#endif
 
 #endif

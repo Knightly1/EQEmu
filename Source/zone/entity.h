@@ -118,6 +118,7 @@ public:
 	Corpse*	GetCorpseByOwner(Client* client);
 	Corpse* GetCorpseByID(int16 id);
 	Corpse* GetCorpseByName(char* name);
+	bool IsMobInZone(Mob *who);
 	void ClearClientPetitionQueue();
     bool CanAddHateForMob(Mob *p);
 	void	SendGuildJoin(GuildJoin_Struct* gj);
@@ -128,6 +129,7 @@ public:
 	void	MobProcess();
 	void	TrapProcess();
 	void	BeaconProcess();
+	void	ProcessMove(Client *c, float x, float y, float z);
 	void	SendAATimer(int32 charid,UseAA_Struct* uaa);
 	Doors*	FindDoor(int8 door_id);
 	bool	MakeDoorSpawnPacket(APPLAYER* app);
@@ -142,6 +144,7 @@ public:
 	void	AddDoor(Doors* door);
 	void	AddTrap(Trap* trap);
 	void	AddBeacon(Beacon *beacon);
+	void	AddProximity(NPC *proximity_for);
 	void	Clear();
 	bool	RemoveMob(int16 delete_id);
 	bool	RemoveClient(int16 delete_id);
@@ -151,6 +154,7 @@ public:
 	bool	RemoveDoor(int16 delete_id);
 	bool	RemoveTrap(int16 delete_id);
 	bool	RemoveObject(int16 delete_id);
+	bool	RemoveProximity(int16 delete_npc_id);
 	void	RemoveAllMobs();
 	void	RemoveAllClients();
 	void	RemoveAllNPCs();
@@ -159,6 +163,7 @@ public:
 	void	RemoveAllDoors();
 	void	RemoveAllTraps();
 	void	RemoveAllObjects();
+	void	RemoveAllLocalities();
 	Entity*	GetEntityMob(int16 id);
 	Entity* GetEntityMob(const char *name);
 	Entity*	GetEntityDoor(int16 id);
@@ -248,7 +253,8 @@ public:
 	void	MessageGroup(Mob* sender, bool skipclose, int32 type, const char* message, ...);
 	
 
-	Mob*	AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssistRange);
+	void	CheckClientAggro(Client *around);
+	Mob*	AICheckCloseAggro(Mob* sender, float iAggroRange, float iAssistRange);
 	void	AIYellForHelp(Mob* sender, Mob* attacker);
 	bool	AICheckCloseSpells(Mob* caster, int8 iChance, float iRange, int16 iSpellTypes);
 protected:
@@ -272,6 +278,7 @@ private:
 	LinkedList<Doors*> door_list;
 	LinkedList<Trap*> trap_list;
 	LinkedList<Beacon*> beacon_list;
+	LinkedList<NPC *> proximity_list;
 	int16 last_insert_id;
 };
 

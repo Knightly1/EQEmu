@@ -68,6 +68,12 @@ using namespace std;
 #endif
     #endif
 #endif
+#ifdef EQPROFILE
+#ifdef COMMON_PROFILE
+CommonProfiler _cp;
+#endif
+#endif
+
 #include "zoneserver.h"
 #include "console.h"
 #include "LoginServer.h"

@@ -405,6 +405,7 @@ ItemInst* ItemInstQueue::peek_front() const
 // Retrieve item at specified slot; returns false if item not found
 ItemInst* Inventory::GetItem(sint16 slot_id) const
 {
+	_CP(Inventory_GetItem);
 	ItemInst* result = NULL;
 	
 	// Cursor
@@ -430,7 +431,7 @@ ItemInst* Inventory::GetItem(sint16 slot_id) const
 		// Personal inventory slots
 		result = _GetItem(m_inv, slot_id);
 	}
-	else if (slot_id>=0 && slot_id<=21) {
+	else if ((slot_id>=0 && slot_id<=21) || (slot_id >= 400 && slot_id<=404)) {
 		// Equippable slots (on body)
 		result = _GetItem(m_worn, slot_id);
 	}
@@ -524,6 +525,7 @@ void Inventory::SwapItem(sint16 slot_a, sint16 slot_b)
 
 sint16 Inventory::HasItem(uint32 item_id, uint8 quantity, uint8 where)
 {
+	_CP(Inventory_HasItem);
 	const Item_Struct* item = database.GetItem(item_id);
 	sint16 slot_id = SLOT_INVALID;
 	
@@ -649,7 +651,7 @@ ItemInst* Inventory::PopItem(sint16 slot_id)
 	if (slot_id==SLOT_CURSOR) { // Cursor
 		p = m_cursor.pop();
 	}
-	else if (slot_id>=0 && slot_id<=21) { // Worn slots
+	else if ((slot_id>=0 && slot_id<=21) || (slot_id >= 400 && slot_id<=404)) { // Worn slots
 		p = m_worn[slot_id];
 		m_worn.erase(slot_id);
 	}
@@ -856,7 +858,7 @@ sint16 Inventory::_PutItem(sint16 slot_id, ItemInst* inst)
 		m_cursor.push(inst);
 		result = slot_id;
 	}
-	else if (slot_id>=0 && slot_id<=21) { // Worn slots
+	else if ((slot_id>=0 && slot_id<=21) || (slot_id >= 400 && slot_id<=404)) { // Worn slots
 		m_worn[slot_id] = inst;
 		result = slot_id;
 	}
@@ -1039,6 +1041,7 @@ sint16 Inventory::_HasItemByUse(ItemInstQueue& queue, uint8 use, uint8 quantity)
 // Return base item data without delim at end
 string ItemInst::Serialize(sint16 slot_id) const
 {
+	_CP(ItemInst_Serialize);
 	if (!m_item)
 		return "";
 	
@@ -1088,6 +1091,7 @@ string ItemInst::Serialize(sint16 slot_id) const
 // Serialize to a packet string
 string ItemCommonInst::Serialize(sint16 slot_id) const
 {
+	_CP(ItemCommonInst_Serialize);
 	if (!m_item)
 		return "";
 	
@@ -1235,6 +1239,7 @@ string ItemCommonInst::Serialize(sint16 slot_id) const
 // Serialize to a packet string
 string ItemContainerInst::Serialize(sint16 slot_id) const
 {
+	_CP(ItemContainerInst_Serialize);
 	if (!m_item)
 		return "";
 	

@@ -86,6 +86,7 @@ extern volatile bool ZoneLoaded;
 #include "embparser.h"
 #include "perlparser.h"
 #include "client_logs.h"
+#include "questmgr.h"
 
 #ifdef GUILDWARS
 #include "../GuildWars/GuildWars.h"
@@ -242,6 +243,8 @@ int main(int argc, char** argv) {
 	database.LoadAAEffects();
 	LogFile->write(EQEMuLog::Status, "Loading swarm spells");
 	database.LoadSwarmSpells();
+	LogFile->write(EQEMuLog::Status, "Loading tributes");
+	database.LoadTributes();
 	LogFile->write(EQEMuLog::Status, "Loading corpse timers");
 	database.GetDecayTimes(npcCorpseDecayTimes);
 	LogFile->write(EQEMuLog::Status, "Loading what ever is left");
@@ -300,12 +303,20 @@ int main(int argc, char** argv) {
 	}
 	
 	Timer InterserverTimer(INTERSERVER_TIMER); // does MySQL pings and auto-reconnect
+#ifdef EQPROFILE
+#ifdef PROFILE_DUMP_TIME
+	Timer profile_dump_timer(PROFILE_DUMP_TIME*1000);
+	profile_dump_timer.Start();
+#endif
+#endif
+	Timer quest_timers(1000);	//highest resolution quest timer is 1 second
 	UpdateWindowTitle();
 	bool worldwasconnected = worldserver.Connected();
 	EQNetworkConnection* eqnc;
 	Timer temp_timer(10);
 	temp_timer.Start();
 	while(RunLoops) {
+		_ZP(net_main);
 		Timer::SetCurrentTime();
 		while ((eqnc = eqns.NewQueuePop())) {
 			struct in_addr	in;
@@ -394,6 +405,15 @@ int main(int argc, char** argv) {
 				catch(...){
 					error = 2;
 				}
+				try{
+#endif
+					if(quest_timers.Check())
+						quest_manager.Process();
+#ifdef CATCH_CRASH
+				}
+				catch(...){
+					error = 77777;
+				}
 #endif
 			}
 		}
@@ -431,23 +451,30 @@ int main(int argc, char** argv) {
 		}
 #endif
 #if defined(_EQDEBUG) && defined(DEBUG_PC)
-QueryPerformanceCounter(&tmp3);
-mainloop_time += tmp3.QuadPart - tmp2.QuadPart;
-if (!--tmp0) {
-	tmp0 = 200;
-	printf("Elapsed Tics  : %9.0f (%1.4f sec)\n", (double)mainloop_time, ((double)mainloop_time/tmp.QuadPart));
-	printf("NPCAI Tics    : %9.0f (%1.2f%%)\n", (double)npcai_time, ((double)npcai_time/mainloop_time)*100);
-	printf("FindSpell Tics: %9.0f (%1.2f%%)\n", (double)findspell_time, ((double)findspell_time/mainloop_time)*100);
-	printf("AtkAllowd Tics: %9.0f (%1.2f%%)\n", (double)IsAttackAllowed_time, ((double)IsAttackAllowed_time/mainloop_time)*100);
-	printf("ClientPro Tics: %9.0f (%1.2f%%)\n", (double)clientprocess_time, ((double)clientprocess_time/mainloop_time)*100);
-	printf("ClientAtk Tics: %9.0f (%1.2f%%)\n", (double)clientattack_time, ((double)clientattack_time/mainloop_time)*100);
-mainloop_time = 0;
-npcai_time = 0;
-findspell_time = 0;
-IsAttackAllowed_time = 0;
-clientprocess_time = 0;
-clientattack_time = 0;
-}
+		QueryPerformanceCounter(&tmp3);
+		mainloop_time += tmp3.QuadPart - tmp2.QuadPart;
+		if (!--tmp0) {
+			tmp0 = 200;
+			printf("Elapsed Tics  : %9.0f (%1.4f sec)\n", (double)mainloop_time, ((double)mainloop_time/tmp.QuadPart));
+			printf("NPCAI Tics    : %9.0f (%1.2f%%)\n", (double)npcai_time, ((double)npcai_time/mainloop_time)*100);
+			printf("FindSpell Tics: %9.0f (%1.2f%%)\n", (double)findspell_time, ((double)findspell_time/mainloop_time)*100);
+			printf("AtkAllowd Tics: %9.0f (%1.2f%%)\n", (double)IsAttackAllowed_time, ((double)IsAttackAllowed_time/mainloop_time)*100);
+			printf("ClientPro Tics: %9.0f (%1.2f%%)\n", (double)clientprocess_time, ((double)clientprocess_time/mainloop_time)*100);
+			printf("ClientAtk Tics: %9.0f (%1.2f%%)\n", (double)clientattack_time, ((double)clientattack_time/mainloop_time)*100);
+			mainloop_time = 0;
+			npcai_time = 0;
+			findspell_time = 0;
+			IsAttackAllowed_time = 0;
+			clientprocess_time = 0;
+			clientattack_time = 0;
+		}
+#endif
+#ifdef EQPROFILE
+#ifdef PROFILE_DUMP_TIME
+		if(profile_dump_timer.Check()) {
+			DumpZoneProfile();
+		}
+#endif
 #endif
 		Sleep(1);
 	}

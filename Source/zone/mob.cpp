@@ -124,6 +124,7 @@ logpos = false;
 	moved=false;
 // for quest signal() command
 	signaled=false;
+	_egnode = NULL;
 	adverrorinfo = 0;
 	name[0]=0;
 	clean_name[0]=0;
@@ -273,7 +274,7 @@ logpos = false;
 	
 	memset(&itembonuses, 0, sizeof(StatBonuses));
 	memset(&spellbonuses, 0, sizeof(StatBonuses));
-	spellbonuses.ArrgoRange = -1;
+	spellbonuses.AggroRange = -1;
 	spellbonuses.AssistRange = -1;
 	pLastChange = 0;
 	SetPetID(0);
@@ -912,7 +913,7 @@ void Mob::ShowStats(Client* client) {
 			client->Message(0, "  NPCID: %u  SpawnGroupID: %u LootTable: %u  FactionID: %i  SpellsID: %u", this->GetNPCTypeID(),spawngroupid, this->CastToNPC()->GetLoottableID(), this->CastToNPC()->GetNPCFactionID(), this->GetNPCSpellsID());
 		}
 		if (this->IsAIControlled()) {
-			client->Message(0, "  AIControlled: ArrgoRange: %1.0f  AssistRange: %1.0f", this->GetArrgoRange(), this->GetAssistRange());
+			client->Message(0, "  AIControlled: AggroRange: %1.0f  AssistRange: %1.0f", this->GetAggroRange(), this->GetAssistRange());
 		}
 	}
 }
@@ -1818,6 +1819,7 @@ int8 Mob::GetClassLevelFactor(){
 }
 
 float Mob::Dist(const Mob &other) {
+	_ZP(Mob_Dist);
 	float xDiff = other.x_pos - x_pos;
 	float yDiff = other.y_pos - y_pos;
 	float zDiff = other.z_pos - z_pos;
@@ -1828,6 +1830,7 @@ float Mob::Dist(const Mob &other) {
 }
 
 float Mob::DistNoZ(const Mob &other) {
+	_ZP(Mob_DistNoZ);
 	float xDiff = other.x_pos - x_pos;
 	float yDiff = other.y_pos - y_pos;
 	
@@ -1836,6 +1839,7 @@ float Mob::DistNoZ(const Mob &other) {
 }
 
 float Mob::DistNoRoot(const Mob &other) {
+	_ZP(Mob_DistNoRoot);
 	float xDiff = other.x_pos - x_pos;
 	float yDiff = other.y_pos - y_pos;
 	float zDiff = other.z_pos - z_pos;
@@ -1846,6 +1850,7 @@ float Mob::DistNoRoot(const Mob &other) {
 }
 
 float Mob::DistNoRootNoZ(const Mob &other) {
+	_ZP(Mob_DistNoRootNoZ);
 	float xDiff = other.x_pos - x_pos;
 	float yDiff = other.y_pos - y_pos;
 

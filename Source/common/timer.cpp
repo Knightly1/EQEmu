@@ -75,6 +75,7 @@ int gettimeofday (timeval *tp, ...)
 /* This function checks if the timer triggered */
 bool Timer::Check(bool iReset)
 {
+	_CP(Timer_Check);
     if (this==0) { 
 		cerr << "Null timer during ->Check()!?\n"; 
 		return true; 

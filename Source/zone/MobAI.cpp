@@ -65,6 +65,7 @@ const int SpellType_DOT=256;
 #endif
 
 bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
+	_ZP(Mob_AICastSpell);
 // Faction isnt checked here, it's assumed you wouldnt pass a spell type you wouldnt want casted on the mob
 	if (!tar)
 		return false;
@@ -151,6 +152,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 						if (
 							(spells[AIspells[i].spellid].targettype == ST_Target || tar == this)
 							&& tar->DontBuffMeBefore() < Timer::GetCurrentTime()
+							&& !tar->IsImmuneToSpell(AIspells[i].spellid, this)
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
 							AIDoSpellCast(i, tar, mana_cost, &tar->DontBuffMeBefore());
@@ -252,38 +254,53 @@ void Mob::AIDoSpellCast(int8 i, Mob* tar, sint32 mana_cost, int32* oDontDoAgainB
 }
 
 bool EntityList::AICheckCloseSpells(Mob* caster, int8 iChance, float iRange, int16 iSpellTypes) {
+	_ZP(EntityList_AICheckCloseSpells);
 	if (iChance < 100) {
-		int8 tmp = rand()%100;
+		int8 tmp = MakeRandomInt(0, 99);
 		if (tmp >= iChance)
 			return false;
 	}
-	iRange *= iRange;
-    LinkedListIterator<Mob*> iterator(mob_list);
-	iterator.Reset();
-    while(iterator.MoreElements()) {
-		Mob* mob = iterator.GetData();
-		if (mob != caster  
-			#ifndef GUILDWARS
-			&& !( mob->IsClient() )
-			#endif
-			&&
-			((mob->IsNPC() && mob->GetFactionCon(caster) <= FACTION_AMIABLE)
-#ifdef GUILDWARS
-			|| (mob->IsClient() && ((mob->GetLevel()-caster->GetLevel()) >= -10) && mob->GetFactionCon(caster) <= FACTION_KINDLY)
-#endif
-			))
-			{
-			if (mob->DistNoRoot(*caster) <= iRange) {
-				//they are in range, and we like them, now make sure
-				//that we can see them...
-				if(caster->CheckLosFN(mob)) {
-					// we have a winner!
-					if (caster->AICastSpell(mob, 100, iSpellTypes))
-						return true;
-				}
-			}
+	if (caster->GetPrimaryFaction() == 0 )
+		return(false); // well, if we dont have a faction set, we're gonna be indiff to everybody
+
+	float iRange2 = iRange*iRange;
+	
+	float t1, t2, t3;
+	
+	//Only iterate through NPCs
+    LinkedListIterator<NPC*> iterator(npc_list);
+    for(iterator.Reset(); iterator.MoreElements(); iterator.Advance()) {
+		NPC* mob = iterator.GetData();
+		
+		//Since >90% of mobs will always be out of range, try to
+		//catch them with simple bounding box checks first. These
+		//checks are about 6X faster than DistNoRoot on my athlon 1Ghz
+		t1 = mob->GetX() - caster->GetX();
+		t2 = mob->GetY() - caster->GetY();
+		t3 = mob->GetZ() - caster->GetZ();
+		//cheap ABS()
+		if(t1 < 0)
+			t1 = 0 - t1;
+		if(t2 < 0)
+			t2 = 0 - t2;
+		if(t3 < 0)
+			t3 = 0 - t3;
+		if (   t1 > iRange
+			|| t2 > iRange
+			|| t3 > iRange
+			|| mob->DistNoRoot(*caster) > iRange2
+			|| mob->GetFactionCon(caster) <= FACTION_AMIABLE
+		) {
+			continue;
 		}
-		iterator.Advance();
+		
+		//they are in range, and we like them, now make sure
+		//that we can see them...
+		if(caster->CheckLosFN(mob)) {
+			// we have a winner!
+			if (caster->AICastSpell(mob, 100, iSpellTypes))
+				return true;
+		}
 	}
 	return false;
 }
@@ -343,14 +360,19 @@ void Mob::AI_Start(int32 iMoveDelay) {
 	AImovement_timer = new Timer(AImovement_duration);
 	AIautocastspell_timer = new Timer(750);
 	AIautocastspell_timer->Start(RandomTimer(0, 15000), false);
-	AIscanarea_timer = new Timer(500);
+	AIscanarea_timer = new Timer(AIscanarea_delay);
+#ifdef REVERSE_AGGRO
+	if(IsNPC() && !CastToNPC()->WillAggroNPCs())
+		AIscanarea_timer->Disable();
+#endif
+	
 	for (int i=0; i<MAX_AISPELLS; i++) {
 		AIspells[i].spellid = 0xFFFF;
 		AIspells[i].type = 0;
 	}
 
-	if (GetArrgoRange() == 0)
-		pArrgoRange = 70;
+	if (GetAggroRange() == 0)
+		pAggroRange = 70;
 	if (GetAssistRange() == 0)
 		pAssistRange = 70;
 	hate_list.Wipe();
@@ -445,7 +467,8 @@ void Client::AI_Stop() {
 }
 
 void Mob::AI_Process() {
-
+	_ZP(Mob_AI_Process);
+	
 	sint16 gridno; 
 
 
@@ -485,6 +508,7 @@ void Mob::AI_Process() {
 	
 	if (IsEngaged()) 
 	{
+		_ZP(Mob_AI_Process_engaged);
 		if (IsRooted())
 			SetTarget(hate_list.GetClosest(this));
 		else
@@ -670,6 +694,7 @@ void Mob::AI_Process() {
 		}
 		if (AIautocastspell_timer->Check()) 
 		{
+			_ZP(Mob_AI_Process_autocast);
 #if MobAI_DEBUG_Spells >= 25
 			cout << "Non-Engaged autocast check triggered: " << this->GetName() << endl;
 #endif
@@ -679,7 +704,8 @@ void Mob::AI_Process() {
 		}
 		else if (AIscanarea_timer->Check()) 
 		{
-			Mob* tmptar = entity_list.AICheckCloseArrgo(this, GetArrgoRange(), GetAssistRange());
+			_ZP(Mob_AI_Process_scanarea);
+			Mob* tmptar = entity_list.AICheckCloseAggro(this, GetAggroRange(), GetAssistRange());
 			if (tmptar) 
 			{
 				AddToHateList(tmptar);
@@ -687,9 +713,11 @@ void Mob::AI_Process() {
 		}
 		else if (AImovement_timer->Check() && !IsRooted()) 
 		{
+			_ZP(Mob_AI_Process_move);
 			SetRunAnimSpeed(0);
 			if (GetOwnerID()) 
 			{
+				_ZP(Mob_AI_Process_pet);
 				// we're a pet, do as we're told
 				switch (pStandingPetOrder) 
 				{
@@ -808,6 +836,7 @@ void Mob::AI_Process() {
 					}
 					if (roambox_distance) 
 					{
+						_ZP(Mob_AI_Process_roambox);
 						if (
 							roambox_movingto_x > roambox_max_x
 							|| roambox_movingto_x < roambox_min_x
@@ -846,6 +875,7 @@ void Mob::AI_Process() {
 					}
 					else if (roamer) 
 					{	
+						_ZP(Mob_AI_Process_roamer);
 						if (AIwalking_timer->Check())
 						{
 							movetimercompleted=true;
@@ -896,6 +926,7 @@ void Mob::AI_Process() {
                   } 
                   else if (!(GetGuardX() == 0 && GetGuardY() == 0 && GetGuardZ() == 0)) 
                   { 
+						_ZP(Mob_AI_Process_guard);
                      if (!CalculateNewPosition2(GetGuardX(), GetGuardY(), GetGuardZ(), GetWalkspeed())) 
                      { 
 						if(moved)

@@ -165,7 +165,9 @@ FACTION_VALUE NPC::GetFactionCon(Mob* iOther) {
 #if FACTIONS_DEBUG >= 20
 	LogFile->write(EQEMuLog::Debug, "called N $s::GetFactionCon(%s)", GetName(), iOther->GetName());
 #endif
-
+	
+	_ZP(NPC_GetFactionCon);
+	
 	iOther = iOther->GetOwnerOrSelf();
 	int primaryFaction= iOther->GetPrimaryFaction();
 
@@ -205,6 +207,20 @@ FACTION_VALUE NPC::CheckNPCFactionAlly(sint32 other_faction) {
 		fac_iteratorcur.Advance();
 	}
 	return FACTION_INDIFFERENT;
+}
+
+
+bool NPC::IsFactionListAlly(uint32 other_faction) {
+	LinkedListIterator<struct NPCFaction*> fac_iteratorcur(faction_list);
+	fac_iteratorcur.Reset();
+
+	while(fac_iteratorcur.MoreElements()) {
+		if (fac_iteratorcur.GetData()->factionID == other_faction && fac_iteratorcur.GetData()->value_mod <= 0)
+			return(true);
+
+		fac_iteratorcur.Advance();
+	}
+	return(false);
 }
 
 FACTION_VALUE Mob::GetSpecialFactionCon(Mob* iOther) {
@@ -346,6 +362,8 @@ FACTION_VALUE Client::GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race,
 #if FACTIONS_DEBUG >= 5
 	LogFile->write(EQEMuLog::Debug, "called %s::GetFactionLevel(%lu, %lu, %lu, %lu, %lu, %lu, %s)", GetName(), char_id, npc_id, p_race, p_class, p_deity, pFaction, tnpc?tnpc->GetName():"(NULL)");
 #endif
+	
+	_ZP(Client_GetFactionLevel);
 
 	if (pFaction < 0)
 		return GetSpecialFactionCon(tnpc);
@@ -429,6 +447,7 @@ FACTION_VALUE Client::GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race,
 //o--------------------------------------------------------------
 void  Client::SetFactionLevel(int32 char_id, int32 npc_id, int8 char_class, int8 char_race, int8 char_deity)
 {
+	_ZP(Client_SetFactionLevel);
 	sint32 faction_id[MAX_NPC_FACTIONS]={ 0,0,0,0,0,0,0,0,0,0 };
 	sint32 npc_value[MAX_NPC_FACTIONS]={ 0,0,0,0,0,0,0,0,0,0 };
 	sint32 tmpValue;
@@ -492,6 +511,7 @@ void  Client::SetFactionLevel(int32 char_id, int32 npc_id, int8 char_class, int8
 
 void  Client::SetFactionLevel2(int32 char_id, sint32 faction_id, int8 char_class, int8 char_race, int8 char_deity, sint32 value)
 {
+	_ZP(Client_SetFactionLevel2);
 //	sint32 tmpValue;
 	sint32 current_value;
 //	FactionMods fm;

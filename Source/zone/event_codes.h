@@ -8,5 +8,6 @@
 #define EVENT_TIMER     8
 #define EVENT_SIGNAL    9
 #define EVENT_HP		10
-#define  EVENT_AGGRO    11
-
+#define EVENT_AGGRO		11
+#define EVENT_ENTER		12
+#define EVENT_EXIT		13

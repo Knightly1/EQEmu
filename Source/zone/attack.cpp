@@ -571,6 +571,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 
 bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 {
+	_ZP(Client_Attack);
 	//SetAttackTimer();
 	if (IsCasting() && GetClass() != BARD)
 		return false; // Only bards can attack while casting
@@ -1168,6 +1169,8 @@ void Client::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill
 
 void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 {
+	if(dead)
+		return;	//cant die more than once...
 	int exploss;
 
 	LogFile->write(EQEMuLog::Debug, "%s::Death(%i)", GetName(), damage);
@@ -1476,6 +1479,7 @@ void Client::MakeCorpse(int32 exploss)
 
 bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base function has changed prototype, need to update overloaded version
 {
+	_ZP(NPC_Attack);
 	int damage = 0;
 	
 	if (!other)
@@ -2037,7 +2041,6 @@ bool Mob::ChangeHP(Mob* other, sint32 amount, int16 spell_id, sint8 buffslot, bo
 	if (IsCorpse())
 		return false;
 
-LogFile->write(EQEMuLog::Debug, "%s damaged by %s for %d, spell=%d, tic=%d", GetName(), other->GetName(), amount, spell_id, iBuffTic);
 	if (amount < 0)
 	{
 		// cut all PVP spell damage to 2/3 -solar

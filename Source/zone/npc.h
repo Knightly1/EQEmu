@@ -35,6 +35,15 @@ extern Database database;
 
 //typedef LinkedList<Item_Struct*> ItemList;
 
+typedef struct {
+	float min_x;
+	float max_x;
+	float min_y;
+	float max_y;
+	float min_z;
+	float max_z;
+} NPCProximity;
+
 class NPC : public Mob
 {
 public:
@@ -166,8 +175,12 @@ public:
 	void	AddLootDrop(const Item_Struct*dbitem, ItemList* itemlistconst, sint8 charges, bool equipit, bool wearchange = false);
 	void	DoClassAttacks(Mob *target);
 	
+	inline bool WillAggroNPCs() const { return(npc_aggro); }
+	
 	ItemList*	itemlist; //kathgar - why is this public?  Doing other things or I would check the code
-
+	
+	NPCProximity* proximity;
+	
 	bool	rangerstance;
 
 	Spawn2*	respawn2;
@@ -191,6 +204,7 @@ protected:
     Timer	swarm_timer;
     Timer	classattack_timer;
     Timer	taunt_timer;		//for pet taunting
+    Timer	assist_timer;		//ask for help from nearby mobs
 
 	int		attack_event;
 
@@ -212,7 +226,9 @@ protected:
 
 	int16	pet_spell_id;
 	bool	taunting;
-	
+
+	bool npc_aggro;
+		
 private:
 #ifdef GUILDWARS
 	int32	guildlocationid;

@@ -87,16 +87,18 @@ extern PetitionList petition_list;
 extern EntityList entity_list;
 
 bool Client::Process() {
+	_ZP(Client_Process);
 	adverrorinfo = 1;
 	bool ret = true;
 	//bool throughpacket = true;
 	if (Connected() || IsLD())
 	{
-        // try to send all packets that weren't send before
+        // try to send all packets that weren't sent before
 		if(!IsLD() && zoneinpacket_timer.Check()){
-			zoneinpacket_timer.Disable();
+//			zoneinpacket_timer.Start(1000);		//to decrease latency for these packets... no idea on a good value
 			SendAllPackets();
 		}
+		
 		if(dead)
 			SetHP(-100);
 		if(dead && this->client_state == CLIENT_LINKDEAD) {
@@ -523,6 +525,13 @@ bool Client::Process() {
 		}
 	}
 	
+#ifdef REVERSE_AGGRO
+	//At this point, we are still connected, everything important has taken
+	//place, now check to see if anybody wants to aggro us.
+	if(scanarea_timer.Check()) {
+		entity_list.CheckClientAggro(this);
+	}
+#endif	
 	
 	if (client_state != CLIENT_LINKDEAD && (client_state == CLIENT_ERROR || client_state == DISCONNECTED || client_state == CLIENT_KICKED || !eqnc->CheckActive())) {
 		if (!zoning) {

@@ -329,6 +329,8 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 	if(GetID()==0)
 		return true;
 	
+	_ZP(Mob_CalculateNewPosition2);
+	
 	if ((x_pos-x == 0) && (y_pos-y == 0)) {//spawn is at target coords
 		if(z_pos-z != 0) {
 			z_pos = z;
@@ -462,6 +464,8 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 bool Mob::CalculateNewPosition(float x, float y, float z, float speed, bool checkZ) {
 	if(GetID()==0)
 		return true;
+	
+	_ZP(Mob_CalculateNewPosition);
 	
     float nx = x_pos;
     float ny = y_pos;

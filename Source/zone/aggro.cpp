@@ -27,203 +27,192 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 
 //#define LOSDEBUG 6
 
-Mob* EntityList::AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssistRange) {
-	if (!sender || !sender->IsNPC())
-		return 0;
+//look around a client for things which might aggro the client.
+void EntityList::CheckClientAggro(Client *around) {
+	_ZP(EntityList_CheckClientAggro);
+
 	LinkedListIterator<Mob*> iterator(mob_list);
+	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance()) {
+		_ZP(EntityList_CheckClientAggro_Loop);
+		Mob* mob = iterator.GetData();
+		if(mob->IsClient())	//also ensures that mob != around
+			continue;
+		
+		//there are prolly other constraints we need to check here...
+		//or that could generally increase our speed...
+		if(mob->IsEngaged())
+			continue;
+		
+		if(mob->CheckWillAggro(around)) {
+			mob->AddToHateList(around);
+		}
+	}
+}
+
+bool Mob::CheckWillAggro(Mob *mob) {
+	_ZP(Mob_CheckWillAggro);
+	
+	float iAggroRange = GetAggroRange();
+	
+	// Check If it's invisible and if we can see invis
+	// Check if it's a client, and that the client is connected and not linkdead,
+	//   and that the client isn't Playing an NPC, with thier gm flag on
+	// Check if it's not a Interactive NPC
+	// Trumpcard: The 1st 3 checks are low cost calcs to filter out unnessecary distance checks. Leave them at the beginning, they are the most likely occurence.
+	// Image: I moved this up by itself above faction and distance checks because if one of these return true, theres no reason to go through the other information
+	
+	float t1, t2, t3;
+	t1 = mob->GetX() - GetX();
+	t2 = mob->GetY() - GetY();
+	t3 = mob->GetZ() - GetZ();
+	//Cheap ABS()
+	if(t1 < 0)
+		t1 = 0 - t1;
+	if(t2 < 0)
+		t2 = 0 - t2;
+	if(t3 < 0)
+		t3 = 0 - t3;
+	if(   ( t1 > iAggroRange)
+	   || ( t2 > iAggroRange)
+	   || ( t3 > iAggroRange)
+	   ||(mob->IsInvisible(this))
+	   || (mob->IsClient() &&
+	       (!mob->CastToClient()->Connected()
+	  	    || mob->CastToClient()->IsLD()
+	        || mob->CastToClient()->IsBecomeNPC()
+	        || mob->CastToClient()->GetGM()
+	       )   
+	   ))
+	{
+		return(false);
+	}
+
+	//im not sure I understand this..
+	//if I have an owner and it is not this mob, then I cannot
+	//aggro this mob...???
+	if(GetOwner() != 0 && mob != GetOwner()) {
+		return(false);
+	}
+
+	float dist2  = mob->DistNoRoot(*this);
+	float iAggroRange2 = iAggroRange*iAggroRange;
+
+	if( dist2 > iAggroRange2 ) {
+		// Skip it, out of range
+		return(false);
+	}
+	
+	//Image: Get their current target and faction value now that its required
+	FACTION_VALUE fv = mob->GetFactionCon(this);
+	
+	// Make sure they're still in the zone
+	// Are they in range?
+	// Are they kos?
+	// Are we stupid or are they green
+	// and they don't have thier gm flag on
+	if
+	(
+	//old InZone check taken care of above by !mob->CastToClient()->Connected()
+	(
+		(
+			fv == FACTION_SCOWLS
+			||
+			(mob->GetPrimaryFaction() != GetPrimaryFaction() && mob->GetPrimaryFaction() == -4 && GetOwner() == NULL)
+			||
+			(
+				fv == FACTION_THREATENLY
+				&& MakeRandomInt(0,99) < THREATENLY_ARRGO_CHANCE
+			)
+		)
+	) //Image: Do not tamper with this random code, it is optimized!
+	&&
+	(
+		( GetINT() <= 75 )
+		||( mob->GetLevelCon(GetLevel()) != CON_GREEN )
+	)
+	)
+	{
+		//FatherNiwtit: make sure we can see them. last since it is very expensive
+		if(CheckLosFN(mob)) {
+
+		// Aggro
+		#if EQDEBUG>=5
+			LogFile->write(EQEMuLog::Debug, "Check aggro for %s target %s.", GetName(), mob->GetName());
+		#endif
+		return(true);
+	}
+	  }
+#if EQDEBUG >= 6
+	  cout<<"Is In zone?:"<<mob->InZone()<<endl;
+	  cout<<"Dist^2:"<<dist2<<endl;
+	  cout<<"Range^2:"<<iAggroRange2<<endl;
+	  cout<<"Faction:"<<fv<<endl;
+	  cout<<"Int:"<<sender->GetINT()<<endl;
+	  cout<<"Con:"<<sender->GetLevelCon(mob->GetLevel())<<endl;
+#endif		
+	return(false);
+}
+
+Mob* EntityList::AICheckCloseAggro(Mob* sender, float iAggroRange, float iAssistRange) {
+	if (!sender || !sender->IsNPC())
+		return(NULL);
+	_ZP(EntityList_AICheckCloseAggro);
+
+#ifdef REVERSE_AGGRO
+	//with reverse aggro, npc->client is checked elsewhere, no need to check again
+	LinkedListIterator<NPC*> iterator(npc_list);
+#else
+	LinkedListIterator<Mob*> iterator(mob_list);
+#endif
 	iterator.Reset();
-	float dist2;
-	float iArrgoRange2 = iArrgoRange*iArrgoRange;
-	float iAssistRange2 = iAssistRange*iAssistRange;
 	//float distZ;
 	while(iterator.MoreElements()) {
 		Mob* mob = iterator.GetData();
-
-			// Check If it's invisible and if we can see invis
-			// Check if it's a client, and that the client is connected and not linkdead,
-			//   and that the client isn't Playing an NPC, with thier gm flag on
-			// Check if it's not a Interactive NPC
-			// Trumpcard: The 1st 3 checks are low cost calcs to filter out unnessecary distance checks. Leave them at the beginning, they are the most likely occurence.
-			// Image: I moved this up by itself above faction and distance checks because if one of these return true, theres no reason to go through the other information
-			float t1, t2, t3;
-			t1 = mob->GetX() - sender->GetX();
-			t2 = mob->GetY() - sender->GetY();
-			t3 = mob->GetZ() - sender->GetZ();
-			if(t1 < 0)
-				t1 = 0 - t1;
-			if(t2 < 0)
-				t2 = 0 - t2;
-			if(t3 < 0)
-				t3 = 0 - t3;
-			if(   ( t1 > iArrgoRange)
-			   || ( t2 > iArrgoRange)
-			   || ( t3 > iArrgoRange)
-			   ||(mob->IsInvisible(sender))
-			   || (mob->IsClient() &&
-			       (!mob->CastToClient()->Connected()
-			  	    || mob->CastToClient()->IsLD()
-			        || mob->CastToClient()->IsBecomeNPC()
-			        || mob->CastToClient()->GetGM())   
-			   || mob == sender  
-			   ))
-			{
-				iterator.Advance();
-				continue;
-			}
-
-			if(sender->GetOwner() != 0 && mob != sender->GetOwner())
-			{
-				iterator.Advance();
-				continue;
-			}
-			
-			dist2  = mob->DistNoRoot(*sender);
-			//distZ = dist - mob->DistNoZ(*sender);
-	
-			// TC - removing z checks.  Not implemented correctly. distZ will never be less than -10.
-			//if( ( dist > (iAssistRange*2) && dist > iArrgoRange )
-            //   || ( (distZ <= 0 && distZ < (Z_AGGRO-Z_AGGRO-Z_AGGRO)) 
-			//   || (distZ >= 0 && distZ > (Z_AGGRO)) )
-            //   )
-
-			if(  ( dist2 > (iAssistRange2) ) &&  (dist2 > iArrgoRange2)  )
-			{	// Skip it, out of range
-                     //if (   EQDEBUG >= 5
-                     //    && mob->IsClient()
-                     //    && mob->CastToClient()->Connected()
-                     //    && !mob->CastToClient()->IsLD()
-                     //    && dist <= iArrgoRange
-                     //   )
-                     //     LogFile->write(EQEMuLog::Debug, "Check aggro for %s skipping client %s.", sender->GetName(), mob->GetName());
-                     //if (   EQDEBUG >= 5
-                     //    && mob->IsNPC()
-                     //    && mob->CastToNPC()->IsInteractive()
-                     //   )
-                     //     LogFile->write(EQEMuLog::Debug, "Check aggro for %s skipping IPC %s.", sender->GetName(), mob->GetName());
-			iterator.Advance();
-			continue;
+		
+		if(sender->CheckWillAggro(mob)) {
+			return(mob);
 		}
-		//Image: Get their current target and faction value now that its required
-		Mob* mobTarget = mob->GetTarget();
-		FACTION_VALUE fv = mob->GetFactionCon(sender);
-        // Assist check
-        // Check faction amiable or better (friend)
-        // Is friend engaged
-        // Does friend have a target
-        // Is friend in range
-        // Are we stupid, or is friends target not green
-        // Is friends target in range
-
-// solar: i broke these ifs out all ridiculous for debugging, compress em
-// if you want but make sure not to take out any parens without understanding
-// the order of evaluation completely
-	if
-		(
-			mobTarget
-			&&
-			(
-				( fv <= FACTION_AMIABLE )
-			)
-			&&
-			(
-				( mob->IsNPC() && mob->IsEngaged() )
-			)
-			&&
-				dist2 <= iAssistRange2
-			&&
-			( 
-				( mob->GetINT() <= 100 )
-				|| ( mobTarget->GetLevelCon(sender->GetLevel()) != CON_GREEN )
-			)
-		)
-		{
-			// Had an if statement to check if it wasn't a GM but theres no reason, we check that above
-			// Also had an interactive npc check but I believe these are no longer used, if required can be put above
-			// Assist friend
-			
-			//FatherNiwtit: make sure we can see them. last since it is very expensive
-			if(sender->CheckLosFN(mobTarget)) {
-			
-#if EQDEBUG>=5
-				LogFile->write(EQEMuLog::Debug, "Check aggro for %s assisting %s, target %s.", sender->GetName(), mob->GetName(), mobTarget->GetName());
-#endif
-				return mobTarget;
-			}
-		}
-		// Make sure they're still in the zone
-		// Are they in range?
-		// Are they kos?
-		// Are we stupid or are they green
-		// and they don't have thier gm flag on
-		else if
-		(
-			mob->InZone()
-			&& (dist2 <= iArrgoRange2)
-			&&
-			(
-				(
-					fv == FACTION_SCOWLS
-					||
-					(mob->GetPrimaryFaction() != sender->GetPrimaryFaction() && mob->GetPrimaryFaction() == -4 && sender->GetOwner() == 0)
-					||
-					(
-						fv == FACTION_THREATENLY
-						&& (rand()%100) < THREATENLY_ARRGO_CHANCE
-					)
-				)
-			) //Image: Do not tamper with this random code, it is optimized!
-			&&
-			(
-				( sender->GetINT() <= 75 )
-				||( mob->GetLevelCon(sender->GetLevel()) != CON_GREEN )
-			)
-		)
-		{
-			//FatherNiwtit: make sure we can see them. last since it is very expensive
-			if(sender->CheckLosFN(mob)) {
-			
-			// Aggro
-#if EQDEBUG>=5
-				LogFile->write(EQEMuLog::Debug, "Check aggro for %s target %s.", sender->GetName(), mob->GetName());
-#endif			
-				return mob;
-			}
-	  }
-#if EQDEBUG >= 6
-		  cout<<"Is In zone?:"<<mob->InZone()<<endl;
-		  cout<<"Dist^2:"<<dist2<<endl;
-		  cout<<"Range^2:"<<iArrgoRange2<<endl;
-		  cout<<"Faction:"<<fv<<endl;
-		  cout<<"Int:"<<sender->GetINT()<<endl;
-		  cout<<"Con:"<<sender->GetLevelCon(mob->GetLevel())<<endl;
-#endif		
-
+		
 		iterator.Advance();
 	}
 	//LogFile->write(EQEMuLog::Debug, "Check aggro for %s no target.", sender->GetName());
-	return 0;
+	return(NULL);
 }
 
 void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
+	_ZP(EntityList_AIYellForHelp);
 	if(!sender || !attacker)
 		return;
 	if (sender->GetPrimaryFaction() == 0 )
 		return; // well, if we dont have a faction set, we're gonna be indiff to everybody
-	LinkedListIterator<Mob*> iterator(mob_list);
-	iterator.Reset();
-	while(iterator.MoreElements()) {
-		Mob* mob = iterator.GetData();
-		float mobDistance= mob->Dist(*sender);
+	
+	LinkedListIterator<NPC*> iterator(npc_list);
+	
+	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance()) {
+		NPC* mob = iterator.GetData();
+		float r = mob->GetAssistRange();
+		r = r * r;
+		float mobDistance= mob->DistNoRoot(*sender);
 
 		if (
 			mob != sender
 			&& mob != attacker
-			&& !mob->IsCorpse()
-			&& mob->IsAIControlled()
-			&& mobDistance <= mob->GetAssistRange()
+//			&& !mob->IsCorpse()
+//			&& mob->IsAIControlled()
+			&& mobDistance <= r
+			&& !mob->IsEngaged()
 			)
 		{
-			if(mob->CastToNPC()->GetPrimaryFaction()==sender->CastToNPC()->GetPrimaryFaction() && attacker->GetLevelCon(mob->GetLevel()) != CON_GREEN){//attacking someone on same faction
+			//if they are in range, make sure we are not green...
+			//then jump in if they are our friend
+			if(attacker->GetLevelCon(mob->GetLevel()) != CON_GREEN
+				&& (
+					//not sure if this primary check is needed, faction con might take care of it for us
+					mob->CastToNPC()->GetPrimaryFaction() == sender->CastToNPC()->GetPrimaryFaction()
+					|| mob->GetFactionCon(sender)<= FACTION_AMIABLE )
+			  ) {
+				//attacking someone on same faction
+				
 #if (EQDEBUG>=5) 
 				LogFile->write(EQEMuLog::Debug, "AIYellForHelp(\"%s\",\"%s\") %s attacking %s Dist %f Z %f", 
 					sender->GetName(), attacker->GetName(), mob->GetName(), attacker->GetName(), mobDistance, fabs(sender->GetZ()+mob->GetZ()));
@@ -234,7 +223,6 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 				}
 			}
 		}
-		iterator.Advance();
 	}
 }
 
@@ -878,7 +866,8 @@ bool Mob::CombatRange(Mob* other)
 		size_mod = 8;
 	if (other->GetSize() > size_mod)
 		size_mod = (sint32)other->GetSize();
-	if (DistNoZ(*other) <= size_mod*2)
+	size_mod *= size_mod * 4;
+	if (DistNoRootNoZ(*other) <= size_mod)
 		return true;
 	return false;
 }
@@ -1021,6 +1010,7 @@ bool Mob::CheckLosFN(Mob* other) {
 		return(false);
 #endif
 	}
+	_ZP(Mob_CheckLosFN);
 	
 	VERTEX myloc;
 	VERTEX oloc;

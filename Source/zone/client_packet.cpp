@@ -132,8 +132,6 @@ int Client::HandlePacket(const APPLAYER *app)
 					eqnc->SetDataRate(tmpDR);
 					break;
 				}
-				case OP_SendTributes:
-					break;
 				case OP_ZoneEntry: {
 					// Quagmire - Antighost code
 					// tmp var is so the search doesnt find this object
@@ -205,7 +203,7 @@ int Client::HandlePacket(const APPLAYER *app)
 				case OP_ReqClientSpawn: {
 					
 					//Send Tribute info
-					//SendTribute();
+					SendTribute();
 
 					APPLAYER* outapp = new APPLAYER;
 					
@@ -423,6 +421,13 @@ int Client::HandlePacket(const APPLAYER *app)
 					)
 					{
 						CheckIncreaseSkill(SENSE_HEADING, -20);
+					}
+					
+					if(proximity_timer.Check()) {
+						entity_list.ProcessMove(this, ppu->x_pos, ppu->y_pos, ppu->z_pos);
+						proximity_x = ppu->x_pos;
+						proximity_y = ppu->y_pos;
+						proximity_z = ppu->z_pos;
 					}
 
 					// Update internal state
@@ -4315,23 +4320,6 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					SendHPUpdate();
 					break;
 				}
-				case OP_StartTribute:{
-					if(app->size!=sizeof(StartTribute_Struct))
-						printf("Error in OP_StartTribute.  Expected size of: %i, but got: %i\n",sizeof(StartTribute_Struct),app->size);
-					else{
-						StartTribute_Struct* st = (StartTribute_Struct*)app->pBuffer;
-						Mob* tribmast=entity_list.GetMob(st->npc_id);
-						if(tribmast && tribmast->GetClass()==TRIBUTE_MASTER){
-							st->response=1;
-							QueuePacket(app);
-						}
-						else{
-							st->response=0;
-							QueuePacket(app);
-						}
-					}
-					break;
-				}
 				case OP_Damage: {
 					// Broadcast to other clients
 					CombatDamage_Struct* damage = (CombatDamage_Struct*)app->pBuffer;
@@ -4830,6 +4818,91 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						break;
 					}
 					Message(MT_Skills,"You did not find any traps close enough to disarm.");
+					break;
+				}
+				case OP_StartTribute:{
+					if(app->size != sizeof(StartTribute_Struct))
+						printf("Error in OP_StartTribute.  Expected size of: %i, but got: %i\n",sizeof(StartTribute_Struct),app->size);
+					else {
+						//Opens the tribute master window
+						StartTribute_Struct* st = (StartTribute_Struct*)app->pBuffer;
+						Mob* tribmast = entity_list.GetMob(st->tribute_master_id);
+						if(tribmast && tribmast->GetClass()==TRIBUTE_MASTER) {
+							st->response = 1;
+							QueuePacket(app);
+							tribute_master_id = st->tribute_master_id;
+							DoTributeUpdate();
+						} else {
+							st->response=0;
+							QueuePacket(app);
+						}
+					}
+					break;
+				}
+				case OP_TributeItem:{
+					//player donates an item...
+					if(app->size != sizeof(TributeItem_Struct))
+						printf("Error in OP_TributeItem.  Expected size of: %i, but got: %i\n",sizeof(StartTribute_Struct),app->size);
+					else {
+						TributeItem_Struct* t = (TributeItem_Struct*)app->pBuffer;
+						
+						//Dunno why we would need this 
+						tribute_master_id = t->tribute_master_id;
+						//Mob* tribmast = entity_list.GetMob(t->tribute_master_id);
+						
+						t->tribute_points = TributeItem(t->slot, t->quantity);
+						
+						QueuePacket(app);
+					}
+					break;
+				}
+				case OP_TributeMoney:{
+					//player donates money
+					if(app->size != sizeof(TributeMoney_Struct))
+						printf("Error in OP_TributeMoney.  Expected size of: %i, but got: %i\n",sizeof(StartTribute_Struct),app->size);
+					else {
+						TributeMoney_Struct* t = (TributeMoney_Struct*)app->pBuffer;
+						
+						//Dunno why we would need this 
+						tribute_master_id = t->tribute_master_id;
+						//Mob* tribmast = entity_list.GetMob(t->tribute_master_id);
+						
+						t->tribute_points = TributeMoney(t->platinum);
+						
+						QueuePacket(app);
+					}
+					break;
+				}
+				case OP_SelectTribute:{
+					if(app->size != sizeof(SelectTributeReq_Struct))
+						LogFile->write(EQEMuLog::Error, "Invalid size on OP_SelectTribute packet");
+					else {
+						SelectTributeReq_Struct *t = (SelectTributeReq_Struct *) app->pBuffer;
+						SendTributeDetails(t->client_id, t->tribute_id);
+					}
+					break;
+				}
+				case OP_TributeUpdate:{
+					//sent when the client changes their tribute settings...
+					if(app->size != sizeof(TributeInfo_Struct))
+						LogFile->write(EQEMuLog::Error, "Invalid size on OP_TributeUpdate packet");
+					else {
+						TributeInfo_Struct *t = (TributeInfo_Struct *) app->pBuffer;
+						ChangeTributeSettings(t);
+					}
+					break;
+				}
+				case OP_TributeToggle:{
+					if(app->size != sizeof(int32))
+						LogFile->write(EQEMuLog::Error, "Invalid size on OP_TributeToggle packet");
+					else {
+						int32 *val = (int32 *) app->pBuffer;
+						tribute_active = *val? true : false;
+						DoTributeUpdate();
+					}
+					break;
+				}
+				case OP_TributeNPC:{
 					break;
 				}
 				case OP_CrashDump:
@@ -5403,7 +5476,9 @@ void Client::CompleteConnect()
 	position_timer.Start();
 	SetDuelTarget(0);
 	SetDueling(false);
-		
+	
+	DoTributeUpdate();
+	
 	UpdateWho();
 //	database.UpdateTimersClientConnected(CharacterID());
 	client_state = CLIENT_CONNECTED;
@@ -5546,3 +5621,7 @@ void Client::CompleteConnect()
 		SendWearChange(x);
 	zoneinpacket_timer.Start();
 }
+
+
+
+

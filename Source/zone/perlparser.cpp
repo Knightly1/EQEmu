@@ -44,7 +44,6 @@ PerlXSParser::PerlXSParser() {
 }
 
 void PerlXSParser::map_funs() {
-LogFile->write(EQEMuLog::Error, "Starting XS Mapping...\n");
 
 	perl->eval(
 	"{"
@@ -84,7 +83,8 @@ void PerlXSParser::SendCommands(const char * pkgprefix, const char *event, int32
 {
 	if(!perl)
 		return;
-
+	_ZP(PerlXSParser_SendCommands);
+	
 	quest_manager.StartQuest(other, mob?mob->CastToClient():NULL);
 	
 	try {
@@ -125,6 +125,8 @@ void PerlXSParser::SendCommands(const char * pkgprefix, const char *event, int32
 		//todo: tweak this to be more accurate at deciding what to filter (we don't want to gag legit errors)
 		if(!strstr(err,"Undefined subroutine"))
 			LogFile->write(EQEMuLog::Status, "Script error: %s::%s - %s", pkgprefix, event, err);
+		
+		quest_manager.EndQuest();
 		return;
 	}
 	
@@ -1186,6 +1188,41 @@ XS(XS__ChooseRandom)
 	XSRETURN(1);	//return 1 element from the stack (ST(0))
 }
 
+XS(XS__set_proximity);
+XS(XS__set_proximity)
+{
+	dXSARGS;
+	if (items != 4 && items != 6)
+		Perl_croak(aTHX_ "Usage: set_proximity(minx, maxx, miny, maxy [, minz, maxz])");
+	
+	float minx = (float)SvNV(ST(0));
+	float maxx = (float)SvNV(ST(1));
+	float miny = (float)SvNV(ST(2));
+	float maxy = (float)SvNV(ST(3));
+
+	if(items == 4)
+		quest_manager.set_proximity(minx, maxx, miny, maxy);
+	else {
+		float minz = (float)SvNV(ST(4));
+		float maxz = (float)SvNV(ST(5));
+		quest_manager.set_proximity(minx, maxx, miny, maxy, minz, maxz);
+	}
+	
+	XSRETURN_EMPTY;
+}
+
+XS(XS__clear_proximity);
+XS(XS__clear_proximity)
+{
+	dXSARGS;
+	if (items != 0)
+		Perl_croak(aTHX_ "Usage: clear_proximity()");
+	
+	quest_manager.clear_proximity();
+	
+	XSRETURN_EMPTY;
+}
+
 
 /*
 
@@ -1276,6 +1313,8 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "respawn"), XS__respawn, file);
         newXS(strcpy(buf, "getItemName"), XS_qc_getItemName, file);
         newXS(strcpy(buf, "ChooseRandom"), XS__ChooseRandom, file);
+        newXS(strcpy(buf, "set_proximity"), XS__set_proximity, file);
+        newXS(strcpy(buf, "clear_proximity"), XS__clear_proximity, file);
 	XSRETURN_YES;
 }
 

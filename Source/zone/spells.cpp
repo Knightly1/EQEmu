@@ -177,6 +177,8 @@ void NPC::SpellProcess()
 void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 	sint32 cast_time, sint32 mana_cost, int32* oSpellWillFinish,int item_slot)
 {
+	_ZP(Mob_CastSpell);
+	
 	if
 	(
 		!IsValidSpell(spell_id) ||
@@ -251,6 +253,8 @@ void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
                     sint32 cast_time, sint32 mana_cost, int32* oSpellWillFinish, int item_slot)
 {
+	_ZP(Mob_DoCastSpell);
+	
 	Mob* pMob = NULL;
 	float mobDist;
 	sint32 orgcasttime;
@@ -760,6 +764,8 @@ void Mob::InterruptSpell(int16 message, int16 color, int16 spellid)
 // which figures out proper targets etc
 void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_used, int inventory_slot)
 {
+	_ZP(Mob_CastedSpellFinished);
+	
 	//watch timer for long ass reuse_time spells
 	if(IsClient() && slot != 10 && spells[spell_id].recast_time > 30000) {	// 10 is item
 		if(!CastToClient()->GetPTimers().Expired(pTimerSpellStart + spell_id)) {
@@ -1022,6 +1028,8 @@ Message(13, "Spell Finished returned false, interrupting.");
 // if you need to abort the casting, return false
 bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_used)
 {
+	_ZP(Mob_SpellFinished);
+	
 	APPLAYER *outapp = NULL;
 	int recourse_spell=0;
 	float range;
@@ -2325,6 +2333,7 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 // returns true if the spell should fail, false otherwise
 bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 {
+	_ZP(Mob_IsImmuneToSpell);
 	int effect_index;
 
 	assert(caster != NULL);

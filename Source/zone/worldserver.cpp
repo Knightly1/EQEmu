@@ -120,6 +120,9 @@ bool WorldServer::SendPacket(ServerPacket* pack) {
 void WorldServer::Process() {
 	if (this == 0)
 		return;
+	
+	_ZP(WorldServer_Process);
+	
 	if (!Connected()) {
 		pConnected = tcpc->Connected();
 		if (pConnected) {

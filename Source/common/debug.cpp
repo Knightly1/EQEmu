@@ -44,6 +44,7 @@ EQEMuLog::EQEMuLog() {
 #if EQDEBUG < 2
 	pLogStatus[Status] = 2;
 	pLogStatus[Error] = 2;
+	pLogStatus[Quest] = 2;
 #endif
 }
 

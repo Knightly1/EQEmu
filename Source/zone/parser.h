@@ -34,12 +34,6 @@ struct command_list {
 	int param_amount[17];
 };
 
-struct timers {
-	NPC*   mob;
-	string name;
-	Timer* Timer_;
-};
-
 
 class Parser
 {

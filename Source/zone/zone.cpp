@@ -79,9 +79,9 @@ Zone* zone = 0;
 volatile bool ZoneLoaded = false;
 extern Parser* parse;
 void CleanupLoadZoneState(int32 spawn2_count, ZSDump_Spawn2** spawn2_dump, ZSDump_NPC** npc_dump, ZSDump_NPC_Loot** npcloot_dump, NPCType** gmspawntype_dump, Spawn2*** spawn2_loaded, NPC*** npc_loaded, MYSQL_RES** result);
-extern std::list<timers*> TimerList;
 
 bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
+	_ZP(Zone_Bootup);
 	const char* zonename = database.GetZoneName(iZoneID);
 	
 	if (iZoneID == 0 || zonename == 0)
@@ -746,6 +746,7 @@ int32 Zone::CountAuth() {
 
 bool Zone::Process() {
 	LockMutex lock(&MZoneLock);
+	_ZP(Zone_Process);
 	
 	if(spawn2_timer.Check()) {
 		LinkedListIterator<Spawn2*> iterator(spawn2_list);
@@ -759,18 +760,6 @@ bool Zone::Process() {
 				iterator.RemoveCurrent();
 			}
 		}
-	}
-	list<timers*>::iterator iterator1 = TimerList.begin();
-	timers*p=0;
-	while (iterator1 != TimerList.end())
-	{
-		p=*iterator1;
-		if (p && p->Timer_->Enabled() && p->Timer_->Check())
-		{
-			if (p->mob)
-				parse->Event(EVENT_TIMER,p->mob->GetNPCTypeID(),p->name.c_str(),p->mob, NULL);			
-		}
-		iterator1++;
 	}
 	if(!staticzone) {
 		if (autoshutdown_timer.Check()) {

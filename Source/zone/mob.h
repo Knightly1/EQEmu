@@ -154,7 +154,7 @@ struct StatBonuses {
 	int		ReverseDamageShield; // this is damage done to the mob when it attacks
 	int		movementspeed;
 	sint8		haste;
-	float	ArrgoRange; // when calculate just replace original value with this
+	float	AggroRange; // when calculate just replace original value with this
 	float	AssistRange;
 	int8	skillmod[HIGHEST_SKILL];
 	int		effective_casting_level;
@@ -207,8 +207,8 @@ typedef struct
 } tProc;
 
 struct Shielders_Struct {
-int32   shielder_id;
-int16   shielder_bonus;
+	int32   shielder_id;
+	int16   shielder_bonus;
 };
 
 enum {	//special attack codes
@@ -243,6 +243,8 @@ enum {	//type arguments to DoAnim
 	animEagleStrike			= 47,
 	
 };
+
+class EGNode;
 
 #define MAX_AISPELLS 16
 class Mob : public Entity
@@ -666,8 +668,8 @@ bool logpos;
     inline const float&	GetSpawnY() { return spawn_y; }
     inline const float&	GetSpawnZ() { return spawn_z; }
     inline const float&	GetSpawnHeading() { return spawn_heading; }
-	inline const float& GetArrgoRange() { return (spellbonuses.ArrgoRange == -1) ? pArrgoRange : spellbonuses.ArrgoRange; }
-	inline const float& GetAssistRange() { return (spellbonuses.AssistRange == -1) ? pAssistRange : spellbonuses.AssistRange; }
+	inline const float GetAggroRange() { return (spellbonuses.AggroRange == -1) ? pAggroRange : spellbonuses.AggroRange; }
+	inline const float GetAssistRange() { return (spellbonuses.AssistRange == -1) ? pAssistRange : spellbonuses.AssistRange; }
     void				SaveGuardSpot(bool iClearGuardSpot = false);
     void				SaveSpawnSpot();
 	
@@ -688,7 +690,7 @@ bool logpos;
 	Mob*				GetHateTop()  {return hate_list.GetTop();}
 	Mob*				GetHateDamageTop(Mob* other)  {return hate_list.GetDamageTop(other);}
 	Mob*				GetHateRandom()  {return hate_list.GetRandom();}
-	bool				IsEngaged()   {return (hate_list.GetTop() == 0) ? false:true; }
+	bool				IsEngaged()   {return(!hate_list.IsEmpty()); }
 	bool				HateSummon();
 	void				FaceTarget(Mob* MobToFace = 0, bool update = false);
 	void				SetHeading(float iHeading) { if (heading != iHeading) { pLastChange = Timer::GetCurrentTime(); heading = iHeading; } }
@@ -722,6 +724,7 @@ bool logpos;
 	inline float GetSpellZ() {return spell_z;}
 	inline bool	IsGrouped()	{ return isgrouped; } //Why have an accessor for a public variable?
 	
+	bool CheckWillAggro(Mob *mob);
 	
 	sint16	GetResist(int8 type);
 	void	StopSong();
@@ -740,6 +743,8 @@ bool logpos;
 	int CalcSpellEffectValue_formula(int formula, int base, int max, int caster_level, int16 spell_id);
 	int CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, int caster_level2);
 
+	inline EGNode *GetEGNode() { return(_egnode); }
+	inline void SetEGNode(EGNode *s) { _egnode = s; }
 	
 	
 	bool	isgrouped; //These meant to be private?
@@ -909,7 +914,7 @@ protected:
     float spawn_x, spawn_y, spawn_z, spawn_heading;
 	int32	minLastFightingDelayMoving;
 	int32	maxLastFightingDelayMoving;
-	float	pArrgoRange;
+	float	pAggroRange;
 	float	pAssistRange;
 	Timer*	AIthink_timer;
 	Timer*	AImovement_timer;
@@ -971,6 +976,8 @@ protected:
 	Mob*    bindwound_target;
 	// hp event
 	int nexthpevent;
+
+	EGNode *_egnode;	//the EG node we are in
 };
 
 // All data associated with a single trade

@@ -446,6 +446,7 @@ public:
 	int32	CountAAs();
 	void	LoadAAs(AA_List* load);
 	void	RetrieveAALevels(SendAA_Struct* aa_struct);
+	bool	LoadTributes();
 
 	bool	SetLSAdmin(int32 account_id, int8 in_status);
 	void	FindAccounts(char* whom, Client* from);

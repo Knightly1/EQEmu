@@ -45,15 +45,17 @@ Core Zone features
 #ifdef EMBPERL
 //Enable the new XS based perl parser
 #define EMBPERL_XS
+
 //enable classes in the new XS based parser
 //#define EMBPERL_XS_CLASSES
+
 //enable IO capture and transmission to in game clients
 #define EMBPERL_IO_CAPTURE
-#endif
 
-//enable functionality to send log message to the client
-//it still needs to be enabled with the #logs command
-#define CLIENT_LOGS
+//enable perl-based in-game command, pretty useless without EMBPERL_XS_CLASSES
+#define EMBPERL_COMMANDS
+
+#endif
 
 /*
 
@@ -105,6 +107,19 @@ Zone extensions and features
 //Uncomment to enable map based fear pathing
 //#define ENABLE_FEAR_PATHING 1
 
+//enable functionality to send log message to the client
+//it still needs to be enabled with the #logs command
+#define CLIENT_LOGS
+
+//uncomment to print warnings about commands with 0 status...
+//#define COMMANDS_WARNINGS
+
+//uncomment to allow perl commands to override compiled commands
+#define COMMANDS_PERL_OVERRIDE
+
+//New aggro system to reduce overhead.
+#define REVERSE_AGGRO
+
 /*
 
 Zone Numerical configuration
@@ -142,9 +157,13 @@ enum {	//various hard caps
 	eqHPRegenItemCap = 15
 };
 
-enum {	//timer settings
+enum {	//timer settings, all in milliseconds
 	AImovement_duration = 100,
-	AIthink_duration = 50
+	AIthink_duration = 50,
+	AIscanarea_delay = 500,
+	AIClientScanarea_delay = 750,	//used in REVERSE_AGGRO
+	AIassistcheck_delay = 3000,		//now often a fighting NPC will yell for help
+	ClientProximity_interval = 1000
 };
 	
 
@@ -188,8 +207,27 @@ enum {	//timer settings
 // max factions per npc faction list
 #define MAX_NPC_FACTIONS 20
 
+//value caps
 #define MAX_FACTION	 1500
 #define MIN_FACTION -1500
+
+
+/*
+
+Developer configuration
+
+*/
+
+#ifdef EQPROFILE
+//Enable the zone profiler
+#define ZONE_PROFILE
+
+#define COMMON_PROFILE
+
+#define PROFILE_DUMP_TIME 10*60
+#endif
+
+
 
 #endif
 

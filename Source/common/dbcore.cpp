@@ -54,6 +54,7 @@ void DBcore::ping() {
 }
 
 bool DBcore::RunQuery(const char* query, int32 querylen, char* errbuf, MYSQL_RES** result, int32* affected_rows, int32* last_insert_id, int32* errnum, bool retry) {
+	_CP(DBcore_RunQuery);
 	if (errnum)
 		*errnum = 0;
 	if (errbuf)
@@ -205,6 +206,7 @@ ThreadReturnType DBAsyncLoop(void* tmp) {
 	DBAsync* dba = (DBAsync*) tmp;
 	dba->MLoopRunning.lock();
 	while (dba->RunLoop()) {
+		_CP(DBAsyncLoop_loop);
 		dba->Process();
 		Sleep(1);
 	}
@@ -433,6 +435,7 @@ void DBAsync::CommitWrites() {
 }
 
 void DBAsync::ProcessWork(DBAsyncWork* iWork, bool iSleep) {
+	_CP(DBAsync_ProcessWork);
 	DBAsyncQuery* CurrentQuery;
 #if DEBUG_MYSQL_QUERIES >= 2
 	cout << "Processing AsyncWork #" << iWork->GetWorkID() << endl;
@@ -446,6 +449,7 @@ void DBAsync::ProcessWork(DBAsyncWork* iWork, bool iSleep) {
 }
 
 void DBAsync::DispatchWork(DBAsyncWork* iWork) {
+	_CP(DBAsync_DispatchWork);
 	if (iWork->pCB) {
 		if (iWork->pCB(iWork))
 			safe_delete(iWork);

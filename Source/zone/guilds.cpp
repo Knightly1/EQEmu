@@ -242,3 +242,387 @@ int32 Database::GetGuildEQID(int32 guilddbid) {
 */
 }
 
+int32 Database::GetGuildDBID(int32 eqid){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	if (RunQuery(query, MakeAnyLenString(&query, "Select id from guilds where eqid=%i", eqid), errbuf, &result)) {
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			int32 ret = atoi(row[0]);
+			mysql_free_result(result);
+			return ret;
+		}
+	}
+	return 0;
+}
+void Database::GetGuildMembers(int32 guildid,GuildMember_Struct* gms){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	int32 count=0;
+	int32 length=0;
+	if (RunQuery(query, MakeAnyLenString(&query, "Select name,profile,timelaston,guildrank,publicnote from character_ where guild=%i", guildid), errbuf, &result)) {
+		safe_delete_array(query);
+		while( ( row = mysql_fetch_row(result) ) ){
+			strcpy(gms->member[count].name,row[0]);
+			length+=strlen(row[0])+strlen(row[4]);
+			PlayerProfile_Struct* pps=(PlayerProfile_Struct*)row[1];
+			gms->member[count].level=htonl(pps->level);
+			gms->member[count].zoneid=pps->zone_id;
+			gms->member[count].timelaston=htonl(atol(row[2]));
+			gms->member[count].class_=htonl(pps->class_);
+			gms->member[count].rank=atoi(row[3]);
+			strcpy(gms->member[count].publicnote,row[4]);
+			count++;
+		}
+		mysql_free_result(result);
+	}
+	else {
+		cerr << "Error in GetGuildMembers query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+	}
+	gms->count=count;
+	gms->length=length;
+}
+int32 Database::NumberInGuild(int32 guilddbid) {
+    	char errbuf[MYSQL_ERRMSG_SIZE];
+    	char *query = 0;
+		MYSQL_RES *result;
+		MYSQL_ROW row;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "Select count(id) from character_ where guild=%i", guilddbid), errbuf, &result)) {
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			int32 ret = atoi(row[0]);
+			mysql_free_result(result);
+			return ret;
+		}
+		mysql_free_result(result);
+	}
+	else {
+		cerr << "Error in NumberInGuild query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return 0;
+	}
+	return 0;
+}
+bool Database::SetGuild(char* name, int32 guilddbid, int8 guildrank) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	int32 affected_rows = 0;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "UPDATE character_ SET guild=%i, guildrank=%i WHERE name='%s'", guilddbid, guildrank, name), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+		if (affected_rows == 1)
+			return true;
+		else
+			return false;
+	}
+	else {
+		cerr << "Error in SetGuild query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+	return false;
+}
+bool Database::SetGuild(int32 charid, int32 guilddbid, int8 guildrank) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	int32 affected_rows = 0;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "UPDATE character_ SET guild=%i, guildrank=%i WHERE id=%i", guilddbid, guildrank, charid), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+		if (affected_rows == 1)
+			return true;
+
+		else
+			return false;
+	}
+	else {
+		cerr << "Error in SetGuild query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+	
+	return false;
+}
+
+int32 Database::GetFreeGuildEQID()
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char query[100];
+    MYSQL_RES *result;
+	
+	for (int x = 1; x < 512; x++) {
+		snprintf(query, 100, "SELECT eqid FROM guilds where eqid=%i;", x);
+		
+		if (RunQuery(query, strlen(query), errbuf, &result)) {
+			if (mysql_num_rows(result) == 0) {
+				mysql_free_result(result);
+				return x;
+			}
+			mysql_free_result(result);
+		}
+		else {
+			cerr << "Error in GetFreeGuildEQID query '" << query << "' " << errbuf << endl;
+		}
+	}
+	
+	return 0xFFFFFFFF;
+}
+
+int32 Database::CreateGuild(const char* name, int32 leader) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	char buf[65];
+	int32 affected_rows = 0;
+	DoEscapeString(buf, name, strlen(name)) ;
+	
+	int32 tmpeqid = GetFreeGuildEQID();
+	if (tmpeqid == 0xFFFFFFFF) {
+		cout << "Error in Database::CreateGuild: unable to find free eqid" << endl;
+		return 0xFFFFFFFF;
+	}
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "INSERT INTO guilds (name, leader, eqid) Values ('%s', %i, %i)", buf, leader, tmpeqid), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+		if (tmpeqid > 0) {
+			return tmpeqid;
+		}
+		else {
+			return 0xFFFFFFFF;
+		}
+	}
+	else {
+		cerr << "Error in CreateGuild query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return 0xFFFFFFFF;
+	}
+	
+	return 0xFFFFFFFF;
+}
+
+bool Database::DeleteGuild(int32 guilddbid)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	char *query2 = 0;
+	int32 affected_rows = 0;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "DELETE FROM guilds WHERE id=%i;", guilddbid), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+		if (affected_rows == 1){
+			if(!RunQuery(query2, MakeAnyLenString(&query2, "update character_ set guild=0,guildrank=0 where guild=%i", guilddbid), errbuf, 0, &affected_rows))
+				cerr << "Error in DeleteGuild query '" << query2 << "': " << errbuf << endl;
+			safe_delete_array(query2);
+			return true;
+		}
+		else
+			return false;
+	}
+	else {
+		cerr << "Error in DeleteGuild query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+	
+	return false;
+}
+
+bool Database::RenameGuild(int32 guilddbid, const char* name) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	int32 affected_rows = 0;
+	char buf[65];
+	DoEscapeString(buf, name, strlen(name)) ;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "Update guilds set name='%s' WHERE id=%i;", buf, guilddbid), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+		if (affected_rows == 1)
+			return true;
+		else
+			return false;
+	}
+	else {
+		cerr << "Error in RenameGuild query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+	
+	return false;
+}
+
+
+
+bool Database::EditGuild(int32 guilddbid, int8 ranknum, GuildRankLevel_Struct* grl)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    int chars = 0;
+	int32 affected_rows = 0;
+	char buf[203];
+	char buf2[8];
+	DoEscapeString(buf, grl->rankname, strlen(grl->rankname)) ;
+	buf2[GUILD_HEAR] = grl->heargu + '0';
+	buf2[GUILD_SPEAK] = grl->speakgu + '0';
+	buf2[GUILD_INVITE] = grl->invite + '0';
+	buf2[GUILD_REMOVE] = grl->remove + '0';
+	buf2[GUILD_PROMOTE] = grl->promote + '0';
+	buf2[GUILD_DEMOTE] = grl->demote + '0';
+	buf2[GUILD_MOTD] = grl->motd + '0';
+	buf2[GUILD_WARPEACE] = grl->warpeace + '0';
+	
+	if (ranknum == 0)
+		chars = MakeAnyLenString(&query, "Update guilds set rank%ititle='%s' WHERE id=%i;", ranknum, buf, guilddbid);
+	else
+		chars = MakeAnyLenString(&query, "Update guilds set rank%ititle='%s', rank%i='%s' WHERE id=%i;", ranknum, buf, ranknum, buf2, guilddbid);
+	
+	if (RunQuery(query, chars, errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+		if (affected_rows == 1)
+			return true;
+		else
+			return false;
+	}
+	else {
+		cerr << "Error in EditGuild query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+	
+	return false;
+}
+
+bool Database::GetGuildNameByID(int32 guilddbid, char * name) {
+	if (!name || !guilddbid) return false;
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	MYSQL_RES *result;
+    MYSQL_ROW row;	
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "select * from guilds where id='%i'", guilddbid), errbuf, &result)) {
+		safe_delete_array(query);
+		row = mysql_fetch_row(result);
+		if (row[2]) sprintf(name,"%s",row[2]);
+		mysql_free_result(result);
+		return true;
+	}
+	else {
+		cerr << "Error in RenameGuild query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+	
+	return false;
+}
+
+int32 Database::GetGuildDBIDbyLeader(int32 leader)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id FROM guilds WHERE leader=%i", leader), errbuf, &result)) {
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1)
+		{
+			row = mysql_fetch_row(result);
+			int32 tmp = atoi(row[0]);
+			mysql_free_result(result);
+			return tmp;
+		}
+		mysql_free_result(result);
+	}
+	else {
+		cerr << "Error in GetGuildDBIDbyLeader query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+	}
+	
+	return 0;
+}
+
+bool Database::SetGuildLeader(int32 guilddbid, int32 leader)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	int32 affected_rows = 0;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "UPDATE guilds SET leader=%i WHERE id=%i", leader, guilddbid), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+		if (affected_rows == 1)
+			return true;
+		else
+			return false;
+	}
+	else {
+		cerr << "Error in SetGuildLeader query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+	
+	return false;
+}
+
+bool Database::SetGuildMOTD(int32 guilddbid, const char* motd) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	char* motdbuf = 0;
+	int32 affected_rows = 0;
+	
+	motdbuf = new char[(strlen(motd)*2)+3];
+
+	DoEscapeString(motdbuf, motd, strlen(motd)) ;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "Update guilds set motd='%s' WHERE id=%i;", motdbuf, guilddbid), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+		delete motdbuf;
+		if (affected_rows == 1)
+			return true;
+		else
+			return false;
+	}
+	else
+	{
+		cerr << "Error in SetGuildMOTD query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		delete motdbuf;
+		return false;
+	}
+	
+	return false;
+}
+
+char* Database::GetGuildMOTD(int32 guilddbid)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	char* motd = new char[599];
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT motd FROM guilds WHERE id=%i", guilddbid), errbuf, &result)) {
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			if (row[0] == 0)
+				strcpy(motd, "");
+			else
+				strcpy(motd, row[0]);
+			mysql_free_result(result);
+			return motd;
+		}
+		mysql_free_result(result);
+	}
+	else {
+		cerr << "Error in GetGuildMOTD query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+	}
+	return motd;
+}
+
+

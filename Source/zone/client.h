@@ -132,6 +132,12 @@ typedef enum {	//disciplines for disc_inuse
 	discLeechCurse		= 27
 };
 
+#define TRIBUTE_NONE 0xFFFFFFFF
+typedef struct {
+	uint32 tribute;
+	uint32 level;
+} ClientTributeInfo;
+
 class Client : public Mob
 {
 public:
@@ -281,6 +287,9 @@ public:
 	inline char*	GetLastName()	{ return lastname; }
 	inline int32	GetLDoNPoints() { return 0; }
 	
+	inline float ProximityX() { return(proximity_x); }
+	inline float ProximityY() { return(proximity_y); }
+	inline float ProximityZ() { return(proximity_z); }
 	
 	/*
 		Begin client modifiers
@@ -506,6 +515,12 @@ public:
 	void SetTradeskillObject(Object* object) { m_tradeskill_object = object; }
 	Object* GetTradeskillObject() { return m_tradeskill_object; }
 	void	SendTribute();
+	void	DoTributeUpdate();
+	void	SendTributeDetails(int32 client_id, uint32 tribute_id);
+	sint32	TributeItem(int32 slot, int32 quantity);
+	sint32	TributeMoney(int32 platinum);
+	void	AddTributePoints(sint32 ammount);
+	void	ChangeTributeSettings(TributeInfo_Struct *t);
 	
 	inline PTimerList &GetPTimers() { return(p_timers); }
 	
@@ -694,6 +709,14 @@ private:
 	Timer	ooc_timer;
 	Timer	shield_timer;
 	Timer	fishing_timer;
+#ifdef REVERSE_AGGRO
+	Timer	scanarea_timer;
+#endif
+	
+	Timer	proximity_timer;
+	float	proximity_x;
+	float	proximity_y;
+	float	proximity_z;
 
 	int8 disc_inuse;	//obsoleted by spell-based disciplines, not yet removed
 	
@@ -701,6 +724,11 @@ private:
 	
 	LinkedList<FactionValue*> factionvalue_list;
 	sint32	GetCharacterFactionLevel(sint32 faction_id);
+	
+	sint32 tribute_points;
+	bool tribute_active;
+	int32 tribute_master_id;
+	ClientTributeInfo tributes[MAX_PLAYER_TRIBUTES];
 	
 	bool IsSettingGuildDoor;
 	int16 SetGuildDoorID;

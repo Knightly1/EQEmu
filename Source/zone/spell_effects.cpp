@@ -50,6 +50,8 @@ extern WorldServer worldserver;
 // in this case false will be returned, true otherwise
 bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 {
+	_ZP(Mob_SpellEffect);
+	
 	int caster_level, buffslot, effect, effect_value, i;
 	SPDat_Spell_Struct spell;
 #ifdef SPELL_EFFECT_SPAM
@@ -2020,6 +2022,8 @@ neotokyo: i need those formulas checked!!!!
 
 void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob* caster)
 {
+	_ZP(Mob_DoBuffTic);
+	
 	int effect, effect_value;
 	SPDat_Spell_Struct spell;
 

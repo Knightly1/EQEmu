@@ -144,6 +144,9 @@ enum InventorySlot
 	// Slots 1 through 8 are slots 22->29
 	// Inventory bag slots are 251->330 (10 slots per bag)
 	
+	// Tribute slots are 400-404? (upper bound unknown)
+	// storing these in worn item's map
+	
 	// Bank slots
 	// Bank slots 1 through 16 are slots 2000->2015
 	// Bank bag slots are 2031->2190

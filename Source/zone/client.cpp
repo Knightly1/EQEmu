@@ -140,7 +140,8 @@ Client::Client(EQNetworkConnection* ieqnc)
 	0, // see_invis_undead 
 	0	// qglobal
 
-	), 
+	),
+	//these must be listed in the order they appear in client.h
 	position_timer(250),
 	hpupdate_timer(1800),
 	camp_timer(29000),
@@ -153,7 +154,11 @@ Client::Client(EQNetworkConnection* ieqnc)
 	dead_timer(2000),
 	ooc_timer(1000),
 	shield_timer(500),
-	fishing_timer(8000)
+	fishing_timer(8000),
+#ifdef REVERSE_AGGRO
+	scanarea_timer(AIClientScanarea_delay),
+#endif
+	proximity_timer(ClientProximity_interval)
 {
 	for(int cf=0;cf<21;cf++)
 		ClientFilters[cf]=0;
@@ -197,6 +202,9 @@ Client::Client(EQNetworkConnection* ieqnc)
 	zonesummon_y = -2;
 	zonesummon_z = -2;
 	zonesummon_ignorerestrictions = 0;
+	proximity_x = 0;
+	proximity_y = 0;
+	proximity_z = 0;
 	casting_spell_id = 0;
 	npcflag = false;
 	npclevel = 0;
@@ -224,6 +232,14 @@ Client::Client(EQNetworkConnection* ieqnc)
 	tgb = false;
 	AbilityTimer=false;
 	memset(zonesummon_name, 0, sizeof(zonesummon_name));
+	tribute_master_id = 0;
+	tribute_active = false;
+	tribute_points = 0;
+	int r;
+	for(r = 0; r < MAX_PLAYER_TRIBUTES; r++) {
+		tributes[r].tribute = TRIBUTE_NONE;
+		tributes[r].level = 0;
+	}
 	
 	disc_timer.Disable();
 	disc_elapse.Disable();
@@ -307,7 +323,8 @@ bool Client::Save(int8 iCommitNow) {
 
 	if(!ClientDataLoaded())
 		return false;
-
+	_ZP(Client_Save);
+	
 	m_pp.x = x_pos;
 	m_pp.y = y_pos;
 	m_pp.z = z_pos;
@@ -419,20 +436,31 @@ CLIENTPACKET::~CLIENTPACKET()
     safe_delete(app);
 }
 
+//this assumes we do not own pApp, and clones it.
 bool Client::AddPacket(const APPLAYER *pApp, bool bAckreq) {
 	if (!pApp)
 		return false;
+	if(!zoneinpacket_timer.Enabled()) {
+		//drop the packet because it will never get sent.
+		return(false);
+	}
     CLIENTPACKET *c = new CLIENTPACKET;
 
     c->ack_req = bAckreq;
     c->app = pApp->Copy();
+    
     clientpackets.Append(c);
     return true;
 }
 
+//this assumes that it owns the object pointed to by *pApp
 bool Client::AddPacket(APPLAYER** pApp, bool bAckreq) {
 	if (!pApp || !(*pApp))
 		return false;
+	if(!zoneinpacket_timer.Enabled()) {
+		//drop the packet because it will never get sent.
+		return(false);
+	}
     CLIENTPACKET *c = new CLIENTPACKET;
 	
     c->ack_req = bAckreq;
@@ -451,14 +479,17 @@ bool Client::SendAllPackets() {
 	while(iterator.MoreElements()) {
 		cp = iterator.GetData();
 		if(eqnc)
-			eqnc->FastQueuePacket(&cp->app, iterator.GetData()->ack_req);
+			eqnc->FastQueuePacket(&cp->app, cp->ack_req);
 		iterator.RemoveCurrent();
+#if EQDEBUG >= 6
 		LogFile->write(EQEMuLog::Normal, "Transmitting a packet");
+#endif
 	}
 	return true;
 }
 
 void Client::QueuePacket(const APPLAYER* app, bool ack_req, CLIENT_CONN_STATUS required_state,int8 filter) {
+	_ZP(Client_QueuePacket);
 	if(filter!=0){
 		if(GetFilter(filter)==0)
 			return; //Client has this filter on, no need to send packet
@@ -508,6 +539,7 @@ void Client::FastQueuePacket(APPLAYER** app, bool ack_req, CLIENT_CONN_STATUS re
         // todo: save packets for later use
         AddPacket(app, ack_req);
 //        LogFile->write(EQEMuLog::Normal, "Adding Packet to list (%d) (%d)", (*app)->opcode, (int)required_state);
+		return;
     }
     else {
 	    if(eqnc)
@@ -516,6 +548,7 @@ void Client::FastQueuePacket(APPLAYER** app, bool ack_req, CLIENT_CONN_STATUS re
 			delete *app;
 		*app = 0;
 	}
+	return;
 }
 
 void Client::ChannelMessageReceived(int8 chan_num, int8 language, const char* message, const char* targetname) {
@@ -2423,34 +2456,6 @@ bool Client::CheckCheat(){
 	float dy=cheat_y-y_pos;
 	float result=sqrt((dx*dx)+(dy*dy));
 	return result>70;
-}
-
-void Client::SendTribute(){
-	//TODO: Setup table and pull all tributes from it
-	const char* name="Antidote";
-	APPLAYER* outapp = new APPLAYER(OP_Tribute,sizeof(TributeAbility_Struct)+strlen(name)+1);
-	TributeAbility_Struct* tas = (TributeAbility_Struct*)outapp->pBuffer;
-	tas->list_id=htonl(0);
-	tas->tribute[0].cost=htonl(5);
-	tas->tribute[0].level=htonl(20);
-	tas->tribute[0].tribute_id=htonl(56300);
-	tas->tribute[1].cost=htonl(7);
-	tas->tribute[1].level=htonl(30);
-	tas->tribute[1].tribute_id=htonl(56301);
-	tas->tribute[2].cost=htonl(10);
-	tas->tribute[2].level=htonl(40);
-	tas->tribute[2].tribute_id=htonl(56302);
-	tas->tribute[3].cost=htonl(14);
-	tas->tribute[3].level=htonl(50);
-	tas->tribute[3].tribute_id=htonl(56303);
-	tas->tribute[4].cost=htonl(18);
-	tas->tribute[4].level=htonl(60);
-	tas->tribute[4].tribute_id=htonl(56304);
-	tas->tribute[5].cost=htonl(23);
-	strcpy(tas->name,name);
-	QueuePacket(outapp);
-	//DumpPacket(outapp);
-	safe_delete(outapp);
 }
 
 void Client::SetHideMe(bool flag)

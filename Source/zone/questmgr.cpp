@@ -73,7 +73,8 @@ extern Database database;
 extern Zone* zone;
 extern WorldServer worldserver;
 extern EntityList entity_list;
-extern std::list<timers*> TimerList;
+
+
 
 #include "questmgr.h"
 
@@ -81,19 +82,63 @@ extern std::list<timers*> TimerList;
 QuestManager quest_manager;
 
 QuestManager::QuestManager() {
+	depop_npc = false;
 }
 
 QuestManager::~QuestManager() {
+}
+
+void QuestManager::Process() {
+	list<QuestTimer>::iterator cur = TimerList.begin(), end, tmp;
+	
+	end = TimerList.end();
+	while (cur != end)
+	{
+		if (cur->Timer_.Enabled() && cur->Timer_.Check()) {
+			//make sure the mob is still in zone.
+			if(entity_list.IsMobInZone(cur->mob)) {
+				parse->Event(EVENT_TIMER, cur->mob->GetNPCTypeID(), cur->name.c_str(), cur->mob, NULL);
+				//we MUST reset our iterator since the quest could have removed/added any
+				//number of timers... worst case we have to check a bunch of timers twice
+				cur = TimerList.begin();
+				end = TimerList.end();	//dunno if this is needed, cant hurt...
+			} else {
+				tmp = cur;
+				tmp++;
+				TimerList.erase(cur);
+				cur = tmp;
+			}
+		} else
+			cur++;
+	}
 }
 
 void QuestManager::StartQuest(NPC *_npc, Client *_initiator) {
 	quest_mutex.lock();
 	npc = _npc;
 	initiator = _initiator;
+	depop_npc = false;
 }
 
 void QuestManager::EndQuest() {
 	quest_mutex.unlock();
+	if(depop_npc) {
+		//clear out any timers for them...
+		list<QuestTimer>::iterator cur = TimerList.begin(), end, tmp;
+		
+		end = TimerList.end();
+		while (cur != end) {
+			if(cur->mob == npc) {
+				tmp = cur;
+				tmp++;
+				TimerList.erase(cur);
+				cur = tmp;
+			}
+		}
+		
+		npc->Depop();
+		npc = NULL;	//just to be safe
+	}
 }
 
 
@@ -190,48 +235,45 @@ void QuestManager::Zone(const char *zone_name) {
 }
 
 void QuestManager::settimer(const char *timer_name, int seconds) {
-	list<timers*>::iterator iterator = TimerList.begin();
-	timers*p=0;
-	while (iterator != TimerList.end())
+	list<QuestTimer>::iterator cur = TimerList.begin(), end;
+	
+	end = TimerList.end();
+	while (cur != end)
 	{
-		p=*iterator;
-//		if (p) printf("%s - %s\n",p->name.c_str(), arglist[0]);
-		if (p && !strcmp(timer_name, p->name.c_str()))
-		{
-			p->mob = npc;
-			p->Timer_->Enable();
-			p->Timer_->Start(seconds * 1000,false);
-			printf("Reseting: %s for %d seconds\n", p->name.c_str(), seconds);
-			break;
+		if (cur->name == timer_name) {
+			cur->mob = npc;
+			cur->Timer_.Enable();
+			cur->Timer_.Start(seconds * 1000, false);
+			printf("Reseting: %s for %d seconds\n", cur->name.c_str(), seconds);
+			return;
 		}
-		iterator++;
-		p=0;
+		cur++;
 	}
-	if (!p)
-	{
-		timers * tmp = new timers;
-		tmp->mob = npc;
-		tmp->Timer_ = new Timer(seconds * 1000,0);
-		tmp->Timer_->Start(seconds * 1000,false);
-		tmp->name = timer_name;
-		printf("Adding: %s for %d seconds\n", tmp->name.c_str(), seconds);
-		TimerList.push_back(tmp);
-	}
+	
+/*	timers * tmp = new timers;
+	tmp->mob = npc;
+	tmp->Timer_ = new Timer(seconds * 1000,0);
+	tmp->Timer_->Start(seconds * 1000,false);
+	tmp->name = timer_name;
+	printf("Adding: %s for %d seconds\n", tmp->name.c_str(), seconds);
+	TimerList.push_back(tmp);*/
+	TimerList.push_back(QuestTimer(seconds * 1000, npc, timer_name));
 }
 
 void QuestManager::stoptimer(const char *timer_name) {
-		list<timers*>::iterator iterator = TimerList.begin();
-		timers*p=0;
-		while (iterator != TimerList.end())
+printf("Stop timer called on '%s'!\n", timer_name);
+	list<QuestTimer>::iterator cur = TimerList.begin(), end;
+	
+	end = TimerList.end();
+	while (cur != end)
+	{
+		if(cur->name == timer_name)
 		{
-			p=*iterator;
-//if (p) printf("%s - %s\n",p->name.c_str(), timer_name);
-			if (p && !strcmp(timer_name,p->name.c_str()))
-			{
-				p->Timer_->Disable();
-			}
-			iterator++;
+			TimerList.erase(cur);
+			return;
 		}
+		cur++;
+	}
 }
 
 void QuestManager::emote(const char *str) {
@@ -249,11 +291,15 @@ void QuestManager::shout2(const char *str) {
 void QuestManager::depop(int npc_type) {
 	if (npc_type != 0){
 		Mob * tmp = entity_list.GetMobByNpcTypeID(npc_type);
-		if (tmp)
-			tmp->CastToNPC()->Depop();
+		if (tmp) {
+			if(tmp != npc)
+				tmp->CastToNPC()->Depop();
+			else
+				depop_npc = true;
+		}
 	}
 	else {	//depop self
-		npc->Depop();
+		depop_npc = true;
 	}
 }
 
@@ -926,13 +972,13 @@ void QuestManager::respawn(int npc_type, int grid) {
 	y = npc->GetY();
 	z = npc->GetZ();
 	h = npc->GetHeading();
-	npc->Depop();
+	depop_npc = true;
 		
 	const NPCType* tmp = 0;
 	//int8 guildwarset = atoi(arglist[2]);
 	if ((tmp = database.GetNPCType(npc_type))) 
 	{
-		NPC* npc = new NPC(tmp, 0, x, y, z, h);
+		npc = new NPC(tmp, 0, x, y, z, h);
 		npc->AddLootTable();
 		entity_list.AddNPC(npc,true,true);
 		if(grid > 0)
@@ -941,6 +987,26 @@ void QuestManager::respawn(int npc_type, int grid) {
 		npc->SendPosUpdate();
 	}
 }
+
+void QuestManager::set_proximity(float minx, float maxx, float miny, float maxy, float minz, float maxz) {
+	entity_list.AddProximity(npc);
+	
+	npc->proximity->min_x = minx;
+	npc->proximity->max_x = maxx;
+	npc->proximity->min_y = miny;
+	npc->proximity->max_y = maxy;
+	npc->proximity->min_z = minz;
+	npc->proximity->max_z = maxz;
+}
+
+void QuestManager::clear_proximity() {
+	safe_delete(npc->proximity);
+	entity_list.RemoveProximity(npc->GetID());
+}
+
+
+
+
 
 
 

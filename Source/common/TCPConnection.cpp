@@ -1377,6 +1377,7 @@ void* TCPConnectionLoop(void* tmp) {
 	TCPConnection* tcpc = (TCPConnection*) tmp;
 	tcpc->MLoopRunning.lock();
 	while (tcpc->RunLoop()) {
+		_CP(TCPConnectionLoop);
 		Sleep(1);
 		if (tcpc->GetState() != TCPS_Ready) {
 			if (!tcpc->Process()) {
@@ -1464,6 +1465,7 @@ void* TCPServerLoop(void* tmp) {
 	TCPServer* tcps = (TCPServer*) tmp;
 	tcps->MLoopRunning.lock();
 	while (tcps->RunLoop()) {
+		_CP(TCPServerLoop);
 		Sleep(1);
 		tcps->Process();
 	}

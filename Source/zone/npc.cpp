@@ -113,6 +113,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	swarm_timer(100),
 	classattack_timer(1000),
 	taunt_timer(TauntReuseTime * 1000),
+	assist_timer(AIassistcheck_delay),
 	sendhpupdate_timer(1000)
 {
 	Mob* mob = entity_list.GetMob(name);
@@ -127,7 +128,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	respawn2 = in_respawn;
 	swarm_timer.Disable();
 
-	
+	proximity = NULL;
 	itemlist = new ItemList();
 	copper = 0;
 	silver = 0;
@@ -152,8 +153,8 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	}*/
 
 	
-	pArrgoRange = d->aggroradius;
-	pAssistRange = GetArrgoRange();
+	pAggroRange = d->aggroradius;
+	pAssistRange = GetAggroRange();
 	mana_regen=d->mana_regen;
 
     // neotokyo: fix for lazy db-updaters
@@ -258,6 +259,8 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
     if (!PR)
         PR = (int)( moblevel * 1.1f);
 
+	npc_aggro = d->npc_aggro;
+
 	AI_Start();
 	
 	//give NPCs skill values...
@@ -273,6 +276,10 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	  
 NPC::~NPC()
 {
+	if(proximity != NULL) {
+		entity_list.RemoveProximity(GetID());
+		safe_delete(proximity);
+	}
 	safe_delete(itemlist);
 	safe_delete(NPCTypedata);
  #ifdef IPC	  
@@ -296,19 +303,6 @@ void NPC::SetTarget(Mob* mob) {
 		attack_dw_timer.Disable();
 	}
 	target = mob;
-}
-
-bool NPC::IsFactionListAlly(uint32 other_faction) {
-	LinkedListIterator<struct NPCFaction*> fac_iteratorcur(faction_list);
-	fac_iteratorcur.Reset();
-
-	while(fac_iteratorcur.MoreElements()) {
-		if (fac_iteratorcur.GetData()->factionID == other_faction && fac_iteratorcur.GetData()->value_mod <= 0)
-			return(true);
-
-		fac_iteratorcur.Advance();
-	}
-	return(false);
 }
 
 ServerLootItem_Struct* NPC::GetItem(int slot_id) {
@@ -421,6 +415,7 @@ void NPC::RemoveCash() {
 
 bool NPC::Process()
 {
+	_ZP(NPC_Process);
     if (attacked_timer.Check() && attack_event == 1)
 	{
 		attack_event = 0;
@@ -464,7 +459,9 @@ bool NPC::Process()
     }
 
     adverrorinfo = 2;
+    
     SpellProcess();
+    
     if (tic_timer.Check()) {
         TicProcess();
 	    #ifdef IPC
@@ -526,7 +523,13 @@ bool NPC::Process()
 			SendHPUpdate();
 		}
 	}
-
+	
+	//Handle assists...
+	Mob *hated = NULL;
+	if(assist_timer.Check() && (hated = hate_list.GetTop()) != NULL) {
+		entity_list.AIYellForHelp(this, hated);
+	}
+	
 	adverrorinfo = 3;
 	AI_Process();
 	adverrorinfo = 0;

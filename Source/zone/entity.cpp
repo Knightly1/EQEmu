@@ -41,6 +41,7 @@ using namespace std;
 #include "spdat.h"
 #include "features.h"
 #include "StringIDs.h"
+#include "parser.h"
 
 #ifdef WIN32
 #define snprintf	_snprintf
@@ -179,6 +180,9 @@ EntityList::EntityList() {
 }
 
 EntityList::~EntityList() {
+	//must call this before the list is destroyed, or else it will try to
+	//delete the NPCs in the list, which it cannot do.
+	RemoveAllLocalities();
 }
 
 bool EntityList::CanAddHateForMob(Mob *p) {
@@ -214,6 +218,7 @@ void EntityList::AddClient(Client* client) {
 void EntityList::TrapProcess() {
 	if(numclients < 1)
 		return;
+	_ZP(EntityList_TrapProcess);
 	LinkedListIterator<Trap*> iterator(trap_list);
 	iterator.Reset();
 	int32 count=0;
@@ -233,6 +238,7 @@ void EntityList::TrapProcess() {
 void EntityList::GroupProcess() {
 	if(numclients < 1)
 		return;
+	_ZP(EntityList_GroupProcess);
 	LinkedListIterator<Group*> iterator(group_list);
 	iterator.Reset();
 	int32 count=0;
@@ -254,6 +260,7 @@ void EntityList::DoorProcess() {
 	if(numclients < 1)
 		return;
 #endif
+	_ZP(EntityList_DoorProcess);
 	LinkedListIterator<Doors*> iterator(door_list);
 	iterator.Reset();
 	int32 count=0;
@@ -271,6 +278,7 @@ void EntityList::DoorProcess() {
 }
 
 void EntityList::ObjectProcess() {
+	_ZP(EntityList_ObjectProcess);
 	LinkedListIterator<Object*> iterator(object_list);
 	iterator.Reset();
 	int32 count=0;
@@ -288,6 +296,7 @@ void EntityList::ObjectProcess() {
 }
 
 void EntityList::CorpseProcess() {
+	_ZP(EntityList_CorpseProcess);
 	LinkedListIterator<Corpse*> iterator(corpse_list);
 	iterator.Reset();
 	int32 count=0;
@@ -309,6 +318,7 @@ void EntityList::MobProcess() {
 	if(numclients < 1)
 		return;
 #endif
+	_ZP(EntityList_MobProcess);
 	LinkedListIterator<Mob*> iterator(mob_list);
 	iterator.Reset();
 	while(iterator.MoreElements())
@@ -334,6 +344,7 @@ void EntityList::MobProcess() {
 }
 
 void EntityList::BeaconProcess() {
+	_ZP(EntityList_BeaconProcess);
 	LinkedListIterator<Beacon *> iterator(beacon_list);
 	int count;
 
@@ -565,7 +576,7 @@ bool EntityList::MakeDoorSpawnPacket(APPLAYER* app)
 	}
 
 #if EQDEBUG >= 5
-	LogFile->write(EQEMuLog::Debug, "MakeDoorPacket() packet length:%i qty:%i", length, qty);
+//	LogFile->write(EQEMuLog::Debug, "MakeDoorPacket() packet length:%i qty:%i ", length, qty);
 #endif
 	app->opcode = OP_SpawnDoor;
 	app->size = length;
@@ -860,7 +871,6 @@ void EntityList::SendZoneSpawnsBulk(Client* client)
 	if(maxspawns > mob_list.Count())
 		maxspawns = mob_list.Count();
 	BulkZoneSpawnPacket* bzsp = new BulkZoneSpawnPacket(client, maxspawns);
-	int i=0;
 	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
 	{
 		spawn = iterator.GetData();
@@ -1619,7 +1629,7 @@ bool EntityList::RemoveGroup(int32 delete_id){
 }
 void EntityList::Clear()
 {
-	entity_list.RemoveAllClients();
+	RemoveAllClients();
 	entity_list.RemoveAllNPCs();
 	entity_list.RemoveAllMobs();
 	entity_list.RemoveAllCorpses();
@@ -1627,6 +1637,8 @@ void EntityList::Clear()
 	entity_list.RemoveAllDoors();
 	entity_list.RemoveAllObjects();
 	entity_list.RemoveAllTraps();
+	entity_list.RemoveAllTraps();
+	entity_list.RemoveAllLocalities();
 	last_insert_id = 0;
 }
 
@@ -1779,6 +1791,7 @@ void EntityList::GuildIntervalPoints(int32 guildid,sint32 points)
 
 void EntityList::Process()
 {
+	_ZP(EntityList_Process);
 	CheckSpawnQueue();
 }
 
@@ -2475,5 +2488,94 @@ return;
 		iterator.Advance();
 	}
 }
+
+void EntityList::AddProximity(NPC *proximity_for) {
+	RemoveProximity(proximity_for->GetID());
+	
+	proximity_list.Insert(proximity_for);
+	
+	proximity_for->proximity = new NPCProximity;
+}
+
+bool EntityList::RemoveProximity(int16 delete_npc_id) {
+	LinkedListIterator<NPC*> iterator(proximity_list);
+	iterator.Reset();
+	while(iterator.MoreElements()) {
+		NPC *d = iterator.GetData();
+		if(d->GetID() == delete_npc_id) {
+			safe_delete(d->proximity);
+			iterator.RemoveCurrent(false);
+			return true;
+		}
+		iterator.Advance();
+	}
+	return false;
+}
+
+void EntityList::RemoveAllLocalities() {
+	LinkedListIterator<NPC*> iterator(proximity_list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+		iterator.RemoveCurrent(false);
+}
+
+void EntityList::ProcessMove(Client *c, float x, float y, float z) {
+	/*
+		We look through each proximity, looking to see if last_* was in(out)
+		the proximity, and the new supplied coords are out(in)...
+	*/
+	LinkedListIterator<NPC*> iterator(proximity_list);
+	
+	float last_x = c->ProximityX();
+	float last_y = c->ProximityY();
+	float last_z = c->ProximityZ();
+	
+	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance()) {
+		NPC *d = iterator.GetData();
+		NPCProximity *l = d->proximity;
+		if(l == NULL)
+			continue;
+		
+		//check both bounding boxes, if either coords pairs
+		//cross a boundary, send the event.
+		bool old_in = true;
+		bool new_in = true;
+		if(   last_x < l->min_x || last_x > l->max_x
+		   || last_y < l->min_y || last_y > l->max_y
+		   || last_z < l->min_z || last_z > l->max_z ) {
+			old_in = false;
+		}
+		if(   x < l->min_x || x > l->max_x
+		   || y < l->min_y || y > l->max_y
+		   || z < l->min_z || z > l->max_z ) {
+			new_in = false;
+		}
+		
+		if(old_in && !new_in) {
+			//we were in the proximity, we are no longer, send event exit
+			parse->Event(EVENT_EXIT, d->GetNPCTypeID(), "", d, c);
+		} else if(new_in && !old_in) {
+			//we were not in the proximity, we are now, send enter event
+			parse->Event(EVENT_ENTER, d->GetNPCTypeID(), "", d, c);
+		}
+	}
+	
+}
+
+
+bool EntityList::IsMobInZone(Mob *who) {
+	LinkedListIterator<Mob*> iterator(mob_list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		if(who == iterator.GetData())
+			return(true);
+		iterator.Advance();
+	}
+	return(false);
+}
+
+
+
 
 

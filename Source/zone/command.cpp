@@ -86,7 +86,7 @@ extern char* itoa(int integer);
 #include "StringIDs.h"
 #include "command.h"
 
-struct cl_struct *commandlist;	// the actual linked list of commands
+//struct cl_struct *commandlist;	// the actual linked list of commands
 int commandcount;								// how many commands we have
 
 // this is the pointer to the dispatch function, updated once
@@ -97,7 +97,7 @@ int (*command_dispatch)(Client *,char const *)=command_notavail;
 void command_bestz(Client *c, const Seperator *message);
 void command_pf(Client *c, const Seperator *message);
 
-
+map<string, CommandRecord *> commandlist;
 
 /*
  * command_notavail
@@ -157,8 +157,7 @@ Access Levels:
  */
 int command_init(void)
 {
-	int i ,cmdlvl;
-	struct cl_struct *cur;
+	int cmdlvl;
 
 	if
 	(
@@ -365,6 +364,10 @@ int command_init(void)
 		command_add("search",NULL,0,command_itemsearch) ||
 		command_add("stun","[duration] - Stuns you or your target for duration",100,command_stun) ||
 		command_add("finditem",NULL,0,command_itemsearch) ||
+#ifdef EQPROFILE
+		command_add("profiledump","- Dump profiling info to logs",250,command_profiledump) || 
+		command_add("profilereset","- Reset profiling info",250,command_profilereset) || 
+#endif
 #ifdef EMBPERL
 		command_add("reloadpl","- Reload perl quest for target",80,command_reloadpl) || 
 #endif
@@ -383,7 +386,7 @@ int command_init(void)
 		command_add("timers","- Display persisten timers for target",200,command_timers) ||
 		command_add("hp","- Refresh your HP bar from the server.",0,command_hp) ||
 		command_add("pf","- ",0,command_pf) ||
-		command_add("bestz","- Toggle Path Fixing.",0,command_bestz) ||
+		command_add("bestz","- Ask map for a good Z coord for your x,y coords.",0,command_bestz) ||
 		command_add("ginfo","- get group info on target.",0,command_ginfo) ||
 		command_add("npcemote","[message] - Make your NPC target emote a message.",150,command_npcemote)
 	)
@@ -391,30 +394,28 @@ int command_init(void)
 		command_deinit();
 		return -1;
 	}
-
-	char temp[512];
-	for(cur = commandlist; cur; cur = cur->next)
-		for(i = 0; cur->command[i] && i < CMDALIASES; i++)
+	
+	map<string, CommandRecord *>::iterator cur,end;
+	cur = commandlist.begin();
+	end = commandlist.end();
+	for(; cur != end; cur++) {
+		if((cmdlvl = database.CommandRequirement(cur->first.c_str())) != 255)
 		{
-			temp[0] = '!';
-			temp[1] = 0;
-			strncat(temp, cur->command[i], 510);
-			temp[511]=0;
-			if((cmdlvl = database.CommandRequirement(temp)) != 255)
-			{
 
-				cur->access = cmdlvl;
+			cur->second->access = cmdlvl;
 #if EQDEBUG >=5
-				LogFile->write(EQEMuLog::Debug, "command_init(): - Command '%s' set to access level %d." , cur->command[i], cmdlvl);
+			LogFile->write(EQEMuLog::Debug, "command_init(): - Command '%s' set to access level %d." , cur->first.c_str(), cmdlvl);
 #endif
-			}
-			else
-			{
-				if(cur->access == 0)
-					LogFile->write(EQEMuLog::Status, "command_init(): Warning: Command '%s' defaulting to access level 0!" , cur->command[i]);
-			}
 		}
-
+		else
+		{
+#ifdef COMMANDS_WARNINGS
+			if(cur->second->access == 0)
+				LogFile->write(EQEMuLog::Status, "command_init(): Warning: Command '%s' defaulting to access level 0!" , cur->first.c_str());
+#endif
+		}
+	}
+	
 	command_dispatch = command_realdispatch;
 
 	return commandcount;
@@ -430,23 +431,9 @@ int command_init(void)
  */
 void command_deinit(void)
 {
-	struct cl_struct *rm, *cur;
-	int i;
 
-	if(commandlist)
-	{
-		for(cur = commandlist; cur->next;)
-		{
-			rm = cur;
-			cur = cur->next;
-			for(i = 0; rm->command[i] && i < CMDALIASES; i++)
-				free(rm->command[i]);
-			if(rm->desc) free(rm->desc);
-			safe_delete(rm);
-		}
-		safe_delete(cur);
-		commandlist = NULL;
-	}
+	commandlist.clear();
+	
 	command_dispatch = command_notavail;
 	commandcount = 0;
 }
@@ -464,54 +451,100 @@ void command_deinit(void)
  */
 int command_add(const char *command_string, const char *desc, int access, CmdFuncPtr function)
 {
-	struct cl_struct *cur,*n;
-	int i;
+	if(function == NULL)
+		return(-1);
 	
-	// Sanity check
-	for(cur=commandlist;cur;cur=cur->next)
-		for(i=0;cur->command[i] && i<CMDALIASES;i++)
-			if(!strcasecmp(command_string, cur->command[i]))
-			{
-				LogFile->write(EQEMuLog::Error, "command_add() - Command '%s' is a duplicate - check command.cpp." , command_string);
-				return -1;
-			}
-
-	// First check if there's already a command with this function.
-	// In that case, this is just an alias to the same command.
-	for(cur=commandlist;cur;cur=cur->next)
-		if(function == cur->function) // alias, don't create new command
-		{
-			for(i=0;cur->command[i];i++);
-			if(i>=CMDALIASES)
-			{
-				LogFile->write(EQEMuLog::Error, "command_add() - too many aliases for command %s.	Increase the value of CMDALIASES in command.h and rebuild.", cur->command[0]);
-				return -1;
-			}
-			cur->command[i]=strdup(command_string);	// add the alias
-			return 0;					// and be done with it
-		}
-
-	// create the new struct
-	n=new cl_struct();
-	if(!n) return -1;
-	memset(n,0,sizeof(struct cl_struct));
-	n->access=access;
-	n->function=function;
-	n->command[0]=strdup(command_string);
-	n->desc=strdup(desc);
-
-	// add it to the list
-	if(commandlist)	// do we have the list started?
-	{
-		for(cur=commandlist;cur->next;cur=cur->next);
-		cur->next=n;	// append to end of list
+	string cstr(command_string);
+	
+	if(commandlist.count(cstr) != 0) {
+		LogFile->write(EQEMuLog::Error, "command_add() - Command '%s' is a duplicate - check command.cpp." , command_string);
+		return(-1);
 	}
-	else			// first item in list
-		commandlist=n;	// start the list
-
+	
+	//look for aliases...
+	map<string, CommandRecord *>::iterator cur,end,del;
+	cur = commandlist.begin();
+	end = commandlist.end();
+	for(; cur != end; cur++) {
+		if(cur->second->function == function) {
+			int r;
+			for(r = 1; r < CMDALIASES; r++) {
+				if(cur->second->command[r] == NULL) {
+					cur->second->command[r] = command_string;
+					break;
+				}
+			}
+			commandlist[cstr] = cur->second;
+			return(0);
+		}
+	}
+	
+	CommandRecord *c = new CommandRecord;
+	c->desc = desc;
+	c->access = access;
+	c->function = function;
+	memset(c->command, 0, sizeof(c->command));
+	c->command[0] = command_string;
+	
+	commandlist[cstr] = c;
+	
 	commandcount++;
 	return 0;
 }
+
+#ifdef EMBPERL_COMMANDS
+/*
+ * command_add_perl
+ * adds a command to the command list, as a perl function
+ *
+ * Parameters:
+ *	 command_string	- the command ex: "spawn"
+ *	 desc		- text description of command for #help
+ *	 access		- default access level required to use command
+ *
+ */
+int command_add_perl(const char *command_string, const char *desc, int access) {
+	string cstr(command_string);
+
+	if(commandlist.count(cstr) != 0) {
+#ifdef COMMANDS_PERL_OVERRIDE
+		//print a warning so people dont get too confused when this happens
+		LogFile->write(EQEMuLog::Status, "command_add_perl() - Perl Command '%s' is overriding the compiled command." , command_string);	
+#else
+		LogFile->write(EQEMuLog::Error, "command_add_perl() - Command '%s' is a duplicate - check commands.pl." , command_string);
+		return(-1);
+#endif
+	}
+	
+	CommandRecord *c = new CommandRecord;
+	c->desc = desc;
+	c->access = access;
+	c->function = NULL;
+	
+	commandlist[cstr] = c;
+	
+	commandcount++;
+	return 0;
+
+}
+
+//clear out any perl commands.
+//should restore any overridden C++ commands, but thats a lot of work.
+void command_clear_perl() {
+	map<string, CommandRecord *>::iterator cur,end,del;
+	cur = commandlist.begin();
+	end = commandlist.end();
+	for(; cur != end;) {
+		del = cur;
+		cur++;
+		if(del->second->function == NULL) {
+			delete del->second;
+			commandlist.erase(del);
+		}
+	}
+}
+
+#endif //EMBPERL_COMMANDS
 
 /*
  *
@@ -527,28 +560,40 @@ int command_add(const char *command_string, const char *desc, int access, CmdFun
  */
 int command_realdispatch(Client *c, const char *message)
 {
-	struct cl_struct *cur;
-	int i;
-	//Seperator sep(message);
-        Seperator sep(message, ' ', 10, 100, true); //changed by Eglin: "three word argument" should be considered 1 arg
-
+	_ZP(command_realdispatch);
+	
+	
+    Seperator sep(message, ' ', 10, 100, true); //changed by Eglin: "three word argument" should be considered 1 arg
+	
 	command_logcommand(c, message);
-	for(cur=commandlist;cur;cur=cur->next)
-		for(i=0;cur->command[i] && i<CMDALIASES;i++)
-			if(!strcasecmp(sep.arg[0]+1, cur->command[i]))
-			{
-				if(c->Admin() >= cur->access){
-					cur->function(c, &sep);	// dispatch command
-				}
-				else{
-					c->Message(13,"Your access level is not high enough to use this command.");
-				}
-				return 0;
-			}
-
-	// only reached if command was not found
-	c->Message(13, "Command '%s' not recognized.", sep.arg[0]+1);
-	return -1;
+	
+	string cstr(sep.arg[0]+1);
+	
+	if(commandlist.count(cstr) != 1) {
+		c->Message(13, "Command '%s' not recognized.", sep.arg[0]+1);
+		return(-1);
+	}
+	
+	CommandRecord *cur = commandlist[cstr];
+	if(c->Admin() < cur->access){
+		c->Message(13,"Your access level is not high enough to use this command.");
+		return(-1);
+	}
+	
+	if(cur->function == NULL) {
+#ifdef EMBPERL_COMMANDS
+		//dispatch perl command
+		PerlembParser *embparse = (PerlembParser *) parse;
+		embparse->ExecCommand(c, &sep);
+#else
+		LogFile->write(EQEMuLog::Error, "Command '%s' has a null function, but perl commands are diabled!\n", cstr.c_str());
+		return(-1);
+#endif
+	} else {
+		//dispatch C++ command
+		cur->function(c, &sep);	// dispatch command
+	}
+	return 0;
 }
 
 void command_logcommand(Client *c, const char *message)
@@ -857,55 +902,28 @@ void command_optest(Client *c, const Seperator *sep)
 
 void command_help(Client *c, const Seperator *sep)
 {
-	struct cl_struct *cur;
-	int i, commands_shown=0;
-	bool match;
-	char temp[512], *cptr, *upper1, *upper2;
+	int commands_shown=0;
 
 	c->Message(0, "Available EQEMu commands:");
-	for(cur=commandlist;cur;cur=cur->next)
-	{
-		match=false;
-		if(sep->arg[1][0])
-		{
-			cptr=sep->arg[1];
-			if(*cptr==COMMAND_CHAR)
-				cptr++;
-
-			for(i=0;cur->command[i] && i<CMDALIASES;i++)
-			{
-				upper1=strdup(cptr);
-				upper2=strdup(cur->command[i]);
-				MakeUpperString(cptr, upper1);
-				MakeUpperString(cur->command[i], upper2);
-				if(strstr(upper2, upper1))
-					match=true;
-				free(upper1);
-				free(upper2);
-				if(match)
-					break;
+	
+	map<string, CommandRecord *>::iterator cur,end;
+	cur = commandlist.begin();
+	end = commandlist.end();
+	
+	for(; cur != end; cur++) {
+		if(sep->arg[1][0]) {		
+			if(cur->first.find(sep->arg[1]) == string::npos) {
+				continue;
 			}
 		}
 		
-	  if(c->Admin() >= cur->access && (!sep->arg[1][0] || match))
-	  {
-	  	commands_shown++;
-			c->Message(0, "	%c%s %s", COMMAND_CHAR, cur->command[0], cur->desc);
-			if(CMDALIASES && cur->command[1])
-			{
-				strcpy(temp, "		aliases: ");
-				for(i=1;i<CMDALIASES && cur->command[i];i++)
-				{
-					strcat(temp, " ");
-					temp[strlen(temp)+1]=0;
-					temp[strlen(temp)]=COMMAND_CHAR;
-					strcat(temp, cur->command[i]);
-				}
-				c->Message(0, temp);
-			}
-		}
+		if(c->Admin() < cur->second->access)
+			continue;
+  		commands_shown++;
+		c->Message(0, "	%c%s %s", COMMAND_CHAR, cur->first.c_str(), cur->second->desc == NULL?"":cur->second->desc);
 	}
 	c->Message(0, "%d command%s listed.", commands_shown, commands_shown!=1?"s":"");
+	
 }
 
 void command_version(Client *c, const Seperator *sep)
@@ -5736,6 +5754,15 @@ void command_npcedit(Client *c, const Seperator *sep)
       c->Message(0, "Type #npcedit help for more info");
    }
 }
+
+#ifdef EQPROFILE
+void command_profiledump(Client *c, const Seperator *sep) {
+	DumpZoneProfile();
+}
+void command_profilereset(Client *c, const Seperator *sep) {
+	ResetZoneProfile();
+}
+#endif
 
 void command_logs(Client *c, const Seperator *sep)
 {

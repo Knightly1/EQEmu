@@ -29,6 +29,7 @@
 #include "features.h"
 #include "embparser.h"
 #include "questmgr.h"
+#include "command.h"
 
 #include <algorithm>
 
@@ -39,8 +40,8 @@ extern char* itoa(int integer);
 
 PerlembParser::PerlembParser(void) : Parser()
 {
-LogFile->write(EQEMuLog::Error, "Starting command queue perl parser.\n");
 	perl = NULL;
+	eventQueueProcessing = false;
 	ReloadQuests();
 }
 
@@ -68,11 +69,42 @@ void PerlembParser::ExportVar(const char * pkgprefix, const char * varname, cons
 	}
 }
 
+void PerlembParser::HandleQueue() {
+	if(eventQueueProcessing)
+		return;
+	eventQueueProcessing = true;
+	
+	while(!eventQueue.empty()) {
+		EventRecord e = eventQueue.front();
+		eventQueue.pop();
+
+printf("Running queued event for '%s' type %d\n", e.npcmob->GetName(), e.event);
+
+		Event(e.event, e.npcid, e.data.c_str(), e.npcmob, e.mob);
+	}
+	
+	eventQueueProcessing = false;
+}
+
 void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob, Mob* mob)
 {
 	if(!perl)
 		return;
-
+	
+	if(perl->InUse()) {
+LogFile->write(EQEMuLog::Debug, "Queued event for %s: %d\n", npcmob->GetName(), event);
+		//queue the event for later.
+		EventRecord e;
+		e.event = event;
+		e.npcid = npcid;
+		if(data != NULL)
+			e.data = data;
+		e.npcmob = npcmob;
+		e.mob = mob;
+		eventQueue.push(e);
+		return;
+	}
+	
 	string packagename = GetPkgPrefix(npcid);
 
 	if(!isloaded(packagename.c_str()))
@@ -80,7 +112,7 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 		LoadScript(npcid, zone->GetShortName());
 	}
 
-	packagename = GetPkgPrefix(npcid);
+//	packagename = GetPkgPrefix(npcid);
 
 // SCORPIOUS2K - load global variables
 
@@ -292,14 +324,22 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 			break;
 		}
 // event hp
-		case EVENT_HP: { 
-			if (npcmob) { 
+		case EVENT_HP: {
+			if (npcmob) {
 				SendCommands(packagename.c_str(), "EVENT_HP", npcid, npcmob, mob); 
 			} 
 			break; 
 		}
-		case EVENT_AGGRO: { 
+		case EVENT_AGGRO: {
 			SendCommands(packagename.c_str(), "EVENT_AGGRO", npcid, npcmob, mob); 
+			break; 
+		}
+		case EVENT_ENTER: {
+			SendCommands(packagename.c_str(), "EVENT_ENTER", npcid, npcmob, mob); 
+			break; 
+		}
+		case EVENT_EXIT: {
+			SendCommands(packagename.c_str(), "EVENT_EXIT", npcid, npcmob, mob); 
 			break; 
 		}
 
@@ -308,17 +348,19 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 			break;
 		}
 	}
+	
+	//now handle any events that cropped up...
+	HandleQueue();
 }
 
-void PerlembParser::ReloadQuests()
-{
-LogFile->write(EQEMuLog::Error, "Reloading quests for zone...\n");
+void PerlembParser::ReloadQuests() {
+	
+	command_clear_perl();
+	
 	if(perl != NULL)
 		delete perl;
 	try {
-LogFile->write(EQEMuLog::Error, "Making parser...\n");
 		perl = new Embperl;
-LogFile->write(EQEMuLog::Error, "Mapping...\n");
 		map_funs();
 	}
 	catch(const char * msg) {
@@ -332,6 +374,7 @@ LogFile->write(EQEMuLog::Error, "Mapping...\n");
 	catch(const char * err) {
 		LogFile->write(EQEMuLog::Status, "Error loading default script: %s", err);
 	}
+	
 	hasQuests.clear();
 }
 
@@ -339,6 +382,9 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 {
 	if(!perl)
 		return(0);
+if(npcid == 45054)
+printf("Starting LoadQuest for %d:\n", npcid);
+
 	
 	//we have allready tried to load this quest...
 	if(hasQuests.count(npcid) == 1) {
@@ -470,6 +516,9 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 
 	}
 
+if(npcid == 45054)
+printf("LoadQuest for %d: settled on '%s'\n", npcid, filename.c_str());
+
 //LogFile->write(EQEMuLog::Debug, "	finally settling on '%s'", filename.c_str());
 //	LogFile->write(EQEMuLog::Status, "Looking for quest file: '%s'", filename.c_str());
 
@@ -478,7 +527,9 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 //	try { perl->eval(std::string("delete_package(\"").append(packagename).append("\");").c_str()); }
 //	catch(...) {/*perl balked at us trynig to delete a non-existant package... no big deal.*/}
 
-	try { perl->eval_file(packagename.c_str(), filename.c_str()); }
+	try {
+		perl->eval_file(packagename.c_str(), filename.c_str());
+	}
 	catch(const char * err)
 	{
 		//try to reduce some of the console spam... 
@@ -554,6 +605,8 @@ void PerlembParser::SendCommands(const char * pkgprefix, const char *event, int3
 {
 	if(!perl)
 		return;
+	_ZP(PerlembParser_SendCommands);
+	
 	quest_manager.StartQuest(other, mob?mob->CastToClient():NULL);
 
 	try
@@ -585,6 +638,44 @@ void PerlembParser::SendCommands(const char * pkgprefix, const char *event, int3
 	
 	quest_manager.EndQuest();
 }
+
+#ifdef EMBPERL_COMMANDS
+void PerlembParser::ExecCommand(Client *c, Seperator *sep) {
+#ifdef EMBPERL_XS_CLASSES
+	SV *client = get_sv("commands::client", true);
+	if(c != NULL) {
+		sv_setref_pv(client, "Client", c);
+	} else {
+		//clear out the value, mainly to get rid of blessedness
+		//which prevents us from accessing an invalid pointer
+		sv_setsv(client, newSV(0));
+	}
+#endif
+	
+	char namebuf[128];
+	snprintf(namebuf, 128, "commands::%s", sep->arg[0]+1);
+	namebuf[127] = '\0';
+	
+	std::vector<std::string> args;
+	int i;
+	for(i = 1; i < sep->argnum; i++) {
+		args.push_back(sep->arg[i]);
+	}
+	
+	try
+	{
+		perl->dosub(namebuf, &args);
+	} catch(const char * err)
+	{
+		c->Message(13, "Error executing perl command, check the logs.");
+		LogFile->write(EQEMuLog::Quest, "Script error: %s", err);
+		return;
+	}
+	
+	//now handle any events that cropped up...
+	HandleQueue();
+}
+#endif
 
 void PerlembParser::map_funs()
 {
@@ -675,6 +766,8 @@ LogFile->write(EQEMuLog::Error, "Starting command queue Mapping...\n");
 "sub addldonpoints{push(@cmd_queue,{func=>'addldonpoints',args=>join(',',@_)});}"
 "sub addloot{push(@cmd_queue,{func=>'addloot',args=>join(',',@_)});}"
 "sub traindisc{push(@cmd_queue,{func=>'traindisc',args=>join(',',@_)});}"
+"sub set_proximity{push(@cmd_queue,{func=>'set_proximity',args=>join(',',@_)});}"
+"sub clear_proximity{push(@cmd_queue,{func=>'clear_proximity',args=>join(',',@_)});}"
 "package main;"
 "}"
 );//eval

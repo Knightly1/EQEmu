@@ -9,9 +9,13 @@
 #include "client.h"
 #include "parser.h"
 #include "embperl.h"
+#include "features.h"
 
 #include <map>
+#include <queue>
 using namespace std;
+
+class Seperator;
 
 typedef enum {
 	questDefault = 1,
@@ -20,11 +24,23 @@ typedef enum {
 	questByID
 } questMode;
 
+struct EventRecord {
+	int event;
+	int32 npcid;
+	string data;
+	NPC* npcmob;
+	Mob* mob;
+};
+
 class PerlembParser : public Parser
 {
 protected:
 	
 	map<int32, questMode> hasQuests;	//npcid -> questMode
+	queue<EventRecord> eventQueue;		//for events that happen when perl is in use.
+	bool eventQueueProcessing;
+	
+	void HandleQueue();
 	
 	Embperl * perl;
 	//export a symbol table of sorts
@@ -51,6 +67,10 @@ public:
 	void ReloadQuests();
 	
 	int	HasQuestFile(int32 npcid);
+	
+#ifdef EMBPERL_COMMANDS
+	void ExecCommand(Client *c, Seperator *sep);
+#endif
 	
 };
 

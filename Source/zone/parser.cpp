@@ -37,7 +37,6 @@ extern Database database;
 extern Zone* zone;
 extern WorldServer worldserver;
 extern EntityList entity_list;
-std::list<timers*> TimerList;
 
 
 #define Parser_DEBUG 1
@@ -458,6 +457,18 @@ void Parser::Event(int event, int32 npcid, const char * data, NPC* npcmob, Mob* 
 			SendCommands("event_signal", qstID, npcmob, mob);
 			break;
 		}
+		case EVENT_AGGRO: {
+			SendCommands("event_aggro", qstID, npcmob, mob);
+			break;
+		}
+		case EVENT_ENTER: {
+			SendCommands("event_enter", qstID, npcmob, mob);
+			break;
+		}
+		case EVENT_EXIT: {
+			SendCommands("event_exit", qstID, npcmob, mob);
+			break;
+		}
 		default: {
 			// should we do anything here?
 			break;
@@ -482,7 +493,6 @@ Parser::~Parser() {
 	varlist.clear();
 	AliasList.clear();
 	safe_delete_array(pNPCqstID);
-	TimerList.clear();
 }
 
 bool Parser::LoadAttempted(int32 iNPCID) {
@@ -949,7 +959,18 @@ void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid
 	}
 	else if (!strcmp(command,"setnexthpevent")) {
 		quest_manager.setnexthpevent(atoi(arglist[0]));
-	} 
+	}
+	else if (!strcmp(command,"set_proximity")) {
+		float v1 = atof(arglist[4]);
+		float v2 = atof(arglist[5]);
+		if(v1 == v2)	//omitted, or wrong, either way, skip them
+			quest_manager.set_proximity(atof(arglist[0]), atof(arglist[1]), atof(arglist[2]), atof(arglist[3]));
+		else
+			quest_manager.set_proximity(atof(arglist[0]), atof(arglist[1]), atof(arglist[2]), atof(arglist[3]), v1, v2);
+	}
+	else if (!strcmp(command,"clear_proximity")) {
+		quest_manager.clear_proximity();
+	}
 	else if (!strcmp(command,"respawn")) 
 	{
 		quest_manager.respawn(atoi(arglist[0]), atoi(arglist[1]));

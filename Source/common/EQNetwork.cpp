@@ -191,6 +191,7 @@ void EQNetworkServer::SetOpen(bool iOpen) {
 }
 
 void EQNetworkServer::Process() {
+	_CP(EQNetworkServer_Process);
 	if (!IsOpen()) {
 		if (sock) {
 #ifdef WIN32
@@ -317,14 +318,18 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 }
 
 #ifdef WIN32
-	void EQNetworkServerLoop(void* tmp) {
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
+	void EQNetworkServerLoop(void* tmp)
 #else
-	void* EQNetworkServerLoop(void* tmp) {
+	void* EQNetworkServerLoop(void* tmp)
+#endif
+{
+#ifdef WIN32
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
 #endif
 	EQNetworkServer* eqns = (EQNetworkServer*) tmp;
 	eqns->MLoopRunning.lock();
 	while (eqns->RunLoop) {
+		_CP(EQNetworkServerLoop);
 		eqns->Process();
 		Sleep(1);
 	}
@@ -337,10 +342,11 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 }
 
 #ifdef WIN32
-	void EQNetworkConnectionInLoop(void* tmp) {
+	void EQNetworkConnectionInLoop(void* tmp)
 #else
-	void* EQNetworkConnectionInLoop(void* tmp) {
+	void* EQNetworkConnectionInLoop(void* tmp)
 #endif
+{
 	EQNetworkConnection* eqnc = (EQNetworkConnection*) tmp;
 #ifdef _DEBUG
 	if (eqnc->ConnectionType != Outgoing) {
@@ -351,6 +357,7 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 	Timer* tmp_timer = new Timer(100);
 	tmp_timer->Start();
 	while (eqnc->RunLoop) {
+		_CP(EQNetworkConnectionInLoop);
 		if(tmp_timer->Check())
 		eqnc->DoRecvData();
 		Sleep(1);
@@ -365,10 +372,11 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 }
 
 #ifdef WIN32
-	void EQNetworkConnectionOutLoop(void* tmp) {
+	void EQNetworkConnectionOutLoop(void* tmp)
 #else
-	void* EQNetworkConnectionOutLoop(void* tmp) {
+	void* EQNetworkConnectionOutLoop(void* tmp)
 #endif
+{
 	EQNetworkConnection* eqnc = (EQNetworkConnection*) tmp;
 #ifdef _DEBUG
 	if (eqnc->ConnectionType != Outgoing) {
@@ -379,6 +387,7 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 	Timer* tmp_timer = new Timer(100);
 	tmp_timer->Start();
 	while (eqnc->RunLoop) {
+		_CP(EQNetworkConnectionOutLoop);
 		if(tmp_timer->Check())
 		eqnc->Process(eqnc->outsock);
 		Sleep(1);
@@ -756,10 +765,12 @@ InQueue_Struct* EQNetworkConnection::InQueuePop() {
 }
 
 #ifdef WIN32
-void EQNetworkConnection::Process(SOCKET sock) {
+void EQNetworkConnection::Process(SOCKET sock)
 #else
-void EQNetworkConnection::Process(int sock) {
+void EQNetworkConnection::Process(int sock)
 #endif
+{
+	_CP(EQNetworkConnection_Process);
 	if (!CheckNetActive())
 		return;
 	InQueue_Struct* iqs = 0;

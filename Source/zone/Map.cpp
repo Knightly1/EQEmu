@@ -78,16 +78,13 @@ Map* Map::LoadMapfile(const char* in_zonename) {
 }
 
 Map::Map() {
-#ifdef MAP_COUNT_THINGS
-	_branches = 0;
-	_finals = 0;
+	_minz = 999999;
+	_maxz = -999999;
 	_minx = 999999;
 	_miny = 999999;
-	_minz = 999999;
 	_maxx = -999999;
 	_maxy = -999999;
-	_maxz = -999999;
-#endif
+	
 	m_Faces = 0;
 	m_Nodes = 0;
 	m_FaceLists = 0;
@@ -146,7 +143,6 @@ bool Map::loadMap(FILE *fp) {
 /*	mRoot = new NODE();
 	RecLoadNode(mRoot, fp );*/
 
-#ifdef MAP_COUNT_THINGS
 	unsigned long i;
 	float v;
 	for(i = 0; i < m_Faces; i++) {
@@ -169,9 +165,8 @@ bool Map::loadMap(FILE *fp) {
 		if(v < _minz)
 			_minz = v;
 	}
-	printf("Loaded map: %lu vertices, %lu faces, %lu branch nodes, %lu final nodes\n", m_Faces*3, m_Faces, _branches, _finals);
+	printf("Loaded map: %lu vertices, %lu faces\n", m_Faces*3, m_Faces);
 	printf("Map BB: (%.2f -> %.2f, %.2f -> %.2f, %.2f -> %.2f)\n", _minx, _maxx, _miny, _maxy, _minz, _maxz);
-#endif
 	return(true);
 }
 
@@ -333,6 +328,7 @@ float Map::GetFaceHeight( int _idx, float x, float y ) {
 //p2=end of segment
 
 bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *result, FACE **on) {
+	_ZP(Map_LineIntersectsZone);
 	VERTEX step;
 	VERTEX cur = start;
 	
@@ -395,6 +391,7 @@ bool Map::LocWithinNode( NodeRef node_r, float x, float y ) {
 }
 
 bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *result, FACE **on) {
+	_ZP(Map_LineIntersectsNode);
 	if( node_r == NODE_NONE || node_r >= m_Nodes) {
 		return(true);   //can see through empty nodes, just allow LOS on error...
 	}
@@ -425,6 +422,7 @@ bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *resu
 
 
 float Map::FindBestZ( NodeRef node_r, VERTEX p1, VERTEX *result, FACE **on) {
+	_ZP(Map_FindBestZ);
 	if( node_r == NODE_NONE || node_r >= m_Nodes) {
 		return(-999999);
 	}

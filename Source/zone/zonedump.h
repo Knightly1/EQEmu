@@ -95,8 +95,8 @@ struct NPCType
 	bool	ipc;
 	bool	see_invis;			// Mongrel: See Invis flag added
 	bool	see_invis_undead;   // Mongrel: See Invis vs. Undead flag added 
-	bool  qglobal;
-
+	bool	qglobal;
+	bool	npc_aggro;
 };
 
 struct ZSDump_Spawn2 {

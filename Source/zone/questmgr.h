@@ -31,6 +31,9 @@ public:
 	void StartQuest(NPC *_npc, Client *_initiator = NULL);
 	void EndQuest();
 	
+	void Process();
+	
+	void ClearTimers(NPC *who);
 	
 	//quest perl functions
 	void echo(const char *str);
@@ -102,6 +105,8 @@ public:
 	void addldonpoints(sint32 points, int32 theme);
 	void setnexthpevent(int at);
 	void respawn(int npc_type, int grid);
+	void set_proximity(float minx, float maxx, float miny, float maxy, float minz=-999999, float maxz=999999);
+	void clear_proximity();
 	//not in here because it retains perl types
 	//thing ChooseRandom(array_of_things)
 	
@@ -111,9 +116,21 @@ protected:
 	NPC *npc;	//NPC is never NULL when functions are called.
 	Client *initiator;	//this can be null.
 	
+	bool depop_npc;	//true if EndQuest should depop the NPC
+	
 	Mutex quest_mutex;
 	
 	static int32 QGexpdate(const char * name, const char * options);
+
+
+	class QuestTimer {
+	public:
+		inline QuestTimer(int duration, NPC *_mob, string _name) : mob(_mob), name(_name), Timer_(duration) { Timer_.Start(duration, false); }
+		NPC*   mob;
+		string name;
+		Timer Timer_;
+	};
+	list<QuestTimer> TimerList;
 
 };
 
