@@ -477,6 +477,7 @@ public:
 	void	HandleMysqlError(int32 errnum);
 	
 	uint32  MaxDoors() { return max_door_type; }
+	void	UpdateDoorGuildID(int doorid, int guildid);
 	
 	void ConvertItemBlob(); //@merth: just here temporarily
 	

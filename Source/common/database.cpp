@@ -7378,3 +7378,18 @@ bool Database::UpdateZoneOnlineStatus(int32 zoneid,int8 online)
 return true;
 }
 #endif
+
+void Database::UpdateDoorGuildID(int doorid, int guildid)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	int32	affected_rows = 0, totalsales=0;
+
+	RunQuery(query, MakeAnyLenString(&query, 
+		"UPDATE doors SET guild=%i WHERE id=%i;",guildid,doorid),
+		errbuf, 0, &affected_rows);
+
+	safe_delete_array(query);
+
+	return;
+}
