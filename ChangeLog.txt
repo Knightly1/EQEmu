@@ -2,6 +2,7 @@ EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 ==10/15/2004
 LethalEncounter: Changes necessary for the new MiniLogin :)
+LethalEncounter: Z loc fix, it was placing you ten times the z loc it was supposed to :P
 
 ==10/14/2004
 Rogean: omg we are so teh 0.6.0DR1 now~

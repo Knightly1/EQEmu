@@ -5280,7 +5280,7 @@ printf("Nobody in group is in this zone, making new group object.");
 	sze->player.spawn.npc=0;
 	sze->player.spawn.unknown367[0]=0xFFFFFFFF;
 	sze->player.spawn.unknown367[1]=0xFFFFFFFF;
-	sze->player.spawn.z = sze->player.spawn.z * 105/10;	//what is this multiply all about?
+	//sze->player.spawn.z = sze->player.spawn.z * 105/10;	//what is this multiply all about?
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	
