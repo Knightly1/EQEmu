@@ -19,8 +19,7 @@ CFG=World - Win32 Debug
 !MESSAGE 
 !MESSAGE "World - Win32 Release" (based on "Win32 (x86) Console Application")
 !MESSAGE "World - Win32 Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "World - Win32 GotFrags" (based on "Win32 (x86) Console Application")
-!MESSAGE "World - Win32 Profiling" (based on "Win32 (x86) Console Application")
+!MESSAGE "World - Win32 Raid Addicts" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -80,57 +79,30 @@ LINK32=link.exe
 # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /debug /machine:I386 /nodefaultlib:"LIBCMT" /nodefaultlib:"LIBC" /out:"../build/WorldDebug.exe" /pdbtype:sept
 # SUBTRACT LINK32 /pdb:none /map
 
-!ELSEIF  "$(CFG)" == "World - Win32 GotFrags"
+!ELSEIF  "$(CFG)" == "World - Win32 Raid Addicts"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "World___Win32_GotFrags"
-# PROP BASE Intermediate_Dir "World___Win32_GotFrags"
-# PROP BASE Ignore_Export_Lib 0
+# PROP BASE Output_Dir "Release"
+# PROP BASE Intermediate_Dir "Release"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir "../build/"
-# PROP Intermediate_Dir "../Build/World/GotFrags/"
+# PROP Intermediate_Dir "../Build/World/Release/"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /w /W0 /GX /O2 /Ob2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D "BUILD_FOR_WINDOWS" /FR /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Od /Ob2 /D "GOTFRAGS" /D "NDEBUG" /D "WORLD" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /YX /FD /c
+# ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
+# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /D "NDEBUG" /D "WORLD" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo /o"../Build/World/World.bsc"
-# ADD BSC32 /nologo /o"../Build/World/GotFrags/World.bsc"
-LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /machine:I386
-# SUBTRACT BASE LINK32 /debug
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/WorldGF.map" /debug /machine:I386 /out:"../Build/WorldGF.exe"
-
-!ELSEIF  "$(CFG)" == "World - Win32 Profiling"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "World___Win32_Profiling"
-# PROP BASE Intermediate_Dir "World___Win32_Profiling"
-# PROP BASE Ignore_Export_Lib 0
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir "../build/"
-# PROP Intermediate_Dir "../build/world/Profiling"
-# PROP Ignore_Export_Lib 0
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /w /W0 /GX /O2 /Ob2 /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /FR /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /O2 /Ob2 /D "NDEBUG" /D "WORLD" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /YX /FD /c
-# ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo /o"../Build/World/World.bsc"
+# ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo /o"../Build/World/World.bsc"
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /machine:I386
-# SUBTRACT BASE LINK32 /debug
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /profile /machine:I386 /nodefaultlib:"libc" /out:"C:\EQEmuCVS\Source\Build\World.exe"
+# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/World.map" /debug /machine:I386 /nodefaultlib:"libc"
+# SUBTRACT LINK32 /pdb:none
 
 !ENDIF 
 
@@ -138,8 +110,7 @@ LINK32=link.exe
 
 # Name "World - Win32 Release"
 # Name "World - Win32 Debug"
-# Name "World - Win32 GotFrags"
-# Name "World - Win32 Profiling"
+# Name "World - Win32 Raid Addicts"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
@@ -213,9 +184,7 @@ SOURCE=..\common\database.cpp
 
 # ADD CPP /Gd /Gm /YX
 
-!ELSEIF  "$(CFG)" == "World - Win32 GotFrags"
-
-!ELSEIF  "$(CFG)" == "World - Win32 Profiling"
+!ELSEIF  "$(CFG)" == "World - Win32 Raid Addicts"
 
 !ENDIF 
 

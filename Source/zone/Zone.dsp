@@ -19,11 +19,7 @@ CFG=ZONE - WIN32 RELEASE
 !MESSAGE 
 !MESSAGE "Zone - Win32 Release" (based on "Win32 (x86) Console Application")
 !MESSAGE "Zone - Win32 Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "Zone - Win32 GotFrags" (based on "Win32 (x86) Console Application")
-!MESSAGE "Zone - Win32 Win9x" (based on "Win32 (x86) Console Application")
-!MESSAGE "Zone - Win32 Profiling" (based on "Win32 (x86) Console Application")
-!MESSAGE "Zone - Win32 GuildWars" (based on "Win32 (x86) Console Application")
-!MESSAGE "Zone - Win32 GuildWars Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE "Zone - Win32 Raid Addicts" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -83,135 +79,28 @@ LINK32=link.exe
 # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /debug /machine:I386 /nodefaultlib:"LIBCMT" /nodefaultlib:"LIBC" /out:"../build/ZoneDebug.exe" /pdbtype:sept
 # SUBTRACT LINK32 /pdb:none
 
-!ELSEIF  "$(CFG)" == "Zone - Win32 GotFrags"
+!ELSEIF  "$(CFG)" == "Zone - Win32 Raid Addicts"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "Zone___Win32_GotFrags"
-# PROP BASE Intermediate_Dir "Zone___Win32_GotFrags"
-# PROP BASE Ignore_Export_Lib 0
+# PROP BASE Output_Dir "Release"
+# PROP BASE Intermediate_Dir "Release"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir "../Build/"
-# PROP Intermediate_Dir "../Build/Zone/GotFrags"
+# PROP Intermediate_Dir "../Build/Zone/Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /w /W0 /GX /O2 /Ob2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D "BUILD_FOR_WINDOWS" /D "LUCLIN" /D _WIN32_WINNT=0x0400 /FR /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Od /Ob2 /D "GOTFRAGS" /D "SHAREMEM" /D _WIN32_WINNT=0x0400 /D "NDEBUG" /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "EQDEBUG 0" /D "FIELD_ITEMS" /FR /YX /FD /c
+# ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
+# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /D "SHAREMEM" /D "CATCH_CRASH" /D _WIN32_WINNT=0x0400 /D "NDEBUG" /D "ZONESERVER" /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /D EQDEBUG=0 /FR /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo /o"../Build/Zone/Zone.bsc"
+# ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo /o"../Build/Zone/Zone.bsc"
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /machine:I386 /out:"../Build/ZoneNT.exe"
-# SUBTRACT BASE LINK32 /debug
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/ZoneGF.map" /debug /machine:I386 /out:"..\build\\ZoneGF.exe"
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Win9x"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "Zone___Win32_Win9x"
-# PROP BASE Intermediate_Dir "Zone___Win32_Win9x"
-# PROP BASE Ignore_Export_Lib 0
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir "../Build"
-# PROP Intermediate_Dir "../Build/Zone/Win9x"
-# PROP Ignore_Export_Lib 0
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /w /W0 /GX /Od /Ob2 /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /FR /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /O2 /Ob2 /D "_WIN9x_" /D "NDEBUG" /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "EQDEBUG 0" /D "FIELD_ITEMS" /FR /YX /FD /c
-# ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo /o"../Build/Zone/Zone.bsc"
-# ADD BSC32 /nologo /o"../Build/Zone9x/Zone9x.bsc"
-LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /debug /machine:I386 /out:"C:\eqemucvs\build\\ZoneGF.exe"
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /machine:I386 /out:"C:\eqemucvs\Source\build\\Zone9x.exe"
-# SUBTRACT LINK32 /debug
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Profiling"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "Zone___Win32_Profiling"
-# PROP BASE Intermediate_Dir "Zone___Win32_Profiling"
-# PROP BASE Ignore_Export_Lib 0
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir "../build/"
-# PROP Intermediate_Dir "../build/Zone/Profiling"
-# PROP Ignore_Export_Lib 0
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /w /W0 /GX /O2 /Ob2 /D "SHAREMEM" /D "CATCH_CRASH" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D "ZONESERVER" /FR /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /O2 /Ob2 /D "SHAREMEM" /D "CATCH_CRASH" /D _WIN32_WINNT=0x0400 /D "NDEBUG" /D "ZONESERVER" /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D EQDEBUG=0 /D "FIELD_ITEMS" /FR /YX /FD /c
-# ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo /o"../Build/Zone/Zone.bsc"
-# ADD BSC32 /nologo /o"../Build/Zone/Zone.bsc"
-LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /machine:I386 /out:"../Build/ZoneNT.exe"
-# SUBTRACT BASE LINK32 /debug
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /profile /machine:I386 /nodefaultlib:"libc" /out:"C:\EQEmuCVS\Source\Build\Zone.exe"
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "Zone___Win32_GuildWars"
-# PROP BASE Intermediate_Dir "Zone___Win32_GuildWars"
-# PROP BASE Ignore_Export_Lib 0
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir "../Build/"
-# PROP Intermediate_Dir "../Build/Zone/GuildWars"
-# PROP Ignore_Export_Lib 0
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /D "ZONE" /D "SHAREMEM" /D "CATCH_CRASH" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D "ZONESERVER" /FR /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /D "SHAREMEM" /D "CATCH_CRASH" /D _WIN32_WINNT=0x0400 /D "NDEBUG" /D "ZONESERVER" /D "GUILDWARS" /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "EQDEBUG 0" /D "FIELD_ITEMS" /FR /YX /FD /c
-# ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo /o"../Build/Zone/Zone.bsc"
-# ADD BSC32 /nologo /o"../Build/Zone/Zone.bsc"
-LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/Zone.map" /debug /machine:I386 /nodefaultlib:"libc"
-# SUBTRACT BASE LINK32 /pdb:none
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/Zone.map" /debug /machine:I386 /nodefaultlib:"libc"
-# SUBTRACT LINK32 /pdb:none
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars Debug"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "Zone___Win32_GuildWars_Debug"
-# PROP BASE Intermediate_Dir "Zone___Win32_GuildWars_Debug"
-# PROP BASE Ignore_Export_Lib 0
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir "Zone___Win32_GuildWars_Debug"
-# PROP Intermediate_Dir "Zone___Win32_GuildWars_Debug"
-# PROP Ignore_Export_Lib 0
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /D "ZONE" /D "SHAREMEM" /D "CATCH_CRASH" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D "ZONESERVER" /D "GUILDWARS" /FR /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /D "SHAREMEM" /D "CATCH_CRASH" /D _WIN32_WINNT=0x0400 /D "NDEBUG" /D "ZONESERVER" /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "EQDEBUG 0" /D "FIELD_ITEMS" /FR /YX /FD /c
-# ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo /o"../Build/Zone/Zone.bsc"
-# ADD BSC32 /nologo /o"../Build/Zone/Zone.bsc"
-LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/Zone.map" /debug /machine:I386 /nodefaultlib:"libc"
-# SUBTRACT BASE LINK32 /pdb:none
+# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
 # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/Zone.map" /debug /machine:I386 /nodefaultlib:"libc"
 # SUBTRACT LINK32 /pdb:none
 
@@ -221,14 +110,18 @@ LINK32=link.exe
 
 # Name "Zone - Win32 Release"
 # Name "Zone - Win32 Debug"
-# Name "Zone - Win32 GotFrags"
-# Name "Zone - Win32 Win9x"
-# Name "Zone - Win32 Profiling"
-# Name "Zone - Win32 GuildWars"
-# Name "Zone - Win32 GuildWars Debug"
+# Name "Zone - Win32 Raid Addicts"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# Begin Source File
+
+SOURCE=.\AA.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\aggro.cpp
+# End Source File
 # Begin Source File
 
 SOURCE=.\attack.cpp
@@ -239,7 +132,15 @@ SOURCE=.\beacon.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\bonuses.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\client.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\client_mods.cpp
 # End Source File
 # Begin Source File
 
@@ -252,6 +153,10 @@ SOURCE=.\command.cpp
 # Begin Source File
 
 SOURCE=.\doors.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\effects.cpp
 # End Source File
 # Begin Source File
 
@@ -275,7 +180,15 @@ SOURCE=.\groups.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\guilds.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\hate_list.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\inventory.cpp
 # End Source File
 # Begin Source File
 
@@ -315,6 +228,10 @@ SOURCE=.\petitions.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pets.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\PlayerCorpse.cpp
 # End Source File
 # Begin Source File
@@ -331,7 +248,31 @@ SOURCE=.\spawngroup.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\spdat.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\spell_effects.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\spells.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\tradeskills.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\trading.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\trap.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\waypoints.cpp
 # End Source File
 # Begin Source File
 
@@ -380,6 +321,10 @@ SOURCE=.\event_codes.h
 # Begin Source File
 
 SOURCE=.\faction.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\features.h
 # End Source File
 # Begin Source File
 
@@ -452,6 +397,10 @@ SOURCE=.\spawngroup.h
 # Begin Source File
 
 SOURCE=.\spdat.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\trap.h
 # End Source File
 # Begin Source File
 
@@ -535,10 +484,6 @@ SOURCE=..\common\eqtime.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\Guilds.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\common\Item.h
 # End Source File
 # Begin Source File
@@ -616,42 +561,7 @@ SOURCE=..\common\types.h
 # Begin Source File
 
 SOURCE=..\common\unix.h
-
-!IF  "$(CFG)" == "Zone - Win32 Release"
-
 # PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Debug"
-
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GotFrags"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Win9x"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Profiling"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars Debug"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
@@ -679,15 +589,7 @@ SOURCE=..\common\database.cpp
 
 # ADD CPP /Gd /Gm /YX
 
-!ELSEIF  "$(CFG)" == "Zone - Win32 GotFrags"
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Win9x"
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Profiling"
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars"
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars Debug"
+!ELSEIF  "$(CFG)" == "Zone - Win32 Raid Addicts"
 
 !ENDIF 
 
@@ -722,10 +624,6 @@ SOURCE=..\common\eqtime.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\guilds.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\common\Item.cpp
 # End Source File
 # Begin Source File
@@ -746,15 +644,7 @@ SOURCE=..\common\MiscFunctions.cpp
 
 # ADD CPP /w /W0
 
-!ELSEIF  "$(CFG)" == "Zone - Win32 GotFrags"
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Win9x"
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Profiling"
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars"
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars Debug"
+!ELSEIF  "$(CFG)" == "Zone - Win32 Raid Addicts"
 
 !ENDIF 
 
@@ -807,27 +697,7 @@ SOURCE=..\common\unix.cpp
 
 # PROP Exclude_From_Build 1
 
-!ELSEIF  "$(CFG)" == "Zone - Win32 GotFrags"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Win9x"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Profiling"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars Debug"
+!ELSEIF  "$(CFG)" == "Zone - Win32 Raid Addicts"
 
 # PROP BASE Exclude_From_Build 1
 # PROP Exclude_From_Build 1
@@ -851,27 +721,7 @@ SOURCE=..\readme.txt
 
 # PROP Exclude_From_Build 1
 
-!ELSEIF  "$(CFG)" == "Zone - Win32 GotFrags"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Win9x"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 Profiling"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars"
-
-# PROP BASE Exclude_From_Build 1
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "Zone - Win32 GuildWars Debug"
+!ELSEIF  "$(CFG)" == "Zone - Win32 Raid Addicts"
 
 # PROP BASE Exclude_From_Build 1
 # PROP Exclude_From_Build 1
