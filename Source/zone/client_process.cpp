@@ -5576,12 +5576,10 @@ bool Client::Process() {
 		}
 		if((p_timers.Get(pTimerAdventureTimer) && p_timers.Expired(pTimerAdventureTimer,false))){
 			p_timers.Disable(pTimerAdventureTimer);
-			printf("terminado %s\n",GetName());
 			SendAdventureFinish(0,0);
 		}
 		else if(p_timers.Get(pTimerStartAdventureTimer) && p_timers.Expired(pTimerStartAdventureTimer,false)){
 			p_timers.Disable(pTimerStartAdventureTimer);
-			printf("terminado %s\n",GetName());
 			SendAdventureFinish(0,0);
 		}		
 		if(linkdead_timer.Check()){

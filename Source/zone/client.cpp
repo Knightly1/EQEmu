@@ -3082,6 +3082,7 @@ void Client::SendAdventureRequest(){
 	
 }
 void Client::SendAdventureRequestData(Group* group,bool EnteredDungeon,bool EnteredZone,bool Zoned){
+	bool send=false;
 	AdventureInfo AF=database.GetAdventureInfo(GetAdventureID());
 	if(strlen(AF.text)<2){
 		printf("adventure with id %i not found!\n",GetAdventureID());
@@ -3095,37 +3096,53 @@ void Client::SendAdventureRequestData(Group* group,bool EnteredDungeon,bool Ente
 	strcpy(adrr->text,AF.text);
 	int32 ID=GetAdventureID();
 
+
+	adrr->x=AF.x;
+	adrr->y=AF.y;
+	adrr->z=0;
+	adrr->unknown2080=0x0A;
+	database.SetAdventureInfo(ID,true,0);
 	if(EnteredDungeon==false && EnteredZone==false && !p_timers.Enabled(pTimerStartAdventureTimer))
 	{
 		for(int z=0;z<6;z++)
 			database.SetAdventureChar(z,0,ID);
 		adrr->timeleft=30*60;
 	}
+	else if(EnteredDungeon==false && EnteredZone==false && p_timers.Enabled(pTimerStartAdventureTimer))
+	{
+		adrr->timeleft=p_timers.GetRemainingTime(pTimerStartAdventureTimer);
+		send=true;
+	}
 	else if(EnteredDungeon==true && !p_timers.Enabled(pTimerAdventureTimer)){
 		adrr->timeleft=AF.minutes*60;
 	}
-	adrr->x=AF.x;
-	adrr->y=AF.y;
-	adrr->z=0;
-	adrr->unknown2080=0x0A;
-	database.SetAdventureInfo(ID,true,0);
+	else if(EnteredDungeon==true && p_timers.Enabled(pTimerAdventureTimer)){
+		adrr->timeleft=p_timers.GetRemainingTime(pTimerAdventureTimer);
+		send=true;
+	}
 	if(EnteredZone==true) {
 		adrr->showcompass=AF.ShowCompass;
 		printf("Client %s entered compass zone.\n", GetName());
-		QueuePacket(outapp);
-		safe_delete(outapp);
-		if(Zoned==false)return;
+		Zoned=true;
+		send=true;
 	}
 	else
 		adrr->showcompass=0;
 
 	if(Zoned==true) {
-		if(p_timers.GetRemainingTime(pTimerAdventureTimer)>0)
+		if(p_timers.Enabled(pTimerAdventureTimer)
+			&& p_timers.GetRemainingTime(pTimerAdventureTimer)>0)
 			adrr->timeleft=p_timers.GetRemainingTime(pTimerAdventureTimer);
-		else if(p_timers.GetRemainingTime(pTimerStartAdventureTimer)>0)
+		else if(p_timers.Enabled(pTimerStartAdventureTimer) 
+			&& p_timers.GetRemainingTime(pTimerStartAdventureTimer)>0)
 			adrr->timeleft=p_timers.GetRemainingTime(pTimerStartAdventureTimer);
-		else
+		else {
+			printf("zoned sin timer %i\n",ID);
 			return;
+		}
+		send=true;
+	}
+	if(send==true){
 		QueuePacket(outapp);
 		safe_delete(outapp);
 		return;
