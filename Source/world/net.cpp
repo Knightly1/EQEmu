@@ -441,7 +441,10 @@ bool NetConnection::ReadLoginINI() {
 			}
 			if (!strncasecmp (type, "account", 7)) {
 				strncpy(worldaccount, buf, 30);
-				net.UpdateStats = true;
+			}
+			if (!strncasecmp (type, "logstats", 8)) {
+				if (strcasecmp(buf, "true") == 0 || (buf[0] == '1' && buf[1] == 0))
+					net.UpdateStats = true;
 			}
 			if (!strncasecmp (type, "password", 8)) {
 				strncpy (worldpassword, buf, 30);
