@@ -25,6 +25,7 @@
 #include "embxs.h" 
 
 extern Database database; 
+#undef write
 
 const char *getItemName(unsigned itemid) 
 { 
@@ -61,7 +62,7 @@ EXTERN_C XS(boot_qc)
 	char file[256];
 	strncpy(file, __FILE__, 256);
 	file[255] = '\0';
-	
+
 	if(items != 1)
 		LogFile->write(EQEMuLog::Error, "boot_qc does not take any arguments.");
 	

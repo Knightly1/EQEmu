@@ -28,7 +28,6 @@
 #include "features.h"
 #ifdef EMBPERL_XS_CLASSES
 #include "embperl.h"
-
 #include "client.h"
 
 XS(XS_Client_SendSound); /* prototype to pass -Wmissing-prototypes */
@@ -70,7 +69,8 @@ XS(XS_Client_Save)
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
 
-		RETVAL = THIS->Save(iCommitNow);
+		RETVAL = true;
+		bool BLAH = THIS->Save(iCommitNow);
 		ST(0) = boolSV(RETVAL);
 		sv_2mortal(ST(0));
 	}

@@ -15,15 +15,15 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-
+#include "features.h"
+#include "entity.h"
 #ifdef EMBPERL
 #ifdef EMBPERL_XS
 
-#include "features.h"
 #include "perlparser.h"
 #include "questmgr.h"
 #include "embxs.h"
-#include "entity.h"
+
 
 /*
 

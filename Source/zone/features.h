@@ -46,7 +46,7 @@ Core Zone features
 //Enable the new XS based perl parser
 #define EMBPERL_XS
 //enable classes in the new XS based parser
-#define EMBPERL_XS_CLASSES
+//#define EMBPERL_XS_CLASSES
 //enable IO capture and transmission to in game clients
 #define EMBPERL_IO_CAPTURE
 #endif

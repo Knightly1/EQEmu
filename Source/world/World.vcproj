@@ -279,6 +279,62 @@
 			<Tool
 				Name="VCWebDeploymentTool"/>
 		</Configuration>
+		<Configuration
+			Name="Perl|Win32"
+			OutputDirectory="Perl"
+			IntermediateDirectory="Perl"
+			ConfigurationType="1"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				InlineFunctionExpansion="2"
+				PreprocessorDefinitions="NDEBUG,WORLD,SHAREMEM,INVERSEXY,_WIN32_WINNT=0x0400,WIN32,_CONSOLE,FIELD_ITEMS,IRC"
+				StringPooling="TRUE"
+				RuntimeLibrary="0"
+				EnableFunctionLevelLinking="TRUE"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderFile=".\../Build/World/Release/World.pch"
+				AssemblerListingLocation=".\../Build/World/Release/"
+				ObjectFile=".\../Build/World/Release/"
+				ProgramDataBaseFileName=".\../Build/World/Release/"
+				BrowseInformation="1"
+				SuppressStartupBanner="TRUE"
+				DebugInformationFormat="3"/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
+				OutputFile=".\../build/World.exe"
+				LinkIncremental="1"
+				SuppressStartupBanner="TRUE"
+				IgnoreDefaultLibraryNames="libc"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile=".\../build/World.pdb"
+				GenerateMapFile="TRUE"
+				MapFileName="../Build/World.map"
+				SubSystem="1"/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../build/World.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+		</Configuration>
 	</Configurations>
 	<Files>
 		<Filter

@@ -12,10 +12,11 @@ Global
 		ConfigName.2 = GuildWars
 		ConfigName.3 = GuildWars Debug
 		ConfigName.4 = MiniLogin
-		ConfigName.5 = Profiling
-		ConfigName.6 = PublicLogin
-		ConfigName.7 = Release
-		ConfigName.8 = Win9x
+		ConfigName.5 = Perl
+		ConfigName.6 = Profiling
+		ConfigName.7 = PublicLogin
+		ConfigName.8 = Release
+		ConfigName.9 = Win9x
 	EndGlobalSection
 	GlobalSection(ProjectDependencies) = postSolution
 	EndGlobalSection
@@ -30,6 +31,8 @@ Global
 		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.GuildWars Debug.Build.0 = GuildWars Debug|Win32
 		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.MiniLogin.ActiveCfg = Release|Win32
 		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.MiniLogin.Build.0 = Release|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Perl.ActiveCfg = Perl|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Perl.Build.0 = Perl|Win32
 		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Profiling.ActiveCfg = Profiling|Win32
 		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Profiling.Build.0 = Profiling|Win32
 		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.PublicLogin.ActiveCfg = Profiling|Win32
@@ -47,6 +50,7 @@ Global
 		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.GuildWars Debug.Build.0 = Debug|Win32
 		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.MiniLogin.ActiveCfg = Profiling|Win32
 		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.MiniLogin.Build.0 = Profiling|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Perl.ActiveCfg = Perl|Win32
 		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Profiling.ActiveCfg = Profiling|Win32
 		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Profiling.Build.0 = Profiling|Win32
 		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.PublicLogin.ActiveCfg = Profiling|Win32
@@ -65,6 +69,7 @@ Global
 		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.GuildWars Debug.Build.0 = Debug|Win32
 		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.MiniLogin.ActiveCfg = Release|Win32
 		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.MiniLogin.Build.0 = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Perl.ActiveCfg = Perl|Win32
 		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Profiling.ActiveCfg = Release|Win32
 		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Profiling.Build.0 = Release|Win32
 		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.PublicLogin.ActiveCfg = Release|Win32

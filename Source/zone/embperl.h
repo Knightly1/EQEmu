@@ -22,11 +22,18 @@ extern "C" {	//the perl headers dont do this for us...
 #include <XSUB.h>
 };
 
-//perl defines this macro and dosent clean it up, lazy bastards.
+//perl defines these macros and dosent clean them up, lazy bastards. --  I hate them too!
 #ifdef Copy
 #undef Copy
 #endif
 
+#ifdef list
+#undef list
+#endif
+
+#ifdef write
+#undef write
+#endif 
 
 //so embedded scripts can use xs extensions (ala 'use socket;')
 EXTERN_C void boot_DynaLoader(pTHX_ CV* cv);
@@ -69,7 +76,6 @@ public:
 	//idea borrowed from perlembed
 	void eval_file(const char * packagename, const char * filename) const;
 };
-
 #endif //EMBPERL
 
 #endif //EMBPERL_H
