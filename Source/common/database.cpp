@@ -231,6 +231,79 @@ void Database::HandleMysqlError(int32 errnum) {
 		}
 	}
 }
+#ifdef LECONVERT
+void Database::ConvertRawZones(){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char *query = 0;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	NewZone_Struct* zone_data = NULL;
+	if (database.RunQuery(query, MakeAnyLenString(&query, "SELECT name,raw from zones_raw"), errbuf, &result)) {
+		safe_delete_array(query);
+		while((row = mysql_fetch_row(result))) {	
+			int32 zoneid = GetZoneID(row[0]);
+			zone_data = (NewZone_Struct*)row[1];
+			SaveRawZone(zoneid,zone_data);
+		}
+		mysql_free_result(result);
+	}
+	else
+		LogFile->write(EQEMuLog::Error, "Error in ConvertRawZones query %s: %s", query, errbuf);
+	safe_delete_array(query);
+}
+void Database::SaveRawZone(int32 zoneid,NewZone_Struct* zd){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	int i=0;
+	char* unknown425 = new char[500];
+	char* unknown425ptr = unknown425;
+	char* unknown475 = new char[500];
+	char* unknown475ptr = unknown475;
+	char* unknown672 = new char[500];
+	char* unknown672ptr = unknown672;
+	char* unknown_end = new char[500];
+	char* unknown_endptr = unknown_end;
+	for(i=0;i<sizeof(zd->unknown360);i++){
+		if(i==0)
+			sprintf(unknown425ptr,"%i",zd->unknown360[i]);
+		else
+			sprintf(unknown425ptr,"-%i",zd->unknown360[i]);
+		unknown425ptr += strlen(unknown425ptr);
+	}
+	for(i=0;i<sizeof(zd->unknown331);i++){
+		if(i==0)
+			sprintf(unknown475ptr,"%i",zd->unknown331[i]);
+		else
+			sprintf(unknown475ptr,"-%i",zd->unknown331[i]);
+		unknown475ptr += strlen(unknown475ptr);
+	}
+	for(i=0;i<sizeof(zd->unknown_end);i++){
+		if(i==0)
+			sprintf(unknown_endptr,"%i",zd->unknown_end[i]);
+		else
+			sprintf(unknown_endptr,"-%i",zd->unknown_end[i]);
+		unknown_endptr += strlen(unknown_endptr);
+	}
+	for(i=0;i<sizeof(zd->unknown672);i++){
+		if(i==0)
+			sprintf(unknown672ptr,"%i",zd->unknown672[i]);
+		else
+			sprintf(unknown672ptr,"-%i",zd->unknown672[i]);
+		unknown672ptr += strlen(unknown672ptr);
+	}
+	char longname[300]={0};
+	mysql_real_escape_string(getMySQL(), longname, zd->zone_long_name, strlen(zd->zone_long_name));
+	if (!RunQuery(query, MakeAnyLenString(&query, "replace into converted_zones set time_type=%i,short_name='%s',long_name='%s',underworld=%f,minclip=%f,maxclip=%f,fog_minclip=%f,fog_maxclip=%f,fog_blue=%i,fog_red=%i,fog_green=%i,sky=%i,ztype=%i,zone_exp_multiplier=%f,walkspeed=%f,safe_x=%f,safe_y=%f,safe_z=%f,unknown425='%s',unknown475='%s',unknown672='%s',unknown504=%f, unknown_end='%s',unknown387=%i,zoneidnumber=%i",
+		zd->time_type,zd->zone_short_name,longname,zd->underworld,zd->minclip,zd->maxclip,zd->fog_minclip[0],zd->fog_maxclip[0],zd->fog_blue[0],zd->fog_red[0],zd->fog_green[0],zd->sky,zd->ztype,zd->zone_exp_multiplier,zd->walkspeed,zd->safe_x,zd->safe_y,zd->safe_z,unknown425,unknown475,unknown672,zd->unknown440,unknown_end,zd->unknown323,zoneid),errbuf))	{
+		LogFile->write(EQEMuLog::Error, "Error in SaveRawZone query %s: %s", query, errbuf);
+	}
+	safe_delete(unknown425);
+	safe_delete(unknown475);
+	safe_delete(unknown672);
+	safe_delete(unknown_end);
+	safe_delete_array(query);
+}
+#endif
 int32 Database::AddPConnect(int32 pp, int32 p_1,int32 p_2){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
@@ -294,6 +367,7 @@ NewZone_Struct* Database::GetZoneCFG(int32 zoneid){
 			zone_data->walkspeed=atof(row[14]);
 			zone_data->time_type=atoi(row[15]);
 		}
+		mysql_free_result(result);
 	}
 	else
 		LogFile->write(EQEMuLog::Error, "Error in GetZoneCFG query %s: %s", query, errbuf);
@@ -3408,7 +3482,7 @@ bool Database::GetSafePoints(const char* short_name, float* safe_x, float* safe_
     MYSQL_RES *result;
     MYSQL_ROW row;
 	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT safe_x, safe_y, safe_z, minium_status, minium_level FROM zone WHERE short_name='%s'", short_name), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT safe_x, safe_y, safe_z, min_status, min_level FROM zone WHERE short_name='%s'", short_name), errbuf, &result)) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {
 			row = mysql_fetch_row(result);
@@ -3431,6 +3505,9 @@ bool Database::GetSafePoints(const char* short_name, float* safe_x, float* safe_
 	else
 	{
 		cerr << "Error in GetSafePoint query '" << query << "' " << errbuf << endl;
+		cerr << "If it errors on minium_level, run the following querys:\n";
+		cerr << "ALTER TABLE `zone` CHANGE `minium_level` `min_level` TINYINT(3)  UNSIGNED DEFAULT \"0\" NOT NULL;\n";
+		cerr << "ALTER TABLE `zone` CHANGE `minium_status` `min_status` TINYINT(3)  UNSIGNED DEFAULT \"0\" NOT NULL;\n";
 		safe_delete_array(query);
 	}
 	return false;

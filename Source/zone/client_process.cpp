@@ -332,7 +332,6 @@ int Client::HandlePacket(const APPLAYER *app)
 					NewZone_Struct* nz = (NewZone_Struct*)outapp->pBuffer;
 					memcpy(outapp->pBuffer, &zone->newzone_data, sizeof(NewZone_Struct));
 					strcpy(nz->char_name, m_pp.name);
-					//outapp->Deflate();
 					QueuePacket(outapp);
 					safe_delete(outapp);
 					break;
@@ -5325,7 +5324,15 @@ void Client::CompleteConnect()
 		if (m_pp.spell_book[spellInt] < 3 || m_pp.spell_book[spellInt] > 20000)
 			m_pp.spell_book[spellInt] = 0xFFFFFFFF;
 	}
-	
+
+	for(int a=0; a < MAX_PP_AA_ARRAY; a++){
+		aa[a] = &m_pp.aa_array[a];
+		int32 id = aa[a]->AA;
+		if(aa[a]->value>1)
+			aa_points[(id - aa[a]->value +1)] = aa[a]->value;
+		else
+			aa_points[id] = aa[a]->value;
+	}
 	SendAATable();
 	
 	//reapply some buffs

@@ -417,7 +417,10 @@ public:
 	void	LoadWorldList();
 	void	UpdateBug(BugStruct* bug);
 	void	UpdateBug(PetitionBug_Struct* bug);
-
+#ifdef LECONVERT
+	void	ConvertRawZones();
+	void	SaveRawZone(int32 zoneid,NewZone_Struct* zd);
+#endif
 	//reworked for new tradeskill system
 	bool	GetTradeRecipe(const ItemContainerInst* container, uint8 c_type, uint8 tradeskill, DBTradeskillRecipe_Struct *spec);
 	bool	GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint8 tradeskill, DBTradeskillRecipe_Struct *spec);
