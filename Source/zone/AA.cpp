@@ -1,4 +1,15 @@
+#include "../common/debug.h"
+#include "mob.h"
 #include "client.h"
+#include "groups.h"
+#include "spdat.h"
+#include "object.h"
+#include "doors.h"
+#include "beacon.h"
+#include "PlayerCorpse.h"
+#include "../common/races.h"
+#include "../common/classes.h"
+#include "../common/eq_packet_structs.h"
 #include "StringIDs.h"
 #include <iostream>
 
@@ -16,7 +27,7 @@ void Client::BuyAA(AA_Action* action){
 	SendAA_Struct* aa2 = zone->FindAA(action->ability);
 	if(!aa2){
 		for(int i=1;i<5;i++){
-			if(aa2 = zone->FindAA(action->ability-i))
+			if((aa2 = zone->FindAA(action->ability-i)))
 				i=4;
 		}
 	}
@@ -106,7 +117,7 @@ void Client::SendAATable() {
     safe_delete(outapp);
 }
 void Client::SendAA(int32 id, int seq,bool update){
-	int value=0;
+	uint32 value=0;
 	SendAA_Struct* saa2 = NULL;
 	if(id==0)
 		saa2=zone->GetAAList()->aa[seq];
@@ -124,7 +135,7 @@ void Client::SendAA(int32 id, int seq,bool update){
 		saa->spellid=0xFFFFFFFF;
 	value=GetAA(saa->id);
 	if(value){
-		if(value<saa->max_level){
+		if(value < saa->max_level){
 			saa->id+=value;
 			saa->next_id=saa->id+1;
 			value++;
