@@ -227,7 +227,7 @@ union {
 /*254*/ uint32	pet_owner_id; 
 /*258*/ int16	deity; 
 /*260*/ int8	unknown260[31]; 
-/*0291*/ int8	unknown291[76];
+/*0291*/ int8	unknown291[80];
 /*0367*/ int32	unknown367[2];
 };
 

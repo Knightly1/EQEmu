@@ -410,7 +410,6 @@ public:
 	bool	MakeDoorSpawnPacket(const char* zone,APPLAYER* app);
 	bool	CheckGuildDoor(int8 doorid,int16 guildid, const char* zone);
 	bool	SetGuildDoor(int8 doorid,int16 guildid, const char* zone);
-	bool	LoadZonePoints(const char* zone, uint8** data, int32* size);
 	bool	LoadStaticZonePoints(LinkedList<ZonePoint*>* zone_point_list,const char* zonename);
 	bool	InsertStats(int32 in_players, int32 in_zones, int32 in_servers);
 	

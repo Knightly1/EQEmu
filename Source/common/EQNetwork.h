@@ -112,8 +112,9 @@ public:
 			return false;
 		if (compressed != appNormal)
 			return false;
-		if (!bufsize)
-			bufsize = this->size * 20;
+		if (!bufsize){
+			bufsize = this->size * 40;
+		}
 		uchar* tmp = new uchar[bufsize];
 		int32 tmpsize = InflatePacket(this->pBuffer, this->size, tmp, bufsize);
 		if (!tmpsize) {

@@ -369,8 +369,6 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, i
 	aggroedmobs =0;
 	address = strcpy(new char[strlen(in_address)+1], in_address);
 	port = in_port;
-	zonepoints_raw = 0;
-	zonepoints_raw_size = 0;
 
 	psafe_x = 0;
 	psafe_y = 0;
@@ -444,10 +442,7 @@ bool Zone::Init(bool iStaticZone) {
 		cout << "ERROR: Couldn't load player corpses." << endl;
 		return false;
 	}
-	if (database.LoadZonePoints(short_name, &zonepoints_raw, &zonepoints_raw_size))
-		cout << "Zonepoints loaded into memory" << endl;
-	else
-		cout << "WARNING: No Zonepoints for this zone in database found" << endl;
+
 	parse->ClearCache();
 	cout << ", timezone data";
 	zone->zone_time.setEQTimeZone(database.GetZoneTZ(zoneid));
@@ -468,7 +463,6 @@ Zone::~Zone()
 	safe_delete_array(address);
 	safe_delete(autoshutdown_timer);
 	safe_delete(clientauth_timer);
-	safe_delete_array(zonepoints_raw);
 	safe_delete(Weather_Timer);
 	zone_point_list.Clear();
 	entity_list.Clear();
@@ -1394,44 +1388,6 @@ bool Database::GetDecayTimes(npcDecayTimes_Struct* npcCorpseDecayTimes) {
 	return true;
 }// Added By Hogie -- End
 
-bool Database::LoadZonePoints(const char* zone, uint8** data, int32* size) {
-	char errbuf[MYSQL_ERRMSG_SIZE];
-	char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT zoneline FROM zonepoints_raw WHERE zone = '%s' ORDER BY id", zone), errbuf, &result)) {
-		safe_delete_array(query);
-		int32 numrows = mysql_num_rows(result);
-		if (numrows) {
-			*size = numrows * 24;
-			int32 o = 0;
-			*data = new int8[*size];
-			memset(*data, 0, *size);
-			while ((row = mysql_fetch_row(result))) {
-				if (o >= *size) {
-					safe_delete(*data);
-					*size = 0;
-					cerr << "Error in LoadZonePoints: o >= *size[" << *size << "]" << endl;
-					mysql_free_result(result);
-					return false;
-				}
-				memcpy(&((*data)[o]), row[0], 24);
-				o += 24;
-			}
-		}
-		else {
-			mysql_free_result(result);
-			return false;
-		}
-		mysql_free_result(result);
-		return true;	
-	}
-	else {
-		cerr << "Error in LoadZonePoints query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return false;
-	}
-}
 
 /*void Zone::weatherProc()
 {

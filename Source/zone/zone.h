@@ -115,8 +115,6 @@ public:
 	void		SetStaticZone(bool sz)	{ staticzone = sz; }
 	inline bool	IsStaticZone()			{ return staticzone; }
 	inline void	GotCurTime(bool time)	{ gottime = time; }
-	inline int8*	GetZonePointsRaw()	{ return zonepoints_raw; }
-	inline const int32& GetZonePointsSize()	{ return zonepoints_raw_size; }
 
 	map<uint32,NPCType *> npctable;
 
@@ -167,8 +165,6 @@ private:
 	AA_List* aas;
 	uchar*	aa_buffer;
 	int16	port;
-	int8*	zonepoints_raw;
-	int32	zonepoints_raw_size;
 
 	float	psafe_x, psafe_y, psafe_z;
 	int32	pMaxClients;

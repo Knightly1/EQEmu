@@ -54,7 +54,7 @@ static int buffsize=0;
 
 	ptr=buffer;
 
-	for(i=0;i<8;i++) {
+	for(i=0;i<item_file->GetNamePosition()-1;i++) {
 		end=ptr-1;
 		while((end=strchr(end+1,'|'))!=NULL) {
 			if (*(end-1)!='\\')
@@ -78,7 +78,7 @@ static int buffsize=0;
 	}
 	ptr++;
 
-	for(i=8;i<item_file->GetMaxField()-11;i++) {
+	for(i=(item_file->GetNamePosition()-1);i<item_file->GetMaxField()-11;i++) {
 		end=ptr-1;
 		while((end=strchr(end+1,'|'))!=NULL) {
 			if (*(end-1)!='\\')

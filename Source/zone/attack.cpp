@@ -895,13 +895,7 @@ void Mob::Heal()
 }
 
 void NPC::Heal() {
-	//for whatever reason, #heal'ing NPCs was written to not work
-	//this makes it work for pets only instead
-	if(GetOwnerID() != 0 && GetOwner()->IsClient()) {
-		SetMaxHP();
-		SendHPUpdate();
-		LogFile->write(EQEMuLog::Normal,"pet %s healed via #heal", name);
-	}
+		CastToMob()->Heal();
 }
 
 void Client::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, bool avoidable, sint8 buffslot, bool iBuffTic)
