@@ -17,10 +17,14 @@ Eglin
 #include <EXTERN.h> 
 #define WIN32IO_IS_STDIO
 
+#ifndef WIN32
 extern "C" {	//the perl headers dont do this for us...
+#endif
 #include <perl.h>
 #include <XSUB.h>
+#ifndef WIN32
 };
+#endif
 
 //perl defines these macros and dosent clean them up, lazy bastards. --  I hate them too!
 #ifdef Copy
@@ -33,7 +37,11 @@ extern "C" {	//the perl headers dont do this for us...
 
 #ifdef write
 #undef write
-#endif 
+#endif
+
+#ifdef bool
+#undef bool
+#endif
 
 //so embedded scripts can use xs extensions (ala 'use socket;')
 EXTERN_C void boot_DynaLoader(pTHX_ CV* cv);

@@ -19,10 +19,10 @@
 #ifndef CORPSE_H
 #define CORPSE_H
 
-#include "../common/database.h"
-#include "entity.h"
 #include "mob.h"
-#include "client.h"
+
+class Client;
+class NPC;
 
 #define MAX_LOOTERS 6
 

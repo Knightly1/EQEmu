@@ -19,13 +19,9 @@
 
 #include "masterentity.h" 
 
-#include "EXTERN.h" 
-#include "perl.h" 
-#include "XSUB.h" 
+#include "embperl.h"
 #include "embxs.h" 
-#ifdef write
-#undef write
-#endif
+
 extern Database database; 
 
 const char *getItemName(unsigned itemid) 
