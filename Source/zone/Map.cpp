@@ -329,9 +329,22 @@ bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *r
 	VERTEX step;
 	VERTEX cur = start;
 	
+	float diff;
+	diff = (end.x - start.x);
+	if (diff < 1 && diff > -1)
+		end.x = start.x;
+	diff = (end.y - start.y);
+	if (diff < 1 && diff > -1)
+		end.y = start.y;
+	diff = (end.z - start.z);
+	if (diff < 1 && diff > -1)
+		end.z = start.z;
+	
 	step.x = end.x - start.x;
 	step.y = end.y - start.y;
 	step.z = end.z - start.z;
+	//since step size is kinda arbitrary, this sqrt could be
+	//approximated somehow to save CPU time
 	float factor = step_mag / sqrt(step.x*step.x + step.y*step.y + step.z*step.z);
 	step.x *= factor;
 	step.y *= factor;
