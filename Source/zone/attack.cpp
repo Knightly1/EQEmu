@@ -1853,7 +1853,7 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	d->attack_skill = spell != 0xffff ? 0xe7 : attack_skill;
 	d->damage = damage;
 	app->priority = 6;
-	entity_list.QueueCloseClients(this, app, false, 600, other);
+	entity_list.QueueClients(this, app, false);
 
 	if(this->respawn2 && (this->respawn2->spawn2_id!=0 && this->respawn2->respawn_!=0)){
 	    database.UpdateTimeleft(this->CastToNPC()->respawn2->spawn2_id,this->CastToNPC()->respawn2->respawn_);
