@@ -322,6 +322,8 @@ int main(int argc, char** argv) {
 		{	//profiler block to omit the sleep from times
 		_ZP(net_main);
 		Timer::SetCurrentTime();
+		
+		//look for new connections
 		while ((eqnc = eqns.NewQueuePop())) {
 			struct in_addr	in;
 			in.s_addr = eqnc->GetrIP();
@@ -329,6 +331,10 @@ int main(int argc, char** argv) {
 			Client* client = new Client(eqnc);
 			entity_list.AddClient(client);
 		}
+		
+		//check for timeouts in other threads
+		timeout_manager.CheckTimeouts();
+		
 #ifdef CATCH_CRASH
 		try{
 #endif
@@ -481,7 +487,7 @@ int main(int argc, char** argv) {
 #endif
 #endif
 		}	//end extra profiler block
-		Sleep(1);
+		Sleep(ZoneTimerResolution);
 	}
 	
 #ifdef CATCH_CRASH
@@ -812,8 +818,8 @@ This is hanging on freebsd for me, not sure why...
 		int y=0;
 		for(y=0; y< 12;y++)
 			sp[tempid].base[y]=atoi(sep.arg[20+y]);
-		for(y=0;y<11;y++)
-			sp[tempid].unknown[y]=atoi(sep.arg[33+y]);
+		for(y=0; y < 11; y++)
+			sp[tempid].base2[y]=atoi(sep.arg[33+y]);
 		for(y=0; y< 12;y++)
 			sp[tempid].max[y]=atoi(sep.arg[44+y]);
 		

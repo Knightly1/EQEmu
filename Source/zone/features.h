@@ -108,7 +108,25 @@ Zone extensions and features
 //Uncomment to enable map based fear pathing
 //#define ENABLE_FEAR_PATHING 1
 
-//give the player a heal when the gain a level
+#ifdef ENABLE_FEAR_PATHING
+//Uncomment to cause fear to violate LOS if all else failes
+//as opposed to make the mob stand there.
+#define FORCE_FEAR_TO_RUN 1
+
+//both of these require fear pathing enabled.
+//the HP ratio, below which mobs walk away from their attacker
+//comment this out to disable it.
+#define FLEE_HP_RATIO 25
+//the min ratio at which a mob's speed is reduced
+#define FLEE_HP_MINSPEED 10
+//number of tics to try to run straight away before looking again
+#define FLEE_RUN_DURATION 1000
+//number of miliseconds between when a mob will check its flee state
+//this is only checked when the mob is damaged.
+#define FLEE_CHECK_TIMER 2000
+#endif
+
+//give the player a heal when they gain a level
 //#define HEAL_ON_LEVEL
 
 //enable functionality to send log message to the client
@@ -181,7 +199,8 @@ enum {	//timer settings, all in milliseconds
 	AIClientScanarea_delay = 750,	//used in REVERSE_AGGRO
 	AIassistcheck_delay = 3000,		//now often a fighting NPC will yell for help
 	ClientProximity_interval = 1000,
-	Tribute_duration = 600000
+	Tribute_duration = 600000,
+	ZoneTimerResolution = 3			//sleep time between zone main loop runs
 };
 	
 

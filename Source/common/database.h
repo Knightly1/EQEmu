@@ -237,7 +237,7 @@ public:
 	void	RefreshPetitionsFromDB();
 	bool	GetDecayTimes(npcDecayTimes_Struct* npcCorpseDecayTimes);
 	int8	CheckWorldVerAuth(char* version);
-	bool	PopulateZoneLists(const char* zone_name, LinkedList<ZonePoint*>* zone_point_list, SpawnGroupList* spawn_group_list);
+	bool	LoadSpawnGroups(const char* zone_name, SpawnGroupList* spawn_group_list);
 	bool	PopulateZoneSpawnList(const char* zone_name, LinkedList<Spawn2*> &spawn2_list, int32 repopdelay = 0);
 	Spawn2*	LoadSpawn2(LinkedList<Spawn2*> &spawn2_list, int32 spawn2id, int32 timeleft);
 	bool	DumpZoneState();
@@ -290,7 +290,7 @@ public:
 	bool	GetSharedBank(uint32 id, Inventory* inv, bool is_charid);
 	bool	GetInventory(uint32 char_id, Inventory* inv);
 	bool	GetInventory(uint32 account_id, char* name, Inventory* inv);
-	bool	CreateSpawn2(Client *c, int32 spawngroup, const char* zone, float heading, float x, float y, float z, int32 respawn, int32 variance);
+	bool	CreateSpawn2(Client *c, int32 spawngroup, const char* zone, float heading, float x, float y, float z, int32 respawn, int32 variance, uint16 condition, sint16 cond_value);
 	bool	CheckNameFilter(const char* name);
 	bool	AddToNameFilter(const char* name);
 	bool	CheckUsedName(const char* name);

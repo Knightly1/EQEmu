@@ -92,8 +92,6 @@
 	inline bool	IsMedding();
 	inline int16	GetDuelTarget();
 	inline bool	IsDueling();
-	inline bool	GetMount();
-	inline void	SetMount(bool mount);
 	inline void	SetDuelTarget(int16 set_id);
 	inline void	SetDueling(bool duel);
 	
@@ -119,8 +117,6 @@
 
 	void SetHorseId(int16 horseid_in);
 	int16 GetHorseId();
-	void SetHasMount(bool hasmount_in);
-	bool GetHasMount();
 
 	uint32	NukeItem(uint32 itemnum);
 	void	SetTint(sint16 slot_id, uint32 color);
@@ -152,7 +148,7 @@
 	void	ResetTrade();
 	bool	UseDiscipline(int32 spell_id, int32 target);
 	void    SetLanguageSkill(int langid, int value); // bUsh
-	
+	sint32  GetCharacterFactionLevel(sint32 faction_id);	
 	
 //TODO: inventory and ptimers interfaces
 //I think there are two GetAA methods in client

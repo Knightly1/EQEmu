@@ -48,6 +48,10 @@ using namespace std;
 #define KA_TIMER	400 /* keeps the lag bar constant */
 #define MAX_HEADER_SIZE	39 // Quag: 39 is the max header + opcode + crc32 + unknowns size
 
+#define COMBINE_MAX_PIECE 4096 //dont bother to combine a packet if its bigger than this, limit is 0xFFFF
+#define COMBINE_PERIOD 200	//ms between each forced combined send
+#define COMBINE_DEFLATE_SIZE 128
+
 class EQNetworkServer;
 class EQNetworkConnection;
 class EQNetworkPacket;
@@ -76,9 +80,12 @@ public:
 		size = in_size;
 		opcode = in_opcode;
 		priority = 0;
+#ifdef COMBINED
+		combined_size = 0;
+#endif
 		compressed = appNormal;
 		if (size == 0) {
-			pBuffer = 0;
+			pBuffer = NULL;
 
 		}
 		else {
@@ -100,9 +107,21 @@ public:
 		if (this == NULL) {
 			return 0;
 		}
-		APPLAYER* ret = new APPLAYER(this->opcode, this->size);
-		if (this->size)
-			memcpy(ret->pBuffer, this->pBuffer, this->size);
+		APPLAYER* ret;
+#ifdef COMBINED
+		if(combined_size > 0) {	//we are a combined packet
+			ret = new APPLAYER(this->opcode, 0);
+			ret->pBuffer = new uchar[this->combined_size];
+			memcpy(ret->pBuffer, this->pBuffer, this->combined_size);
+			ret->combined_size = this->combined_size;
+		} else {	//not combined
+#endif
+			ret = new APPLAYER(this->opcode, this->size);
+			if (this->size)
+				memcpy(ret->pBuffer, this->pBuffer, this->size);
+#ifdef COMBINED
+		}
+#endif
 		ret->priority = this->priority;
 		ret->compressed = this->compressed;
 		return ret;
@@ -163,9 +182,25 @@ public:
 		sint64* encrypt_key;
 	#endif
 	
+#ifdef COMBINED
+	//all the combined code should leave the size of the FIRST packet
+	//in the combined packet in the size field, and store the total
+	//length of the packet in combined_size
+	int32  combined_size;
+	//this is the offset into the buffer where the last opcode
+	//was put, so we can flag it combined if another comes in.
+	int32  opcode_offset;
+	
+	//this is used for implicit length stuff, simple resize
+	void combine_append(int32 add_size, uchar *data, bool implicit);
+	
+	//this handles initial packet conditions as well as
+	//manages the lengths and flags embedded in the combined packet.
+	void combine_add(int16 in_opcode, int32 in_size, uchar *data);
+#endif
+	
 	void PacketReferenced() {
 		refCount++;
-//LogFile->write(EQEMuLog::Debug, "Incrementing refcount to %d for op 0x%.4x\n", refCount, opcode);
 	}
 	
 	//decrement the reference count, delete if it hits 0
@@ -175,7 +210,6 @@ public:
 			return;
 		it->refCount--;
 
-//LogFile->write(EQEMuLog::Debug, "Decrementing refcount to %d for op 0x%.4x\n", it->refCount, it->opcode);
 #if EQDEBUG >= 4
 		if(it->refCount < 0)
 			LogFile->write(EQEMuLog::Debug, "Error: Packet with opcode 0x%.4x got to a negative refcount of %d", it->opcode, it->refCount);
@@ -251,6 +285,8 @@ enum eConnectionType {Incomming, Outgoing};
 	void* EQNetworkConnectionInLoop(void* tmp);
 	void* EQNetworkConnectionOutLoop(void* tmp);
 #endif
+
+
 class EQNetworkServer {
 public:
 	EQNetworkServer(int16 iPort = 0);
@@ -284,6 +320,7 @@ private:
 	bool	pOpen;
 	Mutex	MNewQueue;
 	Mutex	MOpen;
+	int		send_ticks;
 
 	map<string, EQNetworkConnection *> connection_list;
 	queue<EQNetworkConnection *>		NewQueue;
@@ -362,6 +399,9 @@ public:
 	void RemovePacket(EQNetworkPacket* pack);
 	void			RecvData(uchar* data, int32 size);
 	void			OutQueuePush(APPLAYER* app);
+#ifdef COMBINED
+	void			EnableCombining() { combined_timer.Enable(); }
+#endif
 
 #ifdef PACKET_PROFILER
 	void DumpPacketProfile();
@@ -407,12 +447,19 @@ private:
 
 	void			MakeEQPacket(APPLAYER* app, bool ackreq = true);
 	InQueue_Struct*	InQueuePop();
+	
 #ifdef COMBINED
-	bool 			AddToCombined(APPLAYER* app);
-	void			CreateCombinedPacket();
-	APPLAYER* CombinedPacket;
-	Timer* combined_timer;
+	bool AddToCombined(APPLAYER* app);
+	void SendCombinedPackets();
+	void SendACombinedPacket(APPLAYER* app);
+	APPLAYER *CombinedPacket;
+	APPLAYER *ImplicitCombinedPacket;
+	uint32 implicit_counter_offset;
+	uint16 last_opcode;
+	Timer combined_timer;
+	Mutex MCombined;
 #endif
+	
 	int32	rIP;
 	int16	rPort; // network byte order
 

@@ -193,6 +193,28 @@ void WorldServer::Process() {
 			}
 			break;
 		}
+		case ServerOP_SpawnCondition: {
+			if(pack->size != sizeof(ServerSpawnCondition_Struct))
+				break;
+			if (!ZoneLoaded)
+				break;
+			ServerSpawnCondition_Struct* ssc = (ServerSpawnCondition_Struct*) pack->pBuffer;
+			
+			zone->spawn_conditions.SetCondition(zone->GetShortName(), ssc->condition_id, ssc->value, true);
+			
+			break;		
+		}
+		case ServerOP_SpawnEvent: {
+			if(pack->size != sizeof(ServerSpawnEvent_Struct))
+				break;
+			if (!ZoneLoaded)
+				break;
+			ServerSpawnEvent_Struct* sse = (ServerSpawnEvent_Struct*) pack->pBuffer;
+			
+			zone->spawn_conditions.ReloadEvent(sse->event_id);
+			
+			break;		
+		}
 		case ServerOP_AcceptWorldEntrance: {
 			if(pack->size != sizeof(WorldToZone_Struct))
 				break;

@@ -116,6 +116,12 @@ public:
 	void set_proximity(float minx, float maxx, float miny, float maxy, float minz=-999999, float maxz=999999);
 	void clear_proximity();
 	void setanim(int npc_type, int animnum);
+	void showgrid(int gridid);
+	void showpath(float x, float y, float z);
+	void pathto(float x, float y, float z);
+	void spawn_condition(const char *zone_short, uint16 condition_id, short new_value);
+	short get_spawn_condition(const char *zone_short, uint16 condition_id);
+	void toggle_spawn_event(int event_id, bool enable, bool reset_base);
 	
 	//not in here because it retains perl types
 	//thing ChooseRandom(array_of_things)

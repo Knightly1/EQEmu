@@ -570,7 +570,10 @@ void Parser::SendCommands(const char * event, int32 npcid, NPC* npcmob, Mob* mob
 		p = *listIt;
 		iter_eventlist listIt2 = p->Event.begin();
 		if ( p->npcid == npcid ) {
-			quest_manager.StartQuest(npcmob, mob?mob->CastToClient():NULL);
+			if(mob && mob->IsClient())
+				quest_manager.StartQuest(npcmob, mob->CastToClient());
+			else
+				quest_manager.StartQuest(npcmob, NULL);
 			while (listIt2 != p->Event.end())
 			{
 				pp = *listIt2;
@@ -964,6 +967,21 @@ void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid
 	}
 	else if (!strcmp(command,"moveto")) {
 		quest_manager.moveto(atof(arglist[0]), atof(arglist[1]), atof(arglist[2]));
+	}
+	else if (!strcmp(command,"pathto")) {
+		quest_manager.pathto(atof(arglist[0]), atof(arglist[1]), atof(arglist[2]));
+	}
+	else if (!strcmp(command,"showpath")) {
+		quest_manager.showpath(atof(arglist[0]), atof(arglist[1]), atof(arglist[2]));
+	}
+	else if (!strcmp(command,"showgrid")) {
+		quest_manager.showgrid(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"toggle_spawn_event")) {
+		quest_manager.toggle_spawn_event(atoi(arglist[0]),(atoi(arglist[1])!=0),(atoi(arglist[2])!=0));
+	}
+	else if (!strcmp(command,"spawn_condition")) {
+		quest_manager.spawn_condition(arglist[0], atoi(arglist[1]), atoi(arglist[2]));
 	}
 	else if (!strcmp(command,"resume")) {
 		quest_manager.resume();

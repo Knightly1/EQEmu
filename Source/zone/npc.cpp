@@ -157,6 +157,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	pAggroRange = d->aggroradius;
 	pAssistRange = GetAggroRange();
 	mana_regen=d->mana_regen;
+	findable = d->findable;
 
     // neotokyo: fix for lazy db-updaters
     if (GetCasterClass() != 'N' && mana_regen == 0)
@@ -203,6 +204,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
     feign_memory = "0";
 	forgetchance = 0;
 	attack_event = 0;
+	attack_speed = d->attack_speed;
 
 #ifdef GUILDWARS
 	if(respawn2 != 0)
@@ -268,7 +270,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	int r;
 	int skil;
 	for(r = 0; r <= HIGHEST_SKILL; r++) {
-		skil = 4 + moblevel*3 + MakeRandomInt(1, moblevel+moblevel);
+		skil = 4 + moblevel*4 + MakeRandomInt(1, moblevel);
 		if(skil > 250)
 			skil = 250;	//cap them just like players... to keep it fairer
 		skills[r] = skil;
@@ -1779,77 +1781,6 @@ void NPC::PickPocket(Client* thief) {
 	safe_delete(inst);
 }
 
-void NPC::DoClassAttacks(Mob *target) {
-	if(target == NULL)
-		return;	//gotta have a target for all these
-	
-	//general stuff, for all classes....
-	//only gets used when their primary ability get used too
-	//this might be bad for pally's with long reuse time
-	if (GetOwner() != NULL && taunting && target->IsNPC() && target->GetBodyType() != BT_Undead && taunt_timer.Check()) {
-		Taunt(target->CastToNPC(), false);
-	}
-	
-	if(!classattack_timer.Check(false))
-		return;
-	
-	int level = GetLevel();
-	int reuse = TauntReuseTime * 1000;	//make this very long since if they dont use it once, they prolly never will
-	//class specific stuff...
-	switch(GetClass()) {
-		case ROGUE:
-			if(level >= 10) {
-				//does not take advantage of any equipped weapons for simplicity.
-				if (BehindMob(target, GetX(), GetY())) {
-					RogueBackstab(target, NULL, GetLevel()*5+5);
-					reuse = BackstabReuseTime * 1000;
-				}
-			}
-			break;
-		case MONK: {
-			int8 satype = saKick;
-			if(level > 29) {
-				satype = saFlyingKick;
-			} else if(level > 24) {
-				satype = saTailRake;
-			} else if(level > 19) {
-				satype = saEagleStrike;
-			} else if(level > 9) {
-				satype = saTigerClaw;
-			} else if(level > 4) {
-				satype = saRoundKick;
-			}
-			reuse = MonkSpecialAttack(target, satype);
-			break;
-		}
-		case WARRIOR:
-			//kick
-			reuse = MonkSpecialAttack(target, saKick);
-			break;
-		case RANGER:
-		case BEASTLORD:
-			if(level > 5) {
-				//kick
-				reuse = MonkSpecialAttack(target, saKick);
-			}
-			break;
-		case SHADOWKNIGHT:
-			CastSpell(SPELL_NPC_HARM_TOUCH, target->GetID());
-			reuse = HarmTouchReuseTime * 1000;
-			break;
-		case PALADIN:
-			if(GetHPRatio() < 20) {
-				CastSpell(SPELL_LAY_ON_HANDS, GetID());
-				reuse = LayOnHandsReuseTime * 1000;
-			}
-			break;
-	}
-	
-	classattack_timer.Start(reuse);
-	
-	
-}
-
 void Mob::NPCSpecialAttacks(const char* parse, int permtag) {
     for(int i = 0; i < SPECATK_MAXNUM; i++)
 	{
@@ -1918,6 +1849,9 @@ void Mob::NPCSpecialAttacks(const char* parse, int permtag) {
 			break;
 		case 'B':
 			SpecAttacks[IMMUNE_MAGIC] = true;
+			break;
+		case 'f':
+			SpecAttacks[IMMUNE_FLEEING] = true;
 			break;
         default:
             break;

@@ -191,3 +191,4 @@
 	void Handle_OP_SafeFallSuccess(const APPLAYER *app);
 	void Handle_OP_Heartbeat(const APPLAYER *app);
 	void Handle_OP_SafePoint(const APPLAYER *app);
+	void Handle_OP_FindPersonRequest(const APPLAYER *app);

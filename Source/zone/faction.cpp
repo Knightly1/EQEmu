@@ -180,10 +180,7 @@ FACTION_VALUE NPC::GetFactionCon(Mob* iOther) {
 		return FACTION_INDIFFERENT;
 	if (GetOwner())
 		return GetOwner()->GetFactionCon(iOther);
-
-	//inverted for the new NPC -> NPC faction system.
-	if(iOther->IsNPC())
-		return(iOther->CastToNPC()->CheckNPCFactionAlly(GetPrimaryFaction()));
+	
 	return(CheckNPCFactionAlly(primaryFaction));
 }
 

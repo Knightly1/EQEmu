@@ -29,6 +29,7 @@
 #include "spawngroup.h"
 #include "mob.h"
 #include "zonedump.h"
+#include "spawn2.h"
 
 class Map;
 struct ZonePoint {
@@ -57,7 +58,7 @@ struct ZoneClientAuth_Struct {
 
 extern EntityList entity_list;
 class database;
-class FearPathManager;
+class PathManager;
 
 class database;
 
@@ -91,6 +92,8 @@ public:
 	AA_List* GetAAList() { return aas; }
 	SendAA_Struct* FindAA(int32 id);
 	void	LoadZoneDoors(const char* zone);
+	bool	LoadZoneObjects();
+	bool	LoadGroundSpawns();
 	
 	int32	CountSpawn2();
 	ZonePoint* GetClosestZonePoint(float x, float y, float z, const char* to_name);
@@ -119,11 +122,14 @@ public:
 	void		DelAggroMob()			{ aggroedmobs--; }
 	bool		AggroLimitReached()		{ return (aggroedmobs>10)?true:false; } // change this value, to allow more NPCs to autoaggro
 	sint32		MobsAggroCount()		{ return aggroedmobs; }
+	inline bool InstantGrids()			{ return(!initgrids_timer.Enabled()); }
 	void		SetStaticZone(bool sz)	{ staticzone = sz; }
 	inline bool	IsStaticZone()			{ return staticzone; }
 	inline void	GotCurTime(bool time)	{ gottime = time; }
 	void DBAWComplete(int8 workpt_b1, DBAsyncWork* dbaw);
 	
+	void	SpawnConditionChanged(const SpawnCondition &c, sint16 old_value);
+		
 	void	GetMerchantDataForZoneLoad();
 	void	LoadNewMerchantData(uint32 merchantid);
 	void	LoadTempMerchantData();
@@ -135,11 +141,12 @@ public:
 	map<uint32,std::list<MerchantList> > merchanttable;
 	map<uint32,std::list<TempMerchantList> > tmpmerchanttable;
 	Map*	map;
-	FearPathManager *fear;
+	PathManager *pathing;
 	NewZone_Struct	newzone_data;
 //	uchar	zone_header_data[142];
 	int8	zone_weather;
 
+	SpawnConditionManager spawn_conditions;
 	EQTime	zone_time;
 	void	GetTimeSync();
 	void	SetDate(int16 year, int8 month, int8 day, int8 hour, int8 minute);
@@ -164,14 +171,8 @@ public:
 	Timer* db_update;
 #endif
 	LinkedList<ZonePoint*> zone_point_list;
-	LinkedList<Object*> object_list;
+//	LinkedList<Object*> object_list;
 	int32	numzonepoints;
-protected:
-	//friend class database;
-#ifndef GUILDWARS
-	LinkedList<Spawn2*> spawn2_list; // CODER new spawn list
-#endif
-	sint32	aggroedmobs;
 private:
 	int32	zoneid;
 	char*	short_name;
@@ -185,7 +186,18 @@ private:
 	bool pvpzone;
 	float	psafe_x, psafe_y, psafe_z;
 	int32	pMaxClients;
-
+	
+	/*
+		Spawn related things
+	*/
+#ifndef GUILDWARS
+	LinkedList<Spawn2*> spawn2_list; // CODER new spawn list
+#endif
+	sint32	aggroedmobs;
+	Timer initgrids_timer;	//delayed loading of initial grids.
+	
+	
+	
 	double  GroupEXPBonus; 
 	double  EXPMod; 
 	double  AAXPMod;

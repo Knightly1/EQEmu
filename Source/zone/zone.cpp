@@ -48,7 +48,7 @@ using namespace std;
 #include "map.h"
 #include "object.h"
 #include "petitions.h"
-#include "fearpath.h"
+#include "pathing.h"
 #include "../common/files.h"
 #include "parser.h"
 #include "event_codes.h"
@@ -96,15 +96,19 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 	
 	numclients = 0;
 	zone = new Zone(iZoneID, zonename, net.GetZoneAddress(), net.GetZonePort());
-   // Load all NPCs in for the current zone.
-   database.GetNPCType (0);
-
+   
+	// Load all NPCs in for the current zone.
+	database.GetNPCType (0);
+	
+	//init the zone, loads all the data, etc
 	if (!zone->Init(iStaticZone)) {
 		safe_delete(zone);
 		cerr << "Zone->Init failed" << endl;
 		worldserver.SetZone(0);
 		return false;
 	}
+	
+	//start up the network server
 	if (!eqns.Open(net.GetZonePort())) {
 		safe_delete(zone);
 		cerr << "eqns.Open failed" << endl;
@@ -114,14 +118,11 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 #endif
 		return false;
 	}
-	if (!zone->LoadZoneCFG(zone->GetShortName(), true)) // try loading the zone name...
-		zone->LoadZoneCFG(zone->GetFileName()); // if that fails, try the file name, then load defaults
+	
 	char tmp[10];
-	char *tmp2; 
 	//PlayerProfile_Struct* pp;
 	//int char_num = 0;
 	//unsigned long* lengths;
-	char errbuf[MYSQL_ERRMSG_SIZE];
 	if (database.GetVariable("loglevel",tmp, 9)) {
 		int blah[4];
 		if (atoi(tmp)>9){ //Server is using the new code
@@ -148,8 +149,28 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 		}
 	}
 	
-	// Load zone objects
-//	uint32 i = 0;
+
+	ZoneLoaded = true;
+
+	worldserver.SetZone(iZoneID);
+	LogFile->write(EQEMuLog::Normal, "---- Zone server %s, listening on port:%i ----", zonename, net.GetZonePort());
+	LogFile->write(EQEMuLog::Status, "Zone Bootup: %s (%i)", zonename, iZoneID);
+	UpdateWindowTitle();
+	zone->GetTimeSync();
+
+	//This is a bad way of making it set the type to clear on bootup.
+	int8 weather=database.GetZoneW(zone->GetZoneID());
+	if(weather<1 || weather>3)
+		zone->weather_type=1;
+	else
+		zone->weather_type=weather;
+	LogFile->write(EQEMuLog::Debug, "Default weather for zone is:%i", zone->weather_type);
+	return true;
+}
+
+//this really loads the objects into entity_list
+bool Zone::LoadZoneObjects() {
+	char errbuf[MYSQL_ERRMSG_SIZE];
 	char* query = NULL;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
@@ -158,9 +179,10 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 		"id,zoneid,xpos,ypos,zpos,heading,itemid,charges,objectname,type,icon,"
 		"linked_list_addr_01,linked_list_addr_02,unknown08,unknown10,unknown20,"
 		"unknown24,unknown60,unknown64,unknown68,unknown72,unknown76,unknown88 "
-		"from object where zoneid=%i", iZoneID);
+		"from object where zoneid=%i", zoneid);
 	
 	if (database.RunQuery(query, len_query, errbuf, &result)) {
+		safe_delete_array(query);
 		LogFile->write(EQEMuLog::Status, "Loading Objects from DB...");
 		while ((row = mysql_fetch_row(result))) {
 			Object_Struct data = {0};
@@ -225,14 +247,20 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 		mysql_free_result(result);
 	}
 	else {
+		safe_delete_array(query);
 		LogFile->write(EQEMuLog::Error, "Error Loading Objects from DB: %s",errbuf);
+		return(false);
 	}
-	safe_delete_array(query);
+	return(true);
+}
+
+//this also just loads into entity_list, not really into zone
+bool Zone::LoadGroundSpawns() {
 	Ground_Spawns groundspawn={0};
 
 	int gsindex=0;
 	LogFile->write(EQEMuLog::Status, "Loading Ground Spawns from DB...");
-	database.LoadGroundSpawns(iZoneID,&groundspawn);
+	database.LoadGroundSpawns(zoneid, &groundspawn);
 	int32 ix=0;
 	char* name=0;
 	int32 gsnumber=0;
@@ -252,55 +280,7 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 			}
 		}
 	}
-	zone->LoadZoneDoors(zone->GetShortName());
-	if(strncasecmp(zonename,"bazaar",6)==0)
-		database.DeleteTraderItem(0);
-	
-	// Load exp modifier variables.
-	// Set default value for EXP modifiers 
-		zone->EXPMod = (double)1; 
-		zone->GroupEXPBonus = 0.1; 
-		zone->AAXPMod = (double)1; 
- 
-	// Look for database entries and use them if they exist 
-		if (database.GetVariable("EXPMod", tmp, 9)) 
-			zone->EXPMod = strtod((const char*)tmp, &tmp2); 
-		if (database.GetVariable("GroupEXPBonus", tmp, 9)) 
-			zone->GroupEXPBonus = strtod((const char*)tmp, &tmp2); 
-		if (database.GetVariable("AAXPMod", tmp, 9)) 
-			zone->AAXPMod = strtod((const char*)tmp, &tmp2); 
-
-#if (EQDEBUG>=11)
-			LogFile->write(EQEMuLog::Debug, "EXPMod set to:%i", zone->EXPMod);
-			LogFile->write(EQEMuLog::Debug, "GroupEXPBonus set to:%i", zone->GroupEXPBonus);
-			LogFile->write(EQEMuLog::Debug, "AAEXPMod set to:%i", zone->AAXPMod);
-#endif
-	adverrornum = 500;
-	zone->LoadAAs();
-	adverrornum = 501;
-	zone->GetMerchantDataForZoneLoad();
-	adverrornum = 502;
-	zone->LoadTempMerchantData();
-	adverrornum = 503;
-	//g_LogFile.write("AI LEVEL set to %d\n",iAILevel);
-	petition_list.ClearPetitions();
-	petition_list.ReadDatabase();
-	ZoneLoaded = true;
-
-	worldserver.SetZone(iZoneID);
-	LogFile->write(EQEMuLog::Normal, "---- Zone server %s, listening on port:%i ----", zonename, net.GetZonePort());
-	LogFile->write(EQEMuLog::Status, "Zone Bootup: %s (%i)", zonename, iZoneID);
-	UpdateWindowTitle();
-	zone->GetTimeSync();
-
-	//This is a bad way of making it set the type to clear on bootup.
-	int8 weather=database.GetZoneW(zone->GetZoneID());
-	if(weather<1 || weather>3)
-		zone->weather_type=1;
-	else
-		zone->weather_type=weather;
-	LogFile->write(EQEMuLog::Debug, "Default weather for zone is:%i", zone->weather_type);
-	return true;
+	return(true);
 }
 
 int Zone::SaveTempItem(int32 merchantid, int32 npcid, int32 item, sint32 charges, bool sold){
@@ -661,18 +641,15 @@ void Zone::LoadZoneDoors(const char* zone)
 }
 
 Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, int16 in_port) 
-:	autoshutdown_timer(ZONE_AUTOSHUTDOWN_DELAY),
+:	initgrids_timer(10000),
+	autoshutdown_timer(ZONE_AUTOSHUTDOWN_DELAY),
 	clientauth_timer(AUTHENTICATION_TIMEOUT * 1000),
 	spawn2_timer(1000)
 {
 	zoneid = in_zoneid;
 	zone_weather = 0;
 	map = Map::LoadMapfile(in_short_name);
-#ifdef ENABLE_FEAR_PATHING
-	fear = FearPathManager::LoadPathFile(in_short_name);
-#else
-	fear = NULL;
-#endif
+	pathing = PathManager::LoadPathFile(in_short_name);
 	short_name = strcpy(new char[strlen(in_short_name)+1], in_short_name);
 	strlwr(short_name);
 	memset(file_name, 0, sizeof(file_name));
@@ -711,59 +688,134 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, i
 //Modified for timezones.
 bool Zone::Init(bool iStaticZone) {
 	SetStaticZone(iStaticZone);
-	cout << "Init: Loading zone lists";
-	if (!database.PopulateZoneLists(short_name, &zone_point_list, &spawn_group_list))
-	{
-		cout << "ERROR: Couldn't load zone lists." << endl;
+	
+	//load up our spawn conditions before any spawn data, since the spawn
+	//data needs access to the spawn conditions to do its thing.
+	LogFile->write(EQEMuLog::Status, "Loading spawn conditions...");
+	if(!spawn_conditions.LoadSpawnConditions(short_name)) {
+		LogFile->write(EQEMuLog::Error, "Loading spawn conditions failed, continuing without them.");
+	}
+	
+	LogFile->write(EQEMuLog::Status, "Loading static zone points...");
+	if (!database.LoadStaticZonePoints(&zone_point_list, short_name)) {
+		LogFile->write(EQEMuLog::Error, "Loading static zone points failed.");
 		return false;
 	}
+	
+	LogFile->write(EQEMuLog::Status, "Loading spawn groups...");
+	if (!database.LoadSpawnGroups(short_name, &spawn_group_list)) {
+		LogFile->write(EQEMuLog::Error, "Loading spawn groups failed.");
+		return false;
+	}
+	
+	//load up our existing spawn state or the regular spawn2 data
 	char pzs[3] = "";
-	cout << ", zone state or spawn list";
-	if (database.GetVariable("PersistentZoneState", pzs, 2)) {
-		if (pzs[0] == '1') {
-			sint8 tmp = database.LoadZoneState(short_name, spawn2_list);
-			if (tmp == 1) {
-				cout << "Zone state loaded." << endl;
-			}
-			else if (tmp == -1) {
-				cout << "Error loading zone state" << endl;
-				return false;
-			}
-			else if (tmp == 0) {
-				cout << "Zone state not found, loading from spawn lists." << endl;
-				if (!database.PopulateZoneSpawnList(short_name, spawn2_list))
-					return false;
-			}
-			else
-				cout << "Unknown LoadZoneState return value" << endl;
+	if (database.GetVariable("PersistentZoneState", pzs, 2) && pzs[0] == '1') {
+		LogFile->write(EQEMuLog::Status, "Loading saved zone state...");
+		sint8 tmp = database.LoadZoneState(short_name, spawn2_list);
+		if (tmp == 1) {
+			//success
+		} else if (tmp == -1) {
+			LogFile->write(EQEMuLog::Error, "Loading zone state failed.");
+			return false;
 		}
-		else if (!database.PopulateZoneSpawnList(short_name, spawn2_list))
+		else if (tmp == 0) {
+			LogFile->write(EQEMuLog::Status, "No state saved, loading spawn2 points...");
+			if (!database.PopulateZoneSpawnList(short_name, spawn2_list))
+				return false;
+		}
+		else
+			cout << "Unknown LoadZoneState return value" << endl;
+	} else {
+		LogFile->write(EQEMuLog::Status, "Loading spawn2 points...");
+		if (!database.PopulateZoneSpawnList(short_name, spawn2_list))
 		{
-			cout << "ERROR: Couldn't populate zone spawn list." << endl;
+			LogFile->write(EQEMuLog::Error, "Loading spawn2 points failed.");
 			return false;
 		}
 	}
-	else if (!database.PopulateZoneSpawnList(short_name, spawn2_list))
-	{
-		cout << "Couldn't populate zone spawn list." << endl;
+	
+	LogFile->write(EQEMuLog::Status, "Loading player corpses...");
+	if (!database.LoadPlayerCorpses(zoneid)) {
+		LogFile->write(EQEMuLog::Error, "Loading player corpses failed.");
 		return false;
 	}
-	cout << ", player corpses";
-	if (!database.LoadPlayerCorpses(zoneid))
-	{
-		cout << "ERROR: Couldn't load player corpses." << endl;
-		return false;
-	}
-	cout << ", traps\n";
+	
+	LogFile->write(EQEMuLog::Status, "Loading traps...");
 	if (!database.LoadTraps(short_name))
 	{
-		cout << "ERROR: Couldn't load traps." << endl;
+		LogFile->write(EQEMuLog::Error, "Loading traps failed.");
 		return false;
 	}
+	
+	LogFile->write(EQEMuLog::Status, "Loading ground spawns...");
+	if (!LoadGroundSpawns())
+	{
+		LogFile->write(EQEMuLog::Error, "Loading ground spawns failed. continuing.");
+	}
+	
+	LogFile->write(EQEMuLog::Status, "Loading Objects from DB...");
+	if (!LoadZoneObjects())
+	{
+		LogFile->write(EQEMuLog::Error, "Loading Objects failed. continuing.");
+	}
+	
+	//load up the zone's doors
+	zone->LoadZoneDoors(zone->GetShortName());
+	
+	//clear trader items if we are loading the bazaar
+	if(strncasecmp(short_name,"bazaar",6)==0)
+		database.DeleteTraderItem(0);
+	
+	// Load exp modifier variables.
+	// Set default value for EXP modifiers 
+	EXPMod = (double)1;
+	GroupEXPBonus = 0.1;
+	AAXPMod = (double)1;
+ 
+	char tmp[10];
+	char *tmp2;
+	// Look for database entries and use them if they exist 
+	if (database.GetVariable("EXPMod", tmp, 9)) 
+		EXPMod = strtod((const char*)tmp, &tmp2); 
+	if (database.GetVariable("GroupEXPBonus", tmp, 9)) 
+		GroupEXPBonus = strtod((const char*)tmp, &tmp2); 
+	if (database.GetVariable("AAXPMod", tmp, 9)) 
+		AAXPMod = strtod((const char*)tmp, &tmp2); 
+
+#if (EQDEBUG>=11)
+	LogFile->write(EQEMuLog::Debug, "EXPMod set to:%i", EXPMod);
+	LogFile->write(EQEMuLog::Debug, "GroupEXPBonus set to:%i", GroupEXPBonus);
+	LogFile->write(EQEMuLog::Debug, "AAEXPMod set to:%i", AAXPMod);
+#endif
+	
+	//Load AA information
+	adverrornum = 500;
+	LoadAAs();
+	
+	//Load merchant data
+	adverrornum = 501;
+	zone->GetMerchantDataForZoneLoad();
+	
+	//Load temporary merchant data
+	adverrornum = 502;
+	zone->LoadTempMerchantData();
+	
+	adverrornum = 503;
+	//g_LogFile.write("AI LEVEL set to %d\n",iAILevel);
+	petition_list.ClearPetitions();
+	petition_list.ReadDatabase();
+	
+	//load the zone config file.
+	if (!LoadZoneCFG(zone->GetShortName(), true)) // try loading the zone name...
+		LoadZoneCFG(zone->GetFileName()); // if that fails, try the file name, then load defaults
+	
 	parse->ClearCache();
-	cout << ", timezone data";
+	
+	LogFile->write(EQEMuLog::Status, "Loading timezone data...");
 	zone->zone_time.setEQTimeZone(database.GetZoneTZ(zoneid));
-	cout << " - Done. ZoneID = " << zoneid << "; Time Offset = " << zone->zone_time.getEQTimeZone() << endl;
+	
+	LogFile->write(EQEMuLog::Status, "Init Finished: ZoneID = %d, Time Offset = %d", zoneid, zone->zone_time.getEQTimeZone());
 	return true;
 }
 
@@ -773,7 +825,7 @@ Zone::~Zone()
 		dbasync->CancelWork(pQueuedMerchantsWorkID);
 	spawn2_list.Clear();
 	safe_delete(map);
-	safe_delete(fear);
+	safe_delete(pathing);
 	if (worldserver.Connected()) {
 		worldserver.SetZone(0);
 	}
@@ -808,7 +860,7 @@ bool Zone::LoadZoneCFG(const char* filename, bool DontLoadDefault) {
 		strcpy(newzone_data.zone_long_name, GetLongName());
 		strcpy(newzone_data.zone_short_name2,GetShortName());
 		safe_delete(nsc);
-		cout << "Successfully loaded Zone Config.\n";
+		LogFile->write(EQEMuLog::Status, "Successfully loaded Zone Config.");
 		return true;
 	}
 	cout << "Error while loading Zone Config!\n";
@@ -901,6 +953,9 @@ bool Zone::Process() {
 	LockMutex lock(&MZoneLock);
 	_ZP(Zone_Process);
 	
+	
+	spawn_conditions.Process();
+	
 	if(spawn2_timer.Check()) {
 		LinkedListIterator<Spawn2*> iterator(spawn2_list);
 
@@ -914,6 +969,18 @@ bool Zone::Process() {
 			}
 		}
 	}
+	if(initgrids_timer.Check()) {
+		//delayed grid loading stuff.
+		initgrids_timer.Disable();
+		LinkedListIterator<Spawn2*> iterator(spawn2_list);
+
+		iterator.Reset();
+		while (iterator.MoreElements()) {
+			iterator.GetData()->LoadGrid();
+			iterator.Advance();
+		}
+	}
+	
 	if(!staticzone) {
 		if (autoshutdown_timer.Check()) {
 			StartShutdownTimer();
@@ -922,10 +989,12 @@ bool Zone::Process() {
 			}
 		}
 	}
+	
 #ifdef GUILDWARS
 	if(db_update->Check())
-	guildwars.Update();
+		guildwars.Update();
 #endif
+	
 	if(Weather_Timer->Check()){
 		Weather_Timer->Disable();
 		int16 tmpweather =rand()%100;
@@ -956,6 +1025,7 @@ bool Zone::Process() {
 		Weather_Timer->Start();
 		LogFile->write(EQEMuLog::Status, "Weather should change in %i seconds",Weather_Timer->GetRemainingTime()/1000);
 	}
+	
 	if (clientauth_timer.Check()) {
 		LinkedListIterator<ZoneClientAuth_Struct*> iterator2(client_auth_list);
 
@@ -1163,7 +1233,7 @@ bool Database::LoadStaticZonePoints(LinkedList<ZonePoint*>* zone_point_list,cons
 	}
 	else
 	{
-		cerr << "Error1 in PopulateZoneLists query '" << query << "' " << errbuf << endl;
+		cerr << "Error1 in LoadStaticZonePoints query '" << query << "' " << errbuf << endl;
 		safe_delete_array(query);
 		return false;
 	}
@@ -1469,10 +1539,10 @@ void Zone::SpawnStatus(Mob* client) {
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
-		if (iterator.GetData()->timer->GetRemainingTime() == 0xFFFFFFFF)
+		if (iterator.GetData()->timer.GetRemainingTime() == 0xFFFFFFFF)
 			client->Message(0, "  %d:  %1.1f, %1.1f, %1.1f:  disabled", iterator.GetData()->GetID(), iterator.GetData()->GetX(), iterator.GetData()->GetY(), iterator.GetData()->GetZ());
 		else
-			client->Message(0, "  %d:  %1.1f, %1.1f, %1.1f:  %1.2f", iterator.GetData()->GetID(), iterator.GetData()->GetX(), iterator.GetData()->GetY(), iterator.GetData()->GetZ(), (float)iterator.GetData()->timer->GetRemainingTime() / 1000);
+			client->Message(0, "  %d:  %1.1f, %1.1f, %1.1f:  %1.2f", iterator.GetData()->GetID(), iterator.GetData()->GetX(), iterator.GetData()->GetY(), iterator.GetData()->GetZ(), (float)iterator.GetData()->timer.GetRemainingTime() / 1000);
 
 		x++;
 		iterator.Advance();

@@ -290,6 +290,7 @@ public:
 	inline float ProximityX() { return(proximity_x); }
 	inline float ProximityY() { return(proximity_y); }
 	inline float ProximityZ() { return(proximity_z); }
+	inline void ClearAllProximities() { entity_list.ProcessMove(this, 1000e99, 1000e99, 1000e99); proximity_x = 1000e99; proximity_y = 1000e99; proximity_z = 1000e99; }
 	
 	/*
 		Begin client modifiers
@@ -393,6 +394,7 @@ public:
 	
 	FACTION_VALUE	GetFactionCon(Mob* iOther);
     FACTION_VALUE   GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race, int32 p_class, int32 p_deity, sint32 pFaction, Mob* tnpc);
+	sint32	GetCharacterFactionLevel(sint32 faction_id);
 	
 	void	SetFactionLevel(int32 char_id, int32 npc_id, int8 char_class, int8 char_race, int8 char_deity);
 	void    SetFactionLevel2(int32 char_id, sint32 faction_id, int8 char_class, int8 char_race, int8 char_deity, sint32 value);
@@ -439,6 +441,7 @@ public:
 	void	FinishTrade(NPC* with);
 	bool	TGB() {return tgb;}  
 	
+	void	OnDisconnect(bool hard_disconnect);
 	int16	GetSkillPoints() {return m_pp.points;}
 	void	SetSkillPoints(int inp) {m_pp.points = inp;}
 	void	IncreaseSkill(int skill_id, int value = 1) { if (skill_id <= HIGHEST_SKILL) { m_pp.skills[skill_id + 1] += value; } }
@@ -525,11 +528,12 @@ public:
 	void	ChangeTributeSettings(TributeInfo_Struct *t);
 	void	SendTributeTimer();
 	void	ToggleTribute(bool enabled);
+	void	SendPathPacket(vector<FindPerson_Point> &path);
 	
 	inline PTimerList &GetPTimers() { return(p_timers); }
 	
 	//AA Methods
-	void	ChangeAATitle(int8 in_aa_title) { this->aa_title = in_aa_title; }
+	void	SetAATitle(const char *txt) { strncpy(m_pp.title, txt, 48); }
 	inline int32	GetMaxAAXP(void) { return max_AAXP; }
 	inline uint32  GetAAXP()   { return m_pp.expAA; }
 	void SendAAStats();
@@ -738,7 +742,6 @@ private:
 	void	BulkSendInventoryItems();
 	
 	LinkedList<FactionValue*> factionvalue_list;
-	sint32	GetCharacterFactionLevel(sint32 faction_id);
 	
 	int32 tribute_master_id;
 	

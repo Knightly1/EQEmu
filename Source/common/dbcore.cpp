@@ -9,6 +9,8 @@ using namespace std;
 #include <string.h>
 #include "../common/MiscFunctions.h"
 
+#define ASYNC_LOOP_GRANULARITY 4 //# of ms between checking our work
+
 #ifdef WIN32
 	#define snprintf	_snprintf
 	#define strncasecmp	_strnicmp
@@ -201,16 +203,23 @@ bool DBcore::Open(int32* errnum, char* errbuf) {
 }
 
 
-
+//we only need to do anything when somebody puts work on the queue
+//so instead of checking all the time, we will wait on a condition
+//which will get signaled when somebody puts something on the queue
 ThreadReturnType DBAsyncLoop(void* tmp) {
 	DBAsync* dba = (DBAsync*) tmp;
 	dba->MLoopRunning.lock();
 	while (dba->RunLoop()) {
+		//wait before working so we check the loop condition
+		//as soon as were done working
+		dba->CInList.Wait();
+		//we could check dba->RunLoop() again to see if we
+		//got turned off while we were waiting
 		{
 			_CP(DBAsyncLoop_loop);
 			dba->Process();
 		}
-		Sleep(1);
+//		Sleep(ASYNC_LOOP_GRANULARITY);
 	}
 	dba->MLoopRunning.unlock();
 #ifndef WIN32
@@ -218,11 +227,10 @@ ThreadReturnType DBAsyncLoop(void* tmp) {
 #endif
 }
 
-DBAsync::DBAsync(DBcore* iDBC) {
+DBAsync::DBAsync(DBcore* iDBC) : Timeoutable(10000) {
 	pDBC = iDBC;
 	pRunLoop = true;
 	pNextID = 1;
-	pTimeoutCheck = new Timer(10000);
 #ifdef WIN32
 	_beginthread(DBAsyncLoop, 0, this);
 #else
@@ -233,7 +241,6 @@ DBAsync::DBAsync(DBcore* iDBC) {
 
 DBAsync::~DBAsync() {
 	StopThread();
-	safe_delete(pTimeoutCheck);
 }
 
 bool DBAsync::StopThread() {
@@ -242,8 +249,14 @@ bool DBAsync::StopThread() {
 	ret = pRunLoop;
 	pRunLoop = false;
 	MRunLoop.unlock();
+	
+	//signal the condition so we exit the loop if were waiting
+	CInList.Signal();
+	
+	//this effectively waits for the processing thread to finish
 	MLoopRunning.lock();
 	MLoopRunning.unlock();
+	
 	return ret;
 }
 
@@ -262,8 +275,12 @@ int32 DBAsync::AddWork(DBAsyncWork** iWork, int32 iDelay) {
 	cout << "Adding AsyncWork #" << (*iWork)->GetWorkID() << endl;
 	cout << "ExecuteAfter = " << (*iWork)->pExecuteAfter << " (" << Timer::GetCurrentTime() << " + " << iDelay << ")" << endl;
 #endif
-	iWork = 0;
+	*iWork = 0;
 	MInList.unlock();
+	
+	//wake up the processing thread and tell it to get to work.
+	CInList.Signal();
+	
 	return ret;
 }
 
@@ -359,13 +376,16 @@ void DBAsync::Process() {
 	MCurrentWork.lock();
 	while ((CurrentWork = InListPop())) {
 		MCurrentWork.unlock();
+		//move from queued to executing
 		Status tmpStatus = CurrentWork->SetStatus(Executing);
 		if (tmpStatus == Queued) {
+			//execute the work
 			ProcessWork(CurrentWork);
 			tmpWork = CurrentWork;
 			MCurrentWork.lock();
 			CurrentWork = 0;
 			MCurrentWork.unlock();
+			//move from executing to finished
 			tmpStatus = tmpWork->SetStatus(DBAsync::Finished);
 			if (tmpStatus != Executing) {
 				if (tmpStatus != Canceled) {
@@ -375,6 +395,7 @@ void DBAsync::Process() {
 				safe_delete(tmpWork);
 			}
 			else {
+				//call callbacks or put results on finished queue
 				DispatchWork(tmpWork);
 				Sleep(25);
 				MCurrentWork.lock();
@@ -389,18 +410,19 @@ void DBAsync::Process() {
 		}
 	}
 	MCurrentWork.unlock();
-	try{
-		if (pTimeoutCheck && pTimeoutCheck->Check()) {
-			MFQList.lock();
-			LinkedListIterator<DBAsyncFinishedQueue**> iterator(FQList);
+}
 
-			iterator.Reset();
-			while (iterator.MoreElements()) {
-				(*iterator.GetData())->CheckTimeouts();
-				iterator.Advance();
-			}
-			MFQList.unlock();
+void DBAsync::CheckTimeout() {
+	try{
+		MFQList.lock();
+		LinkedListIterator<DBAsyncFinishedQueue**> iterator(FQList);
+
+		iterator.Reset();
+		while (iterator.MoreElements()) {
+			(*iterator.GetData())->CheckTimeouts();
+			iterator.Advance();
 		}
+		MFQList.unlock();
 	}
 	catch(...){
 		
@@ -452,6 +474,8 @@ void DBAsync::ProcessWork(DBAsyncWork* iWork, bool iSleep) {
 
 void DBAsync::DispatchWork(DBAsyncWork* iWork) {
 	_CP(DBAsync_DispatchWork);
+	//if this work has a callback, call it
+	//otherwise, stick the work on the finish queue
 	if (iWork->pCB) {
 		if (iWork->pCB(iWork))
 			safe_delete(iWork);
@@ -665,6 +689,8 @@ bool DBAsyncWork::CheckTimeout(int32 iFQTimeout) {
 	return ret;
 }
 
+//sets the work's status to the supplied value and returns
+//the revious status
 DBAsync::Status DBAsyncWork::SetStatus(DBAsync::Status iStatus) {
 	DBAsync::Status ret;
 	MLock.lock();

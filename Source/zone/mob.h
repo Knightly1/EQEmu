@@ -89,6 +89,7 @@ enum {
 	UNFEARABLE,			//D
 	IMMUNE_MEELE,		//A
 	IMMUNE_MAGIC,		//B
+	IMMUNE_FLEEING,		//f
 	SPECATK_MAXNUM
 				//X,Y,Z are old interactive NPC codes
 };
@@ -181,12 +182,13 @@ struct StatBonuses {
 	sint16 StunResist;		//i
 	sint16 MeleeSkillCheck;	//i
 	sint16 HitChance;			//HitChance/15 == % increase i
+	uint8  HitChanceSkill;
 	sint16 DamageModifier;		//i
 	sint16 MinDamageModifier;   //i
-	sint16 ProcChance;			// ProcChance/10 == % increase
+	sint16 ProcChance;			// ProcChance/10 == % increase i
 	sint16 ExtraAttackChance;
 	
-	bool HundredHands;
+	bool HundredHands;		//extra haste, stacks with all other haste  i
 	bool MeleeLifetap;  //i
 };
 
@@ -200,19 +202,6 @@ typedef struct
 struct Shielders_Struct {
 	int32   shielder_id;
 	int16   shielder_bonus;
-};
-
-enum {	//special attack codes
-	//monk attacks, actual live values:
-	saTailRake			= 0x15,	//Dpunch too
-	saEagleStrike		= 0x17,
-	saFlyingKick		= 0x1A,
-	saKick				= 0x1E,
-	saRoundKick			= 0x26,
-	saTigerClaw			= 0x34,
-	
-	//other attacks for NPC AI, not live values
-	saRougeBackstab		= 0x01
 };
 
 //eventually turn this into a typedef and 
@@ -283,7 +272,7 @@ bool logpos;
     int8	MaxSkill_class(int16 skillid, int16 class_, int16 level);
 	
 	
-	void	RogueBackstab(Mob* other, const ItemInst* weapon, int8 bs_skill);
+	void	RogueBackstab(Mob* other, const Item_Struct* weapon, int8 bs_skill, bool min_damage = false);
 	void	RogueAssassinate(Mob* other); // solar
 	bool	BehindMob(Mob* other = 0, float playerx = 0.0f, float playery = 0.0f);
 	
@@ -370,7 +359,8 @@ bool logpos;
 	inline virtual void SetHP(sint32 hp) { if (hp >= max_hp) cur_hp = max_hp; else cur_hp = hp;} 
 	int16   equipment[9];
 	bool ChangeHP(Mob* other, sint32 amount, int16 spell_id = 0, sint8 buffslot = -1, bool iBuffTic = false);
-	int MonkSpecialAttack(Mob* other, int8 type);
+	int MonkSpecialAttack(Mob* other, int8 skill_used);
+	void TryBackstab(Mob *other, const Item_Struct* weapon);
 	void DoAnim(const int animnum, int type=1, bool ackreq = true);
 	
 	void ChangeSize(float in_size, bool bNoRestriction = false);
@@ -689,7 +679,13 @@ bool logpos;
 	int					GetMaxWp(){ return max_wp; }
 	int					GetCurWp(){ return cur_wp; }
 #ifdef ENABLE_FEAR_PATHING
-	void SetFeared(Mob *caster, int32 duration);
+	void SetFeared(Mob *caster, int32 duration, bool flee = false);
+	float GetFearSpeed();
+#ifdef FLEE_HP_RATIO
+	inline void StartFleeing() { SetFeared(GetHateTop(), FLEE_RUN_DURATION, true); }
+	void ProcessFlee();
+	void CheckFlee();
+#endif
 #endif
 	
 	inline bool			CheckAggro(Mob* other) {return hate_list.IsOnHateList(other);}
@@ -790,6 +786,7 @@ protected:
 	bool rez;
 	bool moving;
 	bool targeted;
+	bool findable;
 	sint32  cur_hp;
 	sint32  max_hp;
 	sint32	base_hp;
@@ -859,6 +856,7 @@ protected:
 	
 	Mob*	target;
 	Timer	attack_timer;
+	float	attack_speed;		//% increase/decrease in attack speed (not haste)
 	Timer	tic_timer;
 	Timer	mana_timer;
 	
@@ -929,9 +927,14 @@ protected:
 	
 #ifdef ENABLE_FEAR_PATHING
 	void CalculateFearPosition();
-	VERTEX fear_vector;
+	bool FearTryStraight(Mob *caster, int32 duration, bool flee, VERTEX &hit, VERTEX &fv);
+//	VERTEX fear_vector;
 	FearState fear_state;
 	MobFearState *fear_path_state;
+	bool flee_mode;
+#ifdef FLEE_HP_RATIO
+	Timer flee_timer;
+#endif
 #endif
 	
 	bool	pAIControlled;

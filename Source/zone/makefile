@@ -1,5 +1,5 @@
 APP=zone
-SF=../common/EQNetwork.o \
+SF=.obj/EQNetwork.o \
    ../common/timer.o  ../common/packet_dump.o ../common/packet_functions.o \
    ../common/unix.o ../common/packet_dump_file.o ../common/Mutex.o ../common/MiscFunctions.o \
    zone.o entity.o mob.o client.o client_process.o npc.o net.o spawn2.o attack.o hate_list.o \
@@ -15,7 +15,8 @@ SF=../common/EQNetwork.o \
    inventory.o client_mods.o tradeskills.o waypoints.o pets.o \
    effects.o trap.o perl_client.o perl_entity.o perl_mob.o perl_npc.o \
    perl_PlayerCorpse.o perl_groups.o questmgr.o client_logs.o perlparser.o \
-   ../common/rdtsc.o ../common/extprofile.o horse.o exp.o fearpath.o
+   ../common/rdtsc.o ../common/extprofile.o horse.o exp.o fearpath.o \
+   special_attacks.o ../common/timeoutmgr.o ../common/Condition.o pathing.o
 
 
 CC=gcc
@@ -27,7 +28,7 @@ WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -W
 COPTS=$(WFLAGS) -O2 -ggdb -pthread -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
 LINKOPTS=-rdynamic -L. -lstdc++ -ldl $(MYSQL_LIB)
 
-include .depend
+#include .depend
 
 all: $(APP)
 

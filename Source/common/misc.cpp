@@ -8,6 +8,7 @@
 #include <map>
 #include <iostream>
 #include <zlib.h>
+#include <time.h>
 #include "misc.h"
 #include "types.h"
 using namespace std;
@@ -447,4 +448,60 @@ int i;
 		zerror = inflateEnd( &zstream );
 		return 0;
 	}
+}
+
+
+
+void dump_message_column(unsigned char *buffer, unsigned long length, string leader)
+{
+unsigned long i,j;
+unsigned long rows,offset=0;
+	rows=(length/16)+1;
+	for(i=0;i<rows;i++) {
+		printf("%s0x%04lx: ",leader.c_str(),i*16);
+		for(j=0;j<16;j++) {
+			if (offset+j<length)
+				printf("%02x ",*(buffer+offset+j));
+			else
+				printf("   ");
+		}
+		printf("| ");
+		for(j=0;j<16;j++,offset++) {
+			if (offset<length) {
+				char c=*(buffer+offset);
+				printf("%c",isprint(c) ? c : '.');
+			}
+		}
+		printf("\n");
+	}
+}
+
+string long2ip(unsigned long ip)
+{
+char temp[16];
+union { unsigned long ip; struct { unsigned char a,b,c,d; } octet;} ipoctet;
+
+	ipoctet.ip=ip;
+	sprintf(temp,"%d.%d.%d.%d",ipoctet.octet.a,ipoctet.octet.b,ipoctet.octet.c,ipoctet.octet.d);
+
+	return string(temp);
+}
+
+string timestamp(time_t now)
+{
+	return string_from_time("[%Y%m%d.%H%M%S] ",now);
+}
+
+string string_from_time(string pattern, time_t now)
+{
+struct tm *now_tm;
+char time_string[51];
+
+	if (!now)
+		time(&now);
+	now_tm=localtime(&now);
+
+	strftime(time_string,51,pattern.c_str(),now_tm);
+
+	return string(time_string);
 }

@@ -1,76 +1,95 @@
+/*
+
+Fear Pathing generation utility.
+(c) 2005 Father Nitwit
+
+
+
+Settings table:
+
+CREATE TABLE fear_settings (
+	zone VARCHAR(16) NOT NULL PRIMARY KEY,
+	
+	#general settings:
+	use_doors TINYINT NOT NULL DEFAULT 1,
+	min_fix_z FLOAT NOT NULL DEFAULT 20,
+	max_fear_distance FLOAT NOT NULL DEFAULT 250,
+	image_scale TINYINT NOT NULL DEFAULT 4,
+	
+	#path related
+	check_initial_los TINYINT NOT NULL DEFAULT 0,
+	split_invalid_paths TINYINT NOT NULL DEFAULT 0,
+	link_path_endpoints TINYINT NOT NULL DEFAULT 1,
+	end_distance FLOAT NOT NULL DEFAULT 25,
+	split_long_min FLOAT NOT NULL DEFAULT 300,
+	split_long_step FLOAT NOT NULL DEFAULT 200,
+	
+	#node combining settings:
+	same_dist FLOAT NOT NULL DEFAULT 2.5,
+	node_combine_dist FLOAT NOT NULL DEFAULT 30,
+	grid_combine_dist FLOAT NOT NULL DEFAULT 30,
+	close_all_los TINYINT NOT NULL DEFAULT 0,
+	
+	#line-crossing reduction settings:
+	cross_count INT NOT NULL DEFAULT 5,
+	cross_min_length FLOAT NOT NULL DEFAULT 1,
+	cross_max_z_diff FLOAT NOT NULL DEFAULT 20,
+	cross_combine_dist FLOAT NOT NULL DEFAULT 120,
+	
+	#linking:
+	second_link_dist FLOAT NOT NULL DEFAULT 100,
+	link_max_dist FLOAT NOT NULL DEFAULT 400,
+	link_count TINYINT NOT NULL DEFAULT 1
+	
+);
+
+*/
+
+
+
+
 #include "../common/types.h"
 #include "../zone/map.h"
 #include "../common/rdtsc.h"
 #include "quadtree.h"
 #include "apathing.h"
+#include "boostcrap.h"
 #include <stdio.h>
 #include <mysql.h>
 #include <stdlib.h>
 #include <string.h>
 #include <gd.h>
 
-#include <vector>
-#include <map>
-#include <string>
-#include <algorithm>
-using namespace std;
-
-#include <boost/config.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/prim_minimum_spanning_tree.hpp>
-#include <boost/graph/kruskal_min_spanning_tree.hpp>
-#include <boost/graph/johnson_all_pairs_shortest.hpp>
-using namespace boost;
 
 
-//man I hate boost
-typedef adjacency_list < vecS, vecS, undirectedS,
-	property<vertex_distance_t, int>, property < edge_weight_t, int > >
-	MyGraph;
 
-typedef graph_traits < MyGraph >::vertex_descriptor VertDesc;
-typedef graph_traits < MyGraph >::edge_descriptor EdgeDesc;
-
-
-//ye-olde prototypes
-bool load_paths_from_db(MYSQL *m, Map *map, const char *zone, list<PathGraph*> &db_paths, list<PathNode*> &end_points);
-bool load_spawns_from_db(MYSQL *m, const char *zone, list<PathNode*> &db_spawns);
-bool load_doors_from_db(MYSQL *m, const char *zone, list<PathNode*> &db_spawns);
-void repair_a_high_waypoint(Map *map, PathNode *it);
-void repair_high_waypoints(Map *map, list<PathGraph*> &db_paths, list<PathNode*> &db_spawns);
-bool almost_colinear(PathNode *first, PathNode *second, PathNode *third);
-void reduce_waypoints(list<PathGraph*> &db_paths);
-void break_long_lines(list<PathGraph*> &db_paths);
-//void build_big_graph(PathGraph *big, list<PathGraph*> &db_paths, list<PathNode*> &db_spawns);
-void combine_trivial_grids(Map *map, list<PathGraph*> &db_paths);
-void combine_closest_grids(Map *map, list<PathGraph*> &db_paths);
-void link_spawns(Map *map, PathGraph *big, list<PathNode*> &db_spawns);
-void combine_grid_points(Map *map, PathGraph *big, float close_enough);
-void draw_paths(Map *map, list<PathEdge *> &edges, list<PathEdge *> &edges2, const char *fname);
-void draw_paths2(Map *map, list<PathEdge *> &edges1, list<PathEdge *> &edges2, list<PathEdge *> &edges3, list<PathNode *> &spawns, const char *fname);
-void check_edge_los(Map *map, PathGraph *big);
-void check_long_edge_los(Map *map, PathGraph *big);
-bool CheckLOS(Map *map, PathNode *from, PathNode *to);
-void build_boost_graph(MyGraph &vg, property_map<MyGraph, edge_weight_t>::type &weightmap, map<PathEdge *, EdgeDesc> &em, PathGraph *big, bool set_weights = true);
-void run_min_spanning_tree(MyGraph &vg, property_map<MyGraph, edge_weight_t>::type &weightmap, map<PathEdge *, EdgeDesc> &em, PathGraph *big, int start_node);
-void find_main_grid(Map *map, MyGraph &vg, PathGraph *big, const char *file, int &start_node);
-void calc_path_lengths(Map *map, MyGraph &vg, PathGraph *big, map<PathEdge *, EdgeDesc> &em, const char *fname);
-void count_crossing_lines(list<PathEdge *> &edges, PathGraph *out, PathGraph *excess, map<PathEdge*, vector<GPoint> > &cross_list);
-void color_disjoint_graphs(PathGraph *big, MyGraph &vg, Map *map, const char *fname, vector< vector<int> > &D, vector<int> &counts, vector<int> &first_node );
-void consolidate_cross_graphs(Map *map, PathGraph *cross_big, PathGraph *cross_excess, MyGraph &cross_graph, const char *fname);
-void cut_crossed_grids(PathGraph *big, map<PathEdge*, vector<GPoint> > &cross_list);
-void rebuild_node_list(list<PathEdge *> &edges, list<PathNode *> &nodes, list<PathNode *> *excess_nodes = NULL);
-QTNode *build_quadtree(Map *map, PathGraph *big);
-bool write_path_file(QTNode *_root, PathGraph *big, const char *file);
-bool load_eq_map(const char *zone, PathGraph *eqmap);
-void write_eq_map(list<PathEdge *> &edges, const char *fname);
-//void edge_stats(list<PathEdge*> &edges, const char *s);
-void choose_biggest_graph(PathGraph *big, vector<int> &counts, vector<int> &first_node);
+//parameters:
+bool INCLUDE_DOORS = true;
+float FEAR_MAXIMUM_DISTANCE = 250;
+float ENDPOINT_CONNECT_MAX_DISTANCE = 25;
+float MIN_FIX_Z = 20.0f;
+float CLOSE_ENOUGH = 2.5;
+bool COMBINE_CHECK_ALL_LOS = false;
+float CLOSE_ENOUGH_COMBINE = 30;
+float SPAWN_MIN_SECOND_DIST = 100;
+bool SPLIT_INVALID_PATHS = false;
+bool LINK_PATH_ENDPOINTS = true;
+float MAX_LINK_SPAWN_DIST = 400;
+bool SPAWN_LINK_TWICE = true;
+bool SPAWN_LINK_THRICE = true;
+float MERGE_MIN_SECOND_DIST = 30;
+float SPLIT_LINE_LENGTH = 300;
+float SPLIT_LINE_INTERVAL = 200;
+float LONG_PATH_CHECK_LOS = 0;   //0=disable
+int CROSS_REDUCE_COUNT = 5;
+float CROSS_MIN_LENGTH = 1;
+float CROSS_MAX_Z_DIFF = 20;
+float CLOSE_ENOUGH_CROSS = 120;
+int IMAGE_SCALE = 4;
 
 
-void DrawGradientLine(gdImagePtr im, GPoint *first, GPoint *second, vector<ColorRecord> &colors);
-void allocateGradient(gdImagePtr im, float r1, float g1, float b1, float r2, float g2, float b2, 
-	float min, float max, float divs, vector<ColorRecord> &colors);
+
+
 
 int main(int argc, char *argv[]) {
 	
@@ -129,10 +148,20 @@ int main(int argc, char *argv[]) {
 	if(!load_spawns_from_db(&m, zone, db_spawns))
 		return(1);
 
-#ifdef INCLUDE_DOORS
-	if(!load_doors_from_db(&m, zone, db_spawns))
+	if(INCLUDE_DOORS) {
+		if(!load_doors_from_db(&m, zone, db_spawns))
+			return(1);
+	}
+	
+	if(!load_hints_from_db(&m, zone, db_spawns))
 		return(1);
-#endif
+	
+	//try to load settings, dont care if it fails
+	if(load_settings_from_db(&m, zone))
+		printf("Loaded zone settings from the database.\n");
+	else
+		printf("Unable to load settings from database. Using defaults.\n");
+	
 	
 	printf("Load: got %d paths and %d spawn points from the database.\n", db_paths.size(), db_spawns.size());
 	printf("Load: had to split up %d invalid paths.\n", load_split_paths);
@@ -163,7 +192,7 @@ int main(int argc, char *argv[]) {
 	PathGraph *big = db_paths.front();
 	
 	//now add in the spawn points, and link to closest with LOS
-	link_spawns(map, big, db_spawns);
+	link_spawns(map, big, db_spawns, MAX_LINK_SPAWN_DIST, NULL);
 	printf("Link Spawns: %d linked once, %d linked twice, %d not linked, %d invalid.\n", link_spawn_count-link_spawn2_count, link_spawn2_count, link_spawn_nocount, link_spawn_invalid);
 	
 	//combining close points might be causing small LOS obstacles... 
@@ -196,9 +225,13 @@ int main(int argc, char *argv[]) {
 	
 	/*
 		Graph algorithm application (boost)
+		run it on each disjoint graph
 	*/
 	
-	int start_node;
+	vector<PathGraph *> disjoints;
+	vector<int> start_nodes;
+	
+	//find all the disjoint graphs
 	{
 		//build the boost graph
 		MyGraph boost_graph(big->nodes.size());
@@ -208,129 +241,184 @@ int main(int argc, char *argv[]) {
 		
 		//find the grid which has most of the edges
 		sprintf(buf, "paths-%s-colors.png", zone);
-		find_main_grid(map, boost_graph, big, buf, start_node);
+		find_disjoint_grids(map, boost_graph, big, buf, start_nodes, disjoints);
+	}
+	printf("\nSplit: There are %d valid disjoint graphs.\n", disjoints.size());
+	
+	//for each disjoint graph....
+	int djnum = 0;
+	PathGraph *real_big = big, *tmpg; int start_node;
+	vector<PathGraph *>::iterator cur,end;
+	vector<int>::iterator curs,ends;
+	cur = disjoints.begin(); curs = start_nodes.begin();
+	end = disjoints.end(); ends = start_nodes.end();
+	for(; cur != end; cur++,curs++) {
+		big = *cur;
+		start_node = *curs;
+		
+		printf("Disjoint %d: has %d edges and %d nodes.\n", djnum, big->edges.size(), big->nodes.size());
+		
+		//reset our stats...
+		combine_broke_los = 0;
+		combined_grid_points = 0;
+		removed_edges_los = 0;
+		removed_long_edges_los = 0;
+		broke_paths = 0;
+		cross_edge_count = 0;
+		cross_add_count = 0;
+		
+		{
+			//build the boost graph
+			MyGraph boost_graph(big->nodes.size());
+			property_map<MyGraph, edge_weight_t>::type weightlist;
+			std::map<PathEdge *, EdgeDesc> edgemap;
+			build_boost_graph(boost_graph, weightlist, edgemap, big);
+			
+			//calculate the MST
+			run_min_spanning_tree(boost_graph, weightlist, edgemap, big, start_node);
+			printf("Ran Min Spanning Tree: ended with %d edges\n", big->edges.size());
+		}
+
+		/*
+			Now we have our minimal spanning tree, try to refine it.
+			
+			the goal of this crap is to fix newbie fields and open zones
+		*/
+		std::map<PathEdge*, vector<GPoint> > cross_list;
+		PathGraph *cross_big = new PathGraph();
+		PathGraph *cross_excess = new PathGraph();
+		
+		//count the number of times each edge crosses another edge, and record
+		//the intersection points. Also seperate crossers from non-crossers
+		count_crossing_lines(big->edges, cross_big, cross_excess, cross_list);
+		printf("Cross Count: %d edges cross more than the specified number of other edges.\n", cross_edge_count);
+		
+		if(cross_edge_count > 2) {
+			//Make waypoints at all points of intersection
+			cut_crossed_grids(cross_big, cross_list);
+			printf("Cross Cut: Created %d new nodes cutting intersections\n", cross_add_count);
+			
+			//combine close points with a somewhat big radius...
+			combine_grid_points(map, cross_big, CLOSE_ENOUGH_CROSS);
+			printf("Cross Combine: combined %d nodes.  (%d missed strict LOS)\n", combined_grid_points, combine_broke_los);
+			printf("Cross Combine: so far, %d LOS cache hits, %d LOS cache misses.\n", los_cache_hits, los_cache_misses);
+			
+			//build our boost graph, so we can do reachability
+			MyGraph cross_graph(cross_big->nodes.size());
+			property_map<MyGraph, edge_weight_t>::type cross_weightlist;
+			std::map<PathEdge *, EdgeDesc> cross_edgemap;
+			build_boost_graph(cross_graph, cross_weightlist, cross_edgemap, cross_big, false);
+			
+			//isolate each disjoint graph and try to reduce it, gathering 
+			//all non-cross points and edges while we are at it.
+			sprintf(buf, "paths-%s-crosses.png", zone);
+			consolidate_cross_graphs(map, cross_big, cross_excess, cross_graph, buf);
+			
+			//rebuild the big graph by merging cross_big and cross_excess
+			//might be as simple as append the two arrays and run a combine on it.
+			//leaks 'big'
+			big = cross_excess;
+			cross_excess->add_edges(cross_big->edges);
+			rebuild_node_list(big->edges, big->nodes);
+			
+			//This is used to re-link the cross grids with the non-cross stuff
+			combine_grid_points(map, big, CLOSE_ENOUGH_COMBINE);
+			printf("Cross Merge: combined %d close nodes. (%d missed strict LOS)\n", combined_grid_points, combine_broke_los);
+			printf("Cross Merge: so far, %d LOS cache hits, %d LOS cache misses.\n", los_cache_hits, los_cache_misses);
+			
+			//build yet another boost graph so we can run MST
+			MyGraph cross_graph_final(big->nodes.size());
+			property_map<MyGraph, edge_weight_t>::type cross_weightlist_final;
+			std::map<PathEdge *, EdgeDesc> cross_edgemap_final;
+			build_boost_graph(cross_graph_final, cross_weightlist_final, cross_edgemap_final, big);
+			
+			//run our MST to reduce the new cross-reduced graph
+			run_min_spanning_tree(cross_graph_final, cross_weightlist_final, cross_edgemap_final, big, 0);
+			printf("Ran Min Spanning Tree 2: ended with %d edges\n", big->edges.size());
+		}	//end if there were some cross edges
+		
+		/*
+			Final refinement phase, the graph has been reduced to our final
+			form, this phase is for adding anything back in we might want
+		*/
+
+		//now that we reduced all our co-linear points, add a bunch back in for
+		//long paths, so we have more points over space. Idea is that this way
+		//we control how many colinear points there are, it isnt random
+		//this counteracts any attempts to use line-crossing as a criteria for reduction
+		//for some stupid reason, this just destroys the graph
+	//	break_long_lines(db_paths);
+	//	printf("WP Increase: created %d waypoints on long paths.\n", broke_paths);
+		
+
+		/*
+		Things we might want to do:
+	 - Try to create some cycles. Specifically large cycles.
+	   - do this after reachability calculations
+	   - use allready calculated reacahbility and distances, just adjust them as cycles added
+	   - these will add more realism to the pathing
+	   - might be implemented like this:
+		 - run all pairs shortest path on the MST (is this a byproduct?)
+		 - for each node N, for each other node K
+		   - if path(N, K) is at least MIN_CYCLE_JOIN_PATH (to prevent making small cycles)
+		   - and dist(N,K) is less than MAX_CYCLE_JOIN_DIST (do not want to invent long paths)
+		   - and there is LOS from N to K
+			 - connect N and K
+			 - have to re-run all pairs again... that sucks
+	   - another twist on the implementation would be to only look at paths
+		 which were discarded by the MST. Or maybe run this first, then the other.
+		 */
+		 
+		/*
+			The final tree has been built, remove anything we dont need from
+			it, and gather some information.
+		*/
+		
+		//build a boost graph out of our minimal spanning tree.
+		MyGraph boost_mst(big->nodes.size());
+		property_map<MyGraph, edge_weight_t>::type weightlist_mst;
+		std::map<PathEdge *, EdgeDesc> edgemap_mst;
+		build_boost_graph(boost_mst, weightlist_mst, edgemap_mst, big, false);
+		
+		//determine the path lengths to all nodes from all others
+		//including the longest path reachable by each node.
+		//this also cleans up big by removing anything unreachable
+	//	vector< vector<int> > AllPairs;
+		sprintf(buf, "paths-%s-mstcolors%d.png", zone, djnum++);
+	//	calc_path_lengths(map, boost_mst, big, AllPairs, buf);
+		calc_path_lengths(map, boost_mst, big, edgemap_mst, buf);
+		printf("Calculated the longest paths from each node.\n");
+		printf("\n");
 	}
 	
-	{
-		//rebuild the boost graph because we destroyed the weights above
-		MyGraph boost_graph(big->nodes.size());
-		property_map<MyGraph, edge_weight_t>::type weightlist;
-		std::map<PathEdge *, EdgeDesc> edgemap;
-		build_boost_graph(boost_graph, weightlist, edgemap, big);
-		
-		//calculate the MST
-		run_min_spanning_tree(boost_graph, weightlist, edgemap, big, start_node);
-		printf("Ran Min Spanning Tree: ended with %d edges\n", big->edges.size());
+	printf("Combining all disjoint graphs...\n");
+	//now combine all our disjoint graphs into one big one...
+	big = real_big;
+	cur = disjoints.begin();
+	end = disjoints.end();
+	big->nodes.clear();
+	big->edges.clear();
+	for(; cur != end; cur++) {
+		tmpg = *cur;
+		list<PathEdge *>::iterator cure,ende;
+		cure = tmpg->edges.begin();
+		ende = tmpg->edges.end();
+		for(; cure != ende; cure++) {
+			big->edges.push_back(*cure);
+		}
 	}
-
-	/*
-		Now we have our minimal spanning tree, try to refine it.
-		
-		the goal of this crap is to fix newbie fields and open zones
-	*/
-	std::map<PathEdge*, vector<GPoint> > cross_list;
-	PathGraph *cross_big = new PathGraph();
-	PathGraph *cross_excess = new PathGraph();
+	rebuild_node_list(big->edges, big->nodes, NULL);
 	
-	//count the number of times each edge crosses another edge, and record
-	//the intersection points. Also seperate crossers from non-crossers
-	count_crossing_lines(big->edges, cross_big, cross_excess, cross_list);
-	printf("Cross Count: %d edges cross more than the specified number of other edges.\n", cross_edge_count);
+	//now we have our final node and edge set.
+	//build a graph of all final nodes to find pathing info
+	MyGraph final(big->nodes.size());
+	property_map<MyGraph, edge_weight_t>::type weightlist_final;
+	std::map<PathEdge *, EdgeDesc> edgemap_final;
+	build_boost_graph(final, weightlist_final, edgemap_final, big, true);
 	
-	if(cross_edge_count > 2) {
-		//Make waypoints at all points of intersection
-		cut_crossed_grids(cross_big, cross_list);
-		printf("Cross Cut: Created %d new nodes cutting intersections\n", cross_add_count);
-		
-		//combine close points with a somewhat big radius...
-		combine_grid_points(map, cross_big, CLOSE_ENOUGH_CROSS);
-		printf("Cross Combine: combined %d nodes.  (%d missed strict LOS)\n", combined_grid_points, combine_broke_los);
-		printf("Cross Combine: so far, %d LOS cache hits, %d LOS cache misses.\n", los_cache_hits, los_cache_misses);
-		
-		//build our boost graph, so we can do reachability
-		MyGraph cross_graph(cross_big->nodes.size());
-		property_map<MyGraph, edge_weight_t>::type cross_weightlist;
-		std::map<PathEdge *, EdgeDesc> cross_edgemap;
-		build_boost_graph(cross_graph, cross_weightlist, cross_edgemap, cross_big, false);
-		
-		//isolate each disjoint graph and try to reduce it, gathering 
-		//all non-cross points and edges while we are at it.
-		sprintf(buf, "paths-%s-crosses.png", zone);
-		consolidate_cross_graphs(map, cross_big, cross_excess, cross_graph, buf);
-		
-		//rebuild the big graph by merging cross_big and cross_excess
-		//might be as simple as append the two arrays and run a combine on it.
-		//leaks 'big'
-		big = cross_excess;
-		cross_excess->add_edges(cross_big->edges);
-		rebuild_node_list(big->edges, big->nodes);
-		
-		//This is used to re-link the cross grids with the non-cross stuff
-		combine_grid_points(map, big, CLOSE_ENOUGH_COMBINE);
-		printf("Cross Merge: combined %d close nodes. (%d missed strict LOS)\n", combined_grid_points, combine_broke_los);
-		printf("Cross Merge: so far, %d LOS cache hits, %d LOS cache misses.\n", los_cache_hits, los_cache_misses);
-		
-		//build yet another boost graph so we can run MST
-		MyGraph cross_graph_final(big->nodes.size());
-		property_map<MyGraph, edge_weight_t>::type cross_weightlist_final;
-		std::map<PathEdge *, EdgeDesc> cross_edgemap_final;
-		build_boost_graph(cross_graph_final, cross_weightlist_final, cross_edgemap_final, big);
-		
-		//run our MST to reduce the new cross-reduced graph
-		run_min_spanning_tree(cross_graph_final, cross_weightlist_final, cross_edgemap_final, big, 0);
-		printf("Ran Min Spanning Tree 2: ended with %d edges\n", big->edges.size());
-	}	//end if there were some cross edges
-	
-	/*
-		Final refinement phase, the graph has been reduced to our final
-		form, this phase is for adding anything back in we might want
-	*/
-
-	//now that we reduced all our co-linear points, add a bunch back in for
-	//long paths, so we have more points over space. Idea is that this way
-	//we control how many colinear points there are, it isnt random
-	//this counteracts any attempts to use line-crossing as a criteria for reduction
-	//for some stupid reason, this just destroys the graph
-//	break_long_lines(db_paths);
-//	printf("WP Increase: created %d waypoints on long paths.\n", broke_paths);
-	
-
-	/*
-	Things we might want to do now:
- - Try to create some cycles. Specifically large cycles.
-   - these will add more realism to the pathing
-   - might be implemented like this:
-     - run all pairs shortest path on the MST (is this a byproduct?)
-	 - for each node N, for each other node K
-	   - if path(N, K) is at least MIN_CYCLE_JOIN_PATH (to prevent making small cycles)
-	   - and dist(N,K) is less than MAX_CYCLE_JOIN_DIST (do not want to invent long paths)
-	   - and there is LOS from N to K
-	     - connect N and K
-		 - have to re-run all pairs again... that sucks
-   - another twist on the implementation would be to only look at paths
-     which were discarded by the MST. Or maybe run this first, then the other.
-     */
-     
-	/*
-		The final tree has been built, remove anything we dont need from
-		it, and gather some information.
-	*/
-	
-	//build a boost graph out of our minimal spanning tree.
-	MyGraph boost_mst(big->nodes.size());
-	property_map<MyGraph, edge_weight_t>::type weightlist_mst;
-	std::map<PathEdge *, EdgeDesc> edgemap_mst;
-	build_boost_graph(boost_mst, weightlist_mst, edgemap_mst, big, false);
-	
-	//determine the path lengths to all nodes from all others
-	//including the longest path reachable by each node.
-	//this also cleans up big by removing anything unreachable
-//	vector< vector<int> > AllPairs;
-	sprintf(buf, "paths-%s-mstcolors.png", zone);
-//	calc_path_lengths(map, boost_mst, big, AllPairs, buf);
-	calc_path_lengths(map, boost_mst, big, edgemap_mst, buf);
-	printf("Calculated the longest paths from each node.\n");
-	
+	vector< vector<PathEdge*> > path_finding;
+	find_path_info(map, final, path_finding, big);
+	printf("Calculated pathing information...\n");
 	
 	//write out a nice image of our MST
 	sprintf(buf, "paths-%s-mstree.png", zone);
@@ -353,7 +441,7 @@ int main(int argc, char *argv[]) {
 	
 	t2.start();
 	sprintf(buf, "%s.path", zone);
-	if(!write_path_file(root, big, buf)) {
+	if(!write_path_file(root, big, buf, path_finding)) {
 		printf("Unable to write path file.\n");
 		return(1);
 	}
@@ -601,6 +689,101 @@ bool load_doors_from_db(MYSQL *m, const char *zone, list<PathNode*> &db_spawns) 
 	return(true);
 }
 
+
+bool load_hints_from_db(MYSQL *m, const char *zone, list<PathNode*> &db_spawns) {
+	char query[512];
+	
+	sprintf(query, 
+		"SELECT x,y,z,force,disjoint FROM fear_hints "
+		"WHERE  zone='%s'", zone);
+	if(mysql_query(m, query) != 0) {
+		printf("Unable to query: %s\n", mysql_error(m));
+		return(false);
+	}
+	
+	MYSQL_RES *res = mysql_store_result(m);
+	if(res == NULL) {
+		printf("Unable to store res: %s\n", mysql_error(m));
+		return(false);
+	}
+	
+	MYSQL_ROW row;
+	
+	PathNode *cur = NULL;
+	
+	while((row = mysql_fetch_row(res))) {
+		cur = new PathNode;
+		cur->x = atof(row[0]);
+		cur->y = atof(row[1]);
+		cur->z = atof(row[2]);
+		cur->forced = atoi(row[3])?true:false;
+		cur->disjoint = atoi(row[4])?true:false;
+		db_spawns.push_back(cur);
+	}
+	
+	mysql_free_result(res);
+	
+	return(true);
+}
+
+
+bool load_settings_from_db(MYSQL *m, const char *zone) {
+	char query[512];
+	
+	sprintf(query, 
+		"SELECT use_doors, min_fix_z, max_fear_distance, image_scale, split_invalid_paths,"
+		" link_path_endpoints, end_distance, split_long_min, split_long_step, same_dist, node_combine_dist,"
+		" grid_combine_dist, close_all_los, cross_count, cross_min_length, cross_max_z_diff, cross_combine_dist,"
+		" second_link_dist, link_max_dist, link_count"
+		" FROM fear_settings"
+		" WHERE zone='%s'", zone);
+	if(mysql_query(m, query) != 0) {
+//		printf("Unable to query: %s\n", mysql_error(m));
+		return(false);
+	}
+	
+	MYSQL_RES *res = mysql_store_result(m);
+	if(res == NULL) {
+//		printf("Unable to store res: %s\n", mysql_error(m));
+		return(false);
+	}
+	
+	MYSQL_ROW row;
+		
+	int r = 0;
+	if((row = mysql_fetch_row(res))) {
+		INCLUDE_DOORS = atoi(row[r++])?true:false;
+		MIN_FIX_Z = atof(row[r++]);
+		FEAR_MAXIMUM_DISTANCE = atof(row[r++]);
+		IMAGE_SCALE = atoi(row[r++]);
+		SPLIT_INVALID_PATHS = atoi(row[r++])?true:false;
+		LINK_PATH_ENDPOINTS = atoi(row[r++])?true:false;
+		ENDPOINT_CONNECT_MAX_DISTANCE = atof(row[r++]);
+		SPLIT_LINE_LENGTH = atof(row[r++]);
+		SPLIT_LINE_INTERVAL = atof(row[r++]);
+		CLOSE_ENOUGH = atof(row[r++]);
+		CLOSE_ENOUGH_COMBINE = atof(row[r++]);
+		MERGE_MIN_SECOND_DIST = atof(row[r++]);
+		COMBINE_CHECK_ALL_LOS = atoi(row[r++])?true:false;
+		CROSS_REDUCE_COUNT = atoi(row[r++]);
+		CROSS_MIN_LENGTH = atof(row[r++]);
+		CROSS_MAX_Z_DIFF = atof(row[r++]);
+		CLOSE_ENOUGH_CROSS = atof(row[r++]);
+		
+		SPAWN_MIN_SECOND_DIST = atof(row[r++]);
+		MAX_LINK_SPAWN_DIST = atof(row[r++]);
+		int sc = atoi(row[r++]);
+		SPAWN_LINK_TWICE = sc >= 2?true:false;
+		SPAWN_LINK_THRICE = sc >= 3?true:false;
+		mysql_free_result(res);
+		return(true);
+	}
+	
+	mysql_free_result(res);
+	
+	return(false);
+}
+
 /*
 	We assume this overwrites the edge array in big
 	and does not free the old edges
@@ -700,16 +883,77 @@ void run_min_spanning_tree(MyGraph &vg, property_map<MyGraph, edge_weight_t>::ty
 	big->edges = out_paths;
 }
 
-void find_main_grid(Map *map, MyGraph &vg, PathGraph *big, const char *fname, int &start_node) {
-
+void find_disjoint_grids(Map *map, MyGraph &vg, PathGraph *big, const char *fname, vector<int> &start_nodes, vector<PathGraph *> &disjoints) {
+	
 	vector< vector<int> > D;
 	vector<int> counts;
+	vector<int> disjoint_counts;
 	vector<int> first_node;
 	
 	//color the graph and get us the info we need to do out job
-	color_disjoint_graphs(big, vg, map, fname, D, counts, first_node);
-
+	color_disjoint_graphs(big, vg, map, fname, D, counts, disjoint_counts, first_node);
 	
+	
+	//find the biggest grid, that one gets to be included no matter what
+	int best_graph = 0;
+	int best_count = counts[0];
+	unsigned int r;
+	for(r = 1; r < counts.size(); r++) {
+		if(best_count < counts[r]) {
+			best_count = counts[r];
+			best_graph = r;
+		}
+	}
+	disjoint_counts[best_graph] = 1;
+	
+	
+	//break up the graphs based on color if we want them.
+	vector<int>::iterator ccur,djcur,fcur,cend;
+	list<PathEdge*>::iterator cur,end;
+	PathEdge *e;
+	PathGraph *pg;
+	ccur = counts.begin();
+	djcur = disjoint_counts.begin();
+	fcur = first_node.begin();
+	cend = counts.end();
+	int color = 0;
+	for(; ccur != cend; ccur++, djcur++, fcur++, color++) {
+		int count = *ccur;
+		int dj = *djcur;
+//		int fn = *fcur;
+		
+		if(dj < 1)
+			continue;   //skip disjoint sets not marked for use.
+		
+		if(count < MIN_DISJOINT_NODES)
+			continue;   //make sure we have a reasonable node count
+		
+		pg = new PathGraph();
+		
+		cur = big->edges.begin();
+		end = big->edges.end();
+		for(; cur != end; cur++) {
+			e = *cur;
+			if(e->from->color != e->to->color) {
+				printf("Color Mismatch %d-%d: #%d(%.3f,%.3f,%.3f) -> #%d(%.3f,%.3f,%.3f)\n", e->from->color, e->to->color, e->from->node_id, e->from->x, e->from->y, e->from->z, e->to->node_id, e->to->x, e->to->y, e->to->z);
+				//... what to do...
+			}
+			//just use the color of the from node
+			if(e->from->color == color) {
+				pg->edges.push_back(e);
+			}
+		}
+		
+		//get our list of nodes based on our edge list.
+		rebuild_node_list(pg->edges, pg->nodes, NULL);
+		
+		disjoints.push_back(pg);
+		start_nodes.push_back(1);   //each graph only contains its own nodes, so any node will work.
+	}
+	
+	
+	
+	/*
 	int best_graph = 0;
 	int best_count = counts[0];
 	unsigned int r;
@@ -724,7 +968,7 @@ void find_main_grid(Map *map, MyGraph &vg, PathGraph *big, const char *fname, in
 	start_node = first_node[best_graph];
 	printf("Best sub-graph: chose #%d of %d, has %d nodes, and contains node %d\n", best_graph, counts.size()-1, best_count, start_node);
 	//todo: eliminate other graphs...
-	
+	*/
 	
 /*	list<PathEdge*>::iterator cure,ende;
 	PathEdge *e;
@@ -751,9 +995,10 @@ void color_disjoint_graphs(
 	Map *map,
 	const char *fname,
 
-	vector< vector<int> > &D, 	//output
-	vector<int> &counts,		//output
-	vector<int> &first_node		//output
+	vector< vector<int> > &D,		//output
+	vector<int> &counts,			//output
+	vector<int> &disjoint_counts,   //output
+	vector<int> &first_node			//output
 ) {
 	
 	
@@ -769,6 +1014,8 @@ void color_disjoint_graphs(
 	D.resize(count, vector<int>(count, INT_LIMIT));
 	counts.resize(1);
 	counts[0] = 0;
+	disjoint_counts.resize(1);
+	disjoint_counts[0] = 0;
 	first_node.resize(1);
 	first_node[0] = 0;
 	
@@ -785,7 +1032,7 @@ void color_disjoint_graphs(
 	PathNode *n,*f;
 	
 	int cur_color = 1;
-	int cc;
+	int cc,djc;
 	
 	//clear node colors
 	cur = big->nodes.begin();
@@ -810,6 +1057,10 @@ void color_disjoint_graphs(
 //printf("New Color at: (%.3f,%.3f,%.3f)\n", n->x, n->y, n->z);
 
 		cc = 1;
+		djc = 0;
+		
+		if(n->disjoint)
+			djc++;
 		
 		n->color = cur_color;
 		cur_color++;
@@ -821,8 +1072,11 @@ void color_disjoint_graphs(
 				cc++;
 				f->color = n->color;
 			}
+			if(f->disjoint)
+				djc++;
 		}
 		counts.push_back(cc);
+		disjoint_counts.push_back(djc);
 		first_node.push_back(n->node_id);
 	}
 	
@@ -891,6 +1145,7 @@ void color_disjoint_graphs(
 void calc_path_lengths(Map *map, MyGraph &vg, PathGraph *big, map<PathEdge *, EdgeDesc> &em, const char *fname) {
 
 	vector<int> counts;
+	vector<int> disjoint_counts;
 	vector<int> first_node;
 	vector< vector<int> > D;
 	list<PathNode*>::iterator cur,end;
@@ -905,7 +1160,7 @@ void calc_path_lengths(Map *map, MyGraph &vg, PathGraph *big, map<PathEdge *, Ed
 	*/
 	
 	//color the graph and get us the info we need to do out job
-	color_disjoint_graphs(big, vg, map, fname, D, counts, first_node);
+	color_disjoint_graphs(big, vg, map, fname, D, counts, disjoint_counts, first_node);
 	
 	
 	vector<int>::iterator curp,endp;
@@ -1018,7 +1273,7 @@ void calc_path_lengths(Map *map, MyGraph &vg, PathGraph *big, map<PathEdge *, Ed
 		remove_edge(em[e], vg);
 		
 		//color the graph and get us the info we need to do our job
-		color_disjoint_graphs(big, vg, map, NULL, D, counts, first_node);
+		color_disjoint_graphs(big, vg, map, NULL, D, counts, disjoint_counts, first_node);
 		
 		//add the edge back in
 		EdgeDesc ed;
@@ -1134,11 +1389,97 @@ void consolidate_cross_graphs(Map *map, PathGraph *big, PathGraph *excess, MyGra
 	
 	vector< vector<int> > D;
 	vector<int> counts;
+	vector<int> disjoint_counts;
 	vector<int> first_node;
 	
-	//color the graph and get us the info we need to do out job
-	color_disjoint_graphs(big, cross_graph, map, fname, D, counts, first_node);
+	//color the graph and get us the info we need to do our job
+	color_disjoint_graphs(big, cross_graph, map, fname, D, counts, disjoint_counts, first_node);
 }
+
+void find_path_info(Map *map, MyGraph &vg, vector< vector<PathEdge*> > &path_finding, PathGraph *big) {
+	//make sure our path finding vector is big enough.
+	{
+		int size = big->nodes.size();
+		vector<PathEdge*> tmp(size, (PathEdge*)NULL);
+		path_finding.resize(0);
+		path_finding.resize(size, tmp);
+	}
+	
+	vector< vector<int> > D;
+	vector<int> counts;
+	vector<int> disjoint_counts;
+	vector<int> first_node;
+	
+	//color the graph and get us the info we need to do our job
+	color_disjoint_graphs(big, vg, map, NULL, D, counts, disjoint_counts, first_node);
+	
+	//figure out what edges link to each node.
+	std::map<PathNode*, vector<PathEdge*> > node_edges;
+	find_node_edges(big, node_edges);
+	
+	
+	//for each node, find best edge to reach each other node.
+	list<PathNode*>::iterator cur,end;
+	PathNode *n;
+	vector<int>::iterator curp,endp;
+	vector<PathEdge *>::iterator cure,ende;
+	int r;
+	cur = big->nodes.begin();
+	end = big->nodes.end();
+	for(; cur != end; cur++) {
+		n = *cur;
+		//get all our vector refs that we need since this is kinda expensive
+		vector<int> &cv = D[n->node_id];	//distance array
+		vector<PathEdge *> &pf = path_finding[n->node_id];	//result
+		vector<PathEdge *> &el = node_edges[n];	//our edges
+		curp = cv.begin();
+		endp = cv.end();
+		for(r = 0; curp != endp; curp++, r++) {
+			if(n->node_id == r) {
+				//this is the end of the path, we cannot take an edge to reach ourself
+				pf[r] = NULL;
+				continue;
+			}
+			int my_dist = *curp;
+			if(my_dist == INT_MAX) {
+				//this node is unreachable.
+				pf[r] = NULL;
+				continue;
+			}
+			
+			//else, node r reachable from us, find best edge.
+			cure = el.begin();
+			ende = el.end();
+//			int shortest;
+			PathEdge *ce;
+			PathNode *cn;
+			//for each edge
+			for(; cure != ende; cure++) {
+				ce = *cure;
+				//find the node other than ourself on the edge
+				if(ce->from == n)
+					cn = ce->to;
+				else
+					cn = ce->from;
+				//see how far away this node is
+				int cdist = D[cn->node_id][r];
+				if(cdist < my_dist) {
+					//found one which is closer... due to min span tree, there
+					//should only be one path possible so just go with it.
+					pf[r] = ce;
+					break;
+				}
+			}
+			//assume that this node got assigned.. next
+if(pf[r] == NULL) {
+printf("Node id %d was not able to find a good path to node %d\n", n->node_id, r);
+}
+		}
+	}
+}
+
+
+
 
 
 

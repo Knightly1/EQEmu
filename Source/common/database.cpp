@@ -4462,7 +4462,8 @@ const NPCType* Database::GetNPCType (uint32 id) {
             "npc_types.npc_faction_id,npc_types.face,"
             "npc_types.see_invis,npc_types.see_invis_undead,"
             "npc_types.lastname,npc_types.qglobal,npc_types.AC,"
-            "npc_types.npc_aggro,npc_types.spawn_limit"
+            "npc_types.npc_aggro,npc_types.spawn_limit,"
+            "npc_types.attack_speed,npc_types.findable"
             " FROM npc_types,spawn2 WHERE spawn2.zone='%s'"
             " AND npc_types.id=spawn2.id",
             zone->GetShortName());
@@ -4475,7 +4476,8 @@ const NPCType* Database::GetNPCType (uint32 id) {
             "d_meele_texture1,d_meele_texture2,walkspeed,"
             "runspeed,fixedz,hp_regen_rate,mana_regen_rate,"
             "aggroradius,bodytype,npc_faction_id,face,see_invis,"
-            "see_invis_undead,lastname,qglobal,AC,npc_aggro,spawn_limit"
+            "see_invis_undead,lastname,qglobal,AC,npc_aggro,"
+            "spawn_limit,attack_speed,findable"
             " FROM npc_types WHERE id=%d", id);
 
 		if (RunQuery(query, strlen(query), errbuf, &result)) {
@@ -4539,6 +4541,8 @@ const NPCType* Database::GetNPCType (uint32 id) {
 				tmpNPCType->AC = atoi(row[32]);
 				tmpNPCType->npc_aggro = atoi(row[33])==0?false:true;
 				tmpNPCType->spawn_limit = atoi(row[34]);
+				tmpNPCType->attack_speed = atof(row[35]);
+				tmpNPCType->findable = atoi(row[36])==0?false:true;
 
 				// If NPC with duplicate NPC id already in table,
 				// free item we attempted to add.

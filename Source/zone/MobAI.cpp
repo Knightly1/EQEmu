@@ -480,7 +480,9 @@ void Mob::AI_Process() {
 
 	if (IsCasting())
 		return;
-
+	
+	bool engaged = IsEngaged();
+	
 #ifdef ENABLE_FEAR_PATHING
 	if(fear_state != fearStateNotFeared) {
 		if(fear_state == fearStateStuck)
@@ -499,18 +501,19 @@ void Mob::AI_Process() {
 				SetMoving(false);
 				moved=false;
 			}
+			//continue on to attack code, ensuring that we execute the engaged code
+			engaged = true;
+		} else {
+			//see if its time to think about where to go next.
+			if(AImovement_timer->Check()) {
+				CalculateFearPosition();
+			}
 			return;
 		}
-		
-		//see if its time to think about where to go next.
-		if(AImovement_timer->Check()) {
-			CalculateFearPosition();
-		}
-		return;
 	}
 #endif
 	
-	if (IsEngaged()) 
+	if (engaged) 
 	{
 		_ZP(Mob_AI_Process_engaged);
 		if (IsRooted())
@@ -569,10 +572,10 @@ void Mob::AI_Process() {
 				SendPosition();
 				tar_ndx =0;
 			}
-			if (GetAppearance() == 0 && GetRunAnimSpeed() == 0 && !IsStunned())
 			
 			//should implement some checks for the target being dead mid-attack.
-			if (attack_timer.Check()) 
+			if (GetAppearance() == 0 && GetRunAnimSpeed() == 0 && !IsStunned()
+				&& attack_timer.Check()) 
 			{
 				Attack(target, 13);
 				if (target) 
@@ -656,6 +659,7 @@ void Mob::AI_Process() {
 			}
 		}	//end is within combat range
 		else {
+			//we cannot reach our target...
 			// See if we can summon the mob to us
 			if (!HateSummon()) 
 			{

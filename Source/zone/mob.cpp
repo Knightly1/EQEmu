@@ -21,7 +21,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include <stdlib.h>
 #include <stdarg.h>
 #include "masterentity.h"
-#include "fearpath.h"
+#include "pathing.h"
 #include "zone.h"
 #include "spdat.h"
 #include "../common/skills.h"
@@ -108,6 +108,9 @@ Mob::Mob(const char*   in_name,
 		spellend_timer(0),
 		stunned_timer(0),
 		bardsong_timer(6000),
+#ifdef FLEE_HP_RATIO
+		flee_timer(FLEE_CHECK_TIMER),
+#endif
 		bindwound_timer(10000)
 	//	mezzed_timer(0)
 {
@@ -178,6 +181,8 @@ logpos = false;
 // vesuvias - appearence fix
 	luclinface	= in_luclinface;
 	beard		= in_beard;
+	attack_speed= 0;
+	findable	= false;
 
 	if(in_aa_title>0)
 		aa_title	= in_aa_title;
@@ -319,6 +324,10 @@ logpos = false;
 #ifdef ENABLE_FEAR_PATHING
 	fear_state = fearStateNotFeared;
 	fear_path_state = NULL;
+	flee_mode = false;
+#ifdef FLEE_HP_RATIO
+	flee_timer.Start();
+#endif
 #endif
 	permarooted = ( walkspeed == 0 ) && ( runspeed == 0 );
 
@@ -654,6 +663,7 @@ void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 	ns->spawn.level		= level;
 	ns->spawn.deity		= deity;
 	ns->spawn.animation	= 0;
+	ns->spawn.findable	= findable?1:0;
 // vesuvias - appearence fix
 //	ns->spawn.light		= light; //not really sure where light is now in the struct
 
@@ -1305,89 +1315,103 @@ void Mob::SetAttackTimer() {
 	attack_timer.SetAtTrigger(4000, true);
 	
 	Timer* TimerToUse = NULL;
+	const Item_Struct* PrimaryWeapon = NULL;
+	
 	for (int i=SLOT_PRIMARY; i<=SLOT_SECONDARY; i++) {
-		ItemCommonInst ItemToUse;
+		const Item_Struct* ItemToUse = NULL;
 		
-		if (i==13)
+		//pick a timer
+		if (i == SLOT_PRIMARY)
 			TimerToUse = &attack_timer;
 		else
 			TimerToUse = &attack_dw_timer;
 		
+		//find our item
 		if (IsClient()) {
-			if (CastToClient()->GetInv().GetItem(i))
-				ItemToUse.SetItem(CastToClient()->GetInv().GetItem(i)->GetItem());
+			ItemInst* ci = CastToClient()->GetInv().GetItem(i);
+			if (ci)
+				ItemToUse = ci->GetItem();
+		} else {
+			if(equipment[i] != 0)
+				ItemToUse = database.GetItem(equipment[i]);
 		}
-    	else if (IsNPC())
-			ItemToUse.SetItem(database.GetItem(CastToNPC()->equipment[i]));
 		
-		if ((i==SLOT_SECONDARY) && IsClient()) {
-			int8 tmp = this->CastToClient()->GetSkill(DUAL_WIELD);
-			if ((tmp == 0) || (tmp > 252) || !ItemToUse.IsWeapon() ) {
-				if ( !ItemToUse.IsWeapon() && !CanThisClassDualWield() ) {
-//					if(EQDEBUG>=1 && CastToClient()->GetGM())
-//						Message(0, "Debug Mode: Dual wield disabled (secondary weapon is not a weapon)");
+		//special offhand stuff
+		if(i == SLOT_SECONDARY) {
+			//if we have a 2H weapon in our main hand, no dual
+			if(PrimaryWeapon != NULL) {
+				if(	PrimaryWeapon->ItemClass == ItemTypeCommon
+					&& (PrimaryWeapon->Common.ItemUse == ItemUse2HS
+					||	PrimaryWeapon->Common.ItemUse == ItemUse2HB
+					||	PrimaryWeapon->Common.ItemUse == ItemUse2HPierce)) {
 					attack_dw_timer.Disable();
-					break;
+					continue;
 				}
-				else if (ItemToUse.IsType(ItemTypeCommon)) {
-					const Item_Struct* item = ItemToUse.GetItem();
-					if (item->Common.ItemUse != ItemUseHand2Hand) {
-//						if(EQDEBUG>=1 && CastToClient()->GetGM())
-//							Message(0, "Debug Mode: Dual wield disabled (secondary weapon is not a hand to hand weapon)");
-						attack_dw_timer.Disable();
-						break;
-					}
+			}
+			
+			//clients must have the skill to use it...
+			if(IsClient()) {
+				int8 tmp = GetSkill(DUAL_WIELD);
+				
+				//if we cant dual weild, skip it
+				if (tmp == 0 || tmp > 252 || !CanThisClassDualWield()) {
+					attack_dw_timer.Disable();
+					continue;
 				}
-				else {
-					const ItemInst* MainWeapon = CastToClient()->GetInv().GetItem(SLOT_PRIMARY);
-					if (MainWeapon && MainWeapon->IsWeapon()) {
-						const Item_Struct* item = MainWeapon->GetItem();
-						if ((item->Common.ItemUse == ItemUse2HS) || (item->Common.ItemUse == ItemUse2HB) || (item->Common.ItemUse == ItemUse2HPierce)) {
-//							if (EQDEBUG >=1 && CastToClient()->GetGM())
-//								Message(0, "Debug Mode: Dual wield disabled (Primary weapon is a two handed weapon)");
-							attack_dw_timer.Disable();
-							break;
-						}
-					}
+			} else {
+				//NPCs get it for free at 13
+				if(GetLevel() < 13) {
+					attack_dw_timer.Disable();
+					continue;
 				}
 			}
 		}
 		
-//		if ((EQDEBUG>=1) && IsClient() && CastToClient()->GetGM())
-//			Message(0, "Debug mode: Dual wield enabled (GM Only)");
+		//see if we have a valid weapon
+		if(ItemToUse != NULL) {
+			//check type and damage/delay
+			if(ItemToUse->ItemClass != ItemTypeCommon 
+				|| ItemToUse->Common.Damage == 0 
+				|| ItemToUse->Common.Delay == 0) {
+				//no weapon
+				ItemToUse = NULL;
+			}
+			// Check to see if skill is valid
+			else if((ItemToUse->Common.ItemUse > ItemUse2HB) && (ItemToUse->Common.ItemUse != ItemUseHand2Hand) && (ItemToUse->Common.ItemUse != ItemUse2HPierce)) {
+				//no weapon
+				ItemToUse = NULL;
+			}
+		}
 		
-		if (!ItemToUse.IsType(ItemTypeCommon)) {
+		//if we have no weapon..
+		if (ItemToUse == NULL) {
 			// Work out if we're a monk
 			if ((GetClass() == MONK) || (GetClass() == BEASTLORD)) {
-				int speed = (int)(GetMonkHandToHandDelay()*100.0f*PermaHaste);
+				//we are a monk, use special delay
+				int speed = (int)(GetMonkHandToHandDelay()*(100.0f+attack_speed)*PermaHaste);
 				// neotokyo: 1200 seemed too much, with delay 10 weapons available
-            	if(speed < 500)
+            	if(speed < 500)	//lower bound
 					speed = 500;
 				TimerToUse->SetAtTrigger(speed, true);	// Hand to hand, delay based on level or epic
-			}
-			else {
-				int speed = (int)(3600*PermaHaste);
-				if(speed < 1800 && this->IsClient())
+			} else {
+				//not a monk... using fist, regular delay
+				int speed = (int)(36*(100.0f+attack_speed)*PermaHaste);
+				if(speed < 1800 && IsClient())	//lower bound
 					speed = 1800;
 				TimerToUse->SetAtTrigger(speed, true); 	// Hand to hand, non-monk 2/36
 			}
+		} else {
+			//we have a weapon, use its delay
+			// Convert weapon delay to timer resolution (milliseconds)
+			//delay * 100
+			int speed = (int)(ItemToUse->Common.Delay*(100.0f+attack_speed)*PermaHaste);
+			if(speed < 500)
+				speed = 500;
+			TimerToUse->SetAtTrigger(speed, true);
 		}
-		else {
-			const Item_Struct* item = ItemToUse.GetItem();
-			if ((item->Common.ItemUse > ItemUse2HB) && (item->Common.ItemUse != ItemUseHand2Hand) && (item->Common.ItemUse != ItemUse2HPierce)) { // Check skill is valid
-				// item info is invalid, but ignore that for npcs
-				if ((i == 13) || (GetLevel() >= 13)) // make npcs auto have dual wield at lvl 13
-					TimerToUse->SetAtTrigger(2000, true);
-				else
-					TimerToUse->Disable();		// Disable timer if primary item uses a non-weapon skill
-        	}
-			else {
-				int speed = (int)(item->Common.Delay*(100.0f*PermaHaste));
-				if(speed < 500)
-					speed = 500;
-				TimerToUse->SetAtTrigger(speed, true);	// Convert weapon delay to timer resolution (milliseconds)
-			}
-		}
+		
+		if(i == SLOT_PRIMARY)
+			PrimaryWeapon = ItemToUse;
 	}
 }
 
@@ -2276,6 +2300,7 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 						break;
 				}
 			}
+			ProcChance += float(itembonuses.ProcChance + spellbonuses.ProcChance) / 1000.0f;
 			if (MakeRandomFloat(0, 1) < ProcChance) {	// 255 dex = 0.084 chance of proc. No idea what this number should be really.
 				usedspellID = weapon->Common.SpellId;
 				
@@ -2355,6 +2380,10 @@ int Mob::GetHaste() {
 	
 	if(h > cap)
 		h = cap;
+	
+	//for now we will let hundred hands exceed the cap
+	if(spellbonuses.HundredHands || itembonuses.HundredHands)
+		h += 20;	//TODO: put a real number here... I just made this up
 	
 	h += ExtraHaste;	//GM granted haste.
 	

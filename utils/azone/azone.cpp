@@ -670,7 +670,7 @@ static const unsigned short gIntFaces[6][4] =
 
 
 //stolen in haste from my fear pathing program, and untested in here...
-bool edges_cross(GPoint *pt1, GPoint *pt2, GPoint *pt3, GPoint *pt4) {
+bool edges_cross(GPoint *pt1, GPoint *pt2, const VERTEX *pt3, const VERTEX *pt4) {
 //I love macros
 #define IntersectDenom(p1, p2, p3, p4) \
 ((p4->y - p3->y)*(p2->x - p1->x) - (p4->x - p3->x)*(p2->y - p1->y))
@@ -694,9 +694,6 @@ bool edges_cross(GPoint *pt1, GPoint *pt2, GPoint *pt3, GPoint *pt4) {
  (p2->x > p1->x? \
  (p1->z + ((inter - p1->x)/(p2->x - p1->x) * (p2->z - p1->z))) \
  :(p2->z + ((inter - p2->x)/(p1->x - p2->x) * (p1->z - p2->z))))
-	
- 	if(e1 == e2)
- 		return(false);
 	
 	float denom = IntersectDenom(pt1, pt2, pt3, pt4);
 	if(denom != 0) {
@@ -795,18 +792,18 @@ bool QTBuilder::FaceInNode(const QTNode *q, const FACE *f) {
 (((p4->y - p3->y)*(p2.x - p1.x) - (p4->x - p3->x)*(p2.y - p1.y)) != 0)
 	
 	return(
-		   edges_cross(pt1, pt2, v1, v2)
-		|| edges_cross(pt1, pt2, v1, v3)
-		|| edges_cross(pt1, pt2, v2, v3)
-		|| edges_cross(pt3, pt4, v1, v2)
-		|| edges_cross(pt3, pt4, v1, v3)
-		|| edges_cross(pt3, pt4, v2, v3)
-		|| edges_cross(pt1, pt3, v1, v2)
-		|| edges_cross(pt1, pt3, v1, v3)
-		|| edges_cross(pt1, pt3, v2, v3)
-		|| edges_cross(pt2, pt4, v1, v2)
-		|| edges_cross(pt2, pt4, v1, v3)
-		|| edges_cross(pt2, pt4, v2, v3)
+		   edges_cross(&pt1, &pt2, v1, v2)
+		|| edges_cross(&pt1, &pt2, v1, v3)
+		|| edges_cross(&pt1, &pt2, v2, v3)
+		|| edges_cross(&pt3, &pt4, v1, v2)
+		|| edges_cross(&pt3, &pt4, v1, v3)
+		|| edges_cross(&pt3, &pt4, v2, v3)
+		|| edges_cross(&pt1, &pt3, v1, v2)
+		|| edges_cross(&pt1, &pt3, v1, v3)
+		|| edges_cross(&pt1, &pt3, v2, v3)
+		|| edges_cross(&pt2, &pt4, v1, v2)
+		|| edges_cross(&pt2, &pt4, v1, v3)
+		|| edges_cross(&pt2, &pt4, v2, v3)
 	);
 	
 /*	

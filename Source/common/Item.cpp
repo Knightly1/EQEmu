@@ -1150,14 +1150,14 @@ sint16 Inventory::_HasItem(map<sint16, ItemInst*>& bucket, const Item_Struct* it
 }
 
 // Internal Method: Checks an inventory queue type bucket for a particular item
-sint16 Inventory::_HasItem(ItemInstQueue& queue, const Item_Struct* item, uint8 quantity)
+sint16 Inventory::_HasItem(ItemInstQueue& iqueue, const Item_Struct* item, uint8 quantity)
 {
 	iter_queue it;
 	iter_bag itb;
 	uint8 quantity_found = 0;
 	
 	// Read-only iteration of queue
-	for (it=queue.begin(); it!=queue.end(); it++) {
+	for (it=iqueue.begin(); it!=iqueue.end(); it++) {
 		ItemInst* inst = *it;
 		if (inst && (inst->GetItem() == item)) {
 			quantity_found += (inst->GetCharges()<=0) ? 1 : inst->GetCharges();
@@ -1221,14 +1221,14 @@ sint16 Inventory::_HasItemByUse(map<sint16, ItemInst*>& bucket, uint8 use, uint8
 }
 
 // Internal Method: Checks an inventory queue type bucket for a particular item
-sint16 Inventory::_HasItemByUse(ItemInstQueue& queue, uint8 use, uint8 quantity)
+sint16 Inventory::_HasItemByUse(ItemInstQueue& iqueue, uint8 use, uint8 quantity)
 {
 	iter_queue it;
 	iter_bag itb;
 	uint8 quantity_found = 0;
 	
 	// Read-only iteration of queue
-	for (it=queue.begin(); it!=queue.end(); it++) {
+	for (it=iqueue.begin(); it!=iqueue.end(); it++) {
 		ItemInst* inst = *it;
 		if (inst && inst->IsType(ItemTypeCommon) && inst->GetItem()->Common.ItemUse == use) {
 			quantity_found += (inst->GetCharges()<=0) ? 1 : inst->GetCharges();

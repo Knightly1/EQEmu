@@ -234,11 +234,7 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 			}
 			mysql_free_result(result);		
 		}
-		if (query)
-		{
-			safe_delete_array(query);
-			query=0;
-		}
+		safe_delete_array(query);
 	}
 
 
@@ -668,7 +664,10 @@ void PerlembParser::SendCommands(const char * pkgprefix, const char *event, int3
 		return;
 	_ZP(PerlembParser_SendCommands);
 	
-	quest_manager.StartQuest(other, mob?mob->CastToClient():NULL);
+	if(mob && mob->IsClient())
+		quest_manager.StartQuest(other, mob->CastToClient());
+	else
+		quest_manager.StartQuest(other, NULL);
 
 	try
 	{
@@ -827,7 +826,12 @@ void PerlembParser::map_funs()
 "sub traindisc{push(@cmd_queue,{func=>'traindisc',args=>join(',',@_)});}"
 "sub set_proximity{push(@cmd_queue,{func=>'set_proximity',args=>join(',',@_)});}"
 "sub clear_proximity{push(@cmd_queue,{func=>'clear_proximity',args=>join(',',@_)});}"
-"sub setanim{push(@cmd_queue,{func=>'warp',args=>join(',',@_)});}"
+"sub setanim{push(@cmd_queue,{func=>'setanim',args=>join(',',@_)});}"
+"sub showgrid{push(@cmd_queue,{func=>'showgrid',args=>join(',',@_)});}"
+"sub showpath{push(@cmd_queue,{func=>'showpath',args=>join(',',@_)});}"
+"sub pathto{push(@cmd_queue,{func=>'pathto',args=>join(',',@_)});}"
+"sub spawn_condition{push(@cmd_queue,{func=>'spawn_condition',args=>join(',',@_)});}"
+"sub toggle_spawn_event{push(@cmd_queue,{func=>'toggle_spawn_event',args=>join(',',@_)});}"
 "package main;"
 "}"
 );//eval

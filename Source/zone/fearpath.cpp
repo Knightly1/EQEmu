@@ -22,659 +22,147 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 
 #include "../common/files.h"
 #include "zone_profile.h"
-#include "fearpath.h"
 #include "map.h"
 #include "zone.h"
+#include "pathing.h"
 #ifdef WIN32
 #define snprintf	_snprintf
 #endif
 
 
-/*
-
-Fear guide points. these are not used directly by the fear pathing
-code. They are used by `apathing` to act as hint points to 
-provide more valid points for it to process on
-
-CREATE TABLE fear_hints (
-	id INT AUTO_INCREMENT PRIMARY KEY,
-	zone VARCHAR(16) NOT NULL,
-	x FLOAT NOT NULL,
-	y FLOAT NOT NULL,
-	z FLOAT NOT NULL,
-	UNIQUE KEY(zone,x,y,z)
-);
-
-*/
-
-
 extern Zone* zone;
-
-//#define OPTIMIZE_FEAR_QT_LOOKUPS
-
-//#define DEBUG_SEEK 1
-#define DEBUG_NEXT
-//#define DEBUG_BEST_Z 1
-
-//quick functions to clean up vertex code.
-#define Vmin3(o, a, b, c) ((a.o<b.o)? (a.o<c.o?a.o:c.o) : (b.o<c.o?b.o:c.o))
-#define Vmax3(o, a, b, c) ((a.o>b.o)? (a.o>c.o?a.o:c.o) : (b.o>c.o?b.o:c.o))
-
-FearPathManager* FearPathManager::LoadPathFile(const char* in_zonename) {
-	FILE *fp = NULL;
-	char zBuf[64];
-	char cWork[256];
-	FearPathManager* ret = 0;
-	
-	//have to convert to lower because the short names im getting
-	//are not all lower anymore, copy since strlwr edits the str.
-	strncpy(zBuf, in_zonename, 64);
-	zBuf[63] = '\0';
-	
-	snprintf(cWork, 250, MAP_DIR "/%s.path", strlwr(zBuf));
-	
-	if ((fp = fopen( cWork, "rb" ))) {
-		ret = new FearPathManager();
-		if(ret->loadPaths(fp)) {
-			printf("Path File %s loaded.\n", cWork);
-		} else {
-			printf("Path File %s loading failed.\n", cWork);
-		}
-		fclose(fp);
-	}
-	else {
-		printf("Path File %s not found.\n", cWork);
-	}
-	return ret;
-}
-
-FearPathManager::FearPathManager() {
-	_minz = 999999e111;
-	_minx = 999999e111;
-	_miny = 999999e111;
-	_maxz = -999999e111;
-	_maxx = -999999e111;
-	_maxy = -999999e111;
-	
-	m_Nodes = 0;
-	m_Links = 0;
-	nodes = NULL;
-	links = NULL;
-	m_QTNodes = 0;
-	m_NodeLists = 0;
-	QTNodes = NULL;
-	nodelists = NULL;
-}
-
-bool FearPathManager::loadPaths(FILE *fp) {
-#ifndef INVERSEXY
-#warning Path files do not work without inverted XY
-	return(false);
-#endif
-
-	PathFile_Header head;
-	if(fread(&head, sizeof(head), 1, fp) != 1) {
-		//map read error.
-		return(false);
-	}
-	if(head.version != PATHFILE_VERSION) {
-		//invalid version... if there really are multiple versions,
-		//a conversion routine could be possible.
-		printf("Invalid path file version 0x%lx, we want 0x%lx\n", head.version, PATHFILE_VERSION);
-		return(false);
-	}
-	
-	printf("Path header: %lu nodes, %lu links, %u QT nodes, %lu nodelists\n", head.node_count, head.link_count, head.qtnode_count, head.nodelist_count);
-	
-	m_Nodes = head.node_count;
-	m_Links = head.link_count;
-	m_QTNodes = head.qtnode_count;
-	m_NodeLists = head.nodelist_count;
-	
-	nodes = new PathNode_Struct[m_Nodes];
-	links = new PathLink_Struct[m_Links];
-	QTNodes = new PathTree_Struct[m_QTNodes];
-	nodelists = new FearNodeRef[m_NodeLists];
-	
-	unsigned long count;
-	if((count=fread(nodes, sizeof(PathNode_Struct), m_Nodes , fp)) != m_Nodes) {
-		printf("Unable to read %lu nodes from path file, got %lu.\n", m_Nodes, count);
-		return(false);
-	}
-	if((count=fread(links, sizeof(PathLink_Struct), m_Links , fp)) != m_Links) {
-		printf("Unable to read %lu nodes from path file, got %lu.\n", m_Links, count);
-		return(false);
-	}
-	
-	if((count=fread(QTNodes, sizeof(PathTree_Struct), m_QTNodes, fp)) != m_QTNodes) {
-		printf("Unable to read %lu qt nodes from path file.\n", m_Nodes);
-		return(false);
-	}
-	if((count=fread(nodelists, sizeof(FearNodeRef), m_NodeLists, fp)) != m_NodeLists) {
-		printf("Unable to read %lu node lists from path file. Got %lu.\n", m_NodeLists, count);
-		return(false);
-	}
-	
-	return(true);
-}
-
-FearPathManager::~FearPathManager() {
-	safe_delete_array(nodes);
-	safe_delete_array(links);
-	safe_delete_array(QTNodes);
-	safe_delete_array(nodelists);
-}
-
-
-FearNodeRef FearPathManager::SeekNode( FearNodeRef node_r, float x, float y ) {
-	if(node_r == FEAR_NODE_NONE || node_r >= m_QTNodes) {
-		return(FEAR_NODE_NONE);
-	}
-	PFPNODE _node = &QTNodes[node_r];
-#ifdef DEBUG_SEEK
-printf("Seeking node for %u:(%.2f, %.2f) with root 0x%x.\n", node_r, x, y, _node);
-
-printf("	Current Box: (%.2f -> %.2f, %.2f -> %.2f)\n", _node->minx, _node->maxx, _node->miny, _node->maxy);
-#endif
-	if( x>= _node->minx && x<= _node->maxx && y>= _node->miny && y<= _node->maxy ) {
-		if( _node->flags & fearNodeFinal ) {
-#ifdef DEBUG_SEEK
-printf("Seeking node for %u:(%.2f, %.2f) with root 0x%x.\n", node_r, x, y, _node);
-printf("	Final Node: (%.2f -> %.2f, %.2f -> %.2f)\n", _node->minx, _node->maxx, _node->miny, _node->maxy);
-fflush(stdout);
-printf("	Final node found with %d fear nodes.\n", _node->nodelist.count);
-/*printf("	Faces:\n");
-unsigned long *cfl = mFaceLists + _node->faces.offset;
-unsigned long m;
-for(m = 0; m < _node->faces.count; m++) {
-	FACE *c = &mFinalFaces[ *cfl ];
-	printf("	%lu (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n",
-				*cfl, c->a.x, c->a.y, c->a.z,
-				c->b.x, c->b.y, c->b.z, 
-				c->c.x, c->c.y, c->c.z);
-	cfl++;
-}*/
-#endif
-			return node_r;
-		}
-#ifdef DEBUG_SEEK
-printf("	Kids: %u, %u, %u, %u\n", _node->nodes[0], _node->nodes[1], _node->nodes[2], _node->nodes[3]);
-		
-printf("	Contained In Box: (%.2f -> %.2f, %.2f -> %.2f)\n", _node->minx, _node->maxx, _node->miny, _node->maxy);
-		
-/*printf("	Node found has children.\n");
-if(_node->node1 != NULL) {
-	printf("\tNode: (%.2f -> %.2f, %.2f -> %.2f)\n", 
-		_node->node1->minx, _node->node1->maxx, _node->node1->miny, _node->node1->maxy);
-}
-if(_node->node2 != NULL) {
-	printf("\tNode: (%.2f -> %.2f, %.2f -> %.2f)\n", 
-		_node->node2->minx, _node->node2->maxx, _node->node2->miny, _node->node2->maxy);
-}
-if(_node->node3 != NULL) {
-	printf("\tNode: (%.2f -> %.2f, %.2f -> %.2f)\n", 
-		_node->node3->minx, _node->node3->maxx, _node->node3->miny, _node->node3->maxy);
-}
-if(_node->node4 != NULL) {
-	printf("\tNode: (%.2f -> %.2f, %.2f -> %.2f)\n", 
-		_node->node4->minx, _node->node4->maxx, _node->node4->miny, _node->node4->maxy);
-}*/
-#endif
-		//NOTE: could precalc these and store them in node headers
-
-		FearNodeRef tmp = FEAR_NODE_NONE;
-#ifdef OPTIMIZE_FEAR_QT_LOOKUPS
-		float midx = _node->minx + (_node->maxx - _node->minx) * 0.5;
-		float midy = _node->miny + (_node->maxy - _node->miny) * 0.5;
-		//follow ordering rules from map.h...
-		if(x < midx) {
-			if(y < midy) { //quad 3
-				if(_node->nodes[2] != FEAR_NODE_NONE)
-					tmp = SeekNode( _node->nodes[2], x, y );
-			} else {	//quad 2
-				if(_node->nodes[2] != FEAR_NODE_NONE)
-					tmp = SeekNode( _node->nodes[1], x, y );
-			}
-		} else {
-			if(y < midy) {  //quad 4
-				if(_node->nodes[2] != FEAR_NODE_NONE)
-					tmp = SeekNode( _node->nodes[3], x, y );
-			} else {	//quad 1
-				if(_node->nodes[2] != FEAR_NODE_NONE)
-					tmp = SeekNode( _node->nodes[0], x, y );
-			}
-		}
-		if( tmp != FEAR_NODE_NONE ) return tmp;
-#else
-		tmp = SeekNode( _node->nodes[0], x, y );
-		if( tmp != FEAR_NODE_NONE ) return tmp;
-		tmp = SeekNode( _node->nodes[1], x, y );
-		if( tmp != FEAR_NODE_NONE ) return tmp;
-		tmp = SeekNode( _node->nodes[2], x, y );
-		if( tmp != FEAR_NODE_NONE ) return tmp;
-		tmp = SeekNode( _node->nodes[3], x, y );
-		if( tmp != FEAR_NODE_NONE ) return tmp;
-#endif
-
-	}
-#ifdef DEBUG_SEEK
-printf(" No node found.\n");
-#endif
-	return(FEAR_NODE_NONE);
-}
-
-//this looks for our QT node, if it cannot find our, it
-//will find one close to us
-FearNodeRef FearPathManager::SeekNodeGuarantee( FearNodeRef node_r, float x, float y ) {
-	if(node_r == FEAR_NODE_NONE || node_r >= m_QTNodes) {
-		return(FEAR_NODE_NONE);
-	}
-	
-	PFPNODE _node = &QTNodes[node_r];
-	if( x>= _node->minx && x<= _node->maxx && y>= _node->miny && y<= _node->maxy ) {
-		if( _node->flags & fearNodeFinal ) {
-			return node_r;
-		}
-		//NOTE: could precalc these and store them in node headers
-
-		FearNodeRef tmp = FEAR_NODE_NONE;
-#ifdef OPTIMIZE_FEAR_QT_LOOKUPS
-		float midx = _node->minx + (_node->maxx - _node->minx) * 0.5;
-		float midy = _node->miny + (_node->maxy - _node->miny) * 0.5;
-		//follow ordering rules from map.h...
-		if(x < midx) {
-			if(y < midy) { //quad 3
-				if(_node->nodes[2] != FEAR_NODE_NONE)
-					tmp = SeekNode( _node->nodes[2], x, y );
-			} else {	//quad 2
-				if(_node->nodes[2] != FEAR_NODE_NONE)
-					tmp = SeekNode( _node->nodes[1], x, y );
-			}
-		} else {
-			if(y < midy) {  //quad 4
-				if(_node->nodes[2] != FEAR_NODE_NONE)
-					tmp = SeekNode( _node->nodes[3], x, y );
-			} else {	//quad 1
-				if(_node->nodes[2] != FEAR_NODE_NONE)
-					tmp = SeekNode( _node->nodes[0], x, y );
-			}
-		}
-		if( tmp != FEAR_NODE_NONE ) return tmp;
-#else
-		tmp = SeekNode( _node->nodes[0], x, y );
-		if( tmp != FEAR_NODE_NONE ) return tmp;
-		tmp = SeekNode( _node->nodes[1], x, y );
-		if( tmp != FEAR_NODE_NONE ) return tmp;
-		tmp = SeekNode( _node->nodes[2], x, y );
-		if( tmp != FEAR_NODE_NONE ) return tmp;
-		tmp = SeekNode( _node->nodes[3], x, y );
-		if( tmp != FEAR_NODE_NONE ) return tmp;
-#endif
-		
-		//if we get here we didnt find the node in our children,
-		//so use ourself as the node.
-		return(node_r);
-	}
-#ifdef DEBUG_SEEK
-printf(" No node found.\n");
-#endif
-	return(FEAR_NODE_NONE);
-}
-
-/*
-
-A quadtree is not the ideal structure for finding the closest
-node, because if you are close to a boundary, you will not search
-nodes which are just over the boundary, even if they are much closer.
-
-Also, the sparse nature of the grid points might lead to several gaps
-in the quadtree which contain no nodes
-
-to help fix this, I modified the quadtree to store a node list
-at each level, this allows us to get a node list even if our current
-node dosent exist/is empty.
-
-I also dont just store nodes WITHIN this QT node, but also nodes
-within a defined range, so if you stay under that range, you will always
-find the true closest node. (FEAR_MAXIMUM_DISTANCE)
-
-This also means that if we cannot find our QT node, that there are no
-nodes within FEAR_MAXIMUM_DISTANCE from the mob, so you might wanna 
-just call it quits.
-
-*/
-
-bool FearPathManager::FindNearestPath(MobFearState *state, float x, float y, float z, bool check_los) {
-	if(zone->map == NULL)
-		return(false);
-	
-	FearNodeRef qtnodeR;
-	qtnodeR = SeekNodeGuarantee(GetRoot(), x, y);
-	if(qtnodeR == FEAR_NODE_NONE) {
-		//we have no node from garuntee... this is bad
-		return(false);
-	}
-	
-	//get our real node
-	PathTree_Struct *qtnode = GetQTNode(qtnodeR);
-	
-	//grab our node list, which is qtnode->nodelist.count long
-	FearPointRef *nlist = GetNodeList(qtnode);
-	
-#ifdef DEBUG_SEEK
-printf("QT Node starts at %d and has %d points.\n", qtnode->nodelist.offset, qtnode->nodelist.count);
-#endif
-	PathNode_Struct *curn, *bestn = NULL;
-	FearPointRef bestref = FEAR_NODE_NONE;
-	float cur_dist, best_dist2;
-	VERTEX p1, p2, liz_res;
-	int32 r;
-	
-	p1.x = x;
-	p1.y = y;
-	p1.z = z + 6.0;
-	
-	//loop through each node in the list, and find the closest we can see
-	best_dist2 = 9999999e111;
-	for(r = 0; r < qtnode->nodelist.count; r++, nlist++) {
-		curn = GetNode(*nlist);
-		if(curn == NULL)
-			continue;
-#ifdef DEBUG_SEEK
-printf("\nTrying node %d at (%.3f,%.3f,%.3f) ", *nlist, curn->x, curn->y, curn->z);
-#endif
-		
-		//make sure its the closest
-		cur_dist = Dist2(x, y, z, curn->x, curn->y, curn->z);
-		if(cur_dist >= best_dist2)
-			continue;
-#ifdef DEBUG_SEEK
-printf("Maybe..(%.3f<%.3f)", cur_dist, best_dist2);
-#endif
-		
-		//make sure we can see it...
-		p2.x = curn->x;
-		p2.y = curn->y;
-		p2.z = curn->z + 6.0;
-		if(check_los && zone->map->LineIntersectsZone(p1, p2, 0.5, &liz_res))
-			continue;
-#ifdef DEBUG_SEEK
-printf("New Best");
-#endif
-		
-		best_dist2 = cur_dist;
-		bestn = curn;
-		bestref = *nlist;
-	}
-#ifdef DEBUG_SEEK
-printf("\nBest node: 0x%x\n", bestn);
-#endif
-	
-	if(bestn == NULL)
-		return(false);	//unable to see any of our closest nodes..
-	
-	//start with running to bottom since it will stay
-	//localized longer, once they get to top, they really only
-	//run along one path from top to bottom.
-	state->state = MobFearState::runToBottom;
-	state->goal_node = bestref;
-	state->last_link = FEAR_LINK_NONE;
-	
-	state->x = bestn->x;
-	state->y = bestn->y;
-	state->z = bestn->z;
-	
-#ifdef DEBUG_SEEK
-printf("Found fear node: (%.3f,%.3f,%.3f)\n", bestn->x, bestn->y, bestn->z);
-#endif
-	
-	return(true);
-}
-
-bool FearPathManager::NextPathNode(MobFearState *state) {
-#ifdef DEBUG_NEXT
-	printf("Finding next node from node %d, via link %d. (%.3f,%.3f,%.3f)\n", state->goal_node, state->last_link, state->x, state->y, state->z);
-#endif
-	if(!state->IsValidState()) {
-		return(false);
-	} else if(state->state == MobFearState::runToBottom) {
-		//assume we have reached our goal node, find our next goal
-		
-		//the goal of running to bottom is to increase our distance
-		//from the root node, while taking the path which has the
-		//greatest reach
-#ifdef DEBUG_NEXT
-	printf("Starting 'To Bottom' search\n");
-#endif
-		
-		PathNode_Struct *gnode = GetNode(state->goal_node);
-		if(gnode == NULL)
-			return(false);
-		
-		PathLink_Struct *links = GetLinks(gnode->link_offset);
-		int r;
-		
-		PathNode_Struct *look_node;
-		FearNodeRef longest = 0;
-		FearPointRef long_node = FEAR_NODE_NONE;
-		FearLinkRef long_link = FEAR_LINK_NONE;
-		for(r = 0; r < gnode->link_count; r++, links++) {
-			if(state->last_link == (gnode->link_offset + r))
-				continue;		//never traverse the same link we just came from.
-			//make sure its further away than where we are
-			look_node = GetNode(links->dest_node);
-			if(look_node == NULL)
-				continue;		//this shouldent happen.
-#ifdef DEBUG_NEXT
-			printf("  Checking... d=%d, old_d=%d, best=%d, cur=%d.\n", look_node->distance, gnode->distance, longest, links->reach);
-#endif
-			//if this node is closer than our current node, skip it
-			if(look_node->distance <= gnode->distance)
-				continue;	//only looking for further nodes.
-			
-			if(links->reach > longest) {
-				longest = links->reach;
-				long_node = links->dest_node;
-				long_link = gnode->link_offset + r;
-			} else if(links->reach == longest) {
-				//try to provide some variance at junction nodes
-				//same length longest, give it a 50% chance
-				if(MakeRandomInt(0, 99) >= 50)
-					continue;
-				//it passed, crown this as the new longest
-				longest = links->reach;
-				long_node = links->dest_node;
-				long_link = gnode->link_offset + r;
-			} else if(links->reach > (longest - 5)) {
-				//try to provide some variance at junction nodes
-				//close to the longest, give it a chance based on closeness
-				if(MakeRandomInt(0, 99) >= 10*(longest-links->reach))
-					continue;
-				//it passed, crown this as the new longest
-				longest = links->reach;
-				long_node = links->dest_node;
-				long_link = gnode->link_offset + r;
-				
-			}
-		}
-		
-		//this means we skipped all links cause they were closer to root
-		if(long_node == FEAR_NODE_NONE) {
-			//we reached the top, start heading back down...
-			state->state = MobFearState::runToTop;
-			//call ourselves again to get a real node...
-			//I dont THINK infinite recursion is posible... lets hope not (:
-			//a node should never be top or bottom unless its alont
-			if(m_Links < 2)
-				return(false);	//watch for empty grids
-			return(NextPathNode(state));
-		}
-		
-		PathNode_Struct *bestn = NULL;
-		bestn = GetNode(long_node);
-		if(bestn == NULL)
-			return(false);
-		
-		//not a criteria for state change anymore
-/*		if(state->last_link != FEAR_LINK_NONE) {
-			//Get the link
-			PathLink_Struct *last_link = GetLinks(state->last_link);
-#ifdef DEBUG_NEXT
-	printf("  Last link reach was %d, new link is %d\n", last_link->reach, longest);
-#endif
-		}*/
-		
-		
-		//only go to the next node if we did not change state.
-		//if we changed, let them pick next time we get called.
-		if(state->state == MobFearState::runToBottom) {
-			state->last_link = long_link;
-			state->goal_node = long_node;
-		
-			state->x = bestn->x;
-			state->y = bestn->y;
-			state->z = bestn->z;
-
-#ifdef DEBUG_NEXT
-		printf("To Bottom picked %d, via link %d. (%.3f,%.3f,%.3f)\n", state->goal_node, state->last_link, state->x, state->y, state->z);
-#endif
-		}
-#ifdef DEBUG_NEXT
-else {
-			printf("To Top changed state.\n");
-}
-#endif
-		
-		return(true);
-	} else if(state->state == MobFearState::runToTop) {
-		//assume we have reached our goal node, find our next goal
-		
-		//our goal is to minimize our distance. The root of the tree
-		//can reach a minimum number of nodes down each branch
-		//beacuse it divides them equally on each branch.
-		
-#ifdef DEBUG_NEXT
-	printf("Starting 'To Top' search\n");
-#endif		
-		PathNode_Struct *gnode = GetNode(state->goal_node);
-		if(gnode == NULL)
-			return(false);
-		
-		PathLink_Struct *links = GetLinks(gnode->link_offset);
-		int r;
-		
-		PathNode_Struct *look_node;
-		FearNodeRef shortest = 0xFFFF;
-		FearPointRef short_node = FEAR_NODE_NONE;
-		FearLinkRef short_link = FEAR_LINK_NONE;
-		for(r = 0; r < gnode->link_count; r++, links++) {
-			if(state->last_link == (gnode->link_offset + r))
-				continue;		//never traverse the same link we just came from.
-			//make sure its further away than where we are
-			look_node = GetNode(links->dest_node);
-			if(look_node == NULL)
-				continue;	//this shouldent happen...
-#ifdef DEBUG_NEXT
-			printf("  Checking...best=%d, cur=%d.\n", shortest, look_node->distance);
-#endif
-			
-			if(look_node->distance < shortest) {
-				shortest = look_node->distance;
-				short_node = links->dest_node;
-				short_link = gnode->link_offset + r;
-			}
-			//do we want to add variance for going up? seems like we might
-			//end up screwing up our ascent
-			/* else if(links->distance == shortest) {
-				//try to provide some variance at junction nodes
-				//same length shortest, give it a 50% chance
-				if(MakeRandomInt(0, 99) >= 50)
-					continue;
-				//it passed, crown this as the new shortest
-				shortest = links->distance;
-				short_node = links->dest_node;
-				short_link = gnode->link_offset + r;
-			}*/
-		}
-		if(short_node == FEAR_NODE_NONE)
-			return(false);
-		
-		PathNode_Struct *bestn = NULL;
-		bestn = GetNode(short_node);
-		if(bestn == NULL)
-			return(false);
-		
-/*		if(state->last_link != FEAR_LINK_NONE) {
-			//Get the link
-			PathLink_Struct *last_link = GetLinks(state->last_link);
-#ifdef DEBUG_NEXT
-	printf("  Last link shortest was %d, new link is %d\n", last_link->distance, shortest);
-#endif
-			if(shortest > last_link->distance) {
-				//we reached the top, start heading back down...
-				state->state = MobFearState::runToBottom;
-			}
-		}*/
-#ifdef DEBUG_NEXT
-	printf("  Last link shortest was %d, new link is %d\n", gnode->distance, shortest);
-#endif
-		if(shortest > gnode->distance) {
-			//we reached the top, start heading back down...
-			//call ourselves again to get a real node...
-			state->state = MobFearState::runToBottom;
-			if(m_Links < 2)
-				return(false);	//watch for empty grids
-			return(NextPathNode(state));
-		}
-		
-		//we reached the top, start heading back down...
-		if(shortest == 1) {
-			//call ourselves again to get a real node...
-			state->state = MobFearState::runToBottom;
-			if(m_Links < 2)
-				return(false);	//watch for empty grids
-			return(NextPathNode(state));
-		}
-		
-		//only go to the next node if we did not change state.
-		//if we changed, let them pick next time we get called.
-		if(state->state == MobFearState::runToTop) {
-		
-			state->last_link = short_link;
-			state->goal_node = short_node;
-		
-			state->x = bestn->x;
-			state->y = bestn->y;
-			state->z = bestn->z;
-
-#ifdef DEBUG_NEXT
-			printf("To Top picked %d, via link %d. (%.3f,%.3f,%.3f)\n", state->goal_node, state->last_link, state->x, state->y, state->z);
-#endif
-		}
-#ifdef DEBUG_NEXT
-else {
-			printf("To Top changed state.\n");
-}
-#endif
-		
-		return(true);
-	}
-	
-	return(false);
-}
 
 #ifdef ENABLE_FEAR_PATHING
 
 #define FEAR_PATHING_DEBUG
 
+
+#ifdef FLEE_HP_RATIO
+//this is called whenever we are damaged to process possible fleeing
+void Mob::CheckFlee() {
+	//if were allready fleeing, dont need to check more...
+	if(flee_mode)
+		return;
+	
+	//dont bother if we are immune to fleeing
+	if(SpecAttacks[IMMUNE_FLEEING])
+		return;
+	
+	if(!flee_timer.Check())
+		return;	//only do all this stuff every little while, since
+				//its not essential that we start running RIGHT away
+	
+	//see if were possibly hurt enough
+	float ratio = GetHPRatio();
+	if(ratio >= FLEE_HP_RATIO)
+		return;
+	
+	//we might be hurt enough, check con now..
+	Mob *hate_top = GetHateTop();
+	if(!hate_top) {
+		//this should never happen...
+		StartFleeing();
+		return;
+	}
+	
+	float other_ratio = hate_top->GetHPRatio();
+	if(other_ratio < 20) {
+		//our hate top is almost dead too... stay and fight
+		return;
+	}
+	
+	//base our flee ratio on our con. this is how the 
+	//attacker sees the mob, since this is all we can observe
+	int32 con = GetLevelCon(hate_top->GetLevel(), GetLevel());
+	float run_ratio;
+	switch(con) {
+		//these values are not 100% researched
+		case CON_GREEN:
+			run_ratio = FLEE_HP_RATIO;
+			break;
+		case CON_LIGHTBLUE:
+			run_ratio = FLEE_HP_RATIO * 0.8f;
+			break;
+		case CON_BLUE:
+			run_ratio = FLEE_HP_RATIO * 0.6f;
+			break;
+		default:
+			run_ratio = FLEE_HP_RATIO * 0.4f;
+			break;
+	}
+	if(ratio < run_ratio) {
+		StartFleeing();
+	}
+}
+
+
+void Mob::ProcessFlee() {
+	//see if we are still dying, if so, do nothing
+	if(GetHPRatio() < FLEE_HP_RATIO)
+		return;
+	
+	//we are not dying anymore... see what we do next
+	
+	flee_mode = false;
+	
+	//see if we are legitimately feared now
+	sint8 slot = GetBuffSlotFromType(SE_Fear);
+	if(slot == -1) {
+		//not feared... were done...
+		SetFeared(NULL, 0); //turn off our fear...
+		return;
+	}
+	
+	//we are still feared...
+	
+	//if we are forged to run with fear, start the fear over again if
+	//we got into a stuck state when fleeing, since its not allowed now
+#ifdef FORCE_FEAR_TO_RUN
+	if(fear_state == fearStateStuck) {
+		//start up fear again running from our hate top
+		SetFeared(GetHateTop(), buffs[slot].ticsremaining);
+		return;
+	}
+#endif
+	
+	//otherwise, just use our last flee pathing state for fear
+}
+
+#endif	//FLEE_HP_RATIO
+
+float Mob::GetFearSpeed() {
+#ifdef FLEE_HP_RATIO
+	if(flee_mode) {
+		//we know ratio < FLEE_HP_RATIO
+		float speed = GetRunspeed();
+		float ratio = GetHPRatio();
+		
+		if(ratio < FLEE_HP_MINSPEED) {
+			ratio = FLEE_HP_RATIO-FLEE_HP_MINSPEED;
+		} else {
+			ratio = ratio - FLEE_HP_MINSPEED;
+		}
+		
+		speed -= speed * 0.8 * ratio / (FLEE_HP_RATIO-FLEE_HP_MINSPEED);
+		return(speed);
+	}
+#endif
+	return(GetRunspeed());
+}
+
 //we need to start acting scared...
-void Mob::SetFeared(Mob *caster, int32 duration) {
+void Mob::SetFeared(Mob *caster, int32 duration, bool flee) {
 	//special args to stop fear
 	if(caster == NULL && duration == 0) {
 		fear_state = fearStateNotFeared;
+#ifdef FLEE_HP_RATIO
+		flee_mode = false;
+#endif
 		safe_delete(fear_path_state);
 		return;
 	}
+	
+	flee_mode = flee;
 	
 	//fear dosent work without at least maps
 	if(zone->map == NULL) {
@@ -692,49 +180,19 @@ void Mob::SetFeared(Mob *caster, int32 duration) {
 		return;
 	}
 	
-	//our goal is to run along this vector...
-	fear_vector.x = GetX() - caster->GetX();
-	fear_vector.y = GetY() - caster->GetY();
-	fear_vector.z = 0;	//I dont see any reason to use Z
-	float mag = sqrt(fear_vector.x*fear_vector.x + fear_vector.y*fear_vector.y);
-	fear_vector.x /= mag;
-	fear_vector.y /= mag;
-	
-	//now see if we can just run without hitting anything...
-	VERTEX start, end, hit;
-	start.x = GetX();
-	start.y = GetY();
-	start.z = GetZ() + 5.0;	//raise up a little over small bumps
-	
-	//distance moved per movement tic.
-	float distance = NPC_SPEED_MULTIPLIER * GetRunspeed();
-	//times number of movement tics in the spell.
-	distance *= float(duration) / float(AImovement_duration);
-	
-	end.x = start.x + fear_vector.x * distance;
-	end.y = start.y + fear_vector.y * distance;
-	end.z = start.z;
-	
-	if(!zone->map->LineIntersectsZone(start, end, 0.5, &hit, NULL)) {
-#ifdef FEAR_PATHING_DEBUG
-		LogFile->write(EQEMuLog::Debug, "Fear Pathing Start: can run entire vector from (%.2f, %.2f, %.2f) to (%.2f, %.2f, %.2f)",
-			GetX(), GetY(), GetZ(), end.x, end.y, end.z);
-#endif
-		//no hit, we can run this whole vector.
-		cur_wp_x = end.x;
-		cur_wp_y = end.y;
-		cur_wp_z = GetZ();
-		fear_state = fearStateRunningForever;
-		return;	//were done, nothing difficult needed.
+	//try to run straight away from the caster
+	VERTEX hit, fear_vector;
+	if(FearTryStraight(caster, duration, flee, hit, fear_vector)) {
+		return;
 	}
-	
+		
 	//OK, so if we just run, we are going to hit something...
 	//now we have to think a little more.
 	
 	//first, try to find a fear node that we can see.
-	if(zone->fear != NULL) {
+	if(zone->pathing != NULL) {
 		fear_path_state = new MobFearState();
-		if(zone->fear->FindNearestPath(fear_path_state, GetX(), GetY(), GetZ())) {
+		if(zone->pathing->FindNearestFear(fear_path_state, GetX(), GetY(), GetZ())) {
 #ifdef FEAR_PATHING_DEBUG
 		LogFile->write(EQEMuLog::Debug, "Fear Pathing Start: found path, moving from (%.2f, %.2f, %.2f) to path node  (%.2f, %.2f, %.2f)",
 			GetX(), GetY(), GetZ(), fear_path_state->x, fear_path_state->y, fear_path_state->z);
@@ -767,6 +225,50 @@ void Mob::SetFeared(Mob *caster, int32 duration) {
 	fear_state = fearStateRunning;
 }
 
+bool Mob::FearTryStraight(Mob *caster, int32 duration, bool flee, VERTEX &hit, VERTEX &fear_vector) {
+	//gotta have somebody to run from
+	if(caster == NULL)
+		return(false);
+	
+	//our goal is to run along this vector...
+	fear_vector.x = GetX() - caster->GetX();
+	fear_vector.y = GetY() - caster->GetY();
+	fear_vector.z = 0;	//I dont see any reason to use Z
+	float mag = sqrt(fear_vector.x*fear_vector.x + fear_vector.y*fear_vector.y);
+	fear_vector.x /= mag;
+	fear_vector.y /= mag;
+	
+	//now see if we can just run without hitting anything...
+	VERTEX start, end;
+	start.x = GetX();
+	start.y = GetY();
+	start.z = GetZ() + 5.0;	//raise up a little over small bumps
+	
+	//distance moved per movement tic.
+	float distance = NPC_SPEED_MULTIPLIER * GetFearSpeed();
+	//times number of movement tics in the spell.
+	distance *= float(duration) / float(AImovement_duration);
+	
+	end.x = start.x + fear_vector.x * distance;
+	end.y = start.y + fear_vector.y * distance;
+	end.z = start.z;
+	
+	if(!zone->map->LineIntersectsZone(start, end, 0.5, &hit, NULL)) {
+#ifdef FEAR_PATHING_DEBUG
+		LogFile->write(EQEMuLog::Debug, "Fear Pathing Start: can run entire vector from (%.2f, %.2f, %.2f) to (%.2f, %.2f, %.2f)",
+			GetX(), GetY(), GetZ(), end.x, end.y, end.z);
+#endif
+		//no hit, we can run this whole vector.
+		cur_wp_x = end.x;
+		cur_wp_y = end.y;
+		cur_wp_z = GetZ();
+		fear_state = fearStateRunningForever;
+		return(true);	//were done, nothing difficult needed.
+	}
+	
+	return(false);
+}
+
 void Mob::CalculateFearPosition() {
 	if(zone->map == NULL || fear_state == fearStateStuck) {
 		return;	//just stand there
@@ -775,7 +277,7 @@ void Mob::CalculateFearPosition() {
 	//This is the entire movement section, right here:
 	if (cur_wp_x != GetX() && cur_wp_y != GetY()) {
 		// not at waypoint yet, so keep moving
-		CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetRunspeed(), true); 
+		CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetFearSpeed(), true); 
 		return;
 	}	
 	
@@ -785,31 +287,43 @@ void Mob::CalculateFearPosition() {
 	//figure out a new waypoint to run at...
 	
 	if(fear_state == fearStateRunningForever) {
-		//we were supposed to run forever, but we did not...
-		//should re-fear ourself or something...
-		fear_state = fearStateStuck;
-		return;
+		if(flee_mode) {
+			//a fleeing mob may run away again
+			VERTEX hit, fear_vector;
+			if(FearTryStraight(GetHateTop(), FLEE_RUN_DURATION, true, hit, fear_vector))
+				return;	//we are running again
+			//else, we need to find a grid, so act like we were on a hope run
+			fear_state = fearStateRunning;
+		}
+#ifndef FORCE_FEAR_TO_RUN
+		else {
+			//we were supposed to run forever, but we did not...
+			//should re-fear ourself or something??
+			fear_state = fearStateStuck;
+			return;
+		}
+#endif
 	}
 	
 	//first see if we are on a path. if so our life is easy
 	if(fear_state == fearStateGrid && fear_path_state) {
-#ifdef FEAR_PATHING_DEBUG
-		LogFile->write(EQEMuLog::Debug, "Fear Pathing: on path, moving from (%.2f, %.2f, %.2f) to path node  (%.2f, %.2f, %.2f)",
-			GetX(), GetY(), GetZ(), fear_path_state->x, fear_path_state->y, fear_path_state->z);
-#endif
-		//assume that we have zone->fear since we got to this state.
-		if(!zone->fear->NextPathNode(fear_path_state)) {
+		//assume that we have zone->pathing since we got to this state.
+		if(!zone->pathing->NextFearPath(fear_path_state)) {
 			//this is bad, we were on a path and now its giving us
 			//an error... we dont have a good way to deal with this
 			fear_state = fearStateStuck;
 			return;
 		}
+#ifdef FEAR_PATHING_DEBUG
+		LogFile->write(EQEMuLog::Debug, "Fear Pathing: on path, moving from (%.2f, %.2f, %.2f) to path node  (%.2f, %.2f, %.2f)",
+			GetX(), GetY(), GetZ(), fear_path_state->x, fear_path_state->y, fear_path_state->z);
+#endif
 		//we found a fear node... were on our way..
 		cur_wp_x = fear_path_state->x;
 		cur_wp_y = fear_path_state->y;
 		cur_wp_z = fear_path_state->z;
 		
-		CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetRunspeed(), true);
+		CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetFearSpeed(), true);
 		return;
 	}
 	
@@ -817,16 +331,16 @@ void Mob::CalculateFearPosition() {
 	//find a grid once we reach our waypoint, which we have..
 	if(fear_state != fearStateRunning) {
 		//wtf... unknown state
-		LogFile->write(EQEMuLog::Debug, "Fear Pathing: Reached our fear waypoint, bu we are in an unknown state... stopping.");
+		LogFile->write(EQEMuLog::Debug, "Fear Pathing: Reached our fear waypoint, but we are in an unknown state %d... stopping.", fear_state);
 		fear_state = fearStateStuck;
 		return;
 	}
 	
 	//we wanted to try to find a waypoint now, so lets try..
-	if(zone->fear != NULL) {
+	if(zone->pathing != NULL) {
 		fear_path_state = new MobFearState();
 		
-		if(zone->fear->FindNearestPath(fear_path_state, GetX(), GetY(), GetZ())) {
+		if(zone->pathing->FindNearestFear(fear_path_state, GetX(), GetY(), GetZ())) {
 #ifdef FEAR_PATHING_DEBUG
 		LogFile->write(EQEMuLog::Debug, "Fear Pathing: ran to find path, moving from (%.2f, %.2f, %.2f) to path node  (%.2f, %.2f, %.2f)",
 			GetX(), GetY(), GetZ(), fear_path_state->x, fear_path_state->y, fear_path_state->z);
@@ -836,17 +350,19 @@ void Mob::CalculateFearPosition() {
 			cur_wp_y = fear_path_state->y;
 			cur_wp_z = fear_path_state->z;
 			fear_state = fearStateGrid;
-			CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetRunspeed(), true);
+			CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetFearSpeed(), true);
 			return;
 		}
 	
 		//if we get here... all valid methods have failed
-		
+
+#ifdef FORCE_FEAR_TO_RUN		
 		//ok, now we start making shit up
 
 		//for now, we will limit our bullshitting to ignoring LOS
 		//when finding a pathing node, we SHOULD always get something..
-		if(zone->fear->FindNearestPath(fear_path_state, GetX(), GetY(), GetZ(), false)) {
+		//do not force a path if we are fleeing
+		if(!flee_mode && zone->pathing->FindNearestFear(fear_path_state, GetX(), GetY(), GetZ(), false)) {
 #ifdef FEAR_PATHING_DEBUG
 		LogFile->write(EQEMuLog::Debug, "Fear Pathing: Bullshit Path from (%.2f, %.2f, %.2f) to path node  (%.2f, %.2f, %.2f)",
 			GetX(), GetY(), GetZ(), fear_path_state->x, fear_path_state->y, fear_path_state->z);
@@ -856,9 +372,10 @@ void Mob::CalculateFearPosition() {
 			cur_wp_y = fear_path_state->y;
 			cur_wp_z = fear_path_state->z;
 			fear_state = fearStateGrid;
-			CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetRunspeed(), true);
+			CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetFearSpeed(), true);
 			return;
 		}
+#endif	//FORCE_FEAR_TO_RUN
 		
 		//we have failed to find a path once again, so we dont need this..
 		safe_delete(fear_path_state);

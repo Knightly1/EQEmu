@@ -1,5 +1,5 @@
 /*  EQEMu:  Everquest Server Emulator
-    Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
+    Copyright (C) 2001-2005  EQEMu Development Team (http://eqemulator.net)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 #define SPDAT_H
 
 #include "../common/classes.h"
-#include "mob.h"
 
 #define SPELL_UNKNOWN 0xFFFF
 #define SPELLBOOK_UNKNOWN 0xFFFFFFFF		//player profile spells are 32 bit
@@ -258,7 +257,6 @@ enum RESISTTYPE
 #define SE_NoCombatSkills			311
 #define SE_DefensiveProc			323	//not implemented
 #define SE_CriticalDamageMob		330	//not implemented
-//silentfist + rogue backstab one, how does it tell??? skill #?
 
 #define DF_Permanent		50
 
@@ -291,8 +289,8 @@ struct SPDat_Spell_Struct
 /* 017 */	int32		buffduration;
 /* 018 */	int32		AEDuration;	// sentinel, rain of something
 /* 019 */	int16		mana; // Mana Used
-/* 020 */	sint16		base[EFFECT_COUNT];
-/* 032 */	int			unknown[12];
+/* 020 */	sint16		base[EFFECT_COUNT];	//various purposes
+/* 032 */	int			base2[12];			//various purposes
 /* 044 */	sint16		max[EFFECT_COUNT];
 /* 056 */	int16		icon; // Spell icon
 /* 057 */	int16		memicon; // Icon on membarthing
@@ -313,7 +311,7 @@ struct SPDat_Spell_Struct
 /* 101 */	sint16		zonetype;
 /* 102 */	int16		EnvironmentType;
 /* 103 */	int			TimeOfDay;
-/* 104 */	int8		classes[PLAYER_CLASS_COUNT]; // Classes
+/* 104 */	int8		classes[PLAYER_CLASS_COUNT]; // Classes, and their min levels
 /* 120 */	int8		CastingAnim;
 /* 121 */	int8		TargetAnim;
 /* 122 */	int32		TravelType;
@@ -382,7 +380,8 @@ bool GroupOnlySpell(int16 spell_id);
 bool NoMerchantSpell(int16 spell_id);
 int GetSpellEffectIndex(int16 spell_id, int effect);
 int CanUseSpell(int16 spellid, int classa, int level);
-
+int GetMinLevel(int16 spell_id);
+class Mob;
 int CalcBuffDuration(Mob *caster, Mob *target, int16 spell_id);
 int CalcBuffDuration_formula(int level, int formula, int duration);
 

@@ -77,7 +77,7 @@ void QTNode::clearNodes() {
 
 
 //assumes that both supplied arrays are big enough per countQTNodes/Facelists
-void QTNode::fillBlocks(PathTree_Struct *heads, FearPointRef *flist, unsigned long &hindex, unsigned long &findex) {
+void QTNode::fillBlocks(PathTree_Struct *heads, PathPointRef *flist, unsigned long &hindex, unsigned long &findex) {
 	PathTree_Struct *head = &heads[hindex];
 	hindex++;
 	
@@ -105,7 +105,7 @@ void QTNode::fillBlocks(PathTree_Struct *heads, FearPointRef *flist, unsigned lo
 
 
 	if(final) {
-		head->flags |= fearNodeFinal;
+		head->flags |= pathNodeFinal;
 	} else {
 		head->flags = 0;
 		//branch node.
@@ -114,25 +114,25 @@ void QTNode::fillBlocks(PathTree_Struct *heads, FearPointRef *flist, unsigned lo
 			head->nodes[0] = hindex;
 			node1->fillBlocks(heads, flist, hindex, findex);
 		} else {
-			head->nodes[0] = FEAR_NODE_NONE;
+			head->nodes[0] = PATH_NODE_NONE;
 		}
 		if(node2 != NULL) {
 			head->nodes[1] = hindex;
 			node2->fillBlocks(heads, flist, hindex, findex);
 		} else {
-			head->nodes[1] = FEAR_NODE_NONE;
+			head->nodes[1] = PATH_NODE_NONE;
 		}
 		if(node3 != NULL) {
 			head->nodes[2] = hindex;
 			node3->fillBlocks(heads, flist, hindex, findex);
 		} else {
-			head->nodes[2] = FEAR_NODE_NONE;
+			head->nodes[2] = PATH_NODE_NONE;
 		}
 		if(node4 != NULL) {
 			head->nodes[3] = hindex;
 			node4->fillBlocks(heads, flist, hindex, findex);
 		} else {
-			head->nodes[3] = FEAR_NODE_NONE;
+			head->nodes[3] = PATH_NODE_NONE;
 		}
 	}
 }

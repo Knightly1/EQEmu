@@ -44,6 +44,7 @@ EQTime::EQTime(TimeOfDay_Struct start_eq, time_t start_real)
 
 EQTime::EQTime()
 {
+	timezone=0;
 	memset(&eqTime, 0, sizeof(eqTime));
 	//Defaults for time
 	TimeOfDay_Struct start;
@@ -135,7 +136,7 @@ int EQTime::setEQTimeOfDay(TimeOfDay_Struct start_eq, time_t start_real)
 
 //saveFile and loadFile need to use long for the save datatype...
 //For some reason, ifstream/ofstream have problems with EQEmu datatypes in files.
-bool EQTime::saveFile(const char filename[255])
+bool EQTime::saveFile(const char *filename)
 {
 	ofstream of;
 	of.open(filename);
@@ -157,7 +158,7 @@ bool EQTime::saveFile(const char filename[255])
 	return true;
 }
 
-bool EQTime::loadFile(const char filename[255])
+bool EQTime::loadFile(const char *filename)
 {
 	int version=0;
 	long in_data=0;
@@ -199,3 +200,82 @@ bool EQTime::loadFile(const char filename[255])
 	in.close();
 	return true;
 }
+
+
+bool EQTime::IsTimeBefore(TimeOfDay_Struct *base, TimeOfDay_Struct *test) {
+	if(base->year > test->year)
+		return(true);
+	if(base->year < test->year)
+		return(false);
+	//same years
+	if(base->month > test->month)
+		return(true);
+	if(base->month < test->month)
+		return(false);
+	//same month
+	if(base->day > test->day)
+		return(true);
+	if(base->day < test->day)
+		return(false);
+	//same day
+	if(base->hour > test->hour)
+		return(true);
+	if(base->hour < test->hour)
+		return(false);
+	//same hour...
+	return(base->minute > test->minute);
+}
+
+
+void EQTime::AddMinutes(uint32 minutes, TimeOfDay_Struct *to) {
+	uint32 cur;
+	
+	//minutes start at 0, everything else starts at 1
+	cur = to->minute;
+	cur += minutes;
+	if(cur < 60) {
+		to->minute = cur;
+		return;
+	}
+	to->minute = cur % 60;
+	//carry hours
+	cur /= 60;
+	cur += to->hour;
+	if(cur <= 24) {
+		to->hour = cur;
+		return;
+	}
+	to->hour = ((cur-1) % 24) + 1;
+	//carry days
+	cur = (cur-1) / 24;
+	cur += to->day;
+	if(cur <= 28) {
+		to->day = cur;
+		return;
+	}
+	to->day = ((cur-1) % 28) + 1;
+	//carry months
+	cur = (cur-1) / 28;
+	cur += to->month;
+	if(cur <= 12) {
+		to->month = cur;
+		return;
+	}
+	to->month = ((cur-1) % 12) + 1;
+	//carry years
+	to->year += (cur-1) / 12;
+}
+
+void EQTime::ToString(TimeOfDay_Struct *t, string &str) {
+	char buf[128];
+	snprintf(buf, 128, "%.2d/%.2d/%.4d %.2d:%.2d",
+		t->month, t->day, t->year, t->hour, t->minute);
+	buf[127] = '\0';
+	str = buf;
+}
+
+
+
+
+
+

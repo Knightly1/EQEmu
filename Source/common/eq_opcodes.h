@@ -32,6 +32,24 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 // used anywhere
 //
 
+////////////////////////////////////
+// EQ protocol opcodes
+////////////////////////////////////
+
+static const char OP_SessionRequest	=	0x01;
+static const char OP_SessionResponse	=	0x02;
+static const char OP_Combined		=	0x03;
+static const char OP_SessionDisconnect	=	0x05;
+static const char OP_KeepAlive		=	0x06;
+static const char OP_SessionStatRequest	=	0x07;
+static const char OP_SessionStatResponse=	0x08;
+static const char OP_Packet		=	0x09;
+static const char OP_Fragment		=	0x0d;
+static const char OP_OutOfOrderAck	=	0x11;
+static const char OP_Ack		=	0x15;
+static const char OP_AppCombined	=	0x19;
+
+
 //////////////////////////////////////
 // Zone.exe opcodes:
 //////////////////////////////////////
@@ -101,8 +119,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_AAAction         0x01e9 // Used for changing percent, buying? and activating skills
 #define OP_BoardBoat		0x00bb
 #define OP_LeaveBoat		0x00bc
-
-#define OP_FindRequest		0x02dc //Cofruben: used when you press find on a NPC.30/08/2004
 
 #define OP_AdventureInfoRequest	0x02b8 //Cofruben:received when client click on the recruiter.
 #define OP_AdventureInfo	0x02b9 //Cofruben:sent when client right click on the recruiter.
@@ -410,8 +426,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_RecipeAutoCombine 0x01fc
 
 //for the 'find' command
-	#define OP_FindPersonRequest	0x02db
-	#define OP_FindPersonReply	0x02dc
+#define OP_FindPersonRequest	0x02db
+#define OP_FindPersonReply	0x02dc
 
 #define OP_Shielding		0x01dd		//this is prolly wrong
 

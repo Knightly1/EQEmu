@@ -105,10 +105,14 @@ bool Client::Process() {
 		
 		if(dead)
 			SetHP(-100);
+		
+		/*
+		is there a reason we were doing this? its handled below...
 		if(dead && this->client_state == CLIENT_LINKDEAD) {
 			LeaveGroup();
 			return false;
 		}
+		*/
 		if(hpupdate_timer.Check())
 			SendHPUpdate();	
 		if(mana_timer.Check())
@@ -468,37 +472,29 @@ bool Client::Process() {
 			}
 		}
 	}
-    
-	
 	
 	if (client_state == CLIENT_KICKED) {
-		if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
-		LeaveGroup();
 		Save();
-		eqnc->Close();
+		OnDisconnect(true);
 		cout << "Client disconnected (cs=k): " << GetName() << endl;
 		return false;
 	}
 	
 	if (client_state == DISCONNECTED) {
-		if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
-		LeaveGroup();
-		eqnc->Close();
+		OnDisconnect(true);
 		cout << "Client disconnected (cs=d): " << GetName() << endl;
 		return false;
 	}
 	
 	if (client_state == CLIENT_ERROR) {
-		LeaveGroup();
-		eqnc->Close();
+		OnDisconnect(true);
 		cout << "Client disconnected (cs=e): " << GetName() << endl;
 		return false;
 	}
 	
 	if (client_state != CLIENT_LINKDEAD && !eqnc->CheckActive()) {
-		LeaveGroup();
 		cout << "Client linkdead: " << name << endl;
-		eqnc->Close();
+		OnDisconnect(true);
 
 		if (GetGM()) {
 			return false;
@@ -512,10 +508,8 @@ bool Client::Process() {
 	}
 	/************ Get all packets from packet manager out queue and process them ************/
 	adverrorinfo = 5;
-	if((int32)eqnc == 0xFEEEFEEE){
-		if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
-		LeaveGroup();
-		eqnc->Close();
+	if((int32)eqnc == 0xFEEEFEEE) {
+		OnDisconnect(true);
 		safe_delete(eqnc);
 		return false;
 	}
@@ -542,6 +536,7 @@ bool Client::Process() {
 #endif	
 	
 	if (client_state != CLIENT_LINKDEAD && (client_state == CLIENT_ERROR || client_state == DISCONNECTED || client_state == CLIENT_KICKED || !eqnc->CheckActive())) {
+		//client logged out or errored out
 		if (!zoning) {
 			RemoveNoRent(); //Get rid of ze no rent stuff if logging out
 		}
@@ -568,20 +563,34 @@ bool Client::Process() {
 				
 				adverrorinfo = 813;
 			}
-			eqnc->Close();
+			OnDisconnect(false);
 			return false;
 		}
 		else
 		{
 			adverrorinfo = 814;
 			LinkDead();
-			LeaveGroup();
 		}
-		eqnc->Close();
+		OnDisconnect(true);
 	}
 	
 	
 	return ret;
+}
+
+//just a set of actions preformed all over in Client::Process
+void Client::OnDisconnect(bool hard_disconnect) {
+	if(hard_disconnect) {
+		LeaveGroup();
+	}
+	
+	//remove ourself from all proximities
+	ClearAllProximities();
+	
+	if(GetAdventureID()>0)
+		DeleteCharInAdventure(CharacterID(),GetAdventureID());
+	
+	eqnc->Close();
 }
 
 // Sends the client complete inventory used in character login
@@ -1372,151 +1381,6 @@ void Client::OPGMSummon(const APPLAYER *app)
 	}
 }
 
-void Client::OPCombatAbility(const APPLAYER *app) {
-	if(!target)
-		return;
-	if(!IsAttackAllowed(target))
-		return;
-
-	CombatAbility_Struct* ca_atk = (CombatAbility_Struct*) app->pBuffer;
-	if ((ca_atk->m_atk == 100) && (ca_atk->m_type==10)) {    // SLAM - Bash without a shield equipped
-		DoAnim(animTailRake);
-		float chance = (level+GetSkill(BASH)+GetSTR())/5;
-		sint32 dmg = 0;
-		if(chance<20)
-			chance=20;
-		else if(chance>90)
-			chance=90;
-
-		//this formula is just a hack, its not perfect by any means
-		if((rand()%100)<chance)//success figure damage
-			dmg = ((((level/10)*(rand()%7))+GetSkill(BASH)*5+GetSTR())/100)*(rand()%10);
-		target->Damage(this, dmg, 0xffff, BASH);
-		CheckIncreaseSkill(BASH);
-		
-		/* using CheckIncreaseSkill now
-		if (GetClass()==WARRIOR&&(GetRace()==BARBARIAN||GetRace()==TROLL||GetRace()==OGRE)) { // large race warriors only *
-			float wisebonus =  (m_pp.WIS > 200) ? 20 + ((m_pp.WIS - 200) * 0.05) : m_pp.WIS * 0.1;
-			if (((55-(GetSkill(BASH)*0.240))+wisebonus > MakeRandomFloat(0, 100))&& (GetSkill(BASH)<(m_pp.level+1)*5))
-					this->SetSkill(BASH,GetRawSkill(BASH)+1);
-		}*/
-		return;
-	}
-	
-	//throwing weapons
-	if ((ca_atk->m_atk == 11)&&(ca_atk->m_type == 51)) {
-		ThrowingAttack(target);
-		return;
-	}
-	
-	//ranged attack (archery)
-	if ((ca_atk->m_atk == 11)&&(ca_atk->m_type==7)) {
-		RangedAttack(target);
-		return;
-	}
-	
-	float multiple=(GetLevel()/5);
-	multiple++;
-	switch(GetClass())
-	{
-	case WARRIOR:
-		if (target!=this) {
-			float dmg=((((GetSkill(KICK) + GetSTR() + GetLevel())/90)*multiple)+10) * ( MakeRandomFloat(0, 1) );
-			if(target->IsClient())
-				dmg*=.76;
-			else{
-				CheckIncreaseSkill(KICK);
-				dmg*=1.2f;//small increase for warriors
-			}
-			target->Damage(this, (int32)dmg, 0xffff, 0x1e);
-			DoAnim(animKick);
-		}
-		break;
-	case RANGER:
-	case BEASTLORD:
-		if (target!=this) {
-			float dmg=((((GetSkill(KICK) + GetSTR() + GetLevel())/250)*multiple)+5) * ( MakeRandomFloat(0, 1) );
-			if(target->IsClient())
-				dmg*=.67f;
-			else
-				CheckIncreaseSkill(KICK);
-			target->Damage(this, (int32)dmg, 0xffff, 0x1e);
-			DoAnim(animKick);
-		}
-		break;
-	case PALADIN:
-	case SHADOWKNIGHT:
-		break;
-	case MONK:
-		CheckIncreaseSkill(ca_atk->m_type);
-		MonkSpecialAttack(target->CastToMob(), ca_atk->m_type);
-		break;
-	case ROGUE:
-		if (ca_atk->m_atk != 100) {
-			break;
-		}
-		uint8 aa_item = GetAA(aaChaoticStab);// Chaotic backstab TODO make it do min damage
-		if (target && BehindMob(target, GetX(), GetY())) // Player is behind target
-		{
-			// solar - chance to assassinate
-			// TODO: it's set to 40% chance, should be a formula involving DEX
-			float chance=0;
-			if(
-				level >= 60 && // player is 60 or higher
-				target->GetLevel() <= 45 && // mob 45 or under
-				!target->CastToNPC()->IsEngaged() && // not aggro
-				target->GetHP()<=32000 &&
-				(chance = MakeRandomFloat(0, 100)) < 40 // chance
-				&& target->IsNPC()
-				) {
-				//char temp[100];
-				//snprintf(temp, 100, "%s ASSASSINATES their victim!!", this->GetName());
-				//entity_list.MessageClose(this, 0, 200, 10, temp);
-				entity_list.MessageClose_StringID(this, false, 200, 10, ASSASSINATES, GetName());
-				CheckIncreaseSkill(BACKSTAB);
-				RogueAssassinate(target);
-			}
-			else {
-				RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
-				if ((level > 54) && (target != 0)) {
-					float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
-					// Check for double attack with main hand assuming maxed DA Skill (MS)
-					float random = MakeRandomFloat(0, 1);
-					
-					if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
-						if(target && target->GetHP() > 0)
-							RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
-				}
-				CheckIncreaseSkill(BACKSTAB);
-			}
-		}
-		else if(aa_item>0) {
-			RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
-			if ((level > 54) && (target != 0)) {
-				float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
-				CheckIncreaseSkill(BACKSTAB);
-				// Check for double attack with main hand assuming maxed DA Skill (MS)
-				float random = MakeRandomFloat(0, 1);
-				if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
-					if(target && target->GetHP() > 0)
-						RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
-			}
-		}
-		else {	// Player is in front of target
-			Attack(target, 13);
-			if ((level > 54) && (target != 0)) {
-				float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
-				
-				// Check for double attack with main hand assuming maxed DA Skill (MS)
-				float random = MakeRandomFloat(0, 1);
-				if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
-					if(target && target->GetHP() > 0)
-						Attack(target, 13);
-			}
-		}
-		break;
-	}
-}
 
 void Client::DoHPRegen() {
 	sint32 normal_regen = LevelRegen();

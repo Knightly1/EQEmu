@@ -436,6 +436,19 @@ bool IsValidSpell(int16 spellid)
 	);
 }
 
+//returns the lowest level of any caster which can use the spell
+int GetMinLevel(int16 spell_id) {
+	int r;
+	int min = LEVEL_CAP+1;
+	const SPDat_Spell_Struct &spell = spells[spell_id];
+	for(r = 0; r < PLAYER_CLASS_COUNT; r++) {
+		if(spell.classes[r] < min)
+			min = spell.classes[r];
+	}
+	
+	return(min);
+}
+
 // solar: this will find the first occurance of effect.  this is handy
 // for spells like mez and charm, but if the effect appears more than once
 // in a spell this will just give back the first one.

@@ -706,8 +706,10 @@ void Mob::ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newb
 				//multiplier is to be compatible with item effects
 				//watching for overflow too
 				effect_value = effect_value<2000? effect_value * 15 : 30000;
-				if(newbon->HitChance < effect_value)
+				if(newbon->HitChance < effect_value) {
 					newbon->HitChance = effect_value;
+					newbon->HitChanceSkill = spells[spell_id].base2[i]==-1?255:spells[spell_id].base2[i];
+				}
 				break;
 			}
 				

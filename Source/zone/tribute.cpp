@@ -276,10 +276,10 @@ sint32 Client::TributeItem(int32 slot, int32 quantity) {
 	if(inst->IsStackable()) {
 		if(inst->GetCharges() < (sint32)quantity)	//dont have enough....
 			return(0);
-		m_inv.DeleteItem(slot, quantity);
+		DeleteItemInInventory(slot, quantity, false);
 	} else {
 		quantity = 1;
-		m_inv.DeleteItem(slot);
+		DeleteItemInInventory(slot, 0, false);
 	}
 	
 	pts *= quantity;

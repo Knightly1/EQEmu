@@ -100,7 +100,8 @@ struct NPCType
 	bool	npc_aggro;
 	uint8	spawn_limit;	//only this many may be in zone at a time (0=no limit)
 	int8	mount_color;	//only used by horse class
-	
+	float	attack_speed;	//%+- on attack delay of the mob.
+	bool	findable;		//can be found with find command
 };
 
 struct ZSDump_Spawn2 {

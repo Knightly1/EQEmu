@@ -53,7 +53,6 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 	_ZP(Mob_SpellEffect);
 	
 	int caster_level, buffslot, effect, effect_value, i;
-	SPDat_Spell_Struct spell;
 #ifdef SPELL_EFFECT_SPAM
 #define _EDLEN	200
 	char effect_desc[_EDLEN];
@@ -66,7 +65,8 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 	if(buffslot == -1)	// stacking failure
 		return false;
 
-	spell = spells[spell_id];
+	const SPDat_Spell_Struct &spell = spells[spell_id];
+	
 	caster_level = caster ? caster->GetCasterLevel(spell_id) : GetCasterLevel(spell_id);
 	
 #ifdef SPELL_EFFECT_SPAM
@@ -260,7 +260,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 			case SE_Succor:
 			{
 				float x, y, z, heading;
-				char *target_zone;
+				const char *target_zone;
 
 				x = spell.base[1];
 				y = spell.base[0];
@@ -393,11 +393,13 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 			case SE_Charm:
 			{
 #ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Charm: %+i", effect_value);
+				snprintf(effect_desc, _EDLEN, "Charm: %+i (up to lvl %d)", effect_value, spell.max[i]);
 #endif
 				if (!caster)	// can't be someone's pet unless we know who that someone is
 					break;
-
+				
+				//target level is checked elsewhere...
+				
 				//Shawn319: This does not work. we need to re-write it. Players should never be able to charm other players
 				if (IsClient() && caster->IsClient())
 				{
@@ -1941,6 +1943,9 @@ snare has both of them negative, yet their range should work the same:
 	
 	switch(formula)
 	{
+		case 60:	//used in stun spells..?
+		case 70:
+			result = ubase/100; break;
 		case   0:
 		case 100:	// solar: confirmed 2/6/04
 			result = ubase; break;
@@ -1955,36 +1960,36 @@ snare has both of them negative, yet their range should work the same:
 		case 105:	// solar: confirmed 2/6/04
 			result = updownsign * (ubase + (caster_level * 4)); break;
 
-		case 107:	// Shutting this thing up, this is wrong
+		case 107:
 			//Used on Reckless Strength, I think it should decay over time
-			result = updownsign * (ubase + (caster_level * 4)); break;
-
+			result = updownsign * (ubase + (caster_level / 2)); break;
 		case 108:
 			result = updownsign * (ubase + (caster_level / 3)); break;
 		case 109:	// solar: confirmed 2/6/04
 			result = updownsign * (ubase + (caster_level / 4)); break;
 
 		case 110:	// solar: confirmed 2/6/04
+			//is there a reason we dont use updownsign here???
 			result = ubase + (caster_level / 5); break;
 		
 		case 111:	
-            result = ubase + 7 * (caster_level - 16); break;
+            result = ubase + 6 * (caster_level - GetMinLevel(spell_id)); break;
 		case 112:
-            result = ubase + 8 * (caster_level - 24); break;
+            result = ubase + 8 * (caster_level - GetMinLevel(spell_id)); break;
 		case 113:
-            result = ubase + 12 * (caster_level - 34); break;
+            result = ubase + 10 * (caster_level - GetMinLevel(spell_id)); break;
 		case 114:
-            result = ubase + 15 * (caster_level - 44); break;
+            result = ubase + 15 * (caster_level - GetMinLevel(spell_id)); break;
         
         //these formula were updated according to lucy 10/16/04
 		case 115:	// solar: this is only in symbol of transal
-			result = ubase + 5 * (caster_level - 14); break;
+			result = ubase + 6 * (caster_level - GetMinLevel(spell_id)); break;
 		case 116:	// solar: this is only in symbol of ryltan
-            result = ubase + 8 * (caster_level - 24); break;
+            result = ubase + 8 * (caster_level - GetMinLevel(spell_id)); break;
 		case 117:	// solar: this is only in symbol of pinzarn
-            result = ubase + 12 * (caster_level - 34); break;
+            result = ubase + 12 * (caster_level - GetMinLevel(spell_id)); break;
 		case 118:	// solar: used in naltron and a few others
-            result = ubase + 17 * (caster_level - 44); break;
+            result = ubase + 20 * (caster_level - GetMinLevel(spell_id)); break;
         
 		case 119:	// solar: confirmed 2/6/04
 			result = ubase + (caster_level / 8); break;

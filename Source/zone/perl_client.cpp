@@ -28,6 +28,7 @@
 #include "features.h"
 #ifdef EMBPERL_XS_CLASSES
 #include "embperl.h"
+#include "../common/debug.h"
 
 #include "client.h"
 
@@ -3003,6 +3004,31 @@ XS(XS_Client_SetLanguageSkill)
 	XSRETURN_EMPTY;
 }
 
+XS(XS_Client_GetCharacterFactionLevel); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_GetCharacterFactionLevel)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Client::GetCharacterFactionLevel(THIS, faction_id)");
+	{
+		Client *		THIS;
+		sint32		RETVAL;
+		dXSTARG;
+		sint32		faction_id = (sint32)SvIV(ST(1));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+
+		RETVAL = THIS->GetCharacterFactionLevel(faction_id);
+		XSprePUSH; PUSHi((IV)RETVAL);
+	}
+	XSRETURN(1);
+}
+
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -3143,6 +3169,7 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "ResetTrade"), XS_Client_ResetTrade, file, "$");
 		newXSproto(strcpy(buf, "UseDiscipline"), XS_Client_UseDiscipline, file, "$$$");
 		newXSproto(strcpy(buf, "SetLanguageSkill"), XS_Client_SetLanguageSkill, file, "$$$");
+		newXSproto(strcpy(buf, "GetCharacterFactionLevel"), XS_Client_GetCharacterFactionLevel, file, "$$");
 	XSRETURN_YES;
 }
 

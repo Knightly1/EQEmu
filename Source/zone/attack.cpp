@@ -1,5 +1,5 @@
 /*  EQEMu:  Everquest Server Emulator
-Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
+Copyright (C) 2001-2002  EQEMu Development Team (http://eqemulator.net)
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -291,8 +291,14 @@ bool Mob::CheckHitChance(Mob* other, int8 attack_skill, int Hand, int16 skillinu
 	chancetohit += attacker->spellbonuses.MeleeSkillCheck + attacker->itembonuses.MeleeSkillCheck;
 	
 	
+	//add in our hit chance bonuses if we are using the right skill
 	//does the hit chance cap apply to spell bonuses from disciplines?
-	chancetohit += (attacker->spellbonuses.HitChance + attacker->itembonuses.HitChance) / 15;
+	if(attacker->spellbonuses.HitChanceSkill == 255 || attacker->spellbonuses.HitChanceSkill == attack_skill)
+		chancetohit += attacker->spellbonuses.HitChance / 15;
+	if(attacker->itembonuses.HitChanceSkill == 255 || attacker->itembonuses.HitChanceSkill == attack_skill)
+		chancetohit += attacker->itembonuses.HitChance / 15;
+	
+	//subtract off avoidance by the defender
 	chancetohit -= (defender->spellbonuses.AvoidMeleeChance + defender->itembonuses.AvoidMeleeChance) / 10;
 	
 	// Chance to hit;   Max 95%, Min 30%
@@ -1184,7 +1190,9 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 
 	entity_list.RemoveFromTargets(this);
 	hate_list.RemoveEnt(this);
-
+	
+	//remove ourself from all proximities
+	ClearAllProximities();
 
 	//
 	// #3: exp loss and corpse generation
@@ -1662,7 +1670,7 @@ void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, b
 	}
 
     // only apply DS if physical damage (no spell damage)
-    if (other && damage > 0 && spell_id == 0xFFFF) {
+    if (other && damage > 0 && spell_id == SPELL_UNKNOWN) {
 		this->DamageShield(other);
 	}
 	if ((spell_id != SPELL_UNKNOWN || (attack_skill>200 && attack_skill<250)) && damage>0)
@@ -1786,27 +1794,33 @@ void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, b
 	if (damage > 0)
 	{
 		if (IsMezzed()) {
-
 			this->BuffFadeByEffect(SE_Mez);
-
 		}
+		
 		if (attack_skill == BASH && GetLevel() < 56) {
-			if((itembonuses.StunResist+spellbonuses.StunResist) <= 0 || rand()%101 >= (itembonuses.StunResist+spellbonuses.StunResist))
+			int stun_resist = itembonuses.StunResist+spellbonuses.StunResist;
+			if(stun_resist <= 0 || MakeRandomInt(0,99) >= stun_resist)
 				Stun(0);
 		}
-		if (IsRooted() && spell_id != 0xFFFF) // neotoyko: only spells cancel root
+		if (IsRooted() && spell_id != SPELL_UNKNOWN) // neotoyko: only spells cancel root
 		{
-			if ((float)rand()/RAND_MAX > 0.8f)
-				this->BuffFadeByEffect(SE_Root, buffslot);
+			if (MakeRandomInt(0, 99) < 20)
+				BuffFadeByEffect(SE_Root, buffslot);
 		}
-		if(this->casting_spell_id != 0)
+		if(casting_spell_id != 0)
 		{
 			attacked_count++;
 			isattacked = true;
 		}
 	}
-	if(!IsFullHP || cur_hp<max_hp)
+	if(!IsFullHP || cur_hp<max_hp) {
 		other->SendHPUpdate();
+		
+#ifdef FLEE_HP_RATIO
+		//see if we are gunna start fleeing
+		CheckFlee();
+#endif
+	}
 }
 
 void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
@@ -1816,7 +1830,7 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	{
 		zone->DelAggroMob();
 #if EQDEBUG >= 11
-    LogFile->write(EQEMuLog::Debug,"NPC::Death() Mobs currently Aggro %i", zone->MobsAggroCount());
+		LogFile->write(EQEMuLog::Debug,"NPC::Death() Mobs currently Aggro %i", zone->MobsAggroCount());
 #endif
 	}
 	SetHP(0);
@@ -1835,20 +1849,21 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	d->spawn_id = GetID();
 	d->killer_id = other ? other->GetID() : 0;
 	d->unknown12 = 1;
-	d->spell_id = spell == 0xffff ? 0xffffffff : spell;
-	d->attack_skill = spell != 0xffff ? 0xe7 : attack_skill;
+	d->spell_id = spell == SPELL_UNKNOWN ? 0xffffffff : spell;
+	d->attack_skill = spell != SPELL_UNKNOWN ? 0xe7 : attack_skill;
 	d->damage = damage;
 	app->priority = 6;
-	entity_list.QueueClients(other, app, true);
-
-	if(this->respawn2 && (this->respawn2->spawn2_id!=0 && this->respawn2->respawn_!=0)){
-	    database.UpdateTimeleft(this->CastToNPC()->respawn2->spawn2_id,this->CastToNPC()->respawn2->respawn_);
+	entity_list.QueueClients(other, app, false);
+	
+	if(respawn2) {
+		respawn2->Reset();
+		if(respawn2->spawn2_id!=0 && respawn2->respawn_!=0)
+		    database.UpdateTimeleft(respawn2->spawn2_id, respawn2->respawn_);
 	}
 
-	if (other)
-	{
-		if (other->IsClient())
-			other->CastToClient()->QueuePacket(app);
+	if (other) {
+//		if (other->IsClient())
+//			other->CastToClient()->QueuePacket(app);
 		hate_list.Add(other, damage);
 	}
 
@@ -1898,7 +1913,10 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	if(give_exp && give_exp->GetOwner() != 0)
 		give_exp = give_exp->GetOwner();
 	
-	Client *give_exp_client = give_exp?give_exp->CastToClient():NULL;
+	Client *give_exp_client = NULL;
+	if(give_exp && give_exp->IsClient())
+		give_exp_client = give_exp->CastToClient();
+	
 #ifndef RAIDADDICTS // If we aren't Raid Addicts
     if (give_exp_client && !IsCorpse() && MerchantType == 0)
 	{
@@ -1932,6 +1950,7 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
             }
 		}
 	}
+	
 	//do faction hits even if we are a merchant, so long as a player killed us
 	if(give_exp_client)
 		hate_list.DoFactionHits(GetNPCFactionID());
@@ -1953,10 +1972,6 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	*/
 #endif // End Raid Addicts
 	
-	if (respawn2 != 0) {
-		respawn2->Reset();
-	}
-	
 	if (class_ != 32 && this->ownerid == 0 && this->flag[3]!=3 && CastToNPC()->MerchantType == 0 && killer && (killer->IsClient() || (killer->GetOwner() != 0 && killer->GetOwner()->IsClient())) ) {
 		Corpse* corpse = new Corpse(this, &itemlist, GetNPCTypeID(), &NPCTypedata);
 		entity_list.AddCorpse(corpse, this->GetID());
@@ -1977,15 +1992,16 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 			}
 		}
 	}
+	
 	// Parse quests even if we're killed by an NPC
 	if(other && other->GetOwner())
 		parse->Event(EVENT_DEATH, this->GetNPCTypeID(),0, this, other->GetOwner());
 	else
 		parse->Event(EVENT_DEATH, this->GetNPCTypeID(),0, this, other);
+	
 	this->WhipeHateList();
 	p_depop = true;
 	if(other) other->SetTarget(0);
-
 }
 
 // solar: (notes to self) hmm this is called in a few spots..
@@ -2029,204 +2045,6 @@ bool Mob::ChangeHP(Mob* other, sint32 amount, int16 spell_id, sint8 buffslot, bo
 	return false;
 }
 
-//returns the reuse time for the special attack used.
-int Mob::MonkSpecialAttack(Mob* other, int8 type)
-{
-	bool candamage = true;
-	int avoidchance = other->spellbonuses.AvoidMeleeChance + other->itembonuses.AvoidMeleeChance;
-	if(avoidchance > 0 && MakeRandomInt(0, 99) < avoidchance) {
-		candamage = false;
-	}
-	
-	sint32 ndamage = 0;
-	//PlayerProfile_Struct pp;
-	float hitsuccess = (float)other->GetLevel() - (float)level;
-	float hitmodifier = 0.0;
-	float skillmodifier = 0.0;
-	if(level > other->GetLevel())
-	{
-		hitsuccess += 2;
-		hitsuccess *= 14;
-	}
-	if ((int)hitsuccess >= 40)
-	{
-		hitsuccess *= 3.0;
-		hitmodifier = 1.1;
-	}
-	if ((int)hitsuccess >= 10 && hitsuccess <= 39)
-	{
-		hitsuccess /= 4.0;
-		hitmodifier = 0.25;
-	}
-	else if ((int)hitsuccess < 10 && (int)hitsuccess > -1)
-	{
-		hitsuccess = 0.5;
-		hitmodifier = 1.5;
-	}
-	else if ((int)hitsuccess <= -1)
-	{
-		hitsuccess = 0.1;
-		hitmodifier = 1.8;
-	}
-#if EQDEBUG >= 11
-    LogFile->write(EQEMuLog::Debug,"MonkSpecialAttack() 2 - %d", hitsuccess);
-#endif
-	if ((int)GetSkill(type) >= 100)
-	{
-		skillmodifier = 1;
-	}
-	else if ((int)GetSkill(type) >= 200)
-	{
-		skillmodifier = 2;
-	}
-	
-	hitsuccess -= ((float)GetSkill(type)/10000) + skillmodifier;
-#if EQDEBUG >= 11
-    LogFile->write(EQEMuLog::Debug,"MonkSpecialAttack() 3 - %d", hitsuccess);
-#endif
-	hitsuccess += (float)rand()/RAND_MAX;
-#if EQDEBUG >= 11
-    LogFile->write(EQEMuLog::Debug,"MonkSpecialAttack() 4 - %d", hitsuccess);
-#endif
-	float ackwardtest = 2.4f;
-	float random = (float)rand()/RAND_MAX;
-	if(random <= 0.2)
-	{
-		ackwardtest = 4.5;
-	}
-	if(random > 85 && random < 400.0)
-	{
-		ackwardtest = 3.2;
-	}
-	if(random > 400 && random < 800.0)
-	{
-		ackwardtest = 3.7;
-
-	}
-	if(random > 900 && random < 1400.0)
-	{
-		ackwardtest = 1.9;
-	}
-	if(random > 1400 && random < 14000.0)
-	{
-		ackwardtest = 2.3;
-	}
-
-	if(random > 14000 && random < 24000.0)
-	{
-		ackwardtest = 1.3;
-	}
-	if(random > 24000 && random < 34000.0)
-	{
-		ackwardtest = 1.3;
-	}
-	if(random > 990000)
-	{
-		ackwardtest = 1.2;
-	}
-	if(random < 0.2)
-	{
-		ackwardtest = 0.8;
-	}
-	
-	int reuse = 0;
-	
-	ackwardtest += (float)rand()/RAND_MAX;
-	ackwardtest = abs((long)ackwardtest);
-	if (type == saFlyingKick) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (10 * ackwardtest) * (GetSkill(FLYING_KICK) + GetSTR() + level) / 600);
-		if(other->IsClient())
-			ndamage = ndamage * 3 / 4;
-		if ((float)rand()/RAND_MAX < 0.2) {
-			ndamage = (sint32) (ndamage * 1.9);
-			
-			//I dont know how this can ever get to be negative...
-			if(ndamage <= 0) {
-				entity_list.MessageClose(this, false, 200, 10, "%s misses at an attempt to thunderous kick %s!",name,other->name);
-			}
-			else {
-				entity_list.MessageClose(this, false, 200, 10, "%s lands a thunderous kick!(%d)", name, ndamage);
-			}
-		}
-		
-		if(IsClient() && CastToClient()->CheckDiscipline(discThunderkick, true)) {
-			//values are very approximate
-			if(ndamage < 81)
-				ndamage = 81;
-			else
-				ndamage = ndamage * 4 / 3;
-		}
-		
-		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x1A);
-		DoAnim(animFlyingKick);
-		reuse = FlyingKickReuseTime * 1000;
-	}
-	else if (type == saTigerClaw) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (4 * ackwardtest) * (GetSkill(TIGER_CLAW) + GetSTR() + level) / 700);
-		if(other->IsClient())
-			ndamage = ndamage * 7 / 10;
-		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x34);
-		DoAnim(animTigerClaw);
-		reuse = TigerClawReuseTime * 1000;
-	}
-	else if (type == saRoundKick) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (6 * ackwardtest) * (GetSkill(ROUND_KICK) + GetSTR() + level) / 600);
-		if(other->IsClient())
-			ndamage = ndamage * 9 / 10;
-		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x26);
-		DoAnim(animRoundKick);
-		reuse = RoundKickReuseTime * 1000;
-	}
-	else if (type == saEagleStrike) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (8 * ackwardtest) * (GetSkill(EAGLE_STRIKE) + GetSTR() + level) / 800);
-		if(other->IsClient())
-			ndamage = ndamage * 7 / 10;
-		
-		
-		if(IsClient() && CastToClient()->CheckDiscipline(discAshenhand, true)) {
-			//values are very approximate
-			ndamage = ndamage * 3;
-			if(other->GetLevel() < 49 && MakeRandomFloat(0,1) < 0.005)
-				ndamage = 32000;
-		}
-		
-		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x17);
-		DoAnim(animEagleStrike);
-		reuse = EagleStrikeReuseTime * 1000;
-	}
-	else if (type == saTailRake) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (10 * ackwardtest) * (GetSkill(DRAGON_PUNCH) + GetSTR() + level) / 600);
-		if(other->IsClient())
-			ndamage = ndamage * 7 / 10;
-		
-		if(IsClient() && CastToClient()->CheckDiscipline(discSilentfist, true)) {
-			//values are very approximate
-			ndamage = ndamage * 4 / 3;
-			if(MakeRandomFloat(0,1) < 0.5)	//chance should be right
-				other->Stun(2);		//duration unknown
-		}
-		
-		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x15);
-		DoAnim(animTailRake);
-		reuse = TailRakeReuseTime * 1000;
-	}
-	else if (type == saKick) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (6 * ackwardtest) * (GetSkill(KICK) + GetSTR() + level) / 1000);
-		if(other->IsClient())
-			ndamage = ndamage * 7 / 10;
-		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x1e);
-		DoAnim(animKick);
-		reuse = KickReuseTime * 1000;
-	}
-	return(reuse);
-}
-
 void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHelp, bool bFrenzy, bool iBuffTic) {
     assert(other != NULL);
     if (other == this)
@@ -2237,29 +2055,28 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 	bool wasengaged = IsEngaged();
 	Mob* owner = other->GetOwner();
 	Mob* mypet = this->GetPet();
-    Mob* myowner = this->GetOwner();
-    if (other == myowner)
-			return;
+	Mob* myowner = this->GetOwner();
+	
+	if (other == myowner)
+		return;
 	if (owner) { // Other has a pet, add him and it
-			hate_list.Add(other, hate, 0, bFrenzy, !iBuffTic);
-			hate_list.Add(owner, 1, damage, false, !iBuffTic);
+		hate_list.Add(other, hate, 0, bFrenzy, !iBuffTic);
+		hate_list.Add(owner, 1, damage, false, !iBuffTic);
 	}
 	else { // Other has no pet, add other
-			hate_list.Add(other, hate, damage, false, !iBuffTic);
+		hate_list.Add(other, hate, damage, false, !iBuffTic);
 	}
 	if (mypet) { // I have a pet, add other to it
-			mypet->hate_list.Add(other, 1, 0, bFrenzy);
+		mypet->hate_list.Add(other, 1, 0, bFrenzy);
+	} else if (myowner) { // I am a pet, add other to owner if it's NPC/LD
+		if (myowner->IsAIControlled())
+			myowner->hate_list.Add(other, 1, 0, bFrenzy);
 	}
-    else if (myowner) { // I am a pet, add other to owner if it's NPC/LD
-            if (myowner->IsAIControlled())
-                myowner->hate_list.Add(other, 1, 0, bFrenzy);
-    }
- if (!wasengaged) { 
-	if(IsNPC())
-		parse->Event(EVENT_AGGRO, this->GetNPCTypeID(), 0, CastToNPC(), other); 
-      AI_Event_Engaged(other, iYellForHelp); 
-      adverrorinfo = 8293;
-
+	if (!wasengaged) { 
+		if(IsNPC() && other->CastToClient())
+			parse->Event(EVENT_AGGRO, this->GetNPCTypeID(), 0, CastToNPC(), other); 
+		AI_Event_Engaged(other, iYellForHelp); 
+		adverrorinfo = 8293;
 	}
 }
 
@@ -2427,53 +2244,6 @@ int Mob::GetMonkHandToHandDelay(void)
 	}
 }
 
-//heko: backstab
-void Mob::RogueBackstab(Mob* other, const ItemInst* weapon, int8 bs_skill)
-{
-	int ndamage = 0;
-	int max_hit, min_hit;
-	float skillmodifier = 0.0;
-	int8 primaryweapondamage;
-	if (weapon && weapon->IsType(ItemTypeCommon))
-		primaryweapondamage = weapon->GetItem()->Common.Damage; //backstab uses primary weapon
-	else
-		primaryweapondamage = this->GetLevel() % 10; // fallback incase it's a npc without a weapon
-	
-    // catch a divide by zero error
-    if (!bs_skill)
-        return;
-	
-	skillmodifier = (float)bs_skill/25.0;	//formula's from www.thesafehouse.org
-	
-	// formula is (weapon damage * 2) + 1 + (level - 25)/3 + (strength+skill)/100
-	max_hit = (int)(((float)primaryweapondamage * 2.0) + 1.0 + ((level - 25)/3.0) + ((GetSTR()+GetSkill(BACKSTAB))/100));
-	max_hit *= (int)skillmodifier;
-	
-	// determine minimum hits
-	if (level < 51)
-	{
-		min_hit = 0;
-	}
-	else
-	{
-		// Trumpcard:  Replaced switch statement with formula calc.  This will give minhit increases all the way to 65.
-		min_hit= (int)( level * ( 1.5 + ( (level - 51) * .05 ) ));
-	}
-	if (max_hit < min_hit)
-		max_hit = min_hit;
-	ndamage = (int)min_hit + (rand()%((max_hit-min_hit)+1));	// TODO: better formula, consider mob level vs player level, strength/atk
-	if (!BehindMob(other, GetX(), GetY()))
-		ndamage = min_hit;
-	other->Damage(this, ndamage, 0xffff, BACKSTAB);
-	DoAnim(animPiercing);	//piercing animation
-}
-
-// solar - assassinate
-void Mob::RogueAssassinate(Mob* other)
-{
-	other->Damage(this, 32000, 0xffff, BACKSTAB);
-	DoAnim(animPiercing);	//piercing animation
-}
 
 // neotokyo 14-Nov-02
 
@@ -2524,310 +2294,6 @@ bool Mob::HasProcs()
         if (PermaProcs[i].spellID != 0xFFFF || SpellProcs[i].spellID != 0xFFFF)
             return true;
     return false;
-}
-
-
-void Client::RangedAttack(Mob* other) {
-	DoAnim(animShootBow);
-	
-	const ItemInst* RangeWeapon = m_inv[SLOT_RANGE];
-	
-	//locate ammo
-	int ammo_slot = SLOT_AMMO;
-	const ItemInst* Ammo = m_inv[SLOT_AMMO];
-	
-	if (!RangeWeapon || !RangeWeapon->IsType(ItemTypeCommon)) {
-		Message(0, "Error: Rangeweapon: GetItem(%i)==0, you have no bow!", GetItemIDAt(SLOT_RANGE));
-		return;
-	}
-	if (!Ammo || !Ammo->IsType(ItemTypeCommon)) {
-		Message(0, "Error: Ammo: GetItem(%i)==0, you have no ammo!", GetItemIDAt(SLOT_AMMO));
-		return;
-	}
-	
-	const Item_Struct* RangeItem = RangeWeapon->GetItem();
-	const Item_Struct* AmmoItem = Ammo->GetItem();
-	
-	if(RangeItem->Common.ItemUse != ItemUseBow) {
-		Message(0, "Error: Rangeweapon: GetItem(%i)==0, you have no bow!", GetItemIDAt(SLOT_RANGE));
-		return;
-	}
-	if(AmmoItem->Common.ItemUse != ItemUseArrow) {
-		Message(0, "Error: Ammo: GetItem(%i)==0, you have no ammo!", GetItemIDAt(ammo_slot));
-		return;
-	}
-	
-	//look for ammo in inventory if we only have 1 left...
-	if(Ammo->GetCharges() == 1) {
-		sint32 aslot = m_inv.HasItem(AmmoItem->ItemNumber, 1, invWherePersonal);
-		if(aslot != SLOT_INVALID) {
-			ammo_slot = aslot;
-		}
-	}
-	
-	int range = RangeItem->Common.Range + AmmoItem->Common.Range +5/*Fudge it a little, client will let you hit something at 0 0 0 when you are at 205 0 0*/;
-	range *= range;
-	if(DistNoRootNoZ(*target) > range)
-	{
-		//target is out of range, client does a message
-		return;
-	}
-	
-	//restart their attack timers since this is an attack.
-	if (attack_timer.Enabled())
-		attack_timer.Start();
-	if (attack_dw_timer.Enabled())
-		attack_dw_timer.Start();
-
-	float chancetohit = 0;
-	if(!target)
-		return;
-	if(target->IsNPC())
-		chancetohit = GetSkill(ARCHERY) / 3.75;
-	else
-		chancetohit = GetSkill(ARCHERY) / 4.75; //harder to hit players
-
-	if (m_pp.level-target->GetLevel() < 0) {
-		chancetohit -= (float)((target->GetLevel()-m_pp.level)*(target->GetLevel()-m_pp.level))/4;
-	}
-	
-	int16 targetagi = target->GetAGI();
-	int16 playerDex = (int16)(this->itembonuses.DEX + this->spellbonuses.DEX)/2;
-	
-	targetagi = (targetagi <= 200) ? targetagi:targetagi + ((targetagi-200)/5);
-	chancetohit -= (float)targetagi*0.05;
-	chancetohit += playerDex;
-	chancetohit = (chancetohit > 0) ? chancetohit+30:30;
-	chancetohit = chancetohit > 95 ? 95 : chancetohit; // cap to 95%
-	
-	bool trueshot = CheckDiscipline(discTrueshot);
-	if(trueshot)
-		chancetohit += 30;		//+15%
-	
-	// Hit?
-	if (MakeRandomFloat(0, 200) > chancetohit) {
-		//this->Message(MT_Emote, "You missed your target");
-		//this->Message_StringID(M,GENERIC_MISS,"You","your target.");
-		target->Damage(this, 0, 0xffff, 0x07);
-	}
-	else {
-		const Item_Struct* RangeItem = RangeWeapon->GetItem();
-		const Item_Struct* AmmoItem = Ammo->GetItem();
-		uint16 WDmg = RangeItem->Common.Damage;
-		uint16 ADmg = AmmoItem->Common.Damage;
-		
-		uint16 levelBonus = (GetSTR()+GetLevel()+GetSkill(ARCHERY)) / 100;
-		uint16 MaxDmg = (WDmg+ADmg)*levelBonus;
-		
-		
-		switch(GetAA(aaArcheryMastery)) {
-			case 1:
-				MaxDmg = MaxDmg * 115/100;
-				break;
-			case 2:
-				MaxDmg = MaxDmg * 125/100;
-				break;
-			case 3:
-				MaxDmg = MaxDmg * 150/100;
-				break;
-		}
-		
-		sint32 TotalDmg = 0;
-		sint32 critDmg = 0;
-		
-		if(GetClass()==RANGER) {
-			critDmg = (sint32)(MaxDmg * 1.2);
-		}
-		
-		if(trueshot)
-			MaxDmg *= 2;	//up to 2X the damage
-		
-		if (MaxDmg == 0)
-			MaxDmg = 1;
-		TotalDmg = 1 + MakeRandomInt(0, MaxDmg);
-		if(target->IsClient()) { //Tone down pvp damage
-			if(critDmg>0)
-				critDmg-=critDmg/4;
-			TotalDmg-=TotalDmg/4;
-		}
-		// no crits before level 12 cap is maxed
-		if((GetClass()==RANGER)&&(GetSkill(ARCHERY)>65)&&((uint16)MakeRandomInt(0, 355) < (GetSkill(ARCHERY)+playerDex)/2)&&(chancetohit > 85)) {
-			if(target->IsNPC() && !target->IsMoving() && !target->IsRooted() && this->GetLevel()>50){
-				if(this->GetGM())
-					Message(0,"(GM ONLY) Doubling attack damage, npc isnt moving!");
-				critDmg*=2;
-			}
-			char val1[20]={0};
-			entity_list.MessageClose_StringID(this, false, 200, MT_CritMelee, CRITICAL_HIT, GetName(), ConvertArray(critDmg,val1));
-			//this->Message_StringID(MT_CritMelee,CRITICAL_HIT,GetName(),ConvertArray(critDmg,val1));
-			//this->Message(MT_CritMelee, "You score a critical hit!(%d)", critDmg);
-			target->Damage(this, critDmg, 0xffff, 0x07);
-		}
-		else {
-			if(GetClass()==RANGER && !target->IsMoving() && !target->IsRooted() && this->GetLevel()>50){
-				if(this->GetGM())
-					Message(0,"(GM ONLY) Doubling attack damage, npc isnt moving!");
-				TotalDmg*=2;
-			}
-			char hitname[64]={0};
-			strncpy(hitname,target->GetName(),strlen(target->GetName())-2);
-			//char val1[20]={0};
-			//Message_StringID(MT_Emote,HIT_NON_MELEE,"You",hitname,ConvertArray(TotalDmg,val1));
-			//this->Message(MT_Emote, "You Hit for a total of %d non-melee damage.", TotalDmg);
-			target->Damage(this, TotalDmg, 0xffff, 0x07);
-		}
-		
-		//TODO: check bane and elemental damages
-		
-		if(target && (target->GetHP() > -10))
-			TryWeaponProc(RangeItem, target);
-	}
-
-	// See if the player increases their skill - with cap
-	/*float wisebonus =  (GetWIS() > 200) ? 20 + ((GetWIS() - 200) * 0.05) : GetWIS() * 0.1;
-	
-	if (((55-(GetSkill(ARCHERY)*0.240))+wisebonus > MakeRandomFloat(0, 100)) && (GetSkill(ARCHERY)<(m_pp.level+1)*5) && GetSkill(ARCHERY) < 252)
-		this->SetSkill(ARCHERY,GetRawSkill(ARCHERY)+1);*/
-	CheckIncreaseSkill(ARCHERY);
-	
-	
-	//apparently we are supposed to trust the client to send
-	//us a delete request for the item instead...
-//	if(!GetAA(aaEndlessQuiver))
-//		DeleteItemInInventory(ammo_slot, 1, false);	//do we need the update, or is the client smart?
-	return;
-}
-
-void Client::ThrowingAttack(Mob* other) { //old was 51
-	const ItemInst* RangeWeapon = m_inv[SLOT_RANGE];
-	if(!RangeWeapon)
-		RangeWeapon = m_inv[SLOT_AMMO];
-	
-	if (!RangeWeapon || !RangeWeapon->IsType(ItemTypeCommon)) {
-		Message(0, "Error: Rangeweapon: GetItem(%i)==0, you have nothing to throw!", GetItemIDAt(SLOT_RANGE));
-		return;
-	}
-	
-	const Item_Struct* item = RangeWeapon->GetItem();
-	if(item->Common.ItemUse != ItemUseThrowing && item->Common.ItemUse != ItemUseThrowingv2) {
-		Message(0, "Error: Rangeweapon: GetItem(%i)==0, you have nothing useful to throw!", GetItemIDAt(SLOT_RANGE));
-		return;
-	}
-	 
-	uint8 WDmg = item->Common.Damage;
-	// Throw stuff
-	DoAnim(anim1HWeapon);		//same number as 1HS/1HB, this is prolly wrong..
-	sint32 TotalDmg = 0;
-	
-	// borrowed this from attack.cpp
-	// chance to hit
-	
-	float chancetohit;
-	if(target->IsNPC())
-		chancetohit = GetSkill(THROWING) / 3.75;
-	else
-		chancetohit = GetSkill(THROWING) / 4.75; //harder to hit players
-	
-	if (GetLevel()-target->GetLevel() < 0) {
-		chancetohit -= (float)((target->GetLevel()-GetLevel())*(target->GetLevel()-GetLevel()))/4;
-	}
-	
-	int16 targetagi = target->GetAGI();
-	int16 playerDex = (int16)GetDEX()/2;
-	
-	targetagi = (targetagi <= 200) ? targetagi:targetagi + ((targetagi-200)/5);
-	chancetohit -= (float)targetagi*0.05;
-	chancetohit += playerDex;
-	chancetohit = (chancetohit > 0) ? chancetohit+30:30;
-	chancetohit = chancetohit > 95 ? 95 : chancetohit; // cap to 95%
-	
-	uint8 levelBonus = (GetSTR()+GetLevel()+GetSkill(THROWING)) / 100;
-	uint8 MaxDmg = (WDmg)*levelBonus;
-	if (MaxDmg == 0)
-		MaxDmg = 1;
-	TotalDmg = 1 + MakeRandomInt(0, MaxDmg);
-	
-	// Hit?
-	if (MakeRandomFloat(0, 100) > chancetohit) {
-			target->Damage(this, 0, 0xffff, THROWING);
-	}
-	else {
-		//this->Message(MT_Emote, "You Hit for a total of %d damage.", TotalDmg);
-		target->Damage(this, TotalDmg, 0xffff, THROWING);
-	}
-	
-	if(target && (target->GetHP() > -10))
-		TryWeaponProc(item, target);
-	
-	// See if the player increases their skill - with cap
-	/*float wisebonus =  (GetWIS() > 200) ? 20 + ((GetWIS() - 200) * 0.05) : GetWIS() * 0.1;
-	
-	if (((55-(GetSkill(THROWING)/4))+wisebonus > MakeRandomInt(0, 100)) && GetSkill(THROWING) < (uint16)((GetLevel()*5)+5))
-		SetSkill(THROWING,GetRawSkill(THROWING)+1);*/
-	CheckIncreaseSkill(THROWING);
-	
-	//apparently we are supposed to trust the client to send
-	//us a delete request for the item instead...
-//	DeleteItemInInventory(SLOT_RANGE, 1, false);	//do we need the update, or is the client smart?
-	return;
-}
-
-void Mob::Taunt(NPC* who, bool always_succeed) {
-	if (who == NULL)
-		return;
-	
-	if (!always_succeed && IsClient())
-		CastToClient()->CheckIncreaseSkill(TAUNT);
-	
-	int level = GetLevel();
-	
-	// Check to see if we're already at the top of the target's hate list
-	if ((target->GetHateTop() != this) && (target->GetLevel() < level)) {
-		sint32 newhate, tauntvalue;
-
-		float tauntchance;
-		if(always_succeed) {
-			tauntchance = 101;
-		} else {
-			
-			// no idea how taunt success is actually calculated
-			// TODO: chance for level 50+ mobs should be lower
-			int level_difference = level - target->GetLevel();
-			if (level_difference <= 5) {
-				tauntchance = 25.0;	// minimum
-				tauntchance += tauntchance * (float)GetSkill(TAUNT) / 200.0;	// skill modifier
-				if (tauntchance > 65.0)
-					tauntchance = 65.0;
-			}
-			else if (level_difference <= 10) {
-				tauntchance = 30.0;	// minimum
-				tauntchance += tauntchance * (float)GetSkill(TAUNT) / 200.0;	// skill modifier
-				if (tauntchance > 85.0)
-					tauntchance = 85.0;
-			}
-			else if (level_difference <= 15) {
-				tauntchance = 40.0;	// minimum
-				tauntchance += tauntchance * (float)GetSkill(TAUNT) / 200.0;	// skill modifier
-				if (tauntchance > 90.0)
-					tauntchance = 90.0;
-			}
-			else {
-				tauntchance = 50.0;	// minimum
-				tauntchance += tauntchance * (float)GetSkill(TAUNT) / 200.0;	// skill modifier
-				if (tauntchance > 95.0)
-					tauntchance = 95.0;
-			}
-		}
-		if (tauntchance > MakeRandomFloat(0, 100)) {
-			// this is the max additional hate added per succesfull taunt
-			tauntvalue = (int)MakeRandomFloat(1, level * 10.0);
-			//tauntvalue = (sint32) ((float)level * 10.0 * (float)rand()/(float)RAND_MAX + 1);
-			// new hate: find diff of player's hate and whoever's at top of list, add that plus tauntvalue to players hate
-			newhate = who->CastToNPC()->GetNPCHate(who->CastToNPC()->GetHateTop()) - who->CastToNPC()->GetNPCHate(this) + tauntvalue;
-			// add the hate
-			who->CastToNPC()->AddToHateList(this, newhate);
-		}
-	}
 }
 
 bool Client::CheckDoubleAttack(bool AAadd, bool Triple) {

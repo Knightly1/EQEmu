@@ -132,16 +132,12 @@ bool SpawnGroupList::RemoveSpawnGroup(uint32 in_id) {
 
 
 
-//bool Database::PopulateZoneLists(char* zone_name, NPCType* &npc_type_array, uint32 &max_npc_type, LinkedList<Spawn*>& spawn_list, LinkedList<ZonePoint*>& zone_point_list, LinkedList<Spawn2*> &spawn2_list, SpawnGroupList* spawn_group_list)
-//bool Database::PopulateZoneLists(char* zone_name, NPCType* &npc_type_array, uint32 &max_npc_type, LinkedList<ZonePoint*>& zone_point_list, SpawnGroupList* spawn_group_list)
-bool Database::PopulateZoneLists(const char* zone_name, LinkedList<ZonePoint*>* zone_point_list, SpawnGroupList* spawn_group_list) {
+bool Database::LoadSpawnGroups(const char* zone_name, SpawnGroupList* spawn_group_list) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
 		
-	if(!LoadStaticZonePoints(zone_point_list,zone_name))
-		return false;
 	// CODER new spawn code
 	query = 0;
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT DISTINCT(spawngroupID), spawngroup.name FROM spawn2,spawngroup WHERE spawn2.spawngroupID=spawngroup.ID and zone='%s'", zone_name), errbuf, &result))

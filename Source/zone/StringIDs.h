@@ -166,6 +166,7 @@
 #define TARGET_NOT_FOUND 101 //Target player not found.
 #define ATTACKFAILED 12158 //%1 try to %2 %3, but %4!
 #define BACKSTAB_STRING 12199 //backstab
+#define BACKSTAB_WEAPON 12874 //You need a piercing weapon as your primary weapon in order to backstab
 #define BASH_STRING 12201 //bash
 #define HIT_STRING 12183 //hit
 #define CRUSH_STRING 12191 //crush

@@ -49,7 +49,7 @@
 	char*	MakeNameUnique(char* name);
 	static char*	RemoveNumbers(char* name);
 // signal quest command support
-	void	SignalMobsByNPCID(int32 snpc);
+	void	SignalMobsByNPCID(int32 npc_type, int signal_id);
 	void    RemoveEntity(int16 id);
 
 	sint32	DeleteNPCCorpses();

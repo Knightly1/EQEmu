@@ -214,11 +214,13 @@ union {
 /*244*/ int8	linkdead; // 0=Not LD, 1=LD 
 /*245*/ uint32	bodytype; // Bodytype 
 /*249*/	int8	guild_rank;
-/*250*/ int8	unknown249[4]; 
-/*254*/ uint32	pet_owner_id; 
-/*258*/ int16	deity; 
-/*260*/ int8	unknown260[31];
-/*291*/ char	title[64];	//not tested, just observed
+/*250*/ int8	unknown249[4];
+/*254*/ uint32	pet_owner_id;
+/*258*/ int16	deity;
+/*260*/ int8	unknown260[6];
+/*266*/ int8	findable;	//can be found with find command.
+/*267*/ int8	unknown267[40];
+/*291*/ char	title[48];	//not tested, just observed, len might be wrong
 /*355*/ int8	unknown355[16];
 /*0367*/ int32	unknown367[2];
 };
@@ -1414,7 +1416,7 @@ struct GMLastName_Struct {
 struct CombatAbility_Struct {
 	int32 m_id;
 	int32 m_atk;
-	int32 m_type;
+	int32 m_skill;
 };
 
 //Instill Doubt
@@ -2318,9 +2320,11 @@ struct ApproveWorld_Struct {
 
 struct ClientError_Struct
 {
-/*00000*/	char	unknown0000[69];
+/*00001*/	char	type;
+/*00001*/	char	unknown0001[69];
 /*00069*/	char	character_name[64];
-/*00133*/	char	message[32067];
+/*00134*/	char	unknown134[192];
+/*00133*/	char	message[31994];
 /*32136*/
 };
 
@@ -2775,6 +2779,25 @@ struct TempMerchantList{
 	uint32	charges; //charges/quantity
 	uint32	origslot;
 };
+
+
+struct FindPerson_Point {
+	float y;
+	float x;
+	float z;
+};
+
+struct FindPersonRequest_Struct {
+	uint32	npc_id;
+	FindPerson_Point client_pos;
+};
+
+//variable length packet of points
+struct FindPersonResult_Struct {
+	FindPerson_Point dest;
+	FindPerson_Point path[0];	//last element must be the same as dest
+};
+
 
 //old structures live here:
 #include "eq_old_structs.h"

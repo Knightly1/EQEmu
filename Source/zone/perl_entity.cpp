@@ -28,6 +28,7 @@
 #include "features.h"
 #ifdef EMBPERL_XS_CLASSES
 #include "embperl.h"
+#include "../common/debug.h"
 
 #include "entity.h"
 
@@ -1116,15 +1117,12 @@ XS(XS_EntityList_SignalMobsByNPCID); /* prototype to pass -Wmissing-prototypes *
 XS(XS_EntityList_SignalMobsByNPCID)
 {
 	dXSARGS;
-	if (items != 2 && items != 3)
-		Perl_croak(aTHX_ "Usage: EntityList::SignalMobsByNPCID(THIS, npc_type[, signal_id])");
-
+	if (items != 3)
+		Perl_croak(aTHX_ "Usage: EntityList::SignalMobsByNPCID(THIS, npc_type, signal_id)");
 	{
 		EntityList *		THIS;
-		int32		snpc = (int32)SvUV(ST(1));
-		int32		signal_id = 0;
-		if(items == 3)
-			signal_id = (int32)SvUV(ST(2));
+		int32		npc_type = (int32)SvUV(ST(1));
+		int		signal_id = (int)SvIV(ST(2));
 
 		if (sv_derived_from(ST(0), "EntityList")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -1133,7 +1131,7 @@ XS(XS_EntityList_SignalMobsByNPCID)
 		else
 			Perl_croak(aTHX_ "THIS is not of type EntityList");
 
-		THIS->SignalMobsByNPCID(snpc, signal_id);
+		THIS->SignalMobsByNPCID(npc_type, signal_id);
 	}
 	XSRETURN_EMPTY;
 }
@@ -1459,7 +1457,7 @@ XS(boot_EntityList)
 		newXSproto(strcpy(buf, "OpenDoorsNear"), XS_EntityList_OpenDoorsNear, file, "$$");
 		newXSproto(strcpy(buf, "MakeNameUnique"), XS_EntityList_MakeNameUnique, file, "$$");
 		newXSproto(strcpy(buf, "RemoveNumbers"), XS_EntityList_RemoveNumbers, file, "$$");
-		newXSproto(strcpy(buf, "SignalMobsByNPCID"), XS_EntityList_SignalMobsByNPCID, file, "$$");
+		newXSproto(strcpy(buf, "SignalMobsByNPCID"), XS_EntityList_SignalMobsByNPCID, file, "$$$");
 		newXSproto(strcpy(buf, "RemoveEntity"), XS_EntityList_RemoveEntity, file, "$$");
 		newXSproto(strcpy(buf, "DeleteNPCCorpses"), XS_EntityList_DeleteNPCCorpses, file, "$");
 		newXSproto(strcpy(buf, "DeletePlayerCorpses"), XS_EntityList_DeletePlayerCorpses, file, "$");

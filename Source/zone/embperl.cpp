@@ -106,10 +106,10 @@ Embperl::Embperl()
 	perl_run(my_perl);
 	
 	//a little routine we use a lot.
-	eval_pv("sub my_eval {eval $_[0];}",true);
+	eval_pv("sub my_eval {eval $_[0];}",TRUE);
 	
 	//ruin the perl exit command:
-	eval_pv("sub my_exit {}",true);
+	eval_pv("sub my_exit {}",TRUE);
 	if(gv_stashpv("CORE::GLOBAL", FALSE)) {
 		GV *exitgp = gv_fetchpv("CORE::GLOBAL::exit", TRUE, SVt_PVCV);
 		GvCV(exitgp) = perl_get_cv("my_exit", TRUE);
@@ -117,7 +117,7 @@ Embperl::Embperl()
 	}
 	
 	//ruin the perl sleep command:
-	eval_pv("sub my_sleep {}",true);
+	eval_pv("sub my_sleep {}",TRUE);
 	if(gv_stashpv("CORE::GLOBAL", FALSE)) {
 		GV *sleepgp = gv_fetchpv("CORE::GLOBAL::sleep", TRUE, SVt_PVCV);
 		GvCV(sleepgp) = perl_get_cv("my_sleep", TRUE);
@@ -137,14 +137,14 @@ Embperl::Embperl()
 	
 #ifdef EMBPERL_IO_CAPTURE
 	//make a tieable class to capture IO and pass it into EQEMuLog
-	eval_pv("package EQEmuIO; "
-			"&boot_EQEmuIO;"
- 			"sub TIEHANDLE { bless {}, $_[0]; } } "
+	eval("package EQEmuIO; "
+//			"&boot_EQEmuIO;"
+ 			"sub TIEHANDLE { bless {}, $_[0]; } "
   			"sub PRINTF { my $me = shift; $me->PRINT(sprintf(@_)); } "
-  			"package plugin;"
+  			"package quest;"
   			"tie *STDOUT, 'EQEmuIO';"
   			"tie *STDERR, 'EQEmuIO';"
-  		, true);
+  		);
 #endif //EMBPERL_IO_CAPTURE
 	
 #ifdef EMBPERL_PLUGIN
@@ -206,6 +206,7 @@ Embperl::~Embperl()
 #ifdef EMBPERL_IO_CAPTURE
 	//clean up our handles so perl dosent puke its guts out
 	eval(
+  			"package quest;"
   			"untie *STDOUT;"
   			"untie *STDERR;"
   	);

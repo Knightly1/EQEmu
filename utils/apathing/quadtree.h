@@ -2,7 +2,7 @@
 #define FPQUADTREE_H
 
 //pull in datatypes from zone's map.h
-#include "../zone/fearpath.h"
+#include "../zone/pathing.h"
 #include "gpoint.h"
 
 /*
@@ -50,7 +50,7 @@ public:
 	unsigned long countQTNodes() const;	//counts QT nodes
 	unsigned long countPathNodes() const;	//counts PathNodes
 	
-	void fillBlocks(PathTree_Struct *heads, FearPointRef *flist, unsigned long &hindex, unsigned long &findex);
+	void fillBlocks(PathTree_Struct *heads, PathPointRef *flist, unsigned long &hindex, unsigned long &findex);
 	
 	float minx;
 	float miny;

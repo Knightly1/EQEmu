@@ -46,6 +46,7 @@ int cross_add_count = 0;
 int los_cache_misses = 0;
 int los_cache_hits = 0;
 
+/*
 //ye-olde prototypes
 void repair_a_high_waypoint(Map *map, PathNode *it);
 void repair_high_waypoints(Map *map, list<PathGraph*> &db_paths, list<PathNode*> &db_spawns);
@@ -67,7 +68,7 @@ void rebuild_node_list(list<PathEdge *> &edges, list<PathNode *> &nodes, list<Pa
 void DrawGradientLine(gdImagePtr im, GPoint *first, GPoint *second, vector<ColorRecord> &colors);
 void allocateGradient(gdImagePtr im, float r1, float g1, float b1, float r2, float g2, float b2, 
 	float min, float max, float divs, vector<ColorRecord> &colors);
-
+*/
 
 void repair_a_high_waypoint(Map *map, PathNode *it) {
 	VERTEX pt, res;
@@ -712,7 +713,8 @@ RESTART_CLOSEST_COMBINE:
 }
 */
 
-void link_spawns(Map *map, PathGraph *big, list<PathNode*> &db_spawns) {
+void link_spawns(Map *map, PathGraph *big, list<PathNode*> &db_spawns, 
+  float maxdist, map< pair<PathNode *, PathNode *>, bool > *edgelist) {
 /*
 
 run algorithm to connect all spawn points to the big grid
@@ -735,21 +737,15 @@ run algorithm to connect all spawn points to the big grid
 	
 	printf("Linking (%d dots)", db_spawns.size());
 	fflush(stdout);
-#ifdef SPAWN_LINK_TWICE
 	float md2 = SPAWN_MIN_SECOND_DIST*SPAWN_MIN_SECOND_DIST;
-#endif
-	float maxdist2 = MAX_LINK_SPAWN_DIST*MAX_LINK_SPAWN_DIST;
+	float maxdist2 = maxdist*maxdist;
 	
 	float dist,tmp;
 	PathNode *closest = NULL;
-#ifdef SPAWN_LINK_TWICE
 	float dist2;
 	PathNode *closest2 = NULL;
-#ifdef SPAWN_LINK_THRICE
 	float dist3;
 	PathNode *closest3 = NULL;
-#endif
-#endif
 	
 	VERTEX p1, liz_res /*, p2*/;
 	
@@ -781,21 +777,32 @@ run algorithm to connect all spawn points to the big grid
 		
 		dist = 999999e100f;
 		closest = NULL;
-#ifdef SPAWN_LINK_TWICE
 		dist2 = 999999e100f;
 		closest2 = NULL;
-#ifdef SPAWN_LINK_THRICE
 		dist3 = 999999e100f;
 		closest3 = NULL;
-#endif
-#endif
 		
 		cur = big->nodes.begin();
 		end = big->nodes.end();
 		for(; cur != end; cur++) {
 			if(n == *cur)
 				continue;	//dont link to ourself
+			
+			//if an edge list was supplied, make sure this edge isnt on it
+			if(edgelist) {
+				pair<PathNode *, PathNode *> id;
+				if(int32(n) < int32(*cur)) {
+					id.first = *cur;
+					id.second = n;
+				} else {
+					id.first = n;
+					id.second = *cur;
+				}
+				if(edgelist->find(id) != edgelist->end())
+					continue;	//found in the list
+			}
 
+			//get the distance between the 
 			tmp = n->Dist2(*cur);
 			if(tmp > dist2)
 				continue;
@@ -814,50 +821,41 @@ run algorithm to connect all spawn points to the big grid
 			//we can see to it, see if its closer
 			if(tmp < dist) {
 				//its a new closest
-#ifdef SPAWN_LINK_TWICE
+				
 				//see if we bump #2
-				if(closest && dist < dist2 && closest->Dist2(*cur) > md2) {
+				if(SPAWN_LINK_TWICE && closest && dist < dist2 && closest->Dist2(*cur) > md2) {
 					//the old #1 replaces #2
-#ifdef SPAWN_LINK_THRICE
 					//see if we bump #3
-					if(closest2 && dist2 < dist3 
+					if(SPAWN_LINK_THRICE && closest2 && dist2 < dist3 
 						&& closest2->Dist2(*cur) > md2
 						&& closest2->Dist2(closest) > md2) {
 						dist3 = dist2;
 						closest3 = closest2;
 					}
-#endif
 					dist2 = dist;
 					closest2 = closest;
 				}
-#endif
 					
 				dist = tmp;
 				closest = *cur;
 			}
 			//we can assume closest is set, or else we would never get here
-#ifdef SPAWN_LINK_TWICE
-			 else if(tmp < dist2 && closest->Dist2(*cur) > md2) {
-#ifdef SPAWN_LINK_THRICE
+			 else if(SPAWN_LINK_TWICE && tmp < dist2 && closest->Dist2(*cur) > md2) {
 				//see if we bump #3
-				if(closest2 && dist2 < dist3 
+				if(SPAWN_LINK_THRICE && closest2 && dist2 < dist3 
 					&& closest2->Dist2(*cur) > md2
 					&& closest2->Dist2(closest) > md2) {
 					dist3 = dist2;
 					closest3 = closest2;
 				}
-#endif
 				dist2 = tmp;
 				closest2 = *cur;
 			}
 			//we can assume closest and closest2 are set, or else we would never get here
-#ifdef SPAWN_LINK_THRICE
-			 else if(tmp < dist3 && closest->Dist2(*cur) > md2 && closest2->Dist2(*cur) > md2) {
+			 else if(SPAWN_LINK_THRICE && tmp < dist3 && closest->Dist2(*cur) > md2 && closest2->Dist2(*cur) > md2) {
 				dist3 = tmp;
 				closest3 = *cur;
 			 }
-#endif	//SPAWN_LINK_THRICE
-#endif	//SPAWN_LINK_TWICE
 		}
 		
 		if(closest == NULL || dist > maxdist2) {
@@ -869,11 +867,12 @@ run algorithm to connect all spawn points to the big grid
 /*printf("SL (%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f) d2=%.3f\n",
 		n->x, n->y, n->z,
 		closest->x, closest->y, closest->z, n->Dist2(closest));
-*/		link_spawn_count++;
+		link_spawn_count++;
+*/		
+		
 		big->add_edge(n, closest);
 		
-#ifdef SPAWN_LINK_TWICE
-		if(closest2 && dist2 < maxdist2) {
+		if(SPAWN_LINK_TWICE && closest2 && dist2 < maxdist2) {
 
 /*printf("SL2 (%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f) d2=%.3f\n",
 		n->x, n->y, n->z,
@@ -881,8 +880,7 @@ run algorithm to connect all spawn points to the big grid
 */			big->add_edge(n, closest2);
 			link_spawn2_count++;
 		}
-#ifdef SPAWN_LINK_THRICE
-		if(closest3 && dist3 < maxdist2) {
+		if(SPAWN_LINK_THRICE && closest3 && dist3 < maxdist2) {
 
 /*printf("SL3 (%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f) d2=%.3f\n",
 		n->x, n->y, n->z,
@@ -890,10 +888,6 @@ run algorithm to connect all spawn points to the big grid
 */			big->add_edge(n, closest3);
 			link_spawn3_count++;
 		}
-#endif	//SPAWN_LINK_THRICE
-#endif	//SPAWN_LINK_TWICE
-	
-		
 	}
 	
 	printf("\n");
@@ -1068,6 +1062,9 @@ RESTART_GRID_CLEAN:
 			if(!CheckLOS(map, n, f))
 				continue;
 #endif
+			//cant merge two forced nodes
+			if(n->forced && f->forced)
+				continue;
 
 			//passed the checks, lets merge with it.
 			merge = true;
@@ -1076,6 +1073,15 @@ RESTART_GRID_CLEAN:
 //		printf("checked %d, merge? %d\n", cur_pos, merge);
 		if(merge) {
 			f = *cur2;
+			
+			//normally we merge into n, from f.
+			//if f is forced, then we must reverse that...
+			if(f->forced) {
+				*cur = f;		//swap them in the array
+				PathNode *tmp = f;
+				f = n;
+				n = tmp;
+			}
 			
 			//steal all its edges...
 			//changing references to old node to point to the other node
@@ -1855,7 +1861,7 @@ QTNode *build_quadtree(Map *map, PathGraph *big) {
 	return(_root);
 }
 
-bool write_path_file(QTNode *_root, PathGraph *big, const char *file) {
+bool write_path_file(QTNode *_root, PathGraph *big, const char *file, vector< vector<PathEdge*> > &path_finding) {
 	if(_root == NULL)
 		return(false);
 	
@@ -1905,6 +1911,10 @@ bool write_path_file(QTNode *_root, PathGraph *big, const char *file) {
 		(*cur)->node_id = index;
 	}
 	
+	//maps to get edge list offsets for our pathing stuff
+	std::map<PathEdge *, PathLinkOffsetRef> to_edges;
+	std::map<PathEdge *, PathLinkOffsetRef> from_edges;
+	
 	uint32 eoffset = 0;
 	//fill the node block and edge block,  N*E complexity
 	cur = big->nodes.begin();
@@ -1934,6 +1944,7 @@ bool write_path_file(QTNode *_root, PathGraph *big, const char *file) {
 				curl = &linkBlock[eoffset];
 				curl->dest_node = e->to->node_id;
 				curl->reach = e->normal_reach;
+				from_edges[e] = ecount;
 				ecount++;
 				eoffset++;
 //				curl++;
@@ -1941,13 +1952,14 @@ bool write_path_file(QTNode *_root, PathGraph *big, const char *file) {
 				curl = &linkBlock[eoffset];
 				curl->dest_node = e->from->node_id;
 				curl->reach = 1 + e->reverse_reach;
+				to_edges[e] = ecount;
 				ecount++;
 				eoffset++;
 //				curl++;
 			}
 		}
-		if(ecount > 255) {
-			printf("ERROR: a node has more than 255 links, number will be truncated!");
+		if(ecount >= PATH_LINK_OFFSET_NONE) {
+			printf("ERROR: a node has more than %d links, number will be truncated!", PATH_LINK_OFFSET_NONE-1);
 		}
 		curn->link_count = ecount;
 //printf("Used up to slot %d of %d in links\n", eoffset, head.link_count);
@@ -1973,7 +1985,7 @@ bool write_path_file(QTNode *_root, PathGraph *big, const char *file) {
 	
 	//make our node blocks to write out...
 	PathTree_Struct *qtnodes = new PathTree_Struct[head.qtnode_count];
-	FearPointRef *nodelist = new FearPointRef[head.nodelist_count];
+	PathPointRef *nodelist = new PathPointRef[head.nodelist_count];
 	if(qtnodes == NULL || nodelist == NULL) {
 		printf("Error allocating temporary memory for output.\n");
 		fclose(out);
@@ -1990,15 +2002,57 @@ bool write_path_file(QTNode *_root, PathGraph *big, const char *file) {
 		fclose(out);
 		return(false);
 	}
-	if(fwrite(nodelist, sizeof(FearPointRef), head.nodelist_count, out) != head.nodelist_count) {
+	if(fwrite(nodelist, sizeof(PathPointRef), head.nodelist_count, out) != head.nodelist_count) {
 		printf("Error writting path file nodelist.\n");
 		fclose(out);
 		return(false);
 	}
 	
-	fclose(out);
 	delete[] qtnodes;
 	delete[] nodelist;
+	
+	//assumes that path_finding is not empty
+	PathLinkOffsetRef *refs = new PathLinkOffsetRef[head.node_count];
+	//finally make our path finding blocks.
+	std::map<PathEdge *, PathLinkOffsetRef>::iterator rese, ende;
+	vector< vector<PathEdge*> >::iterator curoe, endoe;
+	vector<PathEdge*>::iterator curie, endie;
+	curoe = path_finding.begin();
+	endoe = path_finding.end();
+	int o,i;
+	for(i = 0; curoe != endoe; curoe++, i++) {
+		curie = (*curoe).begin();
+		endie = (*curoe).end();
+		for(o = 0; curie != endie; curie++, o++) {
+			e = *curie;
+			if(e == NULL) {	//not reachable
+				refs[o] = PATH_LINK_OFFSET_NONE;
+				continue;
+			}
+			if(e->from->node_id == i) {
+				rese = to_edges.find(e);
+				ende = to_edges.end();
+			} else {	//assume to == i
+				rese = from_edges.find(e);
+				ende = from_edges.end();
+			}
+			if(rese == ende) {
+				//not found in map... should this happen?
+				refs[o] = PATH_LINK_OFFSET_NONE;
+				continue;
+			}
+			refs[o] = rese->second;
+		}
+		
+		if(fwrite(refs, sizeof(PathLinkOffsetRef), head.node_count, out) != head.node_count) {
+			printf("Error writting path file's pathing information for node %d/%d.\n", i, head.node_count);
+			fclose(out);
+			return(false);
+		}
+	}
+	delete[] refs;
+	
+	fclose(out);
 	
 	return(true);
 }
@@ -2023,6 +2077,33 @@ void edge_stats(list<PathEdge *> &edges, const char *s) {
 	}
 }*/
 
+void find_node_edges(PathGraph *big,
+	std::map<PathNode*, vector<PathEdge*> > &node_edges) {
+	list<PathEdge*>::iterator curE,endE;
+	PathEdge *e;
+	
+	curE = big->edges.begin();
+	endE = big->edges.end();
+	for(; curE != endE; curE++) {
+		e = *curE;
+		
+		if(node_edges.count(e->from) == 1) {
+			node_edges[e->from].push_back(e);
+		} else {
+			vector<PathEdge*> t(1);
+			t[0] = e;
+			node_edges[e->from] = t;
+		}
+		
+		if(node_edges.count(e->to) == 1) {
+			node_edges[e->to].push_back(e);
+		} else {
+			vector<PathEdge*> t(1);
+			t[0] = e;
+			node_edges[e->to] = t;
+		}
+	}
+}
 
 
 

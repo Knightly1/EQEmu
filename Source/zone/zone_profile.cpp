@@ -22,6 +22,7 @@
 #include "zone_profile.h"
 #include "../common/common_profile.h"
 #include "../common/timer.h"
+#include "../common/rdtsc.h"
 
 #include <time.h>
 #include <string.h>

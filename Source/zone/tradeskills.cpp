@@ -232,6 +232,10 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 		user->QueuePacket(outapp);
 		safe_delete(outapp);
 		database.DeleteWorldContainer(worldo->m_id, zone->GetZoneID());
+		if(success && spec.replace_container) {
+			//should report this error, but we dont have the recipe ID, so its not very useful
+			LogFile->write(EQEMuLog::Error, "Replace container combine executed in a world container.");
+		}
 	} else{
 		for (uint8 i=0; i<10; i++){
 			const ItemInst* inst = container->GetItem(i);
@@ -355,6 +359,7 @@ void Object::HandleAutoCombine(Client* user, const RecipeAutoCombine_Struct* rac
 		if(items[r] == 0 || counts[r] == 0)
 			continue;	//skip empties, could prolly break here
 		
+		//we have to loop here to delete 1 at a time in case its in multiple stacks.
 		for(k = 0; k < counts[r]; k++) {
 			slot = user_inv.HasItem(items[r], 1, invWherePersonal);
 			if(slot == SLOT_INVALID) {

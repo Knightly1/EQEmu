@@ -12,7 +12,8 @@
 #include "../common/linked_list.h"
 #include "../common/queue.h"
 #include "../common/timer.h"
-
+#include "../common/timeoutmgr.h"
+#include "../common/Condition.h"
 
 class DBcore {
 public:
@@ -44,13 +45,12 @@ private:
 
 };
 
-class DBAsync;
 class DBAsyncFinishedQueue;
 class DBAsyncWork;
 class DBAsyncQuery;
 
 // Big daddy that owns the threads and does the work
-class DBAsync {
+class DBAsync : private Timeoutable {
 public:
 	enum Status { AddingWork, Queued, Executing, Finished, Canceled };
 	enum Type { Read, Write, Both };
@@ -65,11 +65,16 @@ public:
 
 	void	AddFQ(DBAsyncFinishedQueue* iDBAFQ);
 protected:
+	//things related to the processing thread:
 	friend ThreadReturnType DBAsyncLoop(void* tmp);
 	Mutex	MLoopRunning;
+	Condition CInList;
 	bool	RunLoop();
 	void	Process();
+	
 private:
+	virtual void CheckTimeout();
+	
 	void	ProcessWork(DBAsyncWork* iWork, bool iSleep = true);
 	void	DispatchWork(DBAsyncWork* iWork);
 	inline	int32	GetNextID()		{ return pNextID++; }
@@ -82,7 +87,6 @@ private:
 
 	DBcore*	pDBC;
 	int32	pNextID;
-	Timer*	pTimeoutCheck;
 	Mutex	MInList;
 	LinkedList<DBAsyncWork*> InList;
 

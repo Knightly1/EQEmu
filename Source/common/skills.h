@@ -43,7 +43,7 @@
 #define DIVINATION			18
 #define DODGE				19
 #define DOUBLE_ATTACK		20
-#define DRAGON_PUNCH		21
+#define DRAGON_PUNCH		21		//aka Tail Rake
 #define DUAL_WIELD			22
 #define EAGLE_STRIKE		23
 #define EVOCATION			24

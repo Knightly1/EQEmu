@@ -28,27 +28,34 @@ typedef enum {
 	BT_Extraplanar		= 6,
 	BT_Magical			= 7,	//this name might be a bit off, 
 	BT_SummonedUndead	= 8,
-	
+	//					...
 	BT_NoTarget			= 11,	// can't target this bodytype
 	BT_Vampire			= 12,
-	//Atenha Ra			  13
-	//Greater Akheva	  14
-	//Khati Sha			  15
+	BT_Atenha_Ra		= 13,
+	BT_Greater_Akheva	= 14,
+	BT_Khati_Sha		= 15,
+	//					...
 	BT_Zek				= 19,
+	BT_Luggald			= 20,
 	BT_Animal			= 21,
 	BT_Insect			= 22,
 	BT_Monster			= 23,
-	BT_Summoned			= 24,
+	BT_Summoned			= 24,	//Elemental?
 	BT_Plant			= 25,
 	BT_Dragon			= 26,
 	BT_Summoned2		= 27,
 	BT_Summoned3		= 28,
+	//					  29
 	BT_VeliousDragon	= 30,	//might not be a tight set
+	//					...
 	BT_Dragon3			= 32,
 	BT_Boxes			= 33,
-	BT_DiscordMob		= 34,	//tribal dudes
+	BT_Muramite			= 34,	//tribal dudes
+	//					...
 	BT_NoTarget2		= 60,
-	BT_SwarmPet		= 63,	//is this valid, or made up?
+	//					...
+	BT_SwarmPet			= 63,	//is this valid, or made up?
+	//					...
 	BT_Special			= 67
 } bodyType;
 /* bodytypes above 64 make the mob not show up */

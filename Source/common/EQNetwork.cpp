@@ -19,6 +19,13 @@
  * EQNetwork classes, by Quagmire
 */
 
+#define RECV_GRANULATIRY 5	//in ms (sleep time between checks)
+#define SEND_WAIT 10		//preform send operations every ## recv loops
+#define NET_COMPRESS_SIZE 256	//packets longer than this get compressed
+
+#define DATA_RESEND_DELAY_IDLE 300	//ms to wait before resend when the connection is somewhat idle
+#define DATA_RESEND_DELAY 500		//ms to wait before resend under any load
+
 #include "../common/debug.h"
 
 #include <iostream>
@@ -72,7 +79,8 @@ type  HI_LOSWAPshort (type a) {return (LO_BYTE(a)<<8) | (HI_BYTE(a)>>8);}
 template <typename type>                    // HI_LOSWAPlong
 type  HI_LOSWAPlong (type x) {return (LO_WORD(a)<<16) | (HIWORD(a)>>16);}  
 
-EQNetworkServer::EQNetworkServer(int16 iPort) {
+EQNetworkServer::EQNetworkServer(int16 iPort)
+{
 	RunLoop = false;
 	pPort = iPort;
 	pOpen = false;
@@ -82,6 +90,7 @@ EQNetworkServer::EQNetworkServer(int16 iPort) {
 	WSAStartup (version, &wsadata);
 #endif
 	sock = 0;
+	send_ticks = 0;
 }
 
 EQNetworkServer::~EQNetworkServer() {
@@ -213,7 +222,8 @@ void EQNetworkServer::Process() {
 
     from.sin_family = AF_INET;
     fromlen = sizeof(from);
-
+	
+	//receive any packets waiting in our in queue
 	while (1) {
 #ifdef WIN32
 		status = recvfrom(sock, (char *) buffer, sizeof(buffer), 0,(struct sockaddr*) &from, (int *) &fromlen);
@@ -227,10 +237,19 @@ void EQNetworkServer::Process() {
 			break;
 		}
 	}
-
+	
+	//watch our tic timer to see if we wanna try to send stuff yet
+	if(send_ticks < SEND_WAIT) {
+		send_ticks++;
+		return;
+	}
+	send_ticks = 0;
+	
+	//give connections a chance to do something.
 	map <string, EQNetworkConnection*>::iterator connection;
 	for (connection = connection_list.begin( ); connection != connection_list.end( );)
 	{
+		//clean up NULL connections
 		if(!connection->second)
 		{
 			map <string, EQNetworkConnection*>::iterator tmp=connection;
@@ -239,12 +258,15 @@ void EQNetworkServer::Process() {
 			continue;
 		}
 		EQNetworkConnection* eqnc_data = connection->second; 
+		//watch for free or inactive connections
 		if (eqnc_data->IsFree() && (!eqnc_data->CheckNetActive())) { 
 			map <string, EQNetworkConnection*>::iterator tmp=connection;
 			connection++;
 			safe_delete(eqnc_data);
 			connection_list.erase(tmp);
-		} 
+		}
+		//else, if the connection is not running its own loop thread
+		//allow it to process here...
 		else if(!eqnc_data->RunLoop) {
 			eqnc_data->Process(sock);
 			connection++;
@@ -337,7 +359,7 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 			_CP(EQNetworkServerLoop);
 			eqns->Process();
 		}
-		Sleep(1);
+		Sleep(RECV_GRANULATIRY);
 	}
 	eqns->MLoopRunning.unlock();
 #ifdef WIN32
@@ -360,17 +382,17 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 	}
 #endif
 	eqnc->MLoopRunning.lock();
-	Timer* tmp_timer = new Timer(100);
-	tmp_timer->Start();
+//	Timer* tmp_timer = new Timer(100);
+//	tmp_timer->Start();
 	while (eqnc->RunLoop) {
 		{
 			_CP(EQNetworkConnectionInLoop);
-			if(tmp_timer->Check())
+//			if(tmp_timer->Check())
 				eqnc->DoRecvData();
 		}
-		Sleep(1);
+		Sleep(100);
 	}
-	safe_delete(tmp_timer);
+//	safe_delete(tmp_timer);
 	eqnc->MLoopRunning.unlock();
 #ifdef WIN32
 	_endthread();
@@ -392,17 +414,17 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 	}
 #endif
 	eqnc->MLoopRunning.lock();
-	Timer* tmp_timer = new Timer(100);
-	tmp_timer->Start();
+//	Timer* tmp_timer = new Timer(100);
+//	tmp_timer->Start();
 	while (eqnc->RunLoop) {
 		{
 			_CP(EQNetworkConnectionOutLoop);
-			if(tmp_timer->Check())
+//			if(tmp_timer->Check())
 				eqnc->Process(eqnc->outsock);
 		}
-		Sleep(1);
+		Sleep(100);
 	}
-	safe_delete(tmp_timer);
+//	safe_delete(tmp_timer);
 	eqnc->MLoopRunning.unlock();
 #ifdef WIN32
 	_endthread();
@@ -411,7 +433,11 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 #endif
 }
 	
-EQNetworkConnection::EQNetworkConnection(int32 irIP, int16 irPort) {
+EQNetworkConnection::EQNetworkConnection(int32 irIP, int16 irPort)
+#ifdef COMBINED
+: combined_timer(COMBINE_PERIOD)
+#endif
+ {
 	ConnectionType = Incomming;
 	rIP = irIP;
 	rPort = irPort;
@@ -430,9 +456,11 @@ EQNetworkConnection::EQNetworkConnection(int32 irIP, int16 irPort) {
 	datarate_timer = new Timer(100, true);
 //	datakeepalive_timer = new Timer(1000);
 #ifdef COMBINED
+	ImplicitCombinedPacket = NULL;
 	CombinedPacket = NULL;
-	combined_timer = new Timer(300);
-	combined_timer->Start();
+	last_opcode = 0;
+	implicit_counter_offset = 0;
+	combined_timer.Disable();
 #endif
 	SetDataRate(500);
 	if (rIP && rPort)
@@ -442,7 +470,11 @@ EQNetworkConnection::EQNetworkConnection(int32 irIP, int16 irPort) {
 #endif
 }
 
-EQNetworkConnection::EQNetworkConnection() {
+EQNetworkConnection::EQNetworkConnection() 
+#ifdef COMBINED
+: combined_timer(COMBINE_PERIOD)
+#endif
+{
 #ifdef WIN32
 	WORD version = MAKEWORD (1,1);
 	WSADATA wsadata;
@@ -466,9 +498,11 @@ EQNetworkConnection::EQNetworkConnection() {
 	queue_check_timer = new Timer(2000);
 	datarate_timer = new Timer(100, true);
 #ifdef COMBINED
+	ImplicitCombinedPacket = NULL;
 	CombinedPacket = NULL;
-	combined_timer = new Timer(300);
-	combined_timer->Start();
+	last_opcode = 0;
+	implicit_counter_offset = 0;
+	combined_timer.Disable();
 #endif
 	SetDataRate(500);
 #ifdef PACKET_PROFILER
@@ -501,17 +535,13 @@ EQNetworkConnection::~EQNetworkConnection() {
 		APPLAYER::PacketUsed(&app);
 	}
 #ifdef COMBINED
-	if(CombinedPacket)
-		safe_delete(CombinedPacket);
+	safe_delete(CombinedPacket);
 #endif
 	
 	safe_delete(timeout_timer);
 	safe_delete(no_ack_sent_timer);
 	safe_delete(keep_alive_timer);
 	safe_delete(datarate_timer);
-#ifdef COMBINED
-	safe_delete(combined_timer);
-#endif
 //	safe_delete(datakeepalive_timer);
 }
 
@@ -635,14 +665,8 @@ void EQNetworkConnection::QueuePacket(const APPLAYER* app, bool ackreq) {
 	if (!app) {
 		ThrowError("EQNetworkConnection::QueuePacket(): app = 0!");
 	}
-	if (!CheckActive())
-		return;
-	InQueue_Struct* iqs = new InQueue_Struct;
-	iqs->app = app->Copy();
-	iqs->ackreq = ackreq;
-	MInQueueLock.lock();
-	InQueue.push(iqs);
-	MInQueueLock.unlock();
+	APPLAYER* c = app->Copy();
+	FastQueuePacket(&c, ackreq);
 }
 
 void EQNetworkConnection::FastQueuePacket(APPLAYER** app, bool ackreq) {
@@ -654,7 +678,11 @@ void EQNetworkConnection::FastQueuePacket(APPLAYER** app, bool ackreq) {
 		APPLAYER::PacketUsed(app);
 		return;
 	}
-
+	
+	if(((*app)->opcode & FLAG_COMPRESSED) == 0 && (*app)->size > NET_COMPRESS_SIZE) {
+		(*app)->Deflate();
+	}
+	
 	InQueue_Struct* iqs = new InQueue_Struct;
 	iqs->app = *app;
 	*app = 0;
@@ -838,16 +866,20 @@ void EQNetworkConnection::Process(int sock)
 	_CP(EQNetworkConnection_Process);
 	if (!CheckNetActive())
 		return;
-	InQueue_Struct* iqs = 0;
+	InQueue_Struct* iqs = NULL;
 	while ((iqs = InQueuePop())) {
 		MakeEQPacket(iqs->app, iqs->ackreq);
 //		safe_delete(iqs->app);
 		APPLAYER::PacketUsed(&iqs->app);
-		delete iqs;
+		safe_delete(iqs);
 	}
+	
 #ifdef COMBINED
-	CreateCombinedPacket();
+	if(combined_timer.Check()) {
+		SendCombinedPackets();
+	}
 #endif 
+	
 	if (timeout_timer->Check()) {
 		#if EQN_DEBUG_Error >= 1
 			cout << "Connection timeout." << endl;
@@ -855,6 +887,7 @@ void EQNetworkConnection::Process(int sock)
 		Close();
 //		SetState(EQNC_Error);
 	}
+	
 	fraglist.CheckTimers();
 	
 	if (datarate_timer->Check(0))
@@ -912,7 +945,7 @@ void EQNetworkConnection::Process(int sock)
 		// Fixed this, there's no datarate setting in world, so it was using the default in the constructor (500), now set to 5
 //		if (((pack->LastSent + 750) <= Timer::GetCurrentTime()) || (datahigh < 5 && (pack->LastSent + 500) <= Timer::GetCurrentTime())) {
 //#else
-		if (((pack->LastSent + 500) <= Timer::GetCurrentTime()) || (datahigh < 5 && (pack->LastSent + 250) <= Timer::GetCurrentTime())) {
+		if (((pack->LastSent + DATA_RESEND_DELAY) <= Timer::GetCurrentTime()) || (datahigh < 5 && (pack->LastSent + DATA_RESEND_DELAY_IDLE) <= Timer::GetCurrentTime())) {
 //#endif
 #if EQN_DEBUG >= 8
 			cout << "ARQ: 0x" << hex << setw(4) << setfill('0') << pack->dwARQ << dec;
@@ -1475,8 +1508,9 @@ void EQNetworkConnection::MakeEQPacket(APPLAYER* app, bool ackreq) {
 #endif
 
 #ifdef COMBINED
-			if(AddToCombined(app)) //Always want an ack on it?  I guess you could keep track of it
-			return;
+	//try to add this packet to the combined queues.
+	if(AddToCombined(app)) //Always want an ack on it?  I guess you could keep track of it
+		return;
 #endif
 
 	MStateLock.lock();
@@ -1648,99 +1682,344 @@ void EQNetworkConnection::MakeEQPacket(APPLAYER* app, bool ackreq) {
 			dwFragSeq++;        
 	} //end if
 }
+
+
 #ifdef COMBINED
-/* Latest Combination Code by Dominic Micale (Image)
-** This code has the possibility of combining the majority of packets, limited to size because of CRC checks
-** If you would like to limit a packet so it is not combined, simply set its priority equal to 6
-** This should be done on packets that have high priority to get to the client (such as zoning)
-** Implicit length packets (when the creation packet) do not require any addition
-** However if the packet is not implicit length, it requires an extra byte (size of packet)
-** Finally packets added with implicit length only include the opcode (2 bytes)
-** Packets that are not implicit length add 3 bytes (opcode then a 1 byte size, which is stupid, limits packets to 255 in size)
-** Also: FLAG_IMPLICIT is not used on these packets
-*/
-bool EQNetworkConnection::AddToCombined(APPLAYER* app)
-{
-	// Check if app doesnt exist, if app size is too small it can't CRC the packet, if its too big it can't set size (one byte for size)
-	// If its encrypted,compressed before moving through the combination it cannot be added.
-	if(!app || (app && ((app->size < 6) || (app->size > 255))) || (app && (app->opcode & FLAG_ENCRYPTED)) || (app && (app->opcode & FLAG_COMPRESSED))) // Restricting to size < 8 and size > 255
-	{
-		combined_timer->Trigger();
-		CreateCombinedPacket();
-		return false;
-	}
+//Father Nitwit's combine code.
 
-	if((app->priority == 6) || (CombinedPacket && CombinedPacket->priority == 6)) // Ignore packets with this priority, or ignore CombinedPacket priority 6 as it is sending
-	{
-		combined_timer->Trigger();
-		CreateCombinedPacket();
-		return false;
-	}
 
-	int32 imp = EQDataPacket::implicitlen(app->opcode); // Grab implicit length of the opcode
-	if(imp != 0 && imp != app->size)
-	imp = 0;
-	if(!CombinedPacket)
-	{
-		if(imp)
-		{
-			//Implicit length packets on creation is just the packet itself
-			CombinedPacket = new APPLAYER(app->opcode,app->size);
-			memcpy(CombinedPacket->pBuffer,app->pBuffer,app->size);
-		}
+void APPLAYER::combine_add(int16 in_opcode, int32 in_size, uchar *data) {
+	if(combined_size == 0) {
+		//first packet, the regular EQ protocol stuff will add the 
+		//opcode to this part.
+		opcode = in_opcode & ~FLAG_IMPLICIT;	//implicit is applied later
+		size = in_size;
+		opcode_offset = 0;
+		
+		//reallocate and fill our buffer
+		safe_delete(pBuffer);	//do we need this?
+		
+		//figure out our header length, without an opcode
+		int32 add_size;
+		if(in_opcode & FLAG_IMPLICIT)
+			add_size = 0;
+		else if(in_size > 0xFF)
+			add_size = 3;	//1+2 bytes of length field
 		else
-		{
-			//Non implicit length packets require the size as the first byte then the normal packet
-			CombinedPacket = new APPLAYER(app->opcode,app->size+1);
-			CombinedPacket->pBuffer[0] = (int8)app->size;
-			memcpy(&CombinedPacket->pBuffer[1],app->pBuffer,app->size);
+			add_size = 1;	//1 bytes of length field
+		
+		combined_size = size+add_size;
+		pBuffer = new uchar[combined_size];
+		
+		//now the length, if we have one
+		uchar *tmp = pBuffer;
+		if((in_opcode & FLAG_IMPLICIT) == 0) {
+			if(in_size > 0xFF) {
+				//add an extended langth code
+				*tmp = 0xFF;
+				tmp++;
+				uint16 *len = (uint16 *) tmp;
+				*len = htons(in_size);
+				tmp += sizeof(uint16);
+			} else {
+				*tmp = in_size;
+				tmp++;
+			}
 		}
-		combined_timer->Start(300);
-		//safe_delete(app); // Handled elsewhere
-		return true;
-	}
-	else if(CombinedPacket)
-	{
-		if(imp)
-		{
-			//Implicit packets included only require the opcode as the first 2 bytes after the main packet, then the normal buffer
-			int size = CombinedPacket->size + app->size + 2;
-			uchar* newbuffer = new uchar[size];
-			memcpy(newbuffer,CombinedPacket->pBuffer,CombinedPacket->size);
-			app->opcode |= FLAG_COMBINED;
-			memcpy(&newbuffer[CombinedPacket->size],&app->opcode,sizeof(int16));
-			memcpy(&newbuffer[CombinedPacket->size+2],app->pBuffer,app->size);
-			safe_delete_array(CombinedPacket->pBuffer); // Delete old outdated buffer
-			CombinedPacket->pBuffer = newbuffer; // Point to the new buffer
-			CombinedPacket->size = size; // Update the size
-		}
+		
+		//copy in the new data now
+		memcpy(pBuffer+add_size, data, size);
+		
+	} else {	//not our first packet.
+		opcode |= FLAG_COMBINED;	//once we have 2+, flag entire thing combined
+		in_opcode |= FLAG_COMBINED;	//everything after first is combined too
+		
+		//figure out our header length
+		int32 add_size;
+		if(in_opcode & FLAG_IMPLICIT)
+			add_size = 2;	//just an opcode
+		else if(in_size > 0xFF)
+			add_size = 5;	//opcode + 1+2 bytes of length field
 		else
-		{
-			//Non-implicit packetse included require the opcode and size after the main packet in that order (2 bytes opcode, 1 byte size), then the buffer.
-			int size = CombinedPacket->size + app->size + 3;
-			uchar* newbuffer = new uchar[size];
-			memcpy(newbuffer,CombinedPacket->pBuffer,CombinedPacket->size);
-			app->opcode |= FLAG_COMBINED;
-			memcpy(&newbuffer[CombinedPacket->size],&app->opcode,sizeof(int16));
-			newbuffer[CombinedPacket->size+2] = (int8)app->size;
-			memcpy(&newbuffer[CombinedPacket->size+3],app->pBuffer,app->size);
-			safe_delete_array(CombinedPacket->pBuffer); // Delete old outdated buffer
-			CombinedPacket->pBuffer = newbuffer; // Point to the new buffer
-			CombinedPacket->size = size; // Update the size
+			add_size = 3;	//opcode + 1 bytes of length field
+		
+		//reallocate our buffer.
+		uchar *tmp = pBuffer;
+		uint32 new_size = combined_size + in_size + add_size;
+		pBuffer = new uchar[new_size];
+		//copy in the old packets
+		memcpy(pBuffer, tmp, combined_size);
+		safe_delete(tmp);	//free old buffer
+		
+		//set our header..
+		tmp = pBuffer + combined_size;
+		//first an opcode, everybody has one of those.
+		opcode_offset = combined_size;	//remember where the opcode is.
+		uint16 *op = (uint16 *) tmp;
+		*op = in_opcode & ~FLAG_IMPLICIT;	//implicit is set elsewhere if at all
+		tmp += sizeof(uint16);
+		
+		//now the length, if we have one
+		if((in_opcode & FLAG_IMPLICIT) == 0) {
+			if(in_size > 0xFF) {
+				//add an extended langth code
+				*tmp = 0xFF;
+				tmp++;
+				uint16 *len = (uint16 *) tmp;
+				*len = htons(in_size);
+				tmp += sizeof(uint16);
+			} else {
+				*tmp = in_size;
+				tmp++;
+			}
 		}
-
-		if((!(CombinedPacket->opcode & FLAG_COMBINED))) //set the combination flag to send out
-		{
-			CombinedPacket->opcode |= FLAG_COMBINED;
-			//combined_timer->Start(100);
-		}
-		//safe_delete(app); // Handled elsewhere
-		return true;
+		
+		//now throw in the new body.
+		memcpy(tmp, data, in_size);
+		
+		//our combined packet is now this long.
+		combined_size = new_size;
 	}
-	return false;
 }
 
-void EQNetworkConnection::CreateCombinedPacket()
+
+//used by implicit length and crc stuff.
+void APPLAYER::combine_append(int32 add_size, uchar *data, bool implicit) {
+	if(combined_size == 0)
+		return;	//invalid
+	
+	uint32 imp_add = 0;
+	//if this is adding an implicit packet...
+	if(implicit) {
+		//if we are the first implicit add, we need a flag and counter
+		if(opcode_offset == 0) {	//0 is a special value
+			if((opcode & FLAG_IMPLICIT) == 0) {
+				//not allready flagged, flag it and add counter
+				opcode |= FLAG_IMPLICIT | FLAG_COMBINED;
+				imp_add = 1;
+			}
+		} else {
+			uint16 *last_op = (uint16 *) (pBuffer + opcode_offset);
+			if((*last_op & FLAG_IMPLICIT) == 0) {
+				//not allready flagged, flag it and add counter
+				*last_op = *last_op | FLAG_IMPLICIT | FLAG_COMBINED;
+				imp_add = 1;
+			}
+		}
+	}
+	
+	//reallocate our buffer
+	uchar* old = pBuffer;
+	int32 new_size = combined_size + add_size + imp_add;
+	pBuffer = new uchar[new_size];
+	//copy in the old data
+	memcpy(pBuffer, old, combined_size);
+	if(imp_add == 1) {
+		//set the counter to 1
+		*(pBuffer+combined_size) = 1;
+	}
+	//copy in the new data
+	memcpy(pBuffer + combined_size + imp_add, data, add_size);
+	//set our new total size
+	combined_size = new_size;
+	safe_delete(old);
+}
+
+/*
+
+	I seemed to have a major stability problem if I let the implcitly packed
+	packets get large enough to get fragmented below. Because of this, they
+	are prevented from growing too large.
+
+*/
+bool EQNetworkConnection::AddToCombined(APPLAYER* app) {
+	if(!app)
+		return(false);
+	//make sure combining is enabled.
+	if(!combined_timer.Enabled())
+		return(false);
+	//priority (this also allows us to ignore ourself)
+	if(app->priority == 6)
+		return(false);
+	//size limitations
+	//this assumes that all implicit packets are smaller than a fragment
+	if(app->size < 6 || app->size > COMBINE_MAX_PIECE)
+//	if(app->size < 6 || app->size > 490)
+		return(false);
+	//cant combine an encrypted packet
+	if(app->opcode & FLAG_ENCRYPTED)
+		return(false);
+	//cant combine a compressed packet either. But we could re-compress it...
+	if(app->opcode & FLAG_COMPRESSED)
+		return(false);
+	
+	
+	//not compressed or encrypted. Not combined. We manage implicit ourself.
+	app->opcode = StripFlags(app->opcode);
+	
+	//figure out if it is an implicit length op.
+	int32 len = EQDataPacket::implicitlen(app->opcode);
+	
+	
+	MCombined.lock();
+	if(len != 0) {
+		//we are implicit length
+
+		//make sure we have a combined packet
+		if(ImplicitCombinedPacket == NULL) {
+			ImplicitCombinedPacket = new APPLAYER(0, 0);
+			ImplicitCombinedPacket->priority = 6;
+			implicit_counter_offset = 0;
+			last_opcode = 0;
+		} else if((ImplicitCombinedPacket->combined_size+app->size) > 506) {	//size is rough
+			//make sure our packet dosent get larger than a fragment. It seems
+			//to piss the EQ client off if an implicit/combined packet gets
+			//fragmented.
+			SendACombinedPacket(ImplicitCombinedPacket);
+			ImplicitCombinedPacket = new APPLAYER(0, 0);
+			ImplicitCombinedPacket->priority = 6;
+			implicit_counter_offset = 0;
+			last_opcode = 0;
+		}
+		
+		//look for repeated opcode
+		if(last_opcode == app->opcode) {
+			//repeated implicit opcodes, special handling
+			//get the pointer to our combine counter
+			
+			if(implicit_counter_offset == 0) {
+				//we dont have a counter yet, but it will be at the end of the
+				//current packet when we grow it. It will start at 1 allready
+				implicit_counter_offset = ImplicitCombinedPacket->combined_size;
+				//grow the packet as needed
+				ImplicitCombinedPacket->combine_append(len, app->pBuffer, true);
+				MCombined.unlock();
+				return(true);
+			} else {
+				//counter is allready there, just increment it
+				uchar *counter = ImplicitCombinedPacket->pBuffer + implicit_counter_offset;
+				if(*counter < 0xFF) {
+					//we can tack on to the end of the contiguous block.
+					*counter = *counter + 1;	//add one to our counter.
+					//grow the packet as needed
+					ImplicitCombinedPacket->combine_append(len, app->pBuffer, true);
+					MCombined.unlock();
+					return(true);
+				} //else, fall through and treat it like a new implicit.
+			}
+		}
+		//else, new implicit opcode.
+		
+		//add a new block to the combined packet.
+		ImplicitCombinedPacket->combine_add(app->opcode|FLAG_IMPLICIT, len, app->pBuffer);
+		
+		//set our counter offset to 0 to indicate we dont have one yet
+		implicit_counter_offset = 0;
+		
+		//set last opcode
+		last_opcode = app->opcode;
+	} else {
+		
+		//make sure we have a combined packet
+		if(CombinedPacket == NULL) {
+			CombinedPacket = new APPLAYER(0, 0);
+			CombinedPacket->priority = 6;
+		}
+		//Unlike implicit packets, this seems to work without this:
+		/*else if((CombinedPacket->combined_size+app->size) > 506) {	//size is rough
+			//this will make the combined packet larger than a fragment, why bother
+			//just send what we have in our combined, and start a new one.
+			SendACombinedPacket(CombinedPacket);
+			CombinedPacket = new APPLAYER(0, 0);
+			CombinedPacket->priority = 6;
+		}*/
+		
+		//grow the combined packet as needed.
+		CombinedPacket->combine_add(app->opcode, app->size, app->pBuffer);
+		
+		//set last opcode, used by implicit stuff. needed if they dont have diff packets
+		//last_opcode = app->opcode;
+	}
+	
+	MCombined.unlock();
+	return(true);
+}
+
+void EQNetworkConnection::SendCombinedPackets() {
+	MCombined.lock();
+	
+	if(CombinedPacket == NULL && ImplicitCombinedPacket == NULL)
+		return;
+	
+	APPLAYER *app = CombinedPacket;
+	APPLAYER *appi = ImplicitCombinedPacket;
+	//clear all our packet state
+	CombinedPacket = NULL;
+	ImplicitCombinedPacket = NULL;
+	implicit_counter_offset = 0;
+	last_opcode = 0;
+	
+	MCombined.unlock();
+	
+	if(app)
+		SendACombinedPacket(app);
+	if(appi)
+		SendACombinedPacket(appi);
+}
+
+void EQNetworkConnection::SendACombinedPacket(APPLAYER* app) {
+	//one last step, we gotta append part of the CRC... I dunno why...
+	//some code from image's old combine stuff
+	
+	if(app->opcode & FLAG_COMBINED) {
+//printf("Sending combined packet of length %d\n", app->combined_size);
+		
+		//We have to grab the last two bytes of the CRC to add to the packet (Why not just use the entire crc?)
+		union imageData { 
+			int32 bignum;
+			int16 littlenum;
+		} crcu;
+
+		int32 crc = CRC32::Generate(app->pBuffer, app->combined_size);
+		crcu.bignum = crc;
+		
+		app->combine_append(sizeof(int16), (uchar *)&crcu.littlenum, false);
+		
+		app->size = app->combined_size;	//MakeEQPacket looks at size only, but dosent put it in the packet
+
+		//DumpPacket(app);
+		
+		//compress bigger packets for a little savings
+		if(app->size > COMBINE_DEFLATE_SIZE)
+			app->Deflate();
+		
+		MakeEQPacket(app);
+		APPLAYER::PacketUsed(&app);
+	} else {
+//printf("Sending combined but alone packet of length %d\n", app->size);
+		//we only got one packet, send it as non-combined.
+		
+		int32 imp = EQDataPacket::implicitlen(app->opcode);
+		if(imp > 0) {
+			MakeEQPacket(app); // No changes to make
+			APPLAYER::PacketUsed(&app);
+		} else {
+			//we want to skip the length pieces we added
+			uchar *orig = app->pBuffer;
+			if(app->size > 0xFF) {
+				app->pBuffer += 3;
+			} else {
+				app->pBuffer += 1;
+			}
+			MakeEQPacket(app); // No changes to make
+			app->pBuffer = NULL;
+			safe_delete(orig);
+			APPLAYER::PacketUsed(&app);
+		}
+	}
+}
+
+/*void EQNetworkConnection::CreateCombinedPacket()
 {
 	if(!CombinedPacket || (!combined_timer->Check()) || (CombinedPacket->priority == 6))
 		return;
@@ -1794,6 +2073,7 @@ void EQNetworkConnection::CreateCombinedPacket()
 		safe_delete(CombinedPacket);
 	}
 }
+*/
 #endif 
 	
 EQNetworkPacket::EQNetworkPacket(EQNetworkConnection* inetcon) {
@@ -2336,8 +2616,8 @@ bool EQDataPacket::Decode(sint64* key, int16 opCode, int8* buf, sint32 buflen) {
 				sint32 size;
 				
 				size = EQDataPacket::implicitlen(opCode);
-				if (size == 0) {
-					if (dptr[0] == 0xff) {
+				if (size == 0) {	//not an implicity length packet
+					if (dptr[0] == 0xff) {	//larger than 255, take next two bytes
 						left--;
 						dptr++;
 						size = ntohs(*((uint16 *)dptr));
@@ -2369,17 +2649,19 @@ bool EQDataPacket::Decode(sint64* key, int16 opCode, int8* buf, sint32 buflen) {
 				
 				count--;
 				if (repeatop) {
-					count = dptr[0];
+					count = dptr[0];	//this is how many implicitly packed packets of this opcode there are
 					dptr++;
 					left--;
 					repeatop = false;
 				}
 			}
 			
+			//if there is enough packet to fit at least an opcode
+			//then
 			if (left > 2) {
 				opCode = *((int16*)dptr);
-				buf = dptr;
-				buflen = left;
+				buf = dptr + 2;	//gotta skip the opcode.
+				buflen = left - 2;
 				continue;
 			}
 			return true;
@@ -2407,6 +2689,8 @@ APPLAYER::~APPLAYER() {
 // Taken from ShowEQ (Thanks guys!)
 uint32 EQDataPacket::implicitlen(uint16 opcode)
 {
+//if the size of any implicit packets ever goes over 500ish, the combine code
+//is prolly gunna break.
 switch (opcode)
   {
   case 0x0021:			// 34

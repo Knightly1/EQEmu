@@ -115,20 +115,27 @@ void QuestManager::Process() {
 	}
 	
 	
-	list<SignalTimer>::iterator curS = STimerList.begin(), endS, tmpS;
+	list<SignalTimer>::iterator curS, endS, tmpS;
 	
+	curS = STimerList.begin();
 	endS = STimerList.end();
 	while (curS != endS) {
-		if (curS->Timer_.Enabled() && curS->Timer_.Check()) {
-			
-			//signal the event...
-			entity_list.SignalMobsByNPCID(curS->npc_id, curS->signal_id);
-			
+		if(!curS->Timer_.Enabled()) {
 			//remove the timer
 			tmpS = curS;
 			tmpS++;
 			STimerList.erase(curS);
 			curS = tmpS;
+		} else if(curS->Timer_.Check()) {
+			//disable the timer so it gets deleted.
+			curS->Timer_.Disable();
+			
+			//signal the event...
+			entity_list.SignalMobsByNPCID(curS->npc_id, curS->signal_id);
+			
+			//restart for the same reasons as above.
+			curS = STimerList.begin();
+			endS = STimerList.end();
 		} else
 			curS++;
 	}
@@ -319,7 +326,6 @@ void QuestManager::settimer(const char *timer_name, int seconds) {
 }
 
 void QuestManager::stoptimer(const char *timer_name) {
-printf("Stop timer called on '%s'!\n", timer_name);
 	list<QuestTimer>::iterator cur = QTimerList.begin(), end;
 	
 	end = QTimerList.end();
@@ -1124,6 +1130,70 @@ void QuestManager::setanim(int npc_type, int animnum) {
 }
 
 
+//displays an in game path based on a waypoint grid
+void QuestManager::showgrid(int grid) {
+	if(initiator == NULL)
+		return;
+	
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char *query = 0;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	
+	FindPerson_Point pt;
+	vector<FindPerson_Point> pts;
+	
+	pt.x = initiator->GetX();
+	pt.y = initiator->GetY();
+	pt.z = initiator->GetZ();
+	pts.push_back(pt);
+	
+	// Retrieve all waypoints for this grid
+	if(database.RunQuery(query,MakeAnyLenString(&query,"SELECT `x`,`y`,`z` FROM grid_entries WHERE `gridid`=%i AND `zoneid`=%i ORDER BY `number`",grid,zone->GetZoneID()),errbuf,&result))
+	{
+		while((row = mysql_fetch_row(result)))
+		{   
+			pt.x = atof(row[0]);
+			pt.y = atof(row[1]);
+			pt.z = atof(row[2]);
+			pts.push_back(pt);
+		}
+		mysql_free_result(result);
+		
+		initiator->SendPathPacket(pts);
+	}
+	else	// DB query error!
+	{
+		LogFile->write(EQEMuLog::Quest, "Error loading grid %d for showgrid(): %s", grid, errbuf);
+		return;
+	}
+	safe_delete_array(query);
+}
+
+//displays an in game path based on path finding.
+void QuestManager::showpath(float x, float y, float z) {
+	say("showpath not implemented yet.");
+}
+
+//causes the npc to use path finding to walk to x,y,z
+void QuestManager::pathto(float x, float y, float z) {
+	say("pathto not implemented yet.");
+}
+
+//change the value of a spawn condition
+void QuestManager::spawn_condition(const char *zone_short, uint16 condition_id, short new_value) {
+	zone->spawn_conditions.SetCondition(zone_short, condition_id, new_value);
+}
+
+//get the value of a spawn condition
+short QuestManager::get_spawn_condition(const char *zone_short, uint16 condition_id) {
+	return(zone->spawn_conditions.GetCondition(zone_short, condition_id));
+}
+
+//toggle a spawn event
+void QuestManager::toggle_spawn_event(int event_id, bool enable, bool reset_base) {
+	zone->spawn_conditions.ToggleEvent(event_id, enable, reset_base);
+}
 
 
 

@@ -1694,7 +1694,11 @@ bool EntityList::RemoveNPC(int16 delete_id){
 	while(iterator.MoreElements())
 	{
 		if(iterator.GetData()->GetID()==delete_id){
+			//make sure its proximity is removed
+			RemoveProximity(iterator.GetData()->GetID());
+			//take it out of the list
 			iterator.RemoveCurrent(false);//Already Deleted
+			//take it out of our limit list
 			if(npc_limit_list.count(delete_id) == 1)
 				npc_limit_list.erase(delete_id);
 			return true;

@@ -36,6 +36,7 @@ using namespace std;
 #include "../common/version.h"
 #include "../common/files.h"
 #include "../common/eqtime.h"
+#include "../common/timeoutmgr.h"
 #include "../common/EQEMuError.h"
 #ifdef WIN32
 	#include <process.h>
@@ -313,6 +314,8 @@ int main(int argc, char** argv) {
 			cout << Timer::GetCurrentTime() << " New TCP connection: " << inet_ntoa(in) << ":" << tcpc->GetrPort() << endl;
 			console_list.Add(new Console(tcpc));
 		}
+		//check for timeouts in other threads
+		timeout_manager.CheckTimeouts();
 		loginserver.Process();
 		console_list.Process();
 		zoneserver_list.Process();

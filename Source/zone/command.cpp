@@ -51,7 +51,7 @@ Copyright (C) 2001-2002	EQEMu Development Team (http://eqemu.org)
 #include "masterentity.h"
 #include "map.h"
 #include "features.h"
-#include "fearpath.h"
+#include "pathing.h"
 #include "client_logs.h"
 
 // these should be in the headers...
@@ -291,7 +291,7 @@ int command_init(void)
 		command_add("corpse","- Manipulate corpses, use with no arguments for help",50,command_corpse) ||
 		command_add("fixmob","[nextrace|prevrace|gender|nexttexture|prevtexture|nexthelm|prevhelm] - Manipulate appearance of your NPC target",100,command_fixmob) ||
 		command_add("gmspeed","[on/off] - Turn GM speed hack on/off for you or your player target",100,command_gmspeed) ||
-		command_add("title","[title(0-3)] - Set your or your player target's title",50,command_title) ||
+		command_add("title","[text] - Set your or your player target's title",50,command_title) ||
 		command_add("spellinfo","[spellid] - Get detailed info about a spell",10,command_spellinfo) ||
 		command_add("lastname","[new lastname] - Set your or your player target's lastname",50,command_lastname) ||
 		command_add("memspell","[slotid] [spellid] - Memorize spellid in the specified slot",50,command_memspell) ||
@@ -396,6 +396,7 @@ int command_init(void)
 		command_add("bestz","- Ask map for a good Z coord for your x,y coords.",0,command_bestz) ||
 		command_add("ginfo","- get group info on target.",20,command_ginfo) ||
 		command_add("fear","- view and edit fear grids and hints",200,command_fear) ||
+		command_add("path","- view and edit pathing",200,command_path) ||
 		command_add("npcemote","[message] - Make your NPC target emote a message.",150,command_npcemote)
 	)
 	{
@@ -2209,10 +2210,17 @@ void command_dbspawn2(Client *c, const Seperator *sep)
 
 	if (sep->IsNumber(1) && sep->IsNumber(2) && sep->IsNumber(3)) {
 		LogFile->write(EQEMuLog::Normal,"Spawning database spawn");
-		database.CreateSpawn2(c, atoi(sep->arg[1]), zone->GetShortName(), c->GetHeading(), c->GetX(), c->GetY(), c->GetZ(), atoi(sep->arg[2]), atoi(sep->arg[3]));
+		uint16 cond = 0;
+		sint16 cond_min = 0;
+		if(sep->IsNumber(4)) {
+			cond = atoi(sep->arg[4]);
+			if(sep->IsNumber(5))
+				cond_min = atoi(sep->arg[5]);
+		}
+		database.CreateSpawn2(c, atoi(sep->arg[1]), zone->GetShortName(), c->GetHeading(), c->GetX(), c->GetY(), c->GetZ(), atoi(sep->arg[2]), atoi(sep->arg[3]), cond, cond_min);
 	}
 	else {
-		c->Message(0, "Usage: #dbspawn2 spawngroup respawn variance");
+		c->Message(0, "Usage: #dbspawn2 spawngroup respawn variance [condition_id] [condition_min]");
 	}
 }
 
@@ -3435,31 +3443,25 @@ void command_gmspeed(Client *c, const Seperator *sep)
 
 void command_title(Client *c, const Seperator *sep)
 {
-	//@merth: Still need to implement this
-	c->Message(0,"Error: This command is not yet working");
-	return;
-	
 	if (sep->arg[1][0]==0)
-		c->Message(0, "Usage: #title  [0-3]");
+		c->Message(0, "Usage: #title [remove|text] - remove or set title to 'text'");
 	else {
-		if (c->GetTarget() == 0 || c->GetTarget() == c) {
-			if (atoi(sep->arg[1]) >= 0 || atoi(sep->arg[1]) <= 3) {
-//				c->GetPP().title = atoi(sep->arg[1]);
-				c->Save();
-				c->Message(0,"Updated your Title.");
-			}
-			else
-				c->Message(0, "You need to use a number between 0 and 3!");
+		Mob *target_mob = c->GetTarget();
+		if(!target_mob->IsClient()) {
+			c->Message(13, "#title only works on players.");
+			return;
 		}
-		else {
-			if (c->GetTarget()->IsClient()) {
-				c->GetTarget()->CastToClient()->ChangeAATitle((int8) atoi(sep->arg[1]));
-				c->GetTarget()->CastToClient()->Save();
-				c->Message(0, "Updated %s's Title", c->GetTarget()->GetName());
-			}
-			else
-				c->Message(0, "You must target a valid Player Character For this action.");
-		}
+		Client *t = target_mob->CastToClient();
+		
+		if(!strcasecmp(sep->arg[1], "remove"))
+			t->SetAATitle("");
+		else
+			t->SetAATitle(sep->arg[1]);
+		t->Save();
+		
+		c->Message(13, "%s's title has been changed to '%s'. They must zone for it to take effect.", t->GetName(), sep->arg[1]);
+		if(t != c)
+			t->Message(13, "Your title has been changed to '%s'. You must zone for it to take effect.", sep->arg[1]);
 	}
 }
 
@@ -3490,6 +3492,7 @@ void command_spellinfo(Client *c, const Seperator *sep)
 		c->Message(0, "  AEDuration: %d", s->AEDuration);
 		c->Message(0, "  mana: %d", s->mana);
 		c->Message(0, "  base[12]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", s->base[0], s->base[1], s->base[2], s->base[3], s->base[4], s->base[5], s->base[6], s->base[7], s->base[8], s->base[9], s->base[10], s->base[11]);
+		c->Message(0, "  base22[12]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", s->base2[0], s->base2[1], s->base2[2], s->base2[3], s->base2[4], s->base2[5], s->base2[6], s->base2[7], s->base2[8], s->base2[9], s->base2[10], s->base2[11]);
 		c->Message(0, "  max[12]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", s->max[0], s->max[1], s->max[2], s->max[3], s->max[4], s->max[5], s->max[6], s->max[7], s->max[8], s->max[9], s->max[10], s->max[11]);
 		c->Message(0, "  icon: %d", s->icon);
 		c->Message(0, "  memicon: %d", s->memicon);
@@ -5562,8 +5565,12 @@ void command_npcedit(Client *c, const Seperator *sep)
       c->Message(0, "#npcedit Seeinvis - Sets an NPCs ability to see invis");   
       c->Message(0, "#npcedit Seeinvisundead - Sets an NPCs ability to see through invis vs. undead");   
       c->Message(0, "#npcedit AC - Sets an NPCs armor class");
-      c->Message(0, "#npcedit limit - Sets an NPCs spawn limit counter");
-   
+      c->Message(0, "#npcedit npcaggro - Sets an NPC's npc_aggro flag");
+      c->Message(0, "#npcedit qglobal - Sets an NPC's quest global flag");
+      c->Message(0, "#npcedit limit - Sets an NPC's spawn limit counter");
+      c->Message(0, "#npcedit Attackspeed - Sets an NPC's attack speed modifier");
+      c->Message(0, "#npcedit findable - Sets an NPC's findable flag");
+      
    }
    else if ( strcasecmp( sep->arg[1], "name" ) == 0 )
    {
@@ -5845,12 +5852,48 @@ void command_npcedit(Client *c, const Seperator *sep)
       c->LogSQL(query);
       safe_delete_array(query);
    }
+   else if ( strcasecmp( sep->arg[1], "qglobal" ) == 0 )
+   {
+      char errbuf[MYSQL_ERRMSG_SIZE];
+      char *query = 0;
+      c->Message(15,"Quest globals have been %d for NPCID %u",c->GetTarget()->CastToNPC()->GetNPCTypeID(),atoi(sep->arg[2])==0?"disabled":"enabled");
+      database.RunQuery(query, MakeAnyLenString(&query, "update npc_types set qglobal=%i where id=%i",atoi(sep->argplus[2])==0?0:1,c->GetTarget()->CastToNPC()->GetNPCTypeID()), errbuf);
+      c->LogSQL(query);
+      safe_delete_array(query);
+   }
+   else if ( strcasecmp( sep->arg[1], "npcaggro" ) == 0 )
+   {
+      char errbuf[MYSQL_ERRMSG_SIZE];
+      char *query = 0;
+      c->Message(15,"NPCID %u will now %s other NPCs with negative faction npc_value",c->GetTarget()->CastToNPC()->GetNPCTypeID(),atoi(sep->arg[2])==0?"not aggro":"aggro");
+      database.RunQuery(query, MakeAnyLenString(&query, "update npc_types set npc_aggro=%i where id=%i",atoi(sep->argplus[2])==0?0:1,c->GetTarget()->CastToNPC()->GetNPCTypeID()), errbuf);
+      c->LogSQL(query);
+      safe_delete_array(query);
+   }
    else if ( strcasecmp( sep->arg[1], "limit" ) == 0 )
    {
       char errbuf[MYSQL_ERRMSG_SIZE];
       char *query = 0;
       c->Message(15,"NPCID %u now has a spawn limit of %i",c->GetTarget()->CastToNPC()->GetNPCTypeID(),atoi(sep->argplus[2]));
       database.RunQuery(query, MakeAnyLenString(&query, "update npc_types set limit=%i where id=%i",atoi(sep->argplus[2]),c->GetTarget()->CastToNPC()->GetNPCTypeID()), errbuf);
+      c->LogSQL(query);
+      safe_delete_array(query);
+   }
+   else if ( strcasecmp( sep->arg[1], "Attackspeed" ) == 0 )
+   {
+      char errbuf[MYSQL_ERRMSG_SIZE];
+      char *query = 0;
+      c->Message(15,"NPCID %u now has attack_speed set to %f",c->GetTarget()->CastToNPC()->GetNPCTypeID(),atof(sep->arg[2]));
+      database.RunQuery(query, MakeAnyLenString(&query, "update npc_types set attack_speed=%f where id=%i",atof(sep->argplus[2]),c->GetTarget()->CastToNPC()->GetNPCTypeID()), errbuf);
+      c->LogSQL(query);
+      safe_delete_array(query);
+   }
+   else if ( strcasecmp( sep->arg[1], "findable" ) == 0 )
+   {
+      char errbuf[MYSQL_ERRMSG_SIZE];
+      char *query = 0;
+      c->Message(15,"NPCID %u is now %s",c->GetTarget()->CastToNPC()->GetNPCTypeID(),atoi(sep->arg[2])==0?"not findable":"findable");
+      database.RunQuery(query, MakeAnyLenString(&query, "update npc_types set findable=%i where id=%i",atoi(sep->argplus[2])==0?0:1,c->GetTarget()->CastToNPC()->GetNPCTypeID()), errbuf);
       c->LogSQL(query);
       safe_delete_array(query);
    }
@@ -6010,66 +6053,42 @@ void command_qglobal(Client *c, const Seperator *sep) {
 
 void command_fear(Client *c, const Seperator *sep) {
 	//super-command for editing fear grids and hints
-	char errbuf[MYSQL_ERRMSG_SIZE];
-	char *query = 0;
+//	char errbuf[MYSQL_ERRMSG_SIZE];
+//	char *query = 0;
 	if(sep->arg[1][0] == '\0' || !strcasecmp(sep->arg[1], "help")) {
 		c->Message(0, "Syntax: #fear [view|close|add|link|list|del].");
 		c->Message(0, "...view - spawn an NPC at each fear grid point, and fear hint");
 		c->Message(0, "...close - spawn an NPC at the closest fear point");
-		c->Message(0, "...path [dist] - spawn an NPC at each fear point for dist hops");
-		c->Message(0, "...add - add a new fear hint point where your standing");
+		c->Message(0, "...path [##] [draw|npc] - draw a path (or spawn an NPC) at each fear point for ## hops");
+//		c->Message(0, "...add [force|disjoint]- add a new fear hint point where your standing");
+//		c->Message(0, "....... force requires this point not move when combining nodes");
+//		c->Message(0, "....... disjoint marks the graph connected to this node as a valid disjoint graph");
 //		c->Message(0, "...link [id1] [id2] - make a fear hint link between two hint points");
-		c->Message(0, "...list - show a list of all fear hint points and links");
-		c->Message(0, "...del [id] - remove the fear hint 'id'");
+//		c->Message(0, "...list - show a list of all fear hint points for this zone");
+//		c->Message(0, "...find [range] - show a list of all fear hint points eithin range of you");
+//		c->Message(0, "...del [id] - remove the fear hint 'id'");
 		c->Message(0, "...start - fears your target until you #fear stop them");
 		c->Message(0, "...stop - Stops fear on your target");
 		return;
 	}
 	
-	if(!strcasecmp(sep->arg[1], "add")) {
-		if(!database.RunQuery(query, MakeAnyLenString(&query, 
-			"INSERT INTO fear_hints (zone,x,y,z) VALUES('%s',%d,%d,%d)",
-			zone->GetShortName(), c->GetX(), c->GetY(), c->GetZ()), errbuf))
-		{
-			c->Message(15, "Error adding hint: %s", errbuf);
-		} else {
-			c->LogSQL(query);
-			c->Message(15, "Success! Fear hint point added.");
+	if(!strcasecmp(sep->arg[1], "view")) {
+		if(zone->pathing == NULL) {
+			c->Message(13, "There is no fear grid file loaded for this zone.");
+			return;
 		}
-		safe_delete(query);
-	} else if(!strcasecmp(sep->arg[1], "del")) {
-		if(!database.RunQuery(query, MakeAnyLenString(&query, 
-			"DELETE FROM fear_hints WHERE zone='%s' AND id=%d",
-			zone->GetShortName(), atoi(sep->arg[2])), errbuf))
-		{
-			c->Message(15, "Error adding hint: %s", errbuf);
-		} else {
-			c->LogSQL(query);
-			c->Message(15, "Success! Fear hint point added.");
-		}
-		safe_delete(query);
-		c->Message(0, "Not implemented yet");
-	} else if(!strcasecmp(sep->arg[1], "list")) {
-		c->Message(0, "Not implemented yet");
 		
-		MYSQL_RES *result;
-		MYSQL_ROW row;
-		if (database.RunQuery(query, MakeAnyLenString(&query, 
-			"SELECT id,x,y,z FROM fear_hints WHERE zone='%s'",
-			zone->GetShortName()), errbuf, &result))
-		{
-			c->Message(0, "Fear Hints for %s:", zone->GetShortName());
-			while ((row = mysql_fetch_row(result)))
-			{
-				c->Message(0, "[%s]: (%s, %s, %s)", row[0], row[1], row[2], row[3]);
-			}
-			mysql_free_result(result);
-		} else {
-			c->Message(0, "Unable to query fear hints: %s", errbuf);
+		int32 count = zone->pathing->CountNodes();
+		int32 r;
+		char buf[128];
+		PathNode_Struct *node = zone->pathing->GetNode(0); //assumes nodes are stored in a linear array
+		for(r = 0; r < count; r++, node++) {
+			sprintf(buf, "Fear_Point%d 3", r);
+			NPC* npc = NPC::SpawnNPC(buf, node->x, node->y, node->z, c->GetHeading(), NULL);
+			if(npc == NULL)
+				c->Message(13, "Unable to spawn new NPC marker.");
+			//do we need to do anything else?
 		}
-		safe_delete_array(query);
-	} else if(!strcasecmp(sep->arg[1], "link")) {
-		c->Message(0, "Not implemented yet");
 #ifdef ENABLE_FEAR_PATHING
 	} else if(!strcasecmp(sep->arg[1], "start")) {
 		if(c->GetTarget() != NULL) {
@@ -6084,25 +6103,8 @@ void command_fear(Client *c, const Seperator *sep) {
 			c->Message(0, "You need a target,");
 		}
 #endif
-	} else if(!strcasecmp(sep->arg[1], "view")) {
-		if(zone->fear == NULL) {
-			c->Message(13, "There is no fear grid file loaded for this zone.");
-			return;
-		}
-		
-		int32 count = zone->fear->CountNodes();
-		int32 r;
-		char buf[128];
-		PathNode_Struct *node = zone->fear->GetNode(0); //assumes nodes are stored in a linear array
-		for(r = 0; r < count; r++, node++) {
-			sprintf(buf, "Fear_Point%d 3", r);
-			NPC* npc = NPC::SpawnNPC(buf, node->x, node->y, node->z, c->GetHeading(), NULL);
-			if(npc == NULL)
-				c->Message(13, "Unable to spawn new NPC marker.");
-			//do we need to do anything else?
-		}
 	} else if(!strcasecmp(sep->arg[1], "path")) {
-		if(zone->fear == NULL) {
+		if(zone->pathing == NULL) {
 			c->Message(13, "There is no fear grid file loaded for this zone.");
 			return;
 		}
@@ -6110,36 +6112,63 @@ void command_fear(Client *c, const Seperator *sep) {
 		int dist = atoi(sep->arg[2]);
 		char buf[128];
 		
+		FindPerson_Point it;
+		vector<FindPerson_Point> pts;
+		pts.reserve(dist+2);
+		bool path_mode = (strcasecmp(sep->arg[3], "npc") != 0);
+		
 		MobFearState fs;
 		
 		sprintf(buf, "Close_Fear_Link%d_ 3", dist);
-		if(!zone->fear->FindNearestPath(&fs, c->GetX(), c->GetY(), c->GetZ())) {
+		if(!zone->pathing->FindNearestFear(&fs, c->GetX(), c->GetY(), c->GetZ())) {
 			c->Message(13, "Unable to locate a closest fear path.");
 			return;
 		}
 		
-		NPC* npc = NPC::SpawnNPC(buf, fs.x, fs.y, fs.z, c->GetHeading(), NULL);
-		if(npc == NULL)
-			c->Message(13, "Unable to spawn new NPC marker.");
+		if(path_mode) {
+			it.x = c->GetX();
+			it.y = c->GetY();
+			it.z = c->GetZ();
+			pts.push_back(it);
+			it.x = fs.x;
+			it.y = fs.y;
+			it.z = fs.z;
+			pts.push_back(it);
+		} else {
+			NPC* npc = NPC::SpawnNPC(buf, fs.x, fs.y, fs.z, c->GetHeading(), NULL);
+			if(npc == NULL)
+				c->Message(13, "Unable to spawn new NPC marker.");
+		}
 		
 		for(dist--; dist > 0; dist--) {
 			sprintf(buf, "Close_Fear_Link%d_ 3", dist);
-			if(!zone->fear->NextPathNode(&fs)) {
+			if(!zone->pathing->NextFearPath(&fs)) {
 				c->Message(13, "Unable to locate next fear path.");
 				return;
 			}
 			
-			/*NPC* npc = */NPC::SpawnNPC(buf, fs.x, fs.y, fs.z, c->GetHeading(), NULL);
+			if(path_mode) {
+				it.x = fs.x;
+				it.y = fs.y;
+				it.z = fs.z;
+				pts.push_back(it);
+			} else {
+				/*NPC* npc = */NPC::SpawnNPC(buf, fs.x, fs.y, fs.z, c->GetHeading(), NULL);
+			}
+		}
+		
+		if(path_mode) {
+			c->SendPathPacket(pts);
 		}
 		
 	} else if(!strcasecmp(sep->arg[1], "close")) {
-		if(zone->fear == NULL) {
+		if(zone->pathing == NULL) {
 			c->Message(13, "There is no fear grid file loaded for this zone.");
 			return;
 		}
 		MobFearState fs;
 		
-		if(!zone->fear->FindNearestPath(&fs, c->GetX(), c->GetY(), c->GetZ())) {
+		if(!zone->pathing->FindNearestFear(&fs, c->GetX(), c->GetY(), c->GetZ())) {
 			c->Message(13, "Unable to locate a closest fear path.");
 			return;
 		}
@@ -6148,6 +6177,271 @@ void command_fear(Client *c, const Seperator *sep) {
 		if(npc == NULL)
 			c->Message(13, "Unable to spawn new NPC marker.");
 		
+	} else if(!strcasecmp(sep->arg[1], "see")) {
+		
+		vector<FindPerson_Point> points;
+		
+		Mob* target = c->GetTarget();
+		
+		if(target == NULL) {
+			//empty length packet == not found.
+			APPLAYER outapp(OP_FindPersonReply, 0);
+			c->QueuePacket(&outapp);
+			return;
+		}
+		
+		c->Message(13, "Found NPC '%s'\n", target->GetName());
+		
+		//fill in the path array...
+		points.resize(4);
+		points[0].x = c->GetX();
+		points[0].y = c->GetY();
+		points[0].z = c->GetZ();
+		points[1].x = target->GetX();
+		points[1].y = target->GetY();
+		points[1].z = target->GetZ();
+		points[2].x = 10;
+		points[2].y = 10;
+		points[2].z = 10;
+		points[3].x = 0;
+		points[3].y = 0;
+		points[3].z = 0;
+		
+		
+		
+		if(points.size() == 0) {
+			//empty length packet == not found.
+			APPLAYER outapp(OP_FindPersonReply, 0);
+			c->QueuePacket(&outapp);
+			return;
+		}
+		
+		int len = sizeof(FindPersonResult_Struct) + points.size() * sizeof(FindPerson_Point);
+		APPLAYER *outapp = new APPLAYER(OP_FindPersonReply, len);
+		FindPersonResult_Struct* fpr=(FindPersonResult_Struct*)outapp->pBuffer;
+		
+		vector<FindPerson_Point>::iterator cur, end;
+		cur = points.begin();
+		end = points.end();
+		int r;
+		for(r = 0; cur != end; cur++, r++) {
+			fpr->path[r] = *cur;
+		}
+		cur--;	//last element.
+		fpr->dest = *cur;
+		
+		c->FastQueuePacket(&outapp);
+	} else {
+		c->Message(15, "Invalid action specified. use '#fear help' for help");
+	}
+}
+
+void command_path(Client *c, const Seperator *sep) {
+	//super-command for editing fear grids and hints
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char *query = 0;
+	if(sep->arg[1][0] == '\0' || !strcasecmp(sep->arg[1], "help")) {
+		c->Message(0, "Syntax: #path [view|close|add|link|list|del].");
+		c->Message(0, "...view - spawn an NPC at each path grid point, and fear hint");
+		c->Message(0, "...close - spawn an NPC at the closest path point");
+		c->Message(0, "...show [draw|npc] [x] [y] [z]- draw a path (or spawn an NPC) at each path point to x,y,z");
+		c->Message(0, "...to [draw|npc] - draw a path (or spawn an NPC) at each path point to your target");
+		c->Message(0, "...add [force|disjoint]- add a new path hint point where your standing");
+		c->Message(0, "....... force requires this point not move when combining nodes");
+		c->Message(0, "....... disjoint marks the graph connected to this node as a valid disjoint graph");
+		c->Message(0, "...list - show a list of all path hint points for this zone");
+		c->Message(0, "...find [range] - show a list of all path hint points within range of you");
+		c->Message(0, "...del [id] - remove the path hint 'id'");
+//		c->Message(0, "...start - fears your target until you #fear stop them");
+//		c->Message(0, "...stop - Stops fear on your target");
+		return;
+	}
+	
+	if(!strcasecmp(sep->arg[1], "add")) {
+		int force = 0;
+		int disjoint = 0;
+		if(!strcasecmp(sep->arg[2], "force")) {
+			force = 1;
+			if(!strcasecmp(sep->arg[1], "disjoint"))
+				disjoint = 1;
+		} else if(!strcasecmp(sep->arg[2], "disjoint")) {
+			disjoint = 1;
+		}
+		if(!database.RunQuery(query, MakeAnyLenString(&query, 
+			"INSERT INTO fear_hints (zone,x,y,z,forced,disjoint) VALUES('%s',%f,%f,%f,%d,%d)",
+			zone->GetShortName(), c->GetX(), c->GetY(), c->GetZ(), force, disjoint), errbuf))
+		{
+			c->Message(15, "Error adding hint: %s", errbuf);
+		} else {
+			c->LogSQL(query);
+			c->Message(15, "Success! Path hint point added.");
+		}
+		safe_delete(query);
+	} else if(!strcasecmp(sep->arg[1], "del")) {
+		if(!database.RunQuery(query, MakeAnyLenString(&query, 
+			"DELETE FROM fear_hints WHERE zone='%s' AND id=%d",
+			zone->GetShortName(), atoi(sep->arg[2])), errbuf))
+		{
+			c->Message(15, "Error adding hint: %s", errbuf);
+		} else {
+			c->LogSQL(query);
+			c->Message(15, "Success! Path hint point added.");
+		}
+		safe_delete(query);
+	} else if(!strcasecmp(sep->arg[1], "list")) {
+		MYSQL_RES *result;
+		MYSQL_ROW row;
+		if (database.RunQuery(query, MakeAnyLenString(&query, 
+			"SELECT id,x,y,z FROM fear_hints WHERE zone='%s'",
+			zone->GetShortName()), errbuf, &result))
+		{
+			c->Message(0, "Path Hints for %s:", zone->GetShortName());
+			while ((row = mysql_fetch_row(result)))
+			{
+				c->Message(0, "[%s]: (%s, %s, %s)", row[0], row[1], row[2], row[3]);
+			}
+			mysql_free_result(result);
+		} else {
+			c->Message(0, "Unable to query path hints: %s", errbuf);
+		}
+		safe_delete_array(query);
+	} else if(!strcasecmp(sep->arg[1], "find")) {
+		float range = atof(sep->arg[2]);
+		if(range < 1) {
+			c->Message(0, "Invalid range.");
+			return;
+		}
+		
+		MYSQL_RES *result;
+		MYSQL_ROW row;
+		if (database.RunQuery(query, MakeAnyLenString(&query, 
+			"SELECT id,x,y,z FROM fear_hints WHERE zone='%s' AND (x*x+y*y) < %f",
+			zone->GetShortName(), range*range), errbuf, &result))
+		{
+			c->Message(0, "Path Hints for %s within %.3f:", zone->GetShortName(), range);
+			while ((row = mysql_fetch_row(result)))
+			{
+				c->Message(0, "[%s]: (%s, %s, %s)", row[0], row[1], row[2], row[3]);
+			}
+			mysql_free_result(result);
+		} else {
+			c->Message(0, "Unable to query path hints: %s", errbuf);
+		}
+		safe_delete_array(query);
+	} else if(!strcasecmp(sep->arg[1], "view")) {
+		if(zone->pathing == NULL) {
+			c->Message(13, "There is no path grid file loaded for this zone.");
+			return;
+		}
+		
+		int32 count = zone->pathing->CountNodes();
+		int32 r;
+		char buf[128];
+		PathNode_Struct *node = zone->pathing->GetNode(0); //assumes nodes are stored in a linear array
+		for(r = 0; r < count; r++, node++) {
+			sprintf(buf, "Path_Point%d 3", r);
+			NPC* npc = NPC::SpawnNPC(buf, node->x, node->y, node->z, c->GetHeading(), NULL);
+			if(npc == NULL)
+				c->Message(13, "Unable to spawn new NPC marker.");
+			//do we need to do anything else?
+		}
+	} else if(!strcasecmp(sep->arg[1], "show") || !strcasecmp(sep->arg[1], "to")) {
+		if(zone->pathing == NULL) {
+			c->Message(13, "There is no path grid file loaded for this zone.");
+			return;
+		}
+		
+		char buf[128];
+		
+		FindPerson_Point it;
+		vector<FindPerson_Point> pts;
+		bool path_mode = (strcasecmp(sep->arg[2], "npc") != 0);
+		
+		PathFindingState ps;
+		ps.x = c->GetX();
+		ps.y = c->GetY();
+		ps.z = c->GetZ();
+		float x,y,z;
+		if(!strcasecmp(sep->arg[1], "to")) {
+			Mob *t = c->GetTarget();
+			if(t == NULL) {
+				c->Message(13, "You must have a target to path to them.");
+				return;
+			}
+			x = ps.dest_x = t->GetX();
+			y = ps.dest_y = t->GetY();
+			z = ps.dest_z = t->GetZ();
+		} else {
+			x = ps.dest_x = atof(sep->arg[3]);
+			y = ps.dest_y = atof(sep->arg[4]);
+			z = ps.dest_z = atof(sep->arg[5]);
+		}
+		
+		if(!zone->pathing->InitPathFinding(&ps, false)) {
+			if(zone->pathing->InitPathFinding(&ps, true)) {
+				c->Message(13, "Unable to locate a clean path, but found one without LOS to endpoints.");
+			} else {
+				c->Message(13, "Unable to locate a path to (%.3f,%.3f,%.3f)", x, y, z);
+				return;
+			}
+		}
+		
+		c->Message(0, "Showing pathing to (%.3f,%.3f,%.3f)", x, y, z);
+		
+		int d = 0;
+		if(path_mode) {
+			//initial position
+			it.x = c->GetX();
+			it.y = c->GetY();
+			it.z = c->GetZ();
+			pts.push_back(it);
+			//first path node
+			it.x = ps.x;
+			it.y = ps.y;
+			it.z = ps.z;
+			pts.push_back(it);
+		} else {
+			sprintf(buf, "Close_Path_Link%d_ 3", d++);
+			NPC* npc = NPC::SpawnNPC(buf, ps.x, ps.y, ps.z, c->GetHeading(), NULL);
+			if(npc == NULL)
+				c->Message(13, "Unable to spawn new NPC marker.");
+		}
+		c->Message(0, "First node (%.3f,%.3f,%.3f)", ps.x, ps.y, ps.z);
+		
+		for(; zone->pathing->NextPathFinding(&ps); d++) {
+			sprintf(buf, "Close_Path_Link%d_ 3", d);
+
+			c->Message(0, "Next (%.3f,%.3f,%.3f)", ps.x, ps.y, ps.z);
+						
+			if(path_mode) {
+				it.x = ps.x;
+				it.y = ps.y;
+				it.z = ps.z;
+				pts.push_back(it);
+			} else {
+				/*NPC* npc = */NPC::SpawnNPC(buf, ps.x, ps.y, ps.z, c->GetHeading(), NULL);
+			}
+		}
+		
+		if(path_mode) {
+			c->SendPathPacket(pts);
+		}
+		
+	} else if(!strcasecmp(sep->arg[1], "close")) {
+		if(zone->pathing == NULL) {
+			c->Message(13, "There is no fear grid file loaded for this zone.");
+			return;
+		}
+		MobFearState fs;
+		
+		if(!zone->pathing->FindNearestFear(&fs, c->GetX(), c->GetY(), c->GetZ())) {
+			c->Message(13, "Unable to locate a closest fear path.");
+			return;
+		}
+		
+		NPC* npc = NPC::SpawnNPC("Close_Fear_Point 2", fs.x, fs.y, fs.z, c->GetHeading(), NULL);
+		if(npc == NULL)
+			c->Message(13, "Unable to spawn new NPC marker.");
 	} else {
 		c->Message(15, "Invalid action specified. use '#fear help' for help");
 	}

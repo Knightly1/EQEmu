@@ -71,7 +71,7 @@ public:
 	// neotokyo: added frenzy
 	bool	Attack(Mob* other, int Hand = 13, bool = false);
 	void	Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill = 0x04, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false);
-	void	Death(Mob* other, sint32 damage, int16 spell_id = 0xFFFF, int8 attack_skill = 0x04);
+	void	Death(Mob* other, sint32 damage, int16 spell_id = SPELL_UNKNOWN, int8 attack_skill = 0x04);
 	bool	DatabaseCastAccepted(int spell_id);
 	int32	spelllimit;
 	bool	IsFactionListAlly(uint32 other_faction);

@@ -288,6 +288,28 @@ bool ZoneServer::Process() {
 			}
 			break;
 		}
+		case ServerOP_SpawnCondition: {
+			if(pack->size != sizeof(ServerSpawnCondition_Struct))
+				break;
+			//bounce the packet to the correct zone server, if its up
+			ServerSpawnCondition_Struct* ssc = (ServerSpawnCondition_Struct*)pack->pBuffer;
+			ZoneServer *zs = zoneserver_list.FindByZoneID(ssc->zoneID);
+			if(zs) {
+				zs->SendPacket(pack);
+			}
+			break;
+		}
+		case ServerOP_SpawnEvent: {
+			if(pack->size != sizeof(ServerSpawnEvent_Struct))
+				break;
+			//bounce the packet to the correct zone server, if its up
+			ServerSpawnEvent_Struct* sse = (ServerSpawnEvent_Struct*)pack->pBuffer;
+			ZoneServer *zs = zoneserver_list.FindByZoneID(sse->zoneID);
+			if(zs) {
+				zs->SendPacket(pack);
+			}
+			break;
+		}
 		case ServerOP_ChannelMessage: {
 			ServerChannelMessage_Struct* scm = (ServerChannelMessage_Struct*) pack->pBuffer;
 			if (scm->chan_num == 7 || scm->chan_num == 14) {

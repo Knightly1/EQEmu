@@ -294,6 +294,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_SafeFallSuccess] = &Client::Handle_OP_SafeFallSuccess;
 	ConnectedOpcodes[OP_Heartbeat] = &Client::Handle_OP_Heartbeat;
 	ConnectedOpcodes[OP_SafePoint] = &Client::Handle_OP_SafePoint;
+	ConnectedOpcodes[OP_FindPersonRequest] = &Client::Handle_OP_FindPersonRequest;
 	
 }
 
@@ -1064,7 +1065,7 @@ void Client::Handle_OP_Consume(const APPLAYER *app)
 		LogFile->write(EQEMuLog::Debug, "Eating from slot:%i", (int)pcs->slot);
 #endif
 		m_pp.hunger_level += eat_item->Common.CastTime*30; //roughly 1 item per 10 minutes
-		GetInv().DeleteItem(pcs->slot,1);
+		DeleteItemInInventory(pcs->slot, 1, false);
 	}
 	else if (pcs->type == 0x02) {
 #if EQDEBUG >= 1
@@ -1073,7 +1074,7 @@ void Client::Handle_OP_Consume(const APPLAYER *app)
 		// 6000 is the max. value
 		//m_pp.thirst_level += 1000;
 		m_pp.thirst_level += eat_item->Common.CastTime*30; //roughly 1 item per 10 minutes
-		GetInv().DeleteItem(pcs->slot,1);
+		DeleteItemInInventory(pcs->slot, 1, false);
 	}
 	else {
 		LogFile->write(EQEMuLog::Error, "OP_Consume: unknown type, type:%i", (int)pcs->type);
@@ -5585,6 +5586,41 @@ void Client::Handle_OP_SafePoint(const APPLAYER *app)
 {
 }
 
+void Client::Handle_OP_FindPersonRequest(const APPLAYER *app)
+{
+	if(app->size != sizeof(FindPersonRequest_Struct))
+		printf("Error in FindPersonRequest_Struct.  Expected size of: %i, but got: %i\n",sizeof(FindPersonRequest_Struct),app->size);
+	else {
+		FindPersonRequest_Struct* t = (FindPersonRequest_Struct*)app->pBuffer;
+		
+		vector<FindPerson_Point> points;
+		
+		Message(13, "Searched for NPC ID: %d\n", t->npc_id);
+		Mob* target = entity_list.GetMob(t->npc_id);
+		
+		if(target == NULL) {
+			//empty length packet == not found.
+			APPLAYER outapp(OP_FindPersonReply, 0);
+			QueuePacket(&outapp);
+			return;
+		}
+		
+		Message(13, "Found NPC '%s'\n", target->GetName());
+		
+		//fill in the path array...
+		points.resize(2);
+		points[0].x = GetX();
+		points[0].y = GetY();
+		points[0].z = GetZ();
+		points[1].x = target->GetX();
+		points[1].y = target->GetY();
+		points[1].z = target->GetZ();
+		
+		SendPathPacket(points);
+	}
+	return;
+}
+
 void Client::DBAWComplete(int8 workpt_b1, DBAsyncWork* dbaw) {
 	Entity::DBAWComplete(workpt_b1, dbaw);
 	switch (workpt_b1) {
@@ -5895,11 +5931,15 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 
 			}
 		}
+		
+		//I believe these effects are stripped off because if they
+		//are not, they result in permanent effects on the player
 		for (int j1=0; j1 < BUFF_COUNT; j1++) {
 			if (buffs[j1].spellid <= (int32)SPDAT_RECORDS) {
 				for (int x1=0; x1 < EFFECT_COUNT; x1++) {
 					switch (spells[buffs[j1].spellid].effectid[x1]) {
 						case SE_Charm:
+						case SE_Rune:
 						case SE_Illusion:
 							buffs[j1].spellid = SPELL_UNKNOWN;
 							m_pp.buffs[j1].spellid = SPELLBOOK_UNKNOWN;
@@ -6048,8 +6088,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	memcpy(outapp->pBuffer,&m_pp,outapp->size);
 	outapp->Deflate();
 	outapp->priority = 6;
-	QueuePacket(outapp);
-	safe_delete(outapp);
+	FastQueuePacket(&outapp);
 
 	
 	//this was moved before the spawn packets are sent 
@@ -6137,6 +6176,13 @@ void Client::CompleteConnect()
 //	database.UpdateTimersClientConnected(CharacterID());
 	client_state = CLIENT_CONNECTED;
 	
+#ifdef COMBINED
+	//dont start combining things until were connected
+	//to prevent strange zoning behavior
+	eqnc->EnableCombining();
+#endif
+	
+	
 	hpupdate_timer.Start();
 	position_timer.Start();
 	SetDuelTarget(0);
@@ -6194,29 +6240,30 @@ void Client::CompleteConnect()
 		if (buffs[j1].spellid > (int32)SPDAT_RECORDS)
 			continue;
 		
+		const SPDat_Spell_Struct &spell = spells[buffs[j1].spellid];
+		
 		for (int x1=0; x1 < EFFECT_COUNT; x1++) {
-			switch (spells[buffs[j1].spellid].effectid[x1]) {
+			switch (spell.effectid[x1]) {
 				case SE_Illusion: {
-					if (spells[buffs[j1].spellid].base[x1] == -1)
-					{
+					if (spell.base[x1] == -1) {
 						if (gender == 1)
 							gender = 0;
 						else if (gender == 0)
 							gender = 1;
 						SendIllusionPacket(GetRace(), gender, 0xFFFF, 0xFFFF);
 					}
-					else if (spells[buffs[j1].spellid].base[x1] == -2)
+					else if (spell.base[x1] == -2)
 					{
 						if (GetRace() == 128 || GetRace() == 130 || GetRace() <= 12)
-							SendIllusionPacket(GetRace(), GetGender(), spells[buffs[j1].spellid].max[x1], spells[buffs[j1].spellid].max[x1]);
+							SendIllusionPacket(GetRace(), GetGender(), spell.max[x1], spell.max[x1]);
 					}
-					else if (spells[buffs[j1].spellid].max[x1] > 0)
+					else if (spell.max[x1] > 0)
 					{
-						SendIllusionPacket(spells[buffs[j1].spellid].base[x1], 0xFF, spells[buffs[j1].spellid].max[x1], spells[buffs[j1].spellid].max[x1]);
+						SendIllusionPacket(spell.base[x1], 0xFF, spell.max[x1], spell.max[x1]);
 					}
 					else
 					{
-						SendIllusionPacket(spells[buffs[j1].spellid].base[x1], 0xFF, 0xFFFF, 0xFFFF);
+						SendIllusionPacket(spell.base[x1], 0xFF, 0xFFFF, 0xFFFF);
 					}
 					break;
 				}
@@ -6254,22 +6301,6 @@ void Client::CompleteConnect()
 			}
 		}
 	}
-	
-	//Remake pet
-/*	if (!GetPet() && m_epp.pet_id > 1 && m_epp.pet_id <= SPDAT_RECORDS)
-	{
-	printf("Remaking pet %d\b", m_epp.pet_id);
-		MakePet(m_epp.pet_id, spells[m_epp.pet_id].teleport_zone, m_epp.pet_name);
-		if (GetPet() && GetPet()->IsNPC()) {
-	printf("I have a pet!\n");
-			NPC *pet = GetPet()->CastToNPC();
-			pet->SetHP(m_epp.pet_hp);
-			pet->SetMana(m_epp.pet_mana);
-			pet->SetPetState(m_epp.pet_buffs, m_epp.pet_items);
-		}
-	}
-	//m_epp.pet_id = 0;
-*/
 	
 	client_data_loaded = true;
 	int x;

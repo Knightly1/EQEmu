@@ -67,6 +67,33 @@ int8 Mob::MaxSkill_weapon(int16 skillid, int16 class_, int16 level){
                 r_value = 100;
               break;
             }
+        case BERSERKER: case BERSERKERGM:{
+              r_value = 5 + (level*5);
+              if ( level < 51 && r_value > 240)
+                  r_value = 240;
+              switch (skillid) {
+                case HAND_TO_HAND:{
+                  if ( r_value > 198)
+                    r_value = 198;
+                  break;
+                }
+                case PIERCING:{
+                  if ( r_value > 240)
+                    r_value = 240;
+                  break;
+                }
+                case _2H_BLUNT:
+                case _2H_SLASHING:{
+                  if ( r_value > 252 )
+                    r_value = 252;
+                  break;
+                }
+                default:
+                  r_value = 0;
+                  break;
+              }
+              break;
+            }
         // Priest classes
         case CLERIC: case CLERICGM:{
               r_value = 4 + (level*4);
@@ -358,6 +385,7 @@ int8 Mob::MaxSkill_offensive(int16 skillid, int16 class_, int16 level){
     case THROWING:{
       switch (class_) {
         // Melee
+        case BERSERKER: case BERSERKERGM:
         case ROGUE: case ROGUEGM:{
           // 220 250
           r_value = ((level*5) + 5);
@@ -485,6 +513,7 @@ int8 Mob::MaxSkill_offensive(int16 skillid, int16 class_, int16 level){
             r_value = 240;
           break;
         }
+        case BERSERKER: case BERSERKERGM:
         case WARRIOR: case WARRIORGM:{
           // 15 205 245
           r_value = ((level*5) + 5);
@@ -634,6 +663,7 @@ int8 Mob::MaxSkill_offensive(int16 skillid, int16 class_, int16 level){
     case KICK:{
       switch (class_) {
         // Melee
+        case BERSERKER: case BERSERKERGM:
         case WARRIOR: case WARRIORGM:{
           // 1 149 210
           r_value = ((level*5) + 5);
@@ -828,6 +858,17 @@ int8 Mob::MaxSkill_defensive(int16 skillid, int16 class_, int16 level){
             r_value = 252;
           break;
         }
+        case BERSERKER: case BERSERKERGM:{
+          // 230 252 5*level+5
+          r_value = ((level*5) + 5);
+          if ( level < 51 ) {
+            if (r_value > 230)
+              r_value = 230;
+          }
+          if (r_value > 252)
+            r_value = 252;
+          break;
+        }
         // Priest
         case DRUID: case DRUIDGM:
         case SHAMAN: case SHAMANGM:
@@ -922,6 +963,14 @@ int8 Mob::MaxSkill_defensive(int16 skillid, int16 class_, int16 level){
             r_value = 230;
           break;
         }
+        case BERSERKER: case BERSERKERGM:{
+          r_value = ((level*5) + 5);
+          if ( level < 10 )
+            r_value = 0;
+          if (r_value > 175)
+            r_value = 175;
+          break;
+        }
 
         // Hybrid
         case BARD: case BARDGM:{
@@ -980,14 +1029,13 @@ int8 Mob::MaxSkill_defensive(int16 skillid, int16 class_, int16 level){
     case RIPOSTE:{
       switch (class_) {
         // Melee
+        case BERSERKER: case BERSERKERGM:
         case WARRIOR: case WARRIORGM:{
         // 25 200 225
         r_value = ((level*5) + 5);
           if ( level < 25 )
             r_value = 0;
           if (r_value > 200 && level < 51 )
-
-
             r_value = 200;
           if (r_value > 225)
             r_value = 225;
@@ -1080,6 +1128,7 @@ int8 Mob::MaxSkill_defensive(int16 skillid, int16 class_, int16 level){
     case DODGE:{
       switch (class_) {
         // Melee
+        case BERSERKER: case BERSERKERGM:
         case WARRIOR: case WARRIORGM:{
           // 6 140 175
           r_value = ((level*5) + 5);
@@ -1243,6 +1292,15 @@ int8 Mob::MaxSkill_defensive(int16 skillid, int16 class_, int16 level){
             r_value = 0;
           if (r_value > 200)
             r_value = 200;
+          break;
+        }
+        case BERSERKER: case BERSERKERGM:{
+        // 35 65 65
+          r_value = ((level*5) + 5);
+          if (level < 35)
+            r_value = 0;
+          if (r_value > 65)
+            r_value = 65;
           break;
         }
         // Priest
@@ -1632,9 +1690,9 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
     case ROUND_KICK:
     case TIGER_CLAW:
     case BLOCKSKILL:{
-      switch(class_){
+        switch(class_){
         case MONK: case MONKGM:{
-        r_value = ((level*5) + 5);
+          r_value = ((level*5) + 5);
           switch (skillid){
               case MEND:{
               // 1 200 200
@@ -1724,6 +1782,22 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
       }// Class Switch
     break;
     }
+	
+	//Berzerkers
+	case BERSERKING: {
+      switch(class_){
+	  case BERSERKER: case BERSERKERGM: {
+          r_value = ((level*5) + 5);
+		  if(r_value > 200)
+			r_value = 200;
+	  }
+	  default:
+		r_value = 0;
+		break;
+	  }
+	  break;
+	}
+	
       // Shaman
     case ALCHEMY:{
       switch(class_){
@@ -1902,6 +1976,14 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
 		 }
 		 break;
 		}
+        case BERSERKER: case BERSERKERGM:{
+		 if(level >= 20) {
+			r_value = (((level-20)*5) + 5);
+			if(r_value > 200)
+			 r_value = 200;
+		 }
+		 break;
+		}
 		case ROGUE: case ROGUEGM:{
 		 if(level >= 22) {
 			r_value = (((level-22)*5) + 5);
@@ -2054,20 +2136,20 @@ int8 Mob::MaxSkill(int16 skillid, int16 class_, int16 level) {
     case POTTERY:
     case FISHING:{
       // Check for Any Trade above 200, check for X (aa skill) Trades above 200
-      r_value = 200;
+      r_value = 250;
       break;
     }
 /////////////////////////////////////
 /////////////////////////////////////
     // Gnome
-    //case TINKERING:{
-    //  if ( race == GNOME && level > 24 ) {
-     //   r_value = ((level*5)+5);
-      //  break;
-      //}
-      //r_value = 0;
-      //break;
-   // }
+    case TINKERING:{
+      if ( race == GNOME && level > 24 ) {
+        r_value = ((level*5)+5);
+        break;
+      }
+      r_value = 0;
+      break;
+    }
 
 /////////////////////////////////////////
 // Common
@@ -2077,8 +2159,6 @@ int8 Mob::MaxSkill(int16 skillid, int16 class_, int16 level) {
       if (level > 50){
         // Check for aa and class
       }
-      if (r_value > 200)
-        r_value = 200;
       switch (class_) {
           case ENCHANTER: case ENCHANTERGM:
           case MAGICIAN: case MAGICIANGM:
@@ -2087,7 +2167,15 @@ int8 Mob::MaxSkill(int16 skillid, int16 class_, int16 level) {
             if (  r_value > 100 )
               r_value = 100;
           }
-        default:  break;
+          case BERSERKER: case BERSERKERGM:{
+            if (  r_value > 210 )
+              r_value = 210;
+          }
+          break;
+          default:
+	        if (r_value > 200)
+	          r_value = 200;
+        	break;
       }
       break;
     }

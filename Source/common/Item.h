@@ -271,9 +271,9 @@ protected:
 	
 	// Checks an inventory bucket for a particular item
 	sint16 _HasItem(map<sint16, ItemInst*>& bucket, const Item_Struct* item, uint8 quantity);
-	sint16 _HasItem(ItemInstQueue& queue, const Item_Struct* item, uint8 quantity);
+	sint16 _HasItem(ItemInstQueue& iqueue, const Item_Struct* item, uint8 quantity);
 	sint16 _HasItemByUse(map<sint16, ItemInst*>& bucket, uint8 use, uint8 quantity);
-	sint16 _HasItemByUse(ItemInstQueue& queue, uint8 use, uint8 quantity);
+	sint16 _HasItemByUse(ItemInstQueue& iqueue, uint8 use, uint8 quantity);
 	
 	
 	// Player inventory

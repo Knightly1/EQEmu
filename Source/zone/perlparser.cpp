@@ -24,6 +24,7 @@
 #include "questmgr.h"
 #include "embxs.h"
 #include "entity.h"
+#include "../common/debug.h"
 
 /*
 
@@ -85,7 +86,10 @@ void PerlXSParser::SendCommands(const char * pkgprefix, const char *event, int32
 		return;
 	_ZP(PerlXSParser_SendCommands);
 	
-	quest_manager.StartQuest(other, mob?mob->CastToClient():NULL);
+	if(mob && mob->IsClient())
+		quest_manager.StartQuest(other, mob->CastToClient());
+	else
+		quest_manager.StartQuest(other, NULL);
 	
 	try {
 
@@ -422,7 +426,7 @@ XS(XS__stoptimer);
 XS(XS__stoptimer)
 {
 	dXSARGS;
-	if (items != 2)
+	if (items != 1)
 		Perl_croak(aTHX_ "Usage: stoptimer(timer_name)");
 
 	char *		timer_name = (char *)SvPV_nolen(ST(0));
@@ -1312,6 +1316,101 @@ XS(XS__setanim) //Cisyouc: mob->setappearance() addition
 	XSRETURN_EMPTY;
 }
 
+XS(XS__showgrid);
+XS(XS__showgrid)
+{
+	dXSARGS;
+	if(items != 1)
+		Perl_croak(aTHX_ "Usage: quest::showgrid(grid_id);");
+	
+	quest_manager.showgrid(SvUV(ST(0)));
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__showpath);
+XS(XS__showpath)
+{
+	dXSARGS;
+	if (items != 3)
+		Perl_croak(aTHX_ "Usage: showpath(x, y, z)");
+
+	float	x = (float)SvNV(ST(0));
+	float	y = (float)SvNV(ST(1));
+	float	z = (float)SvNV(ST(2));
+
+	quest_manager.showpath(x, y, z);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__pathto);
+XS(XS__pathto)
+{
+	dXSARGS;
+	if (items != 3)
+		Perl_croak(aTHX_ "Usage: pathto(x, y, z)");
+
+	float	x = (float)SvNV(ST(0));
+	float	y = (float)SvNV(ST(1));
+	float	z = (float)SvNV(ST(2));
+
+	quest_manager.pathto(x, y, z);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__spawn_condition);
+XS(XS__spawn_condition)
+{
+	dXSARGS;
+	if (items != 3)
+		Perl_croak(aTHX_ "Usage: spawn_condition(zone_short, condition_id, value)");
+	
+	char *	zone_short = (char *)SvPV_nolen(ST(0));
+	uint16	cond_id = (int)SvUV(ST(1));
+	sint16	value = (int)SvIV(ST(2));
+	
+	quest_manager.spawn_condition(zone_short, cond_id, value);
+	
+	XSRETURN_EMPTY;
+}
+
+XS(XS__get_spawn_condition);
+XS(XS__get_spawn_condition)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: get_spawn_condition(zone_short, condition_id)");
+	
+	sint16		RETVAL;
+	dXSTARG;
+	
+	char *	zone_short = (char *)SvPV_nolen(ST(0));
+	uint16	cond_id = (int)SvIV(ST(1));
+
+	RETVAL = quest_manager.get_spawn_condition(zone_short, cond_id);
+	XSprePUSH; PUSHu((IV)RETVAL);
+	
+	XSRETURN(1);
+}
+
+XS(XS__toggle_spawn_event);
+XS(XS__toggle_spawn_event)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: toggle_spawn_event(event_id, enabled?, reset_base)");
+	
+	int32	event_id = (int)SvIV(ST(0));
+	bool	enabled = ((int)SvIV(ST(1))) == 0?false:true;
+	bool	reset_base = ((int)SvIV(ST(1))) == 0?false:true;
+	
+	quest_manager.toggle_spawn_event(event_id, enabled, reset_base);
+	
+	XSRETURN_EMPTY;
+}
+
 /*
 
 This is the callback perl will look for to setup the
@@ -1347,6 +1446,7 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "addloot"), XS__addloot, file);
 		newXS(strcpy(buf, "zone"), XS__zone, file);
 		newXS(strcpy(buf, "settimer"), XS__settimer, file);
+		newXS(strcpy(buf, "stoptimer"), XS__stoptimer, file);
 		newXS(strcpy(buf, "emote"), XS__emote, file);
 		newXS(strcpy(buf, "shout"), XS__shout, file);
 		newXS(strcpy(buf, "shout2"), XS__shout2, file);
@@ -1407,6 +1507,12 @@ EXTERN_C XS(boot_quest)
         newXS(strcpy(buf, "set_proximity"), XS__set_proximity, file);
         newXS(strcpy(buf, "clear_proximity"), XS__clear_proximity, file);
         newXS(strcpy(buf, "setanim"), XS__setanim, file);
+        newXS(strcpy(buf, "showgrid"), XS__showgrid, file);
+        newXS(strcpy(buf, "showpath"), XS__showpath, file);
+        newXS(strcpy(buf, "pathto"), XS__pathto, file);
+        newXS(strcpy(buf, "spawn_condition"), XS__spawn_condition, file);
+        newXS(strcpy(buf, "get_spawn_condition"), XS__get_spawn_condition, file);
+        newXS(strcpy(buf, "toggle_spawn_event"), XS__toggle_spawn_event, file);
 	XSRETURN_YES;
 }
 

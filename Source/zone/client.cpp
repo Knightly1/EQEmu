@@ -206,9 +206,9 @@ Client::Client(EQNetworkConnection* ieqnc)
 	zonesummon_y = -2;
 	zonesummon_z = -2;
 	zonesummon_ignorerestrictions = 0;
-	proximity_x = 0;
-	proximity_y = 0;
-	proximity_z = 0;
+	proximity_x = 9e100;	//arbitrary large number
+	proximity_y = 9e100;
+	proximity_z = 9e100;
 	casting_spell_id = 0;
 	npcflag = false;
 	npclevel = 0;
@@ -994,7 +994,8 @@ return;
 	        }
 	    }
 	}
-
+	
+	outapp->priority = 6;
 	QueuePacket(outapp);
 	safe_delete(outapp);
 #ifdef PACKET_UPDATE_MANAGER   
@@ -2803,6 +2804,8 @@ void Client::SendAdventureInfoRequest(const APPLAYER* app){
 	char* buffer1;
 	SetAdventureID(tmp->GetNPCTypeID());
 	char* p=database.GetAdventureNPCText(tmp->GetNPCTypeID());
+	if(p == NULL)
+		return;
 	buffer1=new char[strlen(p)+1];
 	strcpy(buffer1,p);
 	buffer1[strlen(p)]=0x00;

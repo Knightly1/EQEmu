@@ -37,6 +37,9 @@ using namespace std;
 InitWinsock winsock;
 #endif
 
+#define LOOP_GRANULARITY 3	//# of ms between checking our socket/queues
+#define SERVER_LOOP_GRANULARITY 3	//# of ms between checking our socket/queues
+
 #define TCPN_DEBUG				0
 #define TCPN_DEBUG_Console		0
 #define TCPN_DEBUG_Memory		0
@@ -644,17 +647,22 @@ bool TCPConnection::Connect(int32 in_ip, int16 in_port, char* errbuf) {
 		if (errbuf)
 			snprintf(errbuf, TCPConnection_ErrorBufferSize, "TCPConnection::Connect(): connect() failed. Error: %i", WSAGetLastError());
 		closesocket(connection_socket);
+		connection_socket = 0;
+		SetState(TCPS_Ready);
+		SetAsyncConnect(false);
+		return false;
+	}
 #else
 	if (connect(connection_socket, (struct sockaddr *) &server_sin, sizeof (server_sin)) == SOCKET_ERROR) {
 		if (errbuf)
 			snprintf(errbuf, TCPConnection_ErrorBufferSize, "TCPConnection::Connect(): connect() failed. Error: %s", strerror(errno));
 		close(connection_socket);
-#endif
 		connection_socket = 0;
 		SetState(TCPS_Ready);
 		SetAsyncConnect(false);
 		return false;
-	}	
+	}
+#endif
 	int bufsize = 64 * 1024; // 64kbyte recieve buffer, up from default of 8k
 	setsockopt(connection_socket, SOL_SOCKET, SO_RCVBUF, (char*) &bufsize, sizeof(bufsize));
 #ifdef WIN32
@@ -809,13 +817,15 @@ bool TCPConnection::RecvData(char* errbuf) {
 		if (!(WSAGetLastError() == WSAEWOULDBLOCK)) {
 			if (errbuf)
 				snprintf(errbuf, TCPConnection_ErrorBufferSize, "TCPConnection::RecvData(): Error: %i", WSAGetLastError());
+			return false;
+		}
 #else
 		if (!(errno == EWOULDBLOCK)) {
 			if (errbuf)
 				snprintf(errbuf, TCPConnection_ErrorBufferSize, "TCPConnection::RecvData(): Error: %s", strerror(errno));
-#endif
 			return false;
 		}
+#endif
 	}
 	if ((TCPMode == modePacket || TCPMode == modeTransition) && timeout_timer->Check()) {
 		if (errbuf)
@@ -1334,10 +1344,11 @@ bool TCPConnection::SendData(char* errbuf) {
 		safe_delete_array(data);
 		if (status == SOCKET_ERROR) {
 #ifdef WIN32
-			if (WSAGetLastError() != WSAEWOULDBLOCK) {
+			if (WSAGetLastError() != WSAEWOULDBLOCK)
 #else
-			if (errno != EWOULDBLOCK) {
+			if (errno != EWOULDBLOCK)
 #endif
+			{
 				if (errbuf) {
 #ifdef WIN32
 					snprintf(errbuf, TCPConnection_ErrorBufferSize, "TCPConnection::SendData(): send(): Errorcode: %i", WSAGetLastError());
@@ -1377,7 +1388,7 @@ void* TCPConnectionLoop(void* tmp) {
 	TCPConnection* tcpc = (TCPConnection*) tmp;
 	tcpc->MLoopRunning.lock();
 	while (tcpc->RunLoop()) {
-		Sleep(1);
+		Sleep(LOOP_GRANULARITY);
 		if (tcpc->GetState() != TCPS_Ready) {
 			_CP(TCPConnectionLoop);
 			if (!tcpc->Process()) {
@@ -1467,7 +1478,7 @@ void* TCPServerLoop(void* tmp) {
 	tcps->MLoopRunning.lock();
 	while (tcps->RunLoop()) {
 		_CP(TCPServerLoop);
-		Sleep(1);
+		Sleep(SERVER_LOOP_GRANULARITY);
 		tcps->Process();
 	}
 	tcps->MLoopRunning.unlock();

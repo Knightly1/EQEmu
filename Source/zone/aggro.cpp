@@ -90,7 +90,7 @@ bool Mob::CheckWillAggro(Mob *mob) {
 	//im not sure I understand this..
 	//if I have an owner and it is not this mob, then I cannot
 	//aggro this mob...???
-	if(GetOwner() != 0 && mob != GetOwner()) {
+	if(GetOwnerID() != 0 && mob != GetOwner()) {
 		return(false);
 	}
 
@@ -103,7 +103,7 @@ bool Mob::CheckWillAggro(Mob *mob) {
 	}
 	
 	//Image: Get their current target and faction value now that its required
-	FACTION_VALUE fv = mob->GetFactionCon(this);
+	FACTION_VALUE fv = GetFactionCon(mob);
 	
 	// Make sure they're still in the zone
 	// Are they in range?
@@ -207,11 +207,10 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 			//then jump in if they are our friend
 			if(attacker->GetLevelCon(mob->GetLevel()) != CON_GREEN
 				&& (
-					//not sure if this primary check is needed, faction con might take care of it for us
-					//mob->CastToNPC()->GetPrimaryFaction() == sender->CastToNPC()->GetPrimaryFaction() ||
-					mob->GetFactionCon(sender)<= FACTION_AMIABLE )
+					mob->GetPrimaryFaction() == sender->CastToNPC()->GetPrimaryFaction() ||
+					mob->GetFactionCon(sender) <= FACTION_AMIABLE )
 			  ) {
-				//attacking someone on same faction
+				//attacking someone on same faction, or a friend
 				
 #if (EQDEBUG>=5) 
 				LogFile->write(EQEMuLog::Debug, "AIYellForHelp(\"%s\",\"%s\") %s attacking %s Dist %f Z %f", 
