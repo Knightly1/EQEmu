@@ -481,7 +481,6 @@ void EntityList::CheckSpawnQueue() {
 //				cout << "Sending spawn packet: " << iterator.GetData()->spawn.name << endl;
 				//outapp->Deflate();
 				QueueClients(0, outapp);
-				DumpPacket(outapp);
 				safe_delete(outapp);
 				iterator.RemoveCurrent();
 			}

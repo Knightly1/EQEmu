@@ -465,7 +465,7 @@ void Mob::MakePet(int16 spell_id, const char* pettype) {
 
 		int mat=0;
         float size_mod = 1;
-		#ifdef EQDEBUG
+		#ifdef _EQDEBUG
 			cout << "Setting stats for BL Pet for Race: " << crace << endl;
 		#endif
 
@@ -491,12 +491,14 @@ void Mob::MakePet(int16 spell_id, const char* pettype) {
             size_mod = 1.5f;
 			break;
 		default:
+#ifdef _EQDEBUG
 			cout << "No pet type modifications defined for race: " << crace << endl;
+#endif
 			break;
 		}
-		#ifdef EQDEBUG
+#ifdef _EQDEBUG
 			cout << "Summoning BeastLord Pet: " << (int)ptype << endl;
-		#endif
+#endif
 		switch ( ptype ) {
 		case 51:
 			database.MakePet(&petstruct,136,5,6*size_mod);
