@@ -16,6 +16,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 #include "../common/debug.h"
+#include "features.h"
 #include <iostream>
 using namespace std;
 #include <string.h>
@@ -83,6 +84,8 @@ extern volatile bool ZoneLoaded;
 #include "command.h"
 #include "parser.h"
 #include "embparser.h"
+#include "perlparser.h"
+#include "client_logs.h"
 
 #ifdef GUILDWARS
 #include "../GuildWars/GuildWars.h"
@@ -253,15 +256,25 @@ int main(int argc, char** argv) {
 
 
 #ifdef EMBPERL
+#ifdef EMBPERL_XS
+       LogFile->write(EQEMuLog::Status, "Loading embedded perl XS");
+       AutoDelete<PerlXSParser> ADparse;
+       try {
+		ADparse.init((PerlXSParser **)(&parse), new PerlXSParser);
+	}
+#else //old EMBPERL
        LogFile->write(EQEMuLog::Status, "Loading embedded perl");
        AutoDelete<PerlembParser> ADparse;
-       try { ADparse.init((PerlembParser **)(&parse), new PerlembParser); }
+       try {
+		ADparse.init((PerlembParser **)(&parse), new PerlembParser);
+	}
+#endif
        catch(const char *err)
        {//this should never happen, so if it does, it is something really serious (like a bad perl install), so we'll shutdown.
                LogFile->write(EQEMuLog::Status, "Fatal error initializing perl: %s", err);
                return EXIT_FAILURE;
        }
-#else
+#else	//old .qst
 	AutoDelete<Parser> ADparse(&parse, new Parser);
 #endif //EMBPERL
 
@@ -270,7 +283,11 @@ int main(int argc, char** argv) {
 	if ( !addonCmd.openLib() ) {
 		LogFile->write(EQEMuLog::Error, "Loading addons failed =(");
 	}
-#endif	
+#endif
+#ifdef CLIENT_LOGS
+	LogFile->SetAllCallbacks(ClientLogs::EQEmuIO_buf);
+	LogFile->SetAllCallbacks(ClientLogs::EQEmuIO_fmt);
+#endif
 	if (!worldserver.Connect()) {
 		LogFile->write(EQEMuLog::Error, "worldserver.Connect() FAILED!");
 	}

@@ -64,7 +64,7 @@ public:
 	bool	DatabaseCastAccepted(int spell_id);
 	int32	spelllimit;
 	bool	IsFactionListAlly(uint32 other_faction);
-	sint8	CheckNPCFactionAlly(sint32 other_faction);
+	FACTION_VALUE CheckNPCFactionAlly(sint32 other_faction);
 	FACTION_VALUE GetFactionCon(Mob* iOther);
 
 	void	GoToBind()	{ GMMove(org_x, org_y, org_z, org_heading); }

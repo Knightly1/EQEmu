@@ -62,6 +62,8 @@ void Mob::StopWandering()
 
 void Mob::ResumeWandering()
 {	// causes wandering to continue - overrides waypoint pause timer and PauseWandering()
+	if(!IsNPC())
+		return;
 	if (this->CastToNPC()->GetGrid() != 0)
 	{
 		if (this->CastToNPC()->GetGrid() < 0)
@@ -86,7 +88,7 @@ void Mob::ResumeWandering()
 		if (cur_wp_x == GetX() && cur_wp_y == GetY()) 
 		{	// are we we at a waypoint? if so, trigger event and start to next
 			char temp[100]; 
-			parse->Event(EVENT_WAYPOINT,this->GetNPCTypeID(), itoa(cur_wp,temp,10), this->CastToMob(), 0); 
+			parse->Event(EVENT_WAYPOINT,this->GetNPCTypeID(), itoa(cur_wp,temp,10), CastToNPC(), NULL); 
 			CalculateNewWaypoint(); 
 	        SetAppearance(0, false); 
 		}	// if not currently at a waypoint, we continue on to the one we were headed to before the stop

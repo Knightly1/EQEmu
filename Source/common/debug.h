@@ -85,29 +85,50 @@
 #include "../common/Mutex.h"
 #include <stdio.h>
 
+
 class EQEMuLog {
 public:
 	EQEMuLog();
 	~EQEMuLog();
 
-	enum LogIDs { Status, Normal, Error, Debug, MaxLogID };
-
+	enum LogIDs {
+		Status = 0,	//this must stay the first entry in this list
+		Normal,
+		Error,
+		Debug,
+		Quest,
+		MaxLogID
+	};
+	
+	//these are callbacks called for each
+	typedef void (* msgCallbackBuf)(LogIDs id, const char *buf, int8 size, int32 count);
+	typedef void (* msgCallbackFmt)(LogIDs id, const char *fmt, va_list ap);
+	
+	void SetAllCallbacks(msgCallbackFmt proc);
+	void SetAllCallbacks(msgCallbackBuf proc);
+	void SetCallback(LogIDs id, msgCallbackFmt proc);
+	void SetCallback(LogIDs id, msgCallbackBuf proc);
+	
+	bool write(LogIDs id, const char *buf, int8 size, int32 count);
 	bool write(LogIDs id, const char *fmt, ...);
 	bool Dump(LogIDs id, int8* data, int32 size, int32 cols=16, int32 skip=0);
 private:
 	bool open(LogIDs id);
 	bool writeNTS(LogIDs id, bool dofile, const char *fmt, ...); // no error checking, assumes is open, no locking, no timestamp, no newline
 
-	Mutex*	MOpen;
-	Mutex**	MLog;
-	FILE**	fp;
+	Mutex	MOpen;
+	Mutex	MLog[MaxLogID];
+	FILE*	fp[MaxLogID];
 /* LogStatus: bitwise variable
 	1 = output to file
 	2 = output to stdout
 	4 = fopen error, dont retry
 	8 = use stderr instead (2 must be set)
 */
-	int8*	pLogStatus;
+	int8	pLogStatus[MaxLogID];
+	
+	msgCallbackFmt logCallbackFmt[MaxLogID];
+	msgCallbackBuf logCallbackBuf[MaxLogID];
 };
 
 extern EQEMuLog* LogFile;

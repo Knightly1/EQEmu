@@ -22,7 +22,7 @@
 #include <string.h>
 #include <time.h>
 
-#define BUFF_COUNT 15
+#define BUFF_COUNT 20
 
 /*
 ** Item packet types
@@ -903,20 +903,12 @@ struct PlayerProfile_Struct
 /*4524*/	char				unknown3688[16];				
 /*4540*/	uint32				zone_id;			// Current zone of the player
 /*4544*/	SpellBuff_Struct	buffs[BUFF_COUNT];			// Buffs currently on the player
-/*4784*/	char 				groupMembers[6][64];		//
-/*5168*/	uint8				unknown4328[4]; 		//
-/*5172*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
-/*5176*/	uint32				ldon_mirugal_points;		// Earned Mirugal' Mebagerie points - Verified by Doodman
-/*5180*/	uint32				ldon_mistmoore_points;		// Earned Mismoore Catacombs Points - Verified by Doodman
-/*5184*/	uint32				ldon_rujarkian_points;		// Earned Rujarkian Hills points - Verified by Doodman
-/*5188*/	uint32				ldon_takish_points;		// Earned Takish points - Doodman: guessing based on others that were known
-/*5192*/	uint8				unknown4352[24]; 		//
-/*5216*/	uint32				ldon_available_points;		// Earned Rujarkian Hills points - Verified
+/*4864*/	char 				groupMembers[6][64];		//
 		//hack variables for pet conservation, prolly not valid
-/*5096*/	int16				pet_id;
-/*5098*/	int16				pet_hp;
-/*5100*/	uint32				aa_effects;	//another hack, need it somewhere...
-/*5104*/	uint32				unknown4380[18];	//one word became pet stuff above
+/*5248*/	int16				pet_id;
+/*5250*/	int16				pet_hp;
+/*5252*/	uint32				aa_effects;	//another hack, need it somewhere...
+/*5256*/	uint32				unknown4380[11];	//one word became pet stuff above
 /*5300*/	uint32				unknown4460[166];
 /*5964*/	uint32				unknown5760; //0xFF FF FF FF
 /*5968*/	uint32				unknown5968[15];

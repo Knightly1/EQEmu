@@ -31,6 +31,7 @@ using namespace std;
 #include <time.h>
 #include "parser.h"
 #include "basic_functions.h"
+#include "questmgr.h"
 
 extern Database database;
 extern Zone* zone;
@@ -306,7 +307,7 @@ int Parser::HasQuestFile(int32 npcid)
 return true;
 }
 
-void Parser::Event(int event, int32 npcid, const char * data, Mob* npcmob, Mob* mob) {
+void Parser::Event(int event, int32 npcid, const char * data, NPC* npcmob, Mob* mob) {
 	if (npcid == 0)
 		return;
 	sint32 qstID = GetNPCqstID(npcid);
@@ -544,7 +545,7 @@ void Parser::ClearCache() {
 	npcarrayindex=1;
 }
 
-void Parser::SendCommands(const char * event, int32 npcid, Mob* npcmob, Mob* mob) {
+void Parser::SendCommands(const char * event, int32 npcid, NPC* npcmob, Mob* mob) {
 	iter_events listIt = MainList.begin();
 	Events *p;
 	EventList *pp;
@@ -553,6 +554,7 @@ void Parser::SendCommands(const char * event, int32 npcid, Mob* npcmob, Mob* mob
 		p = *listIt;
 		iter_eventlist listIt2 = p->Event.begin();
 		if ( p->npcid == npcid ) {
+			quest_manager.StartQuest(npcmob, mob?mob->CastToClient():NULL);
 			while (listIt2 != p->Event.end())
 			{
 				pp = *listIt2;
@@ -564,6 +566,8 @@ void Parser::SendCommands(const char * event, int32 npcid, Mob* npcmob, Mob* mob
 				}
 				listIt2++;
 			}
+			quest_manager.EndQuest();
+			return;
 		}
 		listIt++;
 	}
@@ -661,7 +665,7 @@ void Parser::ClearAliasesByNPCID(int32 iNPCID) {
 	}*/
 }
 
-void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid, Mob* other, Mob* mob )
+void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid, NPC* other, Mob* mob )
 {
 	char arglist[10][1024];
 	//Work out the argument list, if there needs to be one
@@ -736,755 +740,224 @@ void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid
 		 *cptr++;
 	}
 	
+	
 	if (!strcmp(command,"write")) {
-				char temp[1024];
-				memset(temp,0x0,1024);
-				snprintf(temp, sizeof(temp), "%s\n", arglist[1]);
-					FILE * pFile;
-					pFile = fopen (arglist[0], "a");
-					fwrite (temp , 1 , strlen(temp) , pFile);
-					fclose (pFile);
-			}
-			else if (!strcmp(command,"me")) {
+		quest_manager.write(arglist[0], arglist[1]);
+	}
+	else if (!strcmp(command,"me")) {
 // MYRA - fixed comma bug for me command
-				if (mob && mob->IsClient()) entity_list.MessageClose(mob->CastToClient(), false, 200, 10, "%s", parms.c_str());
+		quest_manager.me(parms.c_str());
 //end Myra
-			}
-			else if (!strcmp(command,"spawn") || !strcmp(command,"spawn2")) 
-			{
-
-				//char tempa[100];
-				const NPCType* tmp = 0;
-				int16 grid = atoi(arglist[1]);
-				//int8 guildwarset = atoi(arglist[2]);
-				float hdng;
-				if ((tmp = database.GetNPCType(atoi(arglist[0])))) 
-				{
-
-					if (!strcmp(command,"spawn")) 
-					{
-						hdng=mob->CastToClient()->GetHeading();
-					}
-					else
-					{
-						hdng=atof(arglist[6]);
-					}
-					NPC* npc = new NPC(tmp, 0, atof(arglist[3]), atof(arglist[4]), atof(arglist[5]), hdng);
-
-
-					npc->AddLootTable();
-					entity_list.AddNPC(npc,true,true);
-					// Quag: Sleep in main thread? ICK!
-					// Sleep(200);
-					// Quag: check is irrelevent, it's impossible for npc to be 0 here
-					// (we're in main thread, nothing else can possibly modify it)
-//					if(npc != 0) {
-						if(grid > 0)
-						{
-							npc->AssignWaypoints(grid);
-						}
-						npc->SendPosUpdate();
-//					}
-				}
-			}
-			else if (!strcmp(command,"echo")) {
-// MYRA - fixed comma bug for echo command
-				printf("%s\n", parms.c_str());
-//end Myra
-			}
-			else if (!strcmp(command,"summonitem")) {
-				if (mob) mob->CastToClient()->SummonItem(atoi(arglist[0]));
-			}
-			else if (!strcmp(command,"setstat")) {
-				if (mob) 
-					mob->CastToClient()->SetStats(atoi(arglist[0]),atoi(arglist[1]));
-			}
-			else if (!strcmp(command,"castspell")) {
-				if (other) other->SpellFinished(atoi(arglist[1]), atoi(arglist[0]));
-			}
-			else if (!strcmp(command,"selfcast")) {
-				if (mob) mob->SpellFinished(atoi(arglist[0]), mob->GetID(),10,0);
-			}
-			else if (!strcmp(command,"addloot")) {//Cofruben: add an item to the mob.
-				if (other && atoi(arglist[0])>0 && other->IsNPC())
-					other->CastToNPC()->AddItem(atoi(arglist[0]),atoi(arglist[1]));
-			}
-			else if (!strcmp(command,"zone")) {
-				if (mob && mob->IsClient())
-				{
-							ServerPacket* pack = new ServerPacket(ServerOP_ZoneToZoneRequest, sizeof(ZoneToZone_Struct));
-							ZoneToZone_Struct* ztz = (ZoneToZone_Struct*) pack->pBuffer;
-							ztz->response = 0;
-							ztz->current_zone_id = zone->GetZoneID();
-							ztz->requested_zone_id = database.GetZoneID(arglist[0]);
-							ztz->admin = mob->CastToClient()->Admin();
-							strcpy(ztz->name, mob->GetName());
-							ztz->guild_id = mob->CastToClient()->GuildDBID();
-							ztz->ignorerestrictions = 3;
-							worldserver.SendPacket(pack);
-							safe_delete(pack);				
-				}
-			}
-			else if (!strcmp(command,"settimer"))
-			{
-				list<timers*>::iterator iterator = TimerList.begin();
-				timers*p=0;
-				while (iterator != TimerList.end())
-				{
-					p=*iterator;
-//					if (p) printf("%s - %s\n",p->name.c_str(), arglist[0]);
-					if (p && !strcmp(arglist[0],p->name.c_str()))
-					{
-						p->mob = other;
-						p->Timer_->Enable();
-						p->Timer_->Start(atoi(arglist[1]) * 1000,false);
-						printf("Reseting: %s for %d seconds\n", p->name.c_str(), atoi(arglist[1]));
-						break;
-					}
-					iterator++;
-					p=0;
-				}
-				if (!p)
-				{
-				timers * tmp = new timers;
-				tmp->mob = other;
-				tmp->Timer_ = new Timer(atoi(arglist[1]) * 1000,0);
-				tmp->Timer_->Start(atoi(arglist[1]) * 1000,false);
-				tmp->name = arglist[0];
-				printf("Adding: %s for %d seconds\n", tmp->name.c_str(), atoi(arglist[1]));
-				TimerList.push_back(tmp);
-			}
-			}
-
-			else if (!strcmp(command,"say")) {
-				if(other)
-				{
-					other->Say(parms.c_str());
-				}
-			}
-			else if (!strcmp(command,"stoptimer")) {
-				list<timers*>::iterator iterator = TimerList.begin();
-				timers*p=0;
-				while (iterator != TimerList.end())
-				{
-					p=*iterator;
-					if (p) printf("%s - %s\n",p->name.c_str(), arglist[0]);
-					if (p && !strcmp(arglist[0],p->name.c_str()))
-					{
-						p->Timer_->Disable();
-					}
-					iterator++;
-				}
-			}
-			else if (!strcmp(command,"emote")) {
-				if(other)
-				{
-					other->Emote(parms.c_str());
-				}
-			}
-			else if (!strcmp(command,"shout2")) {
-				if (other){
-					worldserver.SendEmoteMessage(0,0,0,13, "%s shouts, '%s'", other->GetCleanName(), parms.c_str());
-				}
-			}
-			else if (!strcmp(command,"shout")) {
-				if(other)
-				{
-					other->Shout(parms.c_str());
-				}
-			}
-			else if (!strcmp(command,"depop")) {
-				if (atoi(arglist[0]) != 0){
-					Mob* tmp = entity_list.GetMobByNpcTypeID(atoi(arglist[0]));
-					if (tmp)
-						tmp->CastToNPC()->Depop();
-				}
-				else
-					if (other) other->CastToNPC()->Depop();
-			}
-			else if (!strcmp(command,"settarget")) {
-				Mob* tmp=0;
-				if (!strcmp(strlwr(arglist[0]),"npctype")) {
-					tmp = entity_list.GetMobByNpcTypeID(atoi(arglist[1]));
-				}
-				else if (!strcmp(strlwr(arglist[0]),"entity")) {
-					tmp = entity_list.GetMob(atoi(arglist[1]));
-				}
-				if (tmp) {
-					if (other) other->SetTarget(tmp);
-				}
-			}
-			else if (!strcmp(command,"follow"))  {
-				if (other) other->SetFollowID(atoi(arglist[0]));
-			}
-			else if (!strcmp(command,"sfollow"))  {
-				if (other) other->SetFollowID(0);
-			}
-			else if (!strcmp(command,"cumflag")) {
-				if (other) other->flag[50] = other->flag[50] + 1;
-			}
-			else if (!strcmp(command,"flagnpc")) {
-				int32 tmpFlagNum = atoi(arglist[0]);
-				if (tmpFlagNum >= (sizeof(other->flag) / sizeof(other->flag[0])))
-					if (other) other->flag[tmpFlagNum] = atoi(arglist[1]);
-				else {
-					// Quag: TODO: Script error here, handle it somehow?
-				}
-			}
-        		else if (!strcmp(command,"changedeity")) { //Cofruben:-Changes the deity.
-          			  if (mob && mob->IsClient())
-					  {
-              			 		  mob->CastToClient()->SetDeity(atoi(arglist[0]));
-			            		  mob->CastToClient()->Message(15,"Your Deity has been changed/set to: %i",arglist[0]);
-						  mob->CastToClient()->Save(1);
-						  mob->CastToClient()->Kick();
-					  }
-					  else
-						mob->CastToClient()->Message(15,"Error changing Deity");
-         		}
-			else if (!strcmp(command,"flagmob->CastToClient()")) {
-				if (mob && mob->IsClient())
-					mob->CastToClient()->flag[atoi(arglist[0])] = atoi(arglist[1]);
-			}
-			else if (!strcmp(command,"exp")) {
-				if (mob && mob->IsClient())
-					mob->CastToClient()->AddEXP(atoi(arglist[0]));
-			}
-			else if (!strcmp(command,"level")) {
-				if (mob && mob->IsClient())
-					mob->CastToClient()->SetLevel(atoi(arglist[0]), true);
-			}
-			else if (!strcmp(command,"traindisc")) {
-				if (mob && mob->IsClient())
-					mob->CastToClient()->TrainDiscipline(atoi(arglist[0]));
-			}
-			else if (!strcmp(command,"safemove")) {
-				if (mob && mob->IsClient())
-					mob->CastToClient()->MovePC(zone->GetShortName(),database.GetSafePoint(zone->GetShortName(),"x"),database.GetSafePoint(zone->GetShortName(),"y"),database.GetSafePoint(zone->GetShortName(),"z"));
-			}
-			else if (!strcmp(command,"rain")) {
-				zone->zone_weather = atoi(arglist[0]);
-				APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
-				*((int32*) &outapp->pBuffer[4]) = (int32) atoi(arglist[0]); // Why not just use 0x01/2/3?
-				entity_list.QueueClients(other, outapp);
-				safe_delete(outapp);
-			}
-			else if (!strcmp(command,"snow")) {
-				zone->zone_weather = atoi(arglist[0]) + 1;
-				APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
-				outapp->pBuffer[0] = 0x01;
-				*((int32*) &outapp->pBuffer[4]) = (int32)atoi(arglist[0]);
-				entity_list.QueueClients(mob->CastToClient(), outapp);
-				safe_delete(outapp);
-			}
-			else if (!strcmp(command,"surname")) { //Cofruben:-Changes the last name. 
-			if (mob && mob->IsClient()) 
-			{ 
-					mob->CastToClient()->ChangeLastName(arglist[0]); 
-					mob->CastToClient()->Message(15,"Your surname has been changed/set to: %s",arglist[0]); 
-			} 
-			 else 
-				mob->CastToClient()->Message(15,"Error changing/setting surname"); 
-			} 
-			 else if (!strcmp(command,"permaclass")) {//Cofruben:-Makes the client the class specified 
-				mob->CastToClient()->SetBaseClass(atoi(arglist[0])); 
-				mob->CastToClient()->Save(2); 
-				mob->CastToClient()->Kick(); 
-			} 
-			 else if (!strcmp(command,"permarace")) {//Cofruben:-Makes the client the race specified 
-				mob->CastToClient()->SetBaseRace(atoi(arglist[0])); 
-				mob->CastToClient()->Save(2); 
-				mob->CastToClient()->Kick(); 
-			 } 
-			 else if (!strcmp(command,"permagender")) {//Cofruben:-Makes the client the gender specified 
-				mob->CastToClient()->SetBaseGender(atoi(arglist[0])); 
-				mob->CastToClient()->Save(2); 
-				mob->CastToClient()->Kick(); 
-			 } 
-			 else if (!strcmp(command,"scribespells")) {//Cofruben:-Scribe spells for user up to his actual level. 
-				int book_slot; 
-				int16 curspell; 
-				for(curspell = 0, book_slot = 0; curspell < SPDAT_RECORDS && book_slot < MAX_PP_SPELLBOOK; curspell++) 
-				{ 
-				   if 
-				   ( 
-					  spells[curspell].classes[WARRIOR] != 0 && 
-					  spells[curspell].classes[mob->CastToClient()->GetPP().class_-1] <= mob->CastToClient()->GetLevel() && 
-					  spells[curspell].skill != 52 
-				   ) 
-				   { 
-					  mob->CastToClient()->ScribeSpell(curspell, book_slot++); 
-				   } 
-				} 
-			 } 
-
-			else if (!strcmp(command,"givecash")) { 
-				APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct)); 
-				moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer; 
-				d->response      = 1; 
-				d->unknown1      = 0x5a; 
-				d->unknown2      = 0x40; 
-				d->unknown3      = 0; 
-				if (mob && mob->IsClient())
-				{
-				d->copper      = atoi(arglist[0]); 
-				d->silver      = atoi(arglist[1]); 
-				d->gold         = atoi(arglist[2]); 
-				d->platinum      = atoi(arglist[3]); 
-				mob->CastToClient()->AddMoneyToPP(d->copper, d->silver, d->gold, d->platinum,true); 
-				mob->CastToClient()->QueuePacket(outapp);
-				string tmp;
-				if (d->platinum>0) tmp = "You receive "+(string)itoa(d->platinum)+" plat"; 
-				if (d->gold>0)
-					if (tmp.length()==0)
-						tmp = "You receive "+(string)itoa(d->gold)+" gold";
-					else
-						tmp = tmp + ","+(string)itoa(d->gold)+" gold";
-				if(d->silver>0) 
-					if (tmp.length()==0)
-						tmp = "You receive "+(string)itoa(d->silver)+" silver";
-					else
-						tmp = tmp + ","+(string)itoa(d->silver)+" silver";
-				if(d->copper>0)
-					if (tmp.length()==0)
-						tmp = "You receive "+(string)itoa(d->copper)+" copper";
-					else
-						tmp = tmp + ","+(string)itoa(d->copper)+" copper";
-				tmp = tmp + " pieces.";
-				if (mob) 
-					mob->CastToClient()->Message(MT_OOC,tmp.c_str()); 
-				safe_delete(outapp); 
-				}
-			}
-			else if (!strcmp(command,"pvp")) {
-				if (!strcmp(strlwr(arglist[0]),"on"))
-					if (mob) mob->CastToClient()->SetPVP(true);
-				else
-
-					if (mob) mob->CastToClient()->SetPVP(false);
-			}
-			else if (!strcmp(command,"movepc")) { 
-				if (mob && mob->IsClient()) 
-					 mob->CastToClient()->MovePC((atoi(arglist[0])),(atof(arglist[1])),(atof(arglist[2])),(atof(arglist[3]))); 
-			}
-			else if (!strcmp(command,"gmmove")) { 
-				if (mob && mob->IsClient()) 
-					 mob->CastToClient()->GMMove( atof(arglist[0]), atof(arglist[1]), atof(arglist[2])); 
-			}
-			else if (!strcmp(command,"movegrp")) {
-			#ifdef IPC
-                if (mob && mob->IsClient()|| (mob->IsNPC() && mob->CastToNPC()->IsInteractive()) ){
-			#else
-			    if (mob && mob->IsClient()) {
-            #endif
-                   	if (entity_list.GetGroupByMob(mob) != 0){
-						entity_list.GetGroupByMob(mob)->TeleportGroup(mob, atoi(arglist[0]),atof(arglist[1]),atof(arglist[2]),atof(arglist[3]));
-					}
-					else {
-						if (mob) mob->CastToClient()->MovePC((atoi(arglist[0])),(atof(arglist[1])),(atof(arglist[2])),(atof(arglist[3])));
-					}
-				}
-			}
-			else if (!strcmp(command,"doanim")) {
-				if (other) other->DoAnim(atoi(arglist[0]));
-			}
-			else if (!strcmp(command,"addskill")) {
-				if (mob && mob->IsClient()) mob->CastToClient()->AddSkill(atoi(arglist[0]), atoi(arglist[1]));
-			}
-			else if (!strcmp(command,"setlanguage")) { // bUsh
-				if (mob && mob->IsClient()) mob->CastToClient()->SetLanguageSkill(atoi(arglist[0]), atoi(arglist[1]));
-			}
-			else if (!strcmp(command,"setskill")) { // bUsh
-				if (mob && mob->IsClient()) mob->CastToClient()->SetSkill(atoi(arglist[0]), atoi(arglist[1]));
-			}
-			else if (!strcmp(command,"setallskill")) { // khuong
-				int8 skill_id = atoi(arglist[0]);
-				if (mob && mob->IsClient()) { 
-				for(int skill_num=0;skill_num<74;skill_num++){
-				if (mob) mob->CastToClient()->SetSkill(skill_num, skill_id);
-					}
-				}
-			else if (!strcmp(command,"attack")) { // not khuong
-				Client* getclient = entity_list.GetClientByName(arglist[0]);
-				if(getclient && other && other->IsNPC() && other->IsAttackAllowed(getclient))
-				{
-					if (other) other->CastToNPC()->AddToHateList(getclient,1);
-				}
-				else
-				{
-					if(other) other->Say("I am unable to attack %s.", arglist[0]);
-				}
-			}
-			}
-			else if (!strcmp(command,"save")) { // khuong
-				if (mob && mob->IsClient()) mob->CastToClient()->Save();
-			}
-			else if (!strcmp(command,"flagcheck")) {
-				int32 tmpFlagNum1 = atoi(arglist[0]);
-				int32 tmpFlagNum2 = atoi(arglist[1]);
-				if (tmpFlagNum1 >= (sizeof(other->flag) / sizeof(other->flag[0])) || tmpFlagNum2 >= (sizeof(other->flag) / sizeof(other->flag[0]))) {
-					if (mob && mob->CastToClient()->flag[tmpFlagNum1] != 0)
-						mob->CastToClient()->flag[tmpFlagNum2] = 0;
-				}
-				else {
-					// Quag: TODO: Script error here, handle it somehow?
-				}
-				// Quag: Orignal code, not sure how this is supposed to work
-//				if (mob->CastToClient()->flag[atoi(arglist[0])] != 0)
-//					if (mob) mob->CastToClient()->flag[atoi(arg1)] = 0;
-			}
-			else if (!strcmp(command,"faction")) {
-			    if (mob && mob->IsClient()) {
-					sint32 faction_id = atoi(arglist[0]);
-					sint32 faction_value = atoi(arglist[1]);
-					if(faction_id!=0&&faction_value!=0){
-// SCORPIOUS2K - fixed faction command
-						if (mob) 
-						{
-							//Client *p; 
-							mob->CastToClient()->SetFactionLevel2(
-								mob->CastToClient()->CharacterID(), 
-								faction_id, 
-								mob->GetClass(), 
-								mob->GetRace(), 
-								mob->GetDeity(), 
-								faction_value); 
-						}
-
-						
-//						if (mob) mob->CastToClient()->SetFactionLevel2(mob->GetID(), faction_id, mob->GetClass(), mob->GetRace(), mob->GetDeity(), faction_value);
-//						// FIXME add a faction message?
-					}
-			    }
-			}
-			else if (!strcmp(command,"setsky")) {
-				uint8 new_sky = atoi(arglist[0]);
-				if (zone) zone->newzone_data.sky = new_sky;
-                        	APPLAYER* outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
-				memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
-				entity_list.QueueClients(mob, outapp);
-				safe_delete(outapp);
-			}
-			else if (!strcmp(command,"setguild")) {
-				if (mob && mob->IsClient()){
-					int32 new_gid = atoi(arglist[0]);
-					int8  new_rank = atoi(arglist[1]);
-					if (mob) mob->CastToClient()->SetGuild(new_gid,new_rank);
-				}
-			}
-			else if (!strcmp(command,"settime")) {
-				int8 new_hour = atoi(arglist[0]);
-				int8 new_min  = atoi(arglist[1]);
-				if (zone) zone->SetTime(new_hour,new_min);
-			}
-// MYRA - added itemlink(ItemNumber) command
-
-			else if (!strcmp(command,"itemlink")) { 
-
-				const Item_Struct* item = 0; 
-					int16 itemid = atoi(arglist[0]); 
-				item = database.GetItem(itemid); 
-				mob->CastToClient()->Message(0, "%s tells you, '%c00%i %s%c",other->GetName(),0x12, item->ItemNumber, item->Name, 0x12); 
-			}
-//end Myra
-// SCORPIOUS2K - signal command
-			else if (!strcmp(command,"signal")) 
-			{	// signal(npcid) - generates EVENT_SIGNAL on specified npc
-				int snpc=atoi(arglist[0]);
-				if (snpc<1)
-				{
-					printf("signal() bad npcid=%i\n",snpc);
-				}
-				else
-				{
-					//Mob* signalnpc=0;
-					entity_list.SignalMobsByNPCID(snpc);
-					}
-			}
-// SCORPIOUS2K - qglobal variable commands
-			else if (!strcmp(command,"setglobal")) 
-			{	// setglobal(varname,value,options,duration)
-				char errbuf[MYSQL_ERRMSG_SIZE];
-				char *query = 0;
-				MYSQL_RES *result;
-				//MYSQL_ROW row;
-				int qgZoneid=zone->GetZoneID();
-				int qgCharid=0;
-				int qgNpcid=npcid;
-				int options=atoi(arglist[2]);
-				/*	options value determines the availability of global variables to NPCs when a quest begins
-				------------------------------------------------------------------
-				  value		   npcid	  player		zone
-				------------------------------------------------------------------
-					0			this		this		this
-					1			all			this		this
-					2			this		all			this
-					3			all			all			this
-					4			this		this		all
-					5			all			this		all
-					6			this		all			all
-					7			all			all			all
-				*/		
-				if (mob && mob->IsClient())  // some events like waypoint and spawn don't have a player involved
-				{
-					qgCharid=mob->CastToClient()->CharacterID();
-				}
-
-				else
-				{
-					qgCharid=-qgNpcid;		// make char id negative npc id as a fudge
-				}
-				if (options < 0 || options > 7)
-				{
-					cerr << "Invalid options for global var " << arglist[1] << " using defaults" << endl;
-				}	// default = 0 (only this npcid,player and zone)
-				else
-				{
-					if (options & 1)
-						qgNpcid=0;
-					if (options & 2)
-						qgCharid=0;
-					if (options & 4)
-						qgZoneid=0;
-				}
-
-				// clean up expired vars and get rid of the one we're going to set if there
-				database.RunQuery(query, MakeAnyLenString(&query, 
-					"DELETE FROM quest_globals WHERE expdate < %i || (name='%s' && (charid=0 || (npcid=%i && charid=%i && zoneid=%i)))"
-					,Timer::GetCurrentTime(),arglist[0],qgNpcid,qgCharid,qgZoneid), errbuf, &result);
-				if (query)
-				{
-					safe_delete_array(query);
-					query=0;
-				}
-				mysql_free_result(result);
-				if (!database.RunQuery(query, MakeAnyLenString(&query, 
-				  "INSERT INTO quest_globals (charid,npcid,zoneid,name,value,expdate) VALUES (%i,%i,%i,'%s','%s',unix_timestamp(now())+%i)",
-				  qgCharid,qgNpcid,qgZoneid,arglist[0],arglist[1],QGexpdate(arglist[0],arglist[3])
-				  ), errbuf, &result)) 
-				{
-					cerr << "setglobal error inserting " << arglist[1] << " : " << errbuf << endl;
-				}
-				if (query)
-				{
-					safe_delete_array(query);
-					query=0;
-				}
-				mysql_free_result(result);
-			}
-			else if (!strcmp(command,"targlobal")) 
-			{	// targlobal(varname,value,duration,npcid,charid,zoneid)
-				char errbuf[MYSQL_ERRMSG_SIZE];
-				char *query = 0;
-				MYSQL_RES *result;
-				//MYSQL_ROW row;
-				int qgZoneid=atoi(arglist[5]);
-				int qgCharid=atoi(arglist[4]);
-				int qgNpcid=atoi(arglist[3]);
-				// clean up expired vars and get rid of the one we're going to set if there
-				database.RunQuery(query, MakeAnyLenString(&query, 
-					"DELETE FROM quest_globals WHERE expdate < %i || (name='%s' && (charid=0 || (npcid=%i && charid=%i && zoneid=%i)))"
-					,Timer::GetCurrentTime(),arglist[0],qgNpcid,qgCharid,qgZoneid), errbuf, &result);
-				if (query)
-				{
-					safe_delete_array(query);
-					query=0;
-				}
-				mysql_free_result(result);
-				if (!database.RunQuery(query, MakeAnyLenString(&query, 
-				  "INSERT INTO quest_globals (charid,npcid,zoneid,name,value,expdate) VALUES (%i,%i,%i,'%s','%s',unix_timestamp(now())+%i)",
-				  qgCharid,qgNpcid,qgZoneid,arglist[0],arglist[1],QGexpdate(arglist[0],arglist[2])
-				  ), errbuf, &result)) 
-				{
-					cerr << "targlobal error inserting " << arglist[0] << " : " << errbuf << endl;
-				}
-				if (query)
-				{
-					safe_delete_array(query);
-					query=0;
-				}
-				mysql_free_result(result);
-			}
-			else if (!strcmp(command,"ding")) {//-Cofruben:makes a sound.
-				if (mob && mob->IsClient())
-					mob->CastToClient()->SendSound();
-			}
-			else if (!strcmp(command,"delglobal")) 
-			{	// delglobal(varname)
-				char errbuf[MYSQL_ERRMSG_SIZE];
-				char *query = 0;
-				MYSQL_RES *result;
-				//MYSQL_ROW row;
-				int qgZoneid=zone->GetZoneID();
-				int qgCharid=0;
-				int qgNpcid=npcid;
-				if (mob && mob->IsClient())  // some events like waypoint and spawn don't have a player involved
-				{
-					qgCharid=mob->CastToClient()->CharacterID();
-				}
-
-				else
-				{
-					qgCharid=-qgNpcid;		// make char id negative npc id as a fudge
-				}
-				if (!database.RunQuery(query, 
-				  MakeAnyLenString(&query, "DELETE FROM quest_globals WHERE name='%s' && (npcid=0 || charid=0 || zoneid=0 ||(npcid=%i && charid=%i && zoneid=%i))",
-				  arglist[0],qgNpcid,qgCharid,qgZoneid),errbuf, &result)) 
-				{
-					cerr << "delglobal error deleting " << arglist[0] << " : " << errbuf << endl;
-				}
-				if (query)
-				{
-					safe_delete_array(query);
-					query=0;
-				}
-				mysql_free_result(result);
-			}
-// SCORPIOUS2K - end of qglobal commands
-			else if (!strcmp(command,"rebind")) {
-				if(mob->IsClient()){
-					if (mob) mob->CastToClient()->SetBindPoint( atoi(arglist[0]), atof(arglist[1]), atof(arglist[2]), atof(arglist[3]));
-				}
-			}
-// new quest wandering commands
-			else if (!strcmp(command,"stop")) 
-			{
-				other->StopWandering();
-			}
-			else if (!strcmp(command,"pause")) 
-			{
-				other->PauseWandering(atoi(arglist[0]));
-			}
-			else if (!strcmp(command,"moveto")) 
-			{
-				other->MoveTo(atof(arglist[0]), atof(arglist[1]), atof(arglist[2]));
-			}
-			else if (!strcmp(command,"resume")) 
-			{
-				other->ResumeWandering();
-			}
-			else if (!strcmp(command,"start")) 
-			{
-				other->AssignWaypoints(atoi(arglist[0]));
-			}
-// add ldon points
-			else if (!strcmp(command,"addldonpoints")) 
-			{
-				mob->CastToClient()->UpdateLDoNPoints(atoi(arglist[0]), atoi(arglist[1]));
-			}
-// hp event 
-			else if (!strcmp(command,"setnexthpevent")) 
-			{ 
-				if (other) other->SetNextHPEvent( atoi(arglist[0]) ); 
-			} 
-			else if (!strcmp(command,"respawn")) 
-			{
-				//char tempa[100];
-				float x,y,z,h;
-				if ( other ) 
-				{
-					x = other->GetX();
-					y = other->GetY();
-					z = other->GetZ();
-					h = other->GetHeading();
-					other->CastToNPC()->Depop();
-				}
-				else 
-				{
-					return;
-				}
-				const NPCType* tmp = 0;
-				int16 grid = atoi(arglist[1]);
-				//int8 guildwarset = atoi(arglist[2]);
-				if ((tmp = database.GetNPCType(atoi(arglist[0])))) 
-				{
-					NPC* npc = new NPC(tmp, 0, x, y, z, h);
-					npc->AddLootTable();
-					entity_list.AddNPC(npc,true,true);
-						if(grid > 0)
-							npc->AssignWaypoints(grid);
-
-						npc->SendPosUpdate();
-				}
-			}
-			else
-				printf("\nUnknown perl function used:%s",command);
-
-
-}
-
-
-// SCORPIOUS2K - convert duration value to expdate
-int32 Parser::QGexpdate(char * name, char * options)
-{
-	// format:	Y#### or D## or H## or M## or S## or T###### or C#######
-
-	int32 tval=strlen(options);
-
-	if (tval < 2 || (tval>1 && !isdigit(options[1])))
+	}
+	else if (!strcmp(command,"spawn") || !strcmp(command,"spawn2")) 
 	{
-		cerr << "Invalid duration for " << name << " using default" << endl;
-		tval=1000000;		// default=1 day
+		
+		float hdng;
+		if (!strcmp(command,"spawn")) 
+		{
+			hdng=mob->CastToClient()->GetHeading();
+		}
+		else
+		{
+			hdng=atof(arglist[6]);
+		}
+		quest_manager.spawn2(atoi(arglist[0]), atoi(arglist[1]), 0,
+			atof(arglist[3]), atof(arglist[4]), atof(arglist[5]), hdng);
+	}
+	else if (!strcmp(command,"echo")) {
+		quest_manager.echo(parms.c_str());
+	}
+	else if (!strcmp(command,"summonitem")) {
+		quest_manager.summonitem(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"setstat")) {
+		quest_manager.setstat(atoi(arglist[0]), atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"castspell")) {
+		quest_manager.castspell(atoi(arglist[1]), atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"selfcast")) {
+		quest_manager.selfcast(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"addloot")) {//Cofruben: add an item to the mob.
+		quest_manager.addloot(atoi(arglist[0]),atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"zone")) {
+		quest_manager.Zone(arglist[0]);
+	}
+	else if (!strcmp(command,"settimer")) {
+		quest_manager.settimer(arglist[0], atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"say")) {
+		quest_manager.say(parms.c_str());
+	}
+	else if (!strcmp(command,"stoptimer")) {
+		quest_manager.stoptimer(arglist[0]);
+	}
+	else if (!strcmp(command,"emote")) {
+		quest_manager.emote(parms.c_str());
+	}
+	else if (!strcmp(command,"shout2")) {
+		quest_manager.shout2(parms.c_str());
+	}
+	else if (!strcmp(command,"shout")) {
+		quest_manager.shout(parms.c_str());
+	}
+	else if (!strcmp(command,"depop")) {
+		quest_manager.depop(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"settarget")) {
+		quest_manager.settarget(arglist[0], atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"follow"))  {
+		quest_manager.follow(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"sfollow"))  {
+		quest_manager.sfollow();
+	}
+	else if (!strcmp(command,"cumflag")) {
+		quest_manager.cumflag();
+	}
+	else if (!strcmp(command,"flagnpc")) {
+		quest_manager.flagnpc(atoi(arglist[0]), atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"changedeity")) {
+		quest_manager.changedeity(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"exp")) {
+		quest_manager.exp(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"level")) {
+		quest_manager.level(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"traindisc")) {
+		quest_manager.traindisc(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"safemove")) {
+		quest_manager.safemove();
+	}
+	else if (!strcmp(command,"rain")) {
+		quest_manager.rain(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"snow")) {
+		quest_manager.snow(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"surname")) { 
+		quest_manager.surname(arglist[0]);
+	} 
+	else if (!strcmp(command,"permaclass")) { 
+		quest_manager.permaclass(atoi(arglist[0]));
+	} 
+	else if (!strcmp(command,"permarace")) {
+		quest_manager.permarace(atoi(arglist[0]));
+	} 
+	else if (!strcmp(command,"permagender")) {
+		quest_manager.permagender(atoi(arglist[0]));
+	} 
+	else if (!strcmp(command,"scribespells")) {
+		quest_manager.scribespells();
+	}
+	else if (!strcmp(command,"givecash")) {
+		quest_manager.givecash(atoi(arglist[0]), atoi(arglist[1]), atoi(arglist[2]), atoi(arglist[3]));
+	}
+	else if (!strcmp(command,"pvp")) {
+		quest_manager.pvp(arglist[0]);
+	}
+	else if (!strcmp(command,"movepc")) {
+		quest_manager.movepc((atoi(arglist[0])),(atof(arglist[1])),(atof(arglist[2])),(atof(arglist[3])));
+	}
+	else if (!strcmp(command,"gmmove")) { 
+		quest_manager.gmmove(atof(arglist[0]), atof(arglist[1]), atof(arglist[2])); 
+	}
+	else if (!strcmp(command,"movegrp")) {
+		quest_manager.movegrp((atoi(arglist[0])),(atof(arglist[1])),(atof(arglist[2])),(atof(arglist[3])));
+	}
+	else if (!strcmp(command,"doanim")) {
+		quest_manager.doanim(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"addskill")) {
+		quest_manager.addskill(atoi(arglist[0]), atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"setlanguage")) {
+		quest_manager.setlanguage(atoi(arglist[0]), atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"setskill")) {
+		quest_manager.setskill(atoi(arglist[0]), atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"setallskill")) {
+		quest_manager.setallskill(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"attack")) {
+		quest_manager.attack(arglist[0]);
+	}
+	else if (!strcmp(command,"save")) {
+		quest_manager.save();
+	}
+	else if (!strcmp(command,"flagcheck")) {
+		quest_manager.flagcheck(atoi(arglist[0]), atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"faction")) {
+		quest_manager.faction(atoi(arglist[0]), atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"setsky")) {
+		quest_manager.setsky(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"setguild")) {
+		quest_manager.setguild(atoi(arglist[0]), atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"settime")) {
+		quest_manager.settime(atoi(arglist[0]), atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"itemlink")) { 
+		quest_manager.itemlink(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"signal")) {
+		quest_manager.signal(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"setglobal")) {
+		quest_manager.setglobal(arglist[0], arglist[1], atoi(arglist[2]), arglist[3]);
+	}
+	else if (!strcmp(command,"targlobal")) {
+		quest_manager.targlobal(arglist[0], arglist[1], arglist[2], atoi(arglist[3]), atoi(arglist[4]), atoi(arglist[5]));
+	}
+	else if (!strcmp(command,"ding")) {
+		quest_manager.ding();
+	}
+	else if (!strcmp(command,"delglobal")) {
+		quest_manager.delglobal(arglist[0]);
+	}
+	else if (!strcmp(command,"rebind")) {
+		quest_manager.rebind((atoi(arglist[0])),(atof(arglist[1])),(atof(arglist[2])),(atof(arglist[3])));
+	}
+	else if (!strcmp(command,"stop")) {
+		quest_manager.stop();
+	}
+	else if (!strcmp(command,"pause")) {
+		quest_manager.pause(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"moveto")) {
+		quest_manager.moveto(atof(arglist[0]), atof(arglist[1]), atof(arglist[2]));
+	}
+	else if (!strcmp(command,"resume")) {
+		quest_manager.resume();
+	}
+	else if (!strcmp(command,"start")) {
+		quest_manager.start(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"addldonpoints")) {
+		quest_manager.addldonpoints(atoi(arglist[0]), atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"setnexthpevent")) {
+		quest_manager.setnexthpevent(atoi(arglist[0]));
+	} 
+	else if (!strcmp(command,"respawn")) 
+	{
+		quest_manager.respawn(atoi(arglist[0]), atoi(arglist[1]));
 	}
 	else
-	{
-		tval=atoi(&options[1]);
-/*
-		if (toupper(options[0])=='Y')
-		{	// years
-			if (tval>50)
-			{
-				tval=50;
-			}
-			tval=tval*10000000000;
-		}
-		else */if (toupper(options[0])=='D')
-		{	// days
+		printf("\nUnknown perl function used:%s",command);
 
-			if (tval>30)
-			{
-				tval=30;
-			}
-			tval=tval*1000000;
-		}
-		else if (toupper(options[0])=='H')
-		{	// hours
-			if (tval>23)
-			{
-				tval=23;
-			}
-			tval=tval*10000;
-		}
-		else if (toupper(options[0])=='M')
-		{	// minutes
-			if (tval>59)
-			{
-				tval=59;
-			}
-			tval=tval*100;
-		}
-		else if (toupper(options[0])=='S')
-		{	// seconds
-			if (tval>59)
-			{
-				tval=59;
-			}
-		}		
-		else if (toupper(options[0])=='T')
-		{	// time as hhmmss
-			if (tval>235959)
-			{
-				tval=235959;
-			}
-		}		
-		else if (toupper(options[0])!='C')
-		{	// calender time as YYYMMDD
-			cerr << "Invalid duration for " << name << " using default" << endl;
-			tval=1000000;		// default=1 day
-		}
-	}
 
-	return tval;
 }
 
 int Parser::LoadScript(int npcid, const char * zone, Mob* activater)
@@ -1998,7 +1471,7 @@ int Parser::ParseIf(string text)
 	return 1;
 }
 
-int Parser::ParseCommands(string text, int line, int justcheck, int32 npcid, Mob* other, Mob* mob,  std::string filename)
+int Parser::ParseCommands(string text, int line, int justcheck, int32 npcid, NPC* other, Mob* mob,  std::string filename)
 {
 	string buffer,command,parms,temp,temp2;
 	temp2 = text;

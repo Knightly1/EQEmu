@@ -47,6 +47,7 @@ extern volatile bool RunLoops;
 extern bool spells_loaded;
 
 #include "../common/version.h"
+#include "features.h"
 #include "masterentity.h"
 #include "worldserver.h"
 #include "net.h"
@@ -63,6 +64,7 @@ extern bool spells_loaded;
 #include "command.h"
 #include "StringIDs.h"
 #include "NpcAI.h"
+#include "client_logs.h"
 
 extern Database database;
 extern EntityList entity_list;
@@ -146,12 +148,12 @@ Client::Client(EQNetworkConnection* ieqnc)
 	disc_timer(60000),
 	disc_elapse(60000),
 	stamina_timer(40000),
+	zoneinpacket_timer(3000),
 	linkdead_timer(30000),
 	dead_timer(2000),
 	ooc_timer(1000),
 	shield_timer(500),
-	fishing_timer(8000),
-	zoneinpacket_timer(3000)
+	fishing_timer(8000)
 {
 	for(int cf=0;cf<21;cf++)
 		ClientFilters[cf]=0;
@@ -243,7 +245,11 @@ Client::~Client() {
 	Object* object=GetTradeskillObject();
 	if(object)
 		object->Close();
-
+	
+#ifdef CLIENT_LOGS
+	client_logs.unsubscribeAll(this);
+#endif
+	
 //	if(AbilityTimer || GetLevel()>=51)
 //		database.UpdateAndDeleteAATimers(CharacterID());
 
@@ -594,9 +600,6 @@ void Client::ChannelMessageReceived(int8 chan_num, int8 language, const char* me
 			sender = GetPet();
 		
 		printf("Message: %s\n",message);
-//			if ((target != 0) && (DistNoRootNoZ(target) <= 200)) {
-//				parse->Event(EVENT_SAY, target->GetNPCTypeID(), message, target, this->CastToMob());
-//			}
 		entity_list.ChannelMessage(sender, chan_num, language, message);
 		
 		if (sender != this)
@@ -604,13 +607,13 @@ void Client::ChannelMessageReceived(int8 chan_num, int8 language, const char* me
 		
 		if (target != 0 && target->IsNPC() && !target->CastToNPC()->IsEngaged()) {
 			if (DistNoRootNoZ(*target) <= 200) {
-				parse->Event(EVENT_SAY, target->GetNPCTypeID(), message, target, this->CastToMob());
+				parse->Event(EVENT_SAY, target->GetNPCTypeID(), message, target->CastToNPC(), this);
 			#ifdef IPC
                 if(target->CastToNPC()->IsInteractive()) {
 					target->CastToNPC()->InteractiveChat(chan_num,language,message,targetname,this);
 				}
 			#endif
-				//parse->Event(EVENT_SAY, target->GetNPCTypeID(), message, target, this->CastToMob());
+				//parse->Event(EVENT_SAY, target->GetNPCTypeID(), message, target->CastToNPC(), this);
 			}
 		}
 		break;
@@ -904,8 +907,11 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 }
 
 #ifndef GUILDWARS
+#warning The LDON stuff has moved in the player profile and needs to be rediscovered, I broke Client::GetLDoNPoints because of this
+
 bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
 {
+/*
 // make sure total stays in sync with individual buckets
 	m_pp.ldon_available_points = m_pp.ldon_guk_points
 		+m_pp.ldon_mirugal_points
@@ -1042,6 +1048,8 @@ bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	return true;
+*/
+	return(false);
 }
 #endif
 
@@ -2957,7 +2965,8 @@ bool IsInAdventure(int32 id,int32 qid) {
 	return false;
 }
 void Client::DeleteCharInAdventure(int32 id,int32 qid) {
-	for(int zo=0;zo<6;zo++){
+	int zo;
+	for(zo=0;zo<6;zo++){
 		if(database.GetAdventureChar(zo,qid) == id){
 			database.SetAdventureChar(zo,0,qid);
 			break;
@@ -2984,10 +2993,10 @@ void Client::SendAdventureFinish(uint32 state,uint32 points,bool grouptoo)
 	memset(outapp->pBuffer,0,outapp->size);
 	AdventureFinish_Struct* af=(AdventureFinish_Struct*)outapp->pBuffer;
 	AdventureInfo AI=database.GetAdventureInfo(GetAdventureID());
-	int32 count=0;
 	int32 advid=GetAdventureID();
 	if(grouptoo==true){//cambiar el grupo por los id's de char's de db
-		for(int z=0;z<6;z++){
+		int z;
+		for(z=0;z<6;z++){
 			int32 id=database.GetAdventureChar(z,advid);
 			if( id > 0) {
 				Client* c=entity_list.GetClientByCharID(id);
@@ -3067,7 +3076,6 @@ void Client::SendAdventureRequest(){
 	int count=0;
 	char* buffer1;
 	AdventureInfo AF=database.GetAdventureInfo(0,GetAdventureID(),rd);
-	int aid=AF.NPCID;
 	APPLAYER* outapp;
 	bool flag=AF.in_use;
 	while(flag==true && count!=20){
@@ -3082,8 +3090,8 @@ void Client::SendAdventureRequest(){
 		}
 	}
 	if(count==20){
-		char* p="There is no adventure available";
-		printf("There is no adventure available\n");
+		const char* p="There is no adventure available";
+		printf("%s\n", p);
 		outapp=new APPLAYER(OP_AdventureInfo,strlen(p)+1);
 		buffer1=new char[strlen(p)+1];
 		strcpy(buffer1,p);

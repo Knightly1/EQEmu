@@ -51,20 +51,65 @@ XS(XS_qc_getItemName)
         sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG; 
     } 
     XSRETURN(1); 
-} 
+}
 
 
 EXTERN_C XS(boot_qc); /* prototype to pass -Wmissing-prototypes */ 
 EXTERN_C XS(boot_qc) 
 { 
     dXSARGS; 
-    char* file = __FILE__; 
+	char file[256];
+	strncpy(file, __FILE__, 256);
+	file[255] = '\0';
+	
+	if(items != 1)
+		LogFile->write(EQEMuLog::Error, "boot_qc does not take any arguments.");
+	
+	char buf[128];	//shouldent have any function names longer than this.
+	
+	//add the strcpy stuff to get rid of const warnings....
 
     XS_VERSION_BOOTCHECK ; 
 
-        newXS("quest::getItemName", XS_qc_getItemName, file); 
+        newXS(strcpy(buf, "quest::getItemName"), XS_qc_getItemName, file); 
 
     XSRETURN_YES; 
-} 
+}
+
+#ifdef EMBPERL_IO_CAPTURE
+
+XS(XS_EQEmuIO_PRINT); /* prototype to pass -Wmissing-prototypes */ 
+XS(XS_EQEmuIO_PRINT) 
+{ 
+    dXSARGS; 
+    if (items < 2)
+    	return;
+//        Perl_croak(aTHX_ "Usage: EQEmuIO::PRINT(@strings)"); 
+
+	int r;
+	for(r = 1; r < items; r++) {
+		char *str = SvPV_nolen(ST(r));
+		char *cur = str;
+		
+		int i;
+		int pos = 0;
+		int len = 0;
+		for(i = 0; *cur != '\0'; i++, cur++) {
+			if(*cur == '\n') {
+				LogFile->write(EQEMuLog::Quest, str + pos, 1, len);
+				len = 0;
+				pos = i+1;
+			} else {
+				len++;
+			}
+		}
+		if(len > 0) {
+			LogFile->write(EQEMuLog::Quest, str + pos, 1, len);
+		}
+ 	}
+ 	
+    XSRETURN_EMPTY; 
+}
+#endif //EMBPERL_IO_CAPTURE
 
 #endif // EMBPERL

@@ -102,6 +102,7 @@ public:
 	
 	Entity* GetID(int16 id);
 	Mob*	GetMob(int16 id);
+	inline Mob*	GetMobID(int16 id) { return(GetMob(id)); }	//for perl
 	Mob*	GetMob(const char* name);
 	Mob*	GetMobByNpcTypeID(int32 get_id);
 	Client* GetClientByName(const char *name); 

@@ -664,7 +664,8 @@ void Mob::AI_Process() {
 		if (signaled==true)
 		{
 //			printf("Signal received\n");
-			parse->Event(EVENT_SIGNAL, this->GetNPCTypeID(), "", this->CastToMob(), 0);
+			if(IsNPC())
+				parse->Event(EVENT_SIGNAL, this->GetNPCTypeID(), "", CastToNPC(), NULL);
 			signaled=false;
 		}
 		if (AIautocastspell_timer->Check()) 
@@ -863,7 +864,7 @@ void Mob::AI_Process() {
 									movetimercompleted=false; 
 									char temp[100]; 
 									entity_list.OpenDoorsNear(CastToNPC());
-									parse->Event(EVENT_WAYPOINT,this->GetNPCTypeID(), itoa(cur_wp,temp,10), this->CastToMob(), 0); 
+									parse->Event(EVENT_WAYPOINT,this->GetNPCTypeID(), itoa(cur_wp,temp,10), CastToNPC(), NULL); 
 									CalculateNewWaypoint(); 
 									SetAppearance(0, false); 
 		                        } 

@@ -418,8 +418,8 @@ bool logpos;
 	bool	FindType(int8 type, bool bOffensive = false, int16 threshold = 100);
 	sint8	GetBuffSlotFromType(int8 type);
 	
-	int16	CalcPetLevel(int16 nlevel, int16 nclass);
 	void	MakePet(int16 spell_id, const char* pettype);
+	inline void	MakePetType(int16 spell_id, const char* pettype) { MakePet(spell_id, pettype); }	//for perl
 	void	MakePet(int16 spell_id, int8 in_level, int8 in_class, int16 in_race, int8 in_texture = 0, int8 in_pettype = 0, float in_size = 0, int8 type = 0, int32 min_dmg = 0, int32 max_dmg = 0);
 	
 	bool	CombatRange(Mob* other);

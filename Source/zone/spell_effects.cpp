@@ -401,6 +401,12 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 				{
 					caster->Message(0, "Unable to cast charm on a fellow player.");
 					break;
+				} else if(IsCorpse()) {
+					caster->Message(0, "Unable to cast charm on a corpse.");
+					break;
+				} else if(caster->GetPet() != NULL) {
+					caster->Message(0, "You cannot charm something when you allready have a pet.");
+					break;
 				}
 
 				WhipeHateList();
@@ -419,9 +425,10 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 					caster->CastToClient()->FastQueuePacket(&app);
 				}
 
-				if (this->IsClient())
-				{
+				if (IsClient()) {
 					AI_Start();
+				} else if(IsNPC()) {
+					CastToNPC()->SetPetSpellID(0);	//not a pet spell.
 				}
 
 // solar: random duration stuff - this is going into CalcBuffDuration eventually

@@ -242,7 +242,6 @@ bool Group::AddMember(Mob* newmember)
 	//put new member in his own list.
 	strcpy(newmember->CastToClient()->GetPP().groupMembers[x],newmember->GetName());
 	newmember->isgrouped = true;
-printf("Adding group member %s to group %lu\n", newmember->GetName(), id);
 	
 	if(newmember->IsClient()) {
 		newmember->CastToClient()->Save();
@@ -286,8 +285,18 @@ void Group::SendHPPackets(Mob *member)
 bool Group::UpdatePlayer(Mob* update){
 	VerifyGroup();
 	
-printf("Updating group member %s for group %lu\n", update->GetName(), id);
 	int i=0;
+	if(update->IsClient()) {
+		//update their player profile
+		PlayerProfile_Struct &pp = update->CastToClient()->GetPP();
+		for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
+			if(membername[0] == '\0')
+				memset(pp.groupMembers[i], 0, 64);
+			else
+				strncpy(pp.groupMembers[i], membername[i], 64);
+		}
+	}
+	
 	for (i = 0; i < MAX_GROUP_MEMBERS; i++)
 	{
 		if (!strcasecmp(membername[i],update->GetName()))
@@ -303,7 +312,6 @@ printf("Updating group member %s for group %lu\n", update->GetName(), id);
 
 void Group::MemberZoned(Mob* removemob) {
 	int i;
-printf("Zoning group member %s for group %lu\n", removemob->GetName(), id);
 
 	if (removemob == NULL)
 		return;
@@ -920,7 +928,6 @@ bool Group::LearnMembers() {
 	MYSQL_ROW row;
 	if (database.RunQuery(query,MakeAnyLenString(&query, "SELECT name FROM character_ WHERE groupid=%lu", id),errbuf,&result)){
 		safe_delete_array(query);
-printf("LearnMembers: %lu has %d members.\n", id, mysql_num_rows(result));
 		if(mysql_num_rows(result) < 1) {	//could prolly be 2
 			mysql_free_result(result);
 			LogFile->write(EQEMuLog::Error, "Error getting group members for group %lu: %s", id, errbuf);
@@ -930,7 +937,6 @@ printf("LearnMembers: %lu has %d members.\n", id, mysql_num_rows(result));
 		while((row = mysql_fetch_row(result))) {
 			if(!row[0])
 				continue;
-printf("LearnMembers: '%s' is in group %lu\n", row[0], id);
 			members[i] = NULL;
 			strncpy(membername[i], row[0], 64);
 			i++;

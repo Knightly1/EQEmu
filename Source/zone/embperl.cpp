@@ -16,6 +16,7 @@ Eglin
 #include "../common/debug.h"
 #include "embperl.h"
 #include "embxs.h" 
+#include "features.h"
 
 //#pragma message("You may want to ensure that you add perl\\lib\\CORE to your include path")
 //#pragma message("You may want to ensure that your build settings look like `perl -MExtUtils::Embed -e ccopts -e ldopts`")
@@ -25,19 +26,70 @@ Eglin
 #pragma comment(lib, "perl58.lib")
 #endif
 
+#ifdef EMBPERL_XS
+EXTERN_C XS(boot_quest);
+#ifdef EMBPERL_XS_CLASSES
+EXTERN_C XS(boot_Mob);
+EXTERN_C XS(boot_NPC);
+EXTERN_C XS(boot_Client);
+EXTERN_C XS(boot_Corpse);
+EXTERN_C XS(boot_EntityList);
+EXTERN_C XS(boot_Group);
+XS(XS_Client_new);
+//XS(XS_Mob_new);
+XS(XS_NPC_new);
+//XS(XS_Corpse_new);
+XS(XS_EntityList_new);
+//XS(XS_Group_new);
+#endif
+#endif
+
+#ifdef EMBPERL_IO_CAPTURE
+XS(XS_EQEmuIO_PRINT);
+#endif //EMBPERL_IO_CAPTURE
+
 //so embedded scripts can use xs extensions (ala 'use socket;')
 EXTERN_C void boot_DynaLoader(pTHX_ CV* cv);
 EXTERN_C void xs_init(pTHX) 
 { 
-	char *file = __FILE__; 
-	newXS("DynaLoader::boot_DynaLoader", boot_DynaLoader, file); 
-	newXS("quest::boot_qc", boot_qc, file);
+	char file[256];
+	strncpy(file, __FILE__, 256);
+	file[255] = '\0';
+	
+	char buf[128];	//shouldent have any function names longer than this.
+	
+	//add the strcpy stuff to get rid of const warnings....
+	
+	newXS(strcpy(buf, "DynaLoader::boot_DynaLoader"), boot_DynaLoader, file); 
+	newXS(strcpy(buf, "quest::boot_qc"), boot_qc, file);
+#ifdef EMBPERL_XS
+	newXS(strcpy(buf, "quest::boot_quest"), boot_quest, file);
+#ifdef EMBPERL_XS_CLASSES
+	newXS(strcpy(buf, "Mob::boot_Mob"), boot_Mob, file);
+	newXS(strcpy(buf, "NPC::boot_Mob"), boot_Mob, file);
+	newXS(strcpy(buf, "NPC::boot_NPC"), boot_NPC, file);
+	newXS(strcpy(buf, "NPC::new"), XS_NPC_new, file);
+	newXS(strcpy(buf, "Corpse::boot_Mob"), boot_Mob, file);
+	newXS(strcpy(buf, "Corpse::boot_Corpse"), boot_Corpse, file);
+	newXS(strcpy(buf, "Client::boot_Mob"), boot_Mob, file);
+	newXS(strcpy(buf, "Client::boot_Client"), boot_Client, file);
+	newXS(strcpy(buf, "Client::new"), XS_Client_new, file);
+	newXS(strcpy(buf, "EntityList::boot_EntityList"), boot_EntityList, file);
+	newXS(strcpy(buf, "EntityList::new"), XS_EntityList_new, file);
+	newXS(strcpy(buf, "Group::boot_Group"), boot_Group, file);
+#endif
+#endif
+
+#ifdef EMBPERL_IO_CAPTURE
+	newXS(strcpy(buf, "EQEmuIO::PRINT"), XS_EQEmuIO_PRINT, file);
+#endif
 }
 
 Embperl::Embperl()
 {
 	//arguments for interpreter start
 	char * args[] = {"", "-e", "0"};
+	//setup perl...
 	my_perl = perl_alloc();
 	if(!my_perl)
 		throw "Failed to init Perl (perl_alloc)";
@@ -45,7 +97,10 @@ Embperl::Embperl()
 	if(perl_parse(my_perl, xs_init, 3, args, NULL))
 		throw "perl_parse failed";
 	perl_run(my_perl);
+	
+	//a little routine we use a lot.
 	eval_pv("sub my_eval {eval $_[0];}",true);
+	
 	//ruin the perl exit command:
 	eval_pv("sub my_exit {}",true);
 	if(gv_stashpv("CORE::GLOBAL", FALSE)) {
@@ -53,40 +108,80 @@ Embperl::Embperl()
 		GvCV(exitgp) = perl_get_cv("my_exit", TRUE);
 		GvIMPORTED_CV_on(exitgp);
 	}
-	try { init_eval_file(); }
+	
+	//declare our file eval routine.
+	try {
+		init_eval_file();
+	}
 	catch(const char *err)
 	{ 
 		//remember... lasterr() is no good if we crap out here, in construction
-		LogFile->write(EQEMuLog::Status, "perl error: %s", err);
+		LogFile->write(EQEMuLog::Quest, "perl error: %s", err);
 		throw "failed to install eval_file hook"; 
 	}
+	
+#ifdef EMBPERL_IO_CAPTURE
+	//make a tieable class to capture IO and pass it into EQEMuLog
+	eval_pv("package EQEmuIO; "
+			"&boot_EQEmuIO;"
+ 			"sub TIEHANDLE { bless {}, $_[0]; } } "
+  			"sub PRINTF { my $me = shift; $me->PRINT(sprintf(@_)); } "
+  			"package plugin;"
+  			"tie *STDOUT, 'EQEmuIO';"
+  			"tie *STDERR, 'EQEmuIO';"
+  		, true);
+#endif //EMBPERL_IO_CAPTURE
+	
 #ifdef EMBPERL_PLUGIN
-	try { eval("package plugin; use IO::Scalar;$plugin::printbuff='';tie *PLUGIN,'IO::Scalar',\\$plugin::printbuff;"); }
-	catch(const char *err) { throw "failed to install plugin printhook, do you lack IO::Scalar?"; }
-	LogFile->write(EQEMuLog::Status, "Loading perlemb plugins.");
+	try {
+		eval(
+			"package plugin; "
+			"use IO::Scalar;"
+			"$plugin::printbuff='';"
+			"tie *PLUGIN,'IO::Scalar',\\$plugin::printbuff;");
+	}
+	catch(const char *err) {
+		throw "failed to install plugin printhook, do you lack IO::Scalar?";
+	}
+	LogFile->write(EQEMuLog::Quest, "Loading perlemb plugins.");
 	try
 	{
 		eval_file("plugin", "plugin.pl");
 	}
 	catch(const char *err)
 	{ 
-		LogFile->write(EQEMuLog::Status, "Warning - plugin.pl: %s", err);
+		LogFile->write(EQEMuLog::Quest, "Warning - plugin.pl: %s", err);
 	}
 	try
 	{
 		//should probably read the directory in c, instead, so that
 		//I can echo filenames as I do it, but c'mon... I'm lazy and this 1 line reads in all the plugins
-		eval("if(opendir(D,'plugins')){my@d=readdir(D);closedir(D);foreach(@d){main::eval_file('plugin','plugins/'.$_)if/\\.pl$/;}}");
+		eval(
+			"if(opendir(D,'plugins')) { "
+			"	my @d = readdir(D);"
+			"	closedir(D);"
+			"	foreach(@d){ "
+			"		main::eval_file('plugin','plugins/'.$_)if/\\.pl$/;"
+			"	}"
+			"}"
+		);
 	}
 	catch(const char *err)
 	{ 
-		LogFile->write(EQEMuLog::Status, "Perl warning: %s", err);
+		LogFile->write(EQEMuLog::Quest, "Perl warning: %s", err);
 	}
 #endif //EMBPERL_PLUGIN
 }
 
 Embperl::~Embperl()
 {
+#ifdef EMBPERL_IO_CAPTURE
+	//clean up our handles so perl dosent puke its guts out
+	eval(
+  			"untie *STDOUT;"
+  			"untie *STDERR;"
+  	);
+#endif
 	perl_destruct(my_perl);
 	perl_free(my_perl);
 }
@@ -98,6 +193,10 @@ void Embperl::init_eval_file(void) const
 		"use Symbol qw(delete_package);"
 		"sub eval_file {"
 			"my($package, $filename) = @_;"
+#ifdef EMBPERL_IO_CAPTURE
+  			"tie *STDOUT, 'EQEmuIO';"
+  			"tie *STDERR, 'EQEmuIO';"
+#endif
 			"$filename=~s/\'//g;"
 			"my $mtime = -M $filename;"
 			"if(defined $Cache{$package}{mtime}&&$Cache{$package}{mtime} <= $mtime && !($package eq 'plugin')){ return; }"
@@ -108,7 +207,12 @@ void Embperl::init_eval_file(void) const
 				"my $eval = qq{package $package; sub handler { $sub; }};"
 				"{ my($filename,$mtime,$package,$sub); eval $eval; }"
 				"die $@ if $@;"
-				"$Cache{$package}{mtime} = $mtime; ${$package.'::isloaded'} = 1;}}"
+				"$Cache{$package}{mtime} = $mtime; ${$package.'::isloaded'} = 1;}"
+			"}"
+#ifdef EMBPERL_IO_CAPTURE
+  			"untie *STDOUT;"
+  			"untie *STDERR;"
+#endif
 		);
  }
 
@@ -160,6 +264,8 @@ void Embperl::eval(const char * code) const
 	dosub("my_eval", &arg, G_SCALAR|G_DISCARD|G_EVAL|G_KEEPERR);
 //end Myra
 }
+
+
 
 
 #endif //EMBPERL

@@ -262,6 +262,7 @@ public:
 	inline void	SetBaseClass(uint32 i) { m_pp.class_=i; }
 	inline void	SetBaseRace(uint32 i) { m_pp.race=i; }
 	inline void	SetBaseGender(uint32 i) { m_pp.gender=i; }
+	inline  void SetDeity(uint32 i) {m_pp.deity=i;}
 
 	inline int16	GetBaseRace()	{ return m_pp.race; }
 	inline int8	GetBaseGender()	{ return m_pp.gender; }
@@ -277,7 +278,7 @@ public:
 
 	
 	inline char*	GetLastName()	{ return lastname; }
-	inline int32	GetLDoNPoints() { return m_pp.ldon_available_points; }
+	inline int32	GetLDoNPoints() { return 0; }
 	
 	
 	/*
@@ -366,7 +367,6 @@ public:
 	
 	
 	bool	UpdateLDoNPoints(sint32 points, int32 theme);
-	inline  void SetDeity(uint32 i) {m_pp.deity=i;}
 
 	void	AddEXP(uint32 add_exp, int8 conlevel = 0xFF, bool resexp = false);
 	void	SetEXP(uint32 set_exp, uint32 set_aaxp, bool resexp=false);

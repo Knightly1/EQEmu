@@ -191,7 +191,10 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 
 //	if (d->npc_faction_id)
 //		DebugBreak();
+	primary_faction = 0;
 	SetNPCFactionID(d->npc_faction_id);
+	
+	pet_spell_id = 0;
 	
 	ignore_target = 0;
 	delaytimer = false;

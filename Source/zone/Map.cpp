@@ -50,10 +50,16 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 
 Map* Map::LoadMapfile(const char* in_zonename) {
 	FILE *fp;
+	char zBuf[64];
 	char cWork[256];
 	Map* ret = 0;
 	
-	snprintf(cWork, 250, MAP_DIR "/%s.map", in_zonename);
+	//have to convert to lower because the short names im getting
+	//are not all lower anymore, copy since strlwr edits the str.
+	strncpy(zBuf, in_zonename, 64);
+	zBuf[63] = '\0';
+	
+	snprintf(cWork, 250, MAP_DIR "/%s.map", strlwr(zBuf));
 	
 	if ((fp = fopen( cWork, "rb" ))) {
 		ret = new Map();
@@ -104,7 +110,7 @@ bool Map::loadMap(FILE *fp) {
 	if(head.version != MAP_VERSION) {
 		//invalid version... if there really are multiple versions,
 		//a conversion routine could be possible.
-		printf("Invalid map version 0x%x\n", head.version);
+		printf("Invalid map version 0x%lx\n", head.version);
 		return(false);
 	}
 	

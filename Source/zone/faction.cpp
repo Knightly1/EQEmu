@@ -158,6 +158,9 @@ FACTION_VALUE Client::GetFactionCon(Mob* iOther) {
 	return GetFactionLevel(CharacterID(), 0, GetRace(), GetClass(), GetDeity(), iOther->GetPrimaryFaction(), iOther);
 }
 
+//this is called with 'this' as the mob being looked at, and
+//iOther the mob who is doing the looking. It should figure out
+//what iOther thinks about 'this'
 FACTION_VALUE NPC::GetFactionCon(Mob* iOther) {
 #if FACTIONS_DEBUG >= 20
 	LogFile->write(EQEMuLog::Debug, "called N $s::GetFactionCon(%s)", GetName(), iOther->GetName());
@@ -173,14 +176,34 @@ FACTION_VALUE NPC::GetFactionCon(Mob* iOther) {
 		return GetSpecialFactionCon(iOther);
 	if (primaryFaction == 0)
 		return FACTION_INDIFFERENT;
-	if (GetOwnerID())
-		return GetOwnerOrSelf()->GetFactionCon(iOther);
+	if (GetOwner())
+		return GetOwner()->GetFactionCon(iOther);
 
-	sint8 tmp = CheckNPCFactionAlly(primaryFaction);
-	if (tmp == 1)
-		return FACTION_ALLY;
-	else if (tmp == -1)
-		return FACTION_SCOWLS;
+	//inverted for the new NPC -> NPC faction system.
+	if(iOther->IsNPC())
+		return(iOther->CastToNPC()->CheckNPCFactionAlly(GetPrimaryFaction()));
+	return(CheckNPCFactionAlly(primaryFaction));
+}
+
+//Look through our faction list and return a faction con based 
+//on the npc_value for the other person's primary faction in our list.
+FACTION_VALUE NPC::CheckNPCFactionAlly(sint32 other_faction) {
+	LinkedListIterator<struct NPCFaction*> fac_iteratorcur(faction_list);
+	fac_iteratorcur.Reset();
+
+	while(fac_iteratorcur.MoreElements()) {
+		NPCFaction* fac = fac_iteratorcur.GetData();
+		if ((sint32)fac->factionID == other_faction) {
+			if (fac->npc_value > 0)
+				return FACTION_ALLY;
+			else if (fac->npc_value < 0)
+				return FACTION_SCOWLS;
+			else
+				return FACTION_INDIFFERENT;
+		}
+
+		fac_iteratorcur.Advance();
+	}
 	return FACTION_INDIFFERENT;
 }
 
@@ -348,7 +371,7 @@ FACTION_VALUE Client::GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race,
 		if(database.GetFactionData(&fmods, p_class, p_race, p_deity, pFaction))
 		{
 			//Get the players current faction with pFaction
-			tmpFactionValue = this->GetCharacterFactionLevel(pFaction);
+			tmpFactionValue = GetCharacterFactionLevel(pFaction);
 			//Return the faction to the client
 			fac = CalculateFaction(&fmods, tmpFactionValue);
 			//Message(0,"Faction: %i %i %i %i",fmods.base,fmods.class_mod,fmods.race_mod,fmods.deity_mod);
@@ -412,57 +435,56 @@ void  Client::SetFactionLevel(int32 char_id, int32 npc_id, int8 char_class, int8
 	sint32 current_value;
 	FactionMods fm;
 	// Get the npc faction list
-	if(database.GetNPCFactionList(npc_id, faction_id, npc_value))
+	if(!database.GetNPCFactionList(npc_id, faction_id, npc_value))
+		return;
+	for(int i = 0;i<MAX_NPC_FACTIONS;i++)
 	{
-		for(int i = 0;i<MAX_NPC_FACTIONS;i++)
+		if(faction_id[i] <= 0)
+			continue;
+		
+		// Get the faction modifiers
+		if(database.GetFactionData(&fm,char_class,char_race,char_deity,faction_id[i]))
 		{
-			if(faction_id[i] > 0)
+			// Get the characters current value with that faction
+			current_value = GetCharacterFactionLevel(faction_id[i]) + npc_value[i];
+			
+			// Calculate the faction
+			tmpValue = current_value + fm.base + fm.class_mod + fm.race_mod + fm.deity_mod;
+			
+			// Make sure faction hits don't go to GMs...
+			if (m_pp.gm==1 && (tmpValue < current_value)) {
+				tmpValue = current_value;
+			}
+			
+			// Make sure we dont go over the min/max faction limits
+			if(tmpValue >= MAX_FACTION)
 			{
-				// Get the faction modifiers
-				if(database.GetFactionData(&fm,char_class,char_race,char_deity,faction_id[i]))
+				if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], MAX_FACTION,&factionvalue_list)))
 				{
-					// Get the characters current value with that faction
-					current_value = GetCharacterFactionLevel(faction_id[i]) + npc_value[i];
-					
-					// Calculate the faction
-					tmpValue = current_value + fm.base + fm.class_mod + fm.race_mod + fm.deity_mod;
-					
-					// Make sure faction hits don't go to GMs...
-					if (m_pp.gm==1 && (tmpValue < current_value)) {
-						tmpValue=current_value;
-					}
-					
-					// Make sure we dont go over the min/max faction limits
-					if(tmpValue >= MAX_FACTION)
-					{
-						if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], MAX_FACTION,&factionvalue_list)))
-						{
-							return;
-						}
-					}
-					else if(tmpValue <= MIN_FACTION)
-					{
-						if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], MIN_FACTION,&factionvalue_list)))
-						{
-							return;
-						}
-					}
-					else
-					{
-						if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], current_value,&factionvalue_list)))
-						{
-							return;
-						}
-					}
-					if(tmpValue <= MIN_FACTION)
-						tmpValue = MIN_FACTION;
-					//ChannelMessageSend(0,0,7,0,BuildFactionMessage(npc_value[i], faction_id[i]));
-					char* msg = BuildFactionMessage(npc_value[i],faction_id[i],tmpValue);
-					if (msg != 0)
-						Message(0, msg);
-					safe_delete(msg);
+					return;
 				}
 			}
+			else if(tmpValue <= MIN_FACTION)
+			{
+				if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], MIN_FACTION,&factionvalue_list)))
+				{
+					return;
+				}
+			}
+			else
+			{
+				if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], current_value,&factionvalue_list)))
+				{
+					return;
+				}
+			}
+			if(tmpValue <= MIN_FACTION)
+				tmpValue = MIN_FACTION;
+			//ChannelMessageSend(0,0,7,0,BuildFactionMessage(npc_value[i], faction_id[i]));
+			char* msg = BuildFactionMessage(npc_value[i],faction_id[i],tmpValue);
+			if (msg != 0)
+				Message(0, msg);
+			safe_delete(msg);
 		}
 	}
 	return;
@@ -817,24 +839,65 @@ bool Database::LoadFactionData()
 	return true;
 }
 
-
-// returns 1 if they're allies, -1 if they're enimies, 0 if they dont care either way
-sint8 NPC::CheckNPCFactionAlly(sint32 other_faction) {
-	LinkedListIterator<struct NPCFaction*> fac_iteratorcur(faction_list);
-	fac_iteratorcur.Reset();
-
-	while(fac_iteratorcur.MoreElements()) {
-		NPCFaction* fac = fac_iteratorcur.GetData();
-		if ((sint32)fac->factionID == other_faction) {
-			if (fac->value_mod < 0)
-				return 1;
-			else if (fac->value_mod > 0)
-				return -1;
-			else
-				return 0;
-		}
-
-		fac_iteratorcur.Advance();
+bool Database::GetFactionIdsForNPC(sint32 nfl_id, LinkedList<struct NPCFaction*> *faction_list, sint32* primary_faction) {
+	if (nfl_id <= 0) {
+		(*faction_list).Clear();
+		if (primary_faction)
+			*primary_faction = nfl_id;
+		return true;
 	}
-	return 0;
+	const NPCFactionList* nfl = GetNPCFactionList(nfl_id);
+	if (!nfl)
+		return false;
+	if (primary_faction)
+		*primary_faction = nfl->primaryfaction;
+	(*faction_list).Clear();
+	for (int i=0; i<MAX_NPC_FACTIONS; i++) {
+		struct NPCFaction *pFac;
+		if (nfl->factionid[i]) {
+			pFac = new struct NPCFaction;
+			pFac->factionID = nfl->factionid[i];
+			pFac->value_mod = nfl->factionvalue[i];
+			pFac->npc_value = nfl->factionnpcvalue[i];
+/*			if (nfl->primaryfaction == pFac->factionID)
+				pFac->primary = true;
+			else
+				pFac->primary = false;
+*/
+			faction_list->Insert(pFac);
+		}
+	}
+	return true;
+/*	char errbuf[MYSQL_ERRMSG_SIZE];
+	char *query = 0;
+	MYSQL_RES *result; 
+	MYSQL_ROW row; 
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT faction_id, value, primary_faction FROM npc_faction WHERE npc_id=%d", npc_id), errbuf, &result)) 
+	{ 
+		delete [] query; 
+		
+		while ((row = mysql_fetch_row(result))) 
+		{ 
+			struct NPCFaction *pFac; 
+			
+			pFac = new struct NPCFaction; 
+			pFac->factionID = atoi(row[0]); 
+			pFac->value_mod = atoi(row[1]); 
+			if (atoi(row[2]) == 1) 
+				pFac->primary = true; 
+			else 
+				pFac->primary = false; 
+			faction_list->Insert(pFac); 
+		} 
+		mysql_free_result(result);
+		return true; 
+	} 
+	else 
+	{ 
+		cerr << "Error in Database::GetFactionIdsForNPC query '" << query << "' " << errbuf << endl; 
+		safe_delete_array(query); 
+	} 
+	return false; */
 }
+

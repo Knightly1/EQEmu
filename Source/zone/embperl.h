@@ -16,8 +16,17 @@ Eglin
 //headers from the Perl distribution
 #include <EXTERN.h> 
 #define WIN32IO_IS_STDIO
+
+extern "C" {	//the perl headers dont do this for us...
 #include <perl.h>
 #include <XSUB.h>
+};
+
+//perl defines this macro and dosent clean it up, lazy bastards.
+#ifdef Copy
+#undef Copy
+#endif
+
 
 //so embedded scripts can use xs extensions (ala 'use socket;')
 EXTERN_C void boot_DynaLoader(pTHX_ CV* cv);
@@ -29,7 +38,10 @@ private:
 	//if we fail inside a script evaluation, this will hold the croak msg (not much help if we die during construction, but that's our own fault)
 	mutable std::string errmsg;
 	//kludgy workaround for the fact that we can't directly do something like SvIV(get_sv($big[0]{ass}->{struct}))
-	SV * my_get_sv(const char * varname) const {eval(std::string("$scratch::temp = ").append(varname).append(";").c_str()); return get_sv("scratch::temp", false);};
+	SV * my_get_sv(const char * varname) const {
+		eval(std::string("$scratch::temp = ").append(varname).append(";").c_str());
+		return get_sv("scratch::temp", false);
+	}
 	//install a perl func
 	void init_eval_file(void) const;
 protected:
@@ -49,7 +61,10 @@ public:
 	//returns the contents of the perl variable named in varname as a c double
 	double getd(const char * varname) const { return SvNV(my_get_sv(varname));};
 	//returns the contents of the perl variable named in varname as a string
-	std::string getstr(const char * varname) const { SV * temp = my_get_sv(varname); return std::string(SvPV_nolen(temp),SvLEN(temp));};
+	std::string getstr(const char * varname) const {
+		SV * temp = my_get_sv(varname);
+		return std::string(SvPV_nolen(temp),SvLEN(temp));
+	}
 	//loads a file and compiles it into our interpreter (assuming it hasn't already been read in)
 	//idea borrowed from perlembed
 	void eval_file(const char * packagename, const char * filename) const;

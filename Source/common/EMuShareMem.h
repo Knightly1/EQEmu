@@ -60,7 +60,7 @@ typedef bool(*CALLBACK_DBLoadNPCFactionLists)(sint32, int32);
 typedef bool(*DLLFUNC_DLLLoadNPCFactionLists)(const CALLBACK_DBLoadNPCFactionLists, int32, sint32*, int32*, int8);
 typedef const NPCFactionList*(*DLLFUNC_GetNPCFactionList)(int32);
 typedef bool(*DLLFUNC_AddNPCFactionList)(int32, const NPCFactionList*);
-typedef bool(*DLLFUNC_SetFaction)(int32, uint32*, sint32*);
+typedef bool(*DLLFUNC_SetFaction)(int32, uint32*, sint32*, sint8*);
 struct NPCFactionListDLLFunc_Struct {
 	DLLFUNC_DLLLoadNPCFactionLists DLLLoadNPCFactionLists;
 	DLLFUNC_GetNPCFactionList GetNPCFactionList;

@@ -21,22 +21,24 @@ using namespace std;
 EQEMuLog* LogFile = new EQEMuLog;
 AutoDelete<EQEMuLog> adlf(&LogFile);
 
-static const char* FileNames[EQEMuLog::MaxLogID] = { "logs/eqemu", "logs/eqemu", "logs/eqemu_error", "logs/eqemu_debug" };
-static const char* LogNames[EQEMuLog::MaxLogID] = { "Status", "Normal", "Error", "Debug" };
+static const char* FileNames[EQEMuLog::MaxLogID] = { "logs/eqemu", "logs/eqemu", "logs/eqemu_error", "logs/eqemu_debug", "logs/eqemu_quest" };
+static const char* LogNames[EQEMuLog::MaxLogID] = { "Status", "Normal", "Error", "Debug", "Quest" };
 
 EQEMuLog::EQEMuLog() {
-	MOpen = new Mutex;
-	MLog = new Mutex*[MaxLogID];
-	fp = new FILE*[MaxLogID];
-	pLogStatus = new int8[MaxLogID];
+//	MOpen = new Mutex;
+//	MLog = new Mutex*[MaxLogID];
+//	fp = new FILE*[MaxLogID];
+//	pLogStatus = new int8[MaxLogID];
 	for (int i=0; i<MaxLogID; i++) {
 		fp[i] = 0;
-		MLog[i] = new Mutex;
+//		MLog[i] = new Mutex;
 #if EQDEBUG >= 2
 		pLogStatus[i] = 1 | 2;
 #else
 		pLogStatus[i] = 0;
 #endif
+		logCallbackFmt[i] = NULL;
+		logCallbackBuf[i] = NULL;
 	}
 // TODO: Make this read from an ini or something, everyone has different opinions on what it should be
 #if EQDEBUG < 2
@@ -49,19 +51,19 @@ EQEMuLog::~EQEMuLog() {
 	for (int i=0; i<MaxLogID; i++) {
 		if (fp[i])
 			fclose(fp[i]);
-		safe_delete(MLog[i]);
+//		safe_delete(MLog[i]);
 	}
-	safe_delete_array(fp);
-	safe_delete_array(MLog);
-	safe_delete_array(pLogStatus);
-	safe_delete(MOpen);
+//	safe_delete_array(fp);
+//	safe_delete_array(MLog);
+//	safe_delete_array(pLogStatus);
+//	safe_delete(MOpen);
 }
 
 bool EQEMuLog::open(LogIDs id) {
 	if (id >= MaxLogID) {
 		return false;
     }
-	LockMutex lock(MOpen);
+	LockMutex lock(&MOpen);
 	if (pLogStatus[id] & 4) {
 		return false;
     }
@@ -106,7 +108,7 @@ bool EQEMuLog::write(LogIDs id, const char *fmt, ...) {
 	}
 	if (!(dofile || pLogStatus[id] & 2))
 		return false;
-	LockMutex lock(MLog[id]);
+	LockMutex lock(&MLog[id]);
 
     time_t aclock;
     struct tm *newtime;
@@ -125,6 +127,10 @@ bool EQEMuLog::write(LogIDs id, const char *fmt, ...) {
 	va_start(argptr, fmt);
     if (dofile)
 		vfprintf( fp[id], fmt, argptr );
+	if(logCallbackFmt[id]) {
+		msgCallbackFmt p = logCallbackFmt[id];
+		p(id, fmt, argptr );
+	}
     if (pLogStatus[id] & 2) {
 		if (pLogStatus[id] & 8) {
 			fprintf(stderr, "[%s] ", LogNames[id]);
@@ -147,7 +153,59 @@ bool EQEMuLog::write(LogIDs id, const char *fmt, ...) {
     if(dofile)
       fflush(fp[id]);
     return true;
-};
+}
+
+bool EQEMuLog::write(LogIDs id, const char *buf, int8 size, int32 count) {
+	if (!this) {
+		return false;
+    }
+	if (id >= MaxLogID) {
+		return false;
+    }
+	bool dofile = false;
+	if (pLogStatus[id] & 1) {
+		dofile = open(id);
+	}
+	if (!(dofile || pLogStatus[id] & 2))
+		return false;
+	LockMutex lock(&MLog[id]);
+
+    time_t aclock;
+    struct tm *newtime;
+    
+    time( &aclock );                 /* Get time in seconds */
+    newtime = localtime( &aclock );  /* Convert time to struct */
+
+    if (dofile)
+#ifndef NO_PIDLOG
+		fprintf(fp[id], "[%02d.%02d. - %02d:%02d:%02d] ", newtime->tm_mon+1, newtime->tm_mday, newtime->tm_hour, newtime->tm_min, newtime->tm_sec);
+#else
+		fprintf(fp[id], "%04i [%02d.%02d. - %02d:%02d:%02d] ", getpid(), newtime->tm_mon+1, newtime->tm_mday, newtime->tm_hour, newtime->tm_min, newtime->tm_sec);
+#endif
+
+	if (dofile) {
+		fwrite(buf, size, count, fp[id]);
+		fprintf(fp[id], "\n");
+	}
+	if(logCallbackBuf[id]) {
+		msgCallbackBuf p = logCallbackBuf[id];
+		p(id, buf, size, count);
+	}
+    if (pLogStatus[id] & 2) {
+		if (pLogStatus[id] & 8) {
+			fprintf(stderr, "[%s] ", LogNames[id]);
+			fwrite(buf, size, count, stderr);
+			fprintf(stderr, "\n");
+		} else {
+			fprintf(stdout, "[%s] ", LogNames[id]);
+			fwrite(buf, size, count, stdout);
+			fprintf(stdout, "\n");
+		}
+	}
+    if(dofile)
+      fflush(fp[id]);
+    return true;
+}
 
 bool EQEMuLog::writeNTS(LogIDs id, bool dofile, const char *fmt, ...) {
 	va_list argptr;
@@ -183,7 +241,7 @@ bool EQEMuLog::Dump(LogIDs id, int8* data, int32 size, int32 cols, int32 skip) {
 	}
 	if (!(dofile || pLogStatus[id] & 2))
 		return false;
-	LockMutex lock(MLog[id]);
+	LockMutex lock(&MLog[id]);
 	write(id, "Dumping Packet: %i", size);
 	// Output as HEX
 	int j = 0; char* ascii = new char[cols+1]; memset(ascii, 0, cols+1);
@@ -218,3 +276,42 @@ bool EQEMuLog::Dump(LogIDs id, int8* data, int32 size, int32 cols, int32 skip) {
 	safe_delete_array(ascii);
 	return true;
 }
+	
+void EQEMuLog::SetCallback(LogIDs id, msgCallbackFmt proc) {
+	if (!this)
+		return;
+	if (id >= MaxLogID) {
+		return;
+    }
+    logCallbackFmt[id] = proc;
+}
+
+void EQEMuLog::SetCallback(LogIDs id, msgCallbackBuf proc) {
+	if (!this)
+		return;
+	if (id >= MaxLogID) {
+		return;
+    }
+    logCallbackBuf[id] = proc;
+}
+
+void EQEMuLog::SetAllCallbacks(msgCallbackFmt proc) {
+	if (!this)
+		return;
+	int r;
+	for(r = Status; r < MaxLogID; r++) {
+		SetCallback((LogIDs)r, proc);
+	}
+}
+
+void EQEMuLog::SetAllCallbacks(msgCallbackBuf proc) {
+	if (!this)
+		return;
+	int r;
+	for(r = Status; r < MaxLogID; r++) {
+		SetCallback((LogIDs)r, proc);
+	}
+}
+
+
+

@@ -32,7 +32,9 @@ Mob* EntityList::AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssist
 		return 0;
 	LinkedListIterator<Mob*> iterator(mob_list);
 	iterator.Reset();
-	float dist;
+	float dist2;
+	float iArrgoRange2 = iArrgoRange*iArrgoRange;
+	float iAssistRange2 = iAssistRange*iAssistRange;
 	//float distZ;
 	while(iterator.MoreElements()) {
 		Mob* mob = iterator.GetData();
@@ -57,10 +59,12 @@ Mob* EntityList::AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssist
 			   || ( t2 > iArrgoRange)
 			   || ( t3 > iArrgoRange)
 			   ||(mob->IsInvisible(sender))
-			   || (mob->IsClient() && (!mob->CastToClient()->Connected()
-			   || mob->CastToClient()->IsLD()
-			   || mob->CastToClient()->IsBecomeNPC()
-			   || mob->CastToClient()->GetGM())   
+			   || (mob->IsClient() &&
+			       (!mob->CastToClient()->Connected()
+			  	    || mob->CastToClient()->IsLD()
+			        || mob->CastToClient()->IsBecomeNPC()
+			        || mob->CastToClient()->GetGM())   
+			   || mob == sender  
 			   ))
 			{
 				iterator.Advance();
@@ -73,7 +77,7 @@ Mob* EntityList::AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssist
 				continue;
 			}
 			
-			dist  = mob->Dist(*sender);
+			dist2  = mob->DistNoRoot(*sender);
 			//distZ = dist - mob->DistNoZ(*sender);
 	
 			// TC - removing z checks.  Not implemented correctly. distZ will never be less than -10.
@@ -82,8 +86,8 @@ Mob* EntityList::AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssist
 			//   || (distZ >= 0 && distZ > (Z_AGGRO)) )
             //   )
 
-			if(  ( dist > (iAssistRange*2) ) &&  (dist > iArrgoRange)  )
-			{	// Skip it
+			if(  ( dist2 > (iAssistRange2) ) &&  (dist2 > iArrgoRange2)  )
+			{	// Skip it, out of range
                      //if (   EQDEBUG >= 5
                      //    && mob->IsClient()
                      //    && mob->CastToClient()->Connected()
@@ -107,7 +111,7 @@ Mob* EntityList::AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssist
         // Is friend engaged
         // Does friend have a target
         // Is friend in range
-        // Are we stupid, or is friends target green
+        // Are we stupid, or is friends target not green
         // Is friends target in range
 
 // solar: i broke these ifs out all ridiculous for debugging, compress em
@@ -125,7 +129,7 @@ Mob* EntityList::AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssist
 				( mob->IsNPC() && mob->IsEngaged() )
 			)
 			&&
-				dist <= iAssistRange
+				dist2 <= iAssistRange2
 			&&
 			( 
 				( mob->GetINT() <= 100 )
@@ -154,7 +158,7 @@ Mob* EntityList::AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssist
 		else if
 		(
 			mob->InZone()
-			&& (dist <= iArrgoRange)
+			&& (dist2 <= iArrgoRange2)
 			&&
 			(
 				(
@@ -186,12 +190,12 @@ Mob* EntityList::AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssist
 			}
 	  }
 #if EQDEBUG >= 6
-		  cout<<"In zone:"<<mob->InZone()<<endl;
-		  cout<<"Dist:"<<dist<<endl;
-		  cout<<"Range:"<<iArrgoRange<<endl;
+		  cout<<"Is In zone?:"<<mob->InZone()<<endl;
+		  cout<<"Dist^2:"<<dist2<<endl;
+		  cout<<"Range^2:"<<iArrgoRange2<<endl;
 		  cout<<"Faction:"<<fv<<endl;
 		  cout<<"Int:"<<sender->GetINT()<<endl;
-		  cout<<"Con:"<<mob->GetLevelCon(sender->GetLevel())<<endl;
+		  cout<<"Con:"<<sender->GetLevelCon(mob->GetLevel())<<endl;
 #endif		
 
 		iterator.Advance();

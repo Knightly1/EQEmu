@@ -28,6 +28,7 @@
 #include "../common/debug.h"
 #include "features.h"
 #include "embparser.h"
+#include "questmgr.h"
 
 #include <algorithm>
 
@@ -38,15 +39,9 @@ extern char* itoa(int integer);
 
 PerlembParser::PerlembParser(void) : Parser()
 {
-	try { perl = new Embperl; map_funs(); }
-	catch(const char * msg) { perl = NULL; LogFile->write(EQEMuLog::Status, "Error initializing perlembed: %s", msg); throw msg;}
-
-	//let's load the default script
-	try { LoadScript(0, NULL); }
-	catch(const char * err)
-	{
-		LogFile->write(EQEMuLog::Status, "Error loading default script: %s", err);
-	}
+LogFile->write(EQEMuLog::Error, "Starting command queue perl parser.\n");
+	perl = NULL;
+	ReloadQuests();
 }
 
 PerlembParser::~PerlembParser()
@@ -73,7 +68,7 @@ void PerlembParser::ExportVar(const char * pkgprefix, const char * varname, cons
 	}
 }
 
-void PerlembParser::Event(int event, int32 npcid, const char * data, Mob* npcmob, Mob* mob)
+void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob, Mob* mob)
 {
 	if(!perl)
 		return;
@@ -317,12 +312,24 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, Mob* npcmob
 
 void PerlembParser::ReloadQuests()
 {
-delete perl;
-	try { perl = new Embperl; map_funs(); }
-	catch(const char * msg) { perl = NULL; LogFile->write(EQEMuLog::Status, "Error initializing perlembed: %s", msg); throw msg;}
-		try { LoadScript(0, NULL); }
-	catch(const char * err)
-	{
+LogFile->write(EQEMuLog::Error, "Reloading quests for zone...\n");
+	if(perl != NULL)
+		delete perl;
+	try {
+LogFile->write(EQEMuLog::Error, "Making parser...\n");
+		perl = new Embperl;
+LogFile->write(EQEMuLog::Error, "Mapping...\n");
+		map_funs();
+	}
+	catch(const char * msg) {
+		perl = NULL;
+		LogFile->write(EQEMuLog::Status, "Error initializing perlembed: %s", msg);
+		throw msg;
+	}
+	try {
+		LoadScript(0, NULL);
+	}
+	catch(const char * err) {
 		LogFile->write(EQEMuLog::Status, "Error loading default script: %s", err);
 	}
 	hasQuests.clear();
@@ -543,10 +550,12 @@ std::string PerlembParser::GetPkgPrefix(int32 npcid, bool defaultOK)
 	return(std::string(buf));
 }
 
-void PerlembParser::SendCommands(const char * pkgprefix, const char *event, int32 npcid, Mob* other, Mob* mob)
+void PerlembParser::SendCommands(const char * pkgprefix, const char *event, int32 npcid, NPC* other, Mob* mob)
 {
 	if(!perl)
 		return;
+	quest_manager.StartQuest(other, mob?mob->CastToClient():NULL);
+
 	try
 	{
 		std::string cmd = "@quest::cmd_queue = (); package " + (std::string)(pkgprefix) + (std::string)(";");
@@ -573,10 +582,13 @@ void PerlembParser::SendCommands(const char * pkgprefix, const char *event, int3
 		size_t num_args = std::count(args.begin(), args.end(), ',') + 1;
 		ExCommands(cmd, args, num_args, npcid, other, mob);
 	}
+	
+	quest_manager.EndQuest();
 }
 
-void PerlembParser::map_funs(void) const
+void PerlembParser::map_funs()
 {
+LogFile->write(EQEMuLog::Error, "Starting command queue Mapping...\n");
 	//map each "exported" function to a variable list that we can access from c
 	//todo:
 	//	break 1|settimer 2|stoptimer 1|dbspawnadd 2|flagcheck 1|write 2|

@@ -10,10 +10,11 @@ SF=../common/EQNetwork.o \
    ../common/dbasync.o zonedbasync.o parser.o beacon.o\
    ../common/EMuShareMem.o ../common/EQEMuError.o ../common/ptimer.o \
    .obj/debug.o .obj/database.o .obj/Item.o .obj/misc.o \
-   doors.o command.o AA.o   \
+   doors.o command.o AA.o client_packet.o \
    bonuses.o trading.o spdat.o  spell_effects.o aggro.o guilds.o \
    inventory.o client_mods.o tradeskills.o waypoints.o pets.o \
-   effects.o trap.o
+   effects.o trap.o perl_client.o perl_entity.o perl_mob.o perl_npc.o \
+   perl_PlayerCorpse.o perl_groups.o questmgr.o client_logs.o perlparser.o
 
 
 CC=gcc

@@ -406,8 +406,7 @@ void EntityList::AddNPC(NPC* npc, bool SendSpawnPacket, bool dontqueue) {
 			//app->Deflate();
 			QueueClients(npc, app);
 			safe_delete(app);
-			parse->Event(EVENT_SPAWN, npc->GetNPCTypeID(), 0, npc->CastToMob(), npc->CastToMob());
-
+			parse->Event(EVENT_SPAWN, npc->GetNPCTypeID(), 0, npc, NULL);
 		}
 		else {
 			NewSpawn_Struct* ns = new NewSpawn_Struct;
@@ -415,7 +414,7 @@ void EntityList::AddNPC(NPC* npc, bool SendSpawnPacket, bool dontqueue) {
 			npc->FillSpawnStruct(ns, 0);	// Not working on player newspawns, so it's safe to use a ForWho of 0
 			AddToSpawnQueue(npc->GetID(), &ns);
 			safe_delete(ns);
-			parse->Event(EVENT_SPAWN, npc->GetNPCTypeID(), 0, npc->CastToMob(), 0);
+			parse->Event(EVENT_SPAWN, npc->GetNPCTypeID(), 0, npc, NULL);
 		}
 	}
 	
@@ -1449,7 +1448,8 @@ void EntityList::NPCMessage(Mob* sender, bool skipsender, float dist, int32 type
     	   tmp++;
 		   if (*tmp == '\'') { tmp++; break; }
 	   }
-	   if (tmp) parse->Event(1, sender->GetTarget()->GetNPCTypeID(), tmp, sender->GetTarget(), sender);
+	   if (tmp)
+		parse->Event(EVENT_SAY, sender->GetTarget()->GetNPCTypeID(), tmp, sender->GetTarget(), sender);
    }
 
 } 

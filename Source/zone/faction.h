@@ -19,6 +19,7 @@
 #define FACTION_H
 
 #include "../common/types.h"
+#include "features.h"
 
 enum FACTION_VALUE {
 	FACTION_ALLY = 1,
@@ -34,15 +35,12 @@ enum FACTION_VALUE {
     FACTION_SCOWLS = 6
 };
 
-#define MAX_NPC_FACTIONS 10	// max factions per list
-#define MAX_FACTION	 1500
-#define MIN_FACTION -1500
-
 struct NPCFactionList {
 	uint32	id;
 	uint32	primaryfaction;
 	uint32	factionid[MAX_NPC_FACTIONS];
 	sint32	factionvalue[MAX_NPC_FACTIONS];
+	sint8	factionnpcvalue[MAX_NPC_FACTIONS];
 };
 
 struct FactionMods
@@ -68,9 +66,10 @@ struct FactionValue {
 
 struct NPCFaction    
 {    
-uint32 factionID;    
-sint32 value_mod;    
-bool primary;    
+uint32 factionID;
+sint32 value_mod;
+sint8 npc_value;
+//bool primary;    
 }; 
 
 char* BuildFactionMessage(sint32 tmpvalue, sint32 faction_id, sint32 totalvalue);

@@ -227,6 +227,8 @@ void command_timers(Client *c, const Seperator *sep);
 void command_undye(Client *c, const Seperator *sep);
 void command_hp(Client *c, const Seperator *sep);
 void command_ginfo(Client *c, const Seperator *sep);
+void command_logs(Client *c, const Seperator *sep);
+void command_nologs(Client *c, const Seperator *sep);
 
 #ifdef GUILDWARS
 void command_zonelocations(Client *c, const Seperator *sep);

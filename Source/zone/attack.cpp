@@ -1203,7 +1203,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	if (other != NULL)
 	{
 		if (other->IsNPC())
-			parse->Event(6, other->GetNPCTypeID(), 0, other, this->CastToMob());
+			parse->Event(EVENT_SLAY, other->GetNPCTypeID(), 0, other->CastToNPC(), this);
 		
 		if(other->IsClient() && (IsDueling() || other->CastToClient()->IsDueling())) {
 			SetDueling(false);
@@ -1640,7 +1640,7 @@ void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, b
       return;
 	if (attack_event == 0)
 	{
-		parse->Event(EVENT_ATTACK, this->GetNPCTypeID(), 0, this, other->CastToMob());
+		parse->Event(EVENT_ATTACK, this->GetNPCTypeID(), 0, this, other);
 	}
 	attack_event = 1;
 	attacked_timer.Start(12000,true);
@@ -1987,8 +1987,10 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 		}
 	}
 	// Parse quests even if we're killed by an NPC
-	if (other)
-		parse->Event(EVENT_DEATH, this->GetNPCTypeID(),0, this, other->CastToMob());
+	if(other && other->GetOwner())
+		parse->Event(EVENT_DEATH, this->GetNPCTypeID(),0, this, other->GetOwner());
+	else
+		parse->Event(EVENT_DEATH, this->GetNPCTypeID(),0, this, other);
 	this->WhipeHateList();
 	p_depop = true;
 	if(other) other->SetTarget(0);
@@ -2259,7 +2261,8 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
                 myowner->hate_list.Add(other, 1, 0, bFrenzy);
     }
  if (!wasengaged) { 
-      parse->Event(EVENT_AGGRO, this->GetNPCTypeID(), 0, this, other->CastToMob()); 
+	if(IsNPC())
+		parse->Event(EVENT_AGGRO, this->GetNPCTypeID(), 0, CastToNPC(), other); 
       AI_Event_Engaged(other, iYellForHelp); 
       adverrorinfo = 8293;
 
@@ -2712,8 +2715,8 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 	}
 	
 	const Item_Struct* item = RangeWeapon->GetItem();
-	if(item->Common.ItemUse != ItemUseThrowing) {
-		Message(0, "Error: Rangeweapon: GetItem(%i)==0, you have nothing to throw!", GetItemIDAt(SLOT_RANGE));
+	if(item->Common.ItemUse != ItemUseThrowing && item->Common.ItemUse != ItemUseThrowingv2) {
+		Message(0, "Error: Rangeweapon: GetItem(%i)==0, you have nothing useful to throw!", GetItemIDAt(SLOT_RANGE));
 		return;
 	}
 	 

@@ -3,6 +3,25 @@ EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 ==11/01/2004
 LethalEncounter: Inventory items on zone in are now sent in one packet like live instead of individual packets.  This will save on bandwidth and processing time.
 Cofruben: Added support for /makeleader command.
+FatherNitwit: Increased max buffs from 15 to 20
+FatherNitwit: Fixed group zoning
+FatherNitwit: Fixed loading map files on UNIX with capitol letters
+FatherNitwit: Fixed a couple crashed related to old AA stuff
+FatherNitwit: Cannot charm a corpse or charm something when you have a pet
+FatherNitwit: A little work on zoneing with a chanrmed pet, not perfect yet
+FatherNitwit: Fixed throwing weapons like shurikens
+FatherNitwit: Broke all the old LDoN points stuff because it moved in the Player profile
+FatherNitwit: Moved all quest command's logic into the QuestManager class
+FatherNitwit: Rewrote perl to use XS instead of command queue (EMBPERL_XS)
+FatherNitwit: Added routines to capture perl errors into proper log IO (EMBPERL_IO_CAPTURE)
+FatherNitwit: Added a HUGE set of routines for quest objects, with new variables
+  $client, $npc, and $entity_list... almost the entire class is exported. (EMBPERL_XS_CLASSES)
+FatherNitwit: Added capability to send log messages to in-game clients (CLIENT_LOGS)
+FatherNitwit: Added new log facility for quest messages named Quest
+FatherNitwit: Added new commands #logs and #nologs to request/stop the server sending you its log messages
+FatherNitwit: Fixed NPC -> NPC aggro, need to run these queries onan older DB:
+ALTER TABLE npc_faction_entries ADD npc_value TINYINT UNSIGNED DEFAULT '0' NOT NULL;
+UPDATE npc_faction_entries SET npc_value=1 WHERE value<0;
 
 ==10/31/2004
 LethalEncounter: Aside from a few tweeks, merchants are finished.  They will now keep your items after you sell them like live.

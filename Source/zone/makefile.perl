@@ -9,12 +9,13 @@ SF=../common/EQNetwork.o \
    groups.o ../common/classes.o ../common/races.o ../common/TCPConnection.o forage.o \
    ../common/crc32.o ../common/md5.o ../common/dbcore.o \
    ../common/dbasync.o zonedbasync.o parser.o embperl.o embparser.o \
-   ../common/EMuShareMem.o ../common/EQEMuError.o \
+   ../common/EMuShareMem.o ../common/EQEMuError.o client_packet.o \
    .obj/debug.o .obj/database.o .obj/Item.o .obj/misc.o \
    doors.o command.o beacon.o embxs.o ../common/ptimer.o \
    bonuses.o trading.o spdat.o  spell_effects.o aggro.o guilds.o \
    inventory.o client_mods.o tradeskills.o waypoints.o pets.o \
-   effects.o AA.o trap.o
+   effects.o AA.o trap.o perl_client.o perl_entity.o perl_mob.o perl_npc.o \
+   perl_PlayerCorpse.o perl_groups.o questmgr.o client_logs.o perlparser.o
 
 
 CC=gcc

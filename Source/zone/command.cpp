@@ -51,6 +51,8 @@ Copyright (C) 2001-2002	EQEMu Development Team (http://eqemu.org)
 #include "worldserver.h"
 #include "masterentity.h"
 #include "map.h"
+#include "features.h"
+#include "client_logs.h"
 
 // these should be in the headers...
 extern WorldServer worldserver;	
@@ -367,6 +369,8 @@ int command_init(void)
 		command_add("reloadpl","- Reload perl quest for target",80,command_reloadpl) || 
 #endif
 
+		command_add("logs","[status|normal|error|debug|quest|all] - Subscribe to a log type",250,command_logs) ||
+		command_add("nologs","[status|normal|error|debug|quest|all] - Unsubscribe to a log type",250,command_logs) ||
 		command_add("datarate","[rate] - Query/set datarate",100,command_datarate) ||
 		command_add("ban","[name] - Ban by character name",150,command_ban) ||
 		command_add("oocmute","[1/0] - Mutes OOC chat",200,command_oocmute) ||
@@ -5376,7 +5380,7 @@ void command_set_adventure_points(Client *c, const Seperator *sep)
 	}
 
 	c->Message(0, "Updating adventure points for %s", t->GetName());
-	t->GetPP().ldon_available_points=atoi(sep->arg[1]);
+//	t->GetPP().ldon_available_points=atoi(sep->arg[1]);
 	t->UpdateLDoNPoints(0, 1);
 }
 
@@ -5726,7 +5730,68 @@ void command_npcedit(Client *c, const Seperator *sep)
    {   
       c->Message(0, "Type #npcedit help for more info");
    }
-} 
+}
+
+void command_logs(Client *c, const Seperator *sep)
+{
+#ifdef CLIENT_LOGS
+	Client *t = c;
+	if(c->GetTarget() && c->GetTarget()->IsClient()) {
+		t = c;
+	}
+	
+	if(!strcasecmp( sep->arg[1], "status" ) )
+		client_logs.subscribe(EQEMuLog::Status, t);
+	else if(!strcasecmp( sep->arg[1], "normal" ) )
+		client_logs.subscribe(EQEMuLog::Normal, t);
+	else if(!strcasecmp( sep->arg[1], "error" ) )
+		client_logs.subscribe(EQEMuLog::Error, t);
+	else if(!strcasecmp( sep->arg[1], "debug" ) )
+		client_logs.subscribe(EQEMuLog::Debug, t);
+	else if(!strcasecmp( sep->arg[1], "quest" ) )
+		client_logs.subscribe(EQEMuLog::Quest, t);
+	else if(!strcasecmp( sep->arg[1], "all" ) )
+		client_logs.subscribeAll(t);
+	else {
+		c->Message(0, "Usage: #logs [status|normal|error|debug|quest|all]");
+		return;
+	}
+	c->Message(0, "You have been subscribed to %s logs.", sep->arg[1]);
+#else
+	c->Message(0, "Client logs are disabled in this server's build.");
+#endif
+}
+
+void command_nologs(Client *c, const Seperator *sep)
+{
+#ifdef CLIENT_LOGS
+	Client *t = c;
+	if(c->GetTarget() && c->GetTarget()->IsClient()) {
+		t = c;
+	}
+	
+	if(!strcasecmp( sep->arg[1], "status" ) )
+		client_logs.unsubscribe(EQEMuLog::Status, t);
+	else if(!strcasecmp( sep->arg[1], "normal" ) )
+		client_logs.unsubscribe(EQEMuLog::Normal, t);
+	else if(!strcasecmp( sep->arg[1], "error" ) )
+		client_logs.unsubscribe(EQEMuLog::Error, t);
+	else if(!strcasecmp( sep->arg[1], "debug" ) )
+		client_logs.unsubscribe(EQEMuLog::Debug, t);
+	else if(!strcasecmp( sep->arg[1], "quest" ) )
+		client_logs.unsubscribe(EQEMuLog::Quest, t);
+	else if(!strcasecmp( sep->arg[1], "all" ) )
+		client_logs.unsubscribeAll(t);
+	else {
+		c->Message(0, "Usage: #logs [status|normal|error|debug|quest|all]");
+		return;
+	}
+	
+	c->Message(0, "You have been unsubscribed from %s logs.", sep->arg[1]);
+#else
+	c->Message(0, "Client logs are disabled in this server's build.");
+#endif
+}
 
 void Client::Undye() {
 	for (int cur_slot = 0; cur_slot < 9 ; cur_slot++ ){

@@ -42,6 +42,19 @@ Core Zone features
 //when there are no players in it, mobs stop wandering, etc..
 #define IDLE_WHEN_EMPTY
 
+#ifdef EMBPERL
+//Enable the new XS based perl parser
+#define EMBPERL_XS
+//enable classes in the new XS based parser
+#define EMBPERL_XS_CLASSES
+//enable IO capture and transmission to in game clients
+#define EMBPERL_IO_CAPTURE
+#endif
+
+//enable functionality to send log message to the client
+//it still needs to be enabled with the #logs command
+#define CLIENT_LOGS
+
 /*
 
 Map Configuration
@@ -169,7 +182,14 @@ enum {	//timer settings
 //minimum level to do alchemy
 #define MIN_LEVEL_ALCHEMY 25
 
+//chance ratio that a 
 #define THREATENLY_ARRGO_CHANCE 32 // 32/128 (25%) chance that a mob will arrgo on con Threatenly
+
+// max factions per npc faction list
+#define MAX_NPC_FACTIONS 20
+
+#define MAX_FACTION	 1500
+#define MIN_FACTION -1500
 
 #endif
 

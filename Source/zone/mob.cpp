@@ -748,7 +748,7 @@ void Mob::CreateHPPacket(APPLAYER* app)
 	if ( IsNPC() && ( GetNextHPEvent() > 0 ) ) { 
 		if ( ds->hp < GetNextHPEvent() ) { 
 			int lasthpevent = nexthpevent;
-			parse->Event(EVENT_HP, GetNPCTypeID(), 0, this, 0);
+			parse->Event(EVENT_HP, GetNPCTypeID(), 0, CastToNPC(), NULL);
 			if ( lasthpevent == nexthpevent ) {
 				SetNextHPEvent(0);
 			}

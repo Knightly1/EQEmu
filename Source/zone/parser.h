@@ -35,7 +35,7 @@ struct command_list {
 };
 
 struct timers {
-	Mob*   mob;
+	NPC*   mob;
 	string name;
 	Timer* Timer_;
 };
@@ -70,9 +70,9 @@ public:
 	//void	Event(int event, int32 npcid, const char * data, Mob* npcmob, Mob* mob);
 	//changed - Eglin.  more reasonable (IMHO) than changing every single referance to the global pointer.
 	//that's what you get for using globals! :)
-	virtual void    Event(int event, int32 npcid, const char * data, Mob* npcmob, Mob* mob);
+	virtual void    Event(int event, int32 npcid, const char * data, NPC* npcmob, Mob* mob);
 
-	void	ExCommands(std::string command, std::string parms, int argnums, int32 npcid, Mob* other, Mob* mob );
+	void	ExCommands(std::string command, std::string parms, int argnums, int32 npcid, NPC* other, Mob* mob );
 
 	void	GetCommandName(char * command1, char * arg);
 	int		GetFreeID();
@@ -91,7 +91,7 @@ public:
 
 	int		numtok(std::string text, const char * character);
 
-	int		ParseCommands(std::string text, int line, int justcheck, int32 npcid, Mob* other, Mob* mob, std::string filename=string("none"));
+	int		ParseCommands(std::string text, int line, int justcheck, int32 npcid, NPC* other, Mob* mob, std::string filename=string("none"));
 	int		ParseIf(std::string text);
 	int		pcalc(const char * string);
 	void    ParseVars(std::string& text, int32 npcid, Mob* mob);
@@ -101,8 +101,7 @@ public:
 	void	scanformat(char *string, const char *format, char arg[10][1024]);
 	bool	SetNPCqstID(int32 iNPCID, sint32 iValue);
 	char *  strrstr(char* string, const char * sub);
-	virtual void	SendCommands(const char * event, int32 npcid, Mob* npcmob, Mob* mob);
-	int32	QGexpdate(char * name, char * options);
+	virtual void	SendCommands(const char * event, int32 npcid, NPC* npcmob, Mob* mob);
 
 	int	HasQuestFile(int32 npcid);
 

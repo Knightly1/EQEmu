@@ -35,6 +35,7 @@ using namespace std;
 #endif
 
 #include "masterentity.h"
+#include "features.h"
 #include "spawngroup.h"
 #include "spawn2.h"
 #include "zone.h"
@@ -50,6 +51,7 @@ using namespace std;
 #include "../common/files.h"
 #include "parser.h"
 #include "event_codes.h"
+#include "client_logs.h"
 
 #ifdef WIN32
 #define snprintf	_snprintf
@@ -556,6 +558,7 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, i
 	guildwars.Construct();
 	db_update = new Timer(600000);
 #endif
+	aa_buffer = NULL;
 }
 
 //Modified for timezones.
@@ -637,6 +640,9 @@ Zone::~Zone()
 	location_list.ClearLocations();
 	guildwars.Deconstruct();
 	safe_delete(db_update);
+#endif
+#ifdef CLIENT_LOGS
+	client_logs.clear();
 #endif
 }
 
@@ -762,7 +768,7 @@ bool Zone::Process() {
 		if (p && p->Timer_->Enabled() && p->Timer_->Check())
 		{
 			if (p->mob)
-				parse->Event(EVENT_TIMER,p->mob->GetNPCTypeID(),p->name.c_str(),p->mob,0);			
+				parse->Event(EVENT_TIMER,p->mob->GetNPCTypeID(),p->name.c_str(),p->mob, NULL);			
 		}
 		iterator1++;
 	}
