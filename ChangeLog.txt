@@ -5,6 +5,7 @@ LethalEncounter: Aside from a few tweeks, merchants are finished.  They will now
 LethalEncounter: Fixed bug that caused falling damage to be calculated twice.
 LethalEncounter: Changed Sense Heading to start at 200 for new characters.
 LethalEncounter: Black screen bug should be fixed now.
+LethalEncounter: Fixed bash/slam.
 
 ==10/30/2004
 LethalEncounter: Fixed a few issues with item charges.

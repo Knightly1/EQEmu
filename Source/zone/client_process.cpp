@@ -6911,14 +6911,17 @@ void Client::OPCombatAbility(const APPLAYER *app) {
 	CombatAbility_Struct* ca_atk = (CombatAbility_Struct*) app->pBuffer;
 	if ((ca_atk->m_atk == 100) && (ca_atk->m_type==10)) {    // SLAM - Bash without a shield equipped
 		DoAnim(animTailRake);
-		printf("(level/10)  * 3: %i\n",(level/10)  * 3);
-		printf("(GetSkill(BASH) + GetSTR() + level): %i\n",(GetSkill(BASH) + GetSTR() + level));
-		printf("(700-GetSkill(BASH)): %i\n",(700-GetSkill(BASH)));
-		sint32 dmg=(sint32) ((level/10)  * 3  * (GetSkill(BASH) + GetSTR() + level) / (700-GetSkill(BASH)));
-		
-		Message(MT_Emote, "You Bash for a total of %d damage.",  dmg);
+		float chance = (level+GetSkill(BASH)+GetSTR())/5;
+		sint32 dmg = 0;
+		if(chance<20)
+			chance=20;
+		else if(chance>90)
+			chance=90;
+
+		//this formula is just a hack, its not perfect by any means
+		if((rand()%100)<chance)//success figure damage
+			dmg = ((((level/10)*(rand()%7))+GetSkill(BASH)*5+GetSTR())/100)*(rand()%10);
 		target->Damage(this, dmg, 0xffff, BASH);
-		
 		CheckIncreaseSkill(BASH);
 		
 		/* using CheckIncreaseSkill now
