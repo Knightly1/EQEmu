@@ -570,8 +570,14 @@ void Database::ExtraOptions()
 			if (fscanf (f, "%[^=]=%[^\r\n]\n", type, buf) == 2)
 #endif
 			{
-				if(sizeof(type) > 0 && maxcommandlevel < 200) {
-					snprintf(commands[maxcommandlevel], 200, "%s", type);
+				if(type[0] != '\0' && maxcommandlevel < 200) {
+					//I really dont understadn how this worked before with the
+					//'!' in front, but i'll fix it now...
+					if(type[0] == '!') {
+						snprintf(commands[maxcommandlevel], 200, "%s", type+1);
+					} else {
+						snprintf(commands[maxcommandlevel], 200, "%s", type);
+					}
 					commandslevels[maxcommandlevel] = atoi(buf);
 					maxcommandlevel++;
 				}
