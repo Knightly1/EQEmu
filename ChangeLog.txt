@@ -1,5 +1,123 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+
+==10/14/2004
+Rogean: omg we are so teh 0.6.0DR1 now~
+
+FatherNitWit:
+A HUGE thanks goes out to wiz for letting me have his source
+to facilitate this merge.
+
+WR Merges:
+- An innumerable number of small bug fixes and tweaks all over
+- A TON of AAs and related effects
+- FISHING!!!!!!!!!
+- Many timers enforced by server, not just client.
+- Trap support.
+- Sense trap and disarm trap
+- Group linking
+- Zone-crossing pets (lose their buffs though, for now)
+- Voice graft
+- poison and disease counters (in progress)
+- hunger and thirst (in progress)
+- stat food
+- NPC door opening!
+- Optimized idle zones to not eat the CPU
+- Items tints display properly
+- shielding other players (in progress)
+- pick pocket
+- Optional EXP scaling based on CON level
+- Instill Doubt
+- Made auto-putting items into bags respect size constraints.
+- heal/buff aggro.
+- reclaim pet gives you mana back.
+- enforce undead and summoned targets spells
+- reworked bard songs a bit
+- implemented camping properly
+- made alcohol tolerance gain skill (dunno if it does anything yet)
+- better checking of lore items during trades and merchant buying
+- prevent interaction with merchants on basis of bad faction
+- pets should actually taunt now.
+- rouge pets should backstab now.
+- optional: group buffs hit group pets now.
+- fixed memory blur chances 
+- several minor group tweaks, should make groups more stable
+- improved duel messages
+- optional random luclin attributes for NPCs with boring faces
+- AGI adjustments based on encumbrance
+- AC bonuses for iskars and monks
+
+
+FatherNitwit Improvements:
+- Made most member timers instances, not pointers.
+- Rewrote focus effects system, spells that give focus effect should work too.
+- Reagent reduction focus implemeneted
+- Rewrote activateable AAs and swarm pets based on Brank's work
+- AA spell effects are now in the DB, easily editable
+- Added a bunch of simple GoD AAs
+- Consolidated many #define options into features.h
+- Fixed crash in world when starting zone dosent exist
+- Fixed dual weild with hand-to-hand
+- Extended fishing to allow mobs to spawn when items are fished up.
+- Made item skill modifiers work.
+- Identified meaning of old Skill field of common items.
+- made bind wounds actually consume bandaids.
+- Made archery and throwing consume ammo
+- Archery weapons proc now
+- Fixed bard item bonuses to apply to all a bard's spell effects.
+- rewrote perl HasQuestFile function to behave properly.
+- modified perl quest system to fit better into the virtual parser scheme.
+- enforce spell/skill components being on the player, not in bank.
+- fixed container loading from DB.
+- implemented item skill bonuses
+- prevent merchant purchases when inventory full.
+- safe fall implemented, but the formula is wrong
+- initial implementation of client rampaging
+- eliminated a lot of sqrt calls
+- added an optional packet profiler to EQ network to count opcodes
+- fixed NPC-casted targeted AE spells affecting the caster
+- fixed monk special attack damage to be skill based.
+- most NPC classes do their special attacks now.
+- fixed multi-dose potions (not 100% sure they were broken)
+- implemented Percental Heal spells
+- put caps on haste, HP, and mana regeneration items
+- Changed HP regen to work without client's regen packet, which it dosent send anymore.
+- Updated natural HP regen to be closer to live.
+- corrected AC calculations
+- Implemented new discipline interface.
+- Added new perl function (traindisc(itemid)) to facilitate training disciplines
+- changed discipline reuse timer to a ptimer, since it is long.
+- implemented a ton of new spell effects to support disciplines.
+- implemented PoP item attributes like shielding, accuracy, etc...
+- rewrote much of group system to better support multi-zone groups.
+- groups given world-wide IDs instead of zone local.
+- group disbanding when split between zones works.
+- Fixed warrior/monk triple attack
+- Fixed NPC AE spells to respect faction
+- Tweaked NPC non-caster mobs being able to cast 'proc' spells.
+- Fixed base resistance calculations to match the client.
+- Cleaned up NPC spell interruption messages when they were not needed.
+- DOTs no longer make you stand every tic.
+- Fixed mob immunities special flags
+- Added new mob immunities: snare, magic, meele
+- Immunity to stuns now includes spin effects as well
+- Trading with NPCs should correctly handle no drop items.
+- fixed AA EXP setting
+- allow starting items to include books and empty bags
+- Fixed starting zones problem on char creation.
+- Allow bards to move and use clicky items.
+- Make NPC casters send stop moving packet when they cast.
+- Fixed archery ammo searching to fall over to inventory.
+- mobs now dual-weild based on a chance instead of garunteed
+- groups do not grant EXP if the mob is green to any group members
+- some NPC combat tweaks to balance it over the levels better. Needs through testing.
+- EXP is now awarded to the top damaging player/group instead of killer
+- fixed donal's complete heal
+- fixed AC calculations for high-agi players
+- Changed mobs with primary faction = 0 to be indifferent.
+- If a player logs/zones in to a Z below the world, they are placed at a valid Z if possible.
+- labeled new item field as attuneable, updated DB code for it
+
 ==10/10/2004
 LethalEncounter: Fixed some issues with hp and mana.
 LethalEncounter: Fixed bug with zoning z coord.

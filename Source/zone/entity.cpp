@@ -39,6 +39,8 @@ using namespace std;
 #include "../common/packet_functions.h"
 #include "petitions.h"
 #include "spdat.h"
+#include "features.h"
+#include "StringIDs.h"
 
 #ifdef WIN32
 #define snprintf	_snprintf
@@ -119,6 +121,19 @@ Mob* Entity::CastToMob() {
 	return static_cast<Mob*>(this);
 }
 
+
+Trap* Entity::CastToTrap()
+{
+#ifdef DEBUG
+	if(!IsTrap())
+	{
+		//cout << "CastToTrap error" << endl;
+		return 0;
+	}
+#endif
+	return static_cast<Trap*>(this);
+}
+
 Corpse* Entity::CastToCorpse() {
 #ifdef _EQDEBUG
 	if(!IsCorpse()) {	
@@ -140,7 +155,7 @@ Object* Entity::CastToObject() {
 	return static_cast<Object*>(this);
 }
 
-Group* Entity::CastToGroup() {
+/*Group* Entity::CastToGroup() {
 #ifdef _EQDEBUG
 	if(!IsGroup()) {	
 		cout << "CastToGroup error" << endl;
@@ -149,7 +164,7 @@ Group* Entity::CastToGroup() {
 	}
 #endif
 	return static_cast<Group*>(this);
-}
+}*/
 
 Doors* Entity::CastToDoors() {
 return static_cast<Doors*>(this);
@@ -157,6 +172,13 @@ return static_cast<Doors*>(this);
 
 Beacon* Entity::CastToBeacon() {
 	return static_cast<Beacon*>(this);
+}
+
+EntityList::EntityList() {
+	last_insert_id = 0;
+}
+
+EntityList::~EntityList() {
 }
 
 bool EntityList::CanAddHateForMob(Mob *p) {
@@ -187,7 +209,30 @@ void EntityList::AddClient(Client* client) {
 	if(!client_list.dont_delete)
 		client_list.dont_delete=true;
 }
+
+
+void EntityList::TrapProcess() {
+	if(numclients < 1)
+		return;
+	LinkedListIterator<Trap*> iterator(trap_list);
+	iterator.Reset();
+	int32 count=0;
+	while(iterator.MoreElements())
+	{
+		count++;
+		if(!iterator.GetData()->Process()){
+			iterator.RemoveCurrent();
+		}
+		else
+			iterator.Advance();
+	}
+	if(count==0)
+		net.trap_timer.Disable();//No traps in list, disable until one is added
+}
+
 void EntityList::GroupProcess() {
+	if(numclients < 1)
+		return;
 	LinkedListIterator<Group*> iterator(group_list);
 	iterator.Reset();
 	int32 count=0;
@@ -201,9 +246,14 @@ void EntityList::GroupProcess() {
 			iterator.Advance();
 	}
 	if(count==0)
-		net.group_timer->Disable();//No groups in list, disable until one is added
+		net.group_timer.Disable();//No groups in list, disable until one is added
 }
+
 void EntityList::DoorProcess() {
+#ifdef IDLE_WHEN_EMPTY
+	if(numclients < 1)
+		return;
+#endif
 	LinkedListIterator<Doors*> iterator(door_list);
 	iterator.Reset();
 	int32 count=0;
@@ -217,8 +267,9 @@ void EntityList::DoorProcess() {
 			iterator.Advance();
 	}
 	if(count==0)
-		net.door_timer->Disable();//No doors in list, disable until one is added
+		net.door_timer.Disable();//No doors in list, disable until one is added
 }
+
 void EntityList::ObjectProcess() {
 	LinkedListIterator<Object*> iterator(object_list);
 	iterator.Reset();
@@ -233,8 +284,9 @@ void EntityList::ObjectProcess() {
 			iterator.Advance();
 	}
 	if(count==0)
-		net.object_timer->Disable();//No objects in list, disable until one is added
+		net.object_timer.Disable();//No objects in list, disable until one is added
 }
+
 void EntityList::CorpseProcess() {
 	LinkedListIterator<Corpse*> iterator(corpse_list);
 	iterator.Reset();
@@ -249,14 +301,19 @@ void EntityList::CorpseProcess() {
 			iterator.Advance();
 	}
 	if(count==0)
-		net.corpse_timer->Disable();//No corpses in list, disable until one is added
+		net.corpse_timer.Disable();//No corpses in list, disable until one is added
 }
+
 void EntityList::MobProcess() {
+#ifdef IDLE_WHEN_EMPTY
+	if(numclients < 1)
+		return;
+#endif
 	LinkedListIterator<Mob*> iterator(mob_list);
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
- 		if(!iterator.GetData()->Process()){
+		if(!iterator.GetData()->Process()){
 			Mob* mob=iterator.GetData();
 			if(mob->IsNPC())
 				entity_list.RemoveNPC(mob->CastToNPC()->GetID());
@@ -276,8 +333,7 @@ void EntityList::MobProcess() {
 	}
 }
 
-void EntityList::BeaconProcess()
-{
+void EntityList::BeaconProcess() {
 	LinkedListIterator<Beacon *> iterator(beacon_list);
 	int count;
 
@@ -292,10 +348,21 @@ void EntityList::BeaconProcess()
 
 
 void EntityList::AddGroup(Group* group) {
-	group->SetID(GetFreeID());
+	int32 gid = worldserver.NextGroupID();
+	if(gid == 0) {
+		LogFile->write(EQEMuLog::Error, "Unable to get new group ID from world server. group is going to be broken.");
+		return;
+	}
+	
+	AddGroup(group, gid);
+}
+
+
+void EntityList::AddGroup(Group* group, int32 gid) {
+	group->SetID(gid);
 	group_list.Insert(group);
-	if(!net.group_timer->Enabled())
-		net.group_timer->Start();
+	if(!net.group_timer.Enabled())
+		net.group_timer.Start();
 }
 
 void EntityList::GuildItemAward(int32 guilddbid, int16 itemid)
@@ -325,8 +392,8 @@ void EntityList::AddCorpse(Corpse* corpse, int32 in_id) {
 		corpse->SetID(in_id);
 	corpse->CalcCorpseName();
 	corpse_list.Insert(corpse);
-	if(!net.corpse_timer->Enabled())
-		net.corpse_timer->Start();
+	if(!net.corpse_timer.Enabled())
+		net.corpse_timer.Start();
 }
 
 void EntityList::AddNPC(NPC* npc, bool SendSpawnPacket, bool dontqueue) {
@@ -368,15 +435,22 @@ void EntityList::AddObject(Object* obj, bool SendSpawnPacket) {
 		QueueClients(0, &app,false);
 	}
 	object_list.Insert(obj);
-	if(!net.object_timer->Enabled())
-		net.object_timer->Start();
+	if(!net.object_timer.Enabled())
+		net.object_timer.Start();
 };
 
 void EntityList::AddDoor(Doors* door) {
 	door->SetEntityID(GetFreeID());
 	door_list.Insert(door);
-	if(!net.door_timer->Enabled())
-		net.door_timer->Start();
+	if(!net.door_timer.Enabled())
+		net.door_timer.Start();
+}
+
+void EntityList::AddTrap(Trap* trap) {
+	trap->SetID(GetFreeID());
+	trap_list.Insert(trap);
+	if(!net.trap_timer.Enabled())
+		net.trap_timer.Start();
 }
 
 void EntityList::AddBeacon(Beacon *beacon)
@@ -593,6 +667,21 @@ Entity* EntityList::GetEntityCorpse(const char *name)
 	}
 	return 0;
 }
+
+Entity* EntityList::GetEntityTrap(int16 id){
+	LinkedListIterator<Trap*> iterator(trap_list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		if (iterator.GetData()->GetID() == id)
+		{
+			return iterator.GetData();
+		}
+		iterator.Advance();
+	}
+	return 0;
+}
+
 Entity* EntityList::GetEntityObject(int16 id){
 	LinkedListIterator<Object*> iterator(object_list);
 	iterator.Reset();
@@ -606,6 +695,7 @@ Entity* EntityList::GetEntityObject(int16 id){
 	}
 	return 0;
 }
+/*
 Entity* EntityList::GetEntityGroup(int16 id){
 	LinkedListIterator<Group*> iterator(group_list);
 	iterator.Reset();
@@ -619,7 +709,8 @@ Entity* EntityList::GetEntityGroup(int16 id){
 	}
 	return 0;
 }
-Entity* EntityList::GetEntityBeacon(int16 id){
+*/
+Entity* EntityList::GetEntityBeacon(int16 id) {
 	LinkedListIterator<Beacon*> iterator(beacon_list);
 	iterator.Reset();
 	while(iterator.MoreElements())
@@ -641,9 +732,11 @@ Entity* EntityList::GetID(int16 get_id)
 		return ent;
 	else if((ent=entity_list.GetEntityCorpse(get_id))!=0)
 		return ent;
-	else if((ent=entity_list.GetEntityGroup(get_id))!=0)
-		return ent;
+//	else if((ent=entity_list.GetEntityGroup(get_id))!=0)
+//		return ent;
 	else if((ent=entity_list.GetEntityObject(get_id))!=0)
+		return ent;
+	else if((ent=entity_list.GetEntityTrap(get_id))!=0)
 		return ent;
 	else if((ent=entity_list.GetEntityBeacon(get_id))!=0)
 		return ent;
@@ -999,146 +1092,23 @@ void EntityList::QueueClientsStatus(Mob* sender, const APPLAYER* app, bool ignor
 	}	
 }
 
-// solar: causes caster to hit every mob within dist range of center with
-// spell_id.
-// NOTE: center is not affected, but caster is if it's in range
-void EntityList::AESpell(Mob *caster, Mob *center, float dist, int16 spell_id)
-{
-	LinkedListIterator<Mob*> iterator(mob_list);
-	Mob *curmob;
-	
-	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
-	{
-		curmob = iterator.GetData();
-		if(curmob != center && center->Dist(*curmob) <= dist)
-			caster->SpellOnTarget(spell_id, curmob);
-	}	
-}
+void EntityList::DuelMessage(Mob* winner, Mob* loser, bool flee) {
+	LinkedListIterator<Client*> iterator(client_list);
 
-#if 0	// solar: this is old code
-void EntityList::AESpell(Mob* caster, Mob* center, float dist, int16 spell_id, bool group)
-{
-	LinkedListIterator<Mob*> iterator(mob_list);
 	iterator.Reset();
 	while(iterator.MoreElements()) {
-		Mob* mob = iterator.GetData();
-		if (group){
-			    // Client casting group spell with out target group buffs enabled
-			    // Skip non group members
-                if (   caster->IsClient()
-                    && !caster->CastToClient()->TGB()
-                    && GetGroupByMob(mob) != 0
-                    && !GetGroupByMob(mob)->IsGroupMember(caster)
-                    ) {
-                    LogFile->write(EQEMuLog::Debug, "Group spell skipping %s", mob->GetName());
-                        iterator.Advance();
-                        continue;
-                }
-			    // Client casting group spell with target group buffs enabled
-                else if (  caster->IsClient()
-                        && caster->CastToClient()->TGB()
-                        && GetGroupByMob(mob) != 0
-                        && GetGroupByMob(mob)->IsGroupMember(caster)
-                        ){
-                        LogFile->write(EQEMuLog::Debug, "Group spell TGB on %s's Group", mob->GetName());
-                        GetGroupByMob(mob)->CastGroupSpell(caster, spell_id);
-                        iterator.Advance();
-                        continue;
-                }
-                else if (  caster->IsClient()
-                        && caster->CastToClient()->TGB()
-                        && GetGroupByMob(mob) == 0
-                        && mob == center
-                        ){
-                        LogFile->write(EQEMuLog::Debug, "Group spell TGB on %s", mob->GetName());
-                        caster->SpellOnTarget(spell_id, mob);
-                        return;
-                }
-		}
-		if (
-			mob->DistNoZ(*center) <= dist
-			&& !(mob->IsClient() && mob->CastToClient()->GMHideMe())
-			&& !mob->IsCorpse()
-			) {
-			//cout << "AE Spell Hit: t=" << iterator.GetData()->GetName() << ", d=" << iterator.GetData()->CastToMob()->DistNoRoot(center) << ", x=" << iterator.GetData()->CastToMob()->GetX() << ", y=" << iterator.GetData()->CastToMob()->GetY() << endl;
-			if (caster == mob) {
-				// Caster gets the first hit, already handled in spells.cpp
-			}
-		#ifdef IPC
-			else if(caster->IsNPC() && !caster->CastToNPC()->IsInteractive()) {
-		#else
-			else if(caster->IsNPC()) {
-        #endif
-        	// Npc
-				if (caster->IsAttackAllowed(mob) && spells[spell_id].targettype != ST_AEBard) {
-				//    printf("NPC Spell casted on %s\n", mob->GetName());
-					caster->SpellOnTarget(spell_id, mob);
-				}
-				else if (mob->IsAIControlled() && spells[spell_id].targettype == ST_AEBard) {
-				//    printf("NPC mgb/aebard spell casted on %s\n", mob->GetName());
-					caster->SpellOnTarget(spell_id, mob);
-				}
-				else {
-				//    printf("NPC AE, fall thru. spell_id:%i, Target type:%x\n", spell_id, spells[spell_id].targettype);
-				}
-			}
-		#ifdef IPC
-            else if(caster->IsNPC() && caster->CastToNPC()->IsInteractive()) {
-			  	// Interactive npc
-				if (caster->IsAttackAllowed(mob) && spells[spell_id].targettype != ST_AEBard && spells[spell_id].targettype != ST_GroupTeleport) {
-				//    printf("IPC Spell casted on %s\n", mob->GetName());
-					caster->SpellOnTarget(spell_id, mob);
-				}
-				else if (!mob->IsAIControlled() && (spells[spell_id].targettype == ST_AEBard||group) && mob->CastToClient()->GetPVP() == caster->CastToClient()->GetPVP()) {
-					    if (group && GetGroupByMob(mob) != GetGroupByMob(caster)) {
-                                iterator.Advance();
-                                continue;
-                    }
-				//    printf("IPC mgb/aebard spell casted on %s\n", mob->GetName());
-				caster->SpellOnTarget(spell_id, mob);
-				}
-				else {
-				//    printf("NPC AE, fall thru. spell_id:%i, Target type:%x\n", spell_id, spells[spell_id].targettype);
-				}
-			}
-		#endif
-            else if (caster->IsClient() && !(caster->CastToClient()->IsBecomeNPC())) {
-				// Client
-				if (caster->IsAttackAllowed(mob) && spells[spell_id].targettype != ST_AEBard){
-				//    printf("Client Spell casted on %s\n", mob->GetName());
-					caster->SpellOnTarget(spell_id, mob);
-				}
-				else if(spells[spell_id].targettype == ST_GroupTeleport && mob->IsClient() && mob->isgrouped && caster->isgrouped && entity_list.GetGroupByMob(caster))
-				{
-					Group* caster_group = entity_list.GetGroupByMob(caster);
-                    if(caster_group != 0 && caster_group->IsGroupMember(mob))
-					    caster->SpellOnTarget(spell_id,mob);
-				}
-				else if (mob->IsClient() && (spells[spell_id].targettype == ST_AEBard||group) && mob->CastToClient()->GetPVP() == caster->CastToClient()->GetPVP()) {
-					if (group && GetGroupByMob(mob) != GetGroupByMob(caster)) {
-                                iterator.Advance();
-                                continue;
-                    }
-					else if (mob->IsClient() && spells[spell_id].targettype == ST_AEBard && mob->CastToClient()->GetPVP() == caster->CastToClient()->GetPVP())
-						caster->SpellOnTarget(spell_id, mob);
-				#ifdef IPC
-                    else if (mob->IsNPC() && mob->CastToNPC()->IsInteractive()) {
-					    if (group && GetGroupByMob(mob) != GetGroupByMob(caster))
-					            continue;
-					    caster->SpellOnTarget(spell_id, mob);
-					}
-			    #endif
-				}
-			}
-			else if (caster->IsClient()) {
-				// Client BecomeNPC
-				caster->SpellOnTarget(spell_id, mob);
-			}
+		Client *cur = iterator.GetData();
+		//might want some sort of distance check in here?
+		if (cur != winner && cur != loser)
+		{
+			if (flee)
+				cur->Message_StringID(15, DUEL_FLED, winner->GetName(),loser->GetName(),loser->GetName());
+			else
+				cur->Message_StringID(15, DUEL_FINISHED, winner->GetName(),loser->GetName());
 		}
 		iterator.Advance();
-	}	
+	}
 }
-#endif	// solar: old code
 
 Client* EntityList::GetClientByName(const char *checkname) {
 	LinkedListIterator<Client*> iterator(client_list); 
@@ -1333,7 +1303,7 @@ void EntityList::Message(int32 to_guilddbid, int32 type, const char* message, ..
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
-		Client* client = iterator.GetData()->CastToClient();
+		Client* client = iterator.GetData();
 		if (to_guilddbid == 0 || client->GuildDBID() == to_guilddbid)
 			client->Message(type, buffer);
 		iterator.Advance();
@@ -1374,7 +1344,7 @@ void EntityList::MessageStatus(int32 to_guilddbid, int to_minstatus, int32 type,
 	
 	iterator.Reset();
 	while(iterator.MoreElements()) {
-		Client* client = iterator.GetData()->CastToClient();
+		Client* client = iterator.GetData();
 		if ((to_guilddbid == 0 || client->GuildDBID() == to_guilddbid) && client->Admin() >= to_minstatus)
 			client->Message(type, buffer);
 		iterator.Advance();
@@ -1527,6 +1497,12 @@ void EntityList::RemoveAllObjects(){
 	while(iterator.MoreElements())
 		iterator.RemoveCurrent();
 }
+void EntityList::RemoveAllTraps(){
+	LinkedListIterator<Trap*> iterator(trap_list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+		iterator.RemoveCurrent();
+}
 bool EntityList::RemoveMob(int16 delete_id){
 	if(delete_id==0)
 		return true;
@@ -1585,6 +1561,19 @@ bool EntityList::RemoveObject(int16 delete_id){
 	}
 	return false;
 }
+bool EntityList::RemoveTrap(int16 delete_id){
+	LinkedListIterator<Trap*> iterator(trap_list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		if(iterator.GetData()->GetID()==delete_id){
+			iterator.RemoveCurrent();
+			return true;
+		}
+		iterator.Advance();
+	}
+	return false;
+}
 bool EntityList::RemoveDoor(int16 delete_id){
 	LinkedListIterator<Doors*> iterator(door_list);
 	iterator.Reset();
@@ -1611,9 +1600,23 @@ bool EntityList::RemoveCorpse(int16 delete_id){
 	}
 	return false;
 }
-bool EntityList::RemoveGroup(int16 delete_id){
+bool EntityList::RemoveGroup(int32 delete_id){
 	LinkedListIterator<Group*> iterator(group_list);
 	iterator.Reset();
+
+#ifdef ENABLE_GROUP_LINKING
+	//remove delete_id from other peoples links
+	while(iterator.MoreElements())
+	{
+		Group *cg = iterator.GetData();
+		if(cg->GetID() != delete_id) {
+			cg->ClearLink(delete_id, false);
+		}
+		iterator.Advance();
+	}
+	iterator.Reset();
+#endif
+	
 	while(iterator.MoreElements())
 	{
 		if(iterator.GetData()->GetID()==delete_id){
@@ -1633,6 +1636,7 @@ void EntityList::Clear()
 	entity_list.RemoveAllGroups();
 	entity_list.RemoveAllDoors();
 	entity_list.RemoveAllObjects();
+	entity_list.RemoveAllTraps();
 	last_insert_id = 0;
 }
 
@@ -1689,6 +1693,8 @@ void EntityList::RemoveEntity(int16 id)
 	else if(entity_list.RemoveDoor(id))
 		return;
 	else if(entity_list.RemoveGroup(id))
+		return;
+	else if(entity_list.RemoveTrap(id))
 		return;
 	else 
 		entity_list.RemoveObject(id);
@@ -1876,6 +1882,25 @@ void EntityList::SendTraders(Client* client){
 	}
 }
 
+void EntityList::RemoveFromHateLists(Mob* mob, bool settoone) {
+	LinkedListIterator<NPC*> iterator(npc_list);
+
+	iterator.Reset();
+	while(iterator.MoreElements()) {
+		if (iterator.GetData()->CheckAggro(mob)) {
+			if (!settoone)
+			{
+				iterator.GetData()->RemoveFromHateList(mob);
+			}
+			else
+			{
+				iterator.GetData()->SetHate(mob,1);
+			}
+		}
+		iterator.Advance();
+	}
+}
+
 
 // Currently, a new packet is sent per entity.
 // @todo: Come back and use FLAG_COMBINED to pack
@@ -1953,14 +1978,7 @@ char* EntityList::MakeNameUnique(char* name) {
 	strcpy(name, tmp);
 	return MakeNameUnique(name);
 }
-void EntityList::SendAATimer(int32 charid,UseAA_Struct* uaa){
-	Client* client2=this->GetClientByCharID(charid);
-	if(!client2){
-		LogFile->write(EQEMuLog::Error, "Error in SendAATimer: Couldnt find character!");
-		return;
-	}
-	client2->SendAATimer(uaa);
-}
+
 char* EntityList::RemoveNumbers(char* name) {
 	char	tmp[64];
 	memset(tmp, 0, sizeof(tmp));
@@ -2349,3 +2367,123 @@ bool EntityList::MakeTrackPacket(Client* client){
 	
 	return ret;
 }
+
+void EntityList::MessageGroup(Mob* sender, bool skipclose, int32 type, const char* message, ...) {
+	va_list argptr;
+	char buffer[4096];
+
+	va_start(argptr, message);
+	vsnprintf(buffer, 4095, message, argptr);
+	va_end(argptr);
+
+	float dist2 = 100;
+
+	if (skipclose)
+		dist2 = 0;
+
+	LinkedListIterator<Client*> iterator(client_list);
+
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		if (iterator.GetData() != sender && (iterator.GetData()->Dist(*sender) <= dist2 || iterator.GetData()->GetGroup() == sender->CastToClient()->GetGroup())) {
+			iterator.GetData()->Message(type, buffer);
+		}
+		iterator.Advance();
+	}
+}
+
+
+bool EntityList::Fighting(Mob* targ) {
+	LinkedListIterator<NPC*> iterator(npc_list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		if (iterator.GetData()->CheckAggro(targ))
+		{
+			return true;
+		}
+		iterator.Advance();
+	}
+	return false;
+}
+
+void EntityList::AddHealAggro(Mob* target, Mob* caster, int16 thedam)
+{
+	LinkedListIterator<NPC*> iterator(npc_list);
+
+	iterator.Reset();
+	NPC *cur;
+	while(iterator.MoreElements())
+	{
+		cur = iterator.GetData();
+		if (!cur->GetOwner() && !cur->IsMezzed() && !cur->IsStunned() 
+			&& cur->CheckAggro(target))
+		{
+			int16 tmpd = thedam;
+			if (cur->GetHateAmount(caster) < 100)
+				tmpd /= 20;
+			cur->AddToHateList(caster, tmpd);
+		}
+		iterator.Advance();
+	}
+}
+
+void EntityList::OpenDoorsNear(NPC* who)
+{
+	LinkedListIterator<Doors*> iterator(door_list);
+	iterator.Reset();
+	while(iterator.MoreElements()) {
+		Doors *cdoor = iterator.GetData();
+		if(cdoor && !cdoor->IsDoorOpen()) {
+			float zdiff = who->GetZ() - cdoor->GetZ();
+			if(zdiff < 0)
+				zdiff = 0 - zdiff;
+			float curdist = 0;
+			float tmp = who->GetX() - cdoor->GetX();
+			curdist += tmp * tmp;
+			tmp = who->GetY() - cdoor->GetY();
+			curdist += tmp * tmp;
+			if (zdiff < 10 && curdist <= 100) {
+				cdoor->NPCOpen(who);
+			}
+		}
+		iterator.Advance();
+	}
+}
+
+void EntityList::SendAlarm(Trap* trap, Mob* currenttarget) {
+
+	//this function is disabled for now. I do not think that
+	//all mobs in the area of effect should start attacking,
+	//there should be some faction check or something...
+return;
+
+
+	LinkedListIterator<NPC*> iterator(npc_list);
+	iterator.Reset();
+	
+	float val2 = trap->effectvalue * trap->effectvalue;
+	
+	while(iterator.MoreElements())
+	{
+		NPC *cur = iterator.GetData();
+		float curdist = 0;
+		float tmp = cur->GetX() - trap->x;
+		curdist += tmp*tmp;
+		tmp = cur->GetY() - trap->y;
+		curdist += tmp*tmp;
+		tmp = cur->GetZ() - trap->z;
+		curdist += tmp*tmp;
+		if (!cur->GetOwner() && 
+			/*!cur->CastToMob()->dead && */
+			!cur->IsEngaged() && 
+			curdist <= val2 )
+		{
+			cur->AddToHateList(currenttarget,1);
+		}
+		iterator.Advance();
+	}
+}
+
+

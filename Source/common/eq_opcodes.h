@@ -113,13 +113,13 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_ZoneInSendName		0x01e5
 #define OP_ZoneInSendName2		0x01c0
 	/*Guild Opcodes*/
-#define OP_GuildLeader		 0x00a7 // /guildleader
+#define OP_GuildLeader		 0x01bf // /guildleader, was 00a7
 #define OP_GuildPeace		 0x009a // /guildpeace
 #define OP_GuildRemove		 0x0132 // /guildremove
 #define OP_GuildMemberList   0x0059 //fixed by Shawn319 (dec 18th patch)
 #define OP_GuildMemberUpdate 0x026e
 #define OP_GuildInvite		0x0130 // /guildinvite
-#define OP_GuildMOTD		0x01bf	// /guildmotd
+#define OP_GuildMOTD		0x01c0	// /guildmotd, was 01bf
 	// not used	#define OP_GuildManagement	0x005e	// LoY guild mgm't tool
 #define OP_GuildPublicNote		0x003c
 #define OP_GetGuildMOTD			0x027e	// /getguildmotd
@@ -217,8 +217,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_SetRunMode		0x008c	// Client hit the "run" button (or control+r)
 #define OP_InspectRequest	0x0248
 #define OP_InspectAnswer	0x0249
-	// not used	#define OP_SenseTraps		0x0187  // Clicked sense traps - @Doodman 10/10/2003
-	// not used	#define OP_DisarmTraps		0x018e  // Clicked disarm traps - @Doodman 10/10/2003
+#define OP_SenseTraps		0x0187  // Clicked sense traps - @Doodman 10/10/2003
+#define OP_DisarmTraps		0x018e  // Clicked disarm traps - @Doodman 10/10/2003
 #define OP_Assist			0x01bc
 #define OP_PickPocket		0x0240
 
@@ -230,10 +230,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 	// solar: there was an OP_PlaceItem synonym for this
 #define OP_MoveItem		0x0151	// Client moving an item from one slot to another (user action)
 
-		#define OP_Disciplines		0x0999
 #define OP_WhoAllRequest   	0x0056
 #define OP_WhoAllResponse   0x0229
-#define OP_Consume			0x0168
+#define OP_Consume			0x0167
 #define OP_AutoAttack		0x0172
 #define OP_AutoAttack2		0x0186
 #define OP_TargetMouse		0x0173	// mouse targetting a person (also: Pressing F* key to target)
@@ -241,6 +240,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_TargetReject		0x01d8	// When /target fails (// solar: untested)
 #define OP_Hide				0x009e
 #define OP_Forage			0x012e // Clicked forage  - @Doodman 10/10/2003
+#define OP_Fishing 			0x0077	
 /**/ #define OP_Adventure		0x02d0 // /adventure
 /**/ #define OP_Feedback			0x0161	// /feedback
 #define OP_Bug				0x0246	// /bug
@@ -363,7 +363,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 /**/ #define OP_Translocate		0x01c5
 	// not used	#define OP_WebUpdate		0x01f2
 #define OP_SaveOnZoneReq    0x00a1
-/**/ #define OP_Logout           0x0186  // Last opcode seny by server when you zone or camp
+#define OP_Logout           0x0185  // Last opcode seny by server when you zone or camp
 #define	OP_RequestDuel		0x0298 //Shawn319: Fixed 1/3/04
 	// OP_DeclineDuel	0x29c
 		#define OP_DuelResponse		0x4a5d
@@ -371,6 +371,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_InstillDoubt		0x0022
 
 #define OP_SafeFallSuccess	0x00ac
+#define OP_DisciplineUpdate	0x02fb	
 
 	//Tribute Master
 #define OP_Tribute			0x02f6
@@ -389,6 +390,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 	#define OP_FindPersonRequest	0x02db
 	#define OP_FindPersonReply	0x02dc
 
+#define OP_Shielding		0x01dd		//this is prolly wrong
 
 	//////////////////////////////////////
 	// Zone.exe opcodes for login sequence:
@@ -456,7 +458,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 	#define PET_SITDOWN			9
 	#define PET_STANDUP			10
 	#define PET_TAUNT			11
+	#define PET_HOLD			12
+	#define PET_NOTAUNT			14
 	#define PET_LEADER			16
+	#define	PET_SLUMBER			17
 
 
 // Agz: The following is from the old source I used as base

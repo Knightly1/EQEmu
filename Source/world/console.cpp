@@ -59,7 +59,7 @@ Console::Console(TCPConnection* itcpc) : WorldTCPConnection() {
 	memset(paccountname, 0, sizeof(paccountname));
 	admin = 0;
 	pAcceptMessages = false;
-	tcpc->Send((uchar *)const_cast<char *>("Username: "), strlen("Username: "));
+	tcpc->Send((uchar*) "Username: ", strlen("Username: "));
 }
 
 Console::~Console() {

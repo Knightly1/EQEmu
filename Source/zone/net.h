@@ -38,8 +38,8 @@ class NetConnection
 {
 public:
 	NetConnection::~NetConnection();
-	NetConnection::NetConnection() { ZonePort = 0; ZoneAddress = 0; WorldAddress = 0; };
-
+	NetConnection::NetConnection();
+	
 	int32	GetIP();
 	int32	GetIP(char* name);
 	void	SaveInfo(char* address, int32 port, char* waddress,char* filename);
@@ -47,10 +47,11 @@ public:
 	char*	GetZoneAddress() { return ZoneAddress; }
 	char*	GetZoneFileName() { return ZoneFileName; }
 	int32	GetZonePort() { return ZonePort; }
-	Timer* object_timer;
-	Timer* door_timer;
-	Timer* corpse_timer;
-	Timer* group_timer;
+	Timer object_timer;
+	Timer door_timer;
+	Timer corpse_timer;
+	Timer group_timer;
+	Timer trap_timer;
 private:
 	int16 ZonePort;
 	char* ZoneAddress;

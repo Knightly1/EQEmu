@@ -164,7 +164,7 @@ bool PersistentTimer::Load() {
 }
 
 bool PersistentTimer::Store() {
-	if(Check(false))	//dont need to store expired timers.
+	if(Expired(false))	//dont need to store expired timers.
 		return(true);
 	
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -220,7 +220,7 @@ bool PersistentTimer::Clear() {
 }
 
 /* This function checks if the timer triggered */
-bool PersistentTimer::Check(bool iReset) {
+bool PersistentTimer::Expired(bool iReset) {
     if (this == NULL) { 
 		LogFile->write(EQEMuLog::Error, "Null timer during ->Check()!?\n"); 
 		return(true);
@@ -339,7 +339,7 @@ bool PTimerList::Load() {
 		//if it expired allready, dont bother.
 		
 		cur = new PersistentTimer(_char_id, type, start_time, timer_time, enabled);
-		if(! cur->Check(false))
+		if(!cur->Expired(false))
 			_list[type] = cur;
 		else
 			delete cur;
@@ -414,12 +414,20 @@ void PTimerList::Clear(pTimerType type) {
 	}
 }
 
-bool PTimerList::Check(pTimerType type, bool reset) {
+bool PTimerList::Expired(pTimerType type, bool reset) {
 	if(_list.count(type) != 1)
 		return(true);
 	if(_list[type] == NULL)
 		return(true);
-	return(_list[type]->Check(reset));
+	return(_list[type]->Expired(reset));
+}
+
+bool PTimerList::Enabled(pTimerType type) {
+	if(_list.count(type) != 1)
+		return(false);
+	if(_list[type] == NULL)
+		return(false);
+	return(_list[type]->Enabled());
 }
 
 void PTimerList::Enable(pTimerType type) {

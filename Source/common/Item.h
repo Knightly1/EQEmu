@@ -77,6 +77,17 @@ enum ItemUseType
 	ItemUseWorldContainer
 };
 
+//FatherNitwit: location bits for searching specific
+//places with HasItem() and HasItemByUse()
+enum {
+	invWhereWorn 		= 0x01,
+	invWherePersonal	= 0x02,	//in the character's inventory
+	invWhereBank		= 0x04,
+	invWhereSharedBank	= 0x08,
+	invWhereTrading		= 0x10,
+	invWhereCursor		= 0x20
+};
+
 /*
 ** Inventory Slot Equipment Enum
 ** Mostly used for third-party tools to reference inventory slots
@@ -180,17 +191,6 @@ protected:
 	
 };
 
-//FatherNitwit: location bits for searching specific
-//places with HasItem()
-enum {
-	invWhereWorn 		= 0x01,
-	invWherePersonal	= 0x02,	//in the character's inventory
-	invWhereBank		= 0x04,
-	invWhereSharedBank	= 0x08,
-	invWhereTrading		= 0x10,
-	invWhereCursor		= 0x20
-};
-
 // ########################################
 // Class: Inventory
 //	Character inventory
@@ -226,8 +226,12 @@ public:
 	// where argument specifies OR'd list of invWhere constants to look
 	sint16 HasItem(uint32 item_id, uint8 quantity=0, uint8 where=0xFF);
 	
+	// Check whether item exists in inventory
+	// where argument specifies OR'd list of invWhere constants to look
+	sint16 HasItemByUse(uint8 use, uint8 quantity=0, uint8 where=0xFF);
+	
 	// Locate an available inventory slot
-	sint16 FindFreeSlot(bool for_bag, bool try_cursor);
+	sint16 FindFreeSlot(bool for_bag, bool try_cursor, int8 min_size = 0);
 	
 	// Calculate slot_id for an item within a bag
 	static sint16 CalcSlotId(sint16 slot_id); // Calc parent bag's slot_id
@@ -240,6 +244,7 @@ public:
 	// Test whether a given slot can support a container item
 	static bool SupportsContainers(sint16 slot_id);
 	
+	void dumpInventory();
 	
 protected:
 	///////////////////////////////
@@ -255,6 +260,8 @@ protected:
 	// Checks an inventory bucket for a particular item
 	sint16 _HasItem(map<sint16, ItemInst*>& bucket, const Item_Struct* item, uint8 quantity);
 	sint16 _HasItem(ItemInstQueue& queue, const Item_Struct* item, uint8 quantity);
+	sint16 _HasItemByUse(map<sint16, ItemInst*>& bucket, uint8 use, uint8 quantity);
+	sint16 _HasItemByUse(ItemInstQueue& queue, uint8 use, uint8 quantity);
 	
 	
 	// Player inventory
@@ -287,6 +294,10 @@ public:
 		m_charges = charges;
 		m_price = 0;
 		m_unknown005 = 0;
+		if(m_item &&m_item->ItemClass == ItemTypeCommon)
+			m_color = m_item->Common.Color;
+		else
+			m_color = 0;
 	}
 	
 	ItemInst(uint32 item_id, sint16 charges = 0) {
@@ -295,6 +306,10 @@ public:
 		m_charges = charges;
 		m_price = 0;
 		m_unknown005 = 0;
+		if(m_item && m_item->ItemClass == ItemTypeCommon)
+			m_color = m_item->Common.Color;
+		else
+			m_color = 0;
 	}
 	
 	ItemInst(ItemUseType use_type) {
@@ -303,6 +318,7 @@ public:
 		m_charges = 0;
 		m_price = 0;
 		m_unknown005 = 0;
+		m_color = 0;
 	}
 	
 	virtual ~ItemInst() {}
@@ -335,6 +351,9 @@ public:
 	
 	uint32 GetPrice() const					{ return m_price; }
 	void SetPrice(uint32 price)				{ m_price = price; }
+	
+	void SetColor(uint32 color)				{ m_color = color; }
+	uint32 GetColor() const					{ return m_color; }
 
 	uint32 GetUnknown5() const				{ return m_unknown005; }
 	void SetUnknown5(uint32 unknown5)		{ m_unknown005 = unknown5; }
@@ -363,6 +382,7 @@ protected:
 	const Item_Struct*	m_item;		// Ptr to item data
 	sint16				m_charges;	// # of charges for chargeable items
 	uint32				m_price;	// Bazaar /trader price
+	uint32				m_color;
 	uint32				m_unknown005;
 	
 };
@@ -488,6 +508,10 @@ protected:
 	iter_bag _end()		{ return m_contents.end(); }
 	friend sint16 Inventory::_HasItem(map<sint16, ItemInst*>& bucket, const Item_Struct* item, uint8 quantity);
 	friend sint16 Inventory::_HasItem(ItemInstQueue& queue, const Item_Struct* item, uint8 quantity);
+	friend sint16 Inventory::_HasItemByUse(map<sint16, ItemInst*>& bucket, uint8 use, uint8 quantity);
+	friend sint16 Inventory::_HasItemByUse(ItemInstQueue& queue, uint8 use, uint8 quantity);
+
+	friend void Inventory::dumpInventory();
 	
 	// Add pre-allocated item to container .. container now owns this memory
 	void _PutItem(uint8 index, ItemInst* inst) { m_contents[index] = inst; }

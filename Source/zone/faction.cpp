@@ -36,6 +36,8 @@ extern Database database;
 	#define snprintf	_snprintf
 #endif
 
+//#define FACTIONS_DEBUG 5
+
 //o--------------------------------------------------------------
 //| Name: CalculateFaction; rembrant, Dec. 16, 2001
 //o--------------------------------------------------------------
@@ -44,6 +46,9 @@ extern Database database;
 //o--------------------------------------------------------------
 FACTION_VALUE CalculateFaction(FactionMods* fm, sint32 tmpCharacter_value)
 {
+#if FACTIONS_DEBUG >= 5
+	LogFile->write(EQEMuLog::Debug, "called CalculateFaction(0x%x, %ld)", fm, tmpCharacter_value);
+#endif
 	sint32 character_value = tmpCharacter_value;
 	if (fm)
 		character_value += fm->base + fm->class_mod + fm->race_mod + fm->deity_mod;
@@ -129,6 +134,183 @@ bool IsOfIndiffRace(int r1, int r2)
     return false;
 }
 
+// returns what Other thinks of this
+FACTION_VALUE Client::GetFactionCon(Mob* iOther) {
+#if FACTIONS_DEBUG >= 5
+	LogFile->write(EQEMuLog::Debug, "called $s::GetFactionCon(%s)", GetName(), iOther->GetName());
+#endif
+	
+	if (GetOwnerID()) {
+		return GetOwnerOrSelf()->GetFactionCon(iOther);
+	}
+	
+	iOther = iOther->GetOwnerOrSelf();
+	
+#if FACTIONS_DEBUG >= 5
+	LogFile->write(EQEMuLog::Debug, "	%s'd primary faction = %d", iOther->GetName(), iOther->GetPrimaryFaction());
+#endif
+	if (iOther->GetPrimaryFaction() < 0)
+		return GetSpecialFactionCon(iOther);
+	
+	if (iOther->GetPrimaryFaction() == 0)
+		return FACTION_INDIFFERENT;
+
+	return GetFactionLevel(CharacterID(), 0, GetRace(), GetClass(), GetDeity(), iOther->GetPrimaryFaction(), iOther);
+}
+
+FACTION_VALUE NPC::GetFactionCon(Mob* iOther) {
+#if FACTIONS_DEBUG >= 20
+	LogFile->write(EQEMuLog::Debug, "called N $s::GetFactionCon(%s)", GetName(), iOther->GetName());
+#endif
+
+	iOther = iOther->GetOwnerOrSelf();
+	int primaryFaction= iOther->GetPrimaryFaction();
+
+#if FACTIONS_DEBUG >= 20
+	LogFile->write(EQEMuLog::Debug, "	%s'd primary faction = %d", iOther->GetName(), primaryFaction);
+#endif
+	if (primaryFaction < 0)
+		return GetSpecialFactionCon(iOther);
+	if (primaryFaction == 0)
+		return FACTION_INDIFFERENT;
+	if (GetOwnerID())
+		return GetOwnerOrSelf()->GetFactionCon(iOther);
+
+	sint8 tmp = CheckNPCFactionAlly(primaryFaction);
+	if (tmp == 1)
+		return FACTION_ALLY;
+	else if (tmp == -1)
+		return FACTION_SCOWLS;
+	return FACTION_INDIFFERENT;
+}
+
+FACTION_VALUE Mob::GetSpecialFactionCon(Mob* iOther) {
+#if FACTIONS_DEBUG >= 5
+	LogFile->write(EQEMuLog::Debug, "called $s::GetSpecialFactionCon(%s)", GetName(), iOther->GetName());
+#endif
+	
+	if (!iOther)
+		return FACTION_INDIFFERENT;
+
+	iOther = iOther->GetOwnerOrSelf();
+	Mob* self = this->GetOwnerOrSelf();
+
+	bool selfAIcontrolled = self->IsAIControlled();
+	bool iOtherAIControlled = iOther->IsAIControlled();
+	int selfPrimaryFaction = self->GetPrimaryFaction();
+	int iOtherPrimaryFaction = iOther->GetPrimaryFaction();
+
+#if FACTIONS_DEBUG >= 5
+	LogFile->write(EQEMuLog::Debug, "	GSFC %d %d %d %d", selfAIcontrolled, iOtherAIControlled, selfPrimaryFaction, iOtherPrimaryFaction);
+#endif
+	
+	if (selfPrimaryFaction >= 0 && selfAIcontrolled)
+		return FACTION_INDIFFERENT;
+	if (iOther->GetPrimaryFaction() >= 0)
+		return FACTION_INDIFFERENT;
+/* special values:
+	-2 = indiff to player, ally to AI on special values, indiff to AI
+	-3 = dub to player, ally to AI on special values, indiff to AI
+	-4 = atk to player, ally to AI on special values, indiff to AI
+	-5 = indiff to player, indiff to AI
+	-6 = dub to player, indiff to AI
+	-7 = atk to player, indiff to AI
+	-8 = indiff to players, ally to AI on same value, indiff to AI
+	-9 = dub to players, ally to AI on same value, indiff to AI
+	-10 = atk to players, ally to AI on same value, indiff to AI
+	-11 = indiff to players, ally to AI on same value, atk to AI
+	-12 = dub to players, ally to AI on same value, atk to AI
+	-13 = atk to players, ally to AI on same value, atk to AI
+*/
+	switch (iOtherPrimaryFaction) {
+		case -2: // -2 = indiff to player, ally to AI on special values, indiff to AI
+			if (selfAIcontrolled && iOtherAIControlled)
+				return FACTION_ALLY;
+			else
+				return FACTION_INDIFFERENT;
+		case -3: // -3 = dub to player, ally to AI on special values, indiff to AI
+			if (selfAIcontrolled && iOtherAIControlled)
+				return FACTION_ALLY;
+			else
+				return FACTION_DUBIOUS;
+		case -4: // -4 = atk to player, ally to AI on special values, indiff to AI
+			if (selfAIcontrolled && iOtherAIControlled)
+				return FACTION_ALLY;
+			else
+				return FACTION_SCOWLS;
+		case -5: // -5 = indiff to player, indiff to AI
+			return FACTION_INDIFFERENT;
+		case -6: // -6 = dub to player, indiff to AI
+			if (selfAIcontrolled && iOtherAIControlled)
+				return FACTION_INDIFFERENT;
+			else
+				return FACTION_DUBIOUS;
+		case -7: // -7 = atk to player, indiff to AI
+			if (selfAIcontrolled && iOtherAIControlled)
+				return FACTION_INDIFFERENT;
+			else
+				return FACTION_SCOWLS;
+		case -8: // -8 = indiff to players, ally to AI on same value, indiff to AI
+			if (selfAIcontrolled && iOtherAIControlled) {
+				if (selfPrimaryFaction == iOtherPrimaryFaction)
+					return FACTION_ALLY;
+				else
+					return FACTION_INDIFFERENT;
+			}
+			else
+				return FACTION_INDIFFERENT;
+		case -9: // -9 = dub to players, ally to AI on same value, indiff to AI
+			if (selfAIcontrolled && iOtherAIControlled) {
+				if (selfPrimaryFaction == iOtherPrimaryFaction)
+					return FACTION_ALLY;
+				else
+					return FACTION_INDIFFERENT;
+			}
+			else
+				return FACTION_DUBIOUS;
+		case -10: // -10 = atk to players, ally to AI on same value, indiff to AI
+			if (selfAIcontrolled && iOtherAIControlled) {
+				if (selfPrimaryFaction == iOtherPrimaryFaction)
+					return FACTION_ALLY;
+				else
+					return FACTION_INDIFFERENT;
+			}
+			else
+				return FACTION_SCOWLS;
+		case -11: // -11 = indiff to players, ally to AI on same value, atk to AI
+			if (selfAIcontrolled && iOtherAIControlled) {
+				if (selfPrimaryFaction == iOtherPrimaryFaction)
+					return FACTION_ALLY;
+				else
+					return FACTION_SCOWLS;
+			}
+			else
+				return FACTION_INDIFFERENT;
+		case -12: // -12 = dub to players, ally to AI on same value, atk to AI
+			if (selfAIcontrolled && iOtherAIControlled) {
+				if (selfPrimaryFaction == iOtherPrimaryFaction)
+					return FACTION_ALLY;
+				else
+					return FACTION_SCOWLS;
+
+
+			}
+			else
+				return FACTION_DUBIOUS;
+		case -13: // -13 = atk to players, ally to AI on same value, atk to AI
+			if (selfAIcontrolled && iOtherAIControlled) {
+				if (selfPrimaryFaction == iOtherPrimaryFaction)
+					return FACTION_ALLY;
+				else
+					return FACTION_SCOWLS;
+			}
+			else
+				return FACTION_SCOWLS;
+		default:
+			return FACTION_INDIFFERENT;
+	}
+}
+
 //o--------------------------------------------------------------
 //| Name: GetFactionLevel; rembrant, Dec. 16, 2001
 //o--------------------------------------------------------------
@@ -138,6 +320,10 @@ bool IsOfIndiffRace(int r1, int r2)
 //o--------------------------------------------------------------
 FACTION_VALUE Client::GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race, int32 p_class, int32 p_deity, sint32 pFaction, Mob* tnpc)
 {
+#if FACTIONS_DEBUG >= 5
+	LogFile->write(EQEMuLog::Debug, "called %s::GetFactionLevel(%lu, %lu, %lu, %lu, %lu, %lu, %s)", GetName(), char_id, npc_id, p_race, p_class, p_deity, pFaction, tnpc?tnpc->GetName():"(NULL)");
+#endif
+
 	if (pFaction < 0)
 		return GetSpecialFactionCon(tnpc);
 	FACTION_VALUE fac = FACTION_INDIFFERENT;
@@ -170,7 +356,13 @@ FACTION_VALUE Client::GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race,
 		}
 	}
 	else
-    {
+    {    	//pFaction == 0
+    	return(FACTION_INDIFFERENT);
+    	/*
+    	I think this is a good idea, but the consensus seems to be
+    	that if the faction is not in the DB, it should not be 
+    	made up based on race and class like this is doing.
+    	
         fmods.base = 0;
         fmods.deity_mod = 0;
 
@@ -190,6 +382,7 @@ FACTION_VALUE Client::GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race,
         else
             fmods.race_mod = 0;
         fac = CalculateFaction(&fmods, 0);
+        */
     }
 
     // merchant fix
@@ -199,6 +392,9 @@ FACTION_VALUE Client::GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race,
 	if (tnpc != 0 && fac != FACTION_SCOWLS && tnpc->CastToNPC()->CheckAggro(this))
 		fac = FACTION_THREATENLY;
 
+#if FACTIONS_DEBUG >= 5
+	LogFile->write(EQEMuLog::Debug, "%s::GetFactionLevel() result: %d", GetName(), fac);
+#endif
 	return fac;
 }
 
@@ -331,6 +527,7 @@ bool Database::GetFactionData(FactionMods* fm, uint32 class_mod, uint32 race_mod
 		case 128: modr_tmp = 17;break;
 		case 130: modr_tmp = 18;break;
 		case 161: modr_tmp = 19;break;
+		case 330: modr_tmp = 20;break;
 	}
 	if (deity_mod == 140 ) 
 		modd_tmp = 0;
@@ -597,6 +794,8 @@ bool Database::LoadFactionData()
 						faction_array[index]->mod_r[i-18] = atoi(row[i]);
 					for (i=38;i != 55;i++)
 						faction_array[index]->mod_d[i-38] = atoi(row[i]);
+					//does this make sense?:
+					//faction_array[atoi(row[0])]->mod_r[20] = atoi(row[55]);
 				}
 				mysql_free_result(result);
 			}
@@ -616,4 +815,26 @@ bool Database::LoadFactionData()
 		return false;
 	}
 	return true;
+}
+
+
+// returns 1 if they're allies, -1 if they're enimies, 0 if they dont care either way
+sint8 NPC::CheckNPCFactionAlly(sint32 other_faction) {
+	LinkedListIterator<struct NPCFaction*> fac_iteratorcur(faction_list);
+	fac_iteratorcur.Reset();
+
+	while(fac_iteratorcur.MoreElements()) {
+		NPCFaction* fac = fac_iteratorcur.GetData();
+		if ((sint32)fac->factionID == other_faction) {
+			if (fac->value_mod < 0)
+				return 1;
+			else if (fac->value_mod > 0)
+				return -1;
+			else
+				return 0;
+		}
+
+		fac_iteratorcur.Advance();
+	}
+	return 0;
 }

@@ -124,6 +124,7 @@ CREATE TABLE items (
   artifactflag tinyint(3) unsigned NOT NULL default '0',
   summonedflag tinyint(3) unsigned NOT NULL default '0',
   unknown113 int(11) default NULL,
+  attuneable tinyint(3) unsigned NOT NULL default '0',
   UNIQUE KEY ID (id)
 ) TYPE=MyISAM;
 

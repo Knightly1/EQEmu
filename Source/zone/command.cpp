@@ -50,6 +50,7 @@ Copyright (C) 2001-2002	EQEMu Development Team (http://eqemu.org)
 //#include "../common/servertalk.h" // for oocmute and revoke
 #include "worldserver.h"
 #include "masterentity.h"
+#include "map.h"
 
 // these should be in the headers...
 extern WorldServer worldserver;	
@@ -90,6 +91,12 @@ int commandcount;								// how many commands we have
 // init has been performed to point at the real function
 int (*command_dispatch)(Client *,char const *)=command_notavail;
 
+
+void command_bestz(Client *c, const Seperator *message);
+void command_pf(Client *c, const Seperator *message);
+
+
+
 /*
  * command_notavail
  * This is the default dispatch function when commands aren't loaded.
@@ -107,6 +114,8 @@ int command_notavail(Client *c, const char *message)
 /*****************************************************************************/
 /*  the rest below here could be in a dynamically loaded module eventually   */
 /*****************************************************************************/
+
+void command_ginfo(Client *c, const Seperator *sep);
 
 /*
 
@@ -367,6 +376,10 @@ int command_init(void)
 		command_add("npcsay","[message] - Make your NPC target say a message.",150,command_npcsay) ||
 		command_add("npcshout","[message] - Make your NPC target shout a message.",150,command_npcshout) ||
 		command_add("timers","- Display persisten timers for target",200,command_timers) ||
+		command_add("hp","- Refresh your HP bar from the server.",0,command_hp) ||
+		command_add("pf","- ",0,command_pf) ||
+		command_add("bestz","- Toggle Path Fixing.",0,command_bestz) ||
+		command_add("ginfo","- get group info on target.",0,command_ginfo) ||
 		command_add("npcemote","[message] - Make your NPC target emote a message.",150,command_npcemote)
 	)
 	{
@@ -384,6 +397,7 @@ int command_init(void)
 			temp[511]=0;
 			if((cmdlvl = database.CommandRequirement(temp)) != 255)
 			{
+
 				cur->access = cmdlvl;
 #if EQDEBUG >=5
 				LogFile->write(EQEMuLog::Debug, "command_init(): - Command '%s' set to access level %d." , cur->command[i], cmdlvl);
@@ -1236,6 +1250,7 @@ void command_log(Client *c, const Seperator *sep)
 			else if(cel->eld[count].id != 0)
 			{
 				c->Message(0,"ID: %i AccountName: %s AccountID: %i Status: %i CharacterName: %s TargetName: %s",cel->eld[count].id,cel->eld[count].accountname,cel->eld[count].account_id,cel->eld[count].status,cel->eld[count].charactername,cel->eld[count].targetname);
+
 				c->Message(0,"LogType: %s Timestamp: %s LogDetails: %s",cel->eld[count].descriptiontype,cel->eld[count].timestamp,cel->eld[count].details);
 			}
 			else
@@ -1855,14 +1870,14 @@ void command_zheader(Client *c, const Seperator *sep)
 	// sends zhdr packet
 	if(sep->arg[1][0]==0) {
 		c->Message(0, "Usage: #zheader <zone name>");
-	}
+		}
 	else if(database.GetZoneID(sep->argplus[1])==0)
 		c->Message(0, "Invalid Zone Name: %s", sep->argplus[1]);
-	else {
+		else {
 		
-		if (zone->LoadZoneCFG(sep->argplus[1], true))
+			if (zone->LoadZoneCFG(sep->argplus[1], true))
 			c->Message(0, "Successfully loaded zone header for %s from database.", sep->argplus[1]);
-		else
+			else
 			c->Message(0, "Failed to load zone header %s from database", sep->argplus[1]);
 		APPLAYER* outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
@@ -1913,15 +1928,7 @@ void command_zcolor(Client *c, const Seperator *sep)
 
 void command_spon(Client *c, const Seperator *sep)
 {
-	APPLAYER* outapp;
-	outapp = new APPLAYER(OP_MemorizeSpell, sizeof(MemorizeSpell_Struct));
-	MemorizeSpell_Struct* p = (MemorizeSpell_Struct*)outapp->pBuffer;
-	p->slot = 0;
-	p->spell_id = 0x2bc;
-	p->scribing = 3;
-	outapp->priority = 5;
-	c->QueuePacket(outapp);
-	safe_delete(outapp);
+	c->MemorizeSpell(0, SPELLBAR_UNLOCK, memSpellSpellbar);
 }
 
 void command_spoff(Client *c, const Seperator *sep)
@@ -2133,7 +2140,7 @@ void command_zsave(Client *c, const Seperator *sep)
 {
 	if(zone->SaveZoneCFG())
 		c->Message(13, "Zone header saved successfully.");
-	else
+		else
 		c->Message(13, "ERROR: Zone header data was NOT saved.");
 }
 
@@ -2465,10 +2472,11 @@ void command_setskillall(Client *c, const Seperator *sep)
 	else {
 		if (c->Admin() >= 100 || c->GetTarget()==c || c->GetTarget()==0) {
 			LogFile->write(EQEMuLog::Normal,"Set ALL skill request from %s, target:%s", c->GetName(), c->GetTarget()->GetName());
-			int8 skill_id = atoi(sep->arg[1]);
-			for(int skill_num=0;skill_num<74;skill_num++)
-				c->GetTarget()->SetSkill(skill_num, skill_id);
+			int8 level = atoi(sep->arg[1]);
+			for(int skill_num=0;skill_num <= HIGHEST_SKILL;skill_num++) {
+				c->GetTarget()->SetSkill(skill_num, level);
 			}
+		}
 		else
 			c->Message(0, "Error: Your status is not high enough to set anothers skills");
 	}
@@ -2506,7 +2514,7 @@ void command_makepet(Client *c, const Seperator *sep)
 	if (!(sep->IsNumber(1) && sep->IsNumber(2) && sep->IsNumber(3) && sep->IsNumber(4)))
 		c->Message(0, "Usage: #makepet level class race texture");
 	else
-		c->MakePet(atoi(sep->arg[1]), atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]));
+		c->MakePet(0, atoi(sep->arg[1]), atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]));
 }
 
 void command_level(Client *c, const Seperator *sep)
@@ -3520,9 +3528,21 @@ void command_depopzone(Client *c, const Seperator *sep)
 
 void command_repop(Client *c, const Seperator *sep)
 {
-	if (sep->IsNumber(1)) {
-		c->Message(0, "Zone depoped. Repop in %i seconds", atoi(sep->arg[1]));
-		zone->Repop(atoi(sep->arg[1])*1000);
+//Hacked by Father Nitwit to support a 'force' argument, which resets respawn times
+	int timearg = 1;
+	if (sep->arg[1] && strcasecmp(sep->arg[1], "force") == 0) {
+		timearg++;
+		
+		char errbuf[MYSQL_ERRMSG_SIZE];
+		char *query = 0;
+		if (database.RunQuery(query, MakeAnyLenString(&query, "UPDATE spawn2 SET timeleft=0 WHERE zone='%s'",zone->GetShortName()), errbuf))
+			safe_delete_array(query);
+		
+		c->Message(0, "Zone depop: Force resetting spawn timers.");
+	}
+	if (sep->IsNumber(timearg)) {
+		c->Message(0, "Zone depoped. Repop in %i seconds", atoi(sep->arg[timearg]));
+		zone->Repop(atoi(sep->arg[timearg])*1000);
 	}
 	else {
 		c->Message(0, "Zone depoped. Repoping now.");
@@ -3925,32 +3945,34 @@ void command_npcspawn(Client *c, const Seperator *sep)
 		c->Message(0, "Error: #npcspawn: You must have a NPC targeted!");
 }
 
-void command_spawnfix(Client *c, const Seperator *sep) 
-{ 
-	Mob *t = c->GetTarget(); 
-	if (!t || !t->IsNPC()) 
-		c->Message(0, "Error: #spawnfix: Need an NPC target."); 
-	else { 
-		Spawn2* s2 = t->CastToNPC()->respawn2; 
-		char errbuf[MYSQL_ERRMSG_SIZE]; 
-		char *query = 0; 
+void command_spawnfix(Client *c, const Seperator *sep) {
+	Mob *t = c->GetTarget();
+	if (!t || !t->IsNPC())
+		c->Message(0, "Error: #spawnfix: Need an NPC target.");
+	else {
+		Spawn2* s2 = t->CastToNPC()->respawn2;
+		char errbuf[MYSQL_ERRMSG_SIZE];
+		char *query = 0;
 
-		if(!s2) 
-			c->Message(0, "#spawnfix FAILED -- cannot determine which spawn entry in the database this mob came from."); 
-		else{
+		if(!s2) {
+			c->Message(0, "#spawnfix FAILED -- cannot determine which spawn entry in the database this mob came from.");
+		}
+		else
+		{
 			if(database.RunQuery(query, MakeAnyLenString(&query, "UPDATE spawn2 SET x='%f', y='%f', z='%f', heading='%f' WHERE id='%i'",c->GetX(), c->GetY(), c->GetZ(), c->GetHeading(),s2->GetID()), errbuf))
-			{   
-				c->Message(0, "Updating coordinates successful."); 
-				t->Depop(false); 
-			} 
-			else{ 
-				c->Message(13, "Update failed! MySQL gave the following error:"); 
-				c->Message(13, errbuf); 
-			} 
-			safe_delete_array(query); 
-		} 
+			{
+				c->Message(0, "Updating coordinates successful.");
+				t->Depop(false);
+			}
+			else
+			{
+				c->Message(13, "Update failed! MySQL gave the following error:");
+				c->Message(13, errbuf);
+		  	}
+			safe_delete_array(query);
+		}
 	} 
-} 
+}
 
 void command_loc(Client *c, const Seperator *sep)
 {
@@ -4008,7 +4030,7 @@ void command_iteminfo(Client *c, const Seperator *sep)
 			c->Message(0, "  equipableSlots: %u equipable Classes: %u", item->EquipSlots, item->Common.Classes);
 			c->Message(0, "  Magic: %i  SpellID: %i  Proc Level: %i DBCharges: %i  CurCharges: %i", item->Common.Magic, item->Common.SpellId, item->Common.ProcLevel, item->Common.MaxCharges, inst->GetCharges());
 			c->Message(0, "  EffectType: 0x%02x  CastTime: %.2f", (int8) item->Common.EffectType, (double) item->Common.CastTime/1000);
-			c->Message(0, "  Material: 0x02%x  Color: 0x%08x  Skill: %i", item->Common.Material, item->Common.Color, item->Common.Skill);
+			c->Message(0, "  Material: 0x02%x  Color: 0x%08x  Skill: %i", item->Common.Material, item->Common.Color, item->Common.ItemUse);
 			c->Message(0, " Required level: %i Required skill: %i Recommended level:%i", item->Common.RequiredLevel,  item->Common.RecommendedSkill, item->Common.RecommendedLevel);
 			c->Message(0, " Skill mod: %i percent: %i", item->Common.SkillModType, item->Common.SkillModValue);
 			c->Message(0, " BaneRace: %i BaneBody: %i BaneDMG: %i", item->Common.BaneDmgRace, item->Common.BaneDmgBody, item->Common.BaneDmg);
@@ -5691,3 +5713,125 @@ void command_npcedit(Client *c, const Seperator *sep)
       c->Message(0, "Type #npcedit help for more info");
    }
 } 
+
+void Client::Undye() {
+	for (int cur_slot = 0; cur_slot < 9 ; cur_slot++ ){
+		int8 slot2=SlotConvert(cur_slot);
+		ItemInst* inst = m_inv.GetItem(slot2);
+		if(inst != NULL) {
+			inst->SetColor(inst->GetItem()->Common.Color);
+			database.SaveInventory(CharacterID(), inst, slot2);
+		}
+		m_pp.item_tint[cur_slot].rgb.use_tint = 0;
+		SendWearChange(cur_slot);
+	}
+}
+
+void command_undye(Client *c, const Seperator *sep)
+{
+	if(c->GetTarget() && c->GetTarget()->IsClient())
+	{
+		c->GetTarget()->CastToClient()->Undye();
+	}
+	else
+	{
+		c->Message(0, "ERROR: Client target required");
+	}
+}
+
+void command_ginfo(Client *c, const Seperator *sep)
+{
+	if(c->GetTarget() && c->GetTarget()->IsClient())
+	{
+		Client *t = c->GetTarget()->CastToClient();
+		Group *g = t->GetGroup();
+		if(!g) {
+			c->Message(0, "This client is not in a group");
+			return;
+		}
+		
+		c->Message(0, "Group #%lu:", g->GetID());
+		
+		int r;
+		for(r = 0; r < MAX_GROUP_MEMBERS; r++) {
+			if(g->members[r] == NULL) {
+				if(g->membername[r][0] == '\0')
+					continue;
+				c->Message(0, "...Zoned Member: %s", g->membername[r]);
+			} else {
+				c->Message(0, "...In-Zone Member: %s (0x%x)", g->membername[r], g->members[r]);
+			}
+		}
+		
+	}
+	else
+	{
+		c->Message(0, "ERROR: Client target required");
+	}
+}
+
+void command_hp(Client *c, const Seperator *sep)
+{
+	c->SendHPUpdate();
+	c->SendManaUpdatePacket();
+}
+
+void command_pf(Client *c, const Seperator *sep)
+{
+	if(c->GetTarget())
+	{
+		Mob *who = c->GetTarget();
+		c->Message(0, "POS: (%.2f, %.2f, %.2f)", who->GetX(), who->GetY(), who->GetZ());
+		c->Message(0, "WP: (%.2f, %.2f, %.2f) (%d/%d)", who->GetCWPX(), who->GetCWPY(), who->GetCWPZ(), who->GetCWP(), who->GetMWP());
+		c->Message(0, "TAR: (%.2f, %.2f, %.2f)", who->tarx, who->tary, who->tarz);
+		c->Message(0, "TARV: (%.2f, %.2f, %.2f)", who->tar_vx, who->tar_vy, who->tar_vz);
+		c->Message(0, "|TV|=%.2f index=%d wpcount=%d", who->tar_vector, who->tar_ndx, who->Waypoints.ItemCount());
+		c->Message(0, "pause=%d RAspeed=%d", who->GetCWPP(), who->GetRunAnimSpeed());
+	}
+	else
+	{
+		c->Message(0, "ERROR: target required");
+	}
+}
+
+void command_bestz(Client *c, const Seperator *sep) {
+	if (zone->map == NULL) {
+		c->Message(0,"Maps deactivated in this zone.");
+		return;
+	}
+	
+	NodeRef pnode;
+	if(c->GetTarget()) {
+		pnode = zone->map->SeekNode( zone->map->GetRoot(), c->GetTarget()->GetX(), c->GetTarget()->GetY() );
+	} else {
+		pnode = zone->map->SeekNode( zone->map->GetRoot(), c->GetX(), c->GetY() );
+	}
+	if (pnode == NODE_NONE) {
+		c->Message(0,"Unable to find your node.");
+		return;
+	}
+	
+	VERTEX me;
+	me.x = c->GetX();
+	me.y = c->GetY();
+	me.z = c->GetZ() + (c->GetSize()==0.0?6:c->GetSize()) * HEAD_POSITION;
+	VERTEX hit;
+	VERTEX bme(me);
+	bme.z -= 500;
+	
+	float best_z = zone->map->FindBestZ(pnode, me, &hit, NULL);
+	
+	float best_z2 = -999990;
+	if(zone->map->LineIntersectsNode(pnode, me, bme, &hit, NULL)) {
+		best_z2 = hit.z;
+	}
+	
+	if (best_z != -999999)
+	{
+		c->Message(0,"Z is %.3f or %.3f at (%.3f, %.3f).", best_z, best_z2, me.x, me.y);
+	}
+	else
+	{
+		c->Message(0,"Found no Z.");
+	}
+}

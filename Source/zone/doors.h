@@ -48,6 +48,7 @@ public:
 	float	GetDestZ() { return dest_z; }
 	float	GetDestHeading() { return dest_heading; }
 	
+	void	NPCOpen(NPC* sender);
 	
 private:
 int32	db_id;
@@ -69,8 +70,8 @@ int16	liftheight;
 int invert_state;
 int32	entity_id;
 bool	isopen;
-Timer*	close_timer;
-Timer*	trigger_timer;
+Timer	close_timer;
+//Timer	trigger_timer;
 
 char    dest_zone[16];
 float   dest_x;

@@ -87,8 +87,10 @@ void HateList::Set(Mob* other, int32 in_hate, int32 in_dam)
     tHateEntry *p = Find(other);
     if (p)
     {
-        p->damage = in_dam;
-        p->hate = in_hate;
+		if (in_dam > 0)
+        	p->damage = in_dam;
+		if (in_hate > 0)
+    		p->hate = in_hate;
     }
 }
 

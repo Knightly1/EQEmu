@@ -43,6 +43,7 @@ class Petition;
 class Object;
 class Group;
 class Doors;
+class Trap;
 class Entity;
 class EntityList;
 
@@ -63,8 +64,9 @@ public:
 	virtual bool IsPlayerCorpse()	{ return false; }
 	virtual bool IsNPCCorpse()		{ return false; }
 	virtual bool IsObject()			{ return false; }
-	virtual bool IsGroup()			{ return false; }
+//	virtual bool IsGroup()			{ return false; }
 	virtual bool IsDoor()			{ return false; }
+	virtual bool IsTrap()			{ return false; }
 	virtual bool IsBeacon()			{ return false; }
 
 	virtual bool Process()  { return false; }
@@ -76,8 +78,9 @@ public:
 	Mob*    CastToMob();
 	Corpse*	CastToCorpse();
 	Object* CastToObject();
-	Group*	CastToGroup();
+//	Group*	CastToGroup();
 	Doors*	CastToDoors();
+	Trap*	CastToTrap();
 	Beacon*	CastToBeacon();
 
 	inline const int16& GetID()	{ return id; }
@@ -94,8 +97,8 @@ private:
 class EntityList
 {
 public:
-	EntityList() { last_insert_id = 0; }
-	~EntityList() {}
+	EntityList();
+	~EntityList();
 	
 	Entity* GetID(int16 id);
 	Mob*	GetMob(int16 id);
@@ -121,6 +124,7 @@ public:
 	void	ObjectProcess();
 	void	CorpseProcess();
 	void	MobProcess();
+	void	TrapProcess();
 	void	BeaconProcess();
 	void	SendAATimer(int32 charid,UseAA_Struct* uaa);
 	Doors*	FindDoor(int8 door_id);
@@ -132,15 +136,18 @@ public:
 	void	AddCorpse(Corpse* pc, int32 in_id = 0xFFFFFFFF);
 	void    AddObject(Object*, bool SendSpawnPacket = true);
 	void    AddGroup(Group*);
+	void    AddGroup(Group*, int32 id);
 	void	AddDoor(Doors* door);
+	void	AddTrap(Trap* trap);
 	void	AddBeacon(Beacon *beacon);
 	void	Clear();
 	bool	RemoveMob(int16 delete_id);
 	bool	RemoveClient(int16 delete_id);
 	bool	RemoveNPC(int16 delete_id);
-	bool	RemoveGroup(int16 delete_id);
+	bool	RemoveGroup(int32 delete_id);
 	bool	RemoveCorpse(int16 delete_id);
 	bool	RemoveDoor(int16 delete_id);
+	bool	RemoveTrap(int16 delete_id);
 	bool	RemoveObject(int16 delete_id);
 	void	RemoveAllMobs();
 	void	RemoveAllClients();
@@ -148,6 +155,7 @@ public:
 	void	RemoveAllGroups();
 	void	RemoveAllCorpses();
 	void	RemoveAllDoors();
+	void	RemoveAllTraps();
 	void	RemoveAllObjects();
 	Entity*	GetEntityMob(int16 id);
 	Entity* GetEntityMob(const char *name);
@@ -155,7 +163,8 @@ public:
 	Entity*	GetEntityObject(int16 id);
 	Entity*	GetEntityCorpse(int16 id);
 	Entity* GetEntityCorpse(const char *name);
-	Entity*	GetEntityGroup(int16 id);
+//	Entity*	GetEntityGroup(int32 id);
+	Entity*	GetEntityTrap(int16 id);
 	Entity*	GetEntityBeacon(int16 id);
 	void	GuildItemAward(int32 guilddbid, int16 itemid);
 
@@ -177,6 +186,7 @@ public:
 	void    SendZoneCorpses(Client*);
 	void    SendZoneCorpsesBulk(Client*);
 	void    SendZoneObjects(Client* client);
+	void	DuelMessage(Mob* winner, Mob* loser, bool flee);
 
 	void    RemoveFromTargets(Mob* mob);
     void    ReplaceWithTarget(Mob* pOldMob, Mob*pNewTarget);
@@ -187,9 +197,18 @@ public:
 	void	QueueClientsGuild(Mob* sender, const APPLAYER* app, bool ignore_sender = false, int32 guildeqid = 0);
 	void	QueueClientsByTarget(Mob* sender, const APPLAYER* app, bool iSendToSender = true, Mob* SkipThisMob = 0, bool ackreq = true);
 
-	void	AESpell(Mob *caster, Mob *center, float dist, int16 spell_id);
+	void	AEAttack(Mob *attacker, float dist, int Hand = 13, int count = 0);
+	void	AETaunt(Client *caster, float range = 0);
+	void	AESpell(Mob *caster, Mob *center, float dist, int16 spell_id, bool affect_caster = true);
 
+	//trap stuff
+	Mob*	GetTrapTrigger(Trap* trap);
+	void	SendAlarm(Trap* trap, Mob* currenttarget);
+	Trap*	FindNearbyTrap(Mob* searcher, float max_dist);
+	
+	void	AddHealAggro(Mob* target, Mob* caster, int16 thedam);
 	Mob*	FindDefenseNPC(int32 npcid);
+	void	OpenDoorsNear(NPC* opener);
 
 	void	UpdateWho(bool iSendFullUpdate = false);
 	void	SendPositionUpdates(Client* client, int32 cLastUpdate = 0, float range = 0, Entity* alwayssend = 0, bool iSendEvenIfNotChanged = false);
@@ -221,6 +240,11 @@ public:
 
     void    Process();
 	void	ClearFeignAggro(Mob* targ);
+	
+	bool	Fighting(Mob* targ);
+	void    RemoveFromHateLists(Mob* mob, bool settoone = false);
+	void	MessageGroup(Mob* sender, bool skipclose, int32 type, const char* message, ...);
+	
 
 	Mob*	AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssistRange);
 	void	AIYellForHelp(Mob* sender, Mob* attacker);
@@ -244,6 +268,7 @@ private:
 	LinkedList<Corpse*> corpse_list;
 	LinkedList<Object*> object_list;
 	LinkedList<Doors*> door_list;
+	LinkedList<Trap*> trap_list;
 	LinkedList<Beacon*> beacon_list;
 	int16 last_insert_id;
 };

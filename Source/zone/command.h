@@ -224,6 +224,9 @@ void command_npcshout(Client *c, const Seperator *sep);
 void command_npcemote(Client *c, const Seperator *sep);
 void command_npcedit(Client *c, const Seperator *sep);
 void command_timers(Client *c, const Seperator *sep);
+void command_undye(Client *c, const Seperator *sep);
+void command_hp(Client *c, const Seperator *sep);
+void command_ginfo(Client *c, const Seperator *sep);
 
 #ifdef GUILDWARS
 void command_zonelocations(Client *c, const Seperator *sep);

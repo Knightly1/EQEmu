@@ -330,22 +330,9 @@ bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *r
 	VERTEX step;
 	VERTEX cur = start;
 	
-	float diff;
-	diff = (end.x - start.x);
-	if (diff < 1 && diff > -1)
-		end.x = start.x;
-	diff = (end.y - start.y);
-	if (diff < 1 && diff > -1)
-		end.y = start.y;
-	diff = (end.z - start.z);
-	if (diff < 1 && diff > -1)
-		end.z = start.z;
-	
 	step.x = end.x - start.x;
 	step.y = end.y - start.y;
 	step.z = end.z - start.z;
-	//since step size is kinda arbitrary, this sqrt could be
-	//approximated somehow to save CPU time
 	float factor = step_mag / sqrt(step.x*step.x + step.y*step.y + step.z*step.z);
 	step.x *= factor;
 	step.y *= factor;
@@ -413,7 +400,7 @@ bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *resu
 		cur = &mFinalFaces[ *cfl ];
 		if(LineIntersectsFace(cur,p1, p2, result)) {
 			if(on != NULL)
-			*on = cur;
+				*on = cur;
 			return(true);
 		}
 		cfl++;
@@ -427,7 +414,7 @@ bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *resu
 
 float Map::FindBestZ( NodeRef node_r, VERTEX p1, VERTEX *result, FACE **on) {
 	if( node_r == NODE_NONE || node_r >= m_Nodes) {
-		return(0.0f);
+		return(-999999);
 	}
 	PNODE _node = &mNodes[node_r];
 	if(!(_node->flags & nodeFinal)) {
@@ -443,10 +430,6 @@ float Map::FindBestZ( NodeRef node_r, VERTEX p1, VERTEX *result, FACE **on) {
 
 	unsigned long i;
 
-	VERTEX r_tmp;
-	if(result == NULL)
-		result = &r_tmp;
-
 	PFACE cur;
 	unsigned long *cfl = mFaceLists + _node->faces.offset;
 
@@ -458,25 +441,26 @@ printf("Start finding best Z...\n");
 //printf("Intersecting with face %lu\n", *cfl);
 		if(LineIntersectsFace(cur, p1, p2, result)) {
 #ifdef DEBUG_BEST_Z
-printf("  %lu (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n",
+				printf("  %lu (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n",
 				*cfl, cur->a.x, cur->a.y, cur->a.z,
 				cur->b.x, cur->b.y, cur->b.z, 
 				cur->c.x, cur->c.y, cur->c.z);
-printf("Found a z: %.2f\n", result->z);
+				printf("Found a z: %.2f\n", result->z);
 #endif
 			if (result->z > best_z) {
 				if(on != NULL)
-				*on = cur;
+					*on = cur;
 				best_z = result->z;
 			}
 		}
 		cfl++;
 	}
+	
 #ifdef DEBUG_BEST_Z
 fflush(stdout);
 printf("Best Z found: %.2f\n", best_z);
 #endif
-
+	
 	return best_z;
 }
 

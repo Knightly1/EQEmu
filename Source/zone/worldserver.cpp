@@ -72,6 +72,8 @@ WorldServer::WorldServer() {
 	tcpc = new TCPConnection();
 	pTryReconnect = true;
 	pConnected = false;
+	cur_groupid = 0;
+	last_groupid = 0;
 }
 
 WorldServer::~WorldServer() {
@@ -230,14 +232,7 @@ void WorldServer::Process() {
 					entity->CastToMob()->SetZone(ztz->requested_zone_id);
 
 					if(ztz->ignorerestrictions == 3)
-								entity->CastToClient()->MovePC(ztz->requested_zone_id,-1,-1,-1);
-
-					if (entity->CastToClient()->isgrouped && entity_list.GetGroupByClient(entity->CastToClient()) != 0){
-						if(zc2->zoneID!=0)
-							entity_list.GetGroupByClient(entity->CastToClient())->SendWorldGroup(zc2->zoneID,entity->CastToMob());
-						else
-							database.SetGroupID(entity->CastToClient()->GetName(),entity_list.GetGroupByClient(entity->CastToClient())->GetID());
-					}
+						entity->CastToClient()->MovePC(ztz->requested_zone_id,-1,-1,-1);
 				}
 
 			adverrornum = 353;
@@ -1001,46 +996,27 @@ void WorldServer::Process() {
 #endif
 			break;
 		}
-		case ServerOP_SendGroup: {
-			SendGroup_Struct* sgs=(SendGroup_Struct*)pack->pBuffer;
-			int i=0;
-			Group* group=0;
-			Client* client;
-			client=entity_list.GetClientByName(sgs->thismember);
-
-			adverrornum = 41351;
-
-			if(client)
-				group=entity_list.GetGroupByClient(client);
-			if(!group){
-				client=entity_list.GetClientByName(sgs->leader);
-				if(client)
-					group=entity_list.GetGroupByClient(client);
-			}
-
-			adverrornum = 41352;
-
-			if(!group){
-				for(i=0;i<sgs->grouptotal;i++){
-					client=entity_list.GetClientByName(sgs->members[i]);
-					if(client)
-						group=entity_list.GetGroupByClient(client);
+		case ServerOP_GroupIDReply: {
+			ServerGroupIDReply_Struct* ids = (ServerGroupIDReply_Struct*) pack->pBuffer;
+			cur_groupid = ids->start;
+			last_groupid = ids->end;
+			printf("Got new group id set: %lu -> %lu\n", cur_groupid, last_groupid);
+			break;
+		}
+		case ServerOP_GroupLeave: {
+			ServerGroupLeave_Struct* sgl = (ServerGroupLeave_Struct*) pack->pBuffer;
+			Client* client = entity_list.GetClientByName(sgl->member_name);
+			if(client) {
+				Group *theirgroup = client->GetGroup();
+				if(theirgroup) {
+printf("Got successful group leave message for '%s'\n", sgl->member_name);
+					theirgroup->DelMember(client, false);
+				} else {
+					cout << "Got GroupLeave message for " << sgl->member_name << " but they are not in a group." << endl;
 				}
+			} else {
+				cout << "Got GroupLeave message for " << sgl->member_name << " but they are not in this zone." << endl;
 			}
-
-			adverrornum = 41353;
-
-			if(!group){ //No group members in zone, make new group! :)
-			adverrornum = 41354;
-				Group* ng = new Group(sgs);
-				entity_list.AddGroup(ng);
-				database.SetGroupID(sgs->thismember,ng->GetID());
-			}
-			else
-				database.SetGroupID(sgs->thismember,group->GetID());
-
-			adverrornum = 41355;
-
 			break;
 		}
 		default: {
@@ -1172,4 +1148,28 @@ bool WorldServer::Connect() {
 void WorldServer::Disconnect() {
 	tcpc->Disconnect();
 }
+
+
+int32 WorldServer::NextGroupID() {
+	//this system wastes a lot of potential group IDs (~5%), but
+	//if you are creating 2 billion groups in 1 run of the emu,
+	//something else is wrong...
+	if(cur_groupid >= last_groupid) {
+		//this is an error... This means that 50 groups were created before
+		//1 packet could make the zone->world->zone trip... so let it error.
+		LogFile->write(EQEMuLog::Error, "Ran out of group IDs before the server sent us more.");
+		return(0);
+	}
+	if(cur_groupid > (last_groupid - /*50*/995)) {
+		//running low, request more
+		ServerPacket* pack = new ServerPacket(ServerOP_GroupIDReq);
+		SendPacket(pack);
+		safe_delete(pack);
+	}
+	printf("Handing out new group id %lu\n", cur_groupid);
+	return(cur_groupid++);
+}
+
+
+
 

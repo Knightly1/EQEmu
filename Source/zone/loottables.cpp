@@ -453,7 +453,7 @@ void Database::AddLootTableToNPC(NPC* npc,int32 loottable_id, ItemList* itemlist
 	// Do items
 	for (int32 i=0; i<lts->NumEntries; i++) {
 		for (int32 k = 1; k <= lts->Entries[i].multiplier; k++) {
-			if ( (rand()%100) < lts->Entries[i].probability) {
+			if ( MakeRandomInt(0,99) < lts->Entries[i].probability) {
 				AddLootDropToNPC(npc,lts->Entries[i].lootdrop_id, itemlist);
 			}
 		}
@@ -477,64 +477,77 @@ void Database::AddLootDropToNPC(NPC* npc,int32 lootdrop_id, ItemList* itemlist) 
 #ifdef POOLLOOTING
 	printf("POOL!\n");
 	int32 chancepool = 0;
-	int32 items[50];
-	int32 itemchance[50];
-	int16 itemcharges[50];
+	int32 loot_items[100];
+	int8  equipitem[100];
+	int32 itemchance[100];
+	int16 itemcharges[100];
 	int8 i = 0;
 
-	for (int m=0;m < 50;m++) {
-		items[m]=0;
+	for (int m=0;m < 100;m++) {
+		loot_items[m]=0;
 		itemchance[m]=0;
 		itemcharges[m]=0;
+		equipitem[m]=0;
 	}
 
-	for (int k=0; k<lds->NumEntries; k++) {
-		items[i] = lds->Entries[k].item_id;
-		itemchance[i] = lds->Entries[k].chance + chancepool;
+	for (int k=0; k<lds->NumEntries; k++) 
+	{
+		loot_items[i] = lds->Entries[k].item_id;
+		int chance = lds->Entries[k].chance;
 		itemcharges[i] = lds->Entries[k].item_charges;
+		equipitem[i] = lds->Entries[k].equip_item;
+		
+		/*
+		im not sure what this is trying to accomplish...
+		LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+		iterator.Reset();
+		while(iterator.MoreElements())
+		{
+			 if (iterator.GetData()->item_id == loot_items[i])
+			 {
+				chance /= 5;
+			 }
+			 iterator.Advance();
+		}*/
+
+		chance += chancepool;
 		chancepool += lds->Entries[k].chance;
+		itemchance[i] = chance;
 		i++;
 	}
 	int32 res;
 	i = 0;
 
     if (chancepool!=0) { //avoid divide by zero if some mobs have 0 for chancepool
-        res = rand()%chancepool;
+        res = MakeRandomInt(0, chancepool-1);
     }
     else {
         res = 0;
     }
 
-	while (items[i] != 0) {
+	while (loot_items[i] != 0) {
 		if (res <= itemchance[i])
 			break;
 		else
 			i++;
 	}
-	const Item_Struct* dbitem = database.GetItem(items[i]);
-	if (dbitem != 0) {
-	//	cerr << "Error in AddLootDropToNPC: dbitem=0, item#=" << items[i] << ", lootdrop_id=" << lootdrop_id << endl;
-	//}
-	//else {
-		cout << "Adding item to Mob" << endl;
-		ServerLootItem_Struct* item = new ServerLootItem_Struct;
-		item->item_id = dbitem->ItemNumber;
-		item->charges = itemcharges[i];
-		item->equipSlot = 0;
-		(*itemlist).Append(item);
-	}
+	const Item_Struct* dbitem = GetItem(items[i]);
+	npc->AddLootDrop(dbitem, itemlist, lds->Entries[k].item_charges, lds->Entries[k].equip_item, false);
+	
 #else
+	//non-pool based looting
+
 	int32 r;
 	int32 totalchance = 0;
 	for (r = 0; r < lds->NumEntries; r++) {
 		totalchance += lds->Entries[r].chance;
-		}
+	}
 	uint32 thischance = 0;
 	unsigned short k;
 	bool found = false;
 	
 	while(!found) {
-		k = rand() % lds->NumEntries;
+		k = MakeRandomInt(0, lds->NumEntries-1);
 		
 		thischance = lds->Entries[k].chance;
 		unsigned int drop_chance = rand() % totalchance;
@@ -549,95 +562,9 @@ void Database::AddLootDropToNPC(NPC* npc,int32 lootdrop_id, ItemList* itemlist) 
 			found = true;
 			int32 itemid = lds->Entries[k].item_id;
 			
-			const Item_Struct* dbitem = database.GetItem(itemid);
-			if (dbitem != 0) {
-				ServerLootItem_Struct* item = new ServerLootItem_Struct;
-#if EQDEBUG>=11
-					LogFile->write(EQEMuLog::Debug, "Adding drop to npc: %s, Item: %i",npc->GetName(),dbitem->ItemNumber);
-#endif
-				item->item_id = dbitem->ItemNumber;
-				item->charges = lds->Entries[k].item_charges;
-				if (lds->Entries[k].equip_item==1){
-					const Item_Struct* item2 = database.GetItem(item->item_id);
-					char newid[20];
-					if(!item2)
-						break;
-					// @merth: IDFile size has been increased, this needs to change
-					memset(newid, 0, sizeof(newid));
-					for(int i=0;i<7;i++){
-						if (!isalpha(item2->IDFile[i])){
-							strncpy(newid, &item2->IDFile[i],5);
-							i=8;
-						}
-					}
-					// @merth: This needs to be updated for new item classes
-		
-					if (((item2->EquipSlots==24576) || (item2->EquipSlots==8192)) && (npc->d_meele_texture1==0)) {
-						npc->d_meele_texture1=atoi(newid);
-						npc->equipment[7]=item2->ItemNumber;
-						if (item2->Common.SpellId!=0)
-							npc->CastToMob()->AddProcToWeapon(item2->Common.SpellId,true);
-						npc->AC+=item2->Common.AC;
-						npc->STR+=item2->Common.STR;
-						npc->INT+=item2->Common.INT;
-					}
-					else if (((item2->EquipSlots==24576) || (item2->EquipSlots==16384)) && (npc->d_meele_texture2 ==0) && ((npc->GetLevel()>=13) || (item2->Common.Damage==0)))
-					{
-						if (item2->Common.SpellId!=0)
-							npc->CastToMob()->AddProcToWeapon(item2->Common.SpellId,true);
-						npc->equipment[8]=item2->ItemNumber;
-						npc->d_meele_texture2=atoi(newid);
-						npc->AC+=item2->Common.AC;
-						npc->STR+=item2->Common.STR;
-						npc->INT+=item2->Common.INT;
-					}
-					else if ((item2->EquipSlots==4) && (npc->equipment[0]==0)){
-						npc->equipment[0]=item2->ItemNumber;
-						npc->AC+=item2->Common.AC;
-						npc->STR+=item2->Common.STR;
-						npc->INT+=item2->Common.INT;
-					}
-					else if ((item2->EquipSlots==131072) && (npc->equipment[1]==0)){
-						npc->equipment[1]=item2->Common.Material;
-						npc->texture=item2->Common.Material;
-						npc->AC+=item2->Common.AC;
-						npc->STR+=item2->Common.STR;
-						npc->INT+=item2->Common.INT;
-					}
-					else if ((item2->EquipSlots==128) && (npc->equipment[2]==0)){
-						npc->equipment[2]=item2->Common.Material;
-						npc->AC+=item2->Common.AC;
-						npc->STR+=item2->Common.STR;
-						npc->INT+=item2->Common.INT;
-					}
-					else if ((item2->EquipSlots==1536) && (npc->equipment[3]==0)){
-						npc->equipment[3]=item2->Common.Material;
-						npc->AC+=item2->Common.AC;
-						npc->STR+=item2->Common.STR;
-						npc->INT+=item2->Common.INT;
-					}
-					else if ((item2->EquipSlots==4096) && (npc->equipment[4]==0)){
-						npc->equipment[4]=item2->Common.Material;
-						npc->AC+=item2->Common.AC;
-						npc->STR+=item2->Common.STR;
-						npc->INT+=item2->Common.INT;
-					}
-					else if ((item2->EquipSlots==262144) && (npc->equipment[5]==0)){
-						npc->equipment[5]=item2->Common.Material;
-						npc->AC+=item2->Common.AC;
-						npc->STR+=item2->Common.STR;
-						npc->INT+=item2->Common.INT;
-					}
-					else if ((item2->EquipSlots==524288) && (npc->equipment[6]==0)){
-						npc->equipment[6]=item2->Common.Material;
-						npc->AC+=item2->Common.AC;
-						npc->STR+=item2->Common.STR;
-						npc->INT+=item2->Common.INT;
-					}
-					item->equipSlot = dbitem->EquipSlots;
-				}
-				(*itemlist).Append(item);
-			}
+			const Item_Struct* dbitem = GetItem(itemid);
+			npc->AddLootDrop(dbitem, itemlist, lds->Entries[k].item_charges, lds->Entries[k].equip_item, false);
+			
 #if EQDEBUG>=11
 			else {					
 				LogFile->write(EQEMuLog::Debug, "Error in AddLootDropToNPC: dbitem==NULL, item#=%lu, lootdrop_id=%ld", itemid, lootdrop_id);
@@ -651,8 +578,139 @@ void Database::AddLootDropToNPC(NPC* npc,int32 lootdrop_id, ItemList* itemlist) 
 	
 }
 
+//if itemlist is null, just send wear changes
+void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charges, bool equipit, bool wearchange) {
+	if(item2 == NULL)
+		return;
+	
+	//make sure we are doing something...
+	if(!itemlist && !wearchange)
+		return;
+	
+	ServerLootItem_Struct* item = new ServerLootItem_Struct;
+#if EQDEBUG>=11
+		LogFile->write(EQEMuLog::Debug, "Adding drop to npc: %s, Item: %i", GetName(), item2->ItemNumber);
+#endif
+	
+	APPLAYER* outapp = NULL;
+	WearChange_Struct* wc = NULL;
+	if(wearchange) {
+		outapp = new APPLAYER(OP_WearChange, sizeof(WearChange_Struct));
+		wc = (WearChange_Struct*)outapp->pBuffer;
+		wc->spawn_id = GetID();
+		wc->material=0;
+	}
+	 			
+	item->item_id = item2->ItemNumber;
+	item->charges = charges;
+	if (equipit) {
+		uint8 eslot = 0xFF;
+		//const Item_Struct* item2 = database.GetItem(item->item_id);
+		char newid[20];
+		if(!item2)
+			return;
+		
+		// @merth: IDFile size has been increased, this needs to change
+		uint8 emat;
+		if(item2->Common.Material <= 0
+			|| item2->EquipSlots & (1 << SLOT_PRIMARY | 1 << SLOT_SECONDARY)) {
+			memset(newid, 0, sizeof(newid));
+			for(int i=0;i<7;i++){
+				if (!isalpha(item2->IDFile[i])){
+					strncpy(newid, &item2->IDFile[i],5);
+					i=8;
+				}
+			}
+			emat = atoi(newid);
+		} else {
+			emat = item2->Common.Material;
+		}
 
-#if 0
+		if ((item2->EquipSlots & (1 << SLOT_PRIMARY)) && (equipment[MATERIAL_PRIMARY]==0)) {
+			
+			d_meele_texture1 = atoi(newid);
+			if (item2->Common.SpellId != 0)
+				CastToMob()->AddProcToWeapon(item2->Common.SpellId, true);
+			
+			eslot = MATERIAL_PRIMARY;
+		}
+		else if (item2->EquipSlots & (1 << SLOT_SECONDARY) && (equipment[MATERIAL_SECONDARY]==0) 
+			&& ((GetLevel() >= 13 && MakeRandomInt(0,99) < NPC_DW_CHANCE) || (item2->Common.Damage==0)))
+		{
+			d_meele_texture2 = atoi(newid);
+			if (item2->Common.SpellId!=0)
+				CastToMob()->AddProcToWeapon(item2->Common.SpellId, true);
+			
+			eslot = MATERIAL_SECONDARY;
+		}
+		else if ((item2->EquipSlots & (1 << SLOT_HEAD)) && (equipment[MATERIAL_HEAD]==0)) {
+			eslot = MATERIAL_HEAD;
+		}
+		else if ((item2->EquipSlots & (1 << SLOT_CHEST)) && (equipment[MATERIAL_CHEST]==0)) {
+			eslot = MATERIAL_CHEST;
+		}
+		else if ((item2->EquipSlots & (1 << SLOT_ARMS)) && (equipment[MATERIAL_ARMS]==0)) {
+			eslot = MATERIAL_ARMS;
+		}
+		else if (item2->EquipSlots & ((1 << SLOT_BRACER01)|(1 << SLOT_BRACER02)) && (equipment[MATERIAL_BRACER]==0)) {
+			eslot = MATERIAL_BRACER;
+		}
+		else if ((item2->EquipSlots & (1 << SLOT_HANDS)) && (equipment[MATERIAL_HANDS]==0)) {
+			eslot = MATERIAL_HANDS;
+		}
+		else if ((item2->EquipSlots & (1 << SLOT_LEGS)) && (equipment[MATERIAL_LEGS]==0)) {
+			eslot = MATERIAL_LEGS;
+		}
+		else if ((item2->EquipSlots & (1 << SLOT_FEET)) && (equipment[MATERIAL_FEET]==0)) {
+			eslot = MATERIAL_FEET;
+		}
+		
+		/*
+		what was this about???
+		
+		if (((npc->GetRace()==127) && (npc->CastToMob()->GetOwnerID()!=0)) && (item2->EquipSlots==24576) || (item2->EquipSlots==8192) || (item2->EquipSlots==16384)){
+			npc->d_meele_texture2=atoi(newid);
+			wc->wear_slot_id=8;
+			if (item2->Common.Material >0)
+				wc->material=item2->Common.Material;
+			else
+				wc->material=atoi(newid);
+			npc->AC+=item2->Common.AC;
+			npc->STR+=item2->Common.STR;
+			npc->INT+=item2->Common.INT;
+		}
+		*/
+		
+		//if we found an open slot it goes in...
+		if(eslot != 0xFF) {
+			//equip it...
+			equipment[eslot] = item2->ItemNumber;
+			AC += item2->Common.AC;
+			STR += item2->Common.STR;
+			INT += item2->Common.INT;
+			
+			if(wearchange) {
+				wc->wear_slot_id = eslot;
+				wc->material = emat;
+			}
+		}
+		item->equipSlot = item2->EquipSlots;
+	}
+	
+	if(itemlist != NULL)
+		itemlist->Append(item);
+	else
+		delete item;
+	
+	if(wearchange && outapp) {
+		entity_list.QueueClients(this, outapp);
+	 	safe_delete(outapp);
+	}
+}
+
+
+
+/*#if 0
 // Queries the loottable: adds item & coin to the npc
 void Database::AddLootTableToNPC(int32 loottable_id, ItemList* itemlist, int32* copper, int32* silver, int32* gold, int32* plat) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -850,4 +908,4 @@ void Database::AddLootDropToNPC(int32 lootdrop_id, ItemList* itemlist) {
 	
 	return;
 }
-#endif
+#endif*/

@@ -21,6 +21,17 @@
 #include "../common/classes.h"
 #include "mob.h"
 
+#define SPELL_UNKNOWN 0xFFFF
+#define SPELLBOOK_UNKNOWN 0xFFFFFFFF		//player profile spells are 32 bit
+
+//some spell IDs which will prolly change, but are needed
+#define SPELL_LEECH_TOUCH 6378
+#define SPELL_LAY_ON_HANDS 87
+#define SPELL_HARM_TOUCH 88
+#define SPELL_HARM_TOUCH2 2821
+#define SPELL_NPC_HARM_TOUCH 929
+
+
 //#define SPDAT_SIZE		1824000
 /* 
    solar: look at your spells_en.txt and find the id of the last spell.
@@ -42,6 +53,15 @@ enum RESISTTYPE
 	RESIST_CHROMATIC = 6,
 	RESIST_PRISMATIC = 7,
 	RESIST_PHYSICAL = 8	// see Muscle Shock, Back Swing
+};
+
+enum {	//body types
+	bodyTypePerson = 1,	//dont know the right name for this...
+	bodyTypeUndead = 3,
+	bodyTypeSummoned = 8,	//this might be wrong... this is an older value
+	bodyTypeAnimal = 21,
+	bodyTypeFramiliar = 24,	//an NPC's framiliar had this type, dunno exact
+	bodyTypeSwarmPet = 63
 };
 
 //Target Type IDs
@@ -66,6 +86,8 @@ enum RESISTTYPE
 //#define ST_Summoned			0x19
 #define ST_Summoned			0x0b // NEOTOKYO: see spells_en.txt -> seems to be value 11 not 25
 #define ST_Corpse			0x0f
+#define ST_UndeadAE			0x18
+
 
 //Spell Effect IDs
 #define SE_CurrentHP				0	// Heals and nukes, repeates every tic if in a buff
@@ -209,9 +231,39 @@ enum RESISTTYPE
 #define SE_SpellDamageShield		157	// Petrad's Protection
 #define SE_Reflect					158
 #define SE_AllStats					159	// Aura of Destruction
+#define SE_MeleeMitigation			168
+#define SE_CriticalHitChance		169
+#define SE_CrippBlowChance			171
+#define SE_AvoidMeleeChance			172
+#define SE_RiposteChance			173
+#define SE_DodgeChance				174
+#define SE_ParryChance				175
+#define SE_DualWeildChance			176
+#define SE_DoubleAttackChance		177
+#define SE_MeleeLifetap				178
+#define SE_AllInstrunmentMod		179
+#define SE_ResistSpellChance		180
+#define SE_ResistFearChance			181
+#define SE_HundredHands				182
+#define SE_MeleeSkillCheck			183
+#define SE_HitChance				184
+#define SE_DamageModifier			185
+#define SE_MinDamageModifier		186
+#define SE_FadingMemories			194
+#define SE_StunResist				195
+#define SE_ProcChance				200
+#define SE_RangedProc				201	//not implemented
+#define SE_Rampage					205
+#define SE_AETaunt					206
+#define SE_ReduceSkillTimer			227	//not implemented
 #define SE_Blank					254
-
-
+#define SE_ExtraAttackChance		266 //not implemented
+#define SE_WakeTheDead				299
+#define SE_Doppelganger				300
+#define SE_NoCombatSkills			311
+#define SE_DefensiveProc			323	//not implemented
+#define SE_CriticalDamageMob		330	//not implemented
+//silentfist + rogue backstab one, how does it tell??? skill #?
 
 #define DF_Permanent		50
 
@@ -326,17 +378,20 @@ bool IsBardSong(int16 spell_id);
 bool IsEffectInSpell(int16 spellid, int effect);
 bool IsBlankSpellEffect(int16 spellid, int effect_index);
 bool IsValidSpell(int16 spellid);
+bool IsSummonSpell(int16 spellid);
+bool IsEvacSpell(int16 spellid);
+bool IsDamageSpell(int16 spellid);
+bool IsFearSpell(int16 spellid);
+bool BeneficialSpell(int16 spell_id);
+bool GroupOnlySpell(int16 spell_id);
+bool NoMerchantSpell(int16 spell_id);
 int GetSpellEffectIndex(int16 spell_id, int effect);
 int CanUseSpell(int16 spellid, int classa, int level);
 
-int CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level = 1);
-int CalcSpellEffectValue_formula(int formula, int base, int max, int caster_level);
 int CalcBuffDuration(Mob *caster, Mob *target, int16 spell_id);
 int CalcBuffDuration_formula(int level, int formula, int duration);
 
-int CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, int caster_level2);
 
-int CalcPetLevel(int nlevel, int nclass);
 int CalcPetHp(int levelb, int classb, int STA = 75);
 char *GetRandPetName();
 

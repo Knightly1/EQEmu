@@ -103,8 +103,16 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	  d->see_invis,			// pass see_invis/see_ivu flags to mob constructor
 	  d->see_invis_undead,
 // SCORPIOUS2K - qglobal
-	  d->qglobal )
-
+	  d->qglobal ),
+	#ifdef IPC 
+        interactive_timer(1000),
+	#endif
+	forget_timer(500),
+	attacked_timer(12000),
+	swarm_timer(100),
+	classattack_timer(1000),
+	taunt_timer(TauntReuseTime * 1000),
+	sendhpupdate_timer(1000)
 {
 	Mob* mob = entity_list.GetMob(name);
 	if(mob != 0)
@@ -116,6 +124,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	NPCTypedata = new NPCType;
 	memcpy(NPCTypedata, d, sizeof(NPCType));
 	respawn2 = in_respawn;
+	swarm_timer.Disable();
 
 	
 	itemlist = new ItemList();
@@ -182,17 +191,11 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 //	if (d->npc_faction_id)
 //		DebugBreak();
 	SetNPCFactionID(d->npc_faction_id);
-
+	
 	ignore_target = 0;
 	delaytimer = false;
-	#ifdef IPC 
-        interactive_timer = new Timer(1000);
-	#endif
     feign_memory = "0";
-	forget_timer = new Timer(500);
 	forgetchance = 0;
-	sendhpupdate_timer = new Timer(1000);
-	attacked_timer = new Timer(12000);
 	attack_event = 0;
 
 #ifdef GUILDWARS
@@ -252,18 +255,22 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
         PR = (int)( moblevel * 1.1f);
 
 	AI_Start();
+	
+	//give NPCs skill values...
+	int r;
+	int skil;
+	for(r = 0; r <= HIGHEST_SKILL; r++) {
+		skil = 4 + moblevel*3 + MakeRandomInt(1, moblevel+moblevel);
+		if(skil > 250)
+			skil = 250;	//cap them just like players... to keep it fairer
+		skills[r] = skil;
+	}
 }
 	  
 NPC::~NPC()
 {
 	safe_delete(itemlist);
 	safe_delete(NPCTypedata);
-#ifdef IPC
-	safe_delete(interactive_timer);
-#endif
-	safe_delete(forget_timer);
-	safe_delete(sendhpupdate_timer);
-	safe_delete(attacked_timer);
  #ifdef IPC	  
 	if(IsInteractive())
 	{
@@ -281,8 +288,8 @@ void NPC::SetTarget(Mob* mob) {
 		SetAttackTimer();
 	}
 	else {
-		attack_timer->Disable();
-		attack_timer_dw->Disable();
+		attack_timer.Disable();
+		attack_dw_timer.Disable();
 	}
 	target = mob;
 }
@@ -291,14 +298,13 @@ bool NPC::IsFactionListAlly(uint32 other_faction) {
 	LinkedListIterator<struct NPCFaction*> fac_iteratorcur(faction_list);
 	fac_iteratorcur.Reset();
 
-	bool factionally = false;
-	while(fac_iteratorcur.MoreElements() && !factionally) {
+	while(fac_iteratorcur.MoreElements()) {
 		if (fac_iteratorcur.GetData()->factionID == other_faction && fac_iteratorcur.GetData()->value_mod <= 0)
-			factionally = true;
+			return(true);
 
 		fac_iteratorcur.Advance();
 	}
-	return factionally;
+	return(false);
 }
 
 ServerLootItem_Struct* NPC::GetItem(int slot_id) {
@@ -411,7 +417,7 @@ void NPC::RemoveCash() {
 
 bool NPC::Process()
 {
-    if (attacked_timer->Check() && attack_event == 1)
+    if (attacked_timer.Check() && attack_event == 1)
 	{
 		attack_event = 0;
 	}
@@ -421,7 +427,7 @@ bool NPC::Process()
 	    if(IsEngaged() && CurrentPosition() != 0)
 		    TakenAction(0,0);
 
-        if(interactive_timer->Check())
+        if(interactive_timer.Check())
         {
 		    tired++;
 			if(tired >= tiredmax && CurrentPosition() != 1 && !IsEngaged())
@@ -434,10 +440,10 @@ bool NPC::Process()
     }
 #endif
     adverrorinfo = 1;
-	if (IsStunned() && stunned_timer->Check())
+	if (IsStunned() && stunned_timer.Check())
     {
         this->stunned = false;
-        this->stunned_timer->Disable();
+        this->stunned_timer.Disable();
     }
 
     if (p_depop)
@@ -445,7 +451,8 @@ bool NPC::Process()
         Mob* owner = entity_list.GetMob(this->ownerid);
         if (owner != 0)
         {
-            owner->SetPetID(0);
+        	if(GetBodyType() != bodyTypeSwarmPet)
+	            owner->SetPetID(0);
 			this->ownerid = 0;
             this->petid = 0;
         }
@@ -454,7 +461,7 @@ bool NPC::Process()
 
     adverrorinfo = 2;
     SpellProcess();
-    if (tic_timer->Check()) {
+    if (tic_timer.Check()) {
         TicProcess();
 	    #ifdef IPC
         if(IsInteractive() )
@@ -484,7 +491,7 @@ bool NPC::Process()
 	    return true;
 
 	//Feign Death Memory
-	if (forget_timer->Check() && strstr(GetFeignMemory(),"0") == NULL) {
+	if (forget_timer.Check() && strstr(GetFeignMemory(),"0") == NULL) {
 		Client* remember_client = entity_list.GetClientByName(GetFeignMemory());
 		if (remember_client != 0)
 		{
@@ -510,7 +517,7 @@ bool NPC::Process()
 		}
 	}
 
-	if (sendhpupdate_timer->Check()) {
+	if (sendhpupdate_timer.Check()) {
 		if(!IsFullHP || cur_hp<max_hp){
 			SendHPUpdate();
 		}
@@ -529,7 +536,7 @@ bool NPC::Process()
     if( !IsEngaged() )
 	    this->CheckSelfBuffs();
 
-    if (scanarea_timer->Check() &&(!zone->AggroLimitReached()))
+    if (scanarea_timer.Check() &&(!zone->AggroLimitReached()))
     {
 		if(entity_list.AddHateToCloseMobs(this))
             zone->AddAggroMob();
@@ -547,9 +554,9 @@ bool NPC::Process()
         target = 0;
     }
 		  
-    if (gohome_timer->Check())
+    if (gohome_timer.Check())
     {	
-	    gohome_timer->Disable();
+	    gohome_timer.Disable();
         if (!IsEngaged())
 	        ismovinghome = true;
     }
@@ -594,17 +601,17 @@ bool NPC::Process()
 			  evader = false;
 		  
 		  adverrorinfo = 6;
-		  if((spells_timer->Check() || (IsEngaged() && spells_timer->GetRemainingTime() > 14000)) && !(gohome_timer->Enabled()||ismovinghome))
+		  if((spells_timer.Check() || (IsEngaged() && spells_timer.GetRemainingTime() > 14000)) && !(gohome_timer.Enabled()||ismovinghome))
 		  {
 			  if(!IsEngaged()) {
-				  spells_timer->Start(RandomTimer(100000,240000), true);
+				  spells_timer.Start(RandomTimer(100000,240000), true);
 				  CheckFriendlySpellStatus();
 			  }
 			  if(IsEngaged()) {
 				  if(target->GetHPRatio() <= 25 || evader == true)
-					  spells_timer->Start(RandomTimer(5000,10000), true);
+					  spells_timer.Start(RandomTimer(5000,10000), true);
 				  else
-					  spells_timer->Start(RandomTimer(7000,14000), true);
+					  spells_timer.Start(RandomTimer(7000,14000), true);
 				  
 				  if(GetHPRatio() < 60 && RandomTimer(0,7) == 0)
 					  CheckFriendlySpellStatus();
@@ -649,10 +656,10 @@ bool NPC::Process()
 				  }
 				  
 				  
-				  if (movement_timer->Check() && !rooted) 
+				  if (movement_timer.Check() && !rooted) 
 				  {
 					  adverrorinfo = 8;
-					  //			movement_timer->Start();
+					  //			movement_timer.Start();
 					  // NPC can move per "think", this number should be an EQ distance squared				
 					  float total_move_dist = (float) DistNoRootNoZ(target);
 					  appearance = 0;
@@ -682,7 +689,7 @@ bool NPC::Process()
 					  FaceTarget();
 					  
 				  }
-				  if (target->GetID() != this->ownerid && attack_timer->Check() && this->GetHPRatio() > 0) 
+				  if (target->GetID() != this->ownerid && attack_timer.Check() && this->GetHPRatio() > 0) 
 				  {
 					  adverrorinfo = 9;
 					  if(GetHPRatio() >= 51) {
@@ -774,7 +781,7 @@ bool NPC::Process()
 		else if (ismovinghome)//Go back to bindpoint.. wonder why SendTo don't work for this? - Merkur
 		{
 			adverrorinfo = 11;
-			if (movement_timer->Check()) 
+			if (movement_timer.Check()) 
 			{
 				if (reallygohome) {
 					//	cout << "Really Go Home Code exec" << endl;
@@ -867,7 +874,7 @@ bool NPC::Process()
 								  heading	= 256*(360-angle)/360.0f;
 								  pLastChange = Timer::GetCurrentTime();
 								  } // if total_move_distance
-								  //			if (walking_timer && walking_timer->Check()) {
+								  //			if (walking_timer && walking_timer.Check()) {
 								  //				float delta_x = (rand()%100) - 50;
 								  //				float delta_y = (rand()%100) - 50;
 								  //				SendTo(org_x + delta_x, org_y + delta_y);
@@ -1570,5 +1577,331 @@ sint32 NPC::GetEquipmentMaterial(int8 material_slot)
 			}
 	}
 	return 0;
+}
+
+int32 NPC::GetMaxDamage(int8 tlevel)
+{
+	int32 dmg = 0;
+	if (tlevel < 40)
+		dmg = tlevel*2+2;
+	else if (tlevel < 50)
+		dmg = level*25/10+2;
+	else if (tlevel < 60)
+		dmg = (tlevel*3+2)+((tlevel-50)*30);
+	else
+		dmg = (tlevel*3+2)+((tlevel-50)*35);
+	return dmg;
+}
+
+void NPC::PickPocket(Client* thief) {
+	
+	//make sure were allowed to targte them:
+	int olevel = GetLevel();
+	if(olevel > (thief->GetLevel() - THIEF_PICKPOCKET_UNDER)) {
+		thief->Message(13, "Your not good enough to steal from them.");
+		//should we check aggro
+		return;
+	}
+	
+	
+	int steal_skill = thief->GetSkill(PICK_POCKETS);
+	int stealchance = (rand()%6+1)*olevel;
+	ItemInst* inst = 0;
+	int x = 0;
+	int slot[50];
+	int steal_items[50];
+	int charges[50];
+	int money[4];
+	money[0] = GetPlatinum();
+	money[1] = GetGold();
+	money[2] = GetSilver();
+	money[3] = GetCopper();
+	if (steal_skill < 125)
+		money[0] = 0;
+	if (steal_skill < 60)
+		money[1] = 0;
+	memset(slot,0,50);
+	memset(steal_items,0,50);
+	memset(charges,0,50);
+	//Determine wheter to steal money or an item.
+	bool no_coin = ((money[0] + money[1] + money[2] + money[3]) == 0);
+	bool steal_item = (rand()%100 < 50 || no_coin);
+	if (steal_item)
+	{
+		LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+		iterator.Reset();
+		while(iterator.MoreElements())
+		{
+			const Item_Struct* item = database.GetItem(iterator.GetData()->item_id);
+			if (item)
+			{
+				inst = ItemInst::Create(item,iterator.GetData()->charges);
+				int slot_id = thief->GetInv().FindFreeSlot(false, true, inst->GetItem()->Size);
+				if (/*!Equipped(item->ItemNumber) &&*/
+					 !item->loreflag && !item->Common.Magic && item->NoDrop != 0 && !inst->IsType(ItemTypeContainer) && slot_id != SLOT_INVALID 
+					/*&& steal_skill > item->Common.StealSkill*/ )
+				{
+					slot[x] = slot_id;
+					steal_items[x] = item->ItemNumber;
+					if (inst->IsStackable())
+						charges[x] = 1;
+					else
+						charges[x] = iterator.GetData()->charges;
+					x++;
+					break;
+				}
+			}
+			iterator.Advance();
+		}
+		if (x > 0)
+		{
+			int random = rand()%x;
+			const Item_Struct* item = database.GetItem(steal_items[random]);
+			inst = ItemInst::Create(item,charges[random]);
+
+			if (/*item->Common.StealSkill || */steal_skill >= stealchance)
+			{
+				thief->Message_StringID(0,12903,item->Name,0);
+				thief->PutItemInInventory(slot[random], *inst);
+				thief->SendItemPacket(slot[random], inst, ItemPacketTrade);
+				RemoveItem(item->ItemNumber);
+			}
+			else
+			{
+				if (stealchance - 25 > steal_skill)
+				{
+					thief->Message_StringID(0,12904,GetName(),0);
+					AddToHateList(thief,50);
+				}
+				else
+				{
+					thief->Message_StringID(0,12898);
+				}
+			}
+		}
+		else if (!no_coin)
+		{
+			steal_item = false;
+		}
+		else
+		{
+			thief->Message_StringID(0,113);
+		}
+	}
+	if (!steal_item) //Steal money
+	{
+		uint32 amt = (rand()%((steal_skill/25)+1))+1;
+		int steal_type = 0;
+		if (!money[0])
+		{
+			steal_type = 1;
+			if (!money[1])
+			{
+				steal_type = 2;
+				if (!money[2])
+				{
+					steal_type = 3;
+				}
+			}
+		}
+
+		if (steal_skill >= stealchance)
+		{
+			switch (steal_type)
+			{
+				case 0:
+					if (amt > GetPlatinum())
+						amt = GetPlatinum();
+					SetPlatinum(GetPlatinum()-amt);
+					thief->AddMoneyToPP(0,0,0,amt,true);
+					break;
+				case 1:
+					if (amt > GetGold())
+						amt = GetGold();
+					SetGold(GetGold()-amt);
+					thief->AddMoneyToPP(0,0,amt,0,true);
+					break;
+				case 2:
+					if (amt > GetSilver())
+						amt = GetSilver();
+					SetSilver(GetSilver()-amt);
+					thief->AddMoneyToPP(0,amt,0,0,true);
+					break;
+				case 3:
+					if (amt > GetCopper())
+						amt = GetCopper();
+					SetCopper(GetCopper()-amt);
+					thief->AddMoneyToPP(amt,0,0,0,true);
+					break;
+			}
+			char chr_amt[10];
+			memset(chr_amt,0,10);
+			itoa(amt,chr_amt,10);
+			thief->Message_StringID(0,12899+steal_type,chr_amt,0);
+		}
+		else
+		{
+			if (stealchance - 25 > steal_skill)
+			{
+				thief->Message_StringID(0,12904,GetName(),0);
+				AddToHateList(thief,50);
+			}
+			else
+			{
+				thief->Message_StringID(0,12898);
+			}
+		}
+	}
+	safe_delete(inst);
+}
+
+void NPC::DoClassAttacks(Mob *target) {
+	if(target == NULL)
+		return;	//gotta have a target for all these
+	
+	//general stuff, for all classes....
+	//only gets used when their primary ability get used too
+	//this might be bad for pally's with long reuse time
+	if (GetOwner() != NULL && taunting && target->IsNPC() && target->GetBodyType() != bodyTypeUndead && taunt_timer.Check()) {
+		Taunt(target->CastToNPC(), false);
+	}
+	
+	if(!classattack_timer.Check(false))
+		return;
+	
+	int level = GetLevel();
+	int reuse = TauntReuseTime * 1000;	//make this very long since if they dont use it once, they prolly never will
+	//class specific stuff...
+	switch(GetClass()) {
+		case ROGUE:
+			if(level >= 10) {
+				//does not take advantage of any equipped weapons for simplicity.
+				if (BehindMob(target, GetX(), GetY())) {
+					RogueBackstab(target, NULL, GetLevel()*5+5);
+					reuse = BackstabReuseTime * 1000;
+				}
+			}
+			break;
+		case MONK: {
+			int8 satype = saKick;
+			if(level > 29) {
+				satype = saFlyingKick;
+			} else if(level > 24) {
+				satype = saTailRake;
+			} else if(level > 19) {
+				satype = saEagleStrike;
+			} else if(level > 9) {
+				satype = saTigerClaw;
+			} else if(level > 4) {
+				satype = saRoundKick;
+			}
+			reuse = MonkSpecialAttack(target, satype);
+			break;
+		}
+		case WARRIOR:
+			//kick
+			reuse = MonkSpecialAttack(target, saKick);
+			break;
+		case RANGER:
+		case BEASTLORD:
+			if(level > 5) {
+				//kick
+				reuse = MonkSpecialAttack(target, saKick);
+			}
+			break;
+		case SHADOWKNIGHT:
+			CastSpell(SPELL_NPC_HARM_TOUCH, target->GetID());
+			reuse = HarmTouchReuseTime * 1000;
+			break;
+		case PALADIN:
+			if(GetHPRatio() < 20) {
+				CastSpell(SPELL_LAY_ON_HANDS, GetID());
+				reuse = LayOnHandsReuseTime * 1000;
+			}
+			break;
+	}
+	
+	classattack_timer.Start(reuse);
+	
+	
+}
+
+void Mob::NPCSpecialAttacks(const char* parse, int permtag) {
+    for(int i = 0; i < SPECATK_MAXNUM; i++)
+	{
+	    SpecAttacks[i] = false;
+        SpecAttackTimers[i] = NULL;
+    }
+	
+	const char* orig_parse = parse;
+    while (*parse)
+    {
+        switch(*parse)
+        {
+        case 'Z':
+//			if (this->IsNPC())
+ //   			this->CastToNPC()->interactive = true;
+            break;
+        case 'X':
+   // 		if (this->IsNPC())
+    //			this->CastToNPC()->citycontroller = true;
+            break;
+        case 'Y':
+    //		if (this->IsNPC())
+    //			this->CastToNPC()->guildbank = true;
+            break;
+	    case 'E':
+    	    SpecAttacks[SPECATK_ENRAGE] = true;
+    		break;
+	    case 'F':
+    	    SpecAttacks[SPECATK_FLURRY] = true;
+    		break;
+	    case 'R':
+    	    SpecAttacks[SPECATK_RAMPAGE] = true;
+    		break;
+
+	    case 'S':
+    	    SpecAttacks[SPECATK_SUMMON] = true;
+            SpecAttackTimers[SPECATK_SUMMON] = new Timer(6000);
+            SpecAttackTimers[SPECATK_SUMMON]->Start();
+    		break;
+	    case 'T':
+            SpecAttacks[SPECATK_TRIPLE] = true;
+            break;
+	    case 'Q':
+            SpecAttacks[SPECATK_QUAD] = true;
+            break;
+		case 'U':
+			SpecAttacks[UNSLOWABLE] = true;
+			break;
+		case 'M':
+			SpecAttacks[UNMEZABLE] = true;
+			break;
+		case 'C':
+			SpecAttacks[UNCHARMABLE] = true;
+			break;
+		case 'N':
+			SpecAttacks[UNSTUNABLE] = true;
+			break;
+		case 'I':
+			SpecAttacks[UNSNAREABLE] = true;
+			break;
+		case 'A':
+			SpecAttacks[IMMUNE_MEELE] = true;
+			break;
+		case 'B':
+			SpecAttacks[IMMUNE_MAGIC] = true;
+			break;
+        default:
+            break;
+        }
+        parse++;
+    }
+	
+	if(permtag == 1 && this->GetNPCTypeID() > 0){
+		if(database.SetSpecialAttkFlag(this->GetNPCTypeID(), orig_parse)) {
+			LogFile->write(EQEMuLog::Normal, "NPCTypeID: %i flagged to '%s' for Special Attacks.\n",this->GetNPCTypeID(),orig_parse);
+		}
+	}
 }
 

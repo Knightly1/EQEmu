@@ -357,7 +357,11 @@ void Zone::LoadZoneDoors(const char* zone)
 	
 }
 
-Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, int16 in_port) {
+Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, int16 in_port) 
+:	autoshutdown_timer(ZONE_AUTOSHUTDOWN_DELAY),
+	clientauth_timer(AUTHENTICATION_TIMEOUT * 1000),
+	spawn2_timer(1000)
+{
 	zoneid = in_zoneid;
 	zone_weather = 0;
 	spawn_group_list = 0;
@@ -380,12 +384,10 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, i
 	if (long_name == 0) {
 		long_name = strcpy(new char[18], "Long zone missing");
 	}
-	autoshutdown_timer = new Timer(ZONE_AUTOSHUTDOWN_DELAY);
-	autoshutdown_timer->Start(AUTHENTICATION_TIMEOUT * 1000, false);
+	autoshutdown_timer.Start(AUTHENTICATION_TIMEOUT * 1000, false);
 	Weather_Timer = new Timer(((rand()%7200-30)+30)*2000);
 	Weather_Timer->Start();
 	LogFile->write(EQEMuLog::Status, "Weather should change in %i seconds",Weather_Timer->GetRemainingTime()/1000);
-	clientauth_timer = new Timer(AUTHENTICATION_TIMEOUT * 1000);
 	zone_weather=weather_type-1;
 #ifdef GUILDWARS
 	database.LoadLocationInformation();
@@ -436,13 +438,18 @@ bool Zone::Init(bool iStaticZone) {
 		cout << "Couldn't populate zone spawn list." << endl;
 		return false;
 	}
-	cout << ", player corpses\n";
+	cout << ", player corpses";
 	if (!database.LoadPlayerCorpses(zoneid))
 	{
 		cout << "ERROR: Couldn't load player corpses." << endl;
 		return false;
 	}
-
+	cout << ", traps\n";
+	if (!database.LoadTraps(short_name))
+	{
+		cout << "ERROR: Couldn't load traps." << endl;
+		return false;
+	}
 	parse->ClearCache();
 	cout << ", timezone data";
 	zone->zone_time.setEQTimeZone(database.GetZoneTZ(zoneid));
@@ -461,8 +468,6 @@ Zone::~Zone()
 	safe_delete_array(short_name);
 	safe_delete_array(long_name);
 	safe_delete_array(address);
-	safe_delete(autoshutdown_timer);
-	safe_delete(clientauth_timer);
 	safe_delete(Weather_Timer);
 	zone_point_list.Clear();
 	entity_list.Clear();
@@ -473,6 +478,7 @@ Zone::~Zone()
 	safe_delete(db_update);
 #endif
 }
+
 bool Zone::LoadZoneCFG(const char* filename, bool DontLoadDefault) {
 	memset(&newzone_data, 0, sizeof(NewZone_Struct));
 	NewZone_Struct* nsc = database.GetZoneCFG(database.GetZoneID(filename));
@@ -583,15 +589,18 @@ int32 Zone::CountAuth() {
 
 bool Zone::Process() {
 	LockMutex lock(&MZoneLock);
-	LinkedListIterator<Spawn2*> iterator(spawn2_list);
+	
+	if(spawn2_timer.Check()) {
+		LinkedListIterator<Spawn2*> iterator(spawn2_list);
 
-	iterator.Reset();
-	while (iterator.MoreElements()) {
-		if (iterator.GetData()->Process()) {
-			iterator.Advance();
-		}
-		else {
-			iterator.RemoveCurrent();
+		iterator.Reset();
+		while (iterator.MoreElements()) {
+			if (iterator.GetData()->Process()) {
+				iterator.Advance();
+			}
+			else {
+				iterator.RemoveCurrent();
+			}
 		}
 	}
 	list<timers*>::iterator iterator1 = TimerList.begin();
@@ -607,7 +616,7 @@ bool Zone::Process() {
 		iterator1++;
 	}
 	if(!staticzone) {
-		if (autoshutdown_timer->Check()) {
+		if (autoshutdown_timer.Check()) {
 			StartShutdownTimer();
 			if (numclients == 0) {
 				return false;
@@ -648,7 +657,7 @@ bool Zone::Process() {
 		Weather_Timer->Start();
 		LogFile->write(EQEMuLog::Status, "Weather should change in %i seconds",Weather_Timer->GetRemainingTime()/1000);
 	}
-	if (clientauth_timer->Check()) {
+	if (clientauth_timer.Check()) {
 		LinkedListIterator<ZoneClientAuth_Struct*> iterator2(client_auth_list);
 
 		iterator2.Reset();
@@ -668,8 +677,8 @@ bool Zone::Process() {
 
 void Zone::StartShutdownTimer(int32 set_time) {
 	MZoneLock.lock();
-	if (set_time > autoshutdown_timer->GetRemainingTime()) {
-		autoshutdown_timer->Start(set_time, false);
+	if (set_time > autoshutdown_timer.GetRemainingTime()) {
+		autoshutdown_timer.Start(set_time, false);
 	}
 	MZoneLock.unlock();
 }
@@ -809,7 +818,7 @@ ZonePoint* Zone::GetClosestZonePointWithoutZone(float x, float y, float z) {
 			float delta_x = zp->x - x;
 			float delta_y = zp->y - y;
 
-			float dist = sqrt(delta_x*delta_x+delta_y*delta_y);///*+(zp->z-z)*(zp->z-z)*/;
+			float dist = delta_x*delta_x+delta_y*delta_y;///*+(zp->z-z)*(zp->z-z)*/;
 			if (dist < closest_dist)
 			{
 				closest_zp = zp;
@@ -817,7 +826,7 @@ ZonePoint* Zone::GetClosestZonePointWithoutZone(float x, float y, float z) {
 			}
 		iterator.Advance();
 	}
-	if(closest_dist > 200.0f)
+	if(closest_dist > 40000.0f)
 		closest_zp = 0;
 
 	return closest_zp;

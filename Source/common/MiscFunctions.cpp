@@ -348,9 +348,11 @@ int MakeRandomInt(int low, int high)
 double MakeRandomFloat(double low, double high)
 {
 	static bool seeded=0;
-	double diff = fabs(high - low);
+	double diff = high - low;
   
-  if(!fabs(high - low)) return low;
+	if(!diff) return low;
+	if(diff < 0)
+		diff = 0 - diff;
 
 	if(!seeded)
 	{
@@ -358,7 +360,7 @@ double MakeRandomFloat(double low, double high)
 		seeded = true;
 	}
   
-	return (rand() / (float)RAND_MAX * diff + (low > high ? high : low));
+	return (rand() / (double)RAND_MAX * diff + (low > high ? high : low));
 }
 
 // solar: removes the crap and turns the underscores into spaces.

@@ -26,8 +26,29 @@ using namespace std;
 enum {	//values for pTimerType
 	pTimerStartAdventureTimer = 1,
 	pTimerAdventureTimer = 2,
-	pTimerAAStart = 10,
-	pTimerAAEnd = 130
+	pTimerFeignDeath = 3,
+	pTimerSneak = 4,
+	pTimerHide = 5,
+	pTimerTaunt = 6,
+	pTimerInstillDoubt = 7,
+	pTimerFishing = 8,
+	pTimerForaging = 9,
+	pTimerMend = 10,
+	pTimerTracking = 11,
+	pTimerSenseTraps = 12,
+	pTimerDisarmTraps = 13,
+	pTimerDisciplineReuse = 14,
+	
+	pTimerLayHands = 87,		//these IDs are used by client too
+	pTimerHarmTouch = 89,		//so dont change them
+	
+	pTimerAAStart = 1000,		//AA re-use timers
+	pTimerAAEnd = 1999,
+	pTimerAAEffectStart = 2001,	//AA effect timers
+	pTimerAAEffectEnd	= 2999,
+	
+	pTimerSpellStart = 5000		//Do not put any timer IDs above this one
+								//if needed, increase its starting ID
 };
 
 typedef uint16 pTimerType;
@@ -39,14 +60,16 @@ public:
 	PersistentTimer(int32 char_id, pTimerType type, int32 duration);
 	PersistentTimer(int32 char_id, pTimerType type, int32 start_time, int32 duration, bool enable);
 
-	bool Check(bool iReset = true);
+	bool Expired(bool iReset = true);
 	void Start(int32 set_timer_time=0);
 	
 	void SetTimer(int32 set_timer_time=0);
 	int32 GetRemainingTime();
 	inline void Enable() { enabled = true; }
 	inline void Disable() { enabled = false; }
-	inline const int32 GetTimerTime()		{ return timer_time; }
+	inline const int32 GetTimerTime() const { return timer_time; }
+	inline const int32 GetStartTime() const { return start_time; }
+	inline const pTimerType GetType() const { return _type; }
 
 	inline bool Enabled() { return enabled; }
 
@@ -77,9 +100,10 @@ public:
 	bool Clear();
 	
 	void Start(pTimerType type, int32 duration);
-	bool Check(pTimerType type, bool reset = true);
+	bool Expired(pTimerType type, bool reset = true);
 	void Clear(pTimerType type);
 	void Enable(pTimerType type);
+	bool Enabled(pTimerType type);
 	void Disable(pTimerType type);
 	int32 GetRemainingTime(pTimerType type);
 	PersistentTimer *Get(pTimerType type);
@@ -92,12 +116,17 @@ public:
 	//this is not defined on a char which is logged in!
 	static bool ClearOffline(int32 char_id, pTimerType type);
 	
+	typedef map<pTimerType, PersistentTimer *>::iterator iterator;
+	iterator begin() { return(_list.begin()); }
+	iterator end() { return(_list.end()); }
 protected:
 	int32 _char_id;
 	
 	map<pTimerType, PersistentTimer *> _list;
 };
 
-
+//code prettying macros
+#define AA_Choose3(val, v1, v2, v3) (val==1?v1:(val==2?v2:v3))
+#define AA_Choose5(val, v1, v2, v3, v4, v5) (val==1?v1:(val==2?v2:(val==3?v3:(val==4?v4:v5))))
 
 #endif

@@ -20,6 +20,10 @@
 
 #include "../common/debug.h"
 
+//uncomment this to enable the packet profiler. Counts the number
+//of each type of packet sent or received on a connection.
+#define PACKET_PROFILER 1
+
 #include <string.h>
 #include <map>
 #include <list>
@@ -393,6 +397,15 @@ private:
 
 	sint32	datarate_sec;	// bytes/1000ms
 	sint32	datarate_tic;	// bytes/100ms
+	
+#ifdef PACKET_PROFILER
+	typedef struct {
+		uint32 count;
+		uint32 lengthSum;
+	} _ppData;
+	map<uint16, _ppData> _packetProfileIn;	//opcode -> data
+	map<uint16, _ppData> _packetProfileOut;	//opcode -> data
+#endif
 };
 
 class EQNetworkPacket {

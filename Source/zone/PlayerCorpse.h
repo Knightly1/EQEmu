@@ -46,7 +46,7 @@ public:
 	bool	Save();
 	int32	GetCharID()			{ return charid; }
 	int32	SetCharID(int32 iCharID) { if (IsPlayerCorpse()) { return (charid=iCharID); } return 0xFFFFFFFF; };
-	int32	GetDecayTime()		{ if (corpse_decay_timer == 0) return 0xFFFFFFFF; else return corpse_decay_timer->GetRemainingTime(); }
+	int32	GetDecayTime()		{ if (!corpse_decay_timer.Enabled()) return 0xFFFFFFFF; else return corpse_decay_timer.GetRemainingTime(); }
 	void	CalcCorpseName();
 	inline void		Lock()			{ pLocked = true; }
 	inline void		UnLock()		{ pLocked = false; }
@@ -82,8 +82,9 @@ public:
 	void	CastRezz(int16 spellid, Mob* Caster);
 	void	CompleteRezz();
 
-	bool CanMobLoot(const char* iName);
-	void AllowMobLoot(const char*, int8 slot);
+	bool CanMobLoot(int charid);
+	void AllowMobLoot(Mob *them, int8 slot);
+	void AddLooter(Mob *who);
 
 	char		orgname[64];
 	bool IsRezzed() { return isrezzed; }
@@ -107,9 +108,9 @@ private:
 	int32		rezzexp;
 	bool		become_npc;
 	bool		isrezzed;
-	char		looters[MAX_LOOTERS][64]; // People allowed to loot the corpse
-	Timer*	corpse_decay_timer;
-	Timer*	corpse_delay_timer;
+	int			looters[MAX_LOOTERS]; // People allowed to loot the corpse, character id
+	Timer		corpse_decay_timer;
+	Timer		corpse_delay_timer;
 	Color_Struct item_tint[9];
 };
 

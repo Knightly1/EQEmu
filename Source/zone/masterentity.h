@@ -8,4 +8,5 @@
 #include "PlayerCorpse.h"
 #include "doors.h"
 #include "mob.h"
+#include "trap.h"
 #include "beacon.h"

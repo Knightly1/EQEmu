@@ -483,6 +483,34 @@ EQNetworkConnection::~EQNetworkConnection() {
 	safe_delete(combined_timer);
 #endif
 //	safe_delete(datakeepalive_timer);
+
+#ifdef PACKET_PROFILER
+	//last thing we do before we die is dump our profile
+	struct in_addr ia;
+	ia.s_addr = rIP;
+	LogFile->write(EQEMuLog::Debug, "Packet profile for connection %s:%i", inet_ntoa(ia), ntohs(rPort));
+	uint32 ratio;
+	map<uint16, _ppData>::iterator cur, stop;
+	cur = _packetProfileIn.begin();
+	stop = _packetProfileIn.end();
+	LogFile->write(EQEMuLog::Debug, "Incoming Packets:");
+	while(cur != stop) {
+		const _ppData &pp = cur->second;
+		ratio = pp.lengthSum / pp.count;
+		LogFile->write(EQEMuLog::Debug, "	0x%.4x: count=%lu, total length=%lu, avg. length=%lu", cur->first, pp.count, pp.lengthSum, ratio);
+		cur++;
+	}
+	
+	cur = _packetProfileOut.begin();
+	stop = _packetProfileOut.end();
+	LogFile->write(EQEMuLog::Debug, "Outgoing Packets:");
+	while(cur != stop) {
+		const _ppData &pp = cur->second;
+		ratio = pp.lengthSum / pp.count;
+		LogFile->write(EQEMuLog::Debug, "	0x%.4x: count=%lu, total length=%lu, avg. length=%lu", cur->first, pp.count, pp.lengthSum, ratio);
+		cur++;
+	}
+#endif
 }
 
 int8 EQNetworkConnection::GetState() {
@@ -817,6 +845,20 @@ void EQNetworkConnection::Process(int sock) {
 			cout << " datahigh: "  << setw(3) << setfill(' ') << (int) datahigh << endl;
 #endif
 			size = pack->ReturnPacket(&data);
+			
+			#ifdef PACKET_PROFILER
+				if(_packetProfileOut.count(pack->dwOpCode) == 1) {
+					_ppData &tmp_pp = _packetProfileOut[pack->dwOpCode];
+					tmp_pp.count++;
+					tmp_pp.lengthSum += size;
+				} else {
+					_ppData tmp_pp;
+					tmp_pp.count = 1;
+					tmp_pp.lengthSum = size;
+					_packetProfileOut[pack->dwOpCode] = tmp_pp;
+				}
+			#endif
+			
 			#if LOG_RAW_PACKETS_OUT >= 1
 				cout << setw(8) << setfill(' ') << Timer::GetCurrentTime() << " Outgoing RAW packet: opcode=0x" << hex << setw(4) << setfill('0') << pack->dwOpCode << dec << " size=" << setw(5) << setfill(' ') << size << " headers: ";
 				cout << (int) pack->HDR.a0_Unknown;
@@ -1136,6 +1178,20 @@ bool EQNetworkConnection::ProcessPacket(EQNetworkPacket* pack, bool from_buffer)
 			}
 			APPLAYER *app = 0;
 			while ((app = eqdp.GetApp())) {
+#ifdef PACKET_PROFILER
+				if (app && app->opcode != 0 && app->opcode != 0xFFFF) {
+					if(_packetProfileIn.count(app->opcode) == 1) {
+						_ppData &tmp_pp = _packetProfileIn[app->opcode];
+						tmp_pp.count++;
+						tmp_pp.lengthSum += app->size;
+					} else {
+						_ppData tmp_pp;
+						tmp_pp.count = 1;
+						tmp_pp.lengthSum = app->size;
+						_packetProfileIn[app->opcode] = tmp_pp;
+					}
+				}
+#endif
 #if LOG_PACKETS >= 1
 	if (app && app->opcode != 0 && app->opcode != 0xFFFF) {
 		cout << "Logging incoming packet. OPCode: 0x" << hex << setw(4) << setfill('0') << app->opcode << dec << ", size: " << setw(5) << setfill(' ') << app->size << endl;
@@ -1181,6 +1237,20 @@ bool EQNetworkConnection::ProcessPacket(EQNetworkPacket* pack, bool from_buffer)
 		}
 		APPLAYER* app = 0;
 		while ((app = eqdp.GetApp())) {
+#ifdef PACKET_PROFILER
+			if (app && app->opcode != 0 && app->opcode != 0xFFFF) {
+				if(_packetProfileIn.count(app->opcode) == 1) {
+					_ppData &tmp_pp = _packetProfileIn[app->opcode];
+					tmp_pp.count++;
+					tmp_pp.lengthSum += app->size;
+				} else {
+					_ppData tmp_pp;
+					tmp_pp.count = 1;
+					tmp_pp.lengthSum = app->size;
+					_packetProfileIn[app->opcode] = tmp_pp;
+				}
+			}
+#endif
 #if LOG_PACKETS >= 1
 	if (app && app->opcode != 0 && app->opcode != 0xFFFF) {
 		cout << "Logging incoming packet. OPCode: 0x" << hex << setw(4) << setfill('0') << app->opcode << dec << ", size: " << setw(5) << setfill(' ') << app->size << endl;

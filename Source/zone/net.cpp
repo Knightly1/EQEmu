@@ -235,18 +235,14 @@ int main(int argc, char** argv) {
 	database.LoadGuilds(guilds);
 	LogFile->write(EQEMuLog::Status, "Loading factions");
 	database.LoadFactionData();
+	LogFile->write(EQEMuLog::Status, "Loading AA effects");
+	database.LoadAAEffects();
+	LogFile->write(EQEMuLog::Status, "Loading swarm spells");
+	database.LoadSwarmSpells();
 	LogFile->write(EQEMuLog::Status, "Loading corpse timers");
 	database.GetDecayTimes(npcCorpseDecayTimes);
 	LogFile->write(EQEMuLog::Status, "Loading what ever is left");
 	database.ExtraOptions();
-	net.group_timer=new Timer(1000);
-	net.group_timer->Disable();
-	net.corpse_timer=new Timer(2000);
-	net.corpse_timer->Disable();
-	net.door_timer=new Timer(5000);
-	net.door_timer->Disable();
-	net.object_timer=new Timer(5000);
-	net.object_timer->Disable();
 /* solar: new command system */
 	LogFile->write(EQEMuLog::Status, "Loading commands");
 	int retval=command_init();
@@ -254,6 +250,7 @@ int main(int argc, char** argv) {
 		LogFile->write(EQEMuLog::Status, "Command loading FAILED");
 	else
 		LogFile->write(EQEMuLog::Status, "%d commands loaded", retval);
+
 
 #ifdef EMBPERL
        LogFile->write(EQEMuLog::Status, "Loading embedded perl");
@@ -289,8 +286,8 @@ int main(int argc, char** argv) {
 	UpdateWindowTitle();
 	bool worldwasconnected = worldserver.Connected();
 	EQNetworkConnection* eqnc;
-	Timer* temp_timer = new Timer(10);
-	temp_timer->Start();
+	Timer temp_timer(10);
+	temp_timer.Start();
 	while(RunLoops) {
 		Timer::SetCurrentTime();
 		while ((eqnc = eqns.NewQueuePop())) {
@@ -321,23 +318,26 @@ int main(int argc, char** argv) {
 				entity_list.ChannelMessageFromWorld(0, 0, 6, 0, 0, "WARNING: World server connection lost");
 			worldwasconnected = false;
 		}
-		if (ZoneLoaded && temp_timer->Check()) {
+		if (ZoneLoaded && temp_timer.Check()) {
 			{
 				int8 error2 = 4;
 #ifdef CATCH_CRASH
 				try{
 #endif
-					if(net.group_timer && net.group_timer->Enabled() && net.group_timer->Check())
+					if(net.group_timer.Enabled() && net.group_timer.Check())
 						entity_list.GroupProcess();
 					error2 = 99;
-					if(net.door_timer && net.door_timer->Enabled() && net.door_timer->Check())
+					if(net.door_timer.Enabled() && net.door_timer.Check())
 						entity_list.DoorProcess();
 					error2 = 98;
-					if(net.object_timer && net.object_timer->Enabled() && net.object_timer->Check())
+					if(net.object_timer.Enabled() && net.object_timer.Check())
 						entity_list.ObjectProcess();
 					error2 = 97;
-					if(net.corpse_timer && net.corpse_timer->Enabled() && net.corpse_timer->Check())
+					if(net.corpse_timer.Enabled() && net.corpse_timer.Check())
 						entity_list.CorpseProcess();
+					if(net.trap_timer.Enabled() && net.trap_timer.Check())
+						entity_list.TrapProcess();
+					error2 = 98;
 					error2 = 96;
 					entity_list.Process();
 					error2 = 95;
@@ -464,7 +464,6 @@ clientattack_time = 0;
 	worldserver.Disconnect();
 	dbasync->CommitWrites();
 	dbasync->StopThread();
-	safe_delete(temp_timer);
 #ifdef NEW_LoadSPDat
 	safe_delete(spells_delete);
 #endif
@@ -529,6 +528,24 @@ void NetConnection::SaveInfo(char* address, int32 port, char* waddress, char* fi
 	WorldAddress = new char[strlen(waddress)+1];
 	strcpy(WorldAddress, waddress);
 	strn0cpy(ZoneFileName, filename, sizeof(ZoneFileName));
+}
+
+NetConnection::NetConnection() 
+: 
+	object_timer(5000),
+	door_timer(5000),
+	corpse_timer(2000),
+	group_timer(1000),
+	trap_timer(1000)
+{
+	ZonePort = 0;
+	ZoneAddress = 0;
+	WorldAddress = 0;
+	group_timer.Disable();
+	corpse_timer.Disable();
+	door_timer.Disable();
+	object_timer.Disable();
+	trap_timer.Disable();
 }
 
 NetConnection::~NetConnection() {
@@ -808,749 +825,8 @@ This is hanging on freebsd for me, not sure why...
 
 	return true;
 }
-#else
-void LoadSPDat(SPDat_Spell_Struct** SpellsPointer) {
-	//FILE *fp;
-	//cout << "Beginning Spells memset." << endl;
-	int u;
-	//for (u = 0; u < SPDAT_RECORDS; u++)
-	//{	//cout << u << ' ';
-	memset((char*) &spells,0,sizeof(SPDat_Spell_Struct)*SPDAT_RECORDS);
-	//}
-	//cout << "Memset finished\n";
-	char temp=' ';
-	int tempid=0;
-	char token[64]="";
-	int a = 0;
-	char sep='^';
-	LogFile->write(EQEMuLog::Normal, "If this is the last message you see, you forgot to move spells_en.txt from your EQ dir to this dir.");
 
-#ifdef FREEBSD
-#error ifstreams seem to break BSD...
 #endif
-	ifstream in;in.open(SPELLS_FILE);
-	
-	if(!in.is_open()){
-		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
-		return;
-	}
-	//while(!in.eof())
-	//{in >> temp;}
-	//for(int x =0; x< spellsen_size; x++)
-	//	memset((char*) &spells[x],0,sizeof(SPDat_Spell_Struct));
-	while(tempid <= SPDAT_RECORDS-1)
-	{
-		//if(tempid>3490)
-		//{
-		//	cout << "BLEH";
-		//	getch();
-		//}
-		
-		//in.getline(&temp, 624);
-		in.get(temp);
-		while(chrcmpI(&temp, &sep))
-		{
-			strncat(token,&temp,1);
-			a++;//cout << temp<< ' ';
-			in.get(temp);
-		}
-		tempid=atoi(token);
-		if(tempid>=SPDAT_RECORDS)
-			break;
-		//cout << "TempID: " << tempid << endl;
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		strncpy(spells[tempid].name,token,a);
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		//cout << spells[tempid].name << '^';
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		strncpy(spells[tempid].player_1,token,a);
-		//cout << spells[tempid].player_1 << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		strncpy(spells[tempid].teleport_zone,token,a);
-		//cout << spells[tempid].teleport_zone << '^';
-		a=0;
-
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		strncpy(spells[tempid].you_cast,token,a);
-		//cout << spells[tempid].you_cast << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		strncpy(spells[tempid].other_casts,token,a);
-		//cout << spells[tempid].other_casts << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		strncpy(spells[tempid].cast_on_you,token,a);
-		//cout << spells[tempid].cast_on_you << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		strncpy(spells[tempid].cast_on_other,token,a);
-		//cout << spells[tempid].cast_on_other << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		strncpy(spells[tempid].spell_fades,token,a);
-		//cout << spells[tempid].spell_fades << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			in.get(temp);
-		}
-		spells[tempid].range=atof(token);
-		//cout << spells[tempid].range << '^';
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].aoerange=atof(token);
-		//cout << spells[tempid].aoerange << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].pushback=atof(token);
-		//cout << spells[tempid].pushback << '^';
-		a=0;
-
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].pushup=atof(token);
-		//cout << spells[tempid].pushup << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp); 
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].cast_time=atoi(token);
-		
-		//cout << spells[tempid].cast_time << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].recovery_time=atoi(token);
-		//cout << spells[tempid].recovery_time << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].recast_time=atoi(token);
-		//cout << spells[tempid].recast_time << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].buffdurationformula=atoi(token);
-		//cout << spells[tempid].buffdurationformula << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].buffduration=atoi(token);
-		//cout << spells[tempid].buffduration << '^';
-
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].ImpactDuration=atoi(token);
-		//cout << spells[tempid].ImpactDuration<< '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].mana=atoi(token);
-		//cout << spells[tempid].mana << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		int y;
-		for(y=0; y< 12;y++)
-		{
-			in.get(temp);
-			while(chrcmpI(&temp,&sep))
-			{
-				strncat(token,&temp,1);
-				a++;
-				in.get(temp);
-			}
-			spells[tempid].base[y]=atoi(token);
-			//cout << spells[tempid].base[y] << '^';
-			a=0;
-			for(u=0;u<64;u++)
-				token[u]=(char)0;
-			
-			
-		}
-		for(y=0; y< 12;y++)
-		{
-			in.get(temp);
-			while(chrcmpI(&temp,&sep))
-			{
-				strncat(token,&temp,1);
-				a++;
-				in.get(temp);
-			}
-			spells[tempid].max[y]=atoi(token);
-			//cout << spells[tempid].max[y] << '^';
-			a=0;
-			for(u=0;u<64;u++)
-				token[u]=(char)0;
-			
-		}
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].icon=atoi(token); 
-		//cout << spells[tempid].icon << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].memicon=atoi(token); 
-		//cout << spells[tempid].memicon << '^';
-		
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		for(y=0; y< 4;y++)
-		{
-			in.get(temp);
-			while(chrcmpI(&temp,&sep))
-			{
-				strncat(token,&temp,1);
-				a++;
-				in.get(temp);
-			}
-			spells[tempid].components[y]=atoi(token);
-			//cout << spells[tempid].components[y] << '^';
-			a=0;
-			for(u=0;u<64;u++)
-				token[u]=(char)0;
-			
-		}
-		for(y=0; y< 4;y++)
-		{
-			in.get(temp);
-			while(chrcmpI(&temp,&sep))
-			{
-				strncat(token,&temp,1);
-				a++;
-				in.get(temp);
-			}
-			spells[tempid].component_counts[y]=atoi(token);//atoi(token);
-			//cout << spells[tempid].component_counts[y] << '^';
-			a=0;
-			for(u=0;u<64;u++)
-				token[u]=(char)0;
-		}	
-		for(y=0; y< 4;y++)
-		{
-			in.get(temp);
-			while(chrcmpI(&temp,&sep))
-			{
-				strncat(token,&temp,1);
-				a++;
-				in.get(temp);
-			}
-			spells[tempid].NoexpendReagent[y]=atoi(token); //NoExpend Reagent
-			//cout << spells[tempid].NoexpendReagent[y] << '^';
-			a=0;
-			for(u=0;u<64;u++)
-				token[u]=(char)0;
-			
-		}
-		for(y=0; y< 12;y++)
-		{
-			in.get(temp);
-			while(chrcmpI(&temp,&sep))
-			{
-				strncat(token,&temp,1);
-				a++;
-				in.get(temp);
-			}
-			spells[tempid].formula[y]=atoi(token);
-			//cout << spells[tempid].formula[y] << '^';
-			a=0;
-			for(u=0;u<64;u++)
-				token[u]=(char)0;
-			
-		}
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-
-		spells[tempid].LightType=atoi(token);
-		//cout << spells[tempid].LightType << '^';
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].goodEffect=atoi(token);
-		//cout << spells[tempid].goodEffect << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].Activated=atoi(token);
-		//cout << spells[tempid].Activated << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].resisttype=atoi(token);
-		//cout << spells[tempid].resisttype << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		for(y=0; y< 12;y++)
-		{
-			in.get(temp);
-			while(chrcmpI(&temp,&sep))
-			{
-				strncat(token,&temp,1);
-				a++;
-				in.get(temp);
-			}
-			spells[tempid].effectid[y]=atoi(token);
-			//cout << spells[tempid].effectid[y] << '^';
-			a=0;
-			for(u=0;u<64;u++)
-				token[u]=(char)0;
-			
-		}
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].targettype=atoi(token);
-		//cout << spells[tempid].targettype << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].basediff=atoi(token);
-		//cout << spells[tempid].basediff<< '^';
-		a=0;
-		for(u=0;u<64;u++)
-
-			token[u]=(char)0;
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].skill=atoi(token);
-		//cout << spells[tempid].skill << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].zonetype=atoi(token);
-		//cout << spells[tempid].zonetype << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].EnvironmentType=atoi(token);
-		//cout << spells[tempid].EnvironmentType << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-
-			in.get(temp);
-		}
-		spells[tempid].TimeOfDay=atoi(token);
-		//cout << spells[tempid].TimeOfDay << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		for(y=0; y< 15;y++)
-		{
-			in.get(temp);
-			while(chrcmpI(&temp,&sep))
-			{
-				strncat(token,&temp,1);
-				a++;
-				in.get(temp);
-			}
-			spells[tempid].classes[y]= atoi(token);
-			//cout << spells[tempid].classes[y] << '^';
-			a=0;
-			for(u=0;u<64;u++)
-				token[u]=(char)0;
-			
-		} //cout << "end class";
-		  /*for(y=0; y< 3;y++)
-		  {
-		  in.get(temp);
-		  while(chrcmpI(&temp,&sep))
-		  {
-		  strncat(token,&temp,1);
-		  a++;
-		  in.get(temp);
-		  }
-		  spells[tempid].unknown1[y]=atoi(token);
-		  cout << spells[tempid].unknown1[y] << '^';
-		  a=0;
-		  for(u=0;u<64;u++)
-		  token[u]=(char)0;
-		  
-			}
-			in.get(temp);
-			while(chrcmpI(&temp,&sep))
-			{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-			}
-			spells[tempid].unknown2=atoi(token);
-			cout << spells[tempid].unknown2 << '^';
-			a=0;
-			for(u=0;u<64;u++)
-			token[u]=(char)0;
-		*/
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].CastingAnim=atoi(token);
-		//cout << spells[tempid].CastingAnim << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].TargetAnim=atoi(token);
-		//cout << spells[tempid].TargetAnim << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].TravelType=atoi(token);
-		//cout << spells[tempid].TravelType << '^';
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		in.get(temp);
-		while(chrcmpI(&temp,&sep))
-		{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		}
-		spells[tempid].SpellAffectIndex=atoi(token);
-		//cout << spells[tempid].SpellAffectIndex << '^';
-		
-		a=0;
-		for(u=0;u<64;u++)
-			token[u]=(char)0;
-		
-		for(y=0; y< 23;y++)
-        {
-			in.get(temp);
-			while(chrcmpI(&temp,&sep))
-			{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-		    }
-			spells[tempid].Spacing2[y]=atoi(token);
-			//cout << spells[tempid].base[y] << '^';
-			a=0;
-			for(u=0;u<64;u++)
-			    token[u]=(char)0;
-		}
-		
-        in.get(temp);
-	    while(chrcmpI(&temp,&sep))
-			{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-			}
-		spells[tempid].ResistDiff=atoi(token);
-			//cout << spells[tempid].ResistDiff << '^';
-		a=0;
-		for(u=0;u<64;u++)
-		    token[u]=(char)0;
-			
-        in.get(temp);
-		for(y=0; y< 2;y++)
-			{
-			in.get(temp);
-			while(chrcmpI(&temp,&sep))
-			{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-			}
-			spells[tempid].Spacing3[y]=atoi(token);
-			//cout << spells[tempid].base[y] << '^';
-			a=0;
-			for(u=0;u<64;u++)
-			token[u]=(char)0;
-			}
-
-        in.get(temp);
-	    while(chrcmpI(&temp,&sep))
-			{
-			strncat(token,&temp,1);
-			a++;
-			in.get(temp);
-			}
-		spells[tempid].RecourseLink = atoi(token);
-			//cout << spells[tempid].RecourseLink << '^';
-		a=0;
-		for(u=0;u<64;u++)
-		    token[u]=(char)0;
-
-        while(temp!='\n')
-			in.get(temp);
-		
-		//cout << endl;
-		if(tempid==SPDAT_RECORDS-1) break;
-	} 
-	//for(u=0;u< SPDAT_RECORDS;u++)
-	// cout << u << ' ' << spells[u].name << '^';
-	
-	spells_loaded = true;
-	cout << "Spells loaded.\n";
-	in.close();
-	
-}
-#endif
-
 
 void UpdateWindowTitle(char* iNewTitle) {
 #ifdef WIN32

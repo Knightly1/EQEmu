@@ -24,16 +24,24 @@
 #include "../common/eq_packet_structs.h"
 #include "entity.h"
 #include "mob.h"
+#include "features.h"
 #include "../common/servertalk.h"
 
-#define MAX_GROUP_MEMBERS 6
+enum {	//Group  action fields
+	groupActJoin = 0,
+	groupActLeave = 1,
+	groupActDisband = 6,
+	groupActUpdate = 7,
+	groupActInviteInitial = 9
+};
 
-class Group: public Entity
+class Group /*: public Entity*/
 {
 public:
-	Group::~Group() {}
-	Group::Group(Mob* leader);
-	Group::Group(SendGroup_Struct* sgs);
+	Group(Mob* leader);
+	Group(int32 gid);
+	~Group() {}
+	
 	bool	AddMember(Mob* newmember);
 	void	SendUpdate(int32 type,Mob* member);
 	void	SendWorldGroup(int32 zone_id,Mob* zoningmember);
@@ -46,22 +54,32 @@ public:
 	void	SplitExp(uint32 exp, Mob* other);
 	void	GroupMessage(Mob* sender,const char* message);
 	int32	GetTotalGroupDamage(Mob* other);
-	//Cofruben: Split money used in OP_Split
-	void SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinum);
-	Mob* members[MAX_GROUP_MEMBERS];
-	char	membername[MAX_GROUP_MEMBERS][64];
+	void	SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinum);
 	void	SetLeader(Mob* newleader){ leader=newleader; };
 	Mob*	GetLeader(){ return leader; };
 	char*	GetLeaderName(){ return membername[0]; };
 	void	SendHPPackets(Mob* newmember);
 	bool	UpdatePlayer(Mob* update);
-	void	Remove(Mob* removemob);
+	void	MemberZoned(Mob* removemob);
 	bool	IsLeader(Mob* leadertest) { return leadertest==leader; };
 	int8	GroupCount();
 	int32	GetHighestLevel();
 	void	QueuePacket(const APPLAYER *app, bool ack_req = true);
 	void	TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z);
-
+	bool	LearnMembers();
+	void	VerifyGroup();
+	
+	inline const int32 GetID()	const { return id; }
+	
+#ifdef ENABLE_GROUP_LINKING
+	//linking methods
+	void	ClearLink(int32 clear_id, bool all = false);
+	bool	IsLinked(int32 link_id);
+	void	EstablishLink(int32 link_id);
+#endif
+	
+	Mob* members[MAX_GROUP_MEMBERS];
+	char	membername[MAX_GROUP_MEMBERS][64];
 	bool	disbandcheck;
 	bool	castspell;
 
@@ -77,6 +95,14 @@ public:
 
 private:
 	Mob*	leader;
+#ifdef ENABLE_GROUP_LINKING
+	int32	link[MAX_GROUP_LINKS];
+#endif
+
+protected:
+	friend class EntityList;
+	inline void SetID(int32 set_id) { id = set_id; }
+	int32 id;
 };
 
 #endif

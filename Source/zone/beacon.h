@@ -36,13 +36,13 @@ public:
 	void AELocationSpell(Mob *caster, float range, int16 cast_spell_id);
 
 protected:
-	Timer *remove_timer;
+	Timer remove_timer;
 	bool remove_me;
 
 	int16 spell_id;
 	float spell_range;
 	int spell_iterations;
-	Timer *spell_timer;
+	Timer spell_timer;
 
 	int16 caster_id;
 private:

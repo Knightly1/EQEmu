@@ -386,7 +386,6 @@ void Database::InitVars() {
 
 
 
-
 	loottable_max = 0;
 	lootdrop_max = 0;
 	max_door_type = 0;
@@ -1514,7 +1513,6 @@ void Database::GetCharSelectInfo(int32 account_id, CharacterSelect_Struct* cs) {
 				// Character's equipped items
 				// @merth: Haven't done bracer01/bracer02 yet.
 				// Also: this needs a second look after items are a little more solid
-				// solar: color and all works right now.
 				// NOTE: items don't have a color, players MAY have a tint, if the
 				// use_tint part is set.  otherwise use the regular color
 				inv = new Inventory;
@@ -1900,9 +1898,8 @@ bool Database::SaveInventory(uint32 char_id, const ItemInst* inst, sint16 slot_i
 		}
 		else {
 			// Update/Insert item
-			// solar: color isn't needed
 			uint32 len_query = MakeAnyLenString(&query, "REPLACE INTO inventory (charid,slotid,itemid,charges,color) VALUES(%i,%i,%i,%i,%i)",
-				char_id, slot_id, inst->GetItem()->ItemNumber, inst->GetCharges(),/*inst->GetColor()*/ 0 );
+				char_id, slot_id, inst->GetItem()->ItemNumber, inst->GetCharges(), inst->GetColor() );
 			
 			ret = RunQuery(query, len_query, errbuf);
 		}
@@ -2025,6 +2022,16 @@ bool Database::DeleteCharacter(char *name)
 	}
 
 #if DEBUG >= 5
+	printf(" ptimers");
+#endif
+	RunQuery(query, MakeAnyLenString(&query, "DELETE from timers WHERE char_id='%d'", charid), errbuf, NULL, &affected_rows);
+	if(query)
+	{
+		safe_delete_array(query);
+		query = NULL;
+	}
+
+#if DEBUG >= 5
 	printf(" inventory");
 #endif
 	RunQuery(query, MakeAnyLenString(&query, "DELETE from inventory WHERE charid='%d'", charid), errbuf, NULL, &affected_rows);
@@ -2063,7 +2070,7 @@ bool Database::StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inven
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char query[256+sizeof(PlayerProfile_Struct)*2+sizeof(PlayerAA_Struct)*2+5];
 	char* end = query;
-	char playeraa[500]={0};
+	PlayerAA_Struct playeraa[3];	//*3 > *2+1
 	int32 affected_rows = 0;
 	int i;
 	int32 charid = 0;
@@ -2073,6 +2080,8 @@ bool Database::StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inven
 	MYSQL_ROW row = 0;
 	char zone[50];
 	float x, y, z;
+
+//	memset(&playeraa, 0, sizeof(playeraa));
 
 	// get the char id (used in inventory inserts below)
 	RunQuery
@@ -2102,8 +2111,13 @@ bool Database::StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inven
 		return false;
 	}
 
-
-	strncpy(zone, GetZoneName(pp->zone_id), 49);
+	const char *zname = GetZoneName(pp->zone_id);
+	if(zname == NULL) {
+		//zone not in the DB, something to prevent crash...
+		strncpy(zone, "qeynos", 49);
+		pp->zone_id = 1;
+	} else
+		strncpy(zone, zname, 49);
 	x=pp->x;
 	y=pp->y;
 	z=pp->z;
@@ -2143,12 +2157,11 @@ bool Database::StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inven
 		{
 			MakeAnyLenString
 			(
-				// solar: color isn't needed
 				&invquery,
 				"INSERT INTO inventory SET "
 				"charid=%d, slotid=%d, itemid=%d, charges=%d, color=%d",
 				charid, i, newinv->GetItem()->ItemNumber, 
-				newinv->GetCharges(), /*newinv->GetColor()*/ 0
+				newinv->GetCharges(), newinv->GetColor()
 			);
 
 			RunQuery(invquery, strlen(invquery), errbuf, 0, &affected_rows);
@@ -2192,6 +2205,7 @@ bool Database::SetStartingItems(PlayerProfile_Struct* pp, Inventory* inv, uint32
 		errbuf,
 		&result
 	);
+printf("Starting Items Query: %s\n", query);
 	safe_delete_array(query);
 
 	if(mysql_num_rows(result))
@@ -2201,8 +2215,11 @@ bool Database::SetStartingItems(PlayerProfile_Struct* pp, Inventory* inv, uint32
 			if(row[0] && row[1])
 			{
 				myitem = database.GetItem(atoi(row[0]));
-				if(myitem && myitem->ItemClass == ItemTypeCommon)
+//why would you enforce the items to be common... no books or bags? 
+//				if(myitem && myitem->ItemClass == ItemTypeCommon)
+				if(myitem)
 				{
+
 					ItemCommonInst mycommonitem(myitem, atoi(row[1]));
 					// could use invslot here
 					inv->PutItem(inv->FindFreeSlot(0,0), mycommonitem);
@@ -2222,8 +2239,24 @@ void  Database::SetGroupID(const char* name,int32 id){
     char *query = 0;
 	if (!RunQuery(query, MakeAnyLenString(&query, "update character_ set groupid=%i where name='%s'",id,name), errbuf))
 		printf("Unable to get group id: %s\n",errbuf);	
+printf("Set group id on '%s' to %d\n", name, id);
 	safe_delete_array(query);
 }
+
+
+void Database::ClearGroup(int32 gid) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	if(gid == 0) {  //clear all groups
+		if (!RunQuery(query, MakeAnyLenString(&query, "update character_ set groupid=0 where groupid!=0"), errbuf))
+			printf("Unable to clear groups: %s\n",errbuf);
+	} else {	//clear a specific group
+		if (!RunQuery(query, MakeAnyLenString(&query, "update character_ set groupid=0 where groupid = %lu", gid), errbuf))
+			printf("Unable to clear groups: %s\n",errbuf);
+	}
+	safe_delete_array(query);
+}
+
 int32 Database::GetGroupID(const char* name){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
@@ -2243,8 +2276,10 @@ int32 Database::GetGroupID(const char* name){
 	else
 			printf("Unable to get group id: %s\n",errbuf);
 	safe_delete_array(query);
+printf("Read group ID for '%s': %d\n", name, groupid);
 	return groupid;
 }
+
 char* Database::GetGroupLeaderForLogin(const char* name,char* leaderbuf){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
@@ -2292,85 +2327,6 @@ bool Database::GetCharacterInfoForLogin(const char* name, uint32* character_id, 
 	
 	safe_delete_array(query);
 	return ret;
-}
-void Database::UpdateAndDeleteAATimers(int32 charid){
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-	char *query2 = 0;
-	
-	if (!RunQuery(query, MakeAnyLenString(&query, "delete from aa_timers where charid=%i and UNIX_TIMESTAMP(now())>=end",charid), errbuf)) {
-		LogFile->write(EQEMuLog::Error, "UpdateAATimers query '%s' %s", query, errbuf);
-	}
-	if (!RunQuery(query2, MakeAnyLenString(&query2, "update aa_timers set end=end-(UNIX_TIMESTAMP(now())-begin),begin=UNIX_TIMESTAMP(now()) where charid=%i",charid), errbuf)) {
-		LogFile->write(EQEMuLog::Error, "UpdateAATimers query '%s' %s", query2, errbuf);
-	}
-	safe_delete_array(query);
-	safe_delete_array(query2);
-}
-void Database::UpdateTimersClientConnected(int32 charid){
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-	if (!RunQuery(query, MakeAnyLenString(&query, "update aa_timers set end=(UNIX_TIMESTAMP(now())+(end-begin)),begin=UNIX_TIMESTAMP(now()) where charid=%i",charid), errbuf)) {
-		LogFile->write(EQEMuLog::Error, "UpdateAATimers query '%s' %s", query, errbuf);
-	}
-	safe_delete_array(query);
-}
-#ifdef ZONE
-void Database::GetAATimers(int32 charid){
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-	MYSQL_ROW row;
-	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT ability,begin,end from aa_timers WHERE charid=%i", charid), errbuf, &result)) {
-		while( ( row = mysql_fetch_row(result) ) ){
-			UseAA_Struct* uaa=new UseAA_Struct();
-			uaa->ability=atoi(row[0]);
-			uaa->begin=atoi(row[1]);
-			uaa->end=atoi(row[2]);
-			entity_list.SendAATimer(charid,uaa);
-			safe_delete(uaa);
-		}
-		mysql_free_result(result);
-	}
-	else {
-		LogFile->write(EQEMuLog::Error, "Database::GetAATimers query '%s' %s", query, errbuf);
-	}	
-	safe_delete_array(query);
-}
-#endif
-int32 Database::GetTimerRemaining(int32 charid,int32 ability){
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-	MYSQL_ROW row;
-	int32 remain=0;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT end-begin from aa_timers WHERE charid=%i and ability=%i", charid,ability), errbuf, &result)) {
-		if((row=mysql_fetch_row(result))){
-			remain=atoi(row[0]);
-		}
-		mysql_free_result(result);
-	}
-	else {
-		LogFile->write(EQEMuLog::Error, "Database::GetTimerRemaining query '%s' %s", query, errbuf);
-	}	
-	safe_delete_array(query);
-	return remain;
-}
-void Database::UpdateAATimers(int32 charid,int32 endtime,int32 begintime,int32 ability){
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-	if(begintime==0){
-		if (!RunQuery(query, MakeAnyLenString(&query, "replace into aa_timers (charid,end,begin,ability) values(%i,UNIX_TIMESTAMP(now())+%i,UNIX_TIMESTAMP(now()),%i)",charid,endtime,ability), errbuf)) {
-			LogFile->write(EQEMuLog::Error, "UpdateAATimers query '%s' %s", query, errbuf);
-		}
-	}
-	else{
-		if (!RunQuery(query, MakeAnyLenString(&query, "replace into aa_timers (charid,end,begin,ability) values(%i,%i,%i,%i)",charid,endtime,begintime,ability), errbuf)) {
-			LogFile->write(EQEMuLog::Error, "UpdateAATimers query '%s' %s", query, errbuf);
-		}
-	}
-	safe_delete_array(query);
 }
 // Process results of GetCharacterInfoForLogin()
 // Query this processes: SELECT id,profile,zonename,x,y,z,alt_adv,guild,guildrank FROM character_ WHERE id=%i
@@ -2639,12 +2595,13 @@ bool Database::GetInventory(uint32 char_id, Inventory* inv) {
 	bool ret = false;
 	
 	// Retrieve character inventory
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges FROM inventory WHERE charid=%i ORDER BY slotid", char_id), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges,color FROM inventory WHERE charid=%i ORDER BY slotid", char_id), errbuf, &result)) {
 
 		while ((row = mysql_fetch_row(result))) {	
 			sint16 slot_id	= (sint16)atoi(row[0]);
 			uint32 item_id	= (uint32)atoi(row[1]);
 			sint8 charges	= (uint8)atoi(row[2]);
+			uint32 color		= (uint32)atoi(row[3]);
 			const Item_Struct* item = GetItem(item_id);
 			
 			if (item) {
@@ -2652,6 +2609,9 @@ bool Database::GetInventory(uint32 char_id, Inventory* inv) {
 				
 				if (item->ItemClass == ItemTypeCommon) {
 					ItemCommonInst common(item, charges);
+					if (color > 0)
+						common.SetColor(color);
+					common.SetCharges(charges);
 					put_slot_id = inv->PutItem(slot_id, (ItemInst&)common);
 				}
 				else if (item->ItemClass == ItemTypeContainer) {
@@ -2698,14 +2658,16 @@ bool Database::GetInventory(uint32 account_id, char* name, Inventory* inv) {
 	
 	// Retrieve character inventory
 #ifdef WORLD
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges FROM inventory INNER JOIN character_ ch ON ch.id=charid WHERE ch.name='%s' AND ch.account_id=%i AND slotid<22 ORDER BY slotid", name, account_id), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges,color FROM inventory INNER JOIN character_ ch ON ch.id=charid WHERE ch.name='%s' AND ch.account_id=%i AND slotid<22 ORDER BY slotid", name, account_id), errbuf, &result))
 #else
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges FROM inventory INNER JOIN character_ ch ON ch.id=charid WHERE ch.name='%s' AND ch.account_id=%i ORDER BY slotid", name, account_id), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges,color FROM inventory INNER JOIN character_ ch ON ch.id=charid WHERE ch.name='%s' AND ch.account_id=%i ORDER BY slotid", name, account_id), errbuf, &result))
 #endif
+	{
 		while ((row = mysql_fetch_row(result))) {
 			sint16 slot_id	= (sint16)atoi(row[0]);
 			uint32 item_id	= (uint32)atoi(row[1]);
 			sint8 charges	= (sint8)atoi(row[2]);
+			uint32 color		= (uint32)atoi(row[3]);
 			
 			const Item_Struct* item = GetItem(item_id);
 			sint16 put_slot_id = SLOT_INVALID;
@@ -2713,6 +2675,9 @@ bool Database::GetInventory(uint32 account_id, char* name, Inventory* inv) {
 				continue;
 			if (item->ItemClass == ItemTypeCommon) {
 				ItemCommonInst common(item, charges);
+				if (color > 0)
+					common.SetColor(color);
+				common.SetCharges(charges);
 				put_slot_id = inv->PutItem(slot_id, (ItemInst&)common);
 			}
 			else if (item->ItemClass == ItemTypeContainer) {
@@ -4011,10 +3976,13 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 	
 	#ifdef FIELD_ITEMS
 		// Retrieve all items from database
+		
+		//IF YOU CHANGE THIS QUERY, YOU MUST UPDATE THE RESULT OFFSETS
+		//IN THE CODE BELOW (for books and containers)!!!
 		char query[] =
 			"SELECT charges,unknown002,unknown003,merchantprice,unknown005,"
 			"unknown006,unknown007,unknown008,itemclass,name,lore,idfile,id,weight,norent,"
-			"nodrop,size,slots,cost,icon,unknown018,unknown019,unknown020,"
+			"nodrop,attuneable,size,slots,cost,icon,unknown018,unknown019,unknown020,"
 			"tradeskills,cr,dr,pr,mr,fr,astr,asta,aagi,adex,acha,aint,awis,hp,"
 			"mana,ac,deity,skillmodvalue,skillmodtype,banedmgrace,banedmgamt,"
 			"banedmgbody,magic,casttime2,hasteproclvl,reqlevel,bardtype,bardvalue,"
@@ -4058,18 +4026,19 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 				item.Weight						= (uint8)atoi(row[idx++]);
 				item.NoRent						= (uint8)atoi(row[idx++]);
 				item.NoDrop						= (uint8)atoi(row[idx++]);
+				item.Attuneable					= atoi(row[idx++])?1:0;
 				item.Size						= (int8)atoi(row[idx++]);
 				item.EquipSlots					= (uint32)atoi(row[idx++]);
 				item.Cost						= atoi(row[idx++]);
 				item.IconNumber					= atoi(row[idx++]);
 				if (item.ItemClass == ItemTypeBook) { // Books
-					idx = 106;
+					idx = 107;
 					item.Book.Unknown105			= (uint32)atoi(row[idx++]);
 					item.Book.BookType				= (uint8)atoi(row[idx++]);
 					strcpy(item.Book.File, row[idx++]);
 				}
 				else if (item.ItemClass == ItemTypeContainer) { // Containers
-					idx = 101;
+					idx = 103;
 					item.Container.PackType			= (int8)atoi(row[idx++]);
 					item.Container.Slots			= (int8)atoi(row[idx++]);
 					item.Container.SizeCapacity		= (int8)atoi(row[idx++]);
@@ -4122,7 +4091,7 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 					item.Common.Unknown061			= (uint32)atoi(row[idx++]);
 					item.Common.SpellId				= (sint16)atoi(row[idx++]);
 					item.Common.MaxCharges			= (sint8)atoi(row[idx++]);
-					item.Common.Skill				= (uint8)atoi(row[idx++]);
+					item.Common.ItemUse				= (uint8)atoi(row[idx++]);
 					item.Common.Material			= (uint8)atoi(row[idx++]);
 					item.Common.SellRate			= (float)atof(row[idx++]);
 					item.Common.Unknown067			= (uint32)atoi(row[idx++]);
@@ -4660,23 +4629,23 @@ const NPCType* Database::GetNPCType (uint32 id) {
                tmpNPCType->bodytype = (int8)atoi(row[25]);
             else
                tmpNPCType->bodytype = 0;
-			   tmpNPCType->npc_faction_id = atoi(row[26]);
-			   tmpNPCType->luclinface = atoi(row[27]);
+			tmpNPCType->npc_faction_id = atoi(row[26]);
+			tmpNPCType->luclinface = atoi(row[27]);
 
             // set defaultvalue for aggroradius
             if (tmpNPCType->aggroradius <= 0)
                tmpNPCType->aggroradius = 70;
 
-			   tmpNPCType->see_invis = atoi(row[28]);			// Mongrel: Set see_invis flag
-			   tmpNPCType->see_invis_undead = atoi(row[29]);	// Mongrel: Set see_invis_undead flag
+			tmpNPCType->see_invis = atoi(row[28]);			// Mongrel: Set see_invis flag
+			tmpNPCType->see_invis_undead = atoi(row[29]);	// Mongrel: Set see_invis_undead flag
             if (row[30] != NULL)
-			      strncpy(tmpNPCType->lastname, row[30], 32);
-		      tmpNPCType->qglobal = atoi(row[31]);	// qglobal
-		      tmpNPCType->AC = atoi(row[32]);
+				    	strncpy(tmpNPCType->lastname, row[30], 32);
+		    tmpNPCType->qglobal = atoi(row[31]);	// qglobal
+		    tmpNPCType->AC = atoi(row[32]);
 
             // If NPC with duplicate NPC id already in table,
             // free item we attempted to add.
-	    if (zone->npctable.find(tmpNPCType->npc_id) != zone->npctable.end())
+	    	if (zone->npctable.find(tmpNPCType->npc_id) != zone->npctable.end())
             {
                cerr << "Error loading duplicate NPC "
                     << tmpNPCType->npc_id << endl;
@@ -5956,7 +5925,7 @@ int8 Database::GetUseCFGSafeCoords()
 	return 0;
 	
 }
-bool Database::MoveCharacterToZone(char* charname, const char* zonename,int32 zoneid) {
+bool Database::MoveCharacterToZone(const char* charname, const char* zonename,int32 zoneid) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
 	int32	affected_rows = 0;
@@ -5972,7 +5941,7 @@ bool Database::MoveCharacterToZone(char* charname, const char* zonename,int32 zo
 	
 	return true;
 }
-bool Database::MoveCharacterToZone(char* charname, const char* zonename) {
+bool Database::MoveCharacterToZone(const char* charname, const char* zonename) {
 	return MoveCharacterToZone(charname, zonename, GetZoneID(zonename));
 }
 
@@ -6035,252 +6004,6 @@ int8 Database::CopyCharacter(const char* oldname, const char* newname, int32 acc
 	}
 	
 	return 1;
-}
-
-/*
-Get the name of the alternate advancement skill with the given 'index'.
-Return true if the name was found, otherwise false.
-False will also be returned if there is a database error.
-*/
-int8 Database::GetTotalAALevels(int32 skill_id) {
-char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	int total=0;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(ability) from aa_levels where aa_id=%i", skill_id), errbuf, &result)) {
-		safe_delete_array(query);
-		if (mysql_num_rows(result) == 1) {
-			row = mysql_fetch_row(result);
-			total=atoi(row[0]);
-		}
-		mysql_free_result(result);
-	} else {
-		cerr << "Error in GetTotalAALevels '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-	}
-	return total;
-}
-int32 Database::CountAAs(){
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	int count=0;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(title_sid) from altadv_vars"), errbuf, &result)) {
-		if((row = mysql_fetch_row(result))!=NULL)
-			count = atoi(row[0]);
-	}
-	safe_delete_array(query);
-	mysql_free_result(result);
-	return count;
-}
-int32 Database::CountAALevels(){
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	int count=0;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(id) from aa_levels"), errbuf, &result)) {
-		if((row = mysql_fetch_row(result))!=NULL){
-			count = atoi(row[0]);
-			mysql_free_result(result);
-		}
-	}
-	safe_delete_array(query);
-	return count;
-}
-int32 Database::GetSizeAA(){
-	int size=CountAAs()*sizeof(SendAA_Struct);
-	if(size>0)
-		size+=CountAALevels()*sizeof(AA_Ability);
-	return size;
-}
-void Database::LoadAAs(AA_List* load){
-	if(!load)
-		return;
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT skill_id from altadv_vars order by skill_id"), errbuf, &result)) {
-		int skill=0,ndx=0;
-		while((row = mysql_fetch_row(result))!=NULL) {
-			skill=atoi(row[0]);
-			load->aa[ndx]=GetAASkillVars(skill);
-			load->aa[ndx]->seq=ndx+1;
-			ndx++;
-		}
-	}
-	safe_delete_array(query);
-	mysql_free_result(result);
-}
-void Database::RetrieveAALevels(SendAA_Struct* aa_struct){
-	if(!aa_struct)
-		return;
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT ability, increase_amt, level from aa_levels where aa_id=%i order by level asc", aa_struct->id), errbuf, &result)) {
-		int ndx=0;
-		while((row = mysql_fetch_row(result))!=NULL) {
-			aa_struct->abilities[ndx].skill_id=atoi(row[0]);
-			aa_struct->abilities[ndx].increase_amt=atoi(row[1]);
-			aa_struct->abilities[ndx].last_level=atoi(row[2]);
-			ndx++;
-		}
-	}
-	safe_delete_array(query);
-	mysql_free_result(result);
-}
-
-SendAA_Struct* Database::GetAASkillVars(int32 skill_id)
-{
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	SendAA_Struct* sendaa = NULL;
-	uchar* buffer;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT cost, max_level, hotkey_sid, hotkey_sid2, title_sid, desc_sid, type, prereq_skill, prereq_minpoints, spell_type, spell_refresh, classes, berserker,spellid FROM altadv_vars WHERE skill_id=%i", skill_id), errbuf, &result)) {
-		safe_delete_array(query);
-		if (mysql_num_rows(result) == 1) {
-			int total_abilities = GetTotalAALevels(skill_id);
-			int totalsize = total_abilities * sizeof(AA_Ability) + sizeof(SendAA_Struct);
-			buffer = new uchar[totalsize];
-			memset(buffer,0,totalsize);
-			row = mysql_fetch_row(result);
-			sendaa = (SendAA_Struct*)buffer;
-			sendaa->cost=atoi(row[0]);
-			sendaa->cost2=sendaa->cost;
-			sendaa->max_level=atoi(row[1]);
-			sendaa->hotkey_sid=atoi(row[2]);
-			sendaa->id=skill_id;
-			sendaa->hotkey_sid2=atoi(row[3]);
-			sendaa->title_sid=atoi(row[4]);
-			sendaa->desc_sid=atoi(row[5]);
-			sendaa->type=atoi(row[6]);
-			sendaa->prereq_skill=atoi(row[7]);
-			sendaa->prereq_minpoints=atoi(row[8]);
-			sendaa->spell_type=atoi(row[9]);
-			sendaa->spell_refresh=atoi(row[10]);
-			sendaa->classes=atoi(row[11]);
-			sendaa->berserker=atoi(row[12]);
-			sendaa->last_id=0xFFFFFFFF;
-			sendaa->current_level=1;
-			sendaa->spellid=atoi(row[14]);
-			switch(sendaa->type){
-				case 1:
-					sendaa->class_type=0x33;
-					break;
-				case 2:
-					sendaa->class_type=0x37;
-					break;
-				case 3:
-					sendaa->class_type=0x3B;
-					break;
-				case 4:
-					sendaa->class_type=0x3D;
-					break;
-				case 5:
-					sendaa->class_type=0x3E;
-					break;
-			}
-			sendaa->total_abilities=total_abilities;
-			if(sendaa->hotkey_sid==0xFFFFFFFF)
-				sendaa->next_id=skill_id+1;
-			else
-				sendaa->next_id=0xFFFFFFFF;
-			RetrieveAALevels(sendaa);
-		}
-		mysql_free_result(result);
-	} else {
-		cerr << "Error in GetAASkillVars '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-	}
-	return sendaa;
-}
-
-/*
-Update the player alternate advancement table for the given account "account_id" and character name "name"
-Return true if the character was found, otherwise false.
-False will also be returned if there is a database error.
-*/
-bool Database::SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa)
-{
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char query[256+sizeof(PlayerAA_Struct)*2+1];
-	char* end = query;
-	
-	end += sprintf(end, "UPDATE character_ SET alt_adv=\'");
-	end += DoEscapeString(end, (char*)aa, sizeof(PlayerAA_Struct));
-	*end++ = '\'';
-	end += sprintf(end," WHERE account_id=%d AND name='%s'", account_id, name);
-	
-	int32 affected_rows = 0;
-    if (!RunQuery(query, (int32) (end - query), errbuf, 0, &affected_rows)) {
-        cerr << "Error in SetPlayerAlternateAdv query " << errbuf << endl;
-		return false;
-    }
-	
-	if (affected_rows == 0) {
-		return false;
-	}
-	
-	return true;
-}
-
-/*
-Get the player alternate advancement table for the given account "account_id" and character name "name"
-Return true if the character was found, otherwise false.
-False will also be returned if there is a database error.
-*/
-int32 Database::GetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa)
-{
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	
-	unsigned long* lengths;
-	unsigned long len = 0;
-	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT alt_adv FROM character_ WHERE account_id=%i AND name='%s'", account_id, name), errbuf, &result)) {
-		safe_delete_array(query);
-		if (mysql_num_rows(result) == 1) {	
-			row = mysql_fetch_row(result);
-			lengths = mysql_fetch_lengths(result);
-			len = result->lengths[0];
-			//if (lengths[0] == sizeof(PlayerAA_Struct)) {
-			if(row[0] && lengths[0] >= sizeof(PlayerAA_Struct)) {
-				memcpy(aa, row[0], sizeof(PlayerAA_Struct));
-			} else { // let's support ghetto-ALTERed databases that don't contain any data in the alt_adv column
-				memset(aa, 0, sizeof(PlayerAA_Struct));
-				len = sizeof(PlayerAA_Struct);
-			}
-			//}
-			//else {
-			//cerr << "Player alternate advancement table length mismatch in GetPlayerAlternateAdv" << endl;
-			//mysql_free_result(result);
-			//return false;
-			//}
-		}
-		else {
-			mysql_free_result(result);
-			return 0;
-		}
-		mysql_free_result(result);
-		//		unsigned long len=result->lengths[0];
-		return len;
-	}
-	else {
-		cerr << "Error in GetPlayerAlternateAdv query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return 0;
-	}
-	
-	//return true;
 }
 
 bool Database::SetHackerFlag(const char* accountname, const char* charactername, const char* hacked) {
@@ -7265,9 +6988,10 @@ bool Database::GetStartZone(PlayerProfile_Struct* in_pp, CharCreate_Struct* in_c
 		errbuf,
 		&result
 	);
+LogFile->write(EQEMuLog::Status, "Start zone query: %s\n", query);
 	safe_delete_array(query); 
-
-	if((rows = mysql_num_rows(result)) == 1)
+	
+	if((rows = mysql_num_rows(result)) > 0)
 		row = mysql_fetch_row(result);
 	if(result) mysql_free_result(result);	
 
@@ -7457,14 +7181,15 @@ void Database::ConvertItemBlob()
 				newitem.Common.RecommendedLevel = olditem->common.RecLevel;
 				newitem.Common.RequiredLevel = olditem->common.ReqLevel;
 				//newitem.Common.SizeType = olditem->common.?
-				newitem.Common.Skill = olditem->common.skill;
+				newitem.Common.ItemUse = olditem->common.skill;
 				newitem.Common.SkillModValue = olditem->common.skillModPercent;
 				newitem.Common.SpellId = olditem->common.spellId;
 				//newitem.Common.SpellIdOther = olditem->common.spellId0;
 				newitem.Common.STA = olditem->common.STA;
 				//newitem.Common.Stackable = olditem->common.normal.stackable;
-				if ((olditem->common.normal.stackable) && (newitem.Common.Skill==0))
-					newitem.Common.Skill = 17;
+//TODO: do something else for stackable items...
+				if ((olditem->common.normal.stackable) && (newitem.Common.ItemUse==0))
+					newitem.Common.ItemUse = ItemUseStackable;
 				//newitem.Common.StackCount = olditem->common.number;
 				newitem.Common.STR = olditem->common.STR;
 				newitem.Common.SvCold = olditem->common.CR;
@@ -7535,7 +7260,7 @@ void Database::ConvertItemBlob()
 					newitem.Common.Delay, newitem.Common.EffectType, newitem.Common.Range, newitem.Common.Damage, newitem.Common.Material,
 				newitem.Common.MaxCharges, newitem.Common.RecommendedLevel,
 				newitem.Common.RequiredLevel, newitem.Common.HP, newitem.Common.Mana, newitem.Common.AC, newitem.Common.Color,
-				newitem.Common.Classes, newitem.Common.Races, newitem.Common.SpellId, newitem.Common.CastTime, newitem.Common.FocusId, newitem.Common.Skill
+				newitem.Common.Classes, newitem.Common.Races, newitem.Common.SpellId, newitem.Common.CastTime, newitem.Common.FocusId, newitem.Common.ItemUse
 				);
 			
 			if (!RunQuery(query2, len, errbuff))
@@ -7551,6 +7276,83 @@ void Database::ConvertItemBlob()
 		cout << "ERROR:\r\n" << query1 << "\r\n\r\n" << errbuff << endl;
 		DebugBreak();
 	}
+}
+
+
+int8 Database::GetRaceSkill(int8 skillid, int8 in_race)
+{
+	int16 race_cap = 0;
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char *query = 0;
+	int32	affected_rows = 0;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+
+	//Check for a racial cap!
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT skillcap from race_skillcaps where skill = %i && race = %i", skillid, in_race), errbuf, &result, &affected_rows))
+	{
+		if (affected_rows != 0)
+		{
+			row = mysql_fetch_row(result);
+			race_cap = atoi(row[0]);
+		}
+		delete[] query;
+		mysql_free_result(result);
+	}
+
+	return race_cap;
+}
+
+int8 Database::GetSkillCap(int8 skillid, int8 in_race, int8 in_class, int16 in_level)
+{
+	int8 skill_level = 0, skill_formula = 0;
+	int16 base_cap = 0, skill_cap = 0, skill_cap2 = 0, skill_cap3 = 0;
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char *query = 0;
+	int32	affected_rows = 0;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	//Fetch the data from DB.
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT level, formula, pre50cap, post50cap, post60cap from skillcaps where skill = %i && class = %i", skillid, in_class), errbuf, &result, &affected_rows))
+	{
+		if (affected_rows != 0)
+		{
+			row = mysql_fetch_row(result);
+			skill_level = atoi(row[0]);
+			skill_formula = atoi(row[1]);
+			skill_cap = atoi(row[2]);
+			if (atoi(row[3]) > skill_cap)
+				skill_cap2 = (atoi(row[3])-skill_cap)/10; //Split the post-50 skill cap into difference between pre-50 cap and post-50 cap / 10 to determine amount of points per level.
+			skill_cap3 = atoi(row[4]);
+		}
+		delete[] query;
+		mysql_free_result(result);
+	}
+
+	int race_skill = GetRaceSkill(skillid,in_race);
+
+	if (race_skill > 0 && (race_skill > skill_cap || skill_cap == 0 || in_level < skill_level))
+		return race_skill;
+
+	if (skill_cap == 0) //Can't train this skill at all.
+		return 255; //Untrainable
+
+	if (in_level < skill_level)
+		return 254; //Untrained
+
+	//Determine pre-51 level-based cap
+	if (skill_formula > 0)
+		base_cap = in_level*skill_formula+skill_formula;
+	if (base_cap > skill_cap || skill_formula == 0)
+		base_cap = skill_cap;
+	//If post 50, add post 50 cap to base cap.
+	if (in_level > 50 && skill_cap2 > 0)
+		base_cap += skill_cap2*(in_level-50);
+	//No cap should ever go above its post50cap
+	if (skill_cap3 > 0 && base_cap > skill_cap3)
+		base_cap = skill_cap3;
+	//Base cap is now the max value at the person's level, return it!
+	return base_cap;
 }
 
 #ifdef GUILDWARS

@@ -59,6 +59,9 @@
 #define ServerOP_OOCMute			0x002D
 #define ServerOP_Revoke				0x002E
 #define ServerOP_GuildJoin			0x002F
+#define ServerOP_GroupIDReq			0x0030
+#define ServerOP_GroupIDReply		0x0031
+#define ServerOP_GroupLeave			0x0032	// for disbanding out of zone folks
 
 #define ServerOP_LSInfo				0x1000
 #define ServerOP_LSStatus			0x1001
@@ -84,7 +87,7 @@
 
 #define ServerOP_GuildWarsCycle		0x200F
 #define ServerOP_GWLocation			0x2020
-#define ServerOP_SendGroup			0x1027
+
 /************ PACKET RELATED STRUCT ************/
 class ServerPacket
 {
@@ -475,6 +478,14 @@ struct RevokeStruct {
 	char adminname[64];
 	char name[64];
 	bool toggle; //0 off 1 on
+};
+
+struct ServerGroupIDReply_Struct {
+	int32 start;	//a range of group IDs to use.
+	int32 end;
+};
+struct ServerGroupLeave_Struct {
+	char member_name[64];	//kick this member from their group
 };
 
 #pragma pack()

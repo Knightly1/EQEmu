@@ -32,6 +32,7 @@ extern Database database;
 extern EntityList entity_list;
 
 Doors::Doors(const Door* door)
+:    close_timer(5000)
 {
     db_id = door->db_id;
     door_id = door->door_id;
@@ -53,8 +54,7 @@ Doors::Doors(const Door* door)
     invert_state = door->invert_state;
 		SetOpenState(false);
 
-    close_timer = new Timer(5000);
-    close_timer->Disable();
+    close_timer.Disable();
     
     strncpy(dest_zone,door->dest_zone,16);
     dest_x = door->dest_x;
@@ -66,15 +66,14 @@ Doors::Doors(const Door* door)
 
 Doors::~Doors()
 {
-    safe_delete(close_timer);
 }
 
 bool Doors::Process()
 {
-    if(close_timer && close_timer->Check() && IsDoorOpen())
+    if(close_timer.Enabled() && close_timer.Check() && IsDoorOpen())
     {
 		triggered=false;
-        close_timer->Disable();
+        close_timer.Disable();
         SetOpenState(false);
     }
 	return true;
@@ -149,14 +148,18 @@ void Doors::HandleClick(Client* sender)
 					float modskill=0.0f; 
 					const ItemInst* inst = sender->GetInv().GetItem(SLOT_CURSOR);
 					if (inst && inst->IsType(ItemTypeCommon)
-						&& inst->GetItem()->Common.Skill == 12)
+						&& inst->GetItem()->Common.ItemUse == ItemUseLockPick)
 					{	// we can try to pick the lock with these lock picking tools
 						modskill=sender->GetSkill(PICK_LOCK);
+						
+						//WR: Check the 2nd arg to this, was 25...
+						sender->CheckIncreaseSkill(PICK_LOCK, 1);
 #if EQDEBUG>=5
 						LogFile->write(EQEMuLog::Debug,"Client has lockpicks: skill=%f", modskill);
 #endif
 						if(GetLockpick() <= modskill)
 						{ // lockpick is the minimum skill needed to open the lock
+							
 							if(!IsDoorOpen())
 							{ 
 								md->action = 0x02; 
@@ -166,14 +169,10 @@ void Doors::HandleClick(Client* sender)
 								md->action = 0x03; 
 							}
 							sender->Message_StringID(4,DOORS_SUCCESSFUL_PICK);
-							if(rand()%100<2)	// give credit for trying (maybe)
-								sender->IncreaseSkill(PICK_LOCK);
 						} 
 						else
 						{	// failed to pick the lock
 							sender->Message_StringID(4,DOORS_INSUFFICIENT_SKILL);
-							if(rand()%100<2)	// give credit for trying (maybe)
-								sender->IncreaseSkill(PICK_LOCK);
 							return;
 						} 
 					} 
@@ -196,6 +195,17 @@ void Doors::HandleClick(Client* sender)
 			return;
 		}
 	}
+	
+	// Teleport door?
+    if (opentype == 58 && strncmp(dest_zone,"NONE",sizeof("NONE")) != 0 ){ 
+        if ( strncmp(dest_zone,zone_name,sizeof(zone_name)) == 0){
+            sender->GMMove(dest_x,dest_y,dest_z);
+        }
+        else {
+           	sender->MovePC(dest_zone, dest_x, dest_y, dest_z);
+        }
+		return;
+    }
 
 
 	entity_list.QueueClients(sender, outapp, false);
@@ -217,11 +227,11 @@ void Doors::HandleClick(Client* sender)
 	}
 
     if(!IsDoorOpen() || opentype == 58) {
-        close_timer->Start();
+        close_timer.Start();
 				SetOpenState(true);
     }
     else {
-        close_timer->Disable();
+        close_timer.Disable();
 				SetOpenState(false);
     }
 #endif	// 1
@@ -235,6 +245,29 @@ void Doors::HandleClick(Client* sender)
         }
     }
 }
+
+void Doors::NPCOpen(NPC* sender)
+{
+	if(GetTriggerType() == 255 || GetTriggerDoorID() > 0 || GetLockpick() != 0 || GetKeyItem() != 0 || opentype == 59 || opentype == 58) { // this object isnt triggered or door is locked - NPCs should not open locked doors!
+		return;
+	}
+    APPLAYER* outapp = new APPLAYER(OP_MoveDoor, sizeof(MoveDoor_Struct));
+	MoveDoor_Struct* md=(MoveDoor_Struct*)outapp->pBuffer;
+	md->doorid = door_id;
+	md->action = 0x02;
+	entity_list.QueueCloseClients(sender,outapp,false,200);
+	safe_delete(outapp);
+
+    if(!isopen) {
+        close_timer.Start();
+        isopen=true;
+    }
+    else {
+        close_timer.Disable();
+        isopen=false;
+    }
+}
+
 void Doors::DumpDoor(){
     LogFile->write(EQEMuLog::Debug,
         "db_id:%i door_id:%i zone_name:%s door_name:%s pos_x:%f pos_y:%f pos_z:%f heading:%f",

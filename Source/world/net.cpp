@@ -206,6 +206,8 @@ int main(int argc, char** argv) {
 	database.LoadVariables();
 	LogFile->write(EQEMuLog::Status, "Loading zones..");
 	database.LoadZoneNames();
+	LogFile->write(EQEMuLog::Status, "Clearing groups..");
+	database.ClearGroup();
 	LogFile->write(EQEMuLog::Status, "Loading items..");
 	if (!database.LoadItems()) {
 		LogFile->write(EQEMuLog::Error, "Error: Could not load item data.  But ignoring");

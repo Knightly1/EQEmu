@@ -49,6 +49,9 @@
 #endif
 using namespace std;
 
+//atoi is not int32 or uint32 safe!!!!
+#define atoul(str) strtol(str, NULL, 10)
+
 //class Spawn;
 class Spawn2;
 class NPC;
@@ -201,8 +204,8 @@ public:
 	bool	SaveZoneCFG(int32 zoneid,NewZone_Struct* zd);
 	bool	SaveInventory(uint32 char_id, const ItemInst* inst, sint16 slot_id);
 	bool    logevents(char* accountname,int32 accountid,int8 status,const char* charname,const char* target, const char* descriptiontype, const char* description,int event_nid);
-	bool	MoveCharacterToZone(char* charname, const char* zonename);
-	bool	MoveCharacterToZone(char* charname, const char* zonename,int32 zoneid);
+	bool	MoveCharacterToZone(const char* charname, const char* zonename);
+	bool	MoveCharacterToZone(const char* charname, const char* zonename,int32 zoneid);
 	bool	MoveCharacterToZone(int32 iCharID, const char* iZonename);
 	bool	SetGMSpeed(int32 account_id, int8 gmspeed);
 	int8	GetGMSpeed(int32 account_id);
@@ -293,7 +296,8 @@ public:
 	bool	GetAccountInfoForLogin_result(MYSQL_RES* result, sint16* admin = 0, char* account_name = 0, int32* lsaccountid = 0, int8* gmspeed = 0, bool* revoked = 0);
 	bool	GetCharacterInfoForLogin(const char* name, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, uint32* pplen = 0, PlayerAA_Struct* aa = 0, uint32* aalen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
 	int32	GetGroupID(const char* name);
-	void	SetGroupID(const char* name,int32 id);
+	void	SetGroupID(const char* name, int32 id);
+	void	ClearGroup(int32 gid = 0);
 	char*	GetGroupLeaderForLogin(const char* name,char* leaderbuf);
 	bool	GetCharacterInfoForLogin_result(MYSQL_RES* result, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, uint32* pplen = 0, PlayerAA_Struct* aa = 0, uint32* aalen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
 	bool	SetLocalPassword(uint32 accid, const char* password);
@@ -417,7 +421,10 @@ public:
 	bool	UpdateZoneSafeCoords(const char* zonename, float x, float y, float z);
 	int8	GetUseCFGSafeCoords();
 	int8	CopyCharacter(const char* oldname, const char* newname, int32 acctid);
-	int32	GetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa);
+
+	bool    LoadAAEffects();
+	bool    LoadSwarmSpells();
+//	int32	GetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa);
 	SendAA_Struct*	GetAASkillVars(int32 skill_id);
 	int8	GetTotalAALevels(int32 skill_id);
 	int32	GetSizeAA();
@@ -425,18 +432,24 @@ public:
 	int32	CountAAs();
 	void	LoadAAs(AA_List* load);
 	void	RetrieveAALevels(SendAA_Struct* aa_struct);
+#ifndef FNW_AA
 	bool	SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa);
+#endif
 	bool	SetLSAdmin(int32 account_id, int8 in_status);
 	void	FindAccounts(char* whom, Client* from);
 	float	GetSafePoint(const char* short_name, const char* which);
 	
 	int32   GetZoneForage(int32 ZoneID, int8 skill);    /* for foraging - BoB */
+	int32   GetZoneFishing(int32 ZoneID, int8 skill, uint32 &npc_id, uint8 &npc_chance);
 	void	ModifyGrid(bool remove, int16 id, int8 type = 0, int8 type2 = 0,int16 zoneid = 0);
 	void    ModifyWP(int16 grid_id, int16 wp_num, float xpos, float ypos, float zpos, int32 script=0,int16 zoneid =0);
 	int8    GetGridType(int16 grid,int16 zoneid);
 	int8    GetGridType2(int16 grid,int16 zoneid);
 	bool    GetWaypoints(int16 grid, int16 zoneid, int16 num, wplist* wp);
 	void	AssignGrid(Client *client, float x, float y, int32 id);
+	bool	LoadTraps(const char* zonename);
+	int8	GetSkillCap(int8 skillid, int8 in_race, int8 in_class, int16 in_level);
+	int8	GetRaceSkill(int8 skillid, int8 in_race);
 	
 	//New timezone functions
 	int32	GetZoneTZ(int32 zoneid);

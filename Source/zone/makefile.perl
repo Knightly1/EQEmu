@@ -1,3 +1,4 @@
+
 APP=zone
 SF=../common/EQNetwork.o \
    ../common/timer.o  ../common/packet_dump.o ../common/packet_functions.o \
@@ -10,7 +11,10 @@ SF=../common/EQNetwork.o \
    ../common/dbasync.o zonedbasync.o parser.o embperl.o embparser.o \
    ../common/EMuShareMem.o ../common/EQEMuError.o \
    .obj/debug.o .obj/database.o .obj/Item.o .obj/misc.o \
-   doors.o command.o beacon.o embxs.o
+   doors.o command.o beacon.o embxs.o ../common/ptimer.o \
+   bonuses.o trading.o spdat.o  spell_effects.o aggro.o guilds.o \
+   inventory.o client_mods.o tradeskills.o waypoints.o pets.o \
+   effects.o AA.o trap.o
 
 
 CC=gcc

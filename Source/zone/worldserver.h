@@ -50,6 +50,7 @@ public:
 	bool SendEmoteMessage(const char* to, int32 to_guilddbid, sint16 to_minstatus, int32 type, const char* message, ...);
 	void SetZone(int32 iZoneID);
 	void SetConnectInfo();
+	int32 SendGroupIdRequest();
 	bool RezzPlayer(APPLAYER* rpack,int32 rezzexp, int16 opcode);
 	int32	GetIP()		{ return tcpc->GetrIP(); }
 	int16	GetPort()	{ return tcpc->GetrPort(); }
@@ -61,12 +62,17 @@ public:
 	inline int16	GetErrorNumber()	{ return adverrornum; }
 	inline bool		TryReconnect()		{ return pTryReconnect; }
 	bool oocmuted;
+	
+	int32 NextGroupID();
+	
 private:
 	TCPConnection* tcpc;
 	int16	adverrornum;
 	bool	pTryReconnect;
 	bool	pConnected;
 	
+	int32 cur_groupid;
+	int32 last_groupid;
 };
 #endif
 

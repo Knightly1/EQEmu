@@ -55,6 +55,7 @@ public:
 	void		Disconnect() { tcpc->Disconnect(); }
 	void		IncommingClient(Client* client);
 	void		ChangeWID(int32 iCharID, int32 iWID);
+	void		SendGroupIDs();
 
 	inline const char*	GetZoneName()	{ return zone_name; }
 	inline int32		GetZoneID()		{ return zoneID; }
@@ -131,6 +132,7 @@ public:
 	void	ListLockedZones(const char* to, WorldTCPConnection* connection);
 	Timer* shutdowntimer;
 	Timer* reminder;
+	void	NextGroupIDs(int32 &start, int32 &end);
 protected:
 	friend class ClientListEntry;
 	inline int32	GetNextCLEID() { return NextCLEID++; }
@@ -141,6 +143,7 @@ private:
 	LinkedList<ClientListEntry*> clientlist;
 	Timer*	CLStale_timer;
 	int16	pLockedZones[MaxLockedZones];
+	int32 CurGroupID;
 };
 
 #define CLE_Status_Never		-1

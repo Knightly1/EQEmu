@@ -84,7 +84,7 @@ public:
 
 	bool	LoadAttempted(int32 iNPCID);
 	void	LoadCommands(const char * filename);
-	int 	LoadScript(int npcid, const char * zone, Mob* activater=0);
+	virtual int 	LoadScript(int npcid, const char * zone, Mob* activater=0);
 
 	void	MakeParms(const char * string, int32 npcid);
 	void	MakeVars(std::string text, int32 npcid);
@@ -101,10 +101,10 @@ public:
 	void	scanformat(char *string, const char *format, char arg[10][1024]);
 	bool	SetNPCqstID(int32 iNPCID, sint32 iValue);
 	char *  strrstr(char* string, const char * sub);
-	void	SendCommands(const char * event, int32 npcid, Mob* npcmob, Mob* mob);
+	virtual void	SendCommands(const char * event, int32 npcid, Mob* npcmob, Mob* mob);
 	int32	QGexpdate(char * name, char * options);
 
-	bool	HasQuestFile(int32 npcid);
+	virtual bool	HasQuestFile(int32 npcid);
 
 private:
 

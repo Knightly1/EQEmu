@@ -44,7 +44,6 @@
 
 #include "masterentity.h"
 #include "../common/database.h"
-#include "../common/database.h"
 #include "../common/packet_functions.h"
 #include "../common/packet_dump.h"
 #include "worldserver.h"
@@ -60,6 +59,7 @@
 #include "faction.h"
 #include "../common/crc32.h"
 #include "StringIDs.h"
+#include "map.h"
 using namespace std;
 
 #ifdef GUILDWARS
@@ -85,8 +85,6 @@ extern GuildRanks_Struct guilds[512];
 extern bool spells_loaded;
 extern PetitionList petition_list;
 extern EntityList entity_list;
-
-int glob=0;
 
 int Client::HandlePacket(const APPLAYER *app)
 {
@@ -267,8 +265,11 @@ int Client::HandlePacket(const APPLAYER *app)
 				
 				// Send alt advance exp
 				SendAAStats();
-				if(this->GetLevel()>=51)
-					database.GetAATimers(this->CharacterID());
+				
+				if(GetLevel() >= 51)
+					SendAATimers();
+					//database.GetAATimers(this->CharacterID());
+				
 				if(GuildDBID()!=0 && GuildDBID()!=0xFFFFFFFF)
 					SendGuildMembers(GuildDBID());
 				// Send exp packets
@@ -450,13 +451,16 @@ int Client::HandlePacket(const APPLAYER *app)
 							auto_attack = false;
 							if (IsAIControlled())
 								break;
-							attack_timer->Disable();
-							attack_timer_dw->Disable();
+							attack_timer.Disable();
+							attack_dw_timer.Disable();
+							SetAttackTimer();
 						}
 						else if (app->pBuffer[0] == 1) {
 							auto_attack = true;
 							if (IsAIControlled())
 								break;
+							attack_timer.Enable();
+							attack_dw_timer.Enable();
 							SetAttackTimer();
 						}
 					}
@@ -500,6 +504,77 @@ int Client::HandlePacket(const APPLAYER *app)
 					}
 					break;
 				}
+				case OP_Shielding: {
+					if (shield_target)
+					{
+						entity_list.MessageClose(this,false,100,0,"%s ceases shielding %s.",GetName(),shield_target->GetName());
+						for (int y = 0; y < 2; y++)
+						{
+							if (shield_target->shielder[y].shielder_id == GetID())
+							{
+								shield_target->shielder[y].shielder_id = 0;
+								shield_target->shielder[y].shielder_bonus = 0;
+							}
+						}
+					}
+					Shielding_Struct* shield = (Shielding_Struct*)app->pBuffer;
+					shield_target = entity_list.GetMob(shield->target_id);
+					bool ack = false;
+					ItemInst* inst = GetInv().GetItem(14);
+					if (!shield_target)
+						break;
+					if (inst)
+					{
+						const Item_Struct* shield = inst->GetItem();
+						if (shield && shield->Common.ItemUse == ItemUseShield)
+						{
+							for (int x = 0; x < 2; x++)
+							{
+								if (shield_target->shielder[x].shielder_id == 0)
+								{
+									entity_list.MessageClose(this,false,100,0,"%s uses their shield to guard %s.",GetName(),shield_target->GetName());
+									shield_target->shielder[x].shielder_id = GetID();
+									int shieldbonus = shield->Common.AC*2;
+									switch (GetAA(197))
+									{
+										case 1:
+											shieldbonus = shieldbonus * 115 / 100;
+											break;
+										case 2:
+											shieldbonus = shieldbonus * 125 / 100;
+											break;
+										case 3:
+											shieldbonus = shieldbonus * 150 / 100;
+											break;
+									}
+									shield_target->shielder[x].shielder_bonus = shieldbonus;
+									shield_timer.Start();
+									ack = true;
+									break;
+								}
+							}
+						}
+						else
+						{
+							Message(0,"You must have a shield equipped to shield a target!");
+							shield_target = 0;
+							break;
+						}
+					}
+					else
+					{
+						Message(0,"You must have a shield equipped to shield a target!");
+						shield_target = 0;
+						break;
+					}
+					if (!ack)
+					{
+						Message(0,"No more than two warriors may shield the same being.");
+						shield_target = 0;
+						break;
+					}
+					break;
+				}
 				case OP_Jump: {
 					// neotokyo: here we could reduce fatigue, if we knew how
 					/*
@@ -516,31 +591,39 @@ int Client::HandlePacket(const APPLAYER *app)
 						break;
 					}
 					Consume_Struct* pcs = (Consume_Struct*)app->pBuffer;
+					
+					const Item_Struct* eat_item = GetInv().GetItem(pcs->slot)->GetItem();
 					if (pcs->type == 0x01) {
-					  GetInv().DeleteItem(pcs->slot,1);
 #if EQDEBUG >= 1
-							LogFile->write(EQEMuLog::Debug, "Eating from slot:%i", (int)pcs->slot);
+						LogFile->write(EQEMuLog::Debug, "Eating from slot:%i", (int)pcs->slot);
 #endif
 						// 6000 is the max. value
-						m_pp.hunger_level += 1000;
+						//m_pp.hunger_level += 1000;
+						m_pp.hunger_level += eat_item->Common.CastTime*100;
+						GetInv().DeleteItem(pcs->slot,1);
 					}
 					else if (pcs->type == 0x02) {
-					  GetInv().DeleteItem(pcs->slot,1);
 #if EQDEBUG >= 1
-							LogFile->write(EQEMuLog::Debug, "Drinking from slot:%i", (int)pcs->slot);
+						LogFile->write(EQEMuLog::Debug, "Drinking from slot:%i", (int)pcs->slot);
 #endif
 						// 6000 is the max. value
-						m_pp.thirst_level += 1000;
+						//m_pp.thirst_level += 1000;
+						m_pp.thirst_level += eat_item->Common.CastTime*100;
+						GetInv().DeleteItem(pcs->slot,1);
 					}
 					else {
 						LogFile->write(EQEMuLog::Error, "OP_Consume: unknown type, type:%i", (int)pcs->type);
 						break;
 					}
+					if (m_pp.hunger_level > 6000)
+						m_pp.hunger_level = 6000;
+					if (m_pp.thirst_level > 6000)
+						m_pp.thirst_level = 6000;
 					APPLAYER *outapp;
 					outapp = new APPLAYER(OP_Stamina, sizeof(Stamina_Struct));
 					Stamina_Struct* sta = (Stamina_Struct*)outapp->pBuffer;
-					sta->food = 6000;
-					sta->water = 6000;
+					sta->food = m_pp.hunger_level;
+					sta->water = m_pp.thirst_level;
 
 					//sta->fatigue = m_pp.fatigue;
 					QueuePacket(outapp);
@@ -565,18 +648,18 @@ int Client::HandlePacket(const APPLAYER *app)
 
 					else
 						break;
-  const Item_Struct *item = 0;
-  for (int32 i=0;i<80; i++) {
-    item=database.GetItem(database.GetMerchantData(merchantid,i+1));
-	if(item)
-	{
-	sprintf(msg,"%s^%s,%i,%i,%i,0,1,32767,32767",msg,item->Name,item->ItemNumber,item->Common.ldonpointcost,item->Common.ldonpointtheme);
-	//printf("%s\n",msg);
-	count++;
-	}
-	if(!item)
-		i=80;
-  }
+					  const Item_Struct *item = 0;
+					  for (int32 i=0;i<80; i++) {
+					    item=database.GetItem(database.GetMerchantData(merchantid,i+1));
+						if(item)
+						{
+						sprintf(msg,"%s^%s,%i,%i,%i,0,1,32767,32767",msg,item->Name,item->ItemNumber,item->Common.ldonpointcost,item->Common.ldonpointtheme);
+						//printf("%s\n",msg);
+						count++;
+						}
+						if(!item)
+							i=80;
+					  }
 					//Count
 					//^Item Name,Item ID,Cost in Points,Theme (0=none),0,1,32767,32767
 					APPLAYER* outapp = new APPLAYER(OP_AdventureMerchantResponse,strlen(msg)+2);
@@ -607,17 +690,17 @@ int Client::HandlePacket(const APPLAYER *app)
 
 					const Item_Struct* item = 0;
 
-  for (int32 i=0;i<80; i++) {
-    item=database.GetItem(database.GetMerchantData(merchantid,i+1));
-	if(item && item->ItemNumber == aps->itemid) //This check to make sure that the item is actually on the NPC, people attempt to inject packets to get items summoned...
-	{
-	i=80;
-	}
-	else if(item && item->ItemNumber != aps->itemid)
-	item = 0;
-	else if(!item)
-	i=80;
-  }
+					  for (int32 i=0;i<80; i++) {
+					    item=database.GetItem(database.GetMerchantData(merchantid,i+1));
+						if(item && item->ItemNumber == aps->itemid) //This check to make sure that the item is actually on the NPC, people attempt to inject packets to get items summoned...
+						{
+						i=80;
+						}
+						else if(item && item->ItemNumber != aps->itemid)
+						item = 0;
+						else if(!item)
+						i=80;
+					  }
 					if (!item) {
 						Message(13, "Error: The item you purchased does not exist!");
 						break;
@@ -628,7 +711,7 @@ int Client::HandlePacket(const APPLAYER *app)
 							charges=item->Common.MaxCharges;
 						ItemInst* inst = ItemInst::Create(item,charges);
 						if (inst) {
-							sint16 openslot = m_inv.FindFreeSlot(false,true);
+							sint16 openslot = m_inv.FindFreeSlot(false,true, item->Size);
 							if(openslot == SLOT_INVALID)
 								break;
 							sint32 requiredpts = (sint32)item->Common.ldonpointcost*-1;
@@ -699,7 +782,7 @@ int Client::HandlePacket(const APPLAYER *app)
 					con->playerid = GetID();
 					con->targetid = conin->targetid;
 					if(tmob->IsNPC())
-						con->faction = GetFactionLevel(character_id,tmob->GetNPCTypeID(), race, class_, deity,(tmob->IsNPC()) ? tmob->CastToNPC()->GetPrimaryFaction():0, tmob); // rembrant, Dec. 20, 2001; TODO: Send the players proper deity
+						con->faction = GetFactionLevel(character_id, tmob->GetNPCTypeID(), race, class_, deity,(tmob->IsNPC()) ? tmob->CastToNPC()->GetPrimaryFaction():0, tmob); // rembrant, Dec. 20, 2001; TODO: Send the players proper deity
 					else
 						con->faction = 1;
 					con->level = GetLevelCon(tmob->GetLevel());
@@ -711,7 +794,7 @@ int Client::HandlePacket(const APPLAYER *app)
 					// Mongrel: If we're feigned show NPC as indifferent 
 					if (tmob->IsNPC()) 
 					{ 
-						if (feigned) 
+						if (GetFeigned()) 
 							con->faction = FACTION_INDIFFERENT; 
 					} 
 
@@ -786,7 +869,8 @@ int Client::HandlePacket(const APPLAYER *app)
 						if(slot == SLOT_INVALID)
 						slot = m_inv.FindFreeSlot(false,true);
 
-						if(ClassItemTable[GetClass()][i] != 0 && (slot != SLOT_INVALID) && (m_inv.HasItem(ClassItemTable[GetClass()][i]) == SLOT_INVALID))
+						if(ClassItemTable[GetClass()][i] != 0 && (slot != SLOT_INVALID) 
+							&& (m_inv.HasItem(ClassItemTable[GetClass()][i], 1, invWhereWorn|invWherePersonal) == SLOT_INVALID))
 						{
 						const Item_Struct* item = database.GetItem(ClassItemTable[GetClass()][i]);
 						ItemInst* inst = ItemInst::Create(item, 1);
@@ -963,6 +1047,10 @@ int Client::HandlePacket(const APPLAYER *app)
 						SetDuelTarget(ds->duel_initiator);
 						safe_delete(outapp);
 
+						if (IsCasting())
+							InterruptSpell();
+						if (initiator->CastToClient()->IsCasting())
+							initiator->CastToClient()->InterruptSpell();
 					}
 					break;
 				}
@@ -1002,9 +1090,8 @@ int Client::HandlePacket(const APPLAYER *app)
 						cout << "Wrong size on OP_SpawnAppearance. Got: " << app->size << ", Expected: " << sizeof(SpawnAppearance_Struct) << endl;
 						break;
 					}
-					
 					SpawnAppearance_Struct* sa = (SpawnAppearance_Struct*)app->pBuffer;
-
+					
 					if(sa->spawn_id != GetID())
 						break;
 
@@ -1021,6 +1108,7 @@ int Client::HandlePacket(const APPLAYER *app)
 							playeraction = 0;
 							SetFeigned(false);
 							BindWound(this, false, true);
+							camp_timer.Disable();
 						}
 						else if (sa->parameter == ANIM_SIT) {
 							SetAppearance(1);
@@ -1036,11 +1124,13 @@ int Client::HandlePacket(const APPLAYER *app)
 							SetAppearance(2);
 							playeraction = 2;
 							SetFeigned(false);
+							StopSong();
 						}
 						else if (sa->parameter == ANIM_DEATH) { // feign death too
-							InterruptSpell();
 							SetAppearance(3);
 							playeraction = 3;
+							InterruptSpell();
+							StopSong();
 						}
 						else if (sa->parameter == ANIM_LOOT) {
 							SetAppearance(4);
@@ -1080,11 +1170,11 @@ int Client::HandlePacket(const APPLAYER *app)
 							break;
 						}
 #ifdef GUILDWARS
-if(Admin() == 0)
-{
-m_pp.anon = 0;
-sa->parameter = 0;
-}
+						if(Admin() == 0)
+						{
+							m_pp.anon = 0;
+							sa->parameter = 0;
+						}
 #endif
 						entity_list.QueueClients(this, app, true);
 						UpdateWho();
@@ -1203,18 +1293,25 @@ sa->parameter = 0;
 					break;
 				}
 				case OP_Camp: {
+					//LogFile->write(EQEMuLog::Debug, "%s sent a camp packet.", GetName());
 					Save();
+					LeaveGroup();
 					if (GetGM()) {
 						Disconnect();
 					}
-					// TODO: Implement camp, LD and all that
-					// camp_timer->Start(30000);
+					camp_timer.Start(30000);
+					break;
+				}
+				case OP_Logout: {
+					//LogFile->write(EQEMuLog::Debug, "%s sent a logout packet.", GetName());
+					Save();
+					Disconnect();
 					break;
 				}
 #if 0	//solar: this isn't used anymore, the client doesn't send a packet
 				case OP_SenseHeading: {
 					if (rand()%100 <= 15 && (GetSkill(SENSE_HEADING) < 200) && (GetSkill(SENSE_HEADING) < this->GetLevel()*5+5)) {
-						this->SetSkill(SENSE_HEADING, GetSkill(SENSE_HEADING) + 1);
+						this->SetSkill(SENSE_HEADING, GetRawSkill(SENSE_HEADING) + 1);
 					}
 					break;
 				}
@@ -1222,6 +1319,27 @@ sa->parameter = 0;
 				case OP_FeignDeath: {
 					if(GetClass() != MONK)
 						break;
+					if(!p_timers.Expired(pTimerFeignDeath, false)) {
+						Message(13,"Ability recovery time not yet met.");
+						break;
+					}
+					int reuse = FeignDeathReuseTime;
+					switch (GetAA(aaRapidFeign))
+					{
+						case 1:
+							reuse = 9;
+							break;
+						case 2:
+							reuse = 7;
+							break;
+						case 3:
+							reuse = 5;
+							break;
+					}
+					p_timers.Start(pTimerFeignDeath, reuse-1);
+					
+					//BreakInvis();
+					
 					int16 primfeign = GetSkill(FEIGN_DEATH);
 					int16 secfeign = GetSkill(FEIGN_DEATH);
 					if (primfeign > 100) {
@@ -1240,8 +1358,9 @@ sa->parameter = 0;
 					else {
 						SetFeigned(true);
 					}
+					//what is this doing? why is it doing this and CheckIncreaseSkill??
 					if ((uint16)MakeRandomInt(0, 300) > GetSkill(FEIGN_DEATH) && MakeRandomFloat(0, 4) == 1 && GetSkill(FEIGN_DEATH) < 200 && GetSkill(FEIGN_DEATH) < (uint16)(GetLevel()*5+5) ) {
-						SetSkill(FEIGN_DEATH, GetSkill(FEIGN_DEATH) + 1);
+						SetSkill(FEIGN_DEATH, GetRawSkill(FEIGN_DEATH) + 1);
 					}
 
 					CheckIncreaseSkill(FEIGN_DEATH);
@@ -1251,6 +1370,13 @@ sa->parameter = 0;
 					if(GetSkill(SNEAK) < 1) {
 						break; //You cannot sneak if you do not have sneak
 					}
+					
+					if(!p_timers.Expired(pTimerSneak, false)) {
+						Message(13,"Ability recovery time not yet met.");
+						break;
+					}
+					p_timers.Start(pTimerSneak, SneakReuseTime-1);
+					
 					bool was = sneaking;
 					if (sneaking){
 						sneaking = false;
@@ -1292,6 +1418,14 @@ sa->parameter = 0;
 					if(GetSkill(HIDE) < 1) {
 						break; //You cannot hide if you do not have hide
 					}
+					
+					if(!p_timers.Expired(pTimerHide, false)) {
+						Message(13,"Ability recovery time not yet met.");
+						break;
+					}
+					int reuse = HideReuseTime - GetAA(209);
+					p_timers.Start(pTimerHide, reuse-1);
+					
 					float hidechance = ((GetSkill(HIDE)/300.0f) + .25) * 100;
 					float random = MakeRandomFloat(0, 100);
 					CheckIncreaseSkill(HIDE,15);					
@@ -1307,6 +1441,14 @@ sa->parameter = 0;
 						invisible = true;
 					}
 					if(GetClass() == ROGUE){
+						if (!auto_attack && entity_list.Fighting(this)) {
+							if (MakeRandomInt(0, 300) < (int)GetSkill(HIDE)) {
+								Message(0,"You momentarily duck out of combat.");
+								entity_list.RemoveFromHateLists(this,true);
+							} else {
+								Message(0,"Your attempts to duck out of combat fail.");
+							}
+						}
 						if (invisible){
 							APPLAYER* outapp = new APPLAYER(0x0202,12);
 							uint8 rawData0[12] = { 0x5A, 0x01, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -1357,10 +1499,13 @@ sa->parameter = 0;
 					break;
 				}
 				case OP_ZoneChange: {
+					zoning = true;
 					if (app->size != sizeof(ZoneChange_Struct)) {
 						cout << "Wrong size: OP_ZoneChange, size=" << app->size << ", expected " << sizeof(ZoneChange_Struct) << endl;
 						break;
 					}
+					
+					entity_list.ClearFeignAggro(this);
 					
 #if EQDEBUG >= 5
 					LogFile->write(EQEMuLog::Debug, "Zone request from %s", GetName());
@@ -1408,11 +1553,10 @@ sa->parameter = 0;
 						else
 							strcpy(target_zone, zonesummon_name);
 					}
-					else 
-						if (database.GetZoneName(zc->zoneID))
+					else if (database.GetZoneName(zc->zoneID))
 							strcpy(target_zone, database.GetZoneName(zc->zoneID));
-						else
-							target_zone[0] = 0;
+					else
+						target_zone[0] = 0;
 
 					
 					// this both loads the safe points and does a sanity check on zone name
@@ -1487,6 +1631,7 @@ sa->parameter = 0;
 						else
 							tarz = zone_point->target_z;
 						tarheading = zone_point->target_heading;
+						//strcpy(target_zone,zone_point->target_zone);
 					}
 					// if not -2 -2 -2, zone to these coords. -2, -2, -2 = not a zonesummon zonerequest
 					else if (!(zonesummon_x == -2 && zonesummon_y == -2 && (zonesummon_z == -2 || zonesummon_z == -20))) {
@@ -1606,7 +1751,6 @@ sa->parameter = 0;
 						QueuePacket(outapp);
 						safe_delete(outapp);
 					}
-					//	entity_list.GetGroupByClient(this)->DelMember(this);
 					break;
 				}
 				case OP_DeleteSpawn: {
@@ -2070,6 +2214,7 @@ sa->parameter = 0;
 						LogFile->write(EQEMuLog::Debug, "cs_unknown2: 16 %p %u %u", &castspell->cs_unknown, *(uint16*) castspell->cs_unknown, *(uint16*) castspell->cs_unknown+sizeof(uint16) );
 						LogFile->write(EQEMuLog::Debug, "cs_unknown2: 16 %p %i %i", &castspell->cs_unknown, *(int16*) castspell->cs_unknown, *(int16*) castspell->cs_unknown+sizeof(int16) );
 #endif
+LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", castspell->slot, castspell->spell_id, castspell->target_id);
 
 					if (castspell->slot == 10)	// this means item
 					{
@@ -2110,40 +2255,79 @@ sa->parameter = 0;
 					else	// ability, or regular memmed spell
 					{
 						int16 spell_to_cast = 0;
-
+						
+						//current client seems to send LH in slot 8 now...
+						if(castspell->slot == 8 &&
+							castspell->spell_id == SPELL_LAY_ON_HANDS && GetClass() == PALADIN) {
+							if(!p_timers.Expired(pTimerLayHands)) {
+								Message(13,"Ability recovery time not yet met.");
+								break;
+							}
+							spell_to_cast = SPELL_LAY_ON_HANDS;
+							p_timers.Start(pTimerLayHands, LayOnHandsReuseTime);
+							//database.UpdateAATimers(CharacterID(),LayOnHandsReuseTime,0, 87);//72 minutes
+							AbilityTimer=true;
+							
+						} else if(castspell->slot == 8 &&
+							(castspell->spell_id == SPELL_HARM_TOUCH
+								|| castspell->spell_id == SPELL_HARM_TOUCH2
+							) && GetClass() == SHADOWKNIGHT) {
+							
+							if(!p_timers.Expired(pTimerHarmTouch)) {
+								Message(13,"Ability recovery time not yet met.");
+								break;
+							}
+							
+							if(GetLevel() < 40)
+								spell_to_cast = SPELL_HARM_TOUCH;
+							else
+								spell_to_cast = SPELL_HARM_TOUCH2;
+							p_timers.Start(pTimerHarmTouch, HarmTouchReuseTime);
+							//database.UpdateAATimers(CharacterID(),HarmTouchReuseTime,0, 89);//72 minutes
+							AbilityTimer=true;
+						}
+						
+						//handle disciplines
+						if(castspell->slot == DISCIPLINE_SPELL_SLOT) {
+							if(!UseDiscipline(castspell->spell_id, castspell->target_id)) {
+								printf("Unknown ability being used by %s, spell being cast is: %i\n",GetName(),castspell->spell_id);
+								InterruptSpell(castspell->spell_id);
+							}
+							break;
+						}
+						
 						if(castspell->slot < MAX_PP_MEMSPELL)
 						{
 							spell_to_cast = m_pp.mem_spells[castspell->slot];
-						}
-						else if(castspell->slot == 9)	//ability, LoH, HT, etc
-						{
-							int ability;
-							if(GetClass() == PALADIN)
+							if(spell_to_cast != castspell->spell_id)
 							{
-								ability=87;
-								spell_to_cast = 87;
-							}
-							else if(GetClass() == SHADOWKNIGHT)
-							{
-								ability=89;	// solar: TODO check this value, why is it not 88?
-								spell_to_cast = 88;
-							}
-							else
-							{
-								printf("Unknown ability being used by %s, spell being cast is: %i\n",GetName(),castspell->spell_id);
-								InterruptSpell(castspell->spell_id);
+								InterruptSpell(castspell->spell_id); //CHEATER!!!
 								break;
 							}
-							database.UpdateAATimers(CharacterID(),4320,0,ability);//72 minutes
-							AbilityTimer=true;
 						}
-
-						if(spell_to_cast != castspell->spell_id)
+						/*
+						these are coming through with slot 8 now...
+						else if(castspell->slot == 9)	//discipline, LoH, HT, etc
 						{
-							InterruptSpell(castspell->spell_id); //CHEATER!!!
-							break;
-						}
-
+							if(GetClass() == PALADIN && castspell->spell_id == SPELL_LAY_ON_HANDS)
+							{
+								spell_to_cast = SPELL_LAY_ON_HANDS;
+								p_timers.Start(pTimerLayHands, LayOnHandsReuseTime);
+								CastSpell(spell_to_cast, castspell->target_id, castspell->slot);
+							}
+							else if(GetClass() == SHADOWKNIGHT
+								&& (castspell->spell_id == SPELL_HARM_TOUCH || castspell->spell_id == SPELL_HARM_TOUCH2))
+							{
+								if(GetLevel() < 40)
+									spell_to_cast = SPELL_HARM_TOUCH;
+								else
+									spell_to_cast = SPELL_HARM_TOUCH2;
+								p_timers.Start(pTimerHarmTouch, HarmTouchReuseTime);
+							}
+							else*/
+							//try disciplines
+						AbilityTimer=true;
+						
 						CastSpell(spell_to_cast, castspell->target_id, castspell->slot);
 					}
 					break;
@@ -2156,7 +2340,13 @@ sa->parameter = 0;
 					
 					// @merth: Need to figure out which slot to delete from .. or maybe m_id is the slot?
 					CombatAbility_Struct* ca_atk = (CombatAbility_Struct*) app->pBuffer;
+ 					const ItemInst *inst = GetInv().GetItem(ca_atk->m_id);
+					if (inst && inst->GetItem()->Common.ItemUse == ItemUseAlcohol) {
+						//TODO: grant alcohol bonuses..?
+						CheckIncreaseSkill(ALCOHOL_TOLERANCE,200);
+					}
 					DeleteItemInInventory(ca_atk->m_id, 1);
+					
 					break;
 				}
 				case OP_CombatAbility: {
@@ -2165,355 +2355,31 @@ sa->parameter = 0;
 						break;
 					}
 					
-					if (target) {
-						if(!IsAttackAllowed(target))
-							break;
-
-						CombatAbility_Struct* ca_atk = (CombatAbility_Struct*) app->pBuffer;
-						if ((ca_atk->m_atk == 100)&&(ca_atk->m_type==10)) {    // SLAM - Bash without a shield equipped
-							DoAnim(7);
-							sint32 dmg=(sint32) ((level/10)  * 3  * (GetSkill(BASH) + GetSTR() + level) / (700-GetSkill(BASH)));
-							//this->Message(MT_Emote, "You Bash for a total of %d damage.",  dmg);
-							target->Damage(this, dmg, 0xffff, BASH);
-							
-							CheckIncreaseSkill(BASH);
-							
-							if (GetClass()==WARRIOR&&(GetRace()==BARBARIAN||GetRace()==TROLL||GetRace()==OGRE)) { // large race warriors only *
-								float wisebonus =  (m_pp.WIS > 200) ? 20 + ((m_pp.WIS - 200) * 0.05) : m_pp.WIS * 0.1;
-								if (((55-(GetSkill(BASH)*0.240))+wisebonus > MakeRandomFloat(0, 100))&& (GetSkill(BASH)<(m_pp.level+1)*5))
-										this->SetSkill(BASH,GetSkill(BASH)+1);
-							}
-							break;
-						}
-						
-						if ((ca_atk->m_atk == 11)&&(ca_atk->m_type==51)) { //old was 51
-							const ItemInst* RangeWeapon = m_inv[SLOT_RANGE];
-							if (!RangeWeapon || !RangeWeapon->IsType(ItemTypeCommon)) {
-								Message(0, "Error: RangeWeapon: GetItem(%i)==0, you have nothing to throw!", GetItemIDAt(SLOT_RANGE));
-								break;
-							}
-							
-							const Item_Struct* item = RangeWeapon->GetItem();
-							uint8 WDmg = item->Common.Damage;
-							// Throw stuff
-							DoAnim(5);
-							sint32 TotalDmg = 0;
-							
-							// borrowed this from attack.cpp
-							// chance to hit
-							
-							float chancetohit = GetSkill(51) / 3.75;    // throwing
-							
-							if (GetLevel()-target->GetLevel() < 0) {
-								chancetohit -= (float)((target->GetLevel()-GetLevel())*(target->GetLevel()-GetLevel()))/4;
-							}
-							
-							int16 targetagi = target->GetAGI();
-							int16 playerDex = (int16)GetDEX()/2;
-							
-							targetagi = (targetagi <= 200) ? targetagi:targetagi + ((targetagi-200)/5);
-							chancetohit -= (float)targetagi*0.05;
-							chancetohit += playerDex;
-							chancetohit = (chancetohit > 0) ? chancetohit+30:30;
-							chancetohit = chancetohit > 95 ? 95 : chancetohit; // cap to 95%
-							
-							uint8 levelBonus = (GetSTR()+GetLevel()+GetSkill(51)) / 100;
-							uint8 MaxDmg = (WDmg)*levelBonus;
-							if (MaxDmg == 0)
-								MaxDmg = 1;
-							TotalDmg = 1 + MakeRandomInt(0, MaxDmg);
-							
-							// Hit?
-							if (MakeRandomFloat(0, 100) > chancetohit) {
-									target->Damage(this, 0, 0xffff, THROWING);
-							}
-							else {
-								//this->Message(MT_Emote, "You Hit for a total of %d damage.", TotalDmg);
-								target->Damage(this, TotalDmg, 0xffff, THROWING);
-							}
-							// See if the player increases their skill - with cap
-							float wisebonus =  (GetWIS() > 200) ? 20 + ((GetWIS() - 200) * 0.05) : GetWIS() * 0.1;
-							
-							if (((55-(GetSkill(51)/4))+wisebonus > MakeRandomInt(0, 100)) && GetSkill(51) < (uint16)((GetLevel()*5)+5))
-								SetSkill(51,GetSkill(51)+1);
-							break;
-						}
-						
-						if ((ca_atk->m_atk == 11)&&(ca_atk->m_type==7)) {
-							DoAnim(9);
-							
-							const ItemInst* RangeWeapon = m_inv[SLOT_RANGE];
-							const ItemInst* Ammo = m_inv[SLOT_AMMO];
-							
-							if (!RangeWeapon || !RangeWeapon->IsWeapon()) {
-								Message(0, "Error: Rangeweapon: GetItem(%i)==0, you have nothing to throw!", GetItemIDAt(SLOT_RANGE));
-								break;
-							}
-							if (!Ammo || !Ammo->IsWeapon()) {
-								Message(0, "Error: Ammo: GetItem(%i)==0, you have nothing to throw!", GetItemIDAt(SLOT_RANGE));
-								break;
-							}				
-
-							const Item_Struct* RangeItem = RangeWeapon->GetItem();
-							const Item_Struct* AmmoItem = Ammo->GetItem();
-
-							int range = RangeItem->Common.Range + AmmoItem->Common.Range +5/*Fudge it a little, client will let you hit something at 0 0 0 when you are at 205 0 0*/;
-							range *= range;
-							if(DistNoRootNoZ(*target) > range)
-							{
-								//target is out of range, client does a message
-								break;
-							}
-		
-							float chancetohit = 0;
-							if(target){
-								if(target->IsNPC())
-									chancetohit = GetSkill(ARCHERY) / 3.75;
-								else
-									chancetohit = GetSkill(ARCHERY) / 4.75; //harder to hit players
-
-								if (m_pp.level-target->GetLevel() < 0) {
-									chancetohit -= (float)((target->GetLevel()-m_pp.level)*(target->GetLevel()-m_pp.level))/4;
-								}
-								
-								int16 targetagi = target->GetAGI();
-								int16 playerDex = (int16)(this->itembonuses->DEX + this->spellbonuses->DEX)/2;
-								
-								targetagi = (targetagi <= 200) ? targetagi:targetagi + ((targetagi-200)/5);
-								chancetohit -= (float)targetagi*0.05;
-								chancetohit += playerDex;
-								chancetohit = (chancetohit > 0) ? chancetohit+30:30;
-								chancetohit = chancetohit > 95 ? 95 : chancetohit; // cap to 95%
-								
-								// Hit?
-								if (MakeRandomFloat(0, 200) > chancetohit) {
-									//this->Message(MT_Emote, "You missed your target");
-									//this->Message_StringID(M,GENERIC_MISS,"You","your target.");
-									target->Damage(this, 0, 0xffff, 0x07);
-								}
-								else {
-									const Item_Struct* RangeItem = RangeWeapon->GetItem();
-									const Item_Struct* AmmoItem = Ammo->GetItem();
-									uint16 WDmg = RangeItem->Common.Damage;
-									uint16 ADmg = AmmoItem->Common.Damage;
-									
-									uint16 levelBonus = (GetSTR()+GetLevel()+GetSkill(ARCHERY)) / 100;
-									uint16 MaxDmg = (WDmg+ADmg)*levelBonus;
-									
-									sint32 TotalDmg = 0;
-									sint32 critDmg = 0;
-									
-									if(GetClass()==RANGER) {
-										critDmg = (sint32)(MaxDmg * 1.2);
-									}
-									
-									if (MaxDmg == 0)
-										MaxDmg = 1;
-									TotalDmg = 1 + MakeRandomInt(0, MaxDmg);
-									if(target->IsClient()){ //Tone down pvp damage
-										if(critDmg>0)
-											critDmg-=critDmg/4;
-										TotalDmg-=TotalDmg/4;
-									}
-									// no crits before level 12 cap is maxed
-									if((GetClass()==RANGER)&&(GetSkill(ARCHERY)>65)&&((uint16)MakeRandomInt(0, 355) < (GetSkill(ARCHERY)+playerDex)/2)&&(chancetohit > 85)) {
-										if(target->IsNPC() && !target->IsMoving() && !target->IsRooted() && this->GetLevel()>50){
-											if(this->GetGM())
-												Message(0,"(GM ONLY) Doubling attack damage, npc isnt moving!");
-											critDmg*=2;
-										}
-										char val1[20]={0};
-										entity_list.MessageClose_StringID(this, false, 200, MT_CritMelee, CRITICAL_HIT, GetName(), ConvertArray(critDmg,val1));
-										//this->Message_StringID(MT_CritMelee,CRITICAL_HIT,GetName(),ConvertArray(critDmg,val1));
-										//this->Message(MT_CritMelee, "You score a critical hit!(%d)", critDmg);
-										target->Damage(this, critDmg, 0xffff, 0x07);
-									}
-									else {
-										if(GetClass()==RANGER && !target->IsMoving() && !target->IsRooted() && this->GetLevel()>50){
-											if(this->GetGM())
-												Message(0,"(GM ONLY) Doubling attack damage, npc isnt moving!");
-											TotalDmg*=2;
-										}
-										char hitname[64]={0};
-										strncpy(hitname,target->GetName(),strlen(target->GetName())-2);
-										//char val1[20]={0};
-										//Message_StringID(MT_Emote,HIT_NON_MELEE,"You",hitname,ConvertArray(TotalDmg,val1));
-										//this->Message(MT_Emote, "You Hit for a total of %d non-melee damage.", TotalDmg);
-										target->Damage(this, TotalDmg, 0xffff, 0x07);
-									}
-								}
-							
-								// See if the player increases their skill - with cap
-								float wisebonus =  (GetWIS() > 200) ? 20 + ((GetWIS() - 200) * 0.05) : GetWIS() * 0.1;
-								
-								if (((55-(GetSkill(ARCHERY)*0.240))+wisebonus > MakeRandomFloat(0, 100)) && (GetSkill(ARCHERY)<(m_pp.level+1)*5) && GetSkill(ARCHERY) < 252)
-									this->SetSkill(ARCHERY,GetSkill(ARCHERY)+1);
-							}
-							break;
-						}
-						float multiple=(GetLevel()/5);
-						multiple++;
-						switch(GetClass())
-						{
-						case WARRIOR:
-							if (target!=this) {
-									float dmg=((((GetSkill(KICK) + GetSTR() + GetLevel())/90)*multiple)+10) * ( MakeRandomFloat(0, 1) );
-									if(target->IsClient())
-										dmg*=.76;
-									else{
-										CheckIncreaseSkill(KICK);
-										dmg*=1.2;//small increase for warriors
-									}
-									target->Damage(this, (int32)dmg, 0xffff, 0x1e);
-									DoAnim(1);
-							}
-							break;
-						case RANGER:
-						case BEASTLORD:
-							if (target!=this) {
-									float dmg=((((GetSkill(KICK) + GetSTR() + GetLevel())/250)*multiple)+5) * ( MakeRandomFloat(0, 1) );
-									if(target->IsClient())
-										dmg*=.67;
-									else
-										CheckIncreaseSkill(KICK);
-									target->Damage(this, (int32)dmg, 0xffff, 0x1e);
-									DoAnim(1);
-							}
-							break;
-						case PALADIN:
-						case SHADOWKNIGHT:
-							break;
-						case MONK:
-							CheckIncreaseSkill(ca_atk->m_type);
-							MonkSpecialAttack(target->CastToMob(), ca_atk->m_type);
-							break;
-						case ROGUE:
-							if (ca_atk->m_atk == 100)
-								{uint8 *aa_item = &(((uint8 *)&aa)[124]);// Chaotic backstab TODO make it do min damage
-							if (target && BehindMob(target, GetX(), GetY())) // Player is behind target
-							{
-								// solar - chance to assassinate
-								// TODO: it's set to 40% chance, should be a formula involving DEX
-								float chance=0;
-								if(
-									level >= 60 && // player is 60 or higher
-									target->GetLevel() <= 45 && // mob 45 or under
-									!target->CastToNPC()->IsEngaged() && // not aggro
-									target->GetHP()<=32000 &&
-									(chance = MakeRandomFloat(0, 100)) < 40 // chance
-									&& target->IsNPC()
-									) {
-									//char temp[100];
-									//snprintf(temp, 100, "%s ASSASSINATES their victim!!", this->GetName());
-									//entity_list.MessageClose(this, 0, 200, 10, temp);
- 									entity_list.MessageClose_StringID(this, false, 200, 10, ASSASSINATES, GetName());
-									CheckIncreaseSkill(BACKSTAB);
-									RogueAssassinate(target);
-								}
-								else {
-									RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
-									if ((level > 54) && (target != 0)) {
-										float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
-										// Check for double attack with main hand assuming maxed DA Skill (MS)
-										float random = MakeRandomFloat(0, 1);
-										
-										if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
-											if(target && target->GetHP() > 0)
-												RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
-									}
-									CheckIncreaseSkill(BACKSTAB);
-								}
-							}
-							else if(*aa_item>0) {
-								RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
-								if ((level > 54) && (target != 0)) {
-									float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
-									CheckIncreaseSkill(BACKSTAB);
-									// Check for double attack with main hand assuming maxed DA Skill (MS)
-									float random = MakeRandomFloat(0, 1);
-									if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
-										if(target && target->GetHP() > 0)
-											RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
-								}
-							}
-							else {	// Player is in front of target
-								Attack(target, 13);
-								if ((level > 54) && (target != 0)) {
-									float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
-									
-									// Check for double attack with main hand assuming maxed DA Skill (MS)
-									float random = MakeRandomFloat(0, 1);
-									if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
-										if(target && target->GetHP() > 0)
-											Attack(target, 13);
-								}
-							}
-						}
-						break;
-						}
-					}
+					OPCombatAbility(app);
+					
 					break;
 				}
 				case OP_Taunt: {
-					if (this->GetTarget() == 0)
-						break;
-					if (!this->GetTarget()->IsNPC())
-						break;
-					sint32 newhate, tauntvalue;
 					if (app->size != sizeof(ClientTarget_Struct)) {
 						cout << "Wrong size on OP_Taunt. Got: " << app->size << ", Expected: "<< sizeof(ClientTarget_Struct) << endl;
 						break;
 					}
-
-					CheckIncreaseSkill(TAUNT);
 					
-					// Check to see if we're already at the top of the target's hate list
-					if ((target->CastToNPC()->GetHateTop() != this) && (target->GetLevel() < level))
-					{
-
-						// no idea how taunt success is actually calculated
-						// TODO: chance for level 50+ mobs should be lower
-						float tauntchance;
-						int level_difference = level - target->GetLevel();
-						if (level_difference <= 5) {
-							tauntchance = 25.0;	// minimum
-							tauntchance += tauntchance * (float)GetSkill(TAUNT) / 200.0;	// skill modifier
-							if (tauntchance > 65.0)
-								tauntchance = 65.0;
-						}
-						else if (level_difference <= 10) {
-							tauntchance = 30.0;	// minimum
-							tauntchance += tauntchance * (float)GetSkill(TAUNT) / 200.0;	// skill modifier
-							if (tauntchance > 85.0)
-								tauntchance = 85.0;
-						}
-						else if (level_difference <= 15) {
-							tauntchance = 40.0;	// minimum
-							tauntchance += tauntchance * (float)GetSkill(TAUNT) / 200.0;	// skill modifier
-							if (tauntchance > 90.0)
-								tauntchance = 90.0;
-						}
-						else {
-							tauntchance = 50.0;	// minimum
-							tauntchance += tauntchance * (float)GetSkill(TAUNT) / 200.0;	// skill modifier
-							if (tauntchance > 95.0)
-								tauntchance = 95.0;
-						}
-						if (tauntchance > MakeRandomFloat(0, 100)) {
-							// this is the max additional hate added per succesfull taunt
-							tauntvalue = (int)MakeRandomFloat(1, level * 10.0);
-							//tauntvalue = (sint32) ((float)level * 10.0 * (float)rand()/(float)RAND_MAX + 1);
-							// new hate: find diff of player's hate and whoever's at top of list, add that plus tauntvalue to players hate
-							newhate = target->CastToNPC()->GetNPCHate(target->CastToNPC()->GetHateTop()) - target->CastToNPC()->GetNPCHate(this) + tauntvalue;
-							// add the hate
-							target->CastToNPC()->AddToHateList(this, newhate);
-						}
+					if(!p_timers.Expired(pTimerTaunt, false)) {
+								Message(13,"Ability recovery time not yet met.");
+								break;
 					}
+					p_timers.Start(pTimerTaunt, TauntReuseTime-1);
+					
+					if(!GetTarget()->IsNPC())
+						break;
+					
+					Taunt(GetTarget()->CastToNPC(), false);
 					break;
 				}
 				case OP_InstillDoubt: {
 					//FIXME: Struct is wrong as of 2/25/04 --Shawn319
-					if(app->size != sizeof(Instill_Doubt_Struct))
+					/*if(app->size != sizeof(Instill_Doubt_Struct))
 					{
 						cout << "Wrong size on OP_InstillDoubt. Got: " << app->size << ", Expected: " << sizeof(Instill_Doubt_Struct) << endl;
 						break;
@@ -2523,6 +2389,31 @@ sa->parameter = 0;
 					if (iatk->i_atk == 0x2E) {
 						Message_StringID(4,NOT_SCARING);
 						//Message(4, "You\'re not scaring anyone.");
+					}*/
+					
+					if (!target || !(target->IsNPC() || target->IsClient()) || !CombatRange(target))
+						break;
+					
+					if(!p_timers.Expired(pTimerInstillDoubt, false)) {
+								Message(13,"Ability recovery time not yet met.");
+								break;
+					}
+					p_timers.Start(pTimerInstillDoubt, InstillDoubtReuseTime-1);
+					CheckIncreaseSkill(INTIMIDATION);
+						break;
+					if ((rand()%100 + GetSkill(INTIMIDATION) + GetCHA()/2) >= (uint32)(target->GetLevel()*4 + target->GetWIS()/2)) {
+						//cast fear on them... should prolly be a different spell
+						//and should be un-resistable.
+						SpellOnTarget(229, target);
+						//is there a success message?
+					} else {
+						Message_StringID(4,NOT_SCARING);
+						//Idea from WR:
+						/* if (target->IsNPC() && MakeRandomInt(0,99) < 10 ) {
+							entity_list.MessageClose(target, false, 50, MT_Rampage, "%s lashes out in anger!",target->GetName());
+							//should we actually do this? and the range is completely made up, unconfirmed
+							entity_list.AEAttack(target, 50);
+						}*/
 					}
 					break;
 				}
@@ -2543,6 +2434,8 @@ sa->parameter = 0;
 					// Trade session not started until OP_TradeRequestAck is sent
 					TradeRequest_Struct* msg = (TradeRequest_Struct*) app->pBuffer;
 					trade->Start(msg->to_mob_id);
+					
+					BreakInvis();
 					
 					// Pass trade request on to recipient
 					Mob* with = trade->With();
@@ -2584,13 +2477,15 @@ sa->parameter = 0;
 						with->CastToClient()->QueuePacket(app);
 						
 						// Put trade items/cash back into inventory
-						this->FinishTrade(this);
+						FinishTrade(this);
+						trade->Reset();
 					}
 					else if(with){
 						CancelTrade_Struct* msg = (CancelTrade_Struct*) app->pBuffer;
 						msg->fromid = with->GetID();
 						QueuePacket(app);
 						FinishTrade(this);
+						trade->Reset();
 					}
 					break;
 				}
@@ -2606,14 +2501,25 @@ sa->parameter = 0;
 							other->trade->state = TradeCompleting;
 							trade->state = TradeCompleting;
 							
-							// Audit trade to database for both trade streams
-							other->trade->LogTrade();
-							trade->LogTrade();
+							if (CheckTradeLoreConflict(other) || other->CheckTradeLoreConflict(this))
+							{
+								Message_StringID(13,104);
+								other->Message_StringID(13,104);
+								this->FinishTrade(this);
+								other->FinishTrade(other);
+								other->trade->Reset();
+								trade->Reset();
+							} else {
+								// Audit trade to database for both trade streams
+								other->trade->LogTrade();
+								trade->LogTrade();
 							
-							// Perform actual trade
-							this->FinishTrade(other);
-							other->FinishTrade(this);
-							
+								// Perform actual trade
+								this->FinishTrade(other);
+								other->FinishTrade(this);
+								other->trade->Reset();
+								trade->Reset();
+							}
 							// All done
 							APPLAYER* outapp = new APPLAYER(OP_FinishTrade, 0);
 							other->QueuePacket(outapp);
@@ -2914,38 +2820,77 @@ sa->parameter = 0;
 				case OP_ShopRequest: {
 					// this works
 					Merchant_Click_Struct* mc=(Merchant_Click_Struct*)app->pBuffer;
-					if (app->size == sizeof(Merchant_Click_Struct)) {
-						// Send back opcode OP_ShopRequest - tells client to open merchant window.
+					if (app->size != sizeof(Merchant_Click_Struct))
+						break;
+					// Send back opcode OP_ShopRequest - tells client to open merchant window.
+					//APPLAYER* outapp = new APPLAYER(OP_ShopRequest, sizeof(Merchant_Click_Struct));
+					//Merchant_Click_Struct* mco=(Merchant_Click_Struct*)outapp->pBuffer;
+
+					int merchantid=0;
+					Mob* tmp = entity_list.GetMob(mc->npcid);
+					if (tmp != 0)
+						merchantid=tmp->CastToNPC()->MerchantType;
+
+					int action = 1;
+					if(merchantid == 0)
+					{
 						APPLAYER* outapp = new APPLAYER(OP_ShopRequest, sizeof(Merchant_Click_Struct));
 						Merchant_Click_Struct* mco=(Merchant_Click_Struct*)outapp->pBuffer;
-						
 						mco->npcid = mc->npcid;
 						mco->playerid = 0;
-						mco->unknown[0] = 1; // Merchant command 0x01 = open
+						mco->unknown[0] = 0;
 						mco->unknown[1] = 0x00;
 						mco->unknown[2] = 0x00;
 						mco->unknown[3] = 0x00;
 						mco->unknown[4] = 0xE0;
-						mco->unknown[5] = 0xCB; // 32
-						mco->unknown[6] = 0x90; // 139
-						mco->unknown[7] = 0x3F; // 63
-						
-						outapp->priority = 6;
+						mco->unknown[5] = 0xCB;
+						mco->unknown[6] = 0x90;
+						mco->unknown[7] = 0x3F;
 						QueuePacket(outapp);
 						safe_delete(outapp);
-						
-						int merchantid=0;
-						Mob* tmp = entity_list.GetMob(mc->npcid);
-						if (tmp != 0)
-							merchantid=tmp->CastToNPC()->MerchantType;
-						if(merchantid == 0)
-							break;
-						if(tmp->IsEngaged()){
-							this->Message_StringID(0,MERCHANT_BUSY);
-							break;
-						}
-						BulkSendMerchantInventory(merchantid,mc->npcid);
+						break;
 					}
+					if(tmp->IsEngaged()){
+						this->Message_StringID(0,MERCHANT_BUSY);
+						action = 0;
+					}
+					if (GetFeigned() || IsInvisible())
+					{
+						Message(0,"You cannot use a merchant right now.");
+						action = 0;
+					}
+					int factionlvl = GetFactionLevel(CharacterID(), tmp->CastToNPC()->GetNPCTypeID(), GetRace(), GetClass(), GetDeity(), tmp->CastToNPC()->GetPrimaryFaction(), tmp);
+					if(factionlvl >= 6 && factionlvl != 9)
+					{
+						Message(0,"I will not deal with one such as you!");
+						action = 0;
+					}
+					if (tmp->Charmed())
+					{
+						action = 0;
+					}
+
+					APPLAYER* outapp = new APPLAYER(OP_ShopRequest, sizeof(Merchant_Click_Struct));
+					Merchant_Click_Struct* mco=(Merchant_Click_Struct*)outapp->pBuffer;
+
+					mco->npcid = mc->npcid;
+					mco->playerid = 0;
+					mco->unknown[0] = action; // Merchant command 0x01 = open
+					mco->unknown[1] = 0x00;
+					mco->unknown[2] = 0x00;
+					mco->unknown[3] = 0x00;
+					mco->unknown[4] = 0xE0;
+					mco->unknown[5] = 0xCB; // 32
+					mco->unknown[6] = 0x90; // 139
+					mco->unknown[7] = 0x3F; // 63
+
+					outapp->priority = 6;
+					QueuePacket(outapp);
+					safe_delete(outapp);
+
+					if (action == 1)
+						BulkSendMerchantInventory(merchantid,mc->npcid);
+					
 					break;
 				}
 				case OP_Bazaar: {
@@ -2981,11 +2926,11 @@ sa->parameter = 0;
 					if (item_id == 0) { // Inventory item?
 						char mki[3] = "";
 						if (database.GetVariable("MerchantsKeepItems", mki, 3) && mki[0] == '1'  && tmp->CastToNPC()->CountLoot() != 0 ) {
-							int vlc = tmp->CastToNPC()->CountLoot();
 							int i_slot=database.GetMerchantSlot(merchantid,item_id);
 							int i_quan = tmp->CastToNPC()->GetItem(i_slot)->charges;
 							int i_num = tmp->CastToNPC()->GetItem(i_slot)->item_id;
 #if EQDEBUG>=5
+								int vlc = tmp->CastToNPC()->CountLoot();
 								LogFile->write(EQEMuLog::Debug,"MerchantsKeepItems: vlc:%i i_slot:%i i_quan:%i i_num:%i",vlc, i_slot, i_quan, i_num);
 #endif							
 							item = database.GetItem( i_num );
@@ -3011,6 +2956,11 @@ sa->parameter = 0;
 					}
 					if (!item)
 						break;
+					if (CheckLoreConflict(item))
+					{
+						Message(15,"You can only have one of a lore item.");
+						break;
+					}
 					
 					APPLAYER* outapp = new APPLAYER(OP_ShopPlayerBuy, sizeof(Merchant_Sell_Struct));
 					Merchant_Sell_Struct* mpo=(Merchant_Sell_Struct*)outapp->pBuffer;
@@ -3021,11 +2971,21 @@ sa->parameter = 0;
 					
 					mpo->price = (int)((item->Cost*mp->quantity)*1.27);
 					sint16 freeslotid=0;
-					freeslotid = m_inv.FindFreeSlot(false, true);
-					if(!TakeMoneyFromPP(mpo->price) || freeslotid==SLOT_INVALID)
+					freeslotid = m_inv.FindFreeSlot(false, true, item->Size);
+					
+					//make sure we are not completely full...
+					if(freeslotid == SLOT_CURSOR) {
+						if(m_inv.GetItem(SLOT_CURSOR) != NULL) {
+							Message(13, "You do not have room for any more items.");
+							safe_delete(outapp);
+							break;
+						}
+					}
+					
+					if(freeslotid == SLOT_INVALID || !TakeMoneyFromPP(mpo->price))
 					{
-					safe_delete(outapp);
-					break;
+						safe_delete(outapp);
+						break;
 					}
 
  					string packet;
@@ -3081,7 +3041,10 @@ sa->parameter = 0;
 					Mob* vendor = entity_list.GetMob(mp->npcid);
 					//Item_Struct* item2 = NULL;
 					int32 price=0;
-					const Item_Struct* item = database.GetItem(GetItemIDAt(mp->itemslot));
+					int32 itemid = GetItemIDAt(mp->itemslot);
+					if(itemid == 0)
+						break;
+					const Item_Struct* item = database.GetItem(itemid);
 					
 					if(mp->quantity > 1 && (sint16)mp->quantity > this->GetInv().GetItem(mp->itemslot)->GetCharges())
 						break;
@@ -3121,6 +3084,18 @@ sa->parameter = 0;
 					}
 					else
 						Message(0, "Error #1, item == 0");
+					
+					//not really sure if this make sense:
+					if (item && GetInv().GetItem(mp->itemslot)->IsStackable())
+					{
+						unsigned int i_quan = GetInv().GetItem(mp->itemslot)->GetCharges();
+						if (mp->quantity > i_quan)
+							mp->quantity = i_quan;
+					}
+					else
+					{
+						mp->quantity = 1;
+					}
 					
 					char mki[3] = "";
 					if (database.GetVariable("MerchantsKeepItems", mki, 3)) {
@@ -3166,17 +3141,17 @@ sa->parameter = 0;
 								// Add Item to Merchants inventory
 								vendor->CastToNPC()->AddItem( cur_inr, 1*mp->quantity, vlc);
 							}
-							
-							// Then remove the item from the player
-							this->DeleteItemInInventory(mp->itemslot,1*mp->quantity,false);
-						} else {
-							this->DeleteItemInInventory(mp->itemslot,1*mp->quantity,false);
 						}
 					} else {
 						// Update zones copy of player inventory
 						cout<<"Deleting item..   MerchantsKeepItems not configured"<<endl;
-						this->DeleteItemInInventory(mp->itemslot);
+						//this->DeleteItemInInventory(mp->itemslot);
 					}
+					// Now remove the item from the player, this happens irrguardless of outcome
+					if (!GetInv().GetItem(mp->itemslot)->IsStackable())
+						this->DeleteItemInInventory(mp->itemslot,0,false);
+					else
+						this->DeleteItemInInventory(mp->itemslot,1*mp->quantity,false);
 					
 					APPLAYER* outapp = new APPLAYER(OP_ShopPlayerSell, sizeof(Merchant_Purchase_Struct));
 					Merchant_Purchase_Struct* mco=(Merchant_Purchase_Struct*)outapp->pBuffer;
@@ -3468,29 +3443,41 @@ sa->parameter = 0;
 				case OP_GroupCancelInvite: {
 					GroupGeneric_Struct* gf = (GroupGeneric_Struct*) app->pBuffer;
 					Mob* inviter = entity_list.GetClientByName(gf->name1);
-					if(inviter != 0 && inviter->IsClient())
+					
+					if(inviter != NULL && inviter->IsClient())
 						inviter->CastToClient()->QueuePacket(app);
 
-					database.SetGroupID(GetName(),0);
+					database.SetGroupID(GetName(), 0);
 					break;
 				}
 				case OP_GroupFollow:
 				case OP_GroupFollow2: {
 					GroupGeneric_Struct* gf = (GroupGeneric_Struct*) app->pBuffer;
 					Mob* inviter = entity_list.GetClientByName(gf->name1);
-					if(inviter != 0 && inviter->IsClient()) {
+					
+					if(inviter != NULL && inviter->IsClient()) {
 						isgrouped = true;
 						strcpy(gf->name1,inviter->GetName());
 						strcpy(gf->name2,this->GetName());
-						inviter->CastToClient()->QueuePacket(app);//notify inviter the client accepted
-						Group* group=entity_list.GetGroupByClient(inviter->CastToClient());
-						if(group){
-							if(!group->AddMember(this))
+						
+						Group* group = entity_list.GetGroupByClient(inviter->CastToClient());
+						
+						if(!group){
+							//Make new group
+							group = new Group(inviter);
+							if(!group)
 								break;
-							group->SendUpdate(7,this);
-							group->SendHPPackets(this);
-						}
-						else{
+							entity_list.AddGroup(group);
+							
+							if(group->GetID() == 0) {
+								Message(13, "Unable to get new group id. Cannot create group.");
+								inviter->Message(13, "Unable to get new group id. Cannot create group.");
+								break;
+							}
+							
+							//now we have a group id, can set inviter's id
+							database.SetGroupID(inviter->GetName(), group->GetID());
+							
 							//Invite the inviter into the group first.....dont ask
 							APPLAYER* outapp=new APPLAYER(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 							GroupJoin_Struct* outgj=(GroupJoin_Struct*)outapp->pBuffer;
@@ -3499,38 +3486,40 @@ sa->parameter = 0;
 							outgj->action = 9;
 							inviter->CastToClient()->QueuePacket(outapp);
 							safe_delete(outapp);
-
-							//Make new group
-							Group* ng = new Group(inviter);
-							entity_list.AddGroup(ng);
-							if(!ng->AddMember(this))
-								break;
-							ng->SendUpdate(7,this);
-							ng->SendHPPackets(this);
-							cout << "New group created" << endl;
 						}
+						if(!group)
+							break;
+						
+						inviter->CastToClient()->QueuePacket(app);//notify inviter the client accepted
+						
+						if(!group->AddMember(this))
+							break;
+						group->SendUpdate(7,this);
+						group->SendHPPackets(this);
+						
 					}
 					break;
 				}
 				case OP_GroupDisband: {
 					printf("Member Disband Request\n");
+					
 					GroupGeneric_Struct* gd = (GroupGeneric_Struct*) app->pBuffer;
-					Group* group = entity_list.GetGroupByClient(this);
-					if((group && group->IsLeader(this) && target == 0) || (group && group->GroupCount()<3)) {
-						if (group)
-							group->DisbandGroup();
-					}
-					else if (this->isgrouped && group != 0)
-					{
+					Group* group = GetGroup();
+					
+					if(!group)
+						break;
+					
+					if((group->IsLeader(this) && target == 0) || (group->GroupCount()<3)) {
+						group->DisbandGroup();
+					} else {
 						group->DelMember(entity_list.GetMob(gd->name2),false);
-						database.SetGroupID(gd->name2,0);
 					}
 					break;
 				}
 				case OP_GroupDelete: {
 					printf("Group Delete Request\n");
-					Group* group = entity_list.GetGroupByClient(this);
-					if (this->isgrouped && group != 0)
+					Group* group = GetGroup();
+					if (group)
 						group->DisbandGroup();
 					break;
 				}
@@ -3599,8 +3588,8 @@ sa->parameter = 0;
 					if(dss->spell_slot < 0 || dss->spell_slot > MAX_PP_SPELLBOOK)
 						break;
 					
-					if(m_pp.spell_book[dss->spell_slot] != 0xFFFFFFFF) {
-						m_pp.spell_book[dss->spell_slot] = 0xFFFFFFFF;
+					if(m_pp.spell_book[dss->spell_slot] != SPELLBOOK_UNKNOWN) {
+						m_pp.spell_book[dss->spell_slot] = SPELLBOOK_UNKNOWN;
 						dss->success = 1;
 					}
 					else
@@ -3745,12 +3734,16 @@ sa->parameter = 0;
 						break;
 					}
 					case PET_GETLOST: {
+						if (mypet->Charmed())
+							break;
 						if (mypet->GetPetType() == 0xFF || !mypet->IsNPC()) {
 							// eqlive ignores this command
 							// we could just remove the charm
 							// and continue
 							mypet->BuffFadeByEffect(SE_Charm);
 							break;
+						} else {
+							SetPet(NULL);
 						}
 						if (mypet == GetFamiliar()) {
 							SetFamiliarID(0);
@@ -3776,6 +3769,13 @@ sa->parameter = 0;
 						break;
 					}
 					case PET_TAUNT: {
+						Message(0,"%s says, 'Now taunting foes, Master!",mypet->GetName());
+						mypet->CastToNPC()->SetTaunting(true);
+						break;
+					}
+					case PET_NOTAUNT: {
+						Message(0,"%s says, 'No longer taunting foes, Master!",mypet->GetName());
+						mypet->CastToNPC()->SetTaunting(false);
 						break;
 					}
 					case PET_GUARDME: {
@@ -3787,6 +3787,7 @@ sa->parameter = 0;
 					case PET_SITDOWN: {
 						mypet->Say_StringID(PET_SIT_STRING);
 						mypet->SetPetOrder(SPO_Sit);
+						mypet->SetRunAnimSpeed(0);
 						if(!mypet->UseBardSpellLogic())	// solar: maybe we can have a bard pet
 							mypet->InterruptSpell(); //Baron-Sprite: No cast 4 u. // neotokyo: i guess the pet should start casting
 						mypet->SendAppearancePacket(AT_Anim, ANIM_SIT);
@@ -3796,6 +3797,15 @@ sa->parameter = 0;
 						mypet->Say_StringID(PET_SIT_STRING);
 						mypet->SetPetOrder(SPO_Follow);
 						mypet->SendAppearancePacket(AT_Anim, ANIM_STAND);
+						break;
+					}
+					case PET_SLUMBER: {
+						mypet->Say_StringID(PET_SIT_STRING);
+						mypet->SetPetOrder(SPO_Sit);
+						mypet->SetRunAnimSpeed(0);
+						if(!mypet->UseBardSpellLogic())	// solar: maybe we can have a bard pet
+							mypet->InterruptSpell(); //Baron-Sprite: No cast 4 u. // neotokyo: i guess the pet should start casting
+						mypet->SendAppearancePacket(AT_Anim, ANIM_DEATH);
 						break;
 					}
 					default: {
@@ -4024,79 +4034,73 @@ sa->parameter = 0;
 					//TODO: Make this toggle a BecomeNPC flag so that it gets updated when people zone in as well; Make combat work with this.
 					break;
 				}
+				case OP_Fishing: {
+					if(!p_timers.Expired(pTimerFishing, false)) {
+						Message(13,"Ability recovery time not yet met.");
+						break;
+					}
+					p_timers.Start(pTimerFishing, FishingReuseTime-1);
+					
+					fishing_timer.Start();
+					break;
+				}
 				// Changes made based on Bobs work on foraging.  Now can set items in the forage database table to 
 				// forage for.
 				case OP_Forage:	{
 					// @merth: This needs to be redone with new item classes
 					
-					uint32 food_id = ForageItem(m_pp.zone_id, GetSkill(FORAGE));
-					const Item_Struct* food_item = database.GetItem(food_id);
-					
-					if (food_item && food_item->Name!=0) {
-						int32 stringid=0;
-						switch(food_id){
-							case 13044:
-								stringid=FORAGE_WATER;
-								break;
-							case 13106:
-								stringid=FORAGE_GRUBS;
-								break;
-							case 13045:
-							case 13046:
-							case 13047:
-							case 13048:
-							case 13419:
-								stringid=FORAGE_FOOD;
-								break;
-							default:
-								stringid=FORAGE_NOEAT;
-						}
-						this->Message_StringID(MT_Skills,stringid);
-						const ItemInst* inst = ItemInst::Create(food_item, 1);
-						this->PutItemInInventory(SLOT_CURSOR,*inst);
-						this->SendItemPacket(SLOT_CURSOR,inst,ItemPacketSummonItem);
+					if(!p_timers.Expired(pTimerForaging, false)) {
+						Message(13,"Ability recovery time not yet met.");
+						break;
 					}
-					else 
-							this->Message_StringID(MT_Skills,FORAGE_FAILED);
+					p_timers.Start(pTimerForaging, ForagingReuseTime-1);
 					
-					//See if the player increases their skill
-					float wisebonus =  (m_pp.WIS > 200) ? 20 + ((m_pp.WIS - 200) * 0.05) : m_pp.WIS * 0.1;
-					if ((55-(GetSkill(FORAGE)*0.236))+wisebonus > MakeRandomFloat(0, 100))
-						this->SetSkill(FORAGE,GetSkill(FORAGE)+1);
+					ForageItem();
 					
 					break;
 				}
 				case OP_Mend: {
 					if(GetClass() != MONK)
 						break;
-					int mendhp = GetMaxHP() / 4;
+					
+					if(!p_timers.Expired(pTimerMend, false)) {
+						Message(13,"Ability recovery time not yet met.");
+						break;
+					}
+					p_timers.Start(pTimerMend, MendReuseTime-1);
+					
+					int num = 25 + 5*GetAA(aaCriticalMend) + 5*GetAA(aaMendingoftheTranquil);
+					int mendhp = (int) GetMaxHP() * num / 100;
 					uint32 noadvance = MakeRandomInt(0, 200);
 					int currenthp = GetHP();
-					if (MakeRandomFloat(0, 100) <= GetSkill(MEND)) {
+					if (MakeRandomInt(0, 100) <= (int)GetSkill(MEND)) {
 						SetHP(GetHP() + mendhp);
 						SendHPUpdate();
 						Message_StringID(4,MEND_SUCCESS);
 						//Message(4, "You mend your wounds and heal some damage");
 					}
-					else if (noadvance > 175 && currenthp > mendhp) {
-						SetHP(GetHP() - mendhp);
-						SendHPUpdate();
-						//Message(4, "You fail to mend your wounds and damage yourself!");
-						Message_StringID(4,MEND_WORSEN);
-					}
-					else if (noadvance > 175 && currenthp <= mendhp) {
-						SetHP(1);
-						SendHPUpdate();
-						//Message(4, "You fail to mend your wounds and damage yourself!");
-						Message_StringID(4,MEND_WORSEN);
+					else if (noadvance > 175) {
+						if(currenthp > mendhp) {
+							SetHP(GetHP() - mendhp);
+							SendHPUpdate();
+							//Message(4, "You fail to mend your wounds and damage yourself!");
+							Message_StringID(4,MEND_WORSEN);
+						} else {
+							SetHP(1);
+							SendHPUpdate();
+							//Message(4, "You fail to mend your wounds and damage yourself!");
+							Message_StringID(4,MEND_WORSEN);
+						}
 					}
 					else	{
 						//Message(4, "You fail to mend your wounds");
 						Message_StringID(4,MEND_FAIL);
 					}
 					
-					if ((GetSkill(MEND) < noadvance) && (MakeRandomFloat(0, 100) < 35) && (GetSkill(MEND) < 101))
-						this->SetSkill(MEND,GetSkill(MEND)+1);
+					if(GetSkill(MEND) < noadvance)
+						CheckIncreaseSkill(MEND);
+					//if ((GetSkill(MEND) < noadvance) && (MakeRandomFloat(0, 100) < 35) && (GetSkill(MEND) < 101))
+					//	this->SetSkill(MEND,GetRawSkill(MEND)+1);
 					break;
 				}
 				case OP_EnvDamage: {
@@ -4106,13 +4110,40 @@ sa->parameter = 0;
 						SetHP(GetHP()-1);//needed or else the client wont acknowledge
 					}
 					
-					if(ed->damage < 0)
-						ed->damage = 31337;
+					int damage = ed->damage;
+					
+					if (ed->dmgtype == 252) {
+						if(CanUseSkill(SAFE_FALL)) {
+							int sv = GetSkill(SAFE_FALL);
+							//this is a total bullshit forumla, somebody find a better one
+							if(MakeRandomInt(0,240) < sv/5)
+								damage = 0;
+							else if(sv > 2)
+								damage = damage * 3 / sv;
+							
+							CheckIncreaseSkill(SAFE_FALL);
+						}
+						
+						switch(GetAA(aaAcrobatics)) {
+						case 1:
+							damage = damage * 95 / 100;
+							break;
+						case 2:
+							damage = damage * 90 / 100;
+							break;
+						case 3:
+							damage = damage * 80 / 100;
+							break;
+						}
+					}
+					
+					if(damage < 0)
+						damage = 31337;
 
 					else if(zone->GetZoneID() == 183 || zone->GetZoneID() == 184)
 						break;
 					else
-						SetHP(GetHP()-ed->damage);
+						SetHP(GetHP() - damage);
 					
 					if(GetHP() <= 0)
 						Death(0,32000);
@@ -4145,21 +4176,28 @@ sa->parameter = 0;
 					//DumpPacket(app);
 					if(app->size!=sizeof(AA_Action)){
 						printf("Error! OP_AAAction size didnt match!\n");
-						break;
+					break;
 					}
 					AA_Action* action=(AA_Action*)app->pBuffer;
-					if(action->action==0)//AA Hotkey
-						ActivateAA(action->ability);
-					else if(action->action==1 && action->unknown08[1]>0 && action->unknown08[1]<=100){ //Adjust exp ratio
-						m_pp.perAA = action->unknown08[1];
-						SendAAStats();
+					
+					if(action->action == aaActionActivate)//AA Hotkey
+						ActivateAA((aaID) action->ability);
+					else if(action->action == aaActionBuy) {
+						BuyAA(action);
 					}
-					else if(action->action==2){ //Turn Off AA Exp
+					else if(action->action == aaActionDisableEXP){ //Turn Off AA Exp
 						m_pp.perAA = 0;
 						SendAAStats();
+					} else if(action->action == aaActionSetEXP) {
+						m_pp.perAA = action->exp_value;
+						if (m_pp.perAA<0 || m_pp.perAA>100) m_pp.perAA=0;	// stop exploit with sanity check
+						// send an update
+						SendAAStats();
+						SendAATable();
+					} else {
+						printf("Unknown AA action: %lu %lu 0x%x %d\n", action->action, action->ability, action->unknown08, action->exp_value);
 					}
-					else if(action->action==3)//BUY
-						BuyAA(action);
+					
 					break;
 				}
 				case OP_TraderBuy:{
@@ -4194,7 +4232,7 @@ sa->parameter = 0;
 								if(gis->items[i]>0 && gis->items[i]<database.GetMaxItem() && database.GetItem(gis->items[i])!=0)
 									database.SaveTraderItem(this->CharacterID(),gis->items[i],ints->itemcost[i],i);
 								else
-									i=80; //sony doesnt memset so assume done on first bad item
+									break; //sony doesnt memset so assume done on first bad item
 							}
 							safe_delete(gis);
 							this->Trader_StartTrader();
@@ -4244,12 +4282,21 @@ sa->parameter = 0;
 						DumpPacket(app);
 					}
 					PickPocket_Struct* pick_in = (PickPocket_Struct*) app->pBuffer;
-					LogFile->write(EQEMuLog::Debug,
-						"PickPocket to:%i from:%i myskill:%i type:%i",
-						pick_in->to, pick_in->from ,pick_in->myskill, pick_in->type);
-						
-					Message(13, "Sorry, Pick Pockets is not implemented yet.");
-					break;
+
+					//APPLAYER* outapp = new APPLAYER(OP_PickPocket, sizeof(sPickPocket_Struct));
+					//sPickPocket_Struct* pick_out = (sPickPocket_Struct*) outapp->pBuffer;
+					Mob* victim = entity_list.GetMob(pick_in->to);
+					if (!victim)
+						break;
+					if (victim == this)
+						Message(0,"You catch yourself red-handed.");
+					else if (victim->GetOwnerID())
+						Message(0,"You cannot steal from pets!");
+					else if (victim->IsNPC())
+						victim->CastToNPC()->PickPocket(this);
+					else
+						Message(0,"Stealing from clients not yet supported.");
+					//safe_delete(outapp);
 
 /*
 					APPLAYER* outapp = new APPLAYER(OP_PickPocket, sizeof(sPickPocket_Struct));
@@ -4425,11 +4472,6 @@ sa->parameter = 0;
 					BindWound(bindmob, true);
 					break;
 				}
-				case OP_Disciplines:{
-					ClientDiscipline_Struct* Disc_in = (ClientDiscipline_Struct*) app->pBuffer;
-					Discipline(Disc_in, target);
-					break;
-				}
 				case OP_TrackTarget:{
 					// Looks like an entityid should probably do something with it.
 					IsTracking=(IsTracking==false);
@@ -4437,10 +4479,19 @@ sa->parameter = 0;
 				}
 				case OP_Track:{
 					IsTracking=false;
-					if( ((GetClass()==RANGER) || (GetClass()==DRUID) || (GetClass()==BARD)) && (GetSkill(TRACKING)==0) )
-						SetSkill(TRACKING,1);
 					if(GetClass() != RANGER && GetClass() != DRUID && GetClass() != BARD)
 						break;
+					
+					if(!p_timers.Expired(pTimerTracking, false)) {
+						Message(13,"Ability recovery time not yet met.");
+						break;
+					}
+					p_timers.Start(pTimerTracking, TrackingReuseTime-1);
+					
+					if( GetSkill(TRACKING)==0 )
+						SetSkill(TRACKING,1);
+					else
+						CheckIncreaseSkill(TRACKING,150);
 
 					entity_list.MakeTrackPacket(this);
 					break;
@@ -4496,7 +4547,7 @@ sa->parameter = 0;
 						Message(13, "You can not split money if your not in a group.");
 						break;
 					}
-					Group *cgroup = entity_list.GetGroupByClient(this);
+					Group *cgroup = GetGroup();
 					if(cgroup == NULL) {
 						//invalid group, not sure if we should say more...
 						Message(13, "You can not split money if your not in a group.");
@@ -4509,6 +4560,109 @@ sa->parameter = 0;
 					}
 					cgroup->SplitMoney(split->copper, split->silver, split->gold, split->platinum);
 					
+					break;
+				}
+				
+				case OP_SenseTraps:
+				{
+					if (!CanUseSkill(SENSE_TRAPS))
+						break;
+					
+					if(!p_timers.Expired(pTimerSenseTraps, false)) {
+						Message(13,"Ability recovery time not yet met.");
+						break;
+					}
+					int reuse = SenseTrapsReuseTime;
+					switch(GetAA(aaAdvTrapNegotiation)) {
+						case 1:
+							reuse = reuse * 90/100;
+							break;
+						case 2:
+							reuse = reuse * 75/100;
+							break;
+						case 3:
+							reuse = reuse * 50/100;
+							break;
+					}
+					p_timers.Start(pTimerSenseTraps, reuse-1);
+					
+					Trap* trap = entity_list.FindNearbyTrap(this,100);
+					
+					CheckIncreaseSkill(SENSE_TRAPS);
+					
+					if (trap && trap->skill > 0) {
+						int uskill = GetSkill(SENSE_TRAPS);
+						if ((MakeRandomInt(0,99) + uskill) >= (MakeRandomInt(0,99) + trap->skill*0.75))
+						{
+							float xdif = trap->x - GetX();
+							float ydif = trap->y - GetY();
+							if (xdif == 0 && ydif == 0)
+								Message(MT_Skills,"You sense a trap right under your feet!");
+							else if (xdif > 10 && ydif > 10)
+								Message(MT_Skills,"You sense a trap to the NorthWest.");
+							else if (xdif < -10 && ydif > 10)
+								Message(MT_Skills,"You sense a trap to the NorthEast.");
+							else if (ydif > 10)
+								Message(MT_Skills,"You sense a trap to the North.");
+							else if (xdif > 10 && ydif < -10)
+								Message(MT_Skills,"You sense a trap to the SouthWest.");
+							else if (xdif < -10 && ydif < -10)
+								Message(MT_Skills,"You sense a trap to the SouthEast.");
+							else if (ydif < -10)
+								Message(MT_Skills,"You sense a trap to the South.");
+							else if (xdif > 10)
+								Message(MT_Skills,"You sense a trap to the West.");
+							else
+								Message(MT_Skills,"You sense a trap to the East.");
+							trap->detected = true;
+							break;
+						}
+					}
+					Message(MT_Skills,"You did not find any traps nearby.");
+					break;
+				}
+				case OP_DisarmTraps:
+				{
+					if (!CanUseSkill(DISARM_TRAPS))
+						break;
+					
+					if(!p_timers.Expired(pTimerSenseTraps, false)) {
+						Message(13,"Ability recovery time not yet met.");
+						break;
+					}
+					int reuse = SenseTrapsReuseTime;
+					switch(GetAA(aaAdvTrapNegotiation)) {
+						case 1:
+							reuse = reuse * 90/100;
+							break;
+						case 2:
+							reuse = reuse * 75/100;
+							break;
+						case 3:
+							reuse = reuse * 50/100;
+							break;
+					}
+					p_timers.Start(pTimerSenseTraps, reuse-1);
+					
+					Trap* trap = entity_list.FindNearbyTrap(this,40);
+					if (trap && trap->detected)
+					{
+						int uskill = GetSkill(DISARM_TRAPS);
+						if ((MakeRandomInt(0, 49) + uskill) >= (MakeRandomInt(0, 49) + trap->skill))
+						{
+							Message(MT_Skills,"You disarm a trap.");
+							trap->disarmed = true;
+							trap->respawn_timer.Start(6000000);
+						}
+						else
+						{
+							Message(MT_Skills,"You set off the trap while trying to disarm it!");
+							trap->Trigger(this);
+						}
+						CheckIncreaseSkill(DISARM_TRAPS);
+						break;
+					}
+					Message(MT_Skills,"You did not find any traps close enough to disarm.");
 					break;
 				}
 				case OP_CrashDump:
@@ -4640,7 +4794,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 
 	x_pos		= m_pp.x;
 	y_pos		= m_pp.y;
-	z_pos		= m_pp.z/10;
+	z_pos		= m_pp.z;		//WTF.... this was divided by 10.. WHY??
 	heading		= m_pp.heading;
 	race		= m_pp.race;
 	base_race	= m_pp.race;
@@ -4657,9 +4811,48 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	luclinface	= m_pp.face;
 // vesuvias - appearence fix
 	beard		= m_pp.beard;
+	
+	
+	//if we zone in with invalid Z, fix it.
+	if (zone->map != NULL) {
+		
+		//for whatever reason, LineIntersectsNode is giving better results than FindBestZ
+		
+		NodeRef pnode;
+		VERTEX me;
+		me.x = GetX();
+		me.y = GetY();
+		me.z = GetZ() + (GetSize()==0.0?6:GetSize());
+		pnode = zone->map->SeekNode( zone->map->GetRoot(), me.x, me.y );
+		
+		VERTEX hit;
+		VERTEX below_me(me);
+		below_me.z -= 500;
+		if(!zone->map->LineIntersectsNode(pnode, me, below_me, &hit, NULL) || hit.z < -5000) {
+#if EQDEBUG >= 5
+			LogFile->write(EQEMuLog::Debug, "Player %s started below the zone trying to fix! (%.3f, %.3f, %.3f)", GetName(), me.x, me.y, me.z);
+#endif
+			//theres nothing below us... try to find something to stand on
+			me.z += 200;	//arbitrary #
+			if(zone->map->LineIntersectsNode(pnode, me, below_me, &hit, NULL)) {
+				//+10 so they dont stick in the ground
+				SendTo(me.x, me.y, hit.z + 10);
+				m_pp.z = hit.z + 10;
+			} else {
+				//one more, desperate try
+				me.z += 2000;
+				if(zone->map->LineIntersectsNode(pnode, me, below_me, &hit, NULL)) {
+				//+10 so they dont stick in the ground
+					SendTo(me.x, me.y, hit.z + 10);
+					m_pp.z = hit.z + 10;
+				}
+			}
+		}
+	}
 
-	m_pp.hunger_level = 6000;
-	m_pp.thirst_level = 6000;
+	//m_pp.hunger_level = 6000;
+	//m_pp.thirst_level = 6000;
+	
 	//aa_title	= m_pp.aa_title;
 	//m_pp.timeplayed=64;
 	//m_pp.birthday=1057434792;
@@ -4668,6 +4861,13 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 //	if (admin < 80)
 //		m_pp.gm = 0;
 	
+	if (m_pp.platinum < 0 || m_pp.gold < 0 || m_pp.silver < 0 || m_pp.copper < 0 || m_pp.platinum > 1000000 || m_pp.gold > 1000000 || m_pp.silver > 1000000 || m_pp.copper > 1000000)
+	{
+		m_pp.platinum = 0;
+		m_pp.gold = 0;
+		m_pp.silver = 0;
+		m_pp.copper = 0;
+	}
 	guildeqid = database.GetGuildEQID(guilddbid);
 	if (guildeqid == GUILD_NONE) {
 		guilddbid = 0;
@@ -4685,6 +4885,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 			size = 8;break;
 		case VAHSHIR:
 
+		case FROGLOK: //Frog
 		case BARBARIAN:
 			size = 7;break;
 		case HUMAN:
@@ -4706,6 +4907,15 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 		default:
 			size = 0;break;
 	}
+	
+	//validate skills
+	for (int sk = 1; sk < MAX_PP_SKILL; sk++) {
+		//int cap = GetSkillCap(sk-1);
+		int cap = MaxSkill(sk-1, GetClass(), GetLevel());
+		if (cap >= 254)
+			m_pp.skills[sk] = cap;
+	}
+	
 	if(GetSkill(SWIMMING) < 100)
 		SetSkill(SWIMMING,100);
 #ifdef GUILDWARS
@@ -4774,8 +4984,8 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 		for (i = 0; i < BUFF_COUNT; i++) {
 			for(int z = 0; z < BUFF_COUNT; z++) {
 			// check for duplicates
-				if(buffs[z].spellid != 0xFFFF && buffs[z].spellid == m_pp.buffs[i].spellid) {
-					buffs[z].spellid = 0xFFFF;
+				if(buffs[z].spellid != SPELL_UNKNOWN && buffs[z].spellid == m_pp.buffs[i].spellid) {
+					buffs[z].spellid = SPELL_UNKNOWN;
 					m_pp.buffs[i].spellid = 0xFFFFFFFF;
 				}
 			}
@@ -4783,14 +4993,16 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 			if (m_pp.buffs[i].spellid <= (int32)SPDAT_RECORDS && m_pp.buffs[i].spellid != 0 && m_pp.buffs[i].duration > 0) {
 				if(m_pp.buffs[i].level == 0 || m_pp.buffs[i].level > 100)
 					m_pp.buffs[i].level = 1;
-				buffs[i].spellid = m_pp.buffs[i].spellid;
-				buffs[i].casterlevel = m_pp.buffs[i].level;
-				buffs[i].casterid = 0;
-				buffs[i].durationformula = spells[buffs[i].spellid].buffdurationformula;
-				buffs[i].ticsremaining = m_pp.buffs[i].duration;
+				buffs[i].spellid			= m_pp.buffs[i].spellid;
+				buffs[i].ticsremaining		= m_pp.buffs[i].duration;
+				buffs[i].casterlevel		= m_pp.buffs[i].level;
+				buffs[i].casterid			= 0;
+				buffs[i].durationformula	= spells[buffs[i].spellid].buffdurationformula;
+				buffs[i].poisoncounters		= m_pp.buffs[i].poisoncounters;
+				buffs[i].diseasecounters	= m_pp.buffs[i].diseasecounters;
 			}
 			else {
-				buffs[i].spellid = 0xFFFF;
+				buffs[i].spellid = SPELL_UNKNOWN;
 				m_pp.buffs[i].spellid = 0xFFFFFFFF;
 				m_pp.buffs[i].slotid = 0;
 				m_pp.buffs[i].level = 0;
@@ -4806,8 +5018,8 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 						case SE_Charm:
 						case SE_Rune:
 						case SE_Illusion:
-							buffs[j1].spellid = 0xFFFF;
-							m_pp.buffs[j1].spellid = 0xFFFFFFFF;
+							buffs[j1].spellid = SPELL_UNKNOWN;
+							m_pp.buffs[j1].spellid = SPELLBOOK_UNKNOWN;
 							m_pp.buffs[j1].slotid = 0;
 							m_pp.buffs[j1].level = 0;
 							m_pp.buffs[j1].duration = 0;
@@ -4819,12 +5031,24 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 				}
 			}
 		}
+		
+		//Validity check for memorized
+		for (int mem = 0; mem < 8; mem++)
+		{
+			if (m_pp.mem_spells[mem] < 1 || m_pp.mem_spells[mem] >= (unsigned int)SPDAT_RECORDS || spells[m_pp.mem_spells[mem]].classes[GetClass()-1] < 1 || spells[m_pp.mem_spells[mem]].classes[GetClass()-1] > GetLevel())
+				m_pp.mem_spells[mem] = SPELLBOOK_UNKNOWN;
+		}
+		for (int bk = 0; bk < MAX_PP_SPELLBOOK; bk++)
+		{
+			if (m_pp.spell_book[bk] < 1 || m_pp.spell_book[bk] >= (unsigned int)SPDAT_RECORDS || spells[m_pp.spell_book[bk]].classes[GetClass()-1] < 1 || spells[m_pp.spell_book[bk]].classes[GetClass()-1] > 65)
+				m_pp.spell_book[bk] = SPELLBOOK_UNKNOWN;
+		}
 	}
 	
 	/*
 	if(this->isgrouped) {
 		Group* group;
-		group = entity_list.GetGroupByClient(this);
+		group = GetGroup();
 		for(int z=0; z<5; z++) {
 			memset(m_pp.GMembers[z],0,sizeof(group->members[z]->GetName()));
 		}
@@ -4943,22 +5167,33 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 		m_pp.unknown3920[bp] = rawData8[bp];
 	}
 */
-	int32 groupid=database.GetGroupID(this->GetName());
-	Group* group=0;
-	if(groupid>0){
-		group=entity_list.GetGroupByID(groupid);
+	int32 groupid = database.GetGroupID(GetName());
+printf("Loaded group id %lu from DB.\n", groupid);
+	Group* group = NULL;
+	if(groupid > 0){
+		group = entity_list.GetGroupByID(groupid);
+		if(!group) {	//nobody from our is here... start a new group
+printf("Nobody in group is in this zone, making new group object.");
+			group = new Group(groupid);
+			if(group->GetID() != 0)
+				entity_list.AddGroup(group, groupid);
+			else	//error loading group members...
+				group = NULL;
+		}	//else, somebody from our group is allready here...
+		
 		if(group)
-			group->UpdatePlayer(this->CastToMob());
+			group->UpdatePlayer(this);
 		else
-			database.SetGroupID(this->GetName(),0);
-	}
-	if(groupid<=0 || !group){
+			database.SetGroupID(GetName(), 0);	//cannot re-establish group, kill it
+		
+	} else {	//no group id
+		//clear out the group junk in our PP
 		int xy=0;
-		for(xy=0;xy<6;xy++)
-			memset(m_pp.groupMembers[xy],0,64);
+		for(xy=0;xy < MAX_GROUP_MEMBERS;xy++)
+			memset(m_pp.groupMembers[xy], 0, 64);
 	}
 
-	if(m_pp.z<zone->newzone_data.underworld){
+	if(m_pp.z<zone->newzone_data.underworld) {
 		m_pp.x = zone->newzone_data.safe_x;
 		m_pp.y = zone->newzone_data.safe_y;
 		m_pp.z = zone->newzone_data.safe_z;
@@ -4966,11 +5201,15 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	if(m_pp.class_==SHADOWKNIGHT || m_pp.class_==PALADIN){
 		int32 abilitynum=0;
 		if(m_pp.class_==SHADOWKNIGHT)
-			abilitynum=89;
+			abilitynum = pTimerHarmTouch;
 		else
-			abilitynum=87;
-		int32 remaining=database.GetTimerRemaining(CharacterID(),abilitynum);
-		if(remaining>0 && remaining<15300){
+			abilitynum = pTimerLayHands;
+		//int32 remaining = database.GetTimerRemaining(CharacterID(),abilitynum);
+		
+		//returns 0 or 0xFFFFFFFF if timer is not set.
+		int32 remaining = p_timers.GetRemainingTime(abilitynum);
+		
+		if(remaining > 0 && remaining < 15300){
 			m_pp.ability_down=1;
 			m_pp.ability_up=0;
 			m_pp.ability_number=abilitynum;
@@ -5008,6 +5247,13 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	if(!p_timers.Load()) {
 		//report it...
 	}
+	if(!p_timers.Expired(pTimerDisciplineReuse)) {
+		//reset this so they get the avaliable message.
+		disc_timer.Start(p_timers.GetRemainingTime(pTimerDisciplineReuse)*1000);
+	}
+	
+	printf("Dumping inventory on load:\n");
+	m_inv.dumpInventory();
 	
 	
 	CRC32::SetEQChecksum((unsigned char*)&m_pp, sizeof(PlayerProfile_Struct)-4);
@@ -5028,16 +5274,15 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	// Server Zone Entry Packet
 	outapp = new APPLAYER(OP_ZoneEntry, sizeof(ServerZoneEntry_Struct));
 	ServerZoneEntry_Struct* sze = (ServerZoneEntry_Struct*)outapp->pBuffer;
+
 	FillSpawnStruct(&sze->player,CastToMob());
 	sze->player.spawn.cur_hp=1;
 	sze->player.spawn.npc=0;
 	sze->player.spawn.unknown367[0]=0xFFFFFFFF;
 	sze->player.spawn.unknown367[1]=0xFFFFFFFF;
-	sze->player.spawn.z*=10.5;
+	sze->player.spawn.z = sze->player.spawn.z * 105/10;	//what is this multiply all about?
 	QueuePacket(outapp);
 	safe_delete(outapp);
-	
-	
 	
 	////////////////////////////////////////////////////////////
 	// Zone Spawns Packet
@@ -5112,8 +5357,8 @@ void Client::CompleteConnect()
 	// Stamina packet
 	/*outapp = new APPLAYER(OP_Stamina, sizeof(Stamina_Struct));
 	Stamina_Struct* sta = (Stamina_Struct*)outapp->pBuffer;
-	sta->food = 6000;
-	sta->water = 6000;
+	sta->food = m_pp.hunger_level;
+	sta->water = m_pp.thirst_level;
 	outapp->priority = 6;
 	outapp->Deflate();
 	
@@ -5127,13 +5372,13 @@ void Client::CompleteConnect()
 		}
 	}*/
 	
-	hpregen_timer->Start();
-	position_timer->Start();
+	hpregen_timer.Start();
+	position_timer.Start();
 	SetDuelTarget(0);
 	SetDueling(false);
 		
 	UpdateWho();
-	database.UpdateTimersClientConnected(CharacterID());
+//	database.UpdateTimersClientConnected(CharacterID());
 	client_state = CLIENT_CONNECTED;
 	if(!m_inv[SLOT_CURSOR]){
 		for(int ndx=0;ndx<10;ndx++){
@@ -5181,44 +5426,93 @@ void Client::CompleteConnect()
 		if (m_pp.spell_book[spellInt] < 3 || m_pp.spell_book[spellInt] > 20000)
 			m_pp.spell_book[spellInt] = 0xFFFFFFFF;
 	}
-		for (uint32 j1=0; j1 < BUFF_COUNT; j1++) {
-			if (buffs[j1].spellid <= (int32)SPDAT_RECORDS) {
-				for (int x1=0; x1 < EFFECT_COUNT; x1++) {
-					switch (spells[buffs[j1].spellid].effectid[x1]) {
-						case SE_SummonHorse: {
-							hasmount = false;
-							break;
-						}
-						case SE_Rune: {
-							BuffFadeBySpellID(buffs[j1].spellid);
-							//SetRune(buffs[j1].durationformula);
-							//Somehow we need to toss the remaining rune value over..
-									  }
-						case SE_DivineAura:
-							{
-							invulnerable = true;
-							break;
-							}
-						case SE_Invisibility: 
-							{
-							invisible = true;
-							SendAppearancePacket(AT_Invis, 1);
-							break;
-							}
-						case SE_Levitate:
-							{
-							SendAppearancePacket(AT_Levitate, 2);
-							break;
-							}
-						case SE_InvisVsUndead: 
-							{
-							invisible_undead = true;
-							break;
-							} 
+	
+	
+	//build our AA array representation.
+	memset(&aa, 0, sizeof(aa));
+	for(int a=0; a < MAX_PP_AA_ARRAY; a++) {
+		aa.aa_list[a].aa_skill = m_pp.aa_array[a].AA;
+		aa.aa_list[a].aa_value = m_pp.aa_array[a].value;
+	}
+	SendAATable();
+	
+	//reapply some buffs
+	for (uint32 j1=0; j1 < BUFF_COUNT; j1++) {
+		if (buffs[j1].spellid > (int32)SPDAT_RECORDS)
+			continue;
+		
+		for (int x1=0; x1 < EFFECT_COUNT; x1++) {
+			switch (spells[buffs[j1].spellid].effectid[x1]) {
+				case SE_Illusion: {
+					if (spells[buffs[j1].spellid].base[x1] == -1)
+					{
+						if (gender == 1)
+							gender = 0;
+						else if (gender == 0)
+							gender = 1;
+						SendIllusionPacket(GetRace(), gender, 0xFFFF, 0xFFFF);
 					}
+					else if (spells[buffs[j1].spellid].base[x1] == -2)
+					{
+						if (GetRace() == 128 || GetRace() == 130 || GetRace() <= 12)
+							SendIllusionPacket(GetRace(), GetGender(), spells[buffs[j1].spellid].max[x1], spells[buffs[j1].spellid].max[x1]);
+					}
+					else if (spells[buffs[j1].spellid].max[x1] > 0)
+					{
+						SendIllusionPacket(spells[buffs[j1].spellid].base[x1], 0xFF, spells[buffs[j1].spellid].max[x1], spells[buffs[j1].spellid].max[x1]);
+					}
+					else
+					{
+						SendIllusionPacket(spells[buffs[j1].spellid].base[x1], 0xFF, 0xFFFF, 0xFFFF);
+					}
+					break;
 				}
+				case SE_SummonHorse: {
+					hasmount = true;	//this was false, is that the correct thing?
+					break;
+				}
+				case SE_Rune: {
+					BuffFadeBySpellID(buffs[j1].spellid);
+					//SetRune(buffs[j1].durationformula);
+					//Somehow we need to toss the remaining rune value over..
+							  }
+				case SE_DivineAura:
+					{
+					invulnerable = true;
+					break;
+					}
+				case SE_Invisibility: 
+					{
+					invisible = true;
+					SendAppearancePacket(AT_Invis, 1);
+					break;
+					}
+				case SE_Levitate:
+					{
+					SendAppearancePacket(AT_Levitate, 2);
+					break;
+					}
+				case SE_InvisVsUndead: 
+					{
+					invisible_undead = true;
+					break;
+					} 
 			}
 		}
+	}
+	
+	//Remake pet
+	if (!GetPet() && m_pp.pet_id > 1 && m_pp.pet_id <= SPDAT_RECORDS)
+	{
+		printf("Making pet with id %d\n", m_pp.pet_id);
+		fflush(stdout);
+		MakePet(m_pp.pet_id, spells[m_pp.pet_id].teleport_zone);
+		if (GetPet())
+			GetPet()->SetHP(m_pp.pet_hp);
+	}
+	m_pp.pet_id = 0;
+	m_pp.pet_hp = 0;
+	
 	client_data_loaded = true;
 }
 
@@ -5231,26 +5525,60 @@ bool Client::Process() {
 	{
         // try to send all packets that weren't send before
 		if(!IsLD())
-        SendAllPackets();
+			SendAllPackets();
 		
 		if(dead)
 			SetHP(-100);
-		if(dead && this->client_state == CLIENT_LINKDEAD)
+		if(dead && this->client_state == CLIENT_LINKDEAD) {
+			LeaveGroup();
 			return false;
-		if(dead && dead_timer->Check())
-			return false;
-		if(hpregen_timer->Check()){
-			HPTick();
-			SendManaUpdatePacket();
 		}
-		if(LDTimer->Check()){
+		
+		if(dead && dead_timer.Check()) {
+			database.MoveCharacterToZone(GetName(),database.GetZoneName(m_pp.bind_zone_id));
+			m_pp.zone_id = m_pp.bind_zone_id;
+			m_pp.x = m_pp.bind_x[0];
+			m_pp.y = m_pp.bind_y[0];
+			m_pp.z = m_pp.bind_z[0];
 			Save();
+			
+			Group *mygroup = GetGroup();
+			if (mygroup)	// && zone.GetZoneID() != m_pp.bind_zone_id
+			{
+				entity_list.MessageGroup(this,true,15,"%s died.", GetName());
+				mygroup->MemberZoned(this);
+			}
+			return(false);
+		}
+		
+		if(linkdead_timer.Check()){
+			Save();
+			LeaveGroup();
 			return false; //delete client
 		}
-		if (IsStunned() && stunned_timer->Check()) {
-			this->stunned = false;
-			this->stunned_timer->Disable();
+
+		if (camp_timer.Check()) {
+			instalog = true;
 		}
+		
+		if (IsStunned() && stunned_timer.Check()) {
+			this->stunned = false;
+			this->stunned_timer.Disable();
+		}
+		
+		if (fishing_timer.Check()) {
+			GoFish();
+		}
+		
+		if (bardsong_timer.Check() && bardsong != 0) {
+			//WR: need to figure out how to tell if they are dead...
+			if (!bardsong_target /*|| bardsong_target->dead*/) {
+				StopSong();
+			} else {
+				SpellFinished(bardsong, bardsong_target->GetID(), bardsong_slot, spells[bardsong].mana);
+			}
+		}
+		
 		if(this->client_state == CLIENT_LINKDEAD)
 			this->CastToMob()->AI_Process();
 		/*if(opcodetimer->Check()){
@@ -5288,10 +5616,10 @@ bool Client::Process() {
             if(opcode2>=0xFFFF)
                     opcodetimer->Disable();
         }*/
-		if (bindwound_timer->Check() && bindwound_target != 0) {
+		if (bindwound_timer.Check() && bindwound_target != 0) {
 		    BindWound(bindwound_target, false);
 		}
-		if (auto_attack && !IsAIControlled() && !(spellend_timer->Enabled() && (spells[casting_spell_id].classes[7] < 1 && spells[casting_spell_id].classes[7] > 65)) && target != 0 && attack_timer->Check() && !IsStunned() && !IsMezzed() && dead == 0) {
+		if (auto_attack && !IsAIControlled() && !(spellend_timer.Enabled() && (spells[casting_spell_id].classes[7] < 1 && spells[casting_spell_id].classes[7] > 65)) && target != 0 && attack_timer.Check() && !IsStunned() && !IsMezzed() && dead == 0) {
 			if (!CombatRange(target)) {
 				//Message(0,"Target's Name: %s",target->GetName());
 				//Message(0,"Target's X: %f, Your X: %f",target->CastToMob()->GetX(),GetX());
@@ -5311,19 +5639,69 @@ bool Client::Process() {
 			else if (!IsNPC() && appearance == 3) {
 			}
 			else if (target->GetHP() > -10) { // -10 so we can watch people bleed in PvP
-				Attack(target, 13); 	// Kaiyodo - added attacking hand to arguments
+				if(CheckAAEffect(aaEffectRampage)){	//Dook- AA Destructive Force- AE attacks for duration
+					entity_list.AEAttack(this, 30);
+				} else {
+					Attack(target, 13); 	// Kaiyodo - added attacking hand to arguments
+				}
 				// Kaiyodo - support for double attack. Chance based on formula from Monkly business
-				if( CanThisClassDoubleAttack() ) {
-					float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
-					// Check for double attack with main hand assuming maxed DA Skill (MS)
-					float random = MakeRandomFloat(0, 1);
-					if (random > 0.9)
-						CheckIncreaseSkill(DOUBLE_ATTACK);
-					if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
-						if(target && target->GetHP() > -10){
-							Attack(target, 13);
-							CheckIncreaseSkill(DOUBLE_ATTACK);
+				if( target && CanThisClassDoubleAttack() ) {
+					
+					if(CheckDoubleAttack(true)) {
+						//should we allow rampage on double attack?
+						if(CheckAAEffect(aaEffectRampage)) {
+							entity_list.AEAttack(this, 30);
+						} else {
+							Attack(target, 13, true);
 						}
+					}
+					
+					//triple attack: warriors and monks over level 60
+					if((((GetClass() == WARRIOR || GetClass() == MONK) && GetLevel() >= 60) 
+						|| SpecAttacks[SPECATK_TRIPLE])
+					   && CheckDoubleAttack(false,true))
+					{
+						Attack(target, 13, true);
+					}
+					
+					//quad attack, does this belong here??
+					if(SpecAttacks[SPECATK_QUAD] && CheckDoubleAttack(false,true))
+					{
+						Attack(target, 13, true);
+					}
+				}
+				if (target && GetAA(aaFlurry) > 0) {
+					int flurrychance = 0;
+					switch (GetAA(aaFlurry)) {
+						case 1:
+							flurrychance += 15;
+							break;
+						case 2:
+							flurrychance += 30;
+							break;
+						case 3:
+							flurrychance += 50;
+							break;
+					}
+					switch (GetAA(183)) {
+						case 1:
+							flurrychance += 10;
+							break;
+						case 2:
+							flurrychance += 20;
+							break;
+						case 3:
+							flurrychance += 30;
+							break;
+					}
+					if (rand()%1000 < flurrychance) {
+						Message_StringID(MT_CritMelee, 128);
+						Attack(target, 13, true);
+						
+						//50% chance for yet another attack?
+						if(MakeRandomFloat(0, 1) < 0.5)
+							Attack(target, 13, true);
+					}
 				}
 			}
 		}
@@ -5342,56 +5720,97 @@ bool Client::Process() {
 			this->berserk = false;
 		}
 		// Kaiyodo - Check offhand attack timer
-		if(auto_attack && !IsAIControlled() && CanThisClassDualWield() && target != 0 && attack_timer_dw->Check()&& !IsStunned() && !IsMezzed() && dead == 0) {
+		if(auto_attack && !IsAIControlled() && CanThisClassDualWield() && target != 0 && attack_dw_timer.Check()&& !IsStunned() && !IsMezzed() && dead == 0) {
+		
+			attack_dw_timer.Start(0);
+			// Range check
 			if(!CombatRange(target)) {
 				//Message(13,"Your target is too far away, get closer! (dual)");
 				Message_StringID(13,TARGET_TOO_FAR);
 			}
-			// Range check
+			// Don't attack yourself
 			else if(target == this) {
 				//Message(13,"Try attacking someone else then yourself! (dual)");
-				Message_StringID(13,TARGET_TOO_FAR);
+				Message_StringID(13,TRY_ATTACKING_SOMEONE);
 			}
-			// Don't attack yourself
 			else if (!IsNPC() && appearance == 3) {// Mezzed? Stunned?
         	}
 			else if(target->GetHP() > -10) {
 				float DualWieldProbability = (GetSkill(DUAL_WIELD) + GetLevel()) / 400.0f; // 78.0 max
+				if(GetAA(aaAmbidexterity))
+					DualWieldProbability += 0.1;
+				//discipline effects:
+				DualWieldProbability += (spellbonuses.DualWeildChance + itembonuses.DualWeildChance) / 100.0f;
 				
 				float random = MakeRandomFloat(0, 1);
-				if (random > 0.9)
+				//if (random > 0.9)	//this dosent make sense...
 					CheckIncreaseSkill(DUAL_WIELD);
-				if (random < DualWieldProbability) { // Max 78% of DW
-					Attack(target, 14);	// Single attack with offhand
+				if (random < DualWieldProbability  || GetAA(aaAmbidexterity)) { // Max 78% of DW
+					if(CheckAAEffect(aaEffectRampage)) {
+						entity_list.AEAttack(this, 30, 14);
+					} else {
+						Attack(target, 14);	// Single attack with offhand
+					}
 					CheckIncreaseSkill(DUAL_WIELD);
 					
-					if( CanThisClassDoubleAttack() )
-					{
-						float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
-						
-						// Check for double attack with off hand assuming maxed DA Skill
-						random = MakeRandomFloat(0, 1);
-						if(random <= DoubleAttackProbability)	// Max 62.4% chance of DW/DA
+					if( CanThisClassDoubleAttack() && CheckDoubleAttack()) {
+						if(CheckAAEffect(aaEffectRampage)) {
+							entity_list.AEAttack(this, 30, 14);
+						} else {
 							if(target && target->GetHP() > -10)
-								Attack(target, 14);
+								Attack(target, 14);	// Single attack with offhand
+						}
+					}
+				}
+				if (target && GetAA(aaFlurry) > 0) {
+					int flurrychance = 0;
+					switch (GetAA(aaFlurry)) {
+						case 1:
+							flurrychance += 15;
+							break;
+						case 2:
+							flurrychance += 30;
+							break;
+						case 3:
+							flurrychance += 50;
+							break;
+					}
+					switch (GetAA(183)) {
+						case 1:
+							flurrychance += 10;
+							break;
+						case 2:
+							flurrychance += 20;
+							break;
+						case 3:
+							flurrychance += 30;
+							break;
+					}
+					if (rand()%1000 < flurrychance) {
+						Message_StringID(MT_CritMelee, 128);
+						Attack(target, 13, true);
+						
+						//50% chance for yet another attack?
+						if(MakeRandomFloat(0, 1) < 0.5)
+							Attack(target, 13, true);
 					}
 				}
 			}
 		}
-		if (disc_timer->Check()) {
-			disc_timer->Disable();
+		if (disc_timer.Check()) {
+			disc_timer.Disable();
 			//Message(0, "Your disciplines are available for use!");
 			Message_StringID(0,DISCIPLINE_RDY);
 		}
-		else if (disc_elapse->Check()) {
-			disc_elapse->Disable();
-			disc_inuse = 0;
+		else if (disc_elapse.Check()) {
+			disc_elapse.Disable();
+			disc_inuse = discNone;
 			//Message(0, "You lose your concentration!");
 			Message_StringID(0,DISCIPLINE_CONLOST);
 		}
 		
 		adverrorinfo = 2;
-		if (position_timer->Check()) {
+		if (position_timer.Check()) {
 			if (IsAIControlled())
 				SendPosUpdate(2);
 			
@@ -5409,59 +5828,65 @@ bool Client::Process() {
 			}
 		}
 		
+		if (shield_timer.Check())
+		{
+			if (shield_target)
+			{
+				if (!CombatRange(shield_target))
+				{
+					entity_list.MessageClose(this,false,100,0,"%s ceases shielding %s.",GetName(),shield_target->GetName());
+					for (int y = 0; y < 2; y++)
+					{
+						if (shield_target->shielder[y].shielder_id == GetID())
+						{
+							shield_target->shielder[y].shielder_id = 0;
+							shield_target->shielder[y].shielder_bonus = 0;
+						}
+					}
+					shield_target = 0;
+					shield_timer.Disable();
+				}
+			}
+			else
+			{
+				shield_target = 0;
+				shield_timer.Disable();
+			}
+		}
+		
+		
 		adverrorinfo = 3;
 		SpellProcess();
 		adverrorinfo = 4;
-		if (tic_timer->Check() && dead == 0) {
+		if (tic_timer.Check() && !dead) {
 			CalcMaxHP();
 			CalcMaxMana();
 			TicProcess();
-			if(stamina_timer->Check()){
+			
+			if(stamina_timer.Check()){
+
 				APPLAYER* outapp = new APPLAYER(OP_Stamina, sizeof(Stamina_Struct));
 				Stamina_Struct* sta = (Stamina_Struct*)outapp->pBuffer;
-				//m_pp.hunger_level--;
-				//m_pp.thirst_level--;
-				/*// add the same fatigue per tick as subtracted per jump (like 800?)
-				if(m_pp.fatigue <= 9)
-					m_pp.fatigue = 0;
-				else
-					m_pp.fatigue -= 10;*/
-				//sta->food = m_pp.hunger_level;
-				//sta->water = m_pp.thirst_level;
-				sta->food = 6000;
-				sta->water = 6000; //STA isn't working might as well max it
-				//sta->fatigue = m_pp.fatigue;
+				if (m_pp.hunger_level > 0)
+					m_pp.hunger_level--;
+				if (m_pp.thirst_level > 0)
+					m_pp.thirst_level--;
+				sta->food = m_pp.hunger_level;
+				sta->water = m_pp.thirst_level;
 				QueuePacket(outapp);
 				safe_delete(outapp);
+				SendManaUpdatePacket();
 			}
-			if (GetMana() < max_mana) {
-				int32 level=GetLevel();
-				if (IsSitting()) {
-					medding = true;
-					int32 newmana=0;
-					int32 oldmana=0;
-					if(GetSkill(MEDITATE)>0){
-						oldmana=GetMana();
-						newmana=oldmana+(((GetSkill(MEDITATE)/10)+(level-(level/4)))/4)+4;
-						newmana+=(spellbonuses->ManaRegen+itembonuses->ManaRegen);
-						SetMana(newmana);
-						CheckIncreaseSkill(MEDITATE);
-					}
-					else
-						SetMana(GetMana()+2+spellbonuses->ManaRegen+itembonuses->ManaRegen+(level/5));
-				}
-				else {
-					medding = false;
-					SetMana(GetMana()+2+spellbonuses->ManaRegen+itembonuses->ManaRegen+(level/5));
-				}
-			}
-			//SendHPUpdate();
+			
+			DoManaRegen();
+			DoHPRegen();
 		}
 	}
     
 	
 	
 	if (client_state == CLIENT_KICKED) {
+		LeaveGroup();
 		Save();
 		eqnc->Close();
 		cout << "Client disconnected (cs=k): " << GetName() << endl;
@@ -5469,26 +5894,29 @@ bool Client::Process() {
 	}
 	
 	if (client_state == DISCONNECTED) {
+		LeaveGroup();
 		eqnc->Close();
 		cout << "Client disconnected (cs=d): " << GetName() << endl;
 		return false;
 	}
 	
 	if (client_state == CLIENT_ERROR) {
+		LeaveGroup();
 		eqnc->Close();
 		cout << "Client disconnected (cs=e): " << GetName() << endl;
 		return false;
 	}
 	
 	if (client_state != CLIENT_LINKDEAD && !eqnc->CheckActive()) {
+		LeaveGroup();
 		cout << "Client linkdead: " << name << endl;
 		eqnc->Close();
 
 		if (GetGM()) {
 			return false;
 		}
-		else if(!LDTimer->Enabled()){
-			LDTimer->Start(30000);
+		else if(!linkdead_timer.Enabled()){
+			linkdead_timer.Start(30000);
 			client_state = CLIENT_LINKDEAD;
 			AI_Start(CLIENT_LD_TIMEOUT);
 			SendAppearancePacket(AT_Linkdead, 1);
@@ -5496,23 +5924,67 @@ bool Client::Process() {
 	}
 	/************ Get all packets from packet manager out queue and process them ************/
 	adverrorinfo = 5;
-	if((int32)eqnc==0xFEEEFEEE){
+	if((int32)eqnc == 0xFEEEFEEE){
+		LeaveGroup();
 		eqnc->Close();
 		safe_delete(eqnc);
 		return false;
 	}
+	
 	APPLAYER *app = 0;
-	if((int32)eqnc!=0xfeeefeee){
-		if(eqnc->GetState()>=EQNC_Closing && eqnc->CheckActive()){
-			eqnc->Close();
-			return false;
-		}
+	if(eqnc->GetState()>=EQNC_Closing && eqnc->CheckActive()){
+		//eqnc->Close();
+		//return false;
+		//handled below 
+	} else {
 		while(ret && (app = eqnc->PopPacket())) {
-			ret = HandlePacket(app);
+			if(app)
+				ret = HandlePacket(app);
 			safe_delete(app);
 		}
 	}
-
+	
+	
+	if (client_state != CLIENT_LINKDEAD && (client_state == CLIENT_ERROR || client_state == DISCONNECTED || client_state == CLIENT_KICKED || !eqnc->CheckActive())) {
+		if (!zoning) {
+			RemoveNoRent(); //Get rid of ze no rent stuff if logging out
+		}
+		ResetTrade();
+		if (client_state != CLIENT_KICKED) {
+			Save();
+		}
+		adverrorinfo = 811;
+		client_state = CLIENT_LINKDEAD;
+		if (/*!loggedin || */zoning || instalog || GetGM())
+		{
+			adverrorinfo = 811;
+			Group *mygroup = GetGroup();
+			if (mygroup)
+			{
+				adverrorinfo = 812;
+				if (!zoning) {
+					entity_list.MessageGroup(this,true,15,"%s logged out.",GetName());
+					mygroup->DelMember(this);
+				} else {
+					entity_list.MessageGroup(this,true,15,"%s left the zone.",GetName());
+					mygroup->MemberZoned(this);
+				}
+				
+				adverrorinfo = 813;
+			}
+			eqnc->Close();
+			return false;
+		}
+		else
+		{
+			adverrorinfo = 814;
+			LinkDead();
+			LeaveGroup();
+		}
+		eqnc->Close();
+	}
+	
+	
 	return ret;
 }
 
@@ -5527,91 +5999,75 @@ void Client::BulkSendInventoryItems()
 	// Worn items and Inventory items
 	sint16 slot_id = 0;
 	if(deletenorent){//client was offline for more than 30 minutes, delete no rent items
-		int ndx=0,x=0;
-		for(ndx=0;ndx<8;ndx++){
-			const ItemInst* item=GetInv().GetItem(22+ndx);
-			if(item && item->IsType(ItemTypeContainer)){
-				for(x=0;x<10;x++){
-					sint16 slotid=(((22+ndx+3)*10)+x+1);
-					item=GetInv().GetItem(slotid);
-					if(item && item->GetItem()->NoRent==0){
-						DeleteItemInInventory(slotid);
-					}
-				}
-			}
-		}
-		for(ndx=0;ndx<16;ndx++){
-			const ItemInst* item=GetInv().GetItem(2000+ndx);
-			if(item && item->IsType(ItemTypeContainer)){
-				for(x=0;x<10;x++){
-					sint16 slotid=(((203+ndx)*10)+x+1);
-					item=GetInv().GetItem(slotid);
-					if(item && item->GetItem()->NoRent==0){
-						DeleteItemInInventory(slotid);
-					}
-				}
-			}
-		}
+		RemoveNoRent();
 	}
+	
+	//TODO: this function is just retarded... it re-allocates the buffer for every
+	//new item. It should be changed to loop through once, gather the
+	//lengths, and item packet pointers into an array (fixed length), and
+	//then loop again to build the packet.
+	//APPLAYER *packets[50];
+	//unsigned long buflen = 0;
+	//unsigned long pos = 0;
+	//memset(packets, 0, sizeof(packets));
+	//foreach item in the invendor sections
+	//	packets[pos++] = ReturnItemPacket(...)
+	//	buflen += temp->size
+	//...
+	//allocat the buffer
+	//for r from 0 to pos
+	//	put pos[r]->pBuffer into the buffer
+	//for r from 0 to pos
+	//	safe_delete(pos[r]);
+	
 	int buffptr=0;
 	for (slot_id=0; slot_id<=30; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst){
-			if(deletenorent && inst->GetItem()->NoRent==0)
-				DeleteItemInInventory(slot_id);
+			APPLAYER* temp = ReturnItemPacket(slot_id, inst, ItemPacketCharInventory);
+			if(!temp)
+				continue;
+			if(buffer)
+			{
+				uchar* newbuffer = new uchar[buffptr+temp->size+1];
+				memcpy(newbuffer,buffer,buffptr);
+				memcpy(&newbuffer[buffptr],temp->pBuffer,temp->size);
+				buffptr=buffptr+temp->size+1;
+				safe_delete(buffer);
+				buffer = newbuffer;
+			}
 			else
 			{
-				APPLAYER* temp = ReturnItemPacket(slot_id, inst, ItemPacketCharInventory);
-				if(temp)
-				{
-				if(buffer)
-				{
-					uchar* newbuffer = new uchar[buffptr+temp->size+1];
-					memcpy(newbuffer,buffer,buffptr);
-					memcpy(&newbuffer[buffptr],temp->pBuffer,temp->size);
-					buffptr=buffptr+temp->size+1;
-					safe_delete(buffer);
-					buffer = newbuffer;
-				}
-				else
-				{
-					buffptr=temp->size;
-					buffer = new uchar[temp->size];
-					memcpy(buffer,temp->pBuffer,buffptr);
-				}
-				safe_delete(temp);
-				}
+				buffptr=temp->size;
+				buffer = new uchar[temp->size];
+				memcpy(buffer,temp->pBuffer,buffptr);
 			}
+			safe_delete(temp);
 		}
 	}
 	// Bank items
 	for (slot_id=2000; slot_id<=2015; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst){
-			if(deletenorent && inst->GetItem()->NoRent==0)
-				DeleteItemInInventory(slot_id);
+			APPLAYER* temp = ReturnItemPacket(slot_id, inst, ItemPacketCharInventory);
+			if(temp)
+			{
+			if(buffer)
+			{
+				uchar* newbuffer = new uchar[buffptr+temp->size+1];
+				memcpy(newbuffer,buffer,buffptr);
+				memcpy(&newbuffer[buffptr],temp->pBuffer,temp->size);
+				buffptr=buffptr+temp->size+1;
+				safe_delete(buffer);
+				buffer = newbuffer;
+			}
 			else
 			{
-				APPLAYER* temp = ReturnItemPacket(slot_id, inst, ItemPacketCharInventory);
-				if(temp)
-				{
-				if(buffer)
-				{
-					uchar* newbuffer = new uchar[buffptr+temp->size+1];
-					memcpy(newbuffer,buffer,buffptr);
-					memcpy(&newbuffer[buffptr],temp->pBuffer,temp->size);
-					buffptr=buffptr+temp->size+1;
-					safe_delete(buffer);
-					buffer = newbuffer;
-				}
-				else
-				{
-					buffptr=temp->size;
-					buffer = new uchar[temp->size];
-					memcpy(buffer,temp->pBuffer,buffptr);
-				}
-				safe_delete(temp);
-				}
+				buffptr=temp->size;
+				buffer = new uchar[temp->size];
+				memcpy(buffer,temp->pBuffer,buffptr);
+			}
+			safe_delete(temp);
 			}
 		}
 	}
@@ -5620,30 +6076,25 @@ void Client::BulkSendInventoryItems()
 	for (slot_id=2500; slot_id<=2501; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst){
-			if(deletenorent && inst->GetItem()->NoRent==0)
-				DeleteItemInInventory(slot_id);
+			APPLAYER* temp = ReturnItemPacket(slot_id, inst, ItemPacketCharInventory);
+			if(temp)
+			{
+			if(buffer)
+			{
+				uchar* newbuffer = new uchar[buffptr+temp->size+1];
+				memcpy(newbuffer,buffer,buffptr);
+				memcpy(&newbuffer[buffptr],temp->pBuffer,temp->size);
+				buffptr=buffptr+temp->size+1;
+				safe_delete(buffer);
+				buffer = newbuffer;
+			}
 			else
 			{
-				APPLAYER* temp = ReturnItemPacket(slot_id, inst, ItemPacketCharInventory);
-				if(temp)
-				{
-				if(buffer)
-				{
-					uchar* newbuffer = new uchar[buffptr+temp->size+1];
-					memcpy(newbuffer,buffer,buffptr);
-					memcpy(&newbuffer[buffptr],temp->pBuffer,temp->size);
-					buffptr=buffptr+temp->size+1;
-					safe_delete(buffer);
-					buffer = newbuffer;
-				}
-				else
-				{
-					buffptr=temp->size;
-					buffer = new uchar[temp->size];
-					memcpy(buffer,temp->pBuffer,buffptr);
-				}
-				safe_delete(temp);
-				}
+				buffptr=temp->size;
+				buffer = new uchar[temp->size];
+				memcpy(buffer,temp->pBuffer,buffptr);
+			}
+			safe_delete(temp);
 			}
 		}
 	}
@@ -5658,7 +6109,7 @@ void Client::BulkSendInventoryItems()
 	for (sint16 trade_slot_id=3000; trade_slot_id<=3007; trade_slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst) {
-			sint16 free_slot_id = m_inv.FindFreeSlot(inst->IsType(ItemTypeContainer), true);
+			sint16 free_slot_id = m_inv.FindFreeSlot(inst->IsType(ItemTypeContainer), true, inst->GetItem()->Size);
 			DeleteItemInInventory(trade_slot_id, 0, false);
 			PutItemInInventory(free_slot_id, *inst, true);
 		}
@@ -5672,49 +6123,19 @@ void Client::BulkSendInventoryItems()
 	// Worn items and Inventory items
 	sint16 slot_id = 0;
 	if(deletenorent){//client was offline for more than 30 minutes, delete no rent items
-		int ndx=0,x=0;
-		for(ndx=0;ndx<8;ndx++){
-			const ItemInst* item=GetInv().GetItem(22+ndx);
-			if(item && item->IsType(ItemTypeContainer)){
-				for(x=0;x<10;x++){
-					sint16 slotid=(((22+ndx+3)*10)+x+1);
-					item=GetInv().GetItem(slotid);
-					if(item && item->GetItem()->NoRent==0){
-						DeleteItemInInventory(slotid);
-					}
-				}
-			}
-		}
-		for(ndx=0;ndx<16;ndx++){
-			const ItemInst* item=GetInv().GetItem(2000+ndx);
-			if(item && item->IsType(ItemTypeContainer)){
-				for(x=0;x<10;x++){
-					sint16 slotid=(((203+ndx)*10)+x+1);
-					item=GetInv().GetItem(slotid);
-					if(item && item->GetItem()->NoRent==0){
-						DeleteItemInInventory(slotid);
-					}
-				}
-			}
-		}
+		RemoveNoRent();
 	}
 	for (slot_id=0; slot_id<=30; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst){
-			if(deletenorent && inst->GetItem()->NoRent==0)
-				DeleteItemInInventory(slot_id);
-			else
-				SendItemPacket(slot_id, inst, ItemPacketCharInventory);
+			SendItemPacket(slot_id, inst, ItemPacketCharInventory);
 		}
 	}
 	// Bank items
 	for (slot_id=2000; slot_id<=2015; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst){
-			if(deletenorent && inst->GetItem()->NoRent==0)
-				DeleteItemInInventory(slot_id);
-			else
-				SendItemPacket(slot_id, inst, ItemPacketCharInventory);
+			SendItemPacket(slot_id, inst, ItemPacketCharInventory);
 		}
 	}
 	
@@ -5722,10 +6143,7 @@ void Client::BulkSendInventoryItems()
 	for (slot_id=2500; slot_id<=2501; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst){
-			if(deletenorent && inst->GetItem()->NoRent==0)
-				DeleteItemInInventory(slot_id);
-			else
-				SendItemPacket(slot_id, inst, ItemPacketCharInventory);
+			SendItemPacket(slot_id, inst, ItemPacketCharInventory);
 		}
 	}
 	
@@ -5735,7 +6153,7 @@ void Client::BulkSendInventoryItems()
 	for (sint16 trade_slot_id=3000; trade_slot_id<=3007; trade_slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst) {
-			sint16 free_slot_id = m_inv.FindFreeSlot(inst->IsType(ItemTypeContainer), true);
+			sint16 free_slot_id = m_inv.FindFreeSlot(inst->IsType(ItemTypeContainer), true, inst->GetItem()->Size);
 			DeleteItemInInventory(trade_slot_id, 0, false);
 			PutItemInInventory(free_slot_id, *inst, true);
 		}
@@ -5805,40 +6223,40 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 	const Item_Struct* handyitem = NULL;
 	int32 numItems=database.GetMerchantListNumb(merchant_id);
   int32 numItemSlots=80;  //The max number of items passed in the transaction.   // We don't have 81 slots we have 80 it's misleading (BigPull)
-  int32 cpisize = sizeof(MerchantItem_Struct) + (numItemSlots * sizeof(MerchantItemD_Struct));
-  MerchantItem_Struct* cpi = (MerchantItem_Struct*) new uchar[cpisize];
-  memset(cpi, 0, cpisize);
+//  int32 cpisize = sizeof(MerchantItem_Struct) + (numItemSlots * sizeof(MerchantItemD_Struct));
+//  MerchantItem_Struct* cpi = (MerchantItem_Struct*) new uchar[cpisize];
+//  memset(cpi, 0, cpisize);
   const Item_Struct *item;
   for ( int32 i=0;i<numItems && i < numItemSlots; i++) {
-		int8 handychance=0;
-		if(numItems>1)
+	  int8 handychance=0;
+	if(numItems>1)
 			handychance = MakeRandomInt(0, numItems-1);
-		item=database.GetItem(database.GetMerchantData(merchant_id,i+1));
-		if (item) {
-			//if(!cpi->count)
-			if(handychance==0)
-				handyitem=item;
+    item=database.GetItem(database.GetMerchantData(merchant_id,i+1));
+    if (item) {
+		//if(!cpi->count)
+		if(handychance==0)
+			handyitem=item;
+		else
+			handychance--;
+		int charges=1;
+		if(item->ItemClass==ItemTypeCommon)
+			charges=item->Common.MaxCharges;
+		ItemInst* inst = ItemInst::Create(item,charges);
+		if (inst) {
+			inst->SetPrice(item->Cost*127/100);
+			inst->SetUnknown5(i+84);
+			if(charges > 0)
+				inst->SetCharges(charges);
 			else
-				handychance--;
-			int charges=1;
-			if(item->ItemClass==ItemTypeCommon)
-				charges=item->Common.MaxCharges;
-			ItemInst* inst = ItemInst::Create(item,charges);
-			if (inst) {
-				inst->SetPrice(item->Cost*127/100);
-				inst->SetUnknown5(i+84);
-				if(charges > 0)
-					inst->SetCharges(charges);
-				else
-					inst->SetCharges(1);
-				SendItemPacket(i, inst, ItemPacketMerchant);
-				safe_delete(inst);
-			}
+				inst->SetCharges(1);
+			SendItemPacket(i, inst, ItemPacketMerchant);
+			safe_delete(inst);
 		}
+    }
   }
-
+	
 	Mob* merch = entity_list.GetMob(npcid);
-
+	
 	if(merch != NULL && handyitem){
 		char handy_id[8]={0};
 		int greeting=rand()%5;
@@ -5858,124 +6276,21 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 				break;
 			default:
 				greet_id=MERCHANT_HANDY_ITEM4;
-		}
+        }
 		sprintf(handy_id,"%i",greet_id);
 		char merchantname[64]={0};
 		strncpy(merchantname,merch->GetName(),strlen(merch->GetName())-2);
 		if(greet_id!=MERCHANT_GREETING){
 			Message_StringID(10,GENERIC_STRINGID_SAY,merchantname,handy_id,this->GetName(),handyitem->Name);
-			
-		}
-		else
-			Message_StringID(10,GENERIC_STRINGID_SAY,merchantname,handy_id,this->GetName());
-
-		merch->CastToNPC()->FaceTarget(this->CastToMob());
-	}
-	
-	safe_delete_array(cpi);
-}
-
-void Client::BulkSendTraderInventory(int32 char_id) {
-  const Item_Struct *item;
-  Trader_Struct* outints2 = database.LoadTraderItem(char_id);
-  for (int8 i=0;i<80;i++) {
-		if(outints2->itemid[i]==0)
-			continue;
-		else
-			item=database.GetItem(outints2->itemid[i]);
 		
-		if (item && (item->NoDrop!=0)) {
-			ItemInst* inst = ItemInst::Create(item);
-			if (inst) {
-				inst->SetPrice(outints2->itemcost[i]);
-				inst->SetUnknown5(outints2->itemid[i]);
-				SendItemPacket(30, inst, ItemPacketMerchant);
-				safe_delete(inst);
-			}
-		}
-	}
-}
-
-void Client::Trader_ShowItems(){
-	APPLAYER* outapp= new APPLAYER(OP_Trader,sizeof(Trader_Struct));
-	//outapp->pBuffer= new uchar[sizeof(Trader_Struct)]; // Not Necessary APPLAYER handles
-	//memset(outapp->pBuffer,0,sizeof(Trader_Struct)); // Not Necessary APPLAYER handles
-	Trader_Struct* outints = (Trader_Struct*)outapp->pBuffer;
-	Trader_Struct* outints2 = database.LoadTraderItem(this->CharacterID());
-	for(int i=0;i<160;i=i+2){
-		if(i==0){
-			outints->itemcost[i]=outints2->itemcost[i];
-			outints->itemid[i+1]=outints2->itemid[i];
-		}
-		else{
-			outints->itemcost[(i/2)]=outints2->itemcost[(i/2)];
-			outints->itemid[i+1]=outints2->itemid[(i/2)];
-		}
-	}
-	outints->code=11;
-	QueuePacket(outapp);
-	safe_delete(outapp);
-	safe_delete(outints2);
-}
-
-void Client::SendTraderPacket(Client* trader){
-	APPLAYER* outapp= new APPLAYER(OP_BecomeTrader,sizeof(BecomeTrader_Struct));
-	BecomeTrader_Struct* bts = (BecomeTrader_Struct*)outapp->pBuffer;
-	bts->code=1;
-	bts->id=trader->GetID();
-	//outapp->Deflate();
-	this->QueuePacket(outapp);
-	safe_delete(outapp);
-}
-
-void Client::Trader_StartTrader(){
-	Trader=true;
-	APPLAYER* outapp2= new APPLAYER(OP_Trader,sizeof(Trader_ShowItems_Struct));
-	Trader_ShowItems_Struct* sis = (Trader_ShowItems_Struct*)outapp2->pBuffer;
-	sis->code=1;
-	sis->traderid=this->GetID();
-	QueuePacket(outapp2);
-	safe_delete(outapp2);
-	APPLAYER* outapp= new APPLAYER(OP_BecomeTrader,sizeof(BecomeTrader_Struct));
-	BecomeTrader_Struct* bts = (BecomeTrader_Struct*)outapp->pBuffer;
-	bts->code=1;
-	bts->id=this->GetID();
-	entity_list.QueueCloseClients(this,outapp,false,15000);
-	safe_delete(outapp);
-}
-void Client::Trader_EndTrader(){
-	database.DeleteTraderItem(this->CharacterID());
-	APPLAYER* outapp= new APPLAYER(OP_BecomeTrader,sizeof(BecomeTrader_Struct));
-	BecomeTrader_Struct* bts = (BecomeTrader_Struct*)outapp->pBuffer;
-	bts->code=0;
-	bts->id=this->GetID();
-	entity_list.QueueCloseClients(this,outapp,false,5000);
-	safe_delete(outapp);
-	APPLAYER* outapp2= new APPLAYER(OP_Trader,sizeof(Trader_ShowItems_Struct));
-	Trader_ShowItems_Struct* sis = (Trader_ShowItems_Struct*)outapp2->pBuffer;
-	sis->code=2;
-	sis->traderid=0;
-	QueuePacket(outapp2);
-	safe_delete(outapp2);
-	this->withcustomer=false;
-	this->Trader=false;
-}
-void Client::SendTraderItem(int32 item_id,int16 quantity){
-	string packet;
-	sint16 freeslotid=0;
-	const Item_Struct* item = database.GetItem(item_id);
-	if(!item){
-		printf("Bogus item deleted in Client::SendTraderItem!\n");
-		return;
-	}
-	
-	ItemInst* inst = ItemInst::Create(item, quantity);
-	if (inst) {
-		freeslotid = m_inv.FindFreeSlot(false, true);
-		PutItemInInventory(freeslotid, *inst);
-		SendItemPacket(freeslotid, inst, ItemPacketTrade);
-		safe_delete(inst);
-	}
+        }
+        else
+			Message_StringID(10,GENERIC_STRINGID_SAY,merchantname,handy_id,this->GetName());
+		
+		merch->CastToNPC()->FaceTarget(this->CastToMob());
+        }
+		
+//		safe_delete_array(cpi);
 }
 
 int8 Client::WithCustomer(){
@@ -6008,428 +6323,7 @@ void Client::OPRezzAnswer(const APPLAYER* app) {
 		this->FastQueuePacket(&outapp);
 	}
 }
-int16 Client::FindTraderItemCharges(int32 item_id){
-	const ItemInst* item= NULL;
-	int16 slotid=0;
-	for(int i=0;i<8;i++){
-		item=this->GetInv().GetItem(22+i);
-		if(item && item->GetItem()->ItemNumber==17899){ //Traders Satchel
-			for(int x=0;x<10;x++){
-				slotid=(((22+i+3)*10)+x+1);
-				item=this->GetInv().GetItem(slotid);
-				if(item && item->GetItem()->ItemNumber==item_id)
-					return item->GetCharges();
-			}
-		}
-	}
-	return 9999;
-}
-GetItems_Struct* Client::GetTraderItems(){
-	const ItemInst* item= NULL;
-//	int16 charges=0;
-	int16 slotid=0;
-	GetItems_Struct* gis= new GetItems_Struct;
-	memset(gis,0,sizeof(GetItems_Struct));
-	int8 ndx=0;
-	for(int i=0;i<8;i++){
-		item=this->GetInv().GetItem(22+i);
-		if(item && item->GetItem()->ItemNumber==17899){ //Traders Satchel
-			for(int x=0;x<10;x++){
-				slotid=(((22+i+3)*10)+x+1);
-				item=this->GetInv().GetItem(slotid);
-				if(item){
-					gis->items[ndx]=item->GetItem()->ItemNumber;
-					ndx++;
-				}
-			}
-		}
-	}
-	return gis;
-}
-int16 Client::FindTraderItem(int32 item_id,int16 quantity){
-	const ItemInst* item= NULL;
-//	int16 charges=0;
-	int16 slotid=0;
-	for(int i=0;i<8;i++){
-		item=this->GetInv().GetItem(22+i);
-		if(item && item->GetItem()->ItemNumber==17899){ //Traders Satchel
-			for(int x=0;x<10;x++){
-				slotid=(((22+i+3)*10)+x+1);
-				item=this->GetInv().GetItem(slotid);
-				if(item && item->GetItem()->ItemNumber==item_id && (item->GetCharges()>=quantity || (item->GetCharges()==0 && quantity==1))){
-					return slotid;
-				}
-			}
-		}
-	}
-	printf("Could NOT find a match for Item: %i with a quantity of: %i on Trader: %s\n",item_id,quantity,this->GetName());
-	return 0;
-}
-void Client::NukeTraderItem(int16 slot,int16 charges,int16 quantity,Client* customer,int16 traderslot){
-	APPLAYER* outapp = new APPLAYER(OP_TraderDelItem,sizeof(TraderDelItem_Struct));
-	TraderDelItem_Struct* tdis = (TraderDelItem_Struct*)outapp->pBuffer;
-	tdis->quantity=0xFFFFFFFF;
-	tdis->unknown=0xFFFFFFFF;
-	tdis->slotid=slot;
-	if(quantity<=20 && charges>quantity){
-		for(int y=0;y<quantity;y++)
-			this->QueuePacket(outapp);
-	}
-	else{
-		APPLAYER* outapp2 = new APPLAYER(OP_MoveItem,sizeof(MoveItem_Struct));
-		MoveItem_Struct* mis=(MoveItem_Struct*)outapp2->pBuffer;
-		mis->from_slot=slot;
-		mis->to_slot=0xFFFFFFFF;
-		mis->number_in_stack=0;
-		this->QueuePacket(outapp2);
-		safe_delete(outapp2);
-		customer->TraderUpdate(traderslot,this->GetID());
-	}
-	safe_delete(outapp);
-}
-void Client::TraderUpdate(int16 slot_id,int32 trader_id){
-	APPLAYER* outapp = new APPLAYER(OP_TraderItemUpdate,sizeof(TraderItemUpdate_Struct));
-	TraderItemUpdate_Struct* tus=(TraderItemUpdate_Struct*)outapp->pBuffer;
-	tus->charges=0xFFFF;
-	tus->fromslot=slot_id;
-	tus->toslot=0xFF;
-	tus->traderid=trader_id;
-	tus->unknown0=0;
-	QueuePacket(outapp);
-	safe_delete(outapp);
-}
-void Client::FindAndNukeTraderItem(int32 item_id,int16 quantity,Client* customer,int16 traderslot){
-	const ItemInst* item= NULL;
-	int16 charges=0;
-	int16 slotid=FindTraderItem(item_id,quantity);
-	if(slotid>0){
-		item=this->GetInv().GetItem(slotid);
-		if(item)
-			charges=this->GetInv().GetItem(slotid)->GetCharges();
-		if(item && item->GetItem()->ItemNumber==item_id && (charges>=quantity || (charges==0 && quantity==1))){
-			this->DeleteItemInInventory(slotid,quantity);
-			Trader_Struct* getslot = database.LoadTraderItem(this->CharacterID());
-			int8 count=0;
-			bool testslot=true;
-			for(int y=0;y<80;y++){
-				if(testslot && getslot->itemid[y]==item_id){
-					database.DeleteTraderItem(this->CharacterID(),y);
-					testslot=false;
-				}
-				else if(getslot->itemid[y]>0)
-					count++;
-			}
-			if(count==0)
-				Trader_EndTrader();
-			NukeTraderItem(slotid,charges,quantity,customer,traderslot);
-			return;
-		}
-	}
-	printf("Could NOT find a match for Item: %i with a quantity of: %i on Trader: %s\n",item_id,quantity,this->GetName());
-}
-void Client::ReturnTraderReq(const APPLAYER* app,int16 traderitemcharges){
-	TraderBuy_Struct* tbs=(TraderBuy_Struct*)app->pBuffer;
-	APPLAYER* outapp = new APPLAYER(OP_TraderBuy,sizeof(TraderBuy_Struct));
-	TraderBuy_Struct* outtbs  = (TraderBuy_Struct*)outapp->pBuffer;
-	memcpy(outtbs,tbs,app->size);
-	outtbs->price=(tbs->price*traderitemcharges);
-	outtbs->quantity=traderitemcharges;
-	outtbs->traderid=this->GetID();
-	this->QueuePacket(outapp);
-	safe_delete(outapp);
-}
-void Client::BuyTraderItem(TraderBuy_Struct* tbs,Client* trader,const APPLAYER* app){
-	APPLAYER* outapp = new APPLAYER(OP_Trader,sizeof(TraderBuy_Struct));
-	TraderBuy_Struct* outtbs  = (TraderBuy_Struct*)outapp->pBuffer;
-	outtbs->itemid=tbs->itemid;
-	outtbs->price=tbs->price;
-	int16 traderitemcharges=trader->FindTraderItemCharges(tbs->itemid);
-	if(traderitemcharges<=0)
-		traderitemcharges=1;
-	else if(traderitemcharges==9999){
-		Message(15,"Item not found!");
-		return;
-	}
-	const Item_Struct* item2=database.GetItem(tbs->itemid);
-	if(!item2)
-	{
-		safe_delete(outapp);
-		return;
-	}
-	if(traderitemcharges<tbs->quantity)
-		outtbs->quantity=traderitemcharges;
-	else
-		outtbs->quantity=tbs->quantity;
-	ReturnTraderReq(app,outtbs->quantity);
-	outtbs->traderid=this->GetID();
-	outtbs->slot_num=tbs->slot_num;
-	outtbs->unknown0=0x0A;
-	strncpy(outtbs->itemname-4,item2->Name,64);
-	int traderslot=0;
-	SendTraderItem(outtbs->itemid,outtbs->quantity);
 
-	APPLAYER* outapp2 = new APPLAYER(OP_MoneyUpdate,sizeof(MoneyUpdate_Struct));
-	MoneyUpdate_Struct* mus= (MoneyUpdate_Struct*)outapp2->pBuffer;
-	int32 itemcost=tbs->price;
-	this->TakeMoneyFromPP(tbs->price);
-	mus->platinum=(int)itemcost/1000;
-	itemcost-=(mus->platinum*1000);
-	mus->gold=(int)itemcost/100;
-	itemcost-=(mus->gold*100);
-	mus->silver=(int)itemcost/10;
-	itemcost-=(mus->silver*10);
-	mus->copper=itemcost;
-	//trader->AddMoneyToPP(tbs->price,true);
-	trader->AddMoneyToPP(mus->copper,mus->silver,mus->gold,mus->platinum,false);
-	mus->platinum=trader->GetPP().platinum;
-	mus->gold=trader->GetPP().gold;
-	mus->silver=trader->GetPP().silver;
-	mus->copper=trader->GetPP().copper;
-	traderslot=trader->FindTraderItem(tbs->itemid,outtbs->quantity);
-	trader->QueuePacket(outapp2);
-	trader->FindAndNukeTraderItem(tbs->itemid,outtbs->quantity,this,tbs->slot_num);
-	trader->QueuePacket(outapp);
-	safe_delete(outapp);
-	//safe_delete(outapp2);
-}
-void Client::SendBazaarWelcome(){
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char* query = 0;
-	MYSQL_RES *result;
-	MYSQL_ROW row;
-	if (database.RunQuery(query,MakeAnyLenString(&query, "select count(distinct char_id),count(char_id) from trader"),errbuf,&result)){
-		if(mysql_num_rows(result)==1){
-			row = mysql_fetch_row(result);
-			APPLAYER* outapp = new APPLAYER(OP_Bazaar,sizeof(BazaarWelcome_Struct));
-			memset(outapp->pBuffer,0,outapp->size);
-			BazaarWelcome_Struct* bws = (BazaarWelcome_Struct*)outapp->pBuffer;
-			bws->beginning.action=9;
-			bws->items=atoi(row[1]);
-			bws->traders=atoi(row[0]);
-			this->QueuePacket(outapp);
-			safe_delete(outapp);
-		}
-		mysql_free_result(result);
-	}
-	
-	safe_delete_array(query);
-}
-void Client::SendBazaarResults(int32 trader_id,int32 class_,int32 race,int32 stat,int32 slot,int32 type,char name[64],int32 minprice,int32 maxprice){
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char* query = 0;
-	string search,values;
-	MYSQL_RES *result;
-	MYSQL_ROW row;
-	char tmp[100]={0};
-	values.append("count(item_id),trader.*,items.name");
-	search.append("where trader.item_id=items.id");
-	if(trader_id>0){
-		Client* trader=entity_list.GetClientByID(trader_id);
-		if(trader){
-			sprintf(tmp," and trader.char_id=%i",trader->CharacterID());
-			search.append(tmp);
-		}
-			
-	}
-	string searchresults;
-	if(minprice!=0){
-		sprintf(tmp," and trader.item_cost>=%i",minprice);
-		search.append(tmp);
-	}
-	if(maxprice!=0){
-		sprintf(tmp," and trader.item_cost<=%i",maxprice);
-		search.append(tmp);
-	}
-	if(strlen(name)>0){
-		sprintf(tmp," and items.name like '%%%s%%'",name);
-		search.append(tmp);
-	}
-	if(class_!=0xFFFFFFFF){
-			sprintf(tmp," and mid(reverse(bin(items.classes)),%i,1)=1",class_);
-			search.append(tmp);
-	}
-	if(race!=0xFFFFFFFF){
-			sprintf(tmp," and mid(reverse(bin(items.races)),%i,1)=1",race);
-			search.append(tmp);
-	}
-	if(slot!=0xFFFFFFFF){
-			sprintf(tmp," and mid(reverse(bin(items.slots)),%i,1)=1",slot+1);
-			search.append(tmp);
-	}
-	if(type!=0xFFFFFFFF){
-		switch(type){
-			case 31:
-				sprintf(tmp," and items.itemclass=2");
-				search.append(tmp);
-				break;
-			case 46:
-				sprintf(tmp," and items.spellid>0 and items.spellid<65000");
-				search.append(tmp);
-				break;
-			case 47:
-				sprintf(tmp," and items.spellid=998");
-				search.append(tmp);
-				break;
-			case 48:
-				sprintf(tmp," and items.spellid>=1298 and items.spellid<=1307");
-				search.append(tmp);
-				break;
-			case 49:
-				sprintf(tmp," and items.focusid>0");
-				search.append(tmp);
-				break;
-			default:
-				sprintf(tmp," and items.itemtype=%i",type);
-				search.append(tmp);
-		}
-	}
-	if(stat!=0xFFFFFFFF){
-		if(stat==14){
-			search.append(" and items.ac>0");
-			values.append(",items.ac");
-		}
-		else if(stat==2){
-			search.append(" and items.aagi>0");
-			values.append(",items.aagi");
-		}
-		else if(stat==6){
-			search.append(" and items.acha>0");
-			values.append(",items.acha");
-		}
-		else if(stat==3){
-			search.append(" and items.adex>0");
-			values.append(",items.adex");
-		}
-		else if(stat==4){
-			search.append(" and items.aint>0");
-			values.append(",items.aint");
-		}
-		else if(stat==1){
-			search.append(" and items.asta>0");
-			values.append(",items.asta");
-		}
-		else if(stat==0){
-			search.append(" and items.astr>0");
-			values.append(",items.astr");
-		}
-		else if(stat==5){
-			search.append(" and items.awis>0");
-			values.append(",items.awis");
-		}
-		else if(stat==8){
-			search.append(" and items.cr>0");
-			values.append(",items.cr");
-		}
-		else if(stat==11){
-			search.append(" and items.dr>0");
-			values.append(",items.dr");
-		}
-		else if(stat==9){
-			search.append(" and items.fr>0");
-			values.append(",items.fr");
-		}
-		else if(stat==7){
-			values.append(",items.mr");
-			search.append(" and items.mr>0");
-		}
-		else if(stat==10){
-			search.append(" and items.pr>0");
-			values.append(",items.pr");
-		}
-		else if(stat==13){
-			search.append(" and items.hp>0");
-			values.append(",items.hp");
-		}
-		else if(stat==12){
-			search.append(" and items.mana>0");
-			values.append(",items.mana");
-		}
-	}
-	if (database.RunQuery(query,MakeAnyLenString(&query, "select %s from trader,items %s group by items.id limit 50",values.c_str(),search.c_str()),errbuf,&result)){
-		safe_delete_array(query);
-		int size=0;
-		int32 id=0;
-		//BazaarSearchResults_Struct* brs= new BazaarSearchResults_Struct;
-		if(mysql_num_rows(result)==0){
-			APPLAYER* outapp2 = new APPLAYER(OP_Bazaar,sizeof(BazaarReturnDone_Struct));
-			BazaarReturnDone_Struct* brds = (BazaarReturnDone_Struct*)outapp2->pBuffer;
-			brds->traderid=id;
-			brds->type=0x0C;
-			brds->unknown8=0xFFFFFFFF;
-			brds->unknown12=0xFFFFFFFF;
-			brds->unknown16=0xFFFFFFFF;
-			this->QueuePacket(outapp2);
-			safe_delete(outapp2);
-			mysql_free_result(result);
-			return;
-		}
-		size=mysql_num_rows(result)*sizeof(BazaarSearchResults_Struct);
-		//char *buffer=(char*)malloc(size);
-		//char *bufptr=buffer;
-		uchar *buffer=new uchar[size];
-		uchar *bufptr=buffer;
-		memset(buffer,0,size);
-		int action=7;
-		int32 cost=0;
-		int32 item_id=0;
-		char name[64]={0};
-		int count=0;
-		int32 statvalue=0;
-		while ((row = mysql_fetch_row(result))) {
-			memcpy(bufptr,&action, sizeof(int32));
-			bufptr+=sizeof(int32);
-			count=atoi(row[0]);
-			memcpy(bufptr,&count, sizeof(int32));
-			bufptr+=sizeof(int32);
-			item_id=atoi(row[2]);
-			memcpy(bufptr,&item_id, sizeof(int32));
-			bufptr+=sizeof(int32);
-			Client* trader2=entity_list.GetClientByCharID(atoi(row[1]));
-			if(trader2){
-				id=trader2->GetID();
-				memcpy(bufptr,&id, sizeof(int32));
-				bufptr+=sizeof(int32);
-			}
-			else{
-				printf("Unable to find trader: %i\n",atoi(row[1]));
-				memcpy(bufptr,&id, sizeof(int32));
-				bufptr+=sizeof(int32);
-			}
-			cost=atoi(row[3]);
-			memcpy(bufptr,&cost, sizeof(int32));
-			bufptr+=sizeof(int32);
-			statvalue=atoi(row[6]);
-			memcpy(bufptr,&statvalue, sizeof(int32));
-			bufptr+=sizeof(int32);
-			sprintf(name,"%s(%i)",row[5],count);
-			memcpy(bufptr,&name, strlen(name));
-			bufptr+=64;
-		}
-		mysql_free_result(result);
-		APPLAYER* outapp = new APPLAYER(OP_Bazaar,size);
-		outapp->pBuffer=new uchar[outapp->size];
-		memcpy(outapp->pBuffer,buffer,size);
-		this->QueuePacket(outapp);
-		safe_delete(outapp);
-		//free(buffer);
-		safe_delete_array(buffer);
-		APPLAYER* outapp2 = new APPLAYER(OP_Bazaar,sizeof(BazaarReturnDone_Struct));
-		BazaarReturnDone_Struct* brds = (BazaarReturnDone_Struct*)outapp2->pBuffer;
-		brds->traderid=id;
-		brds->type=0x0C;
-		brds->unknown8=0xFFFFFFFF;
-		brds->unknown12=0xFFFFFFFF;
-		brds->unknown16=0xFFFFFFFF;
-		this->QueuePacket(outapp2);
-		safe_delete(outapp2);
-		
-	}
-	else{
-		printf("Failed to retrieve Bazaar Search!! %s\n",query);
-		safe_delete_array(query);
-		return;
-	}
-}
 void Client::OPTGB(const APPLAYER *app)
 {
 	if(!app) return;
@@ -6473,7 +6367,7 @@ void Client::OPMemorizeSpell(const APPLAYER* app)
 
 	switch(memspell->scribing)
 	{
-		case 0:	{	// scribing spell to book
+		case memSpellScribing:	{	// scribing spell to book
 			ItemInst* inst = m_inv.PopItem(SLOT_CURSOR);
 			
 			if(inst && inst->IsType(ItemTypeCommon))
@@ -6504,17 +6398,32 @@ void Client::OPMemorizeSpell(const APPLAYER* app)
 			break;
 
 			}
-		case 1:	{	// memming spell
+		case memSpellMemorize:	{	// memming spell
 			MemSpell(memspell->spell_id, memspell->slot);
 			break;
 		}
-		case 2:	{	// unmemming spell
+		case memSpellForget:	{	// unmemming spell
 			UnmemSpell(memspell->slot);
 			break;
 		}
 	}
 
 	Save();
+}
+
+void Client::BreakInvis()
+{
+	if (invisible)
+	{
+		APPLAYER* outapp = new APPLAYER(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+		SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
+		sa_out->spawn_id = GetID();
+		sa_out->type = 0x03;
+		sa_out->parameter = 0;
+		entity_list.QueueClients(this, outapp, true);
+		safe_delete(outapp);
+		invisible = false;
+	}
 }
 
 void Client::OPMoveCoin(const APPLAYER* app)
@@ -6835,7 +6744,7 @@ void Client::OPGMTrainSkill(const APPLAYER *app)
 			return;
 		}
 
-		int8 skilllevel = GetSkill(gmskill->skill_id);
+		int8 skilllevel = GetRawSkill(gmskill->skill_id);
 
 		if ( skilllevel == 255)
 		{
@@ -6924,4 +6833,219 @@ void Client::OPGMSummon(const APPLAYER *app)
 		}
 	}
 }
+
+void Client::OPCombatAbility(const APPLAYER *app) {
+	if(!target)
+		return;
+	if(!IsAttackAllowed(target))
+		return;
+
+	CombatAbility_Struct* ca_atk = (CombatAbility_Struct*) app->pBuffer;
+	if ((ca_atk->m_atk == 100) && (ca_atk->m_type==10)) {    // SLAM - Bash without a shield equipped
+		DoAnim(animTailRake);
+		sint32 dmg=(sint32) ((level/10)  * 3  * (GetSkill(BASH) + GetSTR() + level) / (700-GetSkill(BASH)));
+		
+		Message(MT_Emote, "You Bash for a total of %d damage.",  dmg);
+		target->Damage(this, dmg, 0xffff, BASH);
+		
+		CheckIncreaseSkill(BASH);
+		
+		/* using CheckIncreaseSkill now
+		if (GetClass()==WARRIOR&&(GetRace()==BARBARIAN||GetRace()==TROLL||GetRace()==OGRE)) { // large race warriors only *
+			float wisebonus =  (m_pp.WIS > 200) ? 20 + ((m_pp.WIS - 200) * 0.05) : m_pp.WIS * 0.1;
+			if (((55-(GetSkill(BASH)*0.240))+wisebonus > MakeRandomFloat(0, 100))&& (GetSkill(BASH)<(m_pp.level+1)*5))
+					this->SetSkill(BASH,GetRawSkill(BASH)+1);
+		}*/
+		return;
+	}
+	
+	//throwing weapons
+	if ((ca_atk->m_atk == 11)&&(ca_atk->m_type == 51)) {
+		ThrowingAttack(target);
+		return;
+	}
+	
+	//ranged attack (archery)
+	if ((ca_atk->m_atk == 11)&&(ca_atk->m_type==7)) {
+		RangedAttack(target);
+		return;
+	}
+	
+	float multiple=(GetLevel()/5);
+	multiple++;
+	switch(GetClass())
+	{
+	case WARRIOR:
+		if (target!=this) {
+			float dmg=((((GetSkill(KICK) + GetSTR() + GetLevel())/90)*multiple)+10) * ( MakeRandomFloat(0, 1) );
+			if(target->IsClient())
+				dmg*=.76;
+			else{
+				CheckIncreaseSkill(KICK);
+				dmg*=1.2;//small increase for warriors
+			}
+			target->Damage(this, (int32)dmg, 0xffff, 0x1e);
+			DoAnim(animKick);
+		}
+		break;
+	case RANGER:
+	case BEASTLORD:
+		if (target!=this) {
+			float dmg=((((GetSkill(KICK) + GetSTR() + GetLevel())/250)*multiple)+5) * ( MakeRandomFloat(0, 1) );
+			if(target->IsClient())
+				dmg*=.67;
+			else
+				CheckIncreaseSkill(KICK);
+			target->Damage(this, (int32)dmg, 0xffff, 0x1e);
+			DoAnim(animKick);
+		}
+		break;
+	case PALADIN:
+	case SHADOWKNIGHT:
+		break;
+	case MONK:
+		CheckIncreaseSkill(ca_atk->m_type);
+		MonkSpecialAttack(target->CastToMob(), ca_atk->m_type);
+		break;
+	case ROGUE:
+		if (ca_atk->m_atk != 100) {
+			break;
+		}
+		uint8 aa_item = GetAA(aaChaoticStab);// Chaotic backstab TODO make it do min damage
+		if (target && BehindMob(target, GetX(), GetY())) // Player is behind target
+		{
+			// solar - chance to assassinate
+			// TODO: it's set to 40% chance, should be a formula involving DEX
+			float chance=0;
+			if(
+				level >= 60 && // player is 60 or higher
+				target->GetLevel() <= 45 && // mob 45 or under
+				!target->CastToNPC()->IsEngaged() && // not aggro
+				target->GetHP()<=32000 &&
+				(chance = MakeRandomFloat(0, 100)) < 40 // chance
+				&& target->IsNPC()
+				) {
+				//char temp[100];
+				//snprintf(temp, 100, "%s ASSASSINATES their victim!!", this->GetName());
+				//entity_list.MessageClose(this, 0, 200, 10, temp);
+				entity_list.MessageClose_StringID(this, false, 200, 10, ASSASSINATES, GetName());
+				CheckIncreaseSkill(BACKSTAB);
+				RogueAssassinate(target);
+			}
+			else {
+				RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
+				if ((level > 54) && (target != 0)) {
+					float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
+					// Check for double attack with main hand assuming maxed DA Skill (MS)
+					float random = MakeRandomFloat(0, 1);
+					
+					if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
+						if(target && target->GetHP() > 0)
+							RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
+				}
+				CheckIncreaseSkill(BACKSTAB);
+			}
+		}
+		else if(aa_item>0) {
+			RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
+			if ((level > 54) && (target != 0)) {
+				float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
+				CheckIncreaseSkill(BACKSTAB);
+				// Check for double attack with main hand assuming maxed DA Skill (MS)
+				float random = MakeRandomFloat(0, 1);
+				if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
+					if(target && target->GetHP() > 0)
+						RogueBackstab(target, m_inv.GetItem(SLOT_PRIMARY), GetSkill(BACKSTAB));
+			}
+		}
+		else {	// Player is in front of target
+			Attack(target, 13);
+			if ((level > 54) && (target != 0)) {
+				float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
+				
+				// Check for double attack with main hand assuming maxed DA Skill (MS)
+				float random = MakeRandomFloat(0, 1);
+				if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
+					if(target && target->GetHP() > 0)
+						Attack(target, 13);
+			}
+		}
+		break;
+	}
+}
+
+void Client::DoHPRegen(/*SpawnAppearance_Struct* sa*/) {
+	if(hpregen_timer.Check())
+	{
+		// this is the client notifing the server of a hp regen tic
+		sint32 normal_regen = LevelRegen();
+		sint32 item_regen = itembonuses.HPRegen;
+		sint32 spell_regen = spellbonuses.HPRegen;
+		sint32 total_regen = normal_regen + item_regen + spell_regen;
+		
+
+	//	sint32 sa_hp = (sint32)sa->parameter;
+		sint32 sa_hp = 0;	//hack for now
+		
+#ifdef SOLAR
+/*
+	static sint32 last_time = Timer::GetCurrentTime();
+	LogFile->write(EQEMuLog::Debug, "%d Regen tick: for %s - server hp: %d requested hp: %d normal regen: %i item regen: %i spell regen: %i  total = %i", Timer::GetCurrentTime()-last_time, GetName(), GetHP(), sa->parameter, normal_regen, item_regen, spell_regen, total_regen);
+	last_time = Timer::GetCurrentTime();
+*/
+#endif
+		attack_flag = false;
+#if EQDEBUG >= 5
+		if
+		(
+			sa_hp > GetHP() &&
+			sa_hp - GetHP() != total_regen
+		)
+		{
+			LogFile->write(
+				EQEMuLog::Debug, 
+				"HP Regen calculation problem: client %s  our regen: %d  from client: %d",
+				GetName(), total_regen, sa_hp - GetHP()
+			);
+		}
+#endif
+		SetHP(GetHP() + total_regen);
+	}
+	if(hpupdate_timer.Check()) {
+		SendHPUpdate();
+	}
+}
+
+void Client::DoManaRegen() {
+	//WR idea:
+	/*if(Thirsty()) {
+		if(GetMana() > 0)
+			SetMana(GetMana() - 1);
+	} else */
+	if (GetMana() >= max_mana)
+		return;
+	int32 level=GetLevel();
+	int32 regen = 0;
+	if (IsSitting()) {		//this should be changed so we dont med while camping, etc...
+		int32 med = GetSkill(MEDITATE);
+		if(med > 0) {
+			medding = true;
+			regen = (((GetSkill(MEDITATE)/10)+(level-(level/4)))/4)+4;
+			regen += spellbonuses.ManaRegen + itembonuses.ManaRegen;
+			CheckIncreaseSkill(MEDITATE);
+		}
+		else
+			regen = 2+spellbonuses.ManaRegen+itembonuses.ManaRegen+(level/5);
+	}
+	else {
+		medding = false;
+		regen = 2+spellbonuses.ManaRegen+itembonuses.ManaRegen+(level/5);
+	}
+	
+	SetMana(GetMana() + regen);
+//	SendHPUpdate();
+//	SendManaUpdatePacket();
+}
+
+
 

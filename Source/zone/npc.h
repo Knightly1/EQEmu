@@ -72,6 +72,7 @@ public:
 
 	void	InteractiveChat(int8 chan_num, int8 language, const char * message, const char* targetname,Mob* sender);
 	void	TakenAction(int8 action,Mob* actiontaker);
+	virtual void SpellProcess();
 
 	void	AddItem(const Item_Struct* item, int8 charges, int8 slot = 0);
 	void	AddItem(int32 itemid, int8 charges, int8 slot = 0);
@@ -85,7 +86,7 @@ public:
 	void	CheckEnemySpellStatus();
 	void	NPCHarmSpell(int target,int type);
 	void    HateSummon();
-*/
+*/	
 
 	bool	IsRanger() { return rangerstance; }
 
@@ -109,6 +110,11 @@ public:
 	inline uint32	GetSilver()		{ return silver; }
 	inline uint32	GetGold()		{ return gold; }
 	inline uint32	GetPlatinum()	{ return platinum; }
+
+	inline void	SetCopper(uint32 amt)		{ copper = amt; }
+	inline void	SetSilver(uint32 amt)		{ silver = amt; }
+	inline void	SetGold(uint32 amt)			{ gold = amt; }
+	inline void	SetPlatinum(uint32 amt)		{ platinum = amt; }
 
 	sint32 GetEquipmentMaterial(int8 material_slot);
 
@@ -148,7 +154,17 @@ public:
 	inline const char*    GetFeignMemory()	{ return feign_memory; }
 
 	float   org_x, org_y, org_z, org_heading;
-
+	
+	int16	GetMaxDMG() {return max_dmg;}
+	bool	IsAnimal() { return(bodytype == 21); }
+	int16   GetPetSpellID() {return pet_spell_id;}
+	void    SetPetSpellID(int16 amt) {pet_spell_id = amt;}
+	int32	GetMaxDamage(int8 tlevel);
+	void    SetTaunting(bool tog) {taunting = tog;}
+	void	PickPocket(Client* thief);
+	void	StartSwarmTimer(int32 duration) { swarm_timer.Start(duration); }
+	void	AddLootDrop(const Item_Struct*dbitem, ItemList* itemlistconst, sint8 charges, bool equipit, bool wearchange = false);
+	void	DoClassAttacks(Mob *target);
 	
 	ItemList*	itemlist; //kathgar - why is this public?  Doing other things or I would check the code
 
@@ -170,12 +186,12 @@ protected:
 	sint32	npc_faction_id;
 	sint32	primary_faction;
 	
-	Timer*	forget_timer;
-	Timer*	attacked_timer;
+	Timer	forget_timer;
+	Timer	attacked_timer;
+    Timer	swarm_timer;
+    Timer	classattack_timer;
+    Timer	taunt_timer;		//for pet taunting
 
-#ifdef GUILDWARS
-	Timer*	cit_timer;
-#endif
 	int		attack_event;
 
     bool	evader;
@@ -184,9 +200,9 @@ protected:
 	#ifdef IPC
            int8	tired;
            int8	tiredmax;
-	       Timer*	interactive_timer;
+	       Timer	interactive_timer;
 	#endif
-    Timer*	sendhpupdate_timer;
+    Timer	sendhpupdate_timer;
 
 	int8	banishcapability;
 	int16	max_dmg;
@@ -194,6 +210,8 @@ protected:
 	const char*	feign_memory;
 	int8    forgetchance;
 
+	int16	pet_spell_id;
+	bool	taunting;
 	
 private:
 #ifdef GUILDWARS

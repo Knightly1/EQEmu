@@ -18,7 +18,7 @@
 #ifndef ZONE_H
 #define ZONE_H
 
-#define ZONE_AUTOSHUTDOWN_DELAY		5000
+//#define ZONE_AUTOSHUTDOWN_DELAY		5000
 
 #include "../common/Mutex.h"
 #include "../common/linked_list.h"
@@ -28,6 +28,7 @@
 #include "../common/servertalk.h"
 //#include "spawn.h"
 #include "mob.h"
+#include "features.h"
 #include "zonedump.h"
 
 class Map;
@@ -54,6 +55,7 @@ struct ZoneClientAuth_Struct {
 	char	lskey[30];
 	bool	stale;
 };
+
 extern EntityList entity_list;
 
 class Zone
@@ -61,6 +63,7 @@ class Zone
 public:
 	static bool Zone::Bootup(int32 iZoneID, bool iStaticZone = false);
 	static void Zone::Shutdown(bool quite = false);
+	
 	Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, int16 in_port);
 	~Zone();
 	bool	Init(bool iStaticZone);
@@ -176,8 +179,9 @@ private:
 	bool	staticzone;
 	bool	gottime;
 
-	Timer*	autoshutdown_timer;
-	Timer*	clientauth_timer;
+	Timer	autoshutdown_timer;
+	Timer	clientauth_timer;
+	Timer	spawn2_timer;
 	Timer*  Weather_Timer;
 //	LinkedList<Spawn*> spawn_list;
 	LinkedList<ZoneClientAuth_Struct*> client_auth_list;

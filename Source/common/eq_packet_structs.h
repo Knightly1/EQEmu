@@ -68,6 +68,51 @@ enum ItemType
 };
 
 /*
+** Item uses
+**
+*/
+enum ItemUses
+{
+	ItemUse1HS			= 0,
+	ItemUse2HS			= 1,
+	ItemUsePierce		= 2,
+	ItemUse1HB			= 3,
+	ItemUse2HB			= 4,
+	ItemUseBow			= 5,
+	ItemUseThrowing		= 7,
+	ItemUseShield		= 8,
+	ItemUseArmor		= 10,
+	ItemUseUnknon		= 11,	//A lot of random crap has this item use.
+	ItemUseLockPick		= 12,
+	ItemUseFood			= 14,
+	ItemUseDrink		= 15,
+	ItemUseLightSource	= 16,
+	ItemUseStackable	= 17,	//Not all stackable items are this use...
+	ItemUseBandage		= 18,
+	ItemUseThrowingv2	= 19,
+	ItemUseSpell		= 20,	//spells and tomes
+	ItemUsePotion		= 21,
+	ItemUseWindInstr	= 23,
+	ItemUseStringInstr	= 24,
+	ItemUseBrassInstr	= 25,
+	ItemUseDrumInstr	= 26,
+	ItemUseArrow		= 27,
+	ItemUseJewlery		= 29,
+	ItemUseKey			= 33,
+	ItemUse2HPierce		= 35,
+	ItemUseFishingPole	= 36,
+	ItemUseFishingBait	= 37,
+	ItemUseAlcohol		= 38,
+	ItemUseCompass		= 40,
+	ItemUsePoison		= 42,	//might be wrong, but includes poisons
+	ItemUseHand2Hand	= 45,
+	ItemUseCharm		= 52,
+	ItemUseAugment		= 54,
+	ItemUseAugmentSolvent=55,
+	ItemUseAugmentDistill=56
+};
+
+/*
 ** Compiler override to ensure
 ** byte aligned structures
 */
@@ -193,7 +238,7 @@ union {
 /*119*/ int8	face;
 /*120*/ int8	invis; // 0=visible,1=invisible 
 /*121*/ int8	max_hp; // max hp 
-/*122*/ int8	pvp; // 0=Not pvp,1=pvp  solar: this is wrong
+/*122*/ int8	unknown122; // 0=Not pvp,1=pvp  solar: this is wrong
 /*123*/ int8	level; 
 /*124*/ int8	lfg; // 0=Not lfg,1=lfg 
 /*125*/ int32	heading:12; // spawn heading 
@@ -207,7 +252,10 @@ union {
 /*****/ sint32	z:19; 
 /*141*/ int8	hairstyle;	// vesuvias
 /*142*/ int8	haircolor;
-/*143*/ int8	unknown143[8]; 
+/*143*/ int8	invis2;		//not sure...
+/*144*/ int8	unknown144[5];
+/*149*/ int8	pvp;	//according to Wiz
+/*150*/ int8	light;
 /*151*/ float	size; // Size 
 /*155*/ int8	helm; 
 /*156*/ float	runspeed; // 
@@ -286,8 +334,8 @@ struct NewZone_Struct {
 	// Minimum View Distance
 /*0516*/	float	maxclip;				// Maximum View DIstance
 /*0520*/	int8	unknown_end[84];		// ***Placeholder
-/*0604*/	char	zone_short_name2[72];
-/*0672*/
+/*0604*/	char	zone_short_name2[68];
+/*0672*/	char	unknown672[8];
 };
 
 /*
@@ -391,7 +439,8 @@ struct CastBuff_Struct{
 /*02*/	int16	source_id;
 /*04*/	int8	unknown4; //always E7??
 /*05*/	int16	spell_id; //always E7??
-/*07*/	int8	unknown_zero7[8];
+/*07*/	sint32	damage;
+/*11*/	int8	unknown_zero7[4];
 /*17*/	float	heading2;
 /*21*/	int8	unknown_zero21[4];
 };
@@ -527,7 +576,9 @@ struct SpellBuff_Struct
 /*002*/	int16  effect;				// ***Placeholder
 /*004*/	int32	spellid;
 /*008*/ int32	duration;
-/*012*/	int8	Unknown012[4];
+/*009*/ int8	diseasecounters;
+/*010*/ int8	poisoncounters;
+/*012*/	int8	Unknown012[2];
 };
 #else
 struct SpellBuff_Struct
@@ -548,7 +599,7 @@ struct SpellBuffFade_Struct {
 /*006*/	int8 effect;
 /*007*/	int8 unknown7;
 /*008*/	uint32 spellid;
-/*012*/	uint32 unknown012;
+/*012*/	uint32 duration;
 /*016*/	uint32 unknown016;
 /*020*/	uint32 slotid;
 /*024*/	uint32 bufffade;
@@ -683,9 +734,13 @@ struct AA_Array
 	int32 value;	
 };
 
+
+#define MAX_PP_DISCIPLINES 50
+
 struct Disciplines_Struct {
-	uint32 disciplines[50];
+	uint32 values[MAX_PP_DISCIPLINES];
 };
+
 
 /*
 ** Player Profile
@@ -697,6 +752,7 @@ struct Disciplines_Struct {
 #define MAX_PP_SPELLBOOK	400
 #define MAX_PP_MEMSPELL		8
 #define MAX_PP_SKILL		75
+#define MAX_PP_AA_ARRAY		120
 struct PlayerProfile_Struct
 {
 /*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
@@ -743,7 +799,7 @@ struct PlayerProfile_Struct
 /*0304*/	uint32				item_material[9];	// Item texture/material of worn/held items
 /*0340*/	uint8				unknown0256[48];
 /*0388*/	Color_Struct		item_tint[9];
-/*0424*/	AA_Array			aa_array[120];
+/*0424*/	AA_Array			aa_array[MAX_PP_AA_ARRAY];
 /*1384*/	uint8				unknown1388[4];
 /*1388*/	char				servername[100];		// length probably not right
 /*1488*/	uint32				guildid2;		//
@@ -820,7 +876,11 @@ struct PlayerProfile_Struct
 /*5188*/	uint32				ldon_takish_points;		// Earned Takish points - Doodman: guessing based on others that were known
 /*5192*/	uint8				unknown4352[24]; 		//
 /*5216*/	uint32				ldon_available_points;		// Earned Rujarkian Hills points - Verified
-/*5220*/	uint32				unknown4380[20];
+		//hack variables for pet conservation, prolly not valid
+/*5096*/	int16				pet_id;
+/*5098*/	int16				pet_hp;
+/*5100*/	uint32				aa_effects;	//another hack, need it somewhere...
+/*5104*/	uint32				unknown4380[18];	//one word became pet stuff above
 /*5300*/	uint32				unknown4460[166];
 /*5964*/	uint32				unknown5760; //0xFF FF FF FF
 /*5968*/	uint32				unknown5968[16];
@@ -1922,6 +1982,64 @@ struct SpecialMesg_Struct
 #define MT_Skills				270
 #define MT_Disciplines			271
 #define MT_CritMelee			301
+#define	MT_Unused1				272
+#define MT_DefaultText			273
+#define MT_Unused2				274
+#define MT_MerchantOffer		275
+#define MT_MerchantBuySell		276
+#define	MT_YourDeath			277
+#define MT_OtherDeath			278
+#define MT_OtherHits			279
+#define MT_OtherMisses			280
+#define	MT_Who					281
+#define MT_YellForHelp			282
+#define MT_NonMelee				283
+#define MT_WornOff				284
+#define MT_MoneySplit			285
+#define MT_LootMessages			286
+#define MT_DiceRoll				287
+#define MT_OtherSpells			288
+#define MT_Fizzles				289
+#define MT_Chat					290
+#define MT_Channel1				291
+#define MT_Channel2				292
+#define MT_Channel3				293
+#define MT_Channel4				294
+#define MT_Channel5				295
+#define MT_Channel6				296
+#define MT_Channel7				297
+#define MT_Channel8				298
+#define MT_Channel9				299
+#define MT_Channel10			300
+#define MT_CritMelee			301
+#define MT_SpellCrits			302
+#define MT_TooFarAway			303
+#define MT_Rampage				304
+#define MT_Flurry				305
+#define MT_Enrage				306
+#define MT_SayEcho				307
+#define MT_TellEcho				308
+#define MT_GroupEcho			309
+#define MT_GuildEcho			310
+#define MT_OOCEcho				311
+#define MT_AuctionEcho			312
+#define MT_ShoutECho			313
+#define MT_EmoteEcho			314
+#define MT_Chat1Echo			315
+#define MT_Chat2Echo			316
+#define MT_Chat3Echo			317
+#define MT_Chat4Echo			318
+#define MT_Chat5Echo			319
+#define MT_Chat6Echo			320
+#define MT_Chat7Echo			321
+#define MT_Chat8Echo			322
+#define MT_Chat9Echo			323
+#define MT_Chat10Echo			324
+#define MT_DoTDamage			315
+#define MT_ItemLink				316
+#define MT_RaidSay				317
+#define MT_MyPet				318
+#define MT_DS					320
 
 /*
 ** When somebody changes what they're wearing
@@ -1981,7 +2099,7 @@ struct ZoneChange_Struct {
 
 struct Animation_Struct {
 	int16 spawn_id;
-	int8 animation_speed;
+	int8 animation_speed;	//these two might be backwards:
 	int8 animation;
 };
 
@@ -2036,6 +2154,7 @@ struct CombatDamage_Struct
 /* 19 */	int32	unknown19;
 /* 23 */
 };
+
 /*
 ** Consider Struct
 ** Length: 24 Bytes
@@ -2064,7 +2183,7 @@ struct Death_Struct
 /*008*/	int32	unknown08;	// was corpseid
 /*012*/	int32	unknown12;	// was type
 /*016*/	int32	spell_id;
-/*020*/ int32	attack_skill;
+/*020*/ int32	attack_skill;	//bindzoneid?
 /*024*/	int32	damage;
 /*028*/	int32	unknown028;
 };
@@ -2241,7 +2360,7 @@ struct ItemCommon_Struct {
 /*061*/	uint32	Unknown061;
 /*062*/	sint32	SpellId;			// Spell Id of effect, if item has one
 /*063*/	sint16	MaxCharges;			// Maximum charges items can hold: -1 if not a chargeable item
-/*064*/	uint8	Skill;				// Skill (1hs, 2hs, 1hb, etc)
+/*064*/	uint8	ItemUse;			// Item Type/Skill (itemClass* from above)
 /*065*/	uint8	Material;			// Item material type
 /*066*/	float	SellRate;			// Sell rate
 /*067*/	uint32	Unknown067;
@@ -2351,7 +2470,7 @@ struct Item_Struct {
 /*006*/	uint32	Unknown006;
 /*007*/	uint32	Unknown007;
 /*008*/	uint32	Unknown008;		 //added in patch 
-/*008*/	uint32	Unknown009;		 //added in patch 
+/*008*/	uint32	Attuneable;		 //new attuneable flag 0=not attune, 1=attune
 /*008*/	uint8	ItemClass;				// Item Type: 0=common, 1=container, 2=book (quote precedes field - dunno why)
 /*009*/	char	Name[64];			// Name
 /*010*/	char	LoreName[80];		// Lore Name: *=lore, &=summoned, #=artifact, ~=pending lore
@@ -3235,6 +3354,10 @@ struct ClickObject_Struct {
 /*08*/
 };
 
+struct Shielding_Struct {
+	uint32 target_id;
+};
+
 /*
 ** Click Object Acknowledgement Struct
 ** Response to client clicking on a World Container (ie, forge)
@@ -3967,6 +4090,13 @@ struct PetitionBug_Struct{
 	int32	unknown168;
 	char	text[1028];
 };
+
+/*struct DyeColorStruct{
+	int8	blue;
+	int8	green;
+	int8	red;
+	int8	unknown;
+};*/
 
 struct DyeStruct
 {

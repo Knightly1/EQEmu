@@ -116,20 +116,49 @@ uchar blah2[]={0x12,0x00,0x00,0x00,0x16,0x01,0x00,0x00};
 void Mob::SpellProcess()
 {
 	// check the rapid recast prevention timer
-	if(delaytimer == true && spellend_timer->Check())
+	if(delaytimer == true && spellend_timer.Check())
 	{
-		spellend_timer->Disable();
+		spellend_timer.Disable();
 		delaytimer = false;
 		return;
 	}
 
 	// a timed spell is finished casting
-	if (casting_spell_id != 0 && spellend_timer->Check())
+	if (casting_spell_id != 0 && spellend_timer.Check())
 	{
-		spellend_timer->Disable();
+		spellend_timer.Disable();
 		delaytimer = false;
 		CastedSpellFinished(casting_spell_id, casting_spell_targetid, casting_spell_slot, casting_spell_mana, casting_spell_inventory_slot);
 	}
+
+}
+
+void NPC::SpellProcess()
+{
+	// check the rapid recast prevention timer
+	if(delaytimer == true && spellend_timer.Check())
+	{
+		spellend_timer.Disable();
+		delaytimer = false;
+		return;
+	}
+
+	// a timed spell is finished casting
+	if (casting_spell_id != 0 && spellend_timer.Check())
+	{
+		spellend_timer.Disable();
+		delaytimer = false;
+		CastedSpellFinished(casting_spell_id, casting_spell_targetid, casting_spell_slot, casting_spell_mana, casting_spell_inventory_slot);
+	}
+	
+	//Dook- swarm pets 
+	if(GetBodyType() == bodyTypeSwarmPet) {
+		if(swarm_timer.Check()) {
+			Depop(); 
+			swarm_timer.Disable();
+		} 
+   } 
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -153,13 +182,19 @@ void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 		!IsValidSpell(spell_id) ||
 		casting_spell_id ||
 		delaytimer ||
-		spellend_timer->Enabled() ||
+		spellend_timer.Enabled() ||
 		IsStunned() ||
 		IsMezzed()
 	)
 	{
 		if(IsClient())
 			CastToClient()->SendSpellBarEnable(spell_id);
+		return;
+	}
+	
+	//cannot cast under deivne aura
+	if(DivineAura()) {
+		InterruptSpell(173, 0x121, false);
 		return;
 	}
 
@@ -194,6 +229,13 @@ void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 		SetMana(GetMana() - (mana_cost / 4));
 		return;
 	}
+	
+	
+    if (bardsong != 0) {
+        StopSong();
+		casting_spell_id = 0;
+        return;
+    }
 
 	DoCastSpell(spell_id, target_id, slot, cast_time, mana_cost, oSpellWillFinish, item_slot);
 }
@@ -261,8 +303,17 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	// we checked for spells not requiring targets above
 	if(target_id == 0)
 	{
-		Message(13, "Error: Spell requires a target.");
-		InterruptSpell();
+#if EQDEBUG >= 8
+				LogFile->write(EQEMuLog::Debug, "%s: Spell Error: no target spell=%d\n", GetName(), spell_id);
+#endif
+printf("Error no target.\n");
+		if(IsClient()) {
+			//clients produce messages... npcs should not for this case
+			Message(13, "Error: Spell requires a target.");
+			InterruptSpell();
+		} else {
+			InterruptSpell(0, 0, 0);	//the 0 args should cause no messages
+		}
 		return;
 	}
 
@@ -281,16 +332,27 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	// Quagmire: If you're at full mana, let it cast even if you dont have enough mana
 	// solar: TODO reduce mana cost focus items
 	// we calculated this above, now enforce it
-	if(mana_cost && slot != 10)
+	if(mana_cost > 0 && slot != 10)
 	{
 		int my_curmana = GetMana();
 		int my_maxmana = GetMaxMana();
 		if(my_curmana < mana_cost)	// not enough mana
 		{
-			if(!(my_maxmana > 0 &&	my_curmana == my_maxmana))
+			//this is a special case for NPCs with no mana...
+			if(my_maxmana > 0 &&	my_curmana == my_maxmana)
 			{
-				Message(13, "Error: Insufficent mana.");
-				InterruptSpell();
+				mana_cost = 0;
+			} else {
+#if EQDEBUG >= 8
+				LogFile->write(EQEMuLog::Debug, "%s: Spell Error not enough mana spell=%d mymana=%d cost=%d\n", GetName(), spell_id, my_curmana, mana_cost);
+#endif
+				if(IsClient()) {
+					//clients produce messages... npcs should not for this case
+					Message(13, "Error: Insufficent mana.");
+					InterruptSpell();
+				} else {
+					InterruptSpell(0, 0, 0);	//the 0 args should cause no messages
+				}
 				return;
 			}
 		}
@@ -308,7 +370,7 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	}
 
 	// ok we know it has a cast time so we can start the timer now
-	spellend_timer->Start(cast_time);
+	spellend_timer.Start(cast_time);
 	
 	// we check this variable later, for the begins to glow message
 	modrange = spells[spell_id].range;
@@ -329,12 +391,12 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	// note: client checks this, but this makes sure
 	if(pMob != this && !IsGroupSpell(spell_id))
 	{
-		mobDist = Dist(*pMob);
+		mobDist = DistNoRoot(*pMob);
 		if(mobDist > spells[spell_id].range)
 		{
 			modrange = GetActSpellRange(spell_id, spells[spell_id].range);
 
-			if(modrange < mobDist) // still not enough
+			if(modrange*modrange < mobDist) // still not enough
 			{
 				if (IsClient() && !(spells[spell_id].targettype == ST_AECaster))
 				{
@@ -346,7 +408,7 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 		}
 	}
 	
-	if (this->IsAIControlled())
+	if (IsAIControlled())
 	{
 		SetRunAnimSpeed(0);
 		if(this != pMob)
@@ -371,7 +433,7 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	safe_delete(outapp);
 	outapp = NULL;
 
-	if (IsClient()) // begins to glow messages
+/*	if (IsClient()) // begins to glow messages
 	{
 		char itemname[65];
 		int16 focusspell;
@@ -392,7 +454,7 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 		
 		// buff duration
 		buffdur = CalcBuffDuration_formula(
-			GetCasterLevel(), 
+			GetCasterLevel(spell_id), 
 			spells[spell_id].buffdurationformula, 
 			spells[spell_id].buffduration
 		);
@@ -414,7 +476,7 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 		{
 			if (spells[spell_id].effectid[i] == SE_CurrentHP)
 			{
-				dmg = CalcSpellEffectValue(spell_id, i, GetCasterLevel());
+				dmg = CalcSpellEffectValue(spell_id, i, GetCasterLevel(spell_id));
 				break;
 			}   
 		}
@@ -427,6 +489,7 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 				CastToClient()->GetImprovedDamageItem(focusspell, itemname);
 				Message_StringID(MT_Spells, BEGINS_TO_GLOW, itemname);
 			}
+
 		}
 		else if(dmg > 0)
 		{
@@ -436,6 +499,7 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 				CastToClient()->GetImprovedHealingItem(focusspell, itemname);
 				Message_StringID(MT_Spells, BEGINS_TO_GLOW, itemname);
 			}
+
 		}
 		
 		// CastTime
@@ -444,7 +508,10 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 			CastToClient()->GetReduceCastTimeItem(focusspell, itemname);
 			Message_StringID(MT_Spells, BEGINS_TO_GLOW, itemname);
 		}
+
 	}
+	end obsolete glow messages
+	*/
 }
 
 int Mob::GetSpecializeSkill(int16 spell_id) {
@@ -485,10 +552,43 @@ bool Mob::CheckFizzle(int16 spell_id)
 	Client *c = this->CastToClient();
 
 	// GMs don't fizzle
-	if (c->GetGM()) return 1;
+	if (c->GetGM()) return(true);
 
 	assert(IsValidSpell(spell_id));
-
+	
+	
+	int no_fizzle_level = 0;
+	if (GetAA(aaMasteryofthePast)) {
+		switch (GetAA(aaMasteryofthePast)) {
+			case 1:
+				no_fizzle_level = 55;
+				break;
+			case 2:
+				no_fizzle_level = 60;
+				break;
+			case 3:
+				no_fizzle_level = 65;
+				break;
+		}
+	} else {
+		switch (GetAA(aaSpellCastingExpertise)) {
+			case 1:
+				no_fizzle_level = 20;
+				break;
+			case 2:
+				no_fizzle_level = 35;
+				break;
+			case 3:
+				no_fizzle_level = 52;
+				break;
+		}
+	}
+	if (spells[spell_id].classes[GetClass()-1] <= no_fizzle_level)
+		return true;
+	
+	//is there any sort of focus that affects fizzling?
+	
+	
 	// neotokyo: this is my try to get something going
 	int par_skill;
 	int act_skill;
@@ -505,16 +605,15 @@ bool Mob::CheckFizzle(int16 spell_id)
 	
 	//FatherNitwit: spell specialization
 	int spec_skill = GetSpecializeSkill(spell_id);
-	float specialize = spec_skill < HIGHEST_SKILL ? 0 : GetSkill(spec_skill);
+	float specialize = spec_skill < HIGHEST_SKILL ? GetSkill(spec_skill) : 0;
 		//VERY rough success formula, needs research
 	if(specialize > 0) {
+		specialize += GetAA(aaSpellCastingMastery) * 5.0;
 		if(((specialize/6.0f) + 15.0f) < MakeRandomFloat(0, 100)) {
 			specialize *= SPECIALIZE_FIZZLE / 200;
 		} else {
 			specialize = 0.0f;
 		}
-		if(spec_skill < HIGHEST_SKILL)
-			c->CheckIncreaseSkill(spec_skill);
 	}
 	
 	// == 0 --> on par
@@ -542,8 +641,8 @@ bool Mob::CheckFizzle(int16 spell_id)
 #endif
 
 	if(fizzle_roll > fizzlechance)
-		return 1;
-	return 0;
+		return(true);
+	return(false);
 }
 
 void Mob::ZeroCastingVars()
@@ -551,7 +650,7 @@ void Mob::ZeroCastingVars()
 	// zero out the state keeping vars
 	isattacked = false;
 	attacked_count = 0;
-	spellend_timer->Disable();
+	spellend_timer.Disable();
 	casting_spell_id = 0;
 	casting_spell_targetid = 0;
 	casting_spell_slot = 0;
@@ -562,7 +661,7 @@ void Mob::ZeroCastingVars()
 
 void Mob::InterruptSpell(int16 spellid)
 {
-	if (spellid == 0xFFFF)
+	if (spellid == SPELL_UNKNOWN)
 		spellid = casting_spell_id;
 
 	InterruptSpell(0, 0x121, spellid);
@@ -585,6 +684,9 @@ void Mob::InterruptSpell(int16 message, int16 color, int16 spellid)
 	if(!spellid)
 		return;
 
+	if (bardsong || IsBardSong(casting_spell_id))
+		StopSong();
+			
 	if(!message)
 		message = IsBardSong(spellid) ? SONG_ENDS_ABRUPTLY : INTERRUPT_SPELL;
 
@@ -658,6 +760,16 @@ void Mob::InterruptSpell(int16 message, int16 color, int16 spellid)
 // which figures out proper targets etc
 void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_used, int inventory_slot)
 {
+	//watch timer for long ass reuse_time spells
+	if(IsClient() && slot != 10 && spells[spell_id].recast_time > 30000) {	// 10 is item
+		if(!CastToClient()->GetPTimers().Expired(pTimerSpellStart + spell_id)) {
+			//should we issue a  message or send them a spell gem packet?
+			Message(13, "Spell reuse timer not expired yet.");
+			InterruptSpell();
+			return;
+		}
+	}
+	
 	bool regain_conc = false;
 	float channelchance, distance_moved, d_x, d_y, distancemod;
 	 
@@ -687,15 +799,33 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 		return;
 	}
 
+	//WR: not sure what this does, but it looks interesting (: commented until its figured out
+	/*if (GetPet() && GetPet()->GetPetType() == 4)
+	{
+		if (slot < 8 && IsAttackAllowed(entity_list.GetMob(target_id)) && spells[spell_id].targettype == ST_Target && IsDD(spell_id) && !BeneficialSpell(spell_id) && rand()%100 < 25)
+		{
+			GetPet()->CastSpell(spell_id,target_id,slot);
+		}
+	}*/
 
 
 	// here we do different things if this is a bard casting a bard song from
 	// a spell bar slot
-	if(UseBardSpellLogic()) // bard singing
+	if(GetClass() == BARD) // bard's can move when casting any spell...
 	{
-		// don't need to check anything for bard singing so this is just empty
+		if (IsBardSong(spell_id) && spells[spell_id].buffduration != 0xFFFF 
+			&& spells[spell_id].recast_time == 0)
+		{
+			bardsong = spell_id;
+			bardsong_slot = slot;
+			if (!entity_list.GetMob(target_id) || (spells[spell_id].targettype != ST_Target && spells[spell_id].targettype != ST_AETarget))
+				bardsong_target = this;
+			else
+				bardsong_target = entity_list.GetMob(target_id);
+			bardsong_timer.Start(6000);
+		}
 	}
-	else // not bard singing
+	else // not bard, check movement
 	{
 		// if has been attacked, or moved while casting
 		// and this is not a bard song
@@ -735,11 +865,11 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 				d_y = fabs(fabs(GetY()) - fabs(GetSpellY()));
 				if(d_x < 5 && d_y < 5)
 				{
-					distance_moved = sqrt(d_x * d_x + d_y * d_y);
+					//avoid the square root...
+					distance_moved = d_x * d_x + d_y * d_y;
 					// if you moved 1 unit, that's 25% off your chance to regain.
 					// if you moved 2, you lose 100% off your chance
-					distancemod = distance_moved * 5;
-					distancemod *= distancemod;
+					distancemod = distance_moved * 25;
 					channelchance -= distancemod;
 				}
 				else
@@ -770,6 +900,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 	// we're done casting, now try to apply the spell
 	if( SpellFinished(spell_id, target_id, slot, mana_used) == false )
 	{
+Message(13, "Spell Finished returned false, interrupting.");
 		InterruptSpell();
 		return;
 	}
@@ -809,7 +940,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 				}
 				case PERCUSSION_INSTRUMENTS:
 				{
-					if(this->itembonuses->percussionMod > 0)
+					if(this->itembonuses.percussionMod > 0)
 						CastToClient()->CheckIncreaseSkill(PERCUSSION_INSTRUMENTS);
 					else
 						CastToClient()->CheckIncreaseSkill(SINGING);
@@ -817,7 +948,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 				}
 				case STRINGED_INSTRUMENTS:
 				{
-					if(this->itembonuses->stringedMod > 0)
+					if(this->itembonuses.stringedMod > 0)
 						CastToClient()->CheckIncreaseSkill(STRINGED_INSTRUMENTS);
 					else
 						CastToClient()->CheckIncreaseSkill(SINGING);
@@ -825,7 +956,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 				}
 				case WIND_INSTRUMENTS:
 				{
-					if(this->itembonuses->windMod > 0)
+					if(this->itembonuses.windMod > 0)
 						CastToClient()->CheckIncreaseSkill(WIND_INSTRUMENTS);
 					else
 						CastToClient()->CheckIncreaseSkill(SINGING);
@@ -833,7 +964,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 				}
 				case BRASS_INSTRUMENTS:
 				{
-					if(this->itembonuses->brassMod > 0)
+					if(this->itembonuses.brassMod > 0)
 						CastToClient()->CheckIncreaseSkill(BRASS_INSTRUMENTS);
 					else
 						CastToClient()->CheckIncreaseSkill(SINGING);
@@ -849,16 +980,11 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 	{
 		if(IsClient())
 		{
+			Client *c = CastToClient();
 			SendSpellBarEnable(spell_id);
 
 			// this causes the delayed refresh of the spell bar gems
-			APPLAYER *outapp = new APPLAYER(OP_MemorizeSpell, sizeof(MemorizeSpell_Struct));
-			MemorizeSpell_Struct* memspell = (MemorizeSpell_Struct*)outapp->pBuffer;
-			memspell->slot = slot;
-			memspell->spell_id = spell_id;
-			memspell->scribing = 3;
-			outapp->priority = 6;
-			CastToClient()->QueuePacket(outapp);
+			c->MemorizeSpell(slot, spell_id, memSpellSpellbar);
 
 			// this tells the client that casting may happen again
 			SetMana(GetMana());
@@ -866,10 +992,18 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 			// skills
 			if(slot < MAX_PP_MEMSPELL)
 			{
-				CastToClient()->CheckIncreaseSkill(spells[spell_id].skill);
+				c->CheckIncreaseSkill(spells[spell_id].skill);
+				
 				// increased chance of gaining channel skill if you regained concentration
-				CastToClient()->CheckIncreaseSkill(CHANNELING, regain_conc ? 5 : 0);
+				c->CheckIncreaseSkill(CHANNELING, regain_conc ? 5 : 0);
+				
+				int spec_skill = GetSpecializeSkill(spell_id);
+				int specialize = spec_skill < HIGHEST_SKILL ? GetSkill(spec_skill) : 0;
+				if(specialize > 0)
+					c->CheckIncreaseSkill(spec_skill);
 			}
+			
+			
 		}
 
 		// there should be no casting going on now
@@ -877,7 +1011,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 
 		// set the rapid recast timer for next time around
 		delaytimer = true;
-		spellend_timer->Start(400,true);
+		spellend_timer.Start(400,true);
 	}
 
 
@@ -953,7 +1087,9 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 		Unknown
 	}
 	CastAction;
-
+	
+	//I think the string ID SPELL_NEED_TAR is wrong, it dosent seem to show up.
+	
 //
 // solar: Switch #1 - determine spell target
 //
@@ -977,12 +1113,45 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 		}
 
 		// target required for these
-		case ST_Undead:
-		case ST_Animal:
+		case ST_Undead: {
+			spell_target = entity_list.GetMob(target_id);
+			if(!spell_target || spell_target->GetBodyType() != bodyTypeUndead)
+			{
+				//invalid target
+				Message_StringID(13,SPELL_NEED_TAR);
+				return false;
+			}
+			CastAction = SingleTarget;
+			break;
+		}
+		
+		case ST_Summoned: {
+			spell_target = entity_list.GetMob(target_id);
+			if(!spell_target || spell_target->GetBodyType() != bodyTypeSummoned)
+			{
+				//invalid target
+				Message_StringID(13,SPELL_NEED_TAR);
+				return false;
+			}
+			CastAction = SingleTarget;
+			break;
+		}
+		
+		case ST_Animal: {
+			spell_target = entity_list.GetMob(target_id);
+			if(!spell_target || spell_target->GetBodyType() != bodyTypeAnimal)
+			{
+				//invalid target
+				Message_StringID(13,SPELL_NEED_TAR);
+				return false;
+			}
+			CastAction = SingleTarget;
+			break;
+		}
+		
 		case ST_Plant:
 		case ST_Dragon:
 		case ST_Giant:
-		case ST_Summoned:
 		case ST_Tap:
 		case ST_Target: {
 			spell_target = entity_list.GetMob(target_id);
@@ -1031,6 +1200,7 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 			break;
 		}
 
+		case ST_UndeadAE:	//should only affect undead...
 		case ST_AETarget:
 		{
 			spell_target = entity_list.GetMob(target_id);
@@ -1102,60 +1272,52 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 		return false;
 	}
 
-	// Check for consumables and focus items
-	if(IsClient())
-	{
-    Client *c = this->CastToClient();
-    int component, component_count, inv_slot_id;
-    for(int t_count = 0; t_count < 4; t_count++)
-    {
+	// Check for consumables and Reagent focus items
+	// first check for component reduction...
+	if(IsClient() && CastToClient()->GetFocusEffect(focusReagentCost,spell_id) < MakeRandomInt(0, 100)) {
+    	Client *c = this->CastToClient();
+    	int component, component_count, inv_slot_id;
+	    for(int t_count = 0; t_count < 4; t_count++) {
+			if(IsBardSong(spell_id)) // bard spells don't use up reagents right?
+				break;
 			component = spells[spell_id].components[t_count];
 			component_count = spells[spell_id].component_counts[t_count];
 
-			if (component != -1)
+			if (component == -1)
+				continue;
+			if(c->GetInv().HasItem(component, component_count, invWhereWorn|invWherePersonal) == -1) // item not found
 			{
-				if(c->GetInv().HasItem(component, component_count) == -1) // item not found
-				{
-					c->Message_StringID(13, MISSING_SPELL_COMP);
+				c->Message_StringID(13, MISSING_SPELL_COMP);
 
-					const Item_Struct *item = database.GetItem(component);
-					if(item)
-						c->Message_StringID(13, MISSING_SPELL_COMP_ITEM, item->Name);
+				const Item_Struct *item = database.GetItem(component);
+				if(item)
+					c->Message_StringID(13, MISSING_SPELL_COMP_ITEM, item->Name);
 
-					if(c->GetGM())
-						c->Message(0, "Your GM status allows you to finish casting even though you're missing required components.");
-					else
-						return false;
-				}
+				if(c->GetGM())
+					c->Message(0, "Your GM status allows you to finish casting even though you're missing required components.");
 				else
+					return false;
+			}
+			else
+			{
+				// Components found, Deleteing
+				// now we go looking for and deleting the items one by one
+				for(int s = 0; s < component_count; s++)
 				{
-					// Components found Deleteing
-					if(!IsBardSong(spell_id))	// bard spells don't use up reagents right?
+					inv_slot_id = c->GetInv().HasItem(component, 1);
+					if(inv_slot_id != -1)
 					{
-						// now we go looking for and deleting the items one by one
-						for(int s = 0; s < component_count; s++)
-						{
-							inv_slot_id = c->GetInv().HasItem(component, 1);
-							if(inv_slot_id != -1)
-							{
-								c->DeleteItemInInventory(inv_slot_id, 1, true);
-							}
-							else
-							{	// some kind of error in the code if this happens
-								c->Message(13, "ERROR: reagent item disappeared while processing?");
-							}
-						}
+						c->DeleteItemInInventory(inv_slot_id, 1, true);
+					}
+					else
+					{	// some kind of error in the code if this happens
+						c->Message(13, "ERROR: reagent item disappeared while processing?");
 					}
 				}
 			}
-/*
-			else if (spells[spell_id].NoexpendReagent[t_count] != -1)
-			{
-			}
-*/
 		}
 	}
-
+	
 	//
 	// solar: Switch #2 - execute the spell
 	//
@@ -1178,20 +1340,18 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 			// we can't cast an AE spell without something to center it on
 			assert(ae_center != NULL);
 
-			if(ae_center->IsBeacon())
-			{
+			if(ae_center->IsBeacon()) {
 				// special ae duration spell
 				ae_center->CastToBeacon()->AELocationSpell(this, range, spell_id);
-			}
-			else
-			{
+			} else {
 				// regular PB AE or targeted AE spell - spell_target is null if PB
 				if(spell_target)	// this must be an AETarget spell
 				{
 					// affect the target too
 					SpellOnTarget(spell_id, spell_target);
 				}
-				entity_list.AESpell(this, ae_center, range, spell_id);
+				bool affect_caster = !IsNPC();	//NPC AE spells do not affect the NPC caster
+				entity_list.AESpell(this, ae_center, range, spell_id, affect_caster);
 			}
 			break;
 		}
@@ -1215,6 +1375,11 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 				// if target is grouped, CastGroupSpell will cast it on the caster
 				// too, but if not then we have to do that here.
 				SpellOnTarget(spell_id, this);
+#ifdef GROUP_BUFF_PETS
+				//pet too
+				if (GetPet())
+					SpellOnTarget(spell_id, GetPet());
+#endif
 			}
 			break;
 		}
@@ -1232,11 +1397,31 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 	
 	// if this was a spell slot or an ability use up the mana for it
 	// CastSpell already reduced the cost for it if we're a client with focus
-	if(slot != 10)	// 10 is item
+	if(slot != 10 && mana_used > 0)	// 10 is item
 	{
 		SetMana(GetMana() - mana_used);
+		
+		//set our reuse timer on long ass reuse_time spells...
+		if(IsClient() && spells[spell_id].recast_time > 30000) {
+			int recast = spells[spell_id].recast_time/1000;
+			if (spell_id == SPELL_LAY_ON_HANDS)	//lay on hands
+			{
+				recast -= GetAA(aaFervrentBlessing) * 420;
+			}
+			else if (spell_id == SPELL_HARM_TOUCH || spell_id == SPELL_HARM_TOUCH2)	//harm touch
+			{
+				recast -= GetAA(aaTouchoftheWicked) * 420;
+			}
+			CastToClient()->GetPTimers().Start(pTimerSpellStart + spell_id, recast);
+		}
 	}
-
+	
+	//WR: I dont know what these do... uncomment them if you do...
+	/*if (spell_id == 2155)
+		SpellFinished(2156,GetID());
+	if (spell_id == 1994)
+		SpellFinished(1995,GetID());
+	*/
 
 	// neotokyo: 09-Nov-02
 	// Recourse means there is a spell linked to that spell in that the recourse spell will
@@ -1247,8 +1432,17 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 	{
 		if(IsGrouped() && spells[recourse_spell].targettype == ST_Group)
 		{
-			Group *g = entity_list.GetGroupByMob(this);
-			g->CastGroupSpell(this, recourse_spell);
+			if(IsGrouped()) {
+				Group *g = entity_list.GetGroupByMob(this);;
+				g->CastGroupSpell(this, recourse_spell);
+			} else {
+				SpellOnTarget(recourse_spell, this);
+#ifdef GROUP_BUFF_PETS
+				//pet too
+				if (GetPet())
+					SpellOnTarget(recourse_spell, GetPet());
+#endif
+			}
 		}
 		else
 		{
@@ -1290,7 +1484,7 @@ int CalcBuffDuration(Mob *caster, Mob *target, int16 spell_id)
 	formula = spells[spell_id].buffdurationformula;
 	duration = spells[spell_id].buffduration;
 
-	return CalcBuffDuration_formula(caster->GetCasterLevel(), formula, duration);
+	return CalcBuffDuration_formula(caster->GetCasterLevel(spell_id), formula, duration);
 }
 
 // the generic formula calculations
@@ -1366,7 +1560,7 @@ int CalcBuffDuration_formula(int level, int formula, int duration)
 // 0 if not the same type, no action needs to be taken
 // 1 if spellid1 should be removed (overwrite)
 // -1 if they can't stack and spellid2 should be stopped
-int CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, int caster_level2)
+int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, int caster_level2)
 {
 	SPDat_Spell_Struct sp1 = spells[spellid1];
 	SPDat_Spell_Struct sp2 = spells[spellid2];
@@ -1462,8 +1656,13 @@ int CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, int ca
 				sp1_value -= 100;
 				sp2_value -= 100;
 			}
-
-			if(abs(sp2_value) >= abs(sp1_value))
+			
+			if(sp1_value < 0)
+				sp1_value = 0 - sp1_value;
+			if(sp2_value < 0)
+				sp2_value = 0 - sp2_value;
+			
+			if(sp2_value >= sp1_value)
 				return 1;	// overwrite
 			return -1;	// can't stack
 		}
@@ -1482,7 +1681,7 @@ int Mob::AddBuff(Mob *caster, int16 spell_id, int duration)
 	bool will_overwrite = false;
 	Buffs_Struct curbuf;
 	
-	caster_level = caster ? caster->GetCasterLevel() : GetCasterLevel();
+	caster_level = caster ? caster->GetCasterLevel(spell_id) : GetCasterLevel(spell_id);
     
 	if(!duration)
 	{
@@ -1502,7 +1701,7 @@ int Mob::AddBuff(Mob *caster, int16 spell_id, int duration)
 	{
 		curbuf = buffs[buffslot];
 
-		if(curbuf.spellid != 0xFFFF)
+		if(curbuf.spellid != SPELL_UNKNOWN)
 		{
 			// there's a buff in this slot
 			ret = CheckStackConflict(curbuf.spellid, curbuf.casterlevel, spell_id, caster_level);
@@ -1549,7 +1748,7 @@ int Mob::AddBuff(Mob *caster, int16 spell_id, int duration)
 		{
 			curbuf = buffs[buffslot];
 
-			if(curbuf.spellid != 0xFFFF)
+			if(curbuf.spellid != SPELL_UNKNOWN)
 			{
 				ret = CheckStackConflict(curbuf.spellid, curbuf.casterlevel, spell_id, caster_level);
 				if(ret == 1)
@@ -1567,7 +1766,7 @@ int Mob::AddBuff(Mob *caster, int16 spell_id, int duration)
 	}
 
 	// now add buff at emptyslot
-	assert(buffs[emptyslot].spellid == 0xFFFF);	// sanity check
+	assert(buffs[emptyslot].spellid == SPELL_UNKNOWN);	// sanity check
 			
 	buffs[emptyslot].spellid = spell_id;
 	buffs[emptyslot].casterlevel = caster_level;
@@ -1598,7 +1797,7 @@ int Mob::CanBuffStack(int16 spellid, int8 caster_level, bool iFailIfOverwrite)
 		curbuf = buffs[i];
 
 		// no buff in this slot
-		if (curbuf.spellid == 0xffff)
+		if (curbuf.spellid == SPELL_UNKNOWN)
 		{
 			// if we haven't found a free slot, this is the first one so save it
 			if(firstfree == -2)
@@ -1647,6 +1846,8 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		Message(13, "SOT: You must have a target for this spell.");
 		return false;
 	}
+	
+	int16 caster_level = GetCasterLevel(spell_id);
 
 	// Actual cast action - this causes the caster animation and the particles
 	// around the target
@@ -1692,7 +1893,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		action->target = spelltar->GetID(); 
 	} 
 
-	action->level = GetCasterLevel();	// caster level, for animation only
+	action->level = caster_level;	// caster level, for animation only
 	action->type = 231;	// 231 means a spell
 	action->spell = spell_id;
 	action->sequence = (int32) (GetHeading() * 2);	// just some random number
@@ -1723,7 +1924,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	}
 #else
 	// invuln mobs can't be affected by any spells, good or bad
-	if(spelltar->GetInvul())
+	if(spelltar->GetInvul() || spelltar->DivineAura())
 		return false;
 #endif
 
@@ -1792,7 +1993,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		spell_effectiveness = spelltar->ResistSpell(spell_id, this);
 		if(spell_effectiveness < 100)
 		{
-			if(!(IsPartialCapableSpell(spell_id) && spell_effectiveness > 0))
+			if(!IsPartialCapableSpell(spell_id) || spell_effectiveness == 0)
 			{
 				Message_StringID(MT_Shout, TARGET_RESISTED, spells[spell_id].name);
 				spelltar->Message_StringID(MT_Shout, YOU_RESIST, spells[spell_id].name);
@@ -1817,10 +2018,30 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		Shout("%s!", target_name);
 	}
 
-	// solar: TODO fix this - hate needs to be added for the effects
-	 // this sucks for charm spells todo: invent something better
-	if (spelltar->IsAIControlled() && IsDetrimentalSpell(spell_id))
-		spelltar->AddToHateList(this, 0, CalcSpellEffectValue(spell_id, 0, GetLevel()));
+	if (spelltar->IsAIControlled() && spells[spell_id].goodEffect == 0
+		//IsDetrimentalSpell(spell_id)
+		) {
+		int16 aggro_amount = CheckAggroAmount(spell_id);//*spelltar->CastToNPC()->AggroModifier();
+		if (IsClient()) {
+			switch (GetAA(aaSpellCastingSubtlety))
+			{
+			case 1:
+				aggro_amount = aggro_amount * 95 / 100;
+				break;
+			case 2:
+				aggro_amount = aggro_amount * 90 / 100;
+				break;
+			case 3:
+				aggro_amount = aggro_amount * 80 / 100;
+				break;
+			}
+		}
+		if (spell_effectiveness < 100)
+			aggro_amount /= 2;
+		spelltar->AddToHateList(this, aggro_amount);
+	}
+	else if (IsBeneficialSpell(spell_id))
+		entity_list.AddHealAggro(spelltar, this, CheckHealAggroAmount(spell_id));
 
 	// cause the effects to the target
 	if(!spelltar->SpellEffect(this, spell_id, spell_effectiveness))
@@ -1864,1394 +2085,6 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	return true;
 }
 
-// the spell can still fail here, if the buff can't stack
-// in this case false will be returned, true otherwise
-bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
-{
-	int caster_level, buffslot, effect, effect_value, i;
-	SPDat_Spell_Struct spell;
-#ifdef SPELL_EFFECT_SPAM
-#define _EDLEN	200
-	char effect_desc[_EDLEN];
-#endif
-
-	if(!IsValidSpell(spell_id))
-		return false;
-
-	buffslot = AddBuff(caster, spell_id);
-	if(buffslot == -1)	// stacking failure
-		return false;
-
-	spell = spells[spell_id];
-	caster_level = caster ? caster->GetCasterLevel() : GetCasterLevel();
-	
-#ifdef SPELL_EFFECT_SPAM
-		Message(0, "You are affected by spell '%s' (id %d)", spell.name, spell_id);
-		if(buffslot >= 0)
-		{
-			Message(0, "Buff slot:  %d  Duration:  %d tics", buffslot, buffs[buffslot].ticsremaining);
-		}
-#endif
-
-	// iterate through the effects in the spell
-	for (i = 0; i < EFFECT_COUNT; i++)
-	{
-		if(IsBlankSpellEffect(spell_id, i))
-			continue;
-
-		effect = spell.effectid[i];
-		effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
-		
-		if(!(effect == SE_AttackSpeed || effect == SE_SingingSkill) && caster->IsClient() && caster->GetClass() == BARD)
-		{
-			switch(spell.skill)
-			{
-			case SINGING:
-				{
-					effect_value = (int)ceil(effect_value * caster->CastToClient()->itembonuses->singingMod);
-					break;
-				}
-			case PERCUSSION_INSTRUMENTS:
-				{
-					effect_value = (int)ceil(effect_value * caster->CastToClient()->itembonuses->percussionMod);
-					break;
-				}
-
-			case STRINGED_INSTRUMENTS:
-				{
-					effect_value = (int)ceil(effect_value * caster->CastToClient()->itembonuses->stringedMod);
-					break;
-				}
-			case WIND_INSTRUMENTS:
-				{
-					effect_value = (int)ceil(effect_value * caster->CastToClient()->itembonuses->windMod);
-					break;
-				}
-			case BRASS_INSTRUMENTS:
-				{
-					effect_value = (int)ceil(effect_value * caster->CastToClient()->itembonuses->brassMod);
-					break;
-				}
-			}
-		}
-
-#ifdef SPELL_EFFECT_SPAM
-		effect_desc[0] = 0;
-#endif
-
-		switch(effect)
-		{
-			case SE_CurrentHP:	// nukes, heals; also regen/dot if a buff
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Current Hitpoints: %+i", effect_value);
-#endif
-				// SE_CurrentHP is calculated at first tick if its a dot/buff
-				if (buffslot >= 0)
-					break;
-
-				// for offensive spells check if we have a spell rune on
-				sint32 dmg = effect_value;
-				if(dmg < 0)
-				{
-					// take partial damage into account
-					dmg = (int) (dmg * partial / 100);
-					if (caster && caster->IsClient())
-					{
-						dmg = caster->GetActSpellValue(spell_id, dmg);
-
-						//spell crits
-						int chance = 0;
-						float ratio =1.0;
-
-						//normal spell crit
-						if(caster_level > 12 && caster->GetClass() == WIZARD)
-						{
-							chance+= 3;
-							ratio +=.15;
-						}
-
-						//spell casting fury
-						//uint8 *aa_item = &(((uint8 *)&caster->CastToClient()->aa)[23]);
-						uint8 aa_item = caster->CastToClient()->GetAA(23);
-						if(aa_item == 1) {chance+=2; ratio += .333;}
-						if(aa_item == 2) {chance+=5; ratio += .666;}
-						if(aa_item == 3) {chance+=7; ratio += 1.0;}
-				
-						if(rand()%100 <= chance) dmg = (int)(dmg * ratio);	//message.. but I don't care atm			
-					}
-
-					sint32 origdmg = dmg;
-					dmg = ReduceMagicalDamage(dmg, GetMagicRune());
-					if (origdmg != dmg && caster)
-					{
-						caster->Message(15,
-							"The Spellshield absorbed %d of %d points of damage",
-							abs(origdmg - dmg), abs(origdmg));
-					}
-
-					if (dmg == 0)	// rune absorbed it all
-						break;
-				}
-				else if(dmg > 0)
-				{
-					if (caster && caster->IsClient())
-					{
-						dmg = caster->GetActSpellValue(spell_id, dmg);
-					}
-				}
-
-				this->ChangeHP(caster, dmg, spell_id, buffslot);
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Current Hitpoints: %+i  actual: %+i", effect_value, dmg);
-#endif
-				break;
-			}
-
-			case SE_CurrentHPOnce:	// used in buffs usually, see Courage
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Current Hitpoints Once: %+i", effect_value);
-#endif
-				ChangeHP(caster, effect_value, spell_id, buffslot);
-				break;
-			}
-
-			case SE_PercentalHeal:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Percental Heal: %+i (%d%% max)", spell.max[i], effect_value);
-#endif
-				// solar: TODO implement this
-				const char *msg = "Percental Heal is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_CurrentMana:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Current Mana: %+i", effect_value);
-#endif
-				if (buffslot >= 0)
-					break;
-
-				SetMana(GetMana() + effect_value);
-				break;
-			}
-
-			case SE_Translocate:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Translocate: %s %d %d %d heading %d", 
-					spell.teleport_zone, spell.base[1], spell.base[0], 
-					spell.base[2], spell.base[3]
-				);
-#endif
-				if(IsClient())
-				{
-				Group* group = entity_list.GetGroupByClient(this->CastToClient());
-				if(caster != this && (!group || !group->IsGroupMember(caster->CastToMob())))
-					break;
-					// solar: if it's blank or "0" it means bind point
-					// TODO: MovePC needs to take heading too, which is in base[3]
-					if(spell.teleport_zone && strlen(spell.teleport_zone) > 1)
-					{
-						CastToClient()->MovePC
-						(
-							spell.teleport_zone,
-							spell.base[1],
-							spell.base[0],
-							spell.base[2]
-						);
-					}
-					else
-					{
-						Gate();
-					}
-				}
-				break;
-			}
-
-			case SE_Teleport:	// gates, rings, circles, etc
-			case SE_Teleport2:
-			case SE_Succor:
-			{
-				float x, y, z, heading;
-				char *target_zone;
-
-				x = spell.base[1];
-				y = spell.base[0];
-				z = spell.base[2];
-				heading = spell.base[3];
-								
-				if(!strcmp(spell.teleport_zone, "same"))
-				{
-					target_zone = 0;
-				}
-				else
-				{
-					target_zone = spell.teleport_zone;
-				}
-
-#ifdef SPELL_EFFECT_SPAM
-				const char *efstr = "Teleport";
-				if(effect == SE_Teleport)
-					efstr = "Teleport v1";
-				else if(effect == SE_Teleport2)
-					efstr = "Teleport v2";
-				else if(effect == SE_Succor)
-					efstr = "Succor";
-
-				snprintf(effect_desc, _EDLEN, 
-					"%s: %0.2f, %0.2f, %0.2f heading %0.2f in %s",
-					efstr, x, y, z, heading, target_zone ? target_zone : "same zone"
-				);
-#endif
-				if(IsClient())
-				{
-					// TODO: MovePC needs to take heading too, which is in base[3]
-					CastToClient()->MovePC(target_zone, x, y, z);
-				}
-				break;
-			}
-
-			case SE_HealOverTime:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Heal over Time: %+i", effect_value);
-#endif
-				// solar: this is calculated with bonuses
-				break;
-			}
-
-			case SE_MovementSpeed:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Movement Speed: %+i", effect_value);
-#endif
-				// solar: this is calculated with bonuses
-				break;
-			}
-
-			case SE_AttackSpeed:
-			case SE_AttackSpeed2:
-			case SE_AttackSpeed3:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				if(effect == SE_AttackSpeed)
-					snprintf(effect_desc, _EDLEN, "Attack Speed v1: %d%%", effect_value);
-				else if(effect == SE_AttackSpeed2)
-					snprintf(effect_desc, _EDLEN, "Attack Speed v2: %d%%", effect_value);
-				else if(effect == SE_AttackSpeed3)
-					snprintf(effect_desc, _EDLEN, "Attack Speed v3: %d%%", effect_value);
-#endif
-				// solar: this is calculated with bonuses
-				break;
-			}
-
-			case SE_Invisibility:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Invisibility");
-#endif
-				// solar: TODO already invis message and spell kill from SpellOnTarget
-				SetInvisible(true);
-				break;
-			}
-
-			case SE_InvisVsUndead:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Invisibility to Undead");
-#endif
-				invisible_undead = true;		// Mongrel: We're now invis to undead
-				break;
-			}
-
-			case SE_SeeInvis:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "See Invisible");
-#endif
-				// solar: handled by client
-				break;
-			}
-
-			case SE_WaterBreathing:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Water Breathing");
-#endif
-				break;
-			}
-
-			case SE_AddFaction:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Faction Mod: %+i", effect_value);
-#endif
-				// solar: TODO implement this
-				const char *msg = "Faction Mod is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_Stun:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Stun: %d msec", effect_value);
-#endif
-				Stun(effect_value);
-				break;
-			}
-
-			case SE_Charm:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Charm: %+i", effect_value);
-#endif
-				if (!caster)	// can't be someone's pet unless we know who that someone is
-					break;
-
-				//Shawn319: This does not work. we need to re-write it. Players should never be able to charm other players
-				if (IsClient() && caster->IsClient())
-				{
-					caster->Message(0, "Unable to cast charm on a fellow player.");
-					break;
-				}
-
-				WhipeHateList();
-				caster->SetPet(this);
-				SetOwnerID(caster->GetID());
-				SetPetOrder(SPO_Follow);
-                
-				// tell caster it has a pet
-				if(caster->IsClient())
-				{
-					APPLAYER *app = new APPLAYER(OP_Charm, sizeof(Charm_Struct));
-					Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
-					ps->owner_id = caster->GetID();
-					ps->pet_id = this->GetID();
-					ps->command = 1;
-					caster->CastToClient()->FastQueuePacket(&app);
-				}
-
-				if (this->IsClient())
-				{
-					AI_Start();
-				}
-
-// solar: random duration stuff - this is going into CalcBuffDuration eventually
-				bool bBreak = false;
-
-				// define spells with fixed duration
-				// this is handled by the server, and not by the spell database
-				switch(spell_id)
-				{
-					case 3371://call of the banshee
-					case 1707://dictate
-						bBreak = true;
-				}
-				if (!bBreak)
-				{
-					int cha = caster->GetCHA();
-					float r1 = (float)rand()/(float)RAND_MAX;
-					float r2 = (float)cha  + (caster->GetLevel()/3) / 255.0f;
-					float finalPercentDuration = r1 +r2; //When resists work use partial to aid in determining length
-					if (finalPercentDuration > 1.0f) finalPercentDuration = 1.0f;
-					buffs[buffslot].ticsremaining = (int)ceil(finalPercentDuration *buffs[buffslot].ticsremaining);
-				}
-
-				break;
-			}
-
-			case SE_Fear:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Fear: %+i", effect_value);
-#endif
-// solar: random duration, removing this later
-				buffs[buffslot].ticsremaining = MakeRandomInt(1, buffs[buffslot].ticsremaining);
-								
-				if (IsClient() && CastToClient()->disc_inuse == 31)	// fearless
-				{
-					entity_list.MessageClose_StringID(this, false, 200, MT_Disciplines, RESISTS_URGE, GetCleanName());
-					//entity_list.MessageClose(this, false, 100, 0, "%s resists the urge to flee!", GetName());
-				}
-				else
-				{
-					//kathgar: Its basicly fear, they don't move
-					Stun(buffs[buffslot].ticsremaining * 6000);
-				}
-                
-				break;
-			}
-
-			case SE_BindAffinity:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Bind Affinity");
-#endif
-				if (this->IsClient())
-				{
-					CastToClient()->SetBindPoint();
-					Save();
-				}
-				break;
-			}
-
-			case SE_Gate:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Gate");
-#endif
-				Gate();
-				break;
-			}
-
-			case SE_CancelMagic:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Cancel Magic: %d", effect_value);
-#endif
-				// solar: TODO proper dispel counters, including poison/disease/curse
-				int slot;
-				for(slot = 0; slot < BUFF_COUNT; slot++)
-				{
-					if
-					(
-						buffs[slot].spellid != 0xFFFF &&
-						buffs[slot].durationformula != DF_Permanent &&
-			    	buffs[slot].casterlevel <= (caster_level + effect_value)
-			    )
-			    {
-						BuffFadeBySlot(slot);
-						slot = BUFF_COUNT;
-					}
-				}
-				break;
-			}
-
-			case SE_DispelDetrimental:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Dispel Detrimental: %d", effect_value);
-#endif
-				// solar: TODO implement this
-				const char *msg = "Dispel Detrimental is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_Mez:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Mesmerize");
-#endif
-				Mesmerize();
-				break;
-			}
-
-			case SE_SummonItem:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				const Item_Struct *item = database.GetItem(spell.base[i]);
-				const char *itemname = item ? item->Name : "*Unknown Item*";
-				snprintf(effect_desc, _EDLEN, "Summon Item: %s (id %d)", itemname, spell.base[i]);
-#endif
-				if(IsClient())
-				{
-					int charges;
-					if (spell.formula[i] < 100)
-					{
-						charges = spell.formula[i];
-					}
-					else	// variable charges
-					{
-						charges = CalcSpellEffectValue_formula(spell.formula[i], 0, 20, caster_level);
-					}
-					charges = charges < 1 ? 1 : (charges > 20 ? 20 : charges);
-					CastToClient()->SummonItem(spell.base[i], charges);
-				}
-
-				break;
-			}
-
-			case SE_SummonBSTPet:
-			case SE_NecPet:
-			case SE_SummonPet:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Summon Pet: %s", spell.teleport_zone);
-#endif
-				if(GetPet())
-				{
-					Message_StringID(MT_Shout, ONLY_ONE_PET);
-				}
-				else
-				{
-					MakePet(spell.teleport_zone);
-				}
-				break;
-			}
-
-			case SE_Familiar:	// solar: why isn't this just a pet?
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Summon Familiar: %s", spell.teleport_zone);
-#endif
-				if (GetFamiliarID())
-				{
-					Message_StringID(MT_Shout, ONLY_ONE_PET);
-				}
-				else
-				{
-					MakePet(spell.teleport_zone);
-				}
-				break;
-			}
-
-			case SE_DivineAura:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Invulnerability");
-#endif
-				SetInvul(true);
-				break;
-			}
-
-			case SE_ShadowStep:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Shadow Step: %d", effect_value);
-#endif
-				if(IsNPC())	// see Song of Highsun - sends mob home
-				{
-					Gate();
-				}
-				// solar: shadow step is handled by client already, nothing required
-				break;
-			}
-
-			case SE_TrueNorth:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "True North");
-#endif
-				// solar: handled by client
-				break;
-			}
-
-			case SE_Blind:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Blind: %+i", effect_value);
-#endif
-				// solar: handled by client
-				// TODO: blind flag?
-				break;
-			}
-
-			case SE_SenseDead:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Sense Dead");
-#endif
-				// solar: handled by client
-				break;
-			}
-
-			case SE_SenseSummoned:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Sense Summoned");
-#endif
-				// solar: handled by client
-				break;
-			}
-
-			case SE_SenseAnimals:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Sense Animals");
-#endif
-				break;
-				// solar: handled by client
-			}
-
-			case SE_Rune:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Melee Absorb Rune: %+i", effect_value);
-#endif
-				SetRune(effect_value);
-				break;
-			}
-
-			case SE_AbsorbMagicAtt:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Spell Absorb Rune: %+i", effect_value);
-#endif
-				SetMagicRune(effect_value);
-				break;
-			}
-
-			case SE_Levitate:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Levitate");
-#endif
-				// solar: no need to send this, the client already knows to levitate
-				//SendAppearancePacket(AT_Levitate, 2);
-				break;
-			}
-
-			case SE_Illusion:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Illusion: race %d", effect_value);
-#endif
-				// solar: TODO fix up SendIllusionPacket
-
-				int16 tex = 0;
-				if (spell_id == 599||spell_id == 2798||spell_id == 2799||spell_id == 2800)
-					tex = 2;// water
-				else if (spell_id == 598||spell_id == 2795||spell_id == 2796||spell_id == 2797)
-					tex = 1;// fire
-				else if (spell_id == 584||spell_id == 2792||spell_id == 2793||spell_id == 2794)
-					tex = 0; //earth
-				else if (spell_id == 597||spell_id == 2789|| spell_id == 2790|| spell_id == 2791)
-					tex = 3;// air
-
-				SendIllusionPacket
-				(
-					spell.base[i],
-					Mob::GetDefaultGender(spell.base[i], GetGender()),
-					tex
-				);
-				break;
-			}
-
-			case SE_IllusionCopy:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Illusion Copy");
-#endif
-				// solar: TODO implement this
-				const char *msg = "Illusion Copy is not implemented.";
-				if(caster) caster->Message(13, msg);
-			}
-
-			case SE_DamageShield:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Damage Shield: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_ReverseDS:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Reverse Damage Shield: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_SpellDamageShield:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Reverse Damage Shield: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_Identify:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Identify");
-#endif
-				// solar: handled by client
-				break;
-			}
-
-			case SE_WipeHateList:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Memory Blur: %d", effect_value);
-#endif
-				// solar: TODO figure out how to handle the chance calculation, for
-				// now just make it a toss up
-				if(MakeRandomInt(0, 100) > 50)
-				{
-					if(IsAIControlled())
-					{
-						WhipeHateList();
-					}
-					Message(13, "Your mind fogs. Who are my friends? Who are my enimies?... it was all so clear a moment ago...");
-				}
-				break;
-			}
-
-			case SE_SpinTarget:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Spin: %d", effect_value);
-#endif
-				// solar: the spinning is handled by the client
-				if(buffslot >= 0)
-					Stun(buffs[buffslot].ticsremaining * 6000);
-				break;
-			}
-
-			case SE_EyeOfZomm:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Eye of Zomm");
-#endif
-				const char *msg = "Eye of Zomm is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_ReclaimPet:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Reclaim Pet");
-#endif
-				if
-				(
-					IsNPC() &&
-					GetOwnerID() &&		// I'm a pet
-					caster &&					// there's a caster
-					caster->GetID() == GetOwnerID()	&& // and it's my master
-					GetPetType() != 0xFF
-				)
-				{
-					SetOwnerID(0);	// this will kill the pet
-				}
-				break;
-			}
-
-			case SE_BindSight:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Bind Sight");
-#endif
-				// solar: handled by client
-				break;
-			}
-
-			case SE_FeignDeath:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Feign Death");
-#endif
-				if(IsClient())
-					CastToClient()->SetFeigned(true);
-				break;
-			}
-
-			case SE_VoiceGraft:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Voice Graft");
-#endif
-				const char *msg = "Voice Graft is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_Sentinel:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Sentinel");
-#endif
-				if(caster)
-				{
-					if(caster == this)
-					{
-						Message_StringID(MT_Spells,
-							SENTINEL_TRIG_YOU);
-					}
-					else
-					{
-						caster->Message_StringID(MT_Spells,
-							SENTINEL_TRIG_OTHER, GetCleanName());
-					}
-				}
-				break;
-			}
-
-			case SE_LocateCorpse:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Locate Corpse");
-#endif
-				// solar: handled by client
-				break;
-			}
-
-			case SE_Revive:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Revive");	// heh the corpse won't see this
-#endif
-				if (IsCorpse() && CastToCorpse()->IsPlayerCorpse())
-					CastToCorpse()->CastRezz(spell_id, caster);
-				break;
-			}
-
-			case SE_ModelSize:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Model Size: %d%%", effect_value);
-#endif
-				ChangeSize(GetSize() * (effect_value / 100.0));
-				break;
-			}
-
-			case SE_TestSpells:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Test Spell: %+i", effect_value);
-#endif
-				break;
-			}
-
-			case SE_Root:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Root: %+i", effect_value);
-#endif
-				BuffFadeByEffect(SE_MovementSpeed);
-				rooted = true;
-				break;
-			}
-
-			case SE_SummonHorse:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Summon Mount: %s", spell.teleport_zone);
-#endif
-				if(IsClient())	// NPCs can't ride
-				{
-					CastToClient()->MakeHorseSpawnPacket(spell_id);
-				}
-				break;
-			}
-
-			case SE_SummonCorpse:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Summon Corpse: %d", effect_value);
-#endif
-				if(IsClient())	// can only summon corpses of clients
-				{
-					Corpse *corpse = entity_list.GetCorpseByOwner(CastToClient());
-					if(corpse)
-					{
-						if(caster)
-						{
-							caster->Message_StringID(4, SUMMONING_CORPSE_OTHER, GetCleanName());
-						}
-						corpse->Summon(CastToClient(), true);
-					}
-					else	// corpse not found
-					{
-						if(caster)
-						{
-							caster->Message_StringID(4, CORPSE_CANT_SENSE);
-						}
-					}
-				}
-				break;
-			}
-
-			case SE_WeaponProc:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Weapon Proc: %s (id %d)", spells[effect_value].name, effect_value);
-#endif
-				AddProcToWeapon(spell.base[i]);
-				break;
-			}
-
-			case SE_Calm:	// cinder jolt, enraging blow
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Hate Mod: %+i%%", effect_value);
-#endif
-				break;
-			}
-
-			case SE_ChangeAggro:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Aggro Mod: %+i%%", effect_value);
-#endif
-				break;
-			}
-
-			case SE_ChangeFrenzyRad:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Frenzy Radius Mod: %d/%d", spell.base[i], spell.max[i]);
-#endif
-				break;
-			}
-
-			case SE_Harmony:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Reaction Radius Mod: %d/%d", spell.base[i], spell.max[i]);
-#endif
-				break;
-			}
-
-			case SE_Lull:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Lull");
-#endif
-				// TODO: check vs. CHA when harmony effect failed, if caster is to be added to hatelist
-				break;
-			}
-
-			case SE_TotalHP:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Total Hitpoints: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_ManaPool:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Total Mana: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_InfraVision:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Infravision");
-#endif
-				// solar: handled by client
-				break;
-			}
-
-			case SE_UltraVision:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Ultravision");
-#endif
-				// solar: handled by client
-				break;
-			}
-
-			case SE_Stamina:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Stamina: %+i", effect_value);
-#endif
-				// solar: handled with bonuses - this is stamina regen, like CurrentHP
-				break;
-			}
-
-			case SE_ArmorClass:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Armor Class: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_ATK:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "ATK: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_STR:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "STR: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_DEX:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "DEX: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_AGI:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "AGI: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_STA:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "STA: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_INT:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "INT: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_WIS:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "WIS: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_CHA:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "CHA: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_AllStats:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "All Stats: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_ResistFire:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Resist Fire: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_ResistCold:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Resist Cold: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_ResistPoison:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Resist Poison: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_ResistDisease:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Resist Disease: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_ResistMagic:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Resist Magic: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_ResistAll:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Resist All: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_CastingLevel:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Effective Casting Level Mod: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_PoisonCounter:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Poison Counter: %+i", effect_value);
-#endif
-				// solar: don't have to do anything with these, but they need to
-				// be used for dispelling these later.
-				break;
-			}
-
-			case SE_DiseaseCounter:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Disease Counter: %+i", effect_value);
-#endif
-				break;
-			}
-
-			case SE_CurseCounter:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Curse Counter: %+i", effect_value);
-#endif
-				break;
-			}
-
-			case SE_NegateIfCombat:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Negate if Combat");
-#endif
-				// solar: TODO implement this
-				break;
-			}
-
-			case SE_Destroy:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Destroy");
-#endif
-				if(IsNPC() && GetLevel() < 52)
-					CastToNPC()->Depop();
-				break;
-			}
-
-			case SE_Lycanthropy:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Lycanthropy: %+i", effect_value);
-#endif
-				// solar: TODO figure out what this is
-				const char *msg = "Lycanthropy is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-			
-			case SE_TossUp:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Toss Up: %d", effect_value);
-#endif
-				// solar: TODO implement this
-				const char *msg = "Toss Up is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_MagnifyVision:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Magnify Vision: %d%%", effect_value);
-#endif
-				// solar: handled by client
-				break;
-			}
-
-			case SE_StopRain:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Stop Rain");
-#endif
-				zone->zone_weather = 0;
-				zone->weatherSend();
-				break;
-			}
-
-			case SE_Sacrifice:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Sacrifice");
-#endif
-				// solar: TODO implement this
-				const char *msg = "Sacrifice is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_Silence:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Silence");
-#endif
-				// solar: TODO implement this
-				const char *msg = "Silence is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_Fearless:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Fearless");
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_CallPet:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Call Pet");
-#endif
-				// solar: this is cast on self, not on the pet
-				if(GetPet() && GetPet()->IsNPC())
-				{
-					GetPet()->CastToNPC()->GMMove(GetX(), GetY(), GetZ(), GetHeading());
-				}
-				break;
-			}
-
-			case SE_AntiGate:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Anti-Gate: %d", effect_value);
-#endif
-				// solar: TODO implement this
-				const char *msg = "Anti-Gate is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_Hunger:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Hunger");
-#endif
-				// solar: TODO implement this
-				const char *msg = "Hunger is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_MagicWeapon:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Magic Weapon");
-#endif
-				// solar: TODO implement this
-				const char *msg = "Magic Weapon is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_SingingSkill:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Singing Skill: %+i", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_HealRate:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Heal Effectiveness: %d%%", effect_value);
-#endif
-				// solar: TODO implement this
-				const char *msg = "Heal Effectiveness is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_Screech:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Screech: %d", effect_value);
-#endif
-				// solar: TODO figure out what this is
-				const char *msg = "Screech is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
-			}
-
-			case SE_Reflect:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Reflect: %+i%%", effect_value);
-#endif
-				// solar: handled with bonuses
-				break;
-			}
-
-			case SE_StackingCommand_Block:
-			case SE_StackingCommand_Overwrite:
-			{
-				// solar: these are special effects used by the buff stuff
-				break;
-			}
-
-			default:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Unknown Effect ID %d", effect);
-#else
-				Message(0, "Unknown spell effect %d in spell %s (id %d)", effect, spell.name, spell_id);
-#endif
-			}
-		}
-#ifdef SPELL_EFFECT_SPAM
-		Message(0, ". . . Effect #%i: %s", i + 1, strlen(effect_desc) ? effect_desc : "Unknown");
-#endif
-	}
-
-	CalcBonuses();
-
-	return true;
-}
-
-
-
 void Corpse::CastRezz(int16 spellid, Mob* Caster){
 /*
 	if (!rezzexp) {
@@ -3273,790 +2106,6 @@ void Corpse::CastRezz(int16 spellid, Mob* Caster){
 	worldserver.RezzPlayer(outapp, rezzexp, OP_RezzRequest);
 	//DumpPacket(outapp);
 	safe_delete(outapp);
-}
-
-int CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level)
-{
-	int formula, base, max;
-
-	if
-	(
-		!IsValidSpell(spell_id) ||
-		effect_id < 0 ||
-		effect_id >= EFFECT_COUNT
-	)
-		return 0;
-
-	formula = spells[spell_id].formula[effect_id];
-	base = spells[spell_id].base[effect_id];
-	max = spells[spell_id].max[effect_id];
-
-	if(IsBlankSpellEffect(spell_id, effect_id))
-		return 0;
-	
-	return CalcSpellEffectValue_formula(formula, base, max, caster_level);
-}
-
-// solar: generic formula calculations
-int CalcSpellEffectValue_formula(int formula, int base, int max, int caster_level)
-{
-/*
-neotokyo: i need those formulas checked!!!!
-
-0 = base
-1 - 99 = base + level * formulaID
-100 = base
-101 = base + level / 2
-102 = base + level
-103 = base + level * 2
-104 = base + level * 3
-105 = base + level * 4
-106 ? base + level * 5
-107 ? min + level / 2
-108 = min + level / 3
-109 = min + level / 4
-110 = min + level / 5
-119 ? min + level / 8
-121 ? min + level / 4
-122 = splurt
-123 ?
-203 = stacking issues ? max
-205 = stacking issues ? 105
-
-
-  0x77 = min + level / 8
-*/
-	
-	int result = 0, updownsign = 1, ubase = abs(base);
-	
-	// solar: this updown thing might look messed up but if you look at the
-	// spells it actually looks like some have a positive base and max where
-	// the max is actually less than the base, hence they grow downward
-	if (max < base && max != 0)
-	{
-		// values are calculated down
-		updownsign = -1;
-	}
-	else
-	{
-		// values are calculated up
-		updownsign = 1;
-	}
-	
-	switch(formula)
-	{
-		case   0:
-		case 100:	// solar: confirmed 2/6/04
-			result = ubase; break;
-		case 101:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * (caster_level / 2); break;
-		case 102:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * caster_level; break;
-		case 103:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * (caster_level * 2); break;
-		case 104:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * (caster_level * 3); break;
-		case 105:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * (caster_level * 4); break;
-
-		case 107:	// Shutting this thing up, this is wrong
-			result = ubase + updownsign * (caster_level * 4); break;
-
-		case 108:
-			result = ubase + updownsign * (caster_level / 3); break;
-		case 109:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * (caster_level / 4); break;
-		case 110:	// solar: confirmed 2/6/04
-			result = ubase + (caster_level / 5); break;
-		case 111:	// solar: this doesn't look right
-            result = ubase + 5 * (caster_level - 16); break;
-		case 112:
-            result = ubase + 8 * (caster_level - 24); break;
-		case 113:
-            result = ubase + 12 * (caster_level - 34); break;
-		case 114:
-            result = ubase + 15 * (caster_level - 44); break;
-
-		//more bullshit to shut it up, this is prolly wrong
-		case 115:	// solar: this is only in symbol of transal
-			result = ubase + 15 * (caster_level - 54); break;
-
-		//case 116:	// solar: this is only in symbol of ryltan
-		//case 117:	// solar: this is only in symbol of pinzarn
-		//case 118:	// solar: used in naltron and a few others
-		case 119:	// solar: confirmed 2/6/04
-			result = ubase + (caster_level / 8); break;
-		case 121:	// solar: corrected 2/6/04
-			result = ubase + (caster_level / 3); break;
-		case 122:	// todo: we need the remaining tics here
-			break;
-		case 123:	// solar: added 2/6/04
-			result = MakeRandomInt(ubase, abs(max));
-		default:
-			if (formula < 100)
-				result = ubase + (caster_level * formula);
-			else
-				LogFile->write(EQEMuLog::Debug, "Unknown spell effect value forumula %d", formula);
-	}
-	
-	// now check result against the allowed maximum
-	if (max != 0)
-	{
-		if (updownsign == 1)
-		{
-			if (result > max)
-				result = max;
-		}
-		else
-		{
-			if (result < max)
-				result = max;
-		}
-	}
-
-	// if base is less than zero, then the result need to be negative too
-	if (base < 0 && result > 0)
-		result *= -1;
-	return result;
-}
-
-/*
-int CalcSpellValue(int formula, int base, int max, int caster_level, int16 spell_id)
-{
-}
-*/
-
-
-void Mob::CalcBonuses()
-{
-	if(IsClient())
-	{
-		memset(itembonuses, 0, sizeof(StatBonuses));
-		CastToClient()->CalcItemBonuses(itembonuses);
-		CastToClient()->CalcEdibleBonuses(itembonuses);
-	}
-
-	CalcSpellBonuses(spellbonuses);
-
-	CalcMaxHP();
-	CalcMaxMana();
-
-	rooted = FindType(SE_Root);
-}
-
-int Client::CalcRecommendedLevelBonus(int8 level, uint8 reclevel, int basestat)
-{
-	if( (reclevel > 0) && (level < reclevel) )
-	{
-		double statmod = (level / reclevel) * basestat;
-	
-		if( statmod < 0 )
-		{
-			statmod *= -1;
-			statmod += 0.5;
-			return (((int)statmod) * -1);
-		}
-		else
-		{
-			statmod += 0.5;
-			return (int)statmod;
-		}
-	}
-
-	return 0;
-}
-
-void Client::CalcItemBonuses(StatBonuses* newbon) {
-	for (int i=0; i<21; i++) {
-		if(m_inv[i] == 0) {continue;}
-		const ItemInst* inst = m_inv[i];
-		if (inst && inst->IsType(ItemTypeCommon)) {
-			const Item_Struct *item = inst->GetItem();
-			const ItemCommon_Struct& common = item->Common;
-			if( GetLevel() >= common.RecommendedLevel )
-			{
-				newbon->AC += common.AC;
-				newbon->HP += common.HP;
-				newbon->Mana += common.Mana;
-				newbon->STR += common.STR;
-				newbon->STA += common.STA;
-				newbon->DEX += common.DEX;
-				newbon->AGI += common.AGI;
-				newbon->INT += common.INT;
-				newbon->WIS += common.WIS;
-				newbon->CHA += common.CHA;
-				
-				newbon->MR += common.SvMagic;
-				newbon->FR += common.SvFire;
-				newbon->CR += common.SvCold;
-				newbon->PR += common.SvPoison;
-				newbon->DR += common.SvDisease;
-			}
-			else
-			{
-				int lvl = GetLevel();
-				int reclvl = common.RecommendedLevel;
-
-				newbon->AC += CalcRecommendedLevelBonus( lvl, reclvl, common.AC );
-				newbon->HP += CalcRecommendedLevelBonus( lvl, reclvl, common.HP );
-				newbon->Mana += CalcRecommendedLevelBonus( lvl, reclvl, common.Mana );
-				newbon->STR += CalcRecommendedLevelBonus( lvl, reclvl, common.STR );
-				newbon->STA += CalcRecommendedLevelBonus( lvl, reclvl, common.STA );
-				newbon->DEX += CalcRecommendedLevelBonus( lvl, reclvl, common.DEX );
-				newbon->AGI += CalcRecommendedLevelBonus( lvl, reclvl, common.AGI );
-				newbon->INT += CalcRecommendedLevelBonus( lvl, reclvl, common.INT );
-				newbon->WIS += CalcRecommendedLevelBonus( lvl, reclvl, common.WIS );
-				newbon->CHA += CalcRecommendedLevelBonus( lvl, reclvl, common.CHA );
-
-				newbon->MR += CalcRecommendedLevelBonus( lvl, reclvl, common.SvMagic );
-				newbon->FR += CalcRecommendedLevelBonus( lvl, reclvl, common.SvFire );
-				newbon->CR += CalcRecommendedLevelBonus( lvl, reclvl, common.SvCold );
-				newbon->PR += CalcRecommendedLevelBonus( lvl, reclvl, common.SvPoison );
-				newbon->DR += CalcRecommendedLevelBonus( lvl, reclvl, common.SvDisease );
-			}
-			
-			//FatherNitwit: New style haste, shields, and regens
-			if(common.EffectType == 2) {
-				if(newbon->haste < (sint8)item->hastepercent)
-					newbon->haste = item->hastepercent;
-			}
-			if(item->hpregen > 0) {
-				newbon->HPRegen += item->hpregen;
-			}
-			if(item->manaregen > 0) {
-				newbon->ManaRegen += item->manaregen;
-			}
-			if(item->damageshield > 0) {
-				newbon->DamageShield += item->damageshield;
-			}
-			if(common.SpellShield > 0) {
-				newbon->SpellDamageShield += common.SpellShield;
-			}
-			if(common.Shielding > 0) {
-				newbon->Shielding += common.Shielding;
-			}
-			if(common.StunResist > 0) {
-				newbon->StunResist += common.StunResist;
-			}
-			if(common.StrikeThrough > 0) {
-				newbon->StrikeThrough += common.StrikeThrough;
-			}
-			if(common.Avoidance > 0) {
-				newbon->Avoidance += common.Avoidance;
-			}
-			if(common.Accuracy > 0) {
-				newbon->Accuracy += common.Accuracy;
-			}
-			if(common.CombatEffects > 0) {
-				newbon->CombatEffects += common.CombatEffects;
-			}
-			
-			if ((common.SpellId == 998) && (common.EffectType == 2)) { // item haste
-				if (newbon->haste < common.ProcLevel)
-					newbon->haste = common.ProcLevel;
-			}
-			else if ((common.SpellId != 0xFFFF) && (common.EffectType == 2)) { // latent effects
-				ApplySpellsBonuses(common.SpellId, common.ProcLevel, newbon);
-			}
-			switch(common.BardSkillType)
-			{
-			case 51: /* All (e.g. Singing Short Sword) */
-				{
-					if(common.BardSkillAmt > newbon->singingMod)
-						newbon->singingMod = common.BardSkillAmt;
-					if(common.BardSkillAmt > newbon->brassMod)
-						newbon->brassMod = common.BardSkillAmt;
-					if(common.BardSkillAmt > newbon->stringedMod)
-						newbon->stringedMod = common.BardSkillAmt;
-					if(common.BardSkillAmt > newbon->percussionMod)
-						newbon->percussionMod = common.BardSkillAmt;
-					if(common.BardSkillAmt > newbon->windMod)
-						newbon->windMod = common.BardSkillAmt;
-					break;
-				}
-			case 50: /* Singing */
-				{
-					if(common.BardSkillAmt > newbon->singingMod)
-						newbon->singingMod = common.BardSkillAmt;
-					break;
-				}
-			case 23: /* Wind */
-				{
-					if(common.BardSkillAmt > newbon->windMod)
-						newbon->windMod = common.BardSkillAmt;
-					break;
-				}
-			case 24: /* stringed */
-				{
-					if(common.BardSkillAmt > newbon->stringedMod)
-						newbon->stringedMod = common.BardSkillAmt;
-					break;
-				}
-			case 25: /* brass */
-				{
-					if(common.BardSkillAmt > newbon->brassMod)
-						newbon->brassMod = common.BardSkillAmt;
-					break;
-				}
-			case 26: /* Percussion */
-				{
-					if(common.BardSkillAmt > newbon->percussionMod)
-						newbon->percussionMod = common.BardSkillAmt;
-					break;
-				}
-			}
-			/*
-			if (common->SkillModPercent!=0){
-				if (newbon->skillmod[common->SkillModId] < common->SkillModPercent)
-					newbon->skillmod[common->SkillModId] = (uint8)common->SkillModPercent;
-			}
-			*/
-		}
-	}
-	if (newbon->singingMod!=0)
-		newbon->singingMod/=10;
-	if (newbon->windMod!=0)
-		newbon->windMod/=10;
-	if (newbon->stringedMod!=0)
-		newbon->stringedMod/=10;
-	if (newbon->brassMod!=0)
-		newbon->brassMod/=10;
-	if (newbon->percussionMod!=0)
-		newbon->percussionMod/=10;
-	SetAttackTimer();
-}
-
-void Client::CalcEdibleBonuses(StatBonuses* newbon) {
-#if EQDEBUG >= 11
-    cout<<"Client::CalcEdibleBonuses(StatBonuses* newbon)"<<endl;
-#endif
-  // Search player slots for skill=14(food) and skill=15(drink)
-  // pp.inventory[22] - pp.inventory[29]
-  // pp.containerinv[0] - containerinv[79]
-
-	// @merth: Do this after inventory struct is solid
-	/*	solar: NOTE this whole thing is commented
-  // Find food
-  uint32 food_inr = 0;
-  int16 food_slot = 0;
-  uint32 drink_inr = 0;
-  int16 drink_slot = 0;
-
-  const Item_Struct* search_item = 0;
-  for (int16 cur_i = 22; cur_i <= 29 ; cur_i++) {
-    search_item = GetItemIDAt(cur_i);
-    if (!search_item) {
-      continue;
-    }
-    if (search_item->Common.Skill == 14 && !food_slot) {
-      food_slot = cur_i;
-      food_inr = GetItemIDAt(cur_i);
-    } else if (search_item->Common.Skill == 15 && !drink_slot) {
-      drink_slot = cur_i;
-      drink_inr = GetItemIDAt(cur_i);
-    }
-    search_item = NULL;
-  }
-  //for (int16 cur_b = 0+250; cur_b <= 79+250; cur_b++) {
-  //  if ( !food_slot || !drink_slot ) {
-  //    search_item = GetItemIDAt(cur_b);
-  //    if (!search_item) {
-  //      // Database error
-  //      // FIXME    Log error function goes here
-  //      continue;
-  //    }
-  //    if (search_item->Common.Skill == 14 && !food_slot) {
-  //      food_slot = cur_b;
-  //      food_inr = GetItemIDAt(cur_b);
-  //    }
-  //    if (search_item->Common.Skill == 15 && !drink_slot) {
-  //      drink_slot = cur_b;
-  //      drink_inr = GetItemIDAt(cur_b);
-
-  //    }
-
-  //    search_item = NULL;
-  //  }
-  //}
-  // End Find food
-
-		if (food_slot) {
-			search_item = database.GetItem( food_inr );
-			if (search_item != NULL) {
-#if EQDEBUG >= 11
-    cout<<"Food_inr: "<< search_item->ItemNumber<<endl;
-#endif
-			newbon->AC += search_item->Common.AC;
-			newbon->HP += search_item->Common.HP;
-			newbon->Mana += search_item->Common.Mana;
-			newbon->STR += search_item->Common.STR;
-			newbon->STA += search_item->Common.STA;
-			newbon->DEX += search_item->Common.DEX;
-			newbon->AGI += search_item->Common.AGI;
-			newbon->INT += search_item->Common.INT;
-			newbon->WIS += search_item->Common.WIS;
-			newbon->CHA += search_item->Common.CHA;
-			newbon->MR += search_item->Common.SvMagic;
-			newbon->FR += search_item->Common.SvFire;
-			newbon->CR += search_item->Common.SvCold;
-			newbon->PR += search_item->Common.SvPoison;
-			newbon->DR += search_item->Common.SvDisease;
-			search_item = NULL;
-		}
-	}
-	
-	if (drink_slot) {
-		search_item = database.GetItem( drink_inr );
-		if (search_item != NULL) {
-			#if EQDEBUG >= 11
-				cout<<"Drink_inr: "<< search_item->ItemNumber<<endl;
-			#endif
-			newbon->AC += search_item->Common.AC;
-			newbon->HP += search_item->Common.HP;
-			newbon->Mana += search_item->Common.Mana;
-			newbon->STR += search_item->Common.STR;
-			
-			newbon->STA += search_item->Common.STA;
-			newbon->DEX += search_item->Common.DEX;
-			newbon->AGI += search_item->Common.AGI;
-			newbon->INT += search_item->Common.INT;
-			newbon->WIS += search_item->Common.WIS;
-			newbon->CHA += search_item->Common.CHA;
-			newbon->MR += search_item->Common.SvMagic;
-			newbon->FR += search_item->Common.SvFire;
-			newbon->CR += search_item->Common.SvCold;
-			newbon->PR += search_item->Common.SvPoison;
-			newbon->DR += search_item->Common.SvDisease;
-			search_item = NULL;
-		}
-	}
-	
-	return;
-	*/
-}
-
-void Mob::CalcSpellBonuses(StatBonuses* newbon)
-{
-	int i;
-
-	memset(newbon, 0, sizeof(StatBonuses));
-	newbon->ArrgoRange = -1;
-	newbon->AssistRange = -1;
-
-	for(i = 0; i < BUFF_COUNT; i++)
-	{
-		ApplySpellsBonuses(buffs[i].spellid, buffs[i].casterlevel, newbon);
-	}
-}
-
-void Mob::ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newbon)
-{
-	int i, effect_value;
-
-	if(!IsValidSpell(spell_id))
-		return;
-
-	for (i = 0; i < EFFECT_COUNT; i++)
-	{
-		if(IsBlankSpellEffect(spell_id, i))
-			continue;
-
-	  effect_value = CalcSpellEffectValue(spell_id, i, casterlevel);
-
-		switch (spells[spell_id].effectid[i])
-		{
-			case SE_CurrentHP:	// @BP Aura of battle, ect
-			case SE_HealOverTime:
-			{
-				if(IsBeneficialSpell(spell_id) && effect_value < 0)
-					break;
-
-				newbon->HPRegen += effect_value;
-				break;
-			}
-
-			case SE_CurrentMana:
-			{
-				newbon->ManaRegen += effect_value;
-				break;
-			}
-
-			case SE_Harmony:
-			{
-				// neotokyo: Harmony effect as buff - kinda tricky
-				// harmony could stack with a lull spell, which has better aggro range
-				// take the one with less range in any case
-				if
-				(
-					newbon->ArrgoRange == -1 ||
-					effect_value < newbon->ArrgoRange
-				)
-				{
-					newbon->ArrgoRange = effect_value;
-				}
-				break;
-			}
-
-			case SE_ChangeFrenzyRad:
-			{
-				if
-				(
-					newbon->AssistRange == -1 ||
-					effect_value < newbon->AssistRange
-				)
-				{
-					newbon->AssistRange = effect_value;
-				}
-				break;
-			}
-
-			case SE_AttackSpeed:
-			case SE_AttackSpeed2:
-			case SE_AttackSpeed3:
-			{
-				newbon->haste += effect_value - 100;
-				newbon->haste = newbon->haste > 120 ? 120 : (newbon->haste < -120 ? -120 : newbon->haste);
-
-				break;
-			}
-
-			case SE_TotalHP:
-			{
-				newbon->HP += effect_value;
-				break;
-			}
-
-			case SE_ManaPool:
-			{
-				newbon->Mana += effect_value;
-				break;
-			}
-
-			case SE_ArmorClass:
-			{
-				newbon->AC += effect_value;
-				break;
-			}
-
-			case SE_ATK:
-			{
-				newbon->ATK += effect_value;
-				break;
-			}
-
-			case SE_STR:
-			{
-				newbon->STR += effect_value;
-				break;
-			}
-
-			case SE_DEX:
-			{
-				newbon->DEX += effect_value;
-				break;
-			}
-
-			case SE_AGI:
-			{
-				newbon->AGI += effect_value;
-				break;
-			}
-
-			case SE_STA:
-			{
-				newbon->STA += effect_value;
-				break;
-			}
-
-			case SE_INT:
-			{
-				newbon->INT += effect_value;
-				break;
-			}
-
-			case SE_WIS:
-			{
-				newbon->WIS += effect_value;
-				break;
-			}
-
-			case SE_CHA:
-			{
-				newbon->CHA += effect_value;
-				break;
-			}
-
-			case SE_AllStats:
-			{
-				newbon->STR += effect_value;
-				newbon->DEX += effect_value;
-				newbon->AGI += effect_value;
-				newbon->STA += effect_value;
-				newbon->INT += effect_value;
-				newbon->WIS += effect_value;
-				newbon->CHA += effect_value;
-				break;
-			}
-
-			case SE_ResistFire:
-			{
-				newbon->FR += effect_value;
-				break;
-			}
-
-			case SE_ResistCold:
-			{
-				newbon->CR += effect_value;
-				break;
-			}
-
-			case SE_ResistPoison:
-			{
-				newbon->PR += effect_value;
-				break;
-			}
-
-			case SE_ResistDisease:
-			{
-				newbon->DR += effect_value;
-				break;
-			}
-
-			case SE_ResistMagic:
-			{
-				newbon->MR += effect_value;
-				break;
-			}
-
-			case SE_ResistAll:
-			{
-				newbon->MR += effect_value;
-				newbon->DR += effect_value;
-				newbon->PR += effect_value;
-				newbon->CR += effect_value;
-				newbon->FR += effect_value;
-				break;
-			}
-
-			case SE_CastingLevel:	// Brilliance of Ro
-			{
-				newbon->effective_casting_level += effect_value;
-				break;
-			}
-
-			case SE_MovementSpeed:
-			{
-				newbon->movementspeed += effect_value;
-				break;
-			}
-
-			case SE_DamageShield:
-			{
-				newbon->DamageShield += effect_value;
-				break;
-			}
-			
-			case SE_SpellDamageShield:
-			{
-				newbon->SpellDamageShield += effect_value;
-				break;
-			}
-
-			case SE_ReverseDS:
-			{
-				newbon->ReverseDamageShield += effect_value;
-				break;
-			}
-
-			case SE_Reflect:
-			{
-				newbon->reflect_chance += effect_value;
-				break;
-			}
-
-			case SE_SingingSkill:
-			{
-				//newbon->skillmod[SINGING] += effect_value;
-				newbon->singingMod += effect_value/10;
-				break;
-			}
-		}
-	}
-}
-
-void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob* caster)
-{
-	int effect, effect_value;
-	SPDat_Spell_Struct spell;
-
-	if(!IsValidSpell(spell_id))
-		return;
-
-
-	spell = spells[spell_id];
-
-	if (spell_id != 0xFFFF) {
- 		for (int i=0; i < EFFECT_COUNT; i++)
- 		{
- 			if(IsBlankSpellEffect(spell_id, i))
- 				continue;
-
-			effect = spell.effectid[i];
-			effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
-			
-			switch(effect)
-			{
-				case SE_CurrentHP:
-				case SE_HealOverTime:
-				{
-					ChangeHP(caster ? caster : this, effect_value, spell_id, i, true);
-					break;
-				}
-
-				case SE_CurrentMana:
-				{
-					SetMana(GetMana() + effect_value);
-					break;
-				}
-
-           /* case SE_Charm: { //Do it once in Effect instead of every tic
-                bool bBreak = false;
-
-                // define spells with fixed duration
-                // this is handled by the server, and not by the spell database
-                switch(spell_id) {
-                case 3371://call of the banshee
-                case 1707://dictate
-                    bBreak = true;
-                }
-				
-                if (!bBreak && caster) {
-                    int cha = caster->GetCHA();
-                    float r1 = (float)rand()/(float)RAND_MAX;
-                    float r2 = (float)cha  + (caster->GetLevel()/3) / 255.0f;
-
-                    if (r1 > r2) {
-                        BuffFadeByEffect(SE_Charm);
-                    }
-                }
-                break;
-            }*/
-
-				// solar: TODO get this outta here
-				case SE_Root: {
-					float r1 = (float)rand()/RAND_MAX;
-					float r2 = (float)(GetMR() - caster_level)/512.0f;//Need to move to Effect and use partial when resists are updated
-					// cout<<"Root:"<<(float)r1<<":"<<r2<<endl;
-					if ( r1 < r2 )
-						BuffFadeByEffect(SE_Root);
-					break;
-				}
-				default: {
-					// do we need to do anyting here?
-				}
-			}
-		}
-	}
 }
 
 bool Mob::FindBuff(int16 spellid)
@@ -4248,7 +2297,7 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 			spells[buffs[slot].spellid].name, GetCleanName());
 	}
 
-	buffs[slot].spellid = 0xFFFF;
+	buffs[slot].spellid = SPELL_UNKNOWN;
 
 	if (iRecalcBonuses)
 		CalcBonuses();
@@ -4261,6 +2310,10 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 	int effect_index;
 
 	assert(caster != NULL);
+	
+	//TODO: this function loops through the effect list for 
+	//this spell like 10 times, this could easily be consolidated
+	//into one loop through with a switch statement.
 
 	if(!IsValidSpell(spell_id))
 	{
@@ -4271,7 +2324,7 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 	{
 		if
 		(
-			SpecAttackTimers[UNMEZABLE] ||
+			SpecAttacks[UNMEZABLE] ||
 			(IsNPC() && CastToNPC()->HasBanishCapability() == 101)
 		)
 		{
@@ -4292,19 +2345,17 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 	// solar: stun spells are special.  we only issue a warning here, and it's
 	// also checked in SpellEffect() where the effect is skipped.  This check
 	// is only for the message, the real stun checking is done there.
-	if(IsStunSpell(spell_id) && SpecAttackTimers[UNSTUNABLE])
+	if(SpecAttacks[UNSTUNABLE] && (IsStunSpell(spell_id) || IsEffectInSpell(spell_id, SE_SpinTarget)))
 	{
 		caster->Message_StringID(MT_Shout, IMMUNE_STUN);
+		return true;
 	}
 
 	// slow and haste spells
-	if(IsEffectInSpell(spell_id, SE_AttackSpeed))
+	if(SpecAttacks[UNSLOWABLE] && IsEffectInSpell(spell_id, SE_AttackSpeed))
 	{
-		if(SpecAttackTimers[UNSLOWABLE])
-		{
-			caster->Message_StringID(MT_Shout, IMMUNE_ATKSPEED);
-			return true;
-		}
+		caster->Message_StringID(MT_Shout, IMMUNE_ATKSPEED);
+		return true;
 	}
 
 	// client vs client fear
@@ -4319,7 +2370,7 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 
 	if(IsCharmSpell(spell_id))
 	{
-		if(SpecAttackTimers[UNCHARMABLE])
+		if(SpecAttacks[UNCHARMABLE])
 		{
 			caster->Message_StringID(MT_Shout, CANNOT_CHARM);
 			return true;
@@ -4355,13 +2406,19 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 		IsEffectInSpell(spell_id, SE_MovementSpeed)
 	)
 	{
+		if(SpecAttacks[UNSNAREABLE]) {
+			caster->Message_StringID(MT_Shout, IMMUNE_MOVEMENT);
+			return true;
+		}
+		
 		int8 buffslot = GetBuffSlotFromType(SE_MovementSpeed);
-		if((FindType(SE_Root) && IsEffectInSpell(spell_id, SE_MovementSpeed)) || (buffslot!=255 && buffs[buffslot].spellid > 0 && buffs[buffslot].spellid < (int32)SPDAT_RECORDS && IsDetrimentalSpell(buffs[buffslot].spellid) && IsBeneficialSpell(spell_id)))
+		if((FindType(SE_Root) && IsEffectInSpell(spell_id, SE_MovementSpeed)) 
+			|| (buffslot!=255 && buffs[buffslot].spellid > 0 && buffs[buffslot].spellid < (int32)SPDAT_RECORDS 
+			&& IsDetrimentalSpell(buffs[buffslot].spellid) && IsBeneficialSpell(spell_id)))
 		{
 			caster->Message_StringID(MT_Shout,CANNOT_AFFECT_PC);
 			return true;
 		}
-		// solar: this is where we could check for things that can't be snared
 	}
 
 	if(IsLifetapSpell(spell_id))
@@ -4397,19 +2454,56 @@ double Mob::ResistSpell(int16 spell_id, Mob *caster)
 	double roll, roll2, effectiveness_index;
 	double no_resist_chance, full_hit_cutoff, partial_hit_cutoff;
 	
+	int8 resist_type = spells[spell_id].resisttype;
+	
+	if (spell_id == 0) //elem damage!
+	{
+		adverrorinfo = 91;
+		int castlevel = caster->GetLevel();
+		int targlevel = GetLevel();
+		if (castlevel > 60)
+			castlevel -= (castlevel-60)/2;
+		if (targlevel > 60)
+			targlevel -= (targlevel-60)/2;
+		int variance = (castlevel-targlevel)*5;
+		if ((caster->IsClient() && variance > 0) || (IsClient() && variance < 0)) //Levels shouldn't matter as much against players.
+			variance /= 5;
+		if (variance < -50)
+			return true;
+		if (variance < -25)
+			variance *= 2;
+		
+		int targMR = GetResist(resist_type);
+		
+		if (GetLevel() < 50)
+		{
+			targMR -= (targMR*(caster->GetLevel()-50)/100);
+		}
+		int resistchance = (targMR + spells[spell_id].ResistDiff - variance);
+		resistchance /= 2;
+
+		if (rand()%100 < resistchance)
+			return 100;
+		return 0;
+	}
+	
 	if(!IsValidSpell(spell_id))
 	{
 		return 0;
 	}
+	
+	if(SpecAttacks[IMMUNE_MAGIC]) {
+		return(0);
+	}
 
 	target_level = GetLevel();
-	caster_level = caster ? caster->GetCasterLevel() : target_level;
+	caster_level = caster ? caster->GetCasterLevel(spell_id) : target_level;
 
-	// if NPC target and more than 5 levels above caster, it's always resisted
-	if(IsNPC() && target_level - caster_level > 5)
+	// if NPC target and more than X levels above caster, it's always resisted
+	if(IsNPC() && target_level - caster_level > AUTO_RESIST_LEVEL_DIFF)
 		return 0;
 
-	switch(spells[spell_id].resisttype)
+	switch(resist_type)
 	{
 		case RESIST_NONE:	// unresistable
 			return 100;
@@ -4444,23 +2538,24 @@ double Mob::ResistSpell(int16 spell_id, Mob *caster)
 	}
 
 	// resistant discipline bonus 
-	if(IsClient() && CastToClient()->disc_inuse == 30)
+	if(IsClient() && CastToClient()->disc_inuse == discResistant)
 	{
-		if (GetLevel() <= 32)
+		int level = GetLevel();
+		if (level <= 32)
 			resist += 3;
-		else if (GetLevel() >= 33 && GetLevel() <= 35)
+		else if (level >= 33 && level <= 35)
 			resist += 4;
-		else if (GetLevel() >= 36 && GetLevel() <= 38)
+		else if (level >= 36 && level <= 38)
 			resist += 5;
-		else if (GetLevel() >= 39 && GetLevel() <= 41)
+		else if (level >= 39 && level <= 41)
 			resist += 6;
-		else if (GetLevel() >= 42 && GetLevel() <= 44)
+		else if (level >= 42 && level <= 44)
 			resist += 7;
-		else if (GetLevel() >= 45 && GetLevel() <= 47)
+		else if (level >= 45 && level <= 47)
 			resist += 8;
-		else if (GetLevel() >= 48 && GetLevel() <= 49)
+		else if (level >= 48 && level <= 49)
 			resist += 9;
-		else if (GetLevel() >= 50)
+		else if (level >= 50)
 			resist += 10;
 	}
 
@@ -4494,13 +2589,44 @@ double Mob::ResistSpell(int16 spell_id, Mob *caster)
 	// our base chance to land the spell assuming zero resist and same level.
 	// this is out of 100
 	no_resist_chance = 90;
-
-	float level_adj = pow((float)caster_level - (float)target_level, 2)+1;
+	
+	float lvldiff = caster_level - target_level;
+	float level_adj = lvldiff * lvldiff + 1;
 	// level_adj is a positive value indicating the magnitude of the adjustment
 	no_resist_chance += level_adj * (caster_level > target_level ? 1 : -1);
 
 	// now we add the resistance we have
 	no_resist_chance -= resist / 2.0;
+	
+	//still working on this...
+	if (IsFearSpell(spell_id)) {
+		sint16 rchance = 0;
+		switch (GetAA(aaFearResistance))
+		{
+			case 1:
+				rchance += 5;
+				break;
+			case 2:
+				rchance += 10;
+				break;
+			case 3:
+				rchance += 20;
+				break;
+		}
+		rchance += itembonuses.StunResist + spellbonuses.StunResist;
+		
+		//I dont think these should get factored into standard spell resist...
+		if(MakeRandomInt(0, 99) < rchance) {
+			return(0);
+		}
+	}
+	
+	//this is prolly wrong, but I dont see a good way to roll
+	//it into the rest of this stuff
+	sint16 bonus_resists = spellbonuses.ResistSpellChance + itembonuses.ResistSpellChance;
+	no_resist_chance -= bonus_resists;
+
+//this calculation is all fucked up....	
 
 	roll = MakeRandomFloat(0, 1000);
 	// figure out cutoff points
@@ -4532,1226 +2658,6 @@ double Mob::ResistSpell(int16 spell_id, Mob *caster)
 
 	return effectiveness_index;
 }
-
-
-///////////////////////////////////////////////////////////////////////////////
-// pet related functions
-
-char *GetRandPetName()
-{
-	char petnames[77][64] = { "Gabeker","Gann","Garanab","Garn","Gartik",
-            "Gebann","Gebekn","Gekn","Geraner","Gobeker","Gonobtik","Jabantik",
-            "Jasarab","Jasober","Jeker","Jenaner","Jenarer","Jobantik",
-            "Jobekn","Jonartik","Kabann","Kabartik","Karn","Kasarer","Kasekn",
-            "Kebekn","Keber","Kebtik","Kenantik","Kenn","Kentik","Kibekab",
-            "Kobarer","Kobobtik","Konaner","Konarer","Konekn","Konn","Labann",
-            "Lararer","Lasobtik","Lebantik","Lebarab","Libantik","Libtik",
-            "Lobn","Lobtik","Lonaner","Lonobtik","Varekab","Vaseker","Vebobab",
-            "Venarn","Venekn","Vener","Vibobn","Vobtik","Vonarer","Vonartik",
-            "Xabtik","Xarantik","Xarar","Xarer","Xeber","Xebn","Xenartik",
-            "Xeratik","Xesekn","Xonartik","Zabantik","Zabn","Zabeker","Zanab",
-            "Zaner","Zenann","Zonarer","Zonarn" };
-	int r = (rand()  % (77 - 1)) + 1;
-	printf("Pet being created: %s\n",petnames[r]); // DO NOT COMMENT THIS OUT!
-	if(r > 77) // Just in case
-		r=77;
-	return petnames[r];
-}
-
-int CalcPetLevel(int nlevel, int nclass)
-{
-	//int plevel = 0;
-	if (nclass == MAGICIAN)
-		return (nlevel - 10);
-	else
-		return (nlevel - 12);
-}
-
-int CalcPetHp(int levelb, int classb, int STA)
-{
-	int multiplier = 0;
-	int base_hp = 0;
-	switch(classb) {
-		case WARRIOR:{
-			if (levelb < 20)
-				multiplier = 22;
-			else if (levelb < 30)
-				multiplier = 23;
-			else if (levelb < 40)
-				multiplier = 25;
-			else if (levelb < 53)
-				multiplier = 27;
-			else if (levelb < 57)
-				multiplier = 28;
-			else
-				multiplier = 30;
-			break;
-		}
-		case DRUID:
-		case CLERIC:
-		case SHAMAN:{
-			multiplier = 15;
-			break;
-		}
-		case PALADIN:
-		case SHADOWKNIGHT:{
-			if (levelb < 35)
-				multiplier = 21;
-			else if (levelb < 45)
-				multiplier = 22;
-			else if (levelb < 51)
-				multiplier = 23;
-			else if (levelb < 56)
-				multiplier = 24;
-			else if (levelb < 60)
-				multiplier = 25;
-			else
-				multiplier = 26;
-			break;
-		}
-		case MONK:
-		case BARD:
-		case ROGUE:
-		case BEASTLORD:{
-			if (levelb < 51)
-				multiplier = 18;
-			else if (levelb < 58)
-				multiplier = 19;
-			else
-				multiplier = 20;
-			break;
-		}
-		case RANGER:{
-			if (levelb < 58)
-				multiplier = 20;
-			else
-				multiplier = 21;
-			break;
-		}
-		case MAGICIAN:
-		case WIZARD:
-		case NECROMANCER:
-		case ENCHANTER:{
-			multiplier = 12;
-			break;
-		}
-		default:{
-			if (levelb < 35)
-				multiplier = 21;
-			else if (levelb < 45)
-				multiplier = 22;
-			else if (levelb < 51)
-				multiplier = 23;
-			else if (levelb < 56)
-				multiplier = 24;
-			else if (levelb < 60)
-				multiplier = 25;
-			else
-				multiplier = 26;
-			break;
-		}
-	}
-
-	if (multiplier == 0)
-	{
-		cerr << "Multiplier == 0 in CalcPetHp,using Generic...." << endl;
-		multiplier=12;
-	}
-
-	base_hp = 5 + (multiplier*levelb) + ((multiplier*levelb*STA) + 1)/300;
-	return base_hp;
-}
-
-
-
-void Mob::MakePet(const char* pettype) {
-/*Baron-Sprite: Pet types were conflicting all over...
- * was rushed it appears.  I have corrected pet types and
- * assigned ranges for pet types. PLEASE follow these ranges 
- * if you ever add/modify pets: The Pettype ranges for each pet 
- * are shown next to their summoning name, take a minute and look. 
- * Since mage pets are not as percise as necromancers, I am going i
- * to reserve them a large range for future additions I will add.
- *
- * However their base values will still be reserved as 0-3 and epic 
- * will stay on 4. Also I may want to note that even though pet 
- * ranges and types are reserved, it doesn't mean they will be used, 
- * however please respect the reserved spots.  Thanks!
- * TODO: Make anything missing on this list.
-*/
-	//Baron-Sprite:  Mage pets done by: gej302.  Am I missing anyone else??  Sorry only one I saw.
-	Make_Pet_Struct petstruct;
-		if (strncmp(pettype, "SumEarthR", 9) == 0) { //Baron-Sprite: This Pettype is reserved to 0. ALSO 74-87.
-		int8 tmp = atoi(&pettype[9]);
-		if (tmp >= 2 && tmp <= 15) {
-                   switch (tmp) { 
-					 case  2:
-						database.MakePet(&petstruct,74,1);
-						break;
-					 case  3:
-						database.MakePet(&petstruct,75,1);
-						break;
-					 case  4:
-						database.MakePet(&petstruct,76,1);
-						break;
-					 case  5:
-						database.MakePet(&petstruct,77,1);
-						break;
-					 case  6:
-						database.MakePet(&petstruct,78,1);
-						break;
-					 case  7:
-						database.MakePet(&petstruct,79,1);
-						break;
-					 case  8:
-						database.MakePet(&petstruct,80,1);
-						break;
-					 case  9:
-						database.MakePet(&petstruct,81,1);
-						break;
-					 case 10:
-						database.MakePet(&petstruct,82,1);
-						break;
-					 case 11:
-						database.MakePet(&petstruct,83,1);
-						break;
-					 case 12:
-						database.MakePet(&petstruct,84,1);
-						break;
-					 case 13:
-						database.MakePet(&petstruct,85,1);
-						break;
-					 case 14:
-						database.MakePet(&petstruct,86,1);
-						break;
-					 case 15:
-						database.MakePet(&petstruct,87,1);
-						break;
-                  } //switch 
-        } else {
-			Message(0, "Error: Unknown Earth Pet formula");
-		}
-    } else if (strncmp(pettype, "SumFireR", 8) == 0) { //Baron-Sprite: This Pettype is reserved to 1. ALSO 88-101.
-		int8 tmp = atoi(&pettype[8]);
-		if (tmp >= 2 && tmp <= 15) {
-			switch (tmp) { 
-					 case  2:
-						database.MakePet(&petstruct,88,1);
-						break;
-					 case  3:
-						database.MakePet(&petstruct,89,1);
-						break;
-					 case  4:
-						database.MakePet(&petstruct,90,1);
-						break;
-					 case  5:
-						database.MakePet(&petstruct,91,1);
-						break;
-					 case  6:
-						database.MakePet(&petstruct,92,1);
-						break;
-					 case  7:
-						database.MakePet(&petstruct,93,1);
-						break;
-					 case  8:
-						database.MakePet(&petstruct,94,1);
-						break;
-					 case  9:
-						database.MakePet(&petstruct,95,1);
-						break;
-					 case 10:
-						database.MakePet(&petstruct,96,1);
-						break;
-					 case 11:
-						database.MakePet(&petstruct,97,1);
-						break;
-					 case 12:
-						database.MakePet(&petstruct,98,1);
-						break;
-					 case 13:
-						database.MakePet(&petstruct,99,1);
-						break;
-					 case 14:
-						database.MakePet(&petstruct,100,1);
-						break;
-					 case 15:
-						database.MakePet(&petstruct,101,1);
-						break;
-                  }
-        } else {
-			Message(0, "Error: Unknown Fire Pet formula");
-		}
-    } else if (strncmp(pettype, "SumAirR", 7) == 0) { //Baron-Sprite: This Pettype is reserved to 3. ALSO 60-73.
-		int8 tmp = atoi(&pettype[7]);
-        if (tmp >= 2 && tmp <= 15) {
-                   switch (tmp) {
-					 case  2:
-						database.MakePet(&petstruct,60,1);
-						break;
-					 case  3:
-						database.MakePet(&petstruct,61,1);
-						break;
-					 case  4:
-						database.MakePet(&petstruct,62,1);
-						break;
-					 case  5:
-						database.MakePet(&petstruct,63,1);
-						break;
-					 case  6:
-						database.MakePet(&petstruct,64,1);
-						break;
-					 case  7:
-						database.MakePet(&petstruct,65,1);
-						break;
-					 case  8:
-						database.MakePet(&petstruct,66,1);
-						break;
-					 case  9:
-						database.MakePet(&petstruct,67,1);
-						break;
-					 case 10:
-						database.MakePet(&petstruct,68,1);
-						break;
-					 case 11:
-						database.MakePet(&petstruct,69,1);
-						break;
-					 case 12:
-						database.MakePet(&petstruct,70,1);
-						break;
-					 case 13:
-						database.MakePet(&petstruct,71,1);
-						break;
-					 case 14:
-						database.MakePet(&petstruct,72,1);
-						break;
-					 case 15:
-						database.MakePet(&petstruct,73,1);
-						break;
-                  }
-        } else {
-			Message(0, "Error: Unknown Air Pet formula");
-		}
-    } else if (strncmp(pettype, "SumWaterR", 9) == 0) { //Baron-Sprite: This Pettype is reserved to 2. ALSO 102-115.
-		int8 tmp = atoi(&pettype[9]);
-		if (tmp >= 2 && tmp <= 15) {
-			                   switch (tmp) {
-					 case  2:
-						database.MakePet(&petstruct,102,1);
-						break;
-					 case  3:
-						database.MakePet(&petstruct,103,1);
-						break;
-					 case  4:
-						database.MakePet(&petstruct,104,1);
-						break;
-					 case  5:
-						database.MakePet(&petstruct,105,1);
-						break;
-					 case  6:
-						database.MakePet(&petstruct,106,1);
-						break;
-					 case  7:
-						database.MakePet(&petstruct,107,1);
-						break;
-					 case  8:
-						database.MakePet(&petstruct,108,1);
-						break;
-					 case  9:
-						database.MakePet(&petstruct,109,1);
-						break;
-					 case 10:
-						database.MakePet(&petstruct,110,1);
-						break;
-					 case 11:
-						database.MakePet(&petstruct,111,1);
-						break;
-					 case 12:
-						database.MakePet(&petstruct,112,1);
-						break;
-					 case 13:
-						database.MakePet(&petstruct,113,1);
-						break;
-					 case 14:
-						database.MakePet(&petstruct,114,1);
-						break;
-					 case 15:
-						database.MakePet(&petstruct,115,1);
-						break;
-                  }
-
-        } else {
-			Message(0, "Error: Unknown Water Pet formula");
-		}
-    } else if (strncmp(pettype, "Familiar1",9) == 0) { // neotokyo: reserved type 217 for familiars
-        MakePet(27,1,46,1,120,3,217); //Baron-Sprite: This Pettype is reserved to 120-124.
-		return;
-    } else if (strncmp(pettype, "Familiar2",9) == 0) {
-        MakePet(47,1,46,1,121,3,217);
-		return;
-    } else if (strncmp(pettype, "Familiar3",9) == 0) {
-        MakePet(50,1,89,4,122,3,217);
-		return;
-    } else if (strncmp(pettype, "Familiar4",9) == 0) {
-        MakePet(58,1,89,4,123,3,217);
-		return;
-    } else if (strncmp(pettype, "Familiar5",9) == 0) {
-        MakePet(60,1,89,1,124,3,217);
-		return;
-    } else if (strncmp(pettype, "SpiritWolf", 10) == 0) { //Baron-Sprite: This Pettype is reserved to 40-45.  Looks sloppy, sorry.
-		int8 tmp = atoi(&pettype[11]);
-
-		switch (tmp) {
-		case 42:
-			database.MakePet(&petstruct,45,3);
-			break;
-		case 37:
-			database.MakePet(&petstruct,44,3);
-			break;
-		case 34:
-			database.MakePet(&petstruct,43,3);
-			break;
-		case 30:
-			database.MakePet(&petstruct,42,3);
-			break;
-		case 27:
-			database.MakePet(&petstruct,41,3);
-			break;
-		case 24:
-			database.MakePet(&petstruct,40,3);
-			break;
-	    default:
-			cout << "Unknown pettype: " << tmp<< " : Generating default type." << endl;
-			MakePet(24, 1, 42, 0, 40, 7, 3);
-			break;
-		}
-    } else if (strncmp(pettype, "BLpet", 5) == 0) { //Baron-Sprite: This Pettype is reserved to 125-137
-		int8 ptype = atoi(&pettype[5]);
-		int crace = this->GetRace();
-		int prace=0;
-
-		int mat=0;
-        float size_mod = 1;
-		#ifdef EQDEBUG
-			cout << "Setting stats for BL Pet for Race: " << crace << endl;
-		#endif
-
-		switch ( crace ) {
-		case VAHSHIR:
-			prace = 63;
-			size_mod = 1.7f;
-			break;
-		case TROLL:
-			prace=91;
-			break;
-		case OGRE:
-			prace=43;
-			mat=3;
-			break;
-		case IKSAR:
-			prace=42;
-			mat=0;
-			break;
-		case BARBARIAN:
-			prace=42;
-			mat=2;
-            size_mod = 1.5f;
-			break;
-		default:
-			cout << "No pet type modifications defined for race: " << crace << endl;
-			break;
-		}
-		#ifdef EQDEBUG
-			cout << "Summoning BeastLord Pet: " << (int)ptype << endl;
-		#endif
-		switch ( ptype ) {
-		case 51:
-			database.MakePet(&petstruct,136,5,6*size_mod);
-			break;
-		case 49:
-			database.MakePet(&petstruct,135,5,5.8*size_mod);
-			break;
-		case 47:
-			database.MakePet(&petstruct,134,5,5.6*size_mod);
-			break;
-		case 45:
-			database.MakePet(&petstruct,133,5,5.4*size_mod);
-			break;
-		case 43:
-			database.MakePet(&petstruct,132,5,5.2*size_mod);
-			break;
-		case 41:
-			database.MakePet(&petstruct,131,5,5*size_mod);
-			break;
-		case 39:
-			database.MakePet(&petstruct,130,5,4.5*size_mod);
-			break;
-		case 31:
-			database.MakePet(&petstruct,129,5,4*size_mod);
-			break;
-		case 26:
-			database.MakePet(&petstruct,128,5,3.5*size_mod);
-			break;
-		case 22:
-			database.MakePet(&petstruct,127,5,3*size_mod);
-			break;
-		case 16:
-			database.MakePet(&petstruct,126,5,2.6*size_mod);
-			break;
-		case 9:
-			database.MakePet(&petstruct,125,5,2.3*size_mod);
-			break;
-		default:
-			MakePet(10, 1, prace, mat, 125, 2*size_mod, 5);
-	        cout << "ptype not found: Making default BL pet." << endl;
-			break;
-		}
-		petstruct.race = prace;
-		petstruct.texture = mat;
-    } else if (strncmp(pettype, "BLBasePet", 9) == 0) { //Baron-Sprite: This Pettype does not need a reserve, it is only a warning message.
-			Message(13, "Beastlord pets are summon via the Spirit of Sharik, Khaliz, Keshuval, Herikol, Yekan, Kashek, Omakin, Zehkes, Khurenz, Khati Sha, Arag, or Sorsha spell line.  The Summon Warder ability was taken out of live sometime ago and replaced with this method. ");
-			return;
-    } else if (strncmp(pettype, "Animation", 9) == 0) { //Baron-Sprite: This Pettype is reserved to 46-59.
-		int8 ptype = atoi(&pettype[9]);
-
-		switch ( ptype ) {
-		case 14:
-			database.MakePet(&petstruct,59,2);
-			break;
-		case 13:
-			database.MakePet(&petstruct,58,2);
-			break;
-		case 12:
-			database.MakePet(&petstruct,57,2);
-			break;
-		case 11:
-			database.MakePet(&petstruct,56,2);
-			break;
-		case 10:
-			database.MakePet(&petstruct,55,2);
-			break;
-		case 9:
-			database.MakePet(&petstruct,54,2);
-			break;
-		case 8:
-			database.MakePet(&petstruct,53,2);
-			break;
-		case 7:
-			database.MakePet(&petstruct,52,2);
-			break;
-		case 6:
-			database.MakePet(&petstruct,51,2);
-			break;
-		case 5:
-			database.MakePet(&petstruct,50,2);
-			break;
-		case 4:
-			database.MakePet(&petstruct,49,2);
-			break;
-		case 3:
-			database.MakePet(&petstruct,48,2);
-			break;
-		case 2:
-			database.MakePet(&petstruct,47,2);
-			break;
-		case 1:
-			database.MakePet(&petstruct,46,2);
-			break;
-		default:
-			MakePet(1, 1, 127, 0, 46, 6, 2);
-			cout << "ptype not found: Making default animation pet." << endl;
-			break;
-		}
-    } else if (strncmp(pettype, "SumSword", 8) == 0) { //Baron-Sprite: This Pettype is reserved to 18.
-        // for testing make an chanter pet
-		MakePet(59, 1, 127,0,46,0,2);
-    } else if (strncmp(pettype, "skel_pet_", 9) == 0) { //Baron-Sprite: This Pettype is reserved to 22-39.
-		char sztmp[50];
-		strcpy(sztmp, pettype);
-		sztmp[11] = 0;
-		int8 tmp = atoi(&sztmp[9]);
-		//Baron-Sprite: No need for level algorithim - Since pet levels are now fixed in EQLive.
-		//Baron-Sprite: MakePet(level, class, race, texture, pettype, size, type) 0 Can be a placeholder.
-		if (tmp >= 65) {
-			database.MakePet(&petstruct,39,4);
-        } else if (tmp >= 63) {
-			database.MakePet(&petstruct,38,4);
-        } else if (tmp >= 61) {
-			database.MakePet(&petstruct,37,4);
-		} else if (tmp >= 47) {
-			database.MakePet(&petstruct,36,4);
-		} else if (tmp >= 44) {
-			database.MakePet(&petstruct,35,4);
-        } else if (tmp >= 43) {
-			database.MakePet(&petstruct,34,4);
-        } else if (tmp >= 41) {
-			database.MakePet(&petstruct,33,4);
-        } else if (tmp >= 37) {
-			database.MakePet(&petstruct,32,4);
-        } else if (tmp >= 33) {
-			database.MakePet(&petstruct,31,4);
-		} else if (tmp >= 29) {
-			database.MakePet(&petstruct,30,4);
-        } else if (tmp >= 25) {
-			database.MakePet(&petstruct,29,4);
-        } else if (tmp >= 22) {
-			database.MakePet(&petstruct,28,4);
-        } else if (tmp >= 19) {
-			database.MakePet(&petstruct,27,4);
-        } else if (tmp >= 16) {
-			database.MakePet(&petstruct,26,4);
-        } else if (tmp >= 11) {
-			database.MakePet(&petstruct,25,4);
-        } else if (tmp >= 9) {
-			database.MakePet(&petstruct,24,4);
-        } else if (tmp >= 5) {
-			database.MakePet(&petstruct,23,4);
-        } else if (tmp >= 1) {
-			database.MakePet(&petstruct,22,4);
-        } else {
-			MakePet(1, 1, 60);
-        }
-	// in_level, in_class, in_race, in_texture, in_pettype, in_size, type
-	/*	else if (strncmp(pettype, "MonsterSum", 9) == 0) { //Baron-Sprite: This Pettype is reserved to 5-7.
-	}
-	*/
-    } else if (strncmp(pettype, "Mistwalker", 10) == 0) { //Baron-Sprite: This Pettype is reserved to 8.
-		database.MakePet(&petstruct,8,9);
-/* solar: this needs to be fixed right, commenting out for now
-		zone->AddAggroMob();
-	    this->GetPet()->AddToHateList(target, 1);
-		Mob* sictar = entity_list.GetMob(this->GetPetID());
-		if (target)
-			target->AddToHateList(sictar, 1, 0);
-*/
-    } else if (strncmp(pettype, "TunareBane", 10) == 0) { //Baron-Sprite: This Pettype is reserved to 13.
-		database.MakePet(&petstruct,13,12);
-    } else if (strncmp(pettype, "DruidPet", 8) == 0) { //Baron-Sprite: This Pettype is reserved to 11.
-		database.MakePet(&petstruct,11,11);
-    } else if (strncmp(pettype, "SumMageMultiElement", 19) == 0) {
-		database.MakePet(&petstruct,4,15);
-	} else {
-		Message(13, "Unknown pet type: %s", pettype);
-	}
-	MakePet(petstruct.level,petstruct.class_,petstruct.race,petstruct.texture,petstruct.pettype,petstruct.size,petstruct.type,petstruct.min_dmg,petstruct.max_dmg);
-}
-
-void Mob::MakePet(int8 in_level, int8 in_class, int16 in_race,
-                  int8 in_texture, int8 in_pettype, float in_size,
-                  int8 type, int32 min_dmg, int32 max_dmg) {
-	if (this->GetPetID() != 0) {
-		return;
-	}
-	
-	NPCType* npc_type = new NPCType;
-	memset(npc_type, 0, sizeof(NPCType));
-	if (in_level>1)
-		npc_type->hp_regen = 2;//(int)(in_level/5); fixed elsewhere if they arent engaged
-	else
-		npc_type->hp_regen = 1;
-
-	if (in_race == 216) {
-		npc_type->gender = 0;
-	}
-	else {
-		npc_type->gender = 2;
-	}
-
-	if (this->IsClient())
-		strcpy(npc_type->name, GetRandPetName());
-	else {
-		strcpy(npc_type->name, this->GetCleanName());
-		strcat(npc_type->name, "'s_pet");
-	}
-
-	npc_type->level = in_level;
-	npc_type->race = in_race;
-	npc_type->class_ = in_class;
-	npc_type->texture = in_texture;
-	npc_type->helmtexture = in_texture;
-	npc_type->runspeed = 1.25f;
-	npc_type->bodytype = BT_Summoned; /* pets are summoned */
-	npc_type->min_dmg = min_dmg;
-	npc_type->max_dmg = max_dmg;
-
-	npc_type->walkspeed = 0.7f;
-	npc_type->size = in_size;
-	//npc_type->npc_spells_id = this->GetNPCSpellsID();
-	npc_type->npc_spells_id = 0;
-
-	npc_type->max_hp = CalcPetHp(npc_type->level, npc_type->class_);
-	npc_type->cur_hp = npc_type->max_hp;
-	npc_type->fixedZ = 1;
-	int pettype = in_pettype; //Baron-Sprite: Needed for necro pet types.
-//int yourlevel = this->GetLevel();
-	NPCType pet;
-
-	switch(type) {
-	       case 217: {
-        	// wizards familiars
-        	char f_name[50];
-        	strcpy(f_name,this->GetCleanName());
-        	strcat(f_name,"'s Familiar");
-        	strcpy(npc_type->name, f_name);
-        	npc_type->min_dmg = 0;  //Baron-Sprite: Naughty Familiar.  No Attack 4 u.
-        	npc_type->max_dmg = 0;
-        	npc_type->max_hp = 1000;
-        	break;
-           }
-	       case 1: { //Bentareth: Mage pets, as close live as I can find, need spell procs added
-                 //2 types of procs, last 3 in each category does a new type of proc
-                 //Air and earth do damage ~50 hp, water does double previous, and fire needs several wizard spells added
-                       npc_type->hp_regen = 6; //default case (true until lvl 39 pet)
-					   npc_type->gender=2;
-					    if(pettype==4){ //Mage epic pet
-							database.GetPetStats(&pet,4);
-							npc_type->hp_regen=50;
-							npc_type->npc_spells_id = 21;
-						}
-						else if(pettype>=60 && pettype<74){ //Air Pets
-							database.GetPetStats(&pet,pettype);
-							npc_type->npc_spells_id = 14;
-						}
-						else if(pettype>=74 && pettype<88){ //Earth Pets
-							database.GetPetStats(&pet,pettype);
-							npc_type->npc_spells_id = 15;
-						}
-						else if(pettype>=88 && pettype<99){ //Fire Pets
-							database.GetPetStats(&pet,pettype);
-							npc_type->npc_spells_id = 18;
-						}
-						else if(pettype>=99 && pettype<102){ //Fire Pets
-							database.GetPetStats(&pet,pettype);
-							npc_type->npc_spells_id = 20;
-							if(pettype==101)
-								sprintf(npc_type->npc_attacks, "E");
-							npc_type->hp_regen = 30;
-						}
-						else if(pettype>=102 && pettype<116){ //Water Pets
-							database.GetPetStats(&pet,pettype);
-							npc_type->npc_spells_id = 18;
-							if(pettype==115){
-								npc_type->hp_regen = 100;
-								sprintf(npc_type->npc_attacks, "E");
-							}
-							else if(pettype>=110){
-								npc_type->hp_regen = 30;
-								sprintf(npc_type->npc_attacks, "E");
-							}
-							npc_type->npc_spells_id = 16;
-						}
-						else{
-							printf("Unknown pet number of %i\n",pettype);
-							break;
-						}
-						npc_type->max_hp = pet.max_hp;
-						npc_type->cur_hp = pet.cur_hp;
-						npc_type->min_dmg = pet.min_dmg;
-						npc_type->max_dmg = pet.max_dmg;
-						break;
-	}
-	case 2: { //Baron-Sprite: Enchanter Pets.  Some info from casters realm.
-			npc_type->gender = 0; //devn00b: nfi what to do about race here.
-			npc_type->equipment[7] = 34;// devn00b: or these equip fields might have to add them as an option in the db
-			npc_type->equipment[8] = 202;
-			if (pettype >=57 && pettype<=59) {
-				database.GetPetStats(&pet,pettype);
-				npc_type->equipment[7] = 26;
-				npc_type->equipment[8] = 26;
-			}
-			else if ((pettype>=51 && pettype<=56) || (pettype>=46 && pettype<=48))
-				database.GetPetStats(&pet,pettype);
-			else if (pettype >= 49 && pettype<=50){
-				database.GetPetStats(&pet,pettype);
-				npc_type->equipment[7] = 3;
-			}
-			else{
-				printf("Unknown pet number of %i\n",pettype);
-				break;
-			}
-			npc_type->max_hp = pet.max_hp;
-			npc_type->cur_hp = pet.cur_hp;
-			npc_type->min_dmg = pet.min_dmg;
-			npc_type->max_dmg = pet.max_dmg;
-			break;
-		}
-	case 3: { //Baron-Sprite: Shaman pets.  Credits for information go mostly to eq.castersrealm.com.
-		if(pettype==45){
-			database.GetPetStats(&pet,pettype);
-            sprintf(npc_type->npc_attacks, "E"); // should enrage, i guess
-			npc_type->max_hp = pet.max_hp;
-			npc_type->cur_hp = pet.cur_hp;
-			npc_type->min_dmg = pet.min_dmg;
-			npc_type->max_dmg = pet.max_dmg;
-		}
-		else if(pettype>=40 && pettype<45){
-			database.GetPetStats(&pet,pettype);
-			npc_type->max_hp = pet.max_hp;
-			npc_type->cur_hp = pet.cur_hp;
-			npc_type->min_dmg = pet.min_dmg;
-			npc_type->max_dmg = pet.max_dmg;
-		}
-		else{
-				cout << "Fallthrough case for Shaman Pet." << endl;
-				npc_type->max_hp = 25;
-				npc_type->cur_hp = 25;
-				npc_type->min_dmg = 1;
-				npc_type->max_dmg = 3;
-		}
-		break;
-		}
-	case 4: { //Baron-Sprite: Necromancer pets.  Some of the info is from eqnecro.com
-			npc_type->npc_spells_id = 23;
-			npc_type->bodytype = BT_SummonedUndead; /* both summoned and undead */
-			if(pettype >= 37 && pettype<=39){ //Baron-Sprite: This is defined above in the Makepet statement.  I use it to single out the individual pet spells.
-				database.GetPetStats(&pet,pettype);
-				sprintf(npc_type->npc_attacks, "E");
-				npc_type->max_hp = pet.max_hp;
-				npc_type->cur_hp = pet.cur_hp;
-				npc_type->min_dmg = pet.min_dmg;
-				npc_type->max_dmg = pet.max_dmg;
-			}
-			else if(pettype >= 22 && pettype<=36)
-			{
-				database.GetPetStats(&pet,pettype);
-				npc_type->max_hp = pet.max_hp;
-				npc_type->cur_hp = pet.cur_hp;
-				npc_type->min_dmg = pet.min_dmg;
-				npc_type->max_dmg = pet.max_dmg;
-			}
-			else
-			{
-				npc_type->max_hp = 25;
-				npc_type->cur_hp = 25;
-				npc_type->min_dmg = 1;
-				npc_type->max_dmg = 3;
-			}
-			break;
-		}
-	case 5: //Baron-Sprite: Beastlord pets.  Credits for information go mostly to eq.castersrealm.com.  What's new? :)
-		{
-		char f_name[50];
-        strcpy(f_name,this->GetCleanName());
-        strcat(f_name,"`s warder");
-        strcpy(npc_type->name, f_name);
-			if (pettype >= 125 && pettype<=136)
-			{
-				database.GetPetStats(&pet,pettype);
-				npc_type->max_hp = pet.max_hp;
-				npc_type->cur_hp = pet.cur_hp;
-				npc_type->min_dmg = pet.min_dmg;
-				npc_type->max_dmg = pet.max_dmg;
-			}
-			else
-			{
-				npc_type->max_hp = 300;
-				npc_type->cur_hp = 300;
-				npc_type->min_dmg = 5;
-				npc_type->max_dmg = 10;
-			}
-			if (in_race == 42 && in_texture == 0)
-				npc_type->gender = 1;
-			else
-				npc_type->gender = 2;
-			break;
-		}
-	case 8: { //Baron-Sprite:  Mistwalker :D
-		char f_name[50];
-		strcat(f_name," pet");
-        strcpy(npc_type->name, f_name);
-		database.GetPetStats(&pet,9);
-		npc_type->max_hp = pet.max_hp;
-		npc_type->cur_hp = pet.cur_hp;
-		npc_type->min_dmg = pet.min_dmg;
-		npc_type->max_dmg = pet.max_dmg;
-		break;
-	}
-	case 11:{ // Druid Pet...  Baron-Sprite: Info from www.eqdruids.com said about 100 hp.
-			database.GetPetStats(&pet,11);
-			npc_type->max_hp = pet.max_hp;
-			npc_type->cur_hp = pet.cur_hp;
-			npc_type->min_dmg = pet.min_dmg;
-			npc_type->max_dmg = pet.max_dmg;
-			break;	
-	}
-	case 12:{
-		char f_name[50];
-        strcpy(f_name,this->GetCleanName());
-        strcat(f_name," pet");
-        strcpy(npc_type->name, f_name);
-		database.GetPetStats(&pet,13);
-		npc_type->max_hp = pet.max_hp;
-		npc_type->cur_hp = pet.cur_hp;
-		npc_type->min_dmg = pet.min_dmg;
-		npc_type->max_dmg = pet.max_dmg;
-		break;
-	}
-	default:
-		printf("Unknown type/pettype of: %i,%i.  Using Default Formula...\n",type,pettype);
-		npc_type->max_hp = 5*((in_level*in_level)/2);
-		npc_type->cur_hp = npc_type->max_hp;
-		npc_type->min_dmg = 1;
-		npc_type->max_dmg = (int)(in_level*1.2);
-		break;
-	}
-	
-	NPC* npc = new NPC(npc_type, 0,
-                       this->GetX()+10, this->GetY()+10,
-                       this->GetZ(), this->GetHeading());
-	safe_delete(npc_type);
-	npc->SetPetType(in_pettype);
-	npc->SetOwnerID(this->GetID());
-	entity_list.AddNPC(npc);
-    if (type != 217)
-	    this->SetPetID(npc->GetID());
-    else
-	    this->SetFamiliarID(npc->GetID());	
-}
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-// spell property testing functions
-
-bool IsSacrificeSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_Sacrifice);
-}
-
-bool IsLifetapSpell(int16 spell_id)
-{
-	return
-	(
-		IsValidSpell(spell_id) &&
-		(
-			spells[spell_id].targettype == ST_Tap ||
-			(
-				spell_id == 2115	// Ancient: Lifebane
-			)
-		)
-	);
-}
-
-bool IsMezSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_Mez);
-}
-
-bool IsStunSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_Stun);
-}
-
-bool IsSlowSpell(int16 spell_id)
-{
-	int i;
-	SPDat_Spell_Struct sp = spells[spell_id];
-
-	for(i = 0; i < EFFECT_COUNT; i++)
-	{
-		if
-		(
-			sp.effectid[i] == SE_AttackSpeed &&				// attack speed effect
-			CalcSpellEffectValue(spell_id, i) < 100		// less than 100%
-		)
-			return true;
-	}
-
-	return false;
-}
-
-bool IsHasteSpell(int16 spell_id)
-{
-	return
-	(
-		IsEffectInSpell(spell_id, SE_AttackSpeed) &&
-		!IsSlowSpell(spell_id)
-	);
-
-	return false;
-}
-
-bool IsPercentalHealSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_PercentalHeal);
-}
-
-bool IsGroupOnlySpell(int16 spell_id)
-{
-	return IsValidSpell(spell_id) && spells[spell_id].goodEffect == 2;
-}
-
-bool IsBeneficialSpell(int16 spell_id)
-{
-	return spells[spell_id].goodEffect != 0 || IsGroupSpell(spell_id);
-}
-
-bool IsDetrimentalSpell(int16 spell_id)
-{
-	return !IsBeneficialSpell(spell_id);
-}
-
-bool IsInvulnerabilitySpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_DivineAura);
-}
-
-bool IsCHDurationSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_CompleteHeal);
-}
-
-bool IsPoisonCounterSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_PoisonCounter);
-}
-
-bool IsDiseaseCounterSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_DiseaseCounter);
-}
-
-bool IsSummonItemSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_SummonItem);
-}
-
-bool IsSummonSkeletonSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_NecPet);
-}
-
-bool IsSummonPetSpell(int16 spell_id)
-{
-	return
-	(
-		IsEffectInSpell(spell_id, SE_SummonPet) ||
-		IsEffectInSpell(spell_id, SE_SummonBSTPet)
-	);
-}
-
-bool IsCharmSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_Charm);
-}
-
-bool IsBlindSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_Blind);
-}
-
-bool IsEffectHitpointsSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_CurrentHP);
-}
-
-bool IsReduceCastTimeSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_IncreaseSpellHaste);
-}
-
-bool IsIncreaseDurationSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_IncreaseSpellDuration);
-}
-
-bool IsReduceManaSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_ReduceManaCost);
-}
-
-bool IsExtRangeSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_IncreaseRange);
-}
-
-bool IsImprovedHealingSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_ImprovedHeal);
-}
-
-bool IsImprovedDamageSpell(int16 spell_id)
-{
-	return IsEffectInSpell(spell_id, SE_ImprovedDamage);
-}
-
-bool IsAEDurationSpell(int16 spell_id)
-{
-	return IsValidSpell(spell_id) && spells[spell_id].AEDuration !=0;
-}
-
-bool IsPureNukeSpell(int16 spell_id)
-{
-	int i, effect_count = 0;
-
-	if(!IsValidSpell(spell_id))
-		return false;
-
-	for(i = 0; i < EFFECT_COUNT; i++)
-	{
-		if(!IsBlankSpellEffect(spell_id, i))
-			effect_count++;
-	}
-
-	return
-	(
-		spells[spell_id].effectid[0] == SE_CurrentHP &&
-		effect_count == 1
-	);
-}
-
-bool IsPartialCapableSpell(int16 spell_id)
-{
-	if(IsPureNukeSpell(spell_id))
-		return true;
-	
-	return false;
-}
-
-bool IsResistableSpell(int16 spell_id)
-{
-	// solar: for now only detrimental spells are resistable.  later on i will
-	// add specific exceptions for the beneficial spells that are resistable
-	if(IsDetrimentalSpell(spell_id))
-	{
-		return true;
-	}
-
-	return false;
-}
-
-// solar: checks if this spell affects your group
-bool IsGroupSpell(int16 spell_id)
-{
-	return
-	(
-		IsValidSpell(spell_id) &&
-		(
-			spells[spell_id].targettype == ST_AEBard ||
-			spells[spell_id].targettype == ST_Group || 
-			spells[spell_id].targettype == ST_GroupTeleport
-		)
-	);
-}
-
-// solar: checks if this spell can be targeted
-bool IsTGBCompatibleSpell(int16 spell_id)
-{
-	return
-	(
-		IsValidSpell(spell_id) &&
-		(
-			!IsDetrimentalSpell(spell_id) &&
-			spells[spell_id].buffduration != 0 &&
-			!IsBardSong(spell_id) &&
-			!IsEffectInSpell(spell_id, SE_Illusion)
-		)
-	);
-}
-
-bool IsBardSong(int16 spell_id)
-{
-	return
-	(
-		IsValidSpell(spell_id) &&
-		spells[spell_id].classes[BARD - 1] < 255
-	);
-}
-
-bool IsEffectInSpell(int16 spellid, int effect)
-{
-	int j;
-
-	if(!IsValidSpell(spellid))
-		return false;
-
-	for(j = 0; j < EFFECT_COUNT; j++)
-		if(spells[spellid].effectid[j] == effect) 
-			return true;
-
-	return false;
-}
-
-// solar: arguments are spell id and the index of the effect to check.
-// this is used in loops that process effects inside a spell to skip
-// the blanks
-bool IsBlankSpellEffect(int16 spellid, int effect_index)
-{
-	int effect, base, formula;
-
-	effect = spells[spellid].effectid[effect_index];
-	base = spells[spellid].base[effect_index];
-	formula = spells[spellid].formula[effect_index];
-
-	return
-	(
-		effect == SE_Blank ||	// blank marker
-		(	// spacer
-			effect == SE_CHA && 
-			base == 0 &&
-			formula == 100
-		)
-		||
-		effect == SE_StackingCommand_Block ||	// these are only used by stacking code
-		effect == SE_StackingCommand_Overwrite
-	);
-}
-
-// solar: checks some things about a spell id, to see if we can proceed
-bool IsValidSpell(int16 spellid)
-{
-	return
-	(
-		spells_loaded &&
-		spellid != 0 &&
-		spellid != 1 &&
-		spellid != 0xFFFF &&
-		spellid < SPDAT_RECORDS &&
-		spells[spellid].player_1[0]
-	);
-}
-
-// solar: this will find the first occurance of effect.  this is handy
-// for spells like mez and charm, but if the effect appears more than once
-// in a spell this will just give back the first one.
-int GetSpellEffectIndex(int16 spell_id, int effect)
-{
-	int i;
-
-	if(!IsValidSpell(spell_id))
-		return -1;
-
-	for(i = 0; i < EFFECT_COUNT; i++)
-	{
-		if(spells[spell_id].effectid[i] == effect)
-			return i;
-	}
-
-	return -1;
-}
-
-// solar: returns the level required to use the spell if that class/level
-// can use it, 0 otherwise
-// note: this isn't used by anything right now
-int CanUseSpell(int16 spellid, int classa, int level)
-{
-	int level_to_use;
-	
-	if(!IsValidSpell(spellid) || classa >= PLAYER_CLASS_COUNT)
-		return 0;
-
-	level_to_use = spells[spellid].classes[classa - 1];
-
-	if
-	(
-		level_to_use &&
-		level_to_use != 255 &&
-		level >= level_to_use
-	)
-		return level_to_use;
-
-	return 0;
-}
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // 'other' functions
@@ -5790,16 +2696,8 @@ void Mob::SendSpellBarDisable()
 {
 	if (!IsClient())
 		return;
-
-	APPLAYER *outapp = new APPLAYER(OP_MemorizeSpell, sizeof(MemorizeSpell_Struct));
-	MemorizeSpell_Struct* p = (MemorizeSpell_Struct*)outapp->pBuffer;
-	p->slot = 0;
-	p->spell_id = 0x2bc;
-	p->scribing = 3;
-	outapp->priority = 5;
-	this->CastToClient()->QueuePacket(outapp);
-
-	safe_delete(outapp);
+	
+	CastToClient()->MemorizeSpell(0, SPELLBAR_UNLOCK, memSpellSpellbar);
 }
 
 // solar: this puts the spell bar back into a usable state fast
@@ -5814,7 +2712,7 @@ void Mob::SendSpellBarEnable(int16 spell_id)
 	manachange->spell_id = spell_id;
 	manachange->stamina = 6000;
 	outapp->priority = 6;
-	this->CastToClient()->QueuePacket(outapp);
+	CastToClient()->QueuePacket(outapp);
 	safe_delete(outapp);
 }
 
@@ -5826,7 +2724,7 @@ void Mob::Stun(int duration)
 	if(duration > 0)
 	{
 		stunned = true;
-		stunned_timer->Start(duration);
+		stunned_timer.Start(duration);
 	}
 }
 		
@@ -6219,13 +3117,7 @@ void Client::MemSpell(int16 spell_id, int slot, bool update_client)
 
 	if(update_client)
 	{
-		APPLAYER* outapp = new APPLAYER(OP_MemorizeSpell, sizeof(MemorizeSpell_Struct));
-		MemorizeSpell_Struct* mem = (MemorizeSpell_Struct*)outapp->pBuffer;
-		mem->slot = slot;
-		mem->spell_id = spell_id;
-		mem->scribing = 1;
-		QueuePacket(outapp);
-		safe_delete(outapp);
+		MemorizeSpell(slot, spell_id, memSpellMemorize);
 	}
 }
 
@@ -6239,13 +3131,7 @@ void Client::UnmemSpell(int slot, bool update_client)
 
 	if(update_client)
 	{
-		APPLAYER* outapp = new APPLAYER(OP_MemorizeSpell, sizeof(MemorizeSpell_Struct));
-		MemorizeSpell_Struct* mem = (MemorizeSpell_Struct*)outapp->pBuffer;
-		mem->slot = slot;
-		mem->spell_id = m_pp.mem_spells[slot];
-		mem->scribing = 2;
-		QueuePacket(outapp);
-		safe_delete(outapp);
+		MemorizeSpell(slot, m_pp.mem_spells[slot], memSpellForget);
 	}
 }
 
@@ -6274,13 +3160,7 @@ void Client::ScribeSpell(int16 spell_id, int slot, bool update_client)
 
 	if(update_client)
 	{
-		APPLAYER* outapp = new APPLAYER(OP_MemorizeSpell, sizeof(MemorizeSpell_Struct));
-		MemorizeSpell_Struct* mem = (MemorizeSpell_Struct*)outapp->pBuffer;
-		mem->slot = slot;
-		mem->spell_id = spell_id;
-		mem->scribing = 0;
-		QueuePacket(outapp);
-		safe_delete(outapp);
+		MemorizeSpell(slot, spell_id, memSpellScribing);
 	}
 }
 
@@ -6456,7 +3336,7 @@ int16 Mob::FindSpell(int16 classp, int16 level, int type,
 											spellvalue = CalcSpellEffectValue_formula(spells[i].formula[j],
                                                     spells[i].base[j],
                                                     spells[i].max[j],
-                                                    level);
+                                                    level, i);
                     }
 
                     if (abs(spellvalue) > bestvalue) {
@@ -6487,7 +3367,7 @@ int16 Mob::FindSpell(int16 classp, int16 level, int type,
                     sint32 spellvalue = CalcSpellEffectValue_formula(spells[i].formula[j],
                                                        spells[i].base[j],
                                                        spells[i].max[j],
-                                                       level);
+                                                       level, i);
                     if ( abs(spellvalue) > bestvalue ) {
                         bestvalue = abs(spellvalue);
                         bestid = i;
@@ -6519,7 +3399,7 @@ int16 Mob::FindSpell(int16 classp, int16 level, int type,
                     sint32 spellvalue = CalcSpellEffectValue_formula(spells[i].formula[j],
                                                        spells[i].base[j],
                                                        spells[i].max[j],
-                                                       level);
+                                                       level, i);
                     if ( abs(spellvalue) > bestvalue ) {
                         bestvalue = abs(spellvalue);
                         bestid = i;
@@ -6710,7 +3590,7 @@ sint8 Mob::GetBuffSlotFromType(int8 type) {
 
 bool Mob::FindType(int8 type, bool bOffensive, int16 threshold) {
 	for (int i = 0; i < BUFF_COUNT; i++) {
-		if (buffs[i].spellid != 0xFFFF) {
+		if (buffs[i].spellid != SPELL_UNKNOWN) {
 
 			for (int j = 0; j < EFFECT_COUNT; j++) {
                 // adjustments necessary for offensive npc casting behavior
@@ -6720,7 +3600,7 @@ bool Mob::FindType(int8 type, bool bOffensive, int16 threshold) {
                                 CalcSpellEffectValue_formula(buffs[i].durationformula,
                                                spells[buffs[i].spellid].base[j],
                                                spells[buffs[i].spellid].max[j],
-                                               buffs[i].casterlevel);
+                                               buffs[i].casterlevel, buffs[i].spellid);
                         LogFile->write(EQEMuLog::Normal, 
                                 "FindType: type = %d; value = %d; threshold = %d",
                                 type, value, threshold);
@@ -6790,7 +3670,7 @@ bool Mob::UseBardSpellLogic(int16 spell_id, int slot)
 	return
 	(
 		spell_id != 0 &&
-		spell_id != 0xffff &&
+		spell_id != SPELL_UNKNOWN &&
 		slot != -1 &&
 		GetClass() == BARD &&
 		IsBardSong(spell_id) &&
@@ -6812,5 +3692,21 @@ void NPC::Gate()
 {
 	entity_list.MessageClose_StringID(this, true, 200, MT_Spells, GATES, GetCleanName());
 	Mob::Gate();
-}	
-
+}int Mob::GetCasterLevel(int16 spell_id) {
+	int level = GetLevel();
+	level += spellbonuses.effective_casting_level;
+	level += itembonuses.effective_casting_level;
+	
+	if(IsClient()) {
+		if(IsBardSong(spell_id)) {
+			//bard item modifiers raise the effective caster level
+			//which results in an increase in their effects.
+			int instrument_add = CastToClient()->GetInstrumentMod(spell_id);
+			
+			if (instrument_add > 0) {
+				level = (level + level * instrument_add / 1000);
+			}
+		}
+	}
+	return(level);
+}

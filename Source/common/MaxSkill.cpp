@@ -644,7 +644,8 @@ int8 MaxSkillTable(int16 skillid, int16 race, int16 eqclass, int16 level) {
 				case MONK: case MONKGM:{
 				// 1 252 252
 					r_value = level*7;  // This can't be right can it?
-					break;
+					break
+;
 				}
 				case WARRIOR: case WARRIORGM: 
 				case ROGUE: case ROGUEGM: {

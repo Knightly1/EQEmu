@@ -28,6 +28,7 @@ using namespace std;
 #include "entity.h"
 #include "masterentity.h"
 #include "npc.h"
+#include "StringIDs.h"
 
 #include "../common/database.h"
 #ifdef WIN32
@@ -36,6 +37,47 @@ using namespace std;
 
 extern Database database;
 
+//max number of items which can be in the foraging table
+//for a given zone.
+#define FORAGE_ITEM_LIMIT 50
+
+/*
+
+The fishing and foraging need some work...
+foraging currently gives each item an equal chance of dropping
+fishing gives items which come in last from the select a very
+very low chance of dropping.
+
+
+Schema:
+CREATE TABLE forage (
+  id int(11) NOT NULL auto_increment,
+  zoneid int(4) NOT NULL default '0',
+  Itemid int(11) NOT NULL default '0',
+  level smallint(6) NOT NULL default '0',
+  chance smallint(6) NOT NULL default '0',
+  PRIMARY KEY  (id)
+) TYPE=MyISAM;
+
+old table upgrade:
+alter table forage add chance smallint(6) NOT NULL default '0';
+update forage set chance=100;
+
+
+CREATE TABLE fishing (
+  id int(11) NOT NULL auto_increment,
+  zoneid int(4) NOT NULL default '0',
+  Itemid int(11) NOT NULL default '0',
+  skill_level smallint(6) NOT NULL default '0',
+  chance smallint(6) NOT NULL default '0',
+  npc_id int NOT NULL default 0,
+  npc_chance int NOT NULL default 0,
+  PRIMARY KEY  (id)
+) TYPE=MyISAM;
+
+
+*/
+
 // This allows EqEmu to have zone specific foraging - BoB
 int32 Database::GetZoneForage(int32 ZoneID, int8 skill) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -43,19 +85,24 @@ int32 Database::GetZoneForage(int32 ZoneID, int8 skill) {
     MYSQL_RES *result;
     MYSQL_ROW row;
 	
-	int8 index = 0;
-	int32 item[5];
-	int32 ret = 0;
+	int8 index = 0, rindex;
+	int32 item[FORAGE_ITEM_LIMIT];
+	int8 chance[FORAGE_ITEM_LIMIT];
+	int32 ret;
 	
-	for (int c=0; c<4; c++) 	{
-		item[c]=0;
+	for (int c=0; c < FORAGE_ITEM_LIMIT; c++) 	{
+		item[c] = 0;
 	}
 	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT zoneid, itemid, level FROM forage WHERE zoneid= '%i' and level < '%i'",ZoneID, skill ), errbuf, &result))
+	int32 csum = 0;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT itemid,chance FROM forage WHERE zoneid= '%i' and level <= '%i' LIMIT %i", ZoneID, skill, FORAGE_ITEM_LIMIT), errbuf, &result))
 	{
 		safe_delete_array(query);
-		while ((row = mysql_fetch_row(result))&&(index<4)) 	{
-			item[index] = atoi(row[1]);
+		while ((row = mysql_fetch_row(result)) && (index < FORAGE_ITEM_LIMIT)) 	{
+			item[index] = atoi(row[0]);
+			chance[index] = atoi(row[1]);
+			csum += chance[index];
 			index++;
 		}
 		
@@ -67,8 +114,15 @@ int32 Database::GetZoneForage(int32 ZoneID, int8 skill) {
 		return 0;
 	}
 	
-	if (index>0) {
-		ret = item[rand()%index];
+	if (index > 0 && csum > 0) {
+		ret = 0;
+		
+		while(ret == 0) {
+			rindex = MakeRandomInt(0, index-1);
+			ret = item[rindex];
+			if(MakeRandomInt(0, 100) >= chance[rindex])
+				ret = 0;
+		}
 	} else {
 		ret = 0;
 	}
@@ -76,33 +130,272 @@ int32 Database::GetZoneForage(int32 ZoneID, int8 skill) {
 	return ret;
 }
 
-uint32 ForageItem(int32 CurrentZone, int8 skill_level) {
-	uint32 common_food_ids[MAX_COMMON_FOOD_IDS] = {0};
-	int32 itRet;
-	uint32 foragedfood = 0;
-	int8   index = 0;
+int32 Database::GetZoneFishing(int32 ZoneID, int8 skill, uint32 &npc_id, uint8 &npc_chance)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
 	
-	common_food_ids[0] = 13046; // Fruit
-	common_food_ids[1] = 13045; // Berries
-	common_food_ids[2] = 13419; // Vegetables
-	common_food_ids[3] = 13048; // Rabbit Meat
-	common_food_ids[4] = 13047; // Roots
-	common_food_ids[5] = 13044; // Pod Of Water
-	common_food_ids[6] = 13106; // Fishing Grubs
+	int8 index = 0;
+	int32 item[50];
+	int32 chance[50];
+	int32 npc_ids[50];
+	int32 npc_chances[50];
+	int32 chancepool = 0;
+	int32 ret = 0;
 	
-	itRet = database.GetZoneForage(CurrentZone, skill_level);
-	
-	// these may need to be fine tuned, I am just guessing here
-	if (rand()%240<skill_level) {
-        if (rand()%100<75||itRet==0) {
-			index = rand()%MAX_COMMON_FOOD_IDS;
-			foragedfood = common_food_ids[index];
-		} else {
-			foragedfood = itRet;
-		}
-	} else {
-		foragedfood = 0; // doh!
+	for (int c=0; c<50; c++) 	{
+		item[c]=0;
+		chance[c]=0;
 	}
 	
-	return foragedfood;
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT itemid,chance,npc_id,npc_chance FROM fishing WHERE (zoneid= '%i' || zoneid = 0) and skill_level <= '%i'",ZoneID, skill ), errbuf, &result))
+	{
+		safe_delete_array(query);
+		while ((row = mysql_fetch_row(result))&&(index<50)) 	{
+			item[index] = atoi(row[0]);
+			chance[index] = atoi(row[1])+chancepool;
+			chancepool = chance[index];
+			
+			npc_ids[index] = atoi(row[2]);
+			npc_chances[index] = atoi(row[3]);
+			index++;
+		}
+		
+		mysql_free_result(result);
+	}
+	else {
+		cerr << "Error in Fishing query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return 0;
+	}
+	
+	npc_id = 0;
+	npc_chance = 0;
+	if (index>0) {
+		int32 random = (rand()%chancepool)+1;
+		for (int i = 0; i < index; i++)
+		{
+			if (random <= chance[i])
+			{
+				ret = item[i];
+				npc_id = npc_ids[i];
+				npc_chance = npc_chances[i];
+				break;
+			}
+		}
+	} else {
+		ret = 0;
+	}
+	
+	return ret;
+}
+
+void Client::GoFish()
+{
+	
+	fishing_timer.Disable();
+	
+	//multiple entries yeilds higher probability of dropping...
+	uint32 common_fish_ids[MAX_COMMON_FISH_IDS] = {
+		1012, // Cloth Sandals, this ID is not the right sandals
+		1012, // Cloth Sandals
+		1012, // Cloth Sandals
+		13019, // Fresh Fish
+		13019, // Fresh Fish
+		13019, // Fresh Fish
+		13019, // Fresh Fish
+		13019, // Fresh Fish
+		13106, // Fishing Grubs
+		13106, // Fishing Grubs
+		13106, // Fishing Grubs
+		
+		//rusty weapons:
+		5014,
+		5015,
+		5016,
+		5019,
+		5020,
+		5021,
+		5022,
+		5023,
+		5024,
+		5025,
+		6011,
+		6013,
+		6014,
+		6015,
+		6016,
+		7007,
+		7008,
+		7009,
+		7010,
+		
+		13019
+	};
+	
+	//success formula is not researched at all
+	
+	int fishing_skill = GetSkill(FISHING);	//will take into account skill bonuses on pole & bait
+	
+	//make sure we still have a fishing pole on:
+	const ItemInst* Pole = m_inv[SLOT_PRIMARY];
+	sint32 bslot = m_inv.HasItemByUse(ItemUseFishingBait, 1, invWhereWorn|invWherePersonal);
+	const ItemInst* Bait = NULL;
+	if(bslot != SLOT_INVALID)
+		Bait = m_inv.GetItem(bslot);
+	
+	if(!Pole || !Bait) {
+		Message(0, "You are missing a fishing pole or bait.");
+		return;
+	}
+	
+	if(!Pole->IsType(ItemTypeCommon) || Pole->GetItem()->Common.ItemUse != ItemUseFishingPole) {
+		Message(0, "You do not have a fishing pole equipped.");
+		return;
+	}
+	
+	if(!Bait->IsType(ItemTypeCommon) || Bait->GetItem()->Common.ItemUse != ItemUseFishingBait) {
+		Message(0, "You do not have any bait.");
+		return;
+	}
+	
+	//if the bait isnt equipped, need to add its skill bonus
+	if(bslot >= IDX_INV && Bait->GetItem()->Common.SkillModType == FISHING) {
+		fishing_skill += Bait->GetItem()->Common.SkillModValue;
+	}
+	
+	if (fishing_skill > 100)
+	{
+		fishing_skill = 100+((fishing_skill-100)/2);
+	}
+	
+	if (MakeRandomInt(0,175) < fishing_skill) {
+		uint32 food_id = 0;
+		
+		//25% chance to fish an item.
+        if (MakeRandomInt(0, 99) >= 75) {
+			uint32 npc_id = 0;
+			uint8 npc_chance = 0;
+			food_id = database.GetZoneFishing(m_pp.zone_id, fishing_skill, npc_id, npc_chance);
+			
+			//check for add NPC
+			if(npc_chance > 0 && npc_id) {
+				if(npc_chance < MakeRandomInt(0, 99)) {
+					const NPCType* tmp = database.GetNPCType(npc_id);
+					if(tmp != NULL) {
+						NPC* npc = new NPC(tmp, NULL, GetX()+3, GetY(), GetZ(), GetHeading());
+						npc->AddLootTable();
+						
+						npc->AddToHateList(this, 1, 0, false);	//no help yelling
+						
+						entity_list.AddNPC(npc);
+						
+						Message(MT_Emote, "You fish up a little more than you bargained for...");
+					}
+				}
+			}
+		}
+		
+		//consume bait, should we always consume bait on success?
+		DeleteItemInInventory(bslot, 1, true);	//do we need client update?
+		
+		if(food_id == 0) {
+			int index = MakeRandomInt(0, MAX_COMMON_FISH_IDS-1);
+			food_id = common_fish_ids[index];
+		}
+		
+		const Item_Struct* food_item = database.GetItem(food_id);
+		
+		Message_StringID(MT_Skills, FISHING_SUCCESS);
+		const ItemInst* inst = ItemInst::Create(food_item, 1);
+		PutItemInInventory(SLOT_CURSOR, *inst);
+		SendItemPacket(SLOT_CURSOR,inst,ItemPacketSummonItem);
+	}
+	else
+	{
+		//chance to use bait when you dont catch anything...
+		if (MakeRandomInt(0, 4) == 1) {
+			DeleteItemInInventory(bslot, 1, true);	//do we need client update?
+			Message_StringID(MT_Skills, FISHING_LOST_BAIT);	//lost bait
+		} else {
+			Message_StringID(MT_Skills, FISHING_FAILED);
+		}
+	}
+	
+	//chance to break fishing pole...
+	//this is potentially exploitable in that they can fish
+	//and then swap out items in primary slot... too lazy to fix right now
+	if (MakeRandomInt(0, 49) == 1) {
+		Message_StringID(MT_Skills,169);
+		DeleteItemInInventory(13,0,true);
+	}
+
+	CheckIncreaseSkill(FISHING);
+}
+
+void Client::ForageItem() {
+	
+	int skill_level = GetSkill(FORAGE);
+	
+	//be wary of the string ids in switch below when changing this.
+	uint32 common_food_ids[MAX_COMMON_FOOD_IDS] = {
+		13046, // Fruit
+		13045, // Berries
+		13419, // Vegetables
+		13048, // Rabbit Meat
+		13047, // Roots
+		13044, // Pod Of Water
+		19130, // glob of slush water
+		14905, // mushroom
+		13106 // Fishing Grubs
+	};
+	
+	// these may need to be fine tuned, I am just guessing here
+	if (MakeRandomInt(0,239) < skill_level) {
+		uint32 foragedfood = 0;
+		int32 stringid = FORAGE_NOEAT;
+		
+        if (rand()%100 >= 75) {
+			foragedfood = database.GetZoneForage(m_pp.zone_id, skill_level);
+		}
+		
+		if(foragedfood == 0) {
+			int8 index = 0;
+			index = rand()%MAX_COMMON_FOOD_IDS;
+			foragedfood = common_food_ids[index];
+			
+			switch(foragedfood){
+				case 13044:
+					stringid=FORAGE_WATER;
+					break;
+				case 13106:
+					stringid=FORAGE_GRUBS;
+					break;
+				default:
+					stringid=FORAGE_FOOD;
+					break;
+			}
+			
+			const Item_Struct* food_item = database.GetItem(foragedfood);
+			
+			Message_StringID(MT_Skills, stringid);
+			const ItemInst* inst = ItemInst::Create(food_item, 1);
+			PutItemInInventory(SLOT_CURSOR,*inst);
+			SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
+		}
+		
+	} else {
+		Message_StringID(MT_Skills, FORAGE_FAILED);
+	}
+	
+	//why do we not use CheckIncreaseSkill??
+	
+	//See if the player increases their skill
+	/*float wisebonus =  (m_pp.WIS > 200) ? 20 + ((m_pp.WIS - 200) * 0.05) : m_pp.WIS * 0.1;
+	if ((55-(GetSkill(FORAGE)*0.236))+wisebonus > MakeRandomFloat(0, 100))
+		this->SetSkill(FORAGE,GetRawSkill(FORAGE)+1);*/
+	CheckIncreaseSkill(FORAGE);
+	
 }

@@ -281,6 +281,7 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, Mob* npcmob
 			perl->eval(std::string("++$").append(hashname).append("{$").append(packagename).append("::item3};").c_str()); 
 			perl->eval(std::string("++$").append(hashname).append("{$").append(packagename).append("::item4};").c_str()); 
 			SendCommands(packagename.c_str(), "EVENT_ITEM", npcid, npcmob, mob);
+			
 			break;
 		}
 		case EVENT_SPAWN: {
@@ -335,18 +336,29 @@ delete perl;
 	{
 		LogFile->write(EQEMuLog::Status, "Error loading default script: %s", err);
 	}
+	hasQuests.clear();
 }
 
-void PerlembParser::LoadScript(int npcid, const char * zone) const
+int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 {
 	if(!perl)
-		return;
+		return(0);
+	
+	//we have allready tried to load this quest...
+	if(hasQuests.count(npcid) == 1) {
+		return(1);
+	}
+	
 	string filename= "quests/", packagename = GetPkgPrefix(npcid);
 	//each package name is of the form qstxxxx where xxxx = npcid (since numbers alone are not valid package names)
+	questMode curmode = questDefault;
+//LogFile->write(EQEMuLog::Debug, "LoadScript(%d, %s):\n", npcid, zone);
 	if(!npcid || !zone)
 	{
+//LogFile->write(EQEMuLog::Debug, "	default 1");
 		filename += DEFAULT_QUEST_PREFIX;
 		filename += ".pl";
+		curmode = questDefault;
 	}
 	else
 	{
@@ -357,6 +369,7 @@ void PerlembParser::LoadScript(int npcid, const char * zone) const
 #endif
 		filename += itoa(npcid);
 		filename += ".pl";
+		curmode = questByID;
 		
 #ifdef QUEST_SCRIPTS_BYNAME
 		//Father Nitwit's naming hack.
@@ -372,6 +385,7 @@ void PerlembParser::LoadScript(int npcid, const char * zone) const
 			fclose(tmpf);
 			filefound = true;
 		}
+//LogFile->write(EQEMuLog::Debug, "	tried '%s': %d", filename.c_str(), filefound);
 		
 		tmpname[0] = 0;
 		//if there is no file for the NPC's ID, try for the NPC's name
@@ -380,9 +394,11 @@ void PerlembParser::LoadScript(int npcid, const char * zone) const
 			filename = bnfilename;
 			const NPCType *npct = database.GetNPCType(npcid);
 			if(npct == NULL) {
+//LogFile->write(EQEMuLog::Debug, "	no npc type");
 				//revert and go on with life
 				filename += itoa(npcid);
 				filename += ".pl";
+				curmode = questByID;
 			} else {
 				//trace out the ` characters, turn into -
 				
@@ -412,10 +428,13 @@ void PerlembParser::LoadScript(int npcid, const char * zone) const
 					}
 					filename += tmpname;
 					filename += ".pl";
+					curmode = questByName;
 				} else {
+//LogFile->write(EQEMuLog::Debug, "	namelen too long");
 					//revert and go on with life, again
 					filename += itoa(npcid);
 					filename += ".pl";
+					curmode = questByID;
 				}
 			}
 		}
@@ -427,17 +446,27 @@ void PerlembParser::LoadScript(int npcid, const char * zone) const
 			fclose(tmpf);
 			filefound2 = true;
 		}
+//LogFile->write(EQEMuLog::Debug, "	tried '%s': %d", filename.c_str(), filefound2);
 		
 		//if there is no file for the NPC's ID or name, 
 		//try for the NPC's name in the templates directory
 		//only works if we have gotten the NPC's name above
-		if(! filefound && ! filefound2 && tmpname[0] != 0) {
-			//revert to just path
-			filename = "quests/";
-			filename += QUEST_TEMPLATES_DIRECTORY;
-			filename += "/";
-			filename += tmpname;
-			filename += ".pl";
+		if(! filefound && ! filefound2) {
+			if(tmpname[0] != 0) {
+				//revert to just path
+				filename = "quests/";
+				filename += QUEST_TEMPLATES_DIRECTORY;
+				filename += "/";
+				filename += tmpname;
+				filename += ".pl";
+				curmode = questTemplate;
+//LogFile->write(EQEMuLog::Debug, "	template '%s'", filename.c_str(), filefound2);
+			} else {
+//LogFile->write(EQEMuLog::Debug, "	no template name");
+				filename += itoa(npcid);
+				filename += ".pl";
+				curmode = questDefault;
+			}
 		}
 	#endif	//QUEST_TEMPLATES_BYNAME
 		
@@ -445,6 +474,7 @@ void PerlembParser::LoadScript(int npcid, const char * zone) const
 
 	}
 
+//LogFile->write(EQEMuLog::Debug, "	finally settling on '%s'", filename.c_str());
 //	LogFile->write(EQEMuLog::Status, "Looking for quest file: '%s'", filename.c_str());
 
 //  todo: decide whether or not to delete the package to allow for script refreshes w/o restarting the server
@@ -472,21 +502,56 @@ void PerlembParser::LoadScript(int npcid, const char * zone) const
 			setdefcmd += packagename;
 			setdefcmd += "::isloaded = 1;";
 		perl->eval(setdefcmd.c_str());
+		curmode = questDefault;
 	}
+	
+//LogFile->write(EQEMuLog::Debug, "	final mode = %d", curmode);
+	hasQuests[npcid] = curmode;
+	return(1);
+}
+
+//this function does NOT consider the default to be a quest 
+bool PerlembParser::HasQuestFile(int32 npcid) {
+	sint32 qstID = GetNPCqstID(npcid);
+	int success=1;
+	
+	if(hasQuests.count(npcid) == 1) {
+		questMode mode = hasQuests[npcid];
+		if(mode == questDefault)
+			return(false);
+		return(true);
+	}
+	
+	if (qstID==-1)
+		success = LoadScript(npcid, zone->GetShortName());
+	if (!success) 
+		return(false);
+	
+	if(hasQuests.count(npcid) != 1)
+		return(false);
+	
+	questMode mode = hasQuests[npcid];
+	if(mode == questDefault)
+		return(false);
+	
+	return(true);
 }
 
 //utility - return something of the form "qst1234"... 
 //will return "qst[DEFAULT_QUEST_PREFIX]" if the npc in question has no script of its own or failed to compile and defaultOK is set to true
-std::string PerlembParser::GetPkgPrefix(int32 npcid, bool defaultOK) const
+std::string PerlembParser::GetPkgPrefix(int32 npcid, bool defaultOK)
 {
-	std::string prefix = "qst";
-	std::string temp = prefix + (std::string)(itoa(npcid));
-	if(!npcid || (defaultOK && isdefault(temp.c_str())))
+	char buf[32];
+	snprintf(buf, 32, "qst%lu", (unsigned long) npcid);
+//	std::string prefix = "qst";
+//	std::string temp = prefix + (std::string)(itoa(npcid));
+//	if(!npcid || (defaultOK && isdefault(temp.c_str())))
+	if(!npcid || (defaultOK && (hasQuests.count(npcid) == 1 && hasQuests[npcid] == questDefault)))
 	{
-		prefix += DEFAULT_QUEST_PREFIX;
-		return prefix;
+		snprintf(buf, 32, "qst%s", DEFAULT_QUEST_PREFIX.c_str());
 	}
-	return temp;
+	
+	return(std::string(buf));
 }
 
 void PerlembParser::SendCommands(const char * pkgprefix, const char *event, int32 npcid, Mob* other, Mob* mob)
@@ -507,7 +572,7 @@ void PerlembParser::SendCommands(const char * pkgprefix, const char *event, int3
 			LogFile->write(EQEMuLog::Status, "Script error: %s::%s - %s", pkgprefix, event, err);
 		return;
 	}
-
+	
 	int numcoms = perl->geti("quest::qsize()");
 	for(int c = 0; c < numcoms; ++c)
 	{
@@ -608,6 +673,7 @@ void PerlembParser::map_funs(void) const
 "sub changedeity{push(@cmd_queue,{func=>'changedeity',args=>join(',',@_)});}"
 "sub addldonpoints{push(@cmd_queue,{func=>'addldonpoints',args=>join(',',@_)});}"
 "sub addloot{push(@cmd_queue,{func=>'addloot',args=>join(',',@_)});}"
+"sub traindisc{push(@cmd_queue,{func=>'traindisc',args=>join(',',@_)});}"
 "package main;"
 "}"
 );//eval

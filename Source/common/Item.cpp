@@ -46,6 +46,9 @@ ItemInst* ItemInst::Create(const Item_Struct* item, sint16 charges)
 {
 	ItemInst* inst = NULL;
 	if (item) {
+		if (charges == 0)
+			charges = item->Common.MaxCharges;
+		
 		switch (item->ItemClass) {
 		case ItemTypeCommon:
 			inst = new ItemCommonInst(item, charges);
@@ -199,8 +202,10 @@ bool ItemInst::IsWeapon() const
 // Is item stackable?
 bool ItemCommonInst::IsStackable() const
 {
+	//This function is not correct. Not all stackable items have itemuse 
+	//set to ItemUseStackable, example: fishing grubs
 	if (m_item)
-		return (m_item->Common.Skill == 17);
+		return (m_item->Common.ItemUse == ItemUseStackable);
 	
 	return false;
 }
@@ -234,9 +239,7 @@ bool ItemCommonInst::IsEquipable(int16 race, int16 class_) const
 		}
 		classes_ >>= 1;
 	}
-	for (unsigned int cur_race = 1; cur_race <= 17; cur_race++) {
-		if( cur_race == 15 || cur_race == 16 ) // NPC or PET
-			continue;
+	for (unsigned int cur_race = 1; cur_race <= 15; cur_race++) {
 		
 		if (races_ % 2 == 1) {
     		if (cur_race == race_) {
@@ -269,7 +272,7 @@ bool ItemCommonInst::IsWeapon() const
 {
 	if (!m_item)
 		return false;
-	if(m_item->Common.Skill==27 && m_item->Common.Damage != 0)
+	if(m_item->Common.ItemUse==ItemUseArrow && m_item->Common.Damage != 0)
 		return true;
 	else
 		return ((m_item->Common.Damage != 0) && (m_item->Common.Delay != 0));
@@ -405,7 +408,7 @@ ItemInst* Inventory::GetItem(sint16 slot_id) const
 	ItemInst* result = NULL;
 	
 	// Cursor
-	if (slot_id==30) {
+	if (slot_id == SLOT_CURSOR) {
 		// Cursor slot
 		result = m_cursor.peek_front();
 	}
@@ -512,9 +515,14 @@ void Inventory::SwapItem(sint16 slot_a, sint16 slot_b)
 	_PutItem(slot_b, inst_a);
 }
 
+#ifndef PACKETCOLLECTOR
+
 // Checks that user has at least 'quantity' number of items in a given inventory slot
 // Returns first slot it was found in, or SLOT_INVALID if not found
-#ifndef PACKETCOLLECTOR
+
+//This function has a flaw in that it only returns the last stack that it looked at
+//when quantity is greater than 1 and not all of quantity can be found in 1 stack.
+
 sint16 Inventory::HasItem(uint32 item_id, uint8 quantity, uint8 where)
 {
 	const Item_Struct* item = database.GetItem(item_id);
@@ -563,7 +571,55 @@ sint16 Inventory::HasItem(uint32 item_id, uint8 quantity, uint8 where)
 	
 	return slot_id;
 }
+
+//this function has the same quantity flaw mentioned above in HasItem()
+
+sint16 Inventory::HasItemByUse(uint8 use, uint8 quantity, uint8 where)
+{
+	sint16 slot_id = SLOT_INVALID;
+	
+	// Check each inventory bucket
+	if(where & invWhereWorn) {
+		slot_id = _HasItemByUse(m_worn, use, quantity);
+		if (slot_id != SLOT_INVALID)
+			return slot_id;
+	}
+	
+	if(where & invWherePersonal) {
+		slot_id = _HasItemByUse(m_inv, use, quantity);
+		if (slot_id != SLOT_INVALID)
+			return slot_id;
+	}
+		
+	if(where & invWhereBank) {
+		slot_id = _HasItemByUse(m_bank, use, quantity);
+		if (slot_id != SLOT_INVALID)
+			return slot_id;
+	}
+		
+	if(where & invWhereSharedBank) {
+		slot_id = _HasItemByUse(m_shbank, use, quantity);
+		if (slot_id != SLOT_INVALID)
+			return slot_id;
+	}
+		
+	if(where & invWhereTrading) {
+		slot_id = _HasItemByUse(m_trade, use, quantity);
+		if (slot_id != SLOT_INVALID)
+			return slot_id;
+	}
+		
+	if(where & invWhereCursor) {
+		// Check cursor queue
+		slot_id = _HasItemByUse(m_cursor, use, quantity);
+		if (slot_id != SLOT_INVALID)
+			return slot_id;
+	}
+	
+	return slot_id;
+}
 #endif
+
 // Remove item from inventory (with memory delete)
 void Inventory::DeleteItem(sint16 slot_id, uint8 quantity)
 {
@@ -629,7 +685,7 @@ ItemInst* Inventory::PopItem(sint16 slot_id)
 
 // Locate an available inventory slot
 // Returns slot_id when there's one available, else SLOT_INVALID
-sint16 Inventory::FindFreeSlot(bool for_bag, bool try_cursor)
+sint16 Inventory::FindFreeSlot(bool for_bag, bool try_cursor, int8 min_size)
 {
 	// Check basic inventory
 	for (sint16 i=22; i<=29; i++) {
@@ -641,10 +697,14 @@ sint16 Inventory::FindFreeSlot(bool for_bag, bool try_cursor)
 	if (!for_bag) {
 		for (sint16 i=22; i<=29; i++) {
 			const ItemInst* inst = GetItem(i);
-			if (inst && inst->IsType(ItemTypeContainer)) {
+			if (inst && inst->IsType(ItemTypeContainer) 
+				&& inst->GetItem()->Container.SizeCapacity >= min_size
+				) {
 				sint16 base_slot_id = Inventory::CalcSlotId(i, 0);
+
 				int8 slots=inst->GetItem()->Container.Slots;
-				for (uint8 j=0; j<slots; j++) {
+				uint8 j;
+				for (j=0; j<slots; j++) {
 					if (!GetItem(base_slot_id + j))
 						// Found available slot within bag
 						return (base_slot_id + j);
@@ -660,6 +720,111 @@ sint16 Inventory::FindFreeSlot(bool for_bag, bool try_cursor)
 	
 	// No available slots
 	return SLOT_INVALID;
+}
+
+void Inventory::dumpInventory() {
+	iter_inst it;
+	iter_bag itb;
+	ItemInst* inst = NULL;
+	
+	// Check item: After failed checks, check bag contents (if bag)
+	printf("Worn items:\n");
+	for (it=m_worn.begin(); it!=m_worn.end(); it++) {
+		inst = it->second;
+		it->first;
+		if(!inst || !inst->GetItem())
+			continue;
+		
+		printf("Slot %d: %s (%d)\n", it->first, it->second->GetItem()->Name, (inst->GetCharges()<=0) ? 1 : inst->GetCharges());
+		
+		// Go through bag, if bag
+		if (inst && inst->IsType(ItemTypeContainer)) {
+			ItemContainerInst* bag = (ItemContainerInst*)inst;
+			
+			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
+				ItemInst* baginst = itb->second;
+				if(!baginst || !baginst->GetItem())
+					continue;
+				printf("	Slot %d: %s (%d)\n", Inventory::CalcSlotId(it->first, itb->first),
+						baginst->GetItem()->Name, (baginst->GetCharges()<=0) ? 1 : baginst->GetCharges());
+			}
+		}
+	}
+	
+	printf("Inventory items:\n");
+	for (it=m_inv.begin(); it!=m_inv.end(); it++) {
+		inst = it->second;
+		it->first;
+		if(!inst || !inst->GetItem())
+			continue;
+		
+		printf("Slot %d: %s (%d)\n", it->first, it->second->GetItem()->Name, (inst->GetCharges()<=0) ? 1 : inst->GetCharges());
+		
+		// Go through bag, if bag
+		if (inst && inst->IsType(ItemTypeContainer)) {
+			ItemContainerInst* bag = (ItemContainerInst*)inst;
+			
+			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
+				ItemInst* baginst = itb->second;
+				if(!baginst || !baginst->GetItem())
+					continue;
+				printf("	Slot %d: %s (%d)\n", Inventory::CalcSlotId(it->first, itb->first),
+							baginst->GetItem()->Name, (baginst->GetCharges()<=0) ? 1 : baginst->GetCharges());
+				
+			}
+		}
+	}
+	
+	printf("Bank items:\n");
+	for (it=m_bank.begin(); it!=m_bank.end(); it++) {
+		inst = it->second;
+		it->first;
+		if(!inst || !inst->GetItem())
+			continue;
+		
+		printf("Slot %d: %s (%d)\n", it->first, it->second->GetItem()->Name, (inst->GetCharges()<=0) ? 1 : inst->GetCharges());
+		
+		// Go through bag, if bag
+		if (inst && inst->IsType(ItemTypeContainer)) {
+			ItemContainerInst* bag = (ItemContainerInst*)inst;
+			
+			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
+				ItemInst* baginst = itb->second;
+				if(!baginst || !baginst->GetItem())
+					continue;
+				printf("	Slot %d: %s (%d)\n", Inventory::CalcSlotId(it->first, itb->first),
+						baginst->GetItem()->Name, (baginst->GetCharges()<=0) ? 1 : baginst->GetCharges());
+				
+			}
+		}
+	}
+	
+	printf("Shared Bank items:\n");
+	for (it=m_shbank.begin(); it!=m_shbank.end(); it++) {
+		inst = it->second;
+		it->first;
+		if(!inst || !inst->GetItem())
+			continue;
+		
+		printf("Slot %d: %s (%d)\n", it->first, it->second->GetItem()->Name, (inst->GetCharges()<=0) ? 1 : inst->GetCharges());
+		
+		// Go through bag, if bag
+		if (inst && inst->IsType(ItemTypeContainer)) {
+			ItemContainerInst* bag = (ItemContainerInst*)inst;
+			
+			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
+				ItemInst* baginst = itb->second;
+				if(!baginst || !baginst->GetItem())
+					continue;
+				printf("	Slot %d: %s (%d)\n", Inventory::CalcSlotId(it->first, itb->first),
+						baginst->GetItem()->Name, (baginst->GetCharges()<=0) ? 1 : baginst->GetCharges());
+				
+			}
+		}
+	}
+	
+	printf("\n");
+	fflush(stdout);
 }
 
 // Internal Method: Retrieves item within an inventory bucket
@@ -801,6 +966,77 @@ sint16 Inventory::_HasItem(ItemInstQueue& queue, const Item_Struct* item, uint8 
 	return SLOT_INVALID;
 }
 
+// Internal Method: Checks an inventory bucket for a particular item
+sint16 Inventory::_HasItemByUse(map<sint16, ItemInst*>& bucket, uint8 use, uint8 quantity)
+{
+	iter_inst it;
+	iter_bag itb;
+	ItemInst* inst = NULL;
+	uint8 quantity_found = 0;
+	
+	// Check item: After failed checks, check bag contents (if bag)
+	for (it=bucket.begin(); it!=bucket.end(); it++) {
+		inst = it->second;
+		if (inst && inst->IsType(ItemTypeCommon) && inst->GetItem()->Common.ItemUse == use) {
+			quantity_found += (inst->GetCharges()<=0) ? 1 : inst->GetCharges();
+			if (quantity_found >= quantity)
+				return it->first;
+		}
+		
+		// Go through bag, if bag
+		if (inst && inst->IsType(ItemTypeContainer)) {
+			ItemContainerInst* bag = (ItemContainerInst*)inst;
+			
+			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
+				ItemInst* baginst = itb->second;
+				if (baginst && baginst->IsType(ItemTypeCommon) && baginst->GetItem()->Common.ItemUse == use) {
+					quantity_found += (baginst->GetCharges()<=0) ? 1 : baginst->GetCharges();
+					if (quantity_found >= quantity)
+						return Inventory::CalcSlotId(it->first, itb->first);
+				}
+			}
+		}
+	}
+	
+	// Not found
+	return SLOT_INVALID;
+}
+
+// Internal Method: Checks an inventory queue type bucket for a particular item
+sint16 Inventory::_HasItemByUse(ItemInstQueue& queue, uint8 use, uint8 quantity)
+{
+	iter_queue it;
+	iter_bag itb;
+	uint8 quantity_found = 0;
+	
+	// Read-only iteration of queue
+	for (it=queue.begin(); it!=queue.end(); it++) {
+		ItemInst* inst = *it;
+		if (inst && inst->IsType(ItemTypeCommon) && inst->GetItem()->Common.ItemUse == use) {
+			quantity_found += (inst->GetCharges()<=0) ? 1 : inst->GetCharges();
+			if (quantity_found >= quantity)
+				return SLOT_CURSOR;
+		}
+		
+		// Go through bag, if bag
+		if (inst && inst->IsType(ItemTypeContainer)) {
+			ItemContainerInst* bag = (ItemContainerInst*)inst;
+			
+			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
+				ItemInst* baginst = itb->second;
+				if (baginst && baginst->IsType(ItemTypeCommon) && baginst->GetItem()->Common.ItemUse == use) {
+					quantity_found += (baginst->GetCharges()<=0) ? 1 : baginst->GetCharges();
+					if (quantity_found >= quantity)
+						return Inventory::CalcSlotId(SLOT_CURSOR, itb->first);
+				}
+			}
+		}
+	}
+	
+	// Not found
+	return SLOT_INVALID;
+}
+
 // Return base item data without delim at end
 string ItemInst::Serialize(sint16 slot_id) const
 {
@@ -829,7 +1065,7 @@ string ItemInst::Serialize(sint16 slot_id) const
 		unknown5,
 		m_item->Unknown007,
 		m_item->Unknown008,
-		m_item->Unknown009,
+		m_item->Attuneable,
 		m_item->ItemClass,
 		m_item->Name,
 		m_item->LoreName,
@@ -904,13 +1140,13 @@ string ItemCommonInst::Serialize(sint16 slot_id) const
 		common->EffectType,
 		common->Range,
 		common->Damage,
-		common->Color,
+		/*common->Color*/ m_color,
 		common->Classes,
 		common->Races,
 		common->Unknown061,
 		common->SpellId,
 		common->MaxCharges,
-		common->Skill,
+		common->ItemUse,
 		common->Material,
 		common->SellRate,
 		common->Unknown067,
@@ -1000,7 +1236,7 @@ string ItemContainerInst::Serialize(sint16 slot_id) const
 		"0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|"		// ended with Color
 		"0|0|0|-1|0|0|0|1.000000|0|0|0|0|0|0|0|0|0|0|0|0|"	// ended with SpellShield
 		"0|0|0|0|0|0|0|0|0|0|0||0|0|0|0|0|0|0|0|"			// ended with Unknown100
-		"%i|%i|%i|%i|0|0||0|0|0|0|0|\"",					// bag/books stuff
+		"0|%i|%i|%i|%i|0||0|0|0|0|0|\"",					// bag/books stuff
 		ItemInst::Serialize(slot_id).c_str(),
 		container->PackType,
 		container->Slots,

@@ -79,8 +79,6 @@ public:
 	
 	// Destructor
 	~Object();
-	Timer* respawn;
-	Timer* decay_timer;
 	bool Process();
 	bool IsGroundSpawn() { return m_ground_spawn; }
 	// Event handlers
@@ -95,6 +93,9 @@ public:
 	// Packet functions
 	void CreateSpawnPacket(APPLAYER* app);
 	void CreateDeSpawnPacket(APPLAYER* app);
+	
+	//Decay functions
+	void StartDecay() {decay_timer.Start();}
 	
 	// Container functions
 	void PutItem(uint8 index, const ItemInst* inst);
@@ -122,6 +123,9 @@ protected:
 	float			m_z;
 	float			m_heading;
 	bool			m_ground_spawn;
+	
+	Timer respawn_timer;
+	Timer decay_timer;
 };
 
 #endif

@@ -44,14 +44,16 @@ Beacon::Beacon(Mob *at_mob, int lifetime)
 (
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-)
+),
+		remove_timer(lifetime),
+		spell_timer(0)
 {
-	remove_timer = NULL;
+	remove_timer.Disable();
+	spell_timer.Disable();
 	remove_me = false;
 	spell_id = 0xFFFF;
 	spell_range = 0;
 	spell_iterations = 0;
-	spell_timer = NULL;
 	caster_id = 0;
 
 	// copy location
@@ -62,8 +64,7 @@ Beacon::Beacon(Mob *at_mob, int lifetime)
 
 	if(lifetime)
 	{
-		remove_timer = new Timer(lifetime);
-		remove_timer->Start();
+		remove_timer.Start();
 	}
 #ifdef SOLAR
 	entity_list.Message(0, 0, "Beacon being created at %0.2f %0.2f %0.2f heading %0.2f lifetime %d", GetX(), GetY(), GetZ(), GetHeading(), lifetime);
@@ -75,8 +76,6 @@ Beacon::~Beacon()
 #ifdef SOLAR
 	entity_list.Message(0, 0, "Beacon %d being removed at %0.2f %0.2f %0.2f heading %0.2f", GetID(), GetX(), GetY(), GetZ(), GetHeading());
 #endif
-	safe_delete(remove_timer);
-	safe_delete(spell_timer);
 }
 
 bool Beacon::Process()
@@ -88,15 +87,16 @@ bool Beacon::Process()
 
 	if
 	(
-		spell_timer &&
-		spell_timer->Check() &&
+		spell_timer.Enabled() &&
+		spell_timer.Check() &&
 		IsValidSpell(spell_id)
 	)
 	{
 		Mob *caster = entity_list.GetMob(caster_id);
 		if(caster && spell_iterations--)
 		{
-			entity_list.AESpell(caster, this, spell_range, spell_id);
+			bool affect_caster = !caster->IsNPC();	//NPC AE spells do not affect the NPC caster
+			entity_list.AESpell(caster, this, spell_range, spell_id, affect_caster);
 		}
 		else
 		{
@@ -104,12 +104,12 @@ bool Beacon::Process()
 			spell_id = 0xFFFF;
 			spell_iterations = 0;
 			spell_range = 0;
-			safe_delete(spell_timer);
+			spell_timer.Disable();
 			caster_id = 0;
 		}
 	}
 
-	if(remove_timer && remove_timer->Check())
+	if(remove_timer.Enabled() && remove_timer.Check())
 	{
 		return false;
 	}
@@ -127,9 +127,8 @@ void Beacon::AELocationSpell(Mob *caster, float range, int16 cast_spell_id)
 	spell_iterations = spells[spell_id].AEDuration / 2500;
 	spell_iterations = spell_iterations < 1 ? 1 : spell_iterations;	// at least 1
 	spell_range = range;
-	spell_timer = new Timer(2500);
-	spell_timer->Start();
-	spell_timer->Trigger();
+	spell_timer.Start(2500);
+	spell_timer.Trigger();
 }
 
 

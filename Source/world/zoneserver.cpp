@@ -195,6 +195,7 @@ bool ZoneServer::Process() {
 		case ServerOP_ZAAuth: {
 			break;
 		}
+		/*
 		case ServerOP_SendGroup: {
 			SendGroup_Struct* sgs=(SendGroup_Struct*)pack->pBuffer;
 			ZoneServer* zs=zoneserver_list.FindByZoneID(sgs->zoneid);
@@ -202,6 +203,25 @@ bool ZoneServer::Process() {
 				printf("Could not find zone id: %i running to transfer group to!\n",sgs->zoneid);
 			else{
 				zs->SendPacket(pack);
+			}
+			break;
+		}*/
+		case ServerOP_GroupIDReq: {
+			SendGroupIDs();
+			break;
+		}
+		case ServerOP_GroupLeave: {
+			if(pack->size != sizeof(ServerGroupLeave_Struct))
+				break;
+			//bounce the group leave structure to the correct zone server
+			ServerGroupLeave_Struct* sgl = (ServerGroupLeave_Struct*)pack->pBuffer;
+			sgl->member_name[63] = '\0';
+			ClientListEntry *cle = zoneserver_list.FindCharacter(sgl->member_name);
+			if(cle) {
+				ZoneServer *zs = cle->Server();
+				if(zs) {
+					zs->SendPacket(pack);
+				}
 			}
 			break;
 		}
@@ -415,7 +435,7 @@ bool ZoneServer::Process() {
 				else	// need to boot one
 				{
 					int server_id;
-					if (server_id = zoneserver_list.TriggerBootup(ztz->requested_zone_id)){
+					if ((server_id = zoneserver_list.TriggerBootup(ztz->requested_zone_id))){
 						printf("World (%d): Successfully booted a zone for %s\n", GetZoneID(), ztz->name);
 						// bootup successful, ready to rock
 						ztz->response = 1;
@@ -734,6 +754,7 @@ ZSList::ZSList() {
 	NextID = 1;
 	NextCLEID = 1;
 	CLStale_timer = new Timer(45000);
+	CurGroupID = 1;
 }
 
 ZSList::~ZSList() {
@@ -742,6 +763,7 @@ ZSList::~ZSList() {
 
 void ZSList::Add(ZoneServer* zoneserver) {
 	list.Insert(zoneserver);
+	zoneserver->SendGroupIDs();	//send its initial set of group ids
 }
 
 void ZSList::KillAll() {
@@ -1198,6 +1220,23 @@ void ZSList::SendTimeSync() {
 	tod->start_realtime=worldclock.getStartRealTime();
 	zoneserver_list.SendPacket(pack);
 	delete pack;
+}
+
+void ZSList::NextGroupIDs(int32 &start, int32 &end) {
+	start = CurGroupID;
+	CurGroupID += 1000;	//hand them out 1000 at a time...
+	if(CurGroupID < start) {	//handle overflow
+		start = 1;
+		CurGroupID = 1001;
+	}
+	end = CurGroupID - 1;
+}
+
+void ZoneServer::SendGroupIDs() {
+	ServerPacket* pack = new ServerPacket(ServerOP_GroupIDReply, sizeof(ServerGroupIDReply_Struct));
+	ServerGroupIDReply_Struct* sgi = (ServerGroupIDReply_Struct*)pack->pBuffer;
+	zoneserver_list.NextGroupIDs(sgi->start, sgi->end);
+	SendPacket(pack);
 }
 
 void ZoneServer::ChangeWID(int32 iCharID, int32 iWID) {
@@ -1960,6 +1999,9 @@ ClientListEntry* ZSList::CheckAuth(const char* iName, const char* iPassword) {
 		iterator.Advance();
 	}
 	sint16 tmpadmin;
+	
+	printf("Login with '%s' and '%s'\n", iName, iPassword);
+	
 	int32 accid = database.CheckLogin(iName, iPassword, &tmpadmin);
 	if (accid) {
 		ClientListEntry* tmp = new ClientListEntry(accid, iName, tmpMD5, tmpadmin);
@@ -2144,7 +2186,8 @@ bool ClientListEntry::CheckStale() {
 }
 
 bool ClientListEntry::CheckAuth(int32 iLSID, const char* iKey) {
-	if (LSID() == iLSID && strncmp(plskey, iKey,10) == 0) {
+//	if (LSID() == iLSID && strncmp(plskey, iKey,10) == 0) {
+	if (strncmp(plskey, iKey,10) == 0) {
 		if (paccountid == 0) {
 			sint16 tmpStatus = net.GetDefaultStatus();
 			paccountid = database.CreateAccount(plsname, 0, tmpStatus, LSID());

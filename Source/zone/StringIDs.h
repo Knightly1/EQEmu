@@ -152,4 +152,12 @@
 #define MERCHANT_HANDY_ITEM2 1146 //Greetings, %3. You look like you could use a %4.
 #define MERCHANT_HANDY_ITEM3 1147 //Hi there %3, just browsing?  Have you seen the %4 I just got in?
 #define MERCHANT_HANDY_ITEM4 1148 //Welcome to my shop, %3. You would probably find a %4 handy.
+#define DUEL_FINISHED 1088 //dont know text
+#define DUEL_FLED 1408 //dont know text, might not be 'fled' message per-se
+#define FISHING_SUCCESS 170		//you catch something....
+#define FISHING_LOST_BAIT 172	//something about you lost your bait
+#define FISHING_FAILED 168	//you failed to catch anything
+#define DISC_LEVEL_ERROR 503 //You must be a level %1 ... to use this discipline.
+#define DISC_LEVEL_USE_ERROR 13004	//You are not sufficient level to use this discipline.
+
 #endif

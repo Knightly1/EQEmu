@@ -20,8 +20,7 @@
 #define FORAGE_H
 #include "../common/types.h"
 
-#define MAX_COMMON_FOOD_IDS 7
-
-uint32 ForageItem(int32 CurrentZone, int8 skill_level);
+#define MAX_COMMON_FOOD_IDS 9
+#define MAX_COMMON_FISH_IDS 31
 
 #endif

@@ -8,6 +8,9 @@ using namespace std;
 #include <stdlib.h>
 #include <zlib.h>
 
+//FatherNitwit: uncomment to enable my IP based authentication hack
+//#define IPBASED_AUTH_HACK
+
 // Disgrace: for windows compile
 #ifdef WIN32
 	#include <windows.h>
@@ -176,6 +179,10 @@ bool Client::HandlePacket(const APPLAYER *app) {
 				ret = false;
 				break;
 			}
+#ifdef IPBASED_AUTH_HACK
+			struct in_addr tmpip;
+			tmpip.s_addr = ip;
+#endif
 			strncpy(password, (char*)&app->pBuffer[strlen(name)+1], 15);
 			int32 id=0;
 			if(strncasecmp(name, "LS#", 3) == 0)
@@ -183,12 +190,17 @@ bool Client::HandlePacket(const APPLAYER *app) {
 			else
 				id=atoi(name);
 			if (id > 0 && id < 100000) {
-				if (loginserver.Connected() == false) {
+#ifdef IPBASED_AUTH_HACK
+				if ((cle = zoneserver_list.CheckAuth(inet_ntoa(tmpip), password)))
+#else
+				if (false && loginserver.Connected() == false) {
 					cout << "Error: Login server login while not connected to login server." << endl;
 					ret = false;
 					break;
 				}
-				if ((cle = zoneserver_list.CheckAuth(id, password))) {
+				if ((cle = zoneserver_list.CheckAuth(id, password)))
+#endif
+				{
 					if (cle->AccountID() == 0) {
 						ret = false;
 						break;
@@ -231,7 +243,11 @@ bool Client::HandlePacket(const APPLAYER *app) {
 				break;
 			}
 			else {
+#ifdef IPBASED_AUTH_HACK
+				cle = zoneserver_list.CheckAuth(inet_ntoa(tmpip), password);
+#else
 				cle = zoneserver_list.CheckAuth(name, password);
+#endif
 				if (cle == 0)
 				{
 					// TODO: Find out how to tell the client wrong username/password
@@ -991,7 +1007,10 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 
 
 	memset(pp.unknown3224, 0xff, 448);
-	memset(pp.unknown3704, 0xffffffff, 8);
+	memset(pp.unknown3704, 0xff, 32);
+	//was memset(pp.unknown3704, 0xffffffff, 8);
+	//but I dont think thats what you really wanted to do...
+	//memset is byte based
 	
 	//If server is PVP by default, make all character set to it.
 	pp.pvp = database.GetServerType() == 1 ? 1 : 0;			

@@ -954,6 +954,10 @@ void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid
 				if (mob && mob->IsClient())
 					mob->CastToClient()->SetLevel(atoi(arglist[0]), true);
 			}
+			else if (!strcmp(command,"traindisc")) {
+				if (mob && mob->IsClient())
+					mob->CastToClient()->TrainDiscipline(atoi(arglist[0]));
+			}
 			else if (!strcmp(command,"safemove")) {
 				if (mob && mob->IsClient())
 					mob->CastToClient()->MovePC(zone->GetShortName(),database.GetSafePoint(zone->GetShortName(),"x"),database.GetSafePoint(zone->GetShortName(),"y"),database.GetSafePoint(zone->GetShortName(),"z"));
@@ -1589,8 +1593,9 @@ string Parser::GetVar(string varname, int32 npcid)
 	while(iterator != varlist.end())
 	{
 		p = *iterator;
-		if (!strcmp(strlwr(p->name.c_str()),strlwr(checkfirst.c_str())) || !strcmp(strlwr(p->name.c_str()),strlwr(checksecond.c_str())))
+		if (!strcasecmp(p->name.c_str(), checkfirst.c_str()) || !strcasecmp(p->name.c_str(),checksecond.c_str()))
 		{
+printf("GetVar(%s) = '%s'\n", varname.c_str(), p->value.c_str());
 			return p->value;
 		}
 		iterator++;
@@ -2073,7 +2078,7 @@ int Parser::ParseCommands(string text, int line, int justcheck, int32 npcid, Mob
 					lastif = ParseIf(parms);
 #if Parser_DEBUG>10
 					if(mob && mob->IsClient())
-					mob->CastToClient(10,"Parms: %s\n",parms.c_str());
+					mob->CastToClient()->Message(10,"Parms: %s\n",parms.c_str());
 #endif
 					if (!lastif) ignore=1;
 					else ignore=0;
