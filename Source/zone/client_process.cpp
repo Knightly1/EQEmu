@@ -380,10 +380,10 @@ int Client::HandlePacket(const APPLAYER *app)
 				}
 				default:{
 				LogFile->write(EQEMuLog::Error, "HandlePacket() Opcode error: Unexpected packet during CLIENT_CONNECTING: opcode: 0x%04x, size: %i", app->opcode, app->size);
-#if EQDEBUG >= 9
+//#if EQDEBUG >= 9
 					cout << "Unexpected packet during CLIENT_CONNECTING: OpCode: 0x" << hex << setw(4) << setfill('0') << app->opcode << dec << ", size: " << app->size << endl;
 					DumpPacket(app);
-#endif
+//#endif
 				}
 			}
 			break;
@@ -5306,12 +5306,30 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	m_pp.air_remaining = 60; //Reset to max so they dont drown on zone in if its underwater
 	if(zone->IsPVPZone())
 		m_pp.pvp=1;
+	m_pp.level2 = m_pp.level;
+	memset(m_pp.unknown1388,0,sizeof(int32));
+	memset(&m_pp.unknown3756,0,sizeof(int32));
+	memset(&m_pp.unknown11368,0,sizeof(int32));
+	memset(&m_pp.unknown5764,0,sizeof(m_pp.unknown5764));
+	memset(&m_pp.unknown3704[2],0xFF,sizeof(int32)*6);
+	memset(&m_pp.buffs,0,sizeof(m_pp.buffs));
+	memset(&m_pp.hunger_level,0,sizeof(int32));
+	memset(&m_pp.thirst_level,0,sizeof(int32));
+	memset(&m_pp.expAA,0xFF,sizeof(int32));
+	m_pp.aapoints = 0;
+	memset(&m_pp.item_material,0x00,sizeof(m_pp.item_material));
+	memset(&m_pp.item_tint,0x00,sizeof(m_pp.item_tint));
+	m_pp.pvp2 = 0;
+	m_pp.unknown4420 = 0;
+	m_pp.pvptype = 0;
+	m_pp.zone_change_count = 4;
 	CRC32::SetEQChecksum((unsigned char*)&m_pp, sizeof(PlayerProfile_Struct)-4);
 	outapp = new APPLAYER(OP_PlayerProfile,sizeof(PlayerProfile_Struct));
 #ifdef SOLAR
 	printf("PP size: %d\n", sizeof(PlayerProfile_Struct));
 #endif
 	memcpy(outapp->pBuffer,&m_pp,outapp->size);
+	DumpPacket(outapp);
 	outapp->Deflate();
 	outapp->priority = 6;
 	QueuePacket(outapp);
@@ -6016,12 +6034,10 @@ bool Client::Process() {
 }
 
 // Sends the client complete inventory used in character login
-#ifdef ITEMCOMBINED
+//#ifdef ITEMCOMBINED
 void Client::BulkSendInventoryItems()
 {
 	// Search all inventory buckets for items
-	APPLAYER* outapp = new APPLAYER(OP_CharInventory,0);
-	uchar* buffer = 0;
 	bool deletenorent=database.NoRentExpired(GetName());
 	// Worn items and Inventory items
 	sint16 slot_id = 0;
@@ -6046,87 +6062,46 @@ void Client::BulkSendInventoryItems()
 	//	put pos[r]->pBuffer into the buffer
 	//for r from 0 to pos
 	//	safe_delete(pos[r]);
-	
-	int buffptr=0;
+	int32 size=0;
+	int16 i = 0;
+	map<int16,string> ser_items;
+	map<int16,string>::iterator itr;
+	//Inventory items
 	for (slot_id=0; slot_id<=30; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst){
-			APPLAYER* temp = ReturnItemPacket(slot_id, inst, ItemPacketCharInventory);
-			if(!temp)
-				continue;
-			if(buffer)
-			{
-				uchar* newbuffer = new uchar[buffptr+temp->size+1];
-				memcpy(newbuffer,buffer,buffptr);
-				memcpy(&newbuffer[buffptr],temp->pBuffer,temp->size);
-				buffptr=buffptr+temp->size+1;
-				safe_delete(buffer);
-				buffer = newbuffer;
-			}
-			else
-			{
-				buffptr=temp->size;
-				buffer = new uchar[temp->size];
-				memcpy(buffer,temp->pBuffer,buffptr);
-			}
-			safe_delete(temp);
+			string packet = inst->Serialize(slot_id);
+			ser_items[i++] = packet;
+			size+=packet.length() + 1;
 		}
 	}
 	// Bank items
 	for (slot_id=2000; slot_id<=2015; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst){
-			APPLAYER* temp = ReturnItemPacket(slot_id, inst, ItemPacketCharInventory);
-			if(temp)
-			{
-			if(buffer)
-			{
-				uchar* newbuffer = new uchar[buffptr+temp->size+1];
-				memcpy(newbuffer,buffer,buffptr);
-				memcpy(&newbuffer[buffptr],temp->pBuffer,temp->size);
-				buffptr=buffptr+temp->size+1;
-				safe_delete(buffer);
-				buffer = newbuffer;
-			}
-			else
-			{
-				buffptr=temp->size;
-				buffer = new uchar[temp->size];
-				memcpy(buffer,temp->pBuffer,buffptr);
-			}
-			safe_delete(temp);
-			}
+			string packet = inst->Serialize(slot_id);
+			ser_items[i++] = packet;
+			size+=packet.length() + 1;
 		}
 	}
-	
 	// Shared Bank items
 	for (slot_id=2500; slot_id<=2501; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst){
-			APPLAYER* temp = ReturnItemPacket(slot_id, inst, ItemPacketCharInventory);
-			if(temp)
-			{
-			if(buffer)
-			{
-				uchar* newbuffer = new uchar[buffptr+temp->size+1];
-				memcpy(newbuffer,buffer,buffptr);
-				memcpy(&newbuffer[buffptr],temp->pBuffer,temp->size);
-				buffptr=buffptr+temp->size+1;
-				safe_delete(buffer);
-				buffer = newbuffer;
-			}
-			else
-			{
-				buffptr=temp->size;
-				buffer = new uchar[temp->size];
-				memcpy(buffer,temp->pBuffer,buffptr);
-			}
-			safe_delete(temp);
-			}
+			string packet = inst->Serialize(slot_id);
+			ser_items[i++] = packet;
+			size+=packet.length() + 1;
 		}
 	}
-	outapp->size = buffptr;
-	outapp->pBuffer = buffer;
+	APPLAYER* outapp = new APPLAYER(OP_CharInventory,size);
+	uchar* ptr = outapp->pBuffer;
+	for(itr=ser_items.begin();itr!=ser_items.end();itr++){
+		int length = itr->second.length();
+		if(length>5){
+			memcpy(ptr,itr->second.c_str(),length);
+			ptr+=length+1;
+		}
+	}
 	outapp->Deflate();
 	QueuePacket(outapp);
 	safe_delete(outapp);
@@ -6142,7 +6117,7 @@ void Client::BulkSendInventoryItems()
 		}
 	}
 }
-#else
+/*#else
 void Client::BulkSendInventoryItems()
 {
 	// Search all inventory buckets for items
@@ -6186,7 +6161,7 @@ void Client::BulkSendInventoryItems()
 		}
 	}
 }
-#endif
+#endif*/
 // Send an item packet (including all subitems of the item)
 void Client::SendItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type)
 {
