@@ -23,7 +23,9 @@
 #include "perl.h" 
 #include "XSUB.h" 
 #include "embxs.h" 
-
+#ifdef write
+#undef write
+#endif
 extern Database database; 
 
 const char *getItemName(unsigned itemid) 
