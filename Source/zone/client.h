@@ -577,6 +577,8 @@ public:
 
 	void    SetLanguageSkill(int langid, int value); // bUsh
 
+	std::list<Client*> consent_list;
+
 #ifdef GUILDWARS
 	int32 profit;
 	bool permitflag;
@@ -690,7 +692,6 @@ private:
 	
 	bool IsSettingGuildDoor;
 	int16 SetGuildDoorID;
-	
 	int32       max_AAXP;
 	int32		staminacount;
 	AA_Array* aa[MAX_PP_AA_ARRAY];

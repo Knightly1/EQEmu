@@ -95,6 +95,7 @@ Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname
 	pc->luclinface = dbpc->face;
 	pc->beard = dbpc->beard;
 	pc->Rezzed(rezzed);
+	pc->become_npc = false;
 	if (pc->IsEmpty()) {
 		safe_delete(pc);
 		return 0;
@@ -271,6 +272,7 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 		corpse_decay_timer.Enable();
 		corpse_delay_timer.Enable();
 	} else {
+		become_npc = false;
 		corpse_decay_timer.Disable();
 		corpse_delay_timer.Disable();
 	}
@@ -651,29 +653,21 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 		if (looter == 0)
 			this->BeingLootedBy = 0xFFFFFFFF;
 	}
-	int8 tCanLoot = 2;
+	int8 tCanLoot = 1;
 	if (this->BeingLootedBy != 0xFFFFFFFF && this->BeingLootedBy != client->GetID()) {
-		// ok, now we tell the client to fuck off
-		// Quagmire - i think this is the right packet, going by pyro's logs
 		SendLootReqErrorPacket(client, 0);
 		tCanLoot = 0;
-//		cout << "Telling " << client->GetName() << " corpse '" << this->GetName() << "' is busy..." << endl;
 	}
-	else if (IsPlayerCorpse() && charid != client->CharacterID() && !become_npc) {
-		// Not their corpse... get lost
-		tCanLoot = 1;
-		if (client->Admin() < 100) {
-			SendLootReqErrorPacket(client, 2);
-		}
-//		cout << "Telling " << client->GetName() << " corpse '" << this->GetName() << "' is busy..." << endl;
-	}
-	else if ((IsNPCCorpse() || become_npc) && !CanMobLoot(client->CharacterID())) {
-		tCanLoot = 1;
-		if (client->Admin() < 100) {
+	else if(IsPlayerCorpse() && charid == client->CharacterID())
+		tCanLoot = 2;
+	else if ((IsNPCCorpse() || become_npc) && CanMobLoot(client->CharacterID()))
+		tCanLoot = 2;
+	if(tCanLoot == 1){
+		if (client->Admin() < 100 || !client->GetGM()) {
 			SendLootReqErrorPacket(client, 2);
 		}
 	}
-	if (tCanLoot == 2 || (tCanLoot == 1 && client->Admin() >= 100))
+	if (tCanLoot == 2 || (tCanLoot == 1 && client->Admin() >= 100 && client->GetGM()))
 	{
 		this->BeingLootedBy = client->GetID();
 		APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
@@ -946,7 +940,6 @@ void Corpse::QueryLoot(Client* to) {
 
 void Corpse::Summon(Client* client,bool spell) {
 	int32 dist2 = 10000; // pow(100, 2);
-	// TODO: Check consent list
 	if (!spell) {
 		if (this->GetCharID() == client->CharacterID()) {
 			if (IsLocked() && client->Admin() < 100) {
@@ -960,7 +953,19 @@ void Corpse::Summon(Client* client,bool spell) {
 				client->Message(0, "Corpse is too far away.");
 		}
 		else {
-			client->Message(0, "Error: You dont own the corpse");
+			Client* owner = entity_list.GetClientByCharID(charid);
+			bool consent = false;
+			if(owner){
+				std::list<Client*>::const_iterator itr;
+				for(itr=owner->consent_list.begin();itr!=owner->consent_list.end();itr++){
+					if(*itr == client){
+						GMMove(client->GetX(), client->GetY(), client->GetZ());
+						consent = true;
+					}
+				}
+			}
+			if(!consent)
+				client->Message(0, "Error: You dont own the corpse");
 		}
 	}
 	else {

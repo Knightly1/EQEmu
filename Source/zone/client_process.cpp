@@ -490,6 +490,50 @@ int Client::HandlePacket(const APPLAYER *app)
 				case OP_AutoAttack2: { // Why 2?
 					break;
 				}
+				case OP_Consent:{
+					if(app->size<64){
+						char* c_name = (char*)app->pBuffer;
+						Client* client = entity_list.GetClientByName(c_name);
+						if(client && client!=this){
+							consent_list.push_back(client);
+							APPLAYER* outapp = new APPLAYER(OP_ConsentResponse, sizeof(ConsentResponse_Struct));
+							ConsentResponse_Struct* crs = (ConsentResponse_Struct*)outapp->pBuffer;
+							strcpy(crs->grantname,client->GetName());
+							strcpy(crs->ownername,GetName());
+							crs->permission=1;
+							strcpy(crs->zonename,"all zones");
+							client->QueuePacket(outapp);
+							QueuePacket(outapp);
+							safe_delete(outapp);
+						}
+						else if(client==this)
+							Message_StringID(0,CONSENT_YOURSELF);
+						else
+							Message_StringID(0,CONSENT_INVALID_NAME);
+					}
+					break;
+				}
+				case OP_Deny:{
+					if(app->size<64){
+						char* c_name = (char*)app->pBuffer;
+						Client* client = entity_list.GetClientByName(c_name);
+						if(client){
+							consent_list.remove(client);
+							APPLAYER* outapp = new APPLAYER(OP_ConsentResponse, sizeof(ConsentResponse_Struct));
+							ConsentResponse_Struct* crs = (ConsentResponse_Struct*)outapp->pBuffer;
+							strcpy(crs->grantname,client->GetName());
+							strcpy(crs->ownername,GetName());
+							crs->permission=0;
+							strcpy(crs->zonename,"all zones");
+							client->QueuePacket(outapp);
+							QueuePacket(outapp);
+							safe_delete(outapp);
+						}
+						else
+							Message_StringID(0,TARGET_NOT_FOUND);
+					}
+					break;
+				}
 				case OP_TargetMouse:		// mouse targetting a person
 				case OP_TargetCommand: {	// /target user
 					if (app->size != sizeof(ClientTarget_Struct)) {

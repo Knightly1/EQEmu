@@ -267,7 +267,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_BuffFadeMsg		0x00c0
 		#define OP_MultiLineMsg		0x1440	// is this still good for anything?
 #define OP_SpecialMesg		0x021c	// Communicate textual info to client
-/**/ #define OP_Consent			0x0013	// /consent
+#define OP_Consent			0x0013	// /consent
+#define OP_ConsentResponse	0x029d
+#define OP_Deny				0x02d4
 #define OP_Stun				0x016c
 #define OP_BeginCast		0x0021
 #define OP_CastSpell		0x00be

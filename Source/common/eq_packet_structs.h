@@ -666,7 +666,12 @@ struct GMSkillChange_Struct {
 /*008*/ uint16		skill_id;
 /*010*/ int8		unknown3[2];
 };
-
+struct ConsentResponse_Struct {
+	char grantname[64];
+	char ownername[64];
+	int8 permission;
+	char zonename[32];
+};
 /* 
 ** Diety List
 */

@@ -159,5 +159,9 @@
 #define FISHING_FAILED 168	//you failed to catch anything
 #define DISC_LEVEL_ERROR 503 //You must be a level %1 ... to use this discipline.
 #define DISC_LEVEL_USE_ERROR 13004	//You are not sufficient level to use this discipline.
-
+#define CONSENT_DENIED 390 //You do not have consent to summon that corpse.
+#define CONSENT_INVALID_NAME 397 //Not a valid consent name.
+#define CONSENT_NPC 398 //You cannot consent NPC\'s.
+#define CONSENT_YOURSELF 399  //You cannot consent yourself.
+#define TARGET_NOT_FOUND 101 //Target player not found.
 #endif

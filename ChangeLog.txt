@@ -1,14 +1,17 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==10/25/2004
+FatherNitwit: Fixed zone crash related to character_ query.
+FatherNitwit: Fixed book reading to give proper book window.
+FatherNitwit: At least partialy fixed pet dual weild/double attack problem.
+FatherNitwit: Tweaking on selling stackable items.
+FatherNitwit: Fixed archery ammo issue.
+LethalEncounter: Added ability to /consent (and /deny) other players so they can drag your corpse.
+LethalEncounter: Fixed bug where other people were able to loot your corpse.
 
 ==10/24/2004
 LethalEncounter: Fixed bug where you lost air supply on zoning in underwater.
 LethalEncounter: Fixed GM damage bug.
-LethalEncounter: Fixed zone crash related to character_ query.
-LethalEncounter: Fixed book reading to give proper book window.
-LethalEncounter: At least partialy fixed pet dual weild/double attack problem.
-LethalEncounter: Tweaking on selling stackable items.
-LethalEncounter: Fixed archery ammo issue.
 
 ==10/23/2004
 FatherNitwit: Enable named quests by default (in features.h)
