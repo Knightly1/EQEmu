@@ -3097,8 +3097,6 @@ void Client::SendAdventureRequestData(Group* group,bool EnteredDungeon,bool Ente
 	adrr->unknown000=0xBFC40100;
 	strcpy(adrr->text,AF.text);
 	int32 ID=GetAdventureID();
-
-
 	adrr->x=AF.x;
 	adrr->y=AF.y;
 	adrr->z=0;
@@ -3130,8 +3128,8 @@ void Client::SendAdventureRequestData(Group* group,bool EnteredDungeon,bool Ente
 	}
 	else
 		adrr->showcompass=0;
-
 	if(Zoned==true) {
+		send=true;
 		if(p_timers.Enabled(pTimerAdventureTimer)
 			&& p_timers.GetRemainingTime(pTimerAdventureTimer)>0)
 			adrr->timeleft=p_timers.GetRemainingTime(pTimerAdventureTimer);
@@ -3140,16 +3138,17 @@ void Client::SendAdventureRequestData(Group* group,bool EnteredDungeon,bool Ente
 			adrr->timeleft=p_timers.GetRemainingTime(pTimerStartAdventureTimer);
 		else {
 			printf("zoned sin timer %i\n",ID);
+			EnteredZone=true;
+			SetAdventureID(0);
+			send=false;
 			return;
 		}
-		send=true;
 	}
 	if(send==true){
 		QueuePacket(outapp);
 		safe_delete(outapp);
 		return;
 	}
-
 	for(int xx=0;xx<6;xx++){
 		if(EnteredDungeon==false && EnteredZone==false){
 			if(group && group->members[xx]!=NULL && group->members[xx]->IsClient() && !group->members[xx]->CastToClient()->p_timers.Enabled(pTimerStartAdventureTimer)){
