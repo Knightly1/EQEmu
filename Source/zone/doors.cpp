@@ -196,17 +196,6 @@ void Doors::HandleClick(Client* sender)
 		}
 	}
 	
-	// Teleport door?
-    if (opentype == 58 && strncmp(dest_zone,"NONE",sizeof("NONE")) != 0 ){ 
-        if ( strncmp(dest_zone,zone_name,sizeof(zone_name)) == 0){
-            sender->GMMove(dest_x,dest_y,dest_z);
-        }
-        else {
-           	sender->MovePC(dest_zone, dest_x, dest_y, dest_z);
-        }
-		return;
-    }
-
 
 	entity_list.QueueClients(sender, outapp, false);
 	safe_delete(outapp);
