@@ -162,6 +162,7 @@ public:
 	bool	IsOnBoat;
 	bool	IsTracking;
 	bool	withcustomer;
+	bool	TryStacking(ItemInst* item, int8 type = ItemPacketTrade, bool try_worn = true, bool try_cursor = true);
 	void	SendGuildJoin(GuildJoin_Struct* gj);
 	void	SendTraderPacket(Client* trader);
 	GetItems_Struct* GetTraderItems(); 
@@ -614,7 +615,7 @@ private:
 	void	OPRezzAnswer(const APPLAYER *app);
 	void	OPMemorizeSpell(const APPLAYER *app);
 	void	OPMoveCoin(const APPLAYER* app);
-	void	MoveLootCharges(ItemInst &from, sint16 to_slot);
+	void	MoveItemCharges(ItemInst &from, sint16 to_slot, int8 type);
 	void	OPGMTraining(const APPLAYER *app);
 	void	OPGMEndTraining(const APPLAYER *app);
 	void	OPGMTrainSkill(const APPLAYER *app);

@@ -293,7 +293,40 @@ void Client::PutLootInInventory(sint16 slot_id, const ItemInst &inst, ServerLoot
 	}
 	CalcBonuses();
 }
+bool Client::TryStacking(ItemInst* item, int8 type, bool try_worn, bool try_cursor){
+	if(!item || !item->IsStackable() || item->GetCharges()>=20)
+		return false;
+	sint16 i;
+	int32 item_id = item->GetItem()->ItemNumber;
+	for (i = 22; i <= 29; i++)
+	{
+		ItemInst* tmp_inst = m_inv.GetItem(i);	
+		if(tmp_inst && tmp_inst->GetItem()->ItemNumber == item_id && tmp_inst->GetCharges() < ITEM_MAX_STACK){
+			MoveItemCharges(*item, i, type);
+			CalcBonuses();
+			if(item->GetCharges())	// we didn't get them all
+				return AutoPutLootInInventory(*item, try_worn, try_cursor, 0);
+			return true;
+		}
+	}
+	for (i = 22; i <= 29; i++)
+	{
+		for (uint8 j = 0; j < 10; j++)
+		{
+			int16 slotid = Inventory::CalcSlotId(i, j);
+			ItemInst* tmp_inst = m_inv.GetItem(slotid);
 
+			if(tmp_inst && tmp_inst->GetItem()->ItemNumber == item_id && tmp_inst->GetCharges() < ITEM_MAX_STACK){
+				MoveItemCharges(*item, slotid, type);
+				CalcBonuses();
+				if(item->GetCharges())	// we didn't get them all
+					return AutoPutLootInInventory(*item, try_worn, try_cursor, 0);
+				return true;
+			}
+		}
+	}
+	return false;
+}
 // Locate an available space in inventory to place an item
 // and then put the item there
 // The change will be saved to the database
@@ -345,51 +378,8 @@ bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_curs
 	// #2: Stackable item?
 	if (inst.IsStackable())
 	{
-		// Pass 1: (Inventory) Attempt to fill stacks that aren't yet full
-		sint16 i;
-		for (i = 22; i <= 29; i++)
-		{
-			ItemInst* tmp_inst = m_inv.GetItem(i);
-				
-			if
-			(
-				tmp_inst &&
-				tmp_inst->GetItem() == inst.GetItem() &&
-				tmp_inst->GetCharges() < ITEM_MAX_STACK
-			)
-			{
-				MoveLootCharges(inst, i);
-				if(inst.GetCharges())	// we didn't get them all
-				{
-					return AutoPutLootInInventory(inst, try_worn, try_cursor, 0);
-				}
-				return true;
-			}
-		}
-			
-		// Pass 2: (Inventory Bags) Attempt to fill stacks that aren't yet full
-		for (i = 22; i <= 29; i++)
-		{
-			for (uint8 j = 0; j < 10; j++)
-			{
-				int16 slotid = Inventory::CalcSlotId(i, j);
-				ItemInst* tmp_inst = m_inv.GetItem(slotid);
-
-				if
-				(
-					tmp_inst &&
-					tmp_inst->GetItem() == inst.GetItem() &&
-					tmp_inst->GetCharges() < ITEM_MAX_STACK
-				)
-				{
-					MoveLootCharges(inst, slotid);
-					CalcBonuses();
-					if(inst.GetCharges())	// we didn't get them all
-						return AutoPutLootInInventory(inst, try_worn, try_cursor, 0);
-					return true;
-				}
-			}
-		}
+		TryStacking(&inst, ItemPacketTrade, try_worn, try_cursor);
+		return true;
 	}
 
 	// #3: put it in inventory
@@ -404,7 +394,7 @@ bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_curs
 }
 
 // solar: helper function for AutoPutLootInInventory
-void Client::MoveLootCharges(ItemInst &from, sint16 to_slot)
+void Client::MoveItemCharges(ItemInst &from, sint16 to_slot, int8 type)
 {
 	ItemInst *tmp_inst = m_inv.GetItem(to_slot);
 

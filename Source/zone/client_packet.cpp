@@ -3074,10 +3074,9 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					uint32 item_id = 0;
 					std::list<MerchantList> merlist = zone->merchanttable[merchantid];
 					std::list<MerchantList>::const_iterator itr;
-					int findslot = mp->itemslot - 84;
 					for(itr = merlist.begin();itr != merlist.end();itr++){
 						MerchantList ml = *itr;
-						if(findslot == ml.slot){
+						if(mp->itemslot == ml.slot){
 							item_id = ml.item;
 							break;
 						}
@@ -3090,7 +3089,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						TempMerchantList ml;
 						for(tmp_itr = tmp_merlist.begin();tmp_itr != tmp_merlist.end();tmp_itr++){
 							ml = *tmp_itr;
-							if(findslot == ml.slot){
+							if(mp->itemslot == ml.slot){
 								item_id = ml.item;
 								tmpmer_used = true;
 								prevcharges = ml.charges;
@@ -3107,6 +3106,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						delitem->itemslot = mp->itemslot;
 						delitem->npcid = mp->npcid;
 						delitem->playerid = mp->playerid;
+						delitempacket->priority = 6;
 						entity_list.QueueCloseClients(tmp,delitempacket); //que for anyone that could be using the merchant so they see the update
 						safe_delete(delitempacket);
 						break;
@@ -3125,13 +3125,18 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					mpo->itemslot=mp->itemslot;
 					
 					sint16 freeslotid=0;
-					freeslotid = m_inv.FindFreeSlot(false, true, item->Size);
+					ItemInst* inst = ItemInst::Create(item, mp->quantity);
+
+					bool stacked = TryStacking(inst);
+					if(!stacked)
+						freeslotid = m_inv.FindFreeSlot(false, true, item->Size);
 					
 					//make sure we are not completely full...
 					if(freeslotid == SLOT_CURSOR) {
 						if(m_inv.GetItem(SLOT_CURSOR) != NULL) {
 							Message(13, "You do not have room for any more items.");
 							safe_delete(outapp);
+							safe_delete(inst);
 							break;
 						}
 					}
@@ -3139,6 +3144,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					if(freeslotid == SLOT_INVALID || !TakeMoneyFromPP(mpo->price))
 					{
 						safe_delete(outapp);
+						safe_delete(inst);
 						break;
 					}
 
@@ -3148,13 +3154,12 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					else if(mp->quantity==1 && item->Common.MaxCharges>0 && item->Common.MaxCharges<255)
 						mp->quantity=item->Common.MaxCharges;
 					
-					ItemInst* inst = ItemInst::Create(item, mp->quantity);
-					if (inst) {
-						mpo->price = (item->Cost*127/100)*mp->quantity;
+					mpo->price = (item->Cost*127/100)*mp->quantity;
+					if (!stacked && inst) {
 						PutItemInInventory(freeslotid, *inst);
 						SendItemPacket(freeslotid, inst, ItemPacketTrade);
 					}
-					else {
+					else if(!stacked){
 						LogFile->write(EQEMuLog::Error, "OP_ShopPlayerBuy: item->ItemClass Unknown! Type: %i", item->ItemClass);
 					}
 

@@ -514,7 +514,6 @@ void Inventory::SwapItem(sint16 slot_a, sint16 slot_b)
 	// Copy a->b
 	_PutItem(slot_b, inst_a);
 }
-
 #ifndef PACKETCOLLECTOR
 
 // Checks that user has at least 'quantity' number of items in a given inventory slot
@@ -1061,13 +1060,12 @@ string ItemInst::Serialize(sint16 slot_id) const
 	if(charges==-1)
 		spellcharges = charges;
 	sprintf(ch,
-		"%i|%i|%i|%i|%i|%i|%i|%i|%i|\"%i|%s|%s|%s|%i|%i|%i|%i|%i|%i|%i|%i",
+		"%i|%i|%i|%i|0|%i|%i|%i|%i|\"%i|%s|%s|%s|%i|%i|%i|%i|%i|%i|%i|%i",
 		charges,
 		m_item->Unknown002,
 		slot_id,
 		m_price,
 		unknown5,
-		m_item->Unknown006,
 		m_item->Unknown007,
 		spellcharges,
 		m_item->Attuneable,

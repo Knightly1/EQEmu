@@ -215,7 +215,7 @@ public:
 	
 	// Swap items in inventory
 	void SwapItem(sint16 slot_a, sint16 slot_b);
-	
+
 	// Remove item from inventory
 	void DeleteItem(sint16 slot_id, uint8 quantity=0);
 	
@@ -358,6 +358,8 @@ public:
 	uint32 GetUnknown5() const				{ return m_unknown005; }
 	void SetUnknown5(uint32 unknown5)		{ m_unknown005 = unknown5; }
 	
+	sint16 GetCurrentSlot() const			{ return m_currentslot; }
+	void SetCurrentSlot(sint16 curr_slot)   { m_currentslot = curr_slot; }
 	// Allows treatment of this object as though it were a pointer to m_item
 	operator bool() const { return (m_item != NULL); }
 	
@@ -384,7 +386,7 @@ protected:
 	uint32				m_price;	// Bazaar /trader price
 	uint32				m_color;
 	uint32				m_unknown005;
-	
+	sint16				m_currentslot;
 };
 
 

@@ -790,7 +790,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 			ItemInst* inst = ItemInst::Create(item,charges);
 			if (inst) {
 				inst->SetPrice(item->Cost*127/100);
-				inst->SetUnknown5(ml.slot+84);
+				inst->SetUnknown5(ml.slot);
 				if(charges > 0)
 					inst->SetCharges(charges);
 				else
@@ -820,7 +820,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 			ItemInst* inst = ItemInst::Create(item,charges);
 			if (inst) {
 				inst->SetPrice(item->Cost*127/100);
-				inst->SetUnknown5(ml.slot+84);
+				inst->SetUnknown5(ml.slot);
 				if(charges > 0)
 					inst->SetCharges(charges);
 				else
@@ -879,7 +879,6 @@ int8 Client::WithCustomer(){
 		return 1;
 	}
 }
-
 void Client::OPRezzAnswer(const APPLAYER* app) {
 	if (!pendingrezzexp)
 		return;
