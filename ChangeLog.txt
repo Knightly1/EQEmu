@@ -1,5 +1,11 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==10/18/2004
+LethalEncounter: Fixed pet only spells.
+LethalEncounter: Fixed bug that wouldnt let you loot a corpse if someone got an error looting it. (such as a dupe lore error)
+LethalEncounter: Fixed mana regen bug.
+
+
 ==10/17/2004
 LethalEncounter: Added some debug code to make it easier for people that cant get minilogin working.
 LethalEncounter: You will now eat/drink like eqlive if you arent a GM.
