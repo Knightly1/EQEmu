@@ -81,7 +81,8 @@ public:
 	void	Summon(Client* client, bool spell);
 	void	CastRezz(int16 spellid, Mob* Caster);
 	void	CompleteRezz();
-
+	void	SetPKItem(sint32 id) { pkitem = id; }
+	sint32	GetPKItem() { return pkitem; }
 	bool CanMobLoot(int charid);
 	void AllowMobLoot(Mob *them, int8 slot);
 	void AddLooter(Mob *who);
@@ -96,6 +97,7 @@ private:
 	bool		p_PlayerCorpse;
 	bool		pIsChanged;
 	bool		pLocked;
+	sint32		pkitem;
 	int32		dbid;
 	int32		charid;
 	ItemList*	itemlist;

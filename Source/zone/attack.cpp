@@ -1282,6 +1282,34 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 		{
 			// creating the corpse takes the cash/items off the player too
 			Corpse *new_corpse = new Corpse(this, exploss);
+			database.GetVariable("ServerType", tmp, 9);
+			if(atoi(tmp)==1 && other->IsClient()){
+				char tmp2[10] = {0};
+				database.GetVariable("PvPreward", tmp, 9);
+				int reward = atoi(tmp);
+				if(reward==3){
+					database.GetVariable("PvPitem", tmp2, 9);
+					int pvpitem = atoi(tmp2);
+					if(pvpitem>0 && pvpitem<200000)
+						new_corpse->SetPKItem(pvpitem);
+				}
+				else if(reward==2)
+					new_corpse->SetPKItem(-1);
+				else if(reward==1)
+					new_corpse->SetPKItem(1);
+				else
+					new_corpse->SetPKItem(0);
+				if(other->CastToClient()->isgrouped) {
+					Group* group = entity_list.GetGroupByClient(other->CastToClient());
+					if(group != 0) {
+						for(int i=0;i<6;i++) {
+							if(group->members[i] != NULL) {
+								new_corpse->AllowMobLoot(group->members[i],i);
+							}
+						}
+					}
+				}
+			}
 			entity_list.AddCorpse(new_corpse, GetID());
 		}
 

@@ -134,7 +134,7 @@ Corpse::Corpse(NPC* in_npc, ItemList** in_itemlist, int32 in_npctypeid, NPCType*
 		NPCTypedata = *in_npctypedata;
 		*in_npctypedata = 0;
 	}
-	
+	SetPKItem(0);
 	charid = 0;
 	dbid = 0;
 	p_depop = false;
@@ -233,7 +233,7 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 	strcpy(orgname, pp->name);
 	strcpy(name, pp->name);
 
-
+	SetPKItem(0);
 	// cash
 	AddCash(pp->copper, pp->silver, pp->gold, pp->platinum);
 	pp->copper = 0;
@@ -335,6 +335,7 @@ Corpse::Corpse(int32 in_dbid, int32 in_charid, char* in_charname, ItemList* in_i
 	rezzexp = in_rezexp;
 	for (int i=0; i<MAX_LOOTERS; i++)
 		looters[i] = 0;
+	SetPKItem(0);
 }
 
 Corpse::~Corpse() {
@@ -434,7 +435,7 @@ void Corpse::Depop(bool StartSpawnTimer) {
 }
 
 int32 Corpse::CountItems() {
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+	/*LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
 	
 	iterator.Reset();
 	int32 x = 0;
@@ -443,8 +444,8 @@ int32 Corpse::CountItems() {
 		x++;
 		iterator.Advance();
 	}
-	
-	return x;
+	*/
+	return itemlist->Count();
 }
 
 void Corpse::AddItem(uint32 itemnum, int8 charges, sint16 slot) {
@@ -627,7 +628,7 @@ void Corpse::AllowMobLoot(Mob *them, int8 slot)
 // @merth: this function needs some work
 void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 	// Added 12/08.  Started compressing loot struct on live.
-
+	char tmp[10];
 	if(p_depop)
 	{
 		SendLootReqErrorPacket(client, 0);
@@ -654,6 +655,9 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 			this->BeingLootedBy = 0xFFFFFFFF;
 	}
 	int8 tCanLoot = 1;
+	bool lootcoin=false;
+	if(database.GetVariable("LootCoin",tmp, 9))
+		lootcoin=(atoi(tmp)==1);
 	if (this->BeingLootedBy != 0xFFFFFFFF && this->BeingLootedBy != client->GetID()) {
 		SendLootReqErrorPacket(client, 0);
 		tCanLoot = 0;
@@ -662,12 +666,18 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 		tCanLoot = 2;
 	else if ((IsNPCCorpse() || become_npc) && CanMobLoot(client->CharacterID()))
 		tCanLoot = 2;
+	else if(GetPKItem()==-1 && CanMobLoot(client->CharacterID()))
+		tCanLoot = 3; //pvp loot all items, variable cash
+	else if(GetPKItem()==1 && CanMobLoot(client->CharacterID()))
+		tCanLoot = 4; //pvp loot 1 item, variable cash
+	else if(GetPKItem()>1 && CanMobLoot(client->CharacterID()))
+		tCanLoot = 5; //pvp loot 1 set item, variable cash
 	if(tCanLoot == 1){
 		if (client->Admin() < 100 || !client->GetGM()) {
 			SendLootReqErrorPacket(client, 2);
 		}
 	}
-	if (tCanLoot == 2 || (tCanLoot == 1 && client->Admin() >= 100 && client->GetGM()))
+	if (tCanLoot >= 2 || (tCanLoot == 1 && client->Admin() >= 100 && client->GetGM()))
 	{
 		this->BeingLootedBy = client->GetID();
 		APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
@@ -676,7 +686,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 		d->response		= 1;
 		d->unknown1		= 0x42;
 		d->unknown2		= 0xef;
-		if (tCanLoot == 2) { // dont take the coin off if it's a gm peeking at the corpse
+		if (tCanLoot == 2 || (tCanLoot>=3 && lootcoin)) { // dont take the coin off if it's a gm peeking at the corpse
 			if (zone->lootvar!=0){
 				int admin=client->Admin();
 				if (zone->lootvar==7){
@@ -711,7 +721,6 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 				if (this->GetPlatinum()>10000)
 					this->RemoveCash();
 			#endif
-			
 			if(client->isgrouped && client->AutoSplitEnabled() && client->GetGroup()) {
 				d->copper		= 0;
 				d->silver		= 0;
@@ -731,7 +740,19 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 		outapp->priority = 6;
 		client->QueuePacket(outapp); 
 		safe_delete(outapp);
-		
+		if(tCanLoot==5){
+			const Item_Struct* item = database.GetItem(GetPKItem());
+			ItemInst* inst = ItemInst::Create(item, item->Common.MaxCharges);
+			if (inst)
+			{
+				client->SendItemPacket(22, inst, ItemPacketLoot);
+				safe_delete(inst);
+			}
+			else
+				client->Message(13,"Could not find item number %i to send!!",GetPKItem());
+			client->QueuePacket(app);
+			return;
+		}
 		LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
 		int i = 0;
 		const Item_Struct* item = 0;
@@ -741,7 +762,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 			item_data->lootslot = 0xFFFF;
 
 			// Dont display the item if it's in a bag
-			if(!IsPlayerCorpse() || item_data->equipSlot <= 30)
+			if(!IsPlayerCorpse() || item_data->equipSlot <= 30 || tCanLoot>=3)
 			{
 				if (i >= 30)
 				{
@@ -779,7 +800,7 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 		SendEndLootErrorPacket(client);
 		return;
 	}
-	if (IsPlayerCorpse() && !become_npc && (charid != client->CharacterID() && client->Admin() < 150)) {
+	if (IsPlayerCorpse() && !CanMobLoot(client->CharacterID()) && !become_npc && (charid != client->CharacterID() && client->Admin() < 150)) {
 		client->Message(13, "Error: This is a player corpse and you dont own it.");
 		SendEndLootErrorPacket(client);
 		return;
@@ -789,15 +810,23 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 		client->Message(13, "Error: Corpse locked by GM.");
 		return;
 	}
-	
+	if(IsPlayerCorpse() && CanMobLoot(client->CharacterID()) && GetPKItem()==0){
+		client->Message(13, "Error: You cannot loot any more items from this corpse.");
+		SendEndLootErrorPacket(client);
+		return;
+	}
 	const Item_Struct* item = 0;
 	ItemInst *inst = 0;
 	ServerLootItem_Struct* item_data, *bag_item_data[10];
 	memset(bag_item_data, 0, sizeof(bag_item_data));
+	if(GetPKItem()>1)
+		item = database.GetItem(GetPKItem());
+	else if(GetPKItem()==-1 || GetPKItem()==1)
+		item_data = GetItem(lootitem->slot_id - 22); //dont allow them to loot entire bags of items as pvp reward
+	else
+		item_data = GetItem(lootitem->slot_id - 22, bag_item_data);
 
-	item_data = GetItem(lootitem->slot_id - 22, bag_item_data);
-
-	if (item_data != 0)
+	if (GetPKItem()<=1 && item_data != 0)
 	{
 		item = database.GetItem(item_data->item_id);
 	}
@@ -868,9 +897,8 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 
 		// now remove it from the corpse
 		RemoveItem(item_data->lootslot);
-
 		// remove bag contents too
-		if (item->ItemClass == ItemTypeContainer)
+		if (item->ItemClass == ItemTypeContainer && (GetPKItem()!=-1 || GetPKItem()!=1))
 		{
 			for (int i=0; i < 10; i++)
 			{
@@ -880,6 +908,8 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 				}
 			}
 		}
+		if(GetPKItem()!=-1)
+			SetPKItem(0);
 	}
 	else
 	{
