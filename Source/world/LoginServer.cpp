@@ -149,9 +149,7 @@ bool LoginServer::Process() {
 		}
 		case ServerOP_LSClientAuth: {
 			ServerLSClientAuth* slsca = (ServerLSClientAuth*) pack->pBuffer;
-			zoneserver_list.CLEAdd(slsca->lsaccount_id, slsca->name, slsca->key, slsca->worldadmin);
-//cout << "New Auth received for LS#" << slsca->lsaccount_id << endl;
-//cout << "New Auth received for LS#" << slsca->lsaccount_id << ", k=" << slsca->key << endl;
+			zoneserver_list.CLEAdd(slsca->lsaccount_id, slsca->name, slsca->key, slsca->worldadmin, slsca->ip);
 			break;
 		}
 		case ServerOP_LSFatalError: {
@@ -215,6 +213,12 @@ bool InitLoginServer() {
 }
 
 bool LoginServer::Connect(const char* iAddress, int16 iPort) {
+	char tmp[25];
+	if(database.GetVariable("loginType",tmp,sizeof(tmp)) && strcasecmp(tmp,"MinILogin") == 0)
+		minilogin = true;
+	else
+		minilogin = false;
+
 	char errbuf[TCPConnection_ErrorBufferSize];
 	if (iAddress == 0) {
 		cout << "Error: LoginServer::Connect: address == 0" << endl;

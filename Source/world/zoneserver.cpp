@@ -1916,8 +1916,8 @@ void ZSList::SendCLEList(const sint16& admin, const char* to, WorldTCPConnection
 	safe_delete(output);
 }
 
-void ZSList::CLEAdd(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin) {
-	ClientListEntry* tmp = new ClientListEntry(iLSID, iLoginName, iLoginKey, iWorldAdmin);
+void ZSList::CLEAdd(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin, int32 ip) {
+	ClientListEntry* tmp = new ClientListEntry(iLSID, iLoginName, iLoginKey, iWorldAdmin, ip);
 
 	clientlist.Append(tmp);
 }
@@ -1975,7 +1975,25 @@ void ZSList::CLEKeepAlive(int32 numupdates, int32* wid) {
 		iterator.Advance();
 	}
 }
+bool ClientListEntry::CheckAuth(int32 id, const char* iKey, int32 ip) {
+	if (pIP==ip && strncmp(plskey, iKey,10) == 0){
+		paccountid = id;
+		database.GetAccountFromID(id,paccountname,&padmin);
+		return true;
+	}
+	return false;
+}
+ClientListEntry* ZSList::CheckAuth(int32 id, const char* iKey, int32 ip ) {
+  LinkedListIterator<ClientListEntry*> iterator(clientlist);
 
+	iterator.Reset();
+	while(iterator.MoreElements()) {
+		if (iterator.GetData()->CheckAuth(id, iKey, ip))
+			return iterator.GetData();
+		iterator.Advance();
+	}
+	return 0;
+}
 ClientListEntry* ZSList::CheckAuth(int32 iLSID, const char* iKey) {
   LinkedListIterator<ClientListEntry*> iterator(clientlist);
 
@@ -2011,13 +2029,14 @@ ClientListEntry* ZSList::CheckAuth(const char* iName, const char* iPassword) {
 	return 0;
 }
 
-ClientListEntry::ClientListEntry(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin) {
+ClientListEntry::ClientListEntry(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin, int32 ip) {
 	ClearVars(true);
 
 	id = zoneserver_list.GetNextCLEID();
-	pIP = 0;
+	pIP = ip;
 	pLSID = iLSID;
-	paccountid = database.GetAccountIDFromLSID(iLSID, paccountname, &padmin);
+	if(iLSID > 0)
+		paccountid = database.GetAccountIDFromLSID(iLSID, paccountname, &padmin);
 	strn0cpy(plsname, iLoginName, sizeof(plsname));
 	strn0cpy(plskey, iLoginKey, sizeof(plskey));
 	pworldadmin = iWorldAdmin;

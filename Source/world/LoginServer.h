@@ -47,7 +47,10 @@ public:
 	void SendPacket(ServerPacket* pack) { tcpc->SendPacket(pack); }
 	int8 GetState() { return tcpc->GetState(); }
 	bool Connected() { return tcpc->Connected(); }
+	bool MiniLogin() { return minilogin; }
+
 private:
+	bool minilogin;
 	TCPConnection* tcpc;
 	int32	LoginServerIP;
 	int16	LoginServerPort;

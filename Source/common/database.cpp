@@ -2981,7 +2981,6 @@ bool Database::LoadVariables_result(MYSQL_RES* result) {
 }
 
 // Gets variable from 'variables' table
-
 bool Database::GetVariable(const char* varname, char* varvalue, int16 varvalue_len) {
 	LockMutex lock(&Mvarcache);
 	if (strlen(varname) <= 1)
@@ -3065,7 +3064,25 @@ bool Database::SetVariable(const char* varname_in, const char* varvalue_in) {
 	free(varvalue);
 	return false;
 }
-
+int32 Database::GetMiniLoginAccount(char* ip){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+	MYSQL_ROW row;
+	int32 retid = 0;
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id FROM account WHERE minilogin_ip='%s'", ip), errbuf, &result)) {
+		safe_delete_array(query);
+		if (row = mysql_fetch_row(result))
+			retid = atoi(row[0]);
+		mysql_free_result(result);
+	}
+	else
+	{
+		cerr << "Error in GetMiniLoginAccount query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+	}
+	return retid;
+}
 bool Database::CheckZoneserverAuth(const char* ipaddr) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
@@ -5123,7 +5140,28 @@ int32 Database::GetAccountIDFromLSID(int32 iLSID, char* oAccountName, sint16* oS
 	
 	return 0;
 }
-
+void Database::GetAccountFromID(int32 id, char* oAccountName, sint16* oStatus) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, name, status FROM account WHERE id=%i", id), errbuf, &result))
+	{
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			int32 account_id = atoi(row[0]);
+			if (oAccountName)
+				strcpy(oAccountName, row[1]);
+			if (oStatus)
+				*oStatus = atoi(row[2]);
+		}
+		mysql_free_result(result);
+	}
+	else
+		cerr << "Error in GetAccountFromID query '" << query << "' " << errbuf << endl;
+	safe_delete_array(query);
+}
 int8 Database::GetGridType(int16 grid,int16 zoneid ) {
 	char *query = 0;
 	char errbuf[MYSQL_ERRMSG_SIZE];

@@ -316,6 +316,7 @@ struct ServerLSClientAuth {
 	char	key[30];		// the Key the client will present
 	int8	lsadmin;		// login server admin level
 	sint16	worldadmin;		// login's suggested worldadmin level setting for this user, up to the world if they want to obey it
+	int32	ip;
 };
 
 struct ServerSystemwideMessage {

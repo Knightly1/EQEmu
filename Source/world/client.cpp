@@ -185,7 +185,13 @@ bool Client::HandlePacket(const APPLAYER *app) {
 #endif
 			strncpy(password, (char*)&app->pBuffer[strlen(name)+1], 15);
 			int32 id=0;
-			if(strncasecmp(name, "LS#", 3) == 0)
+			bool minilogin = loginserver.MiniLogin();
+			if(minilogin){
+				struct in_addr miniip;
+				miniip.s_addr = ip;
+				id = database.GetMiniLoginAccount(inet_ntoa(miniip));
+			}
+			else if(strncasecmp(name, "LS#", 3) == 0)
 				id=atoi(&name[3]);
 			else
 				id=atoi(name);
@@ -193,12 +199,12 @@ bool Client::HandlePacket(const APPLAYER *app) {
 #ifdef IPBASED_AUTH_HACK
 				if ((cle = zoneserver_list.CheckAuth(inet_ntoa(tmpip), password)))
 #else
-				if (false && loginserver.Connected() == false) {
+				if (loginserver.Connected() == false) {
 					cout << "Error: Login server login while not connected to login server." << endl;
 					ret = false;
 					break;
 				}
-				if ((cle = zoneserver_list.CheckAuth(id, password)))
+				if ((minilogin && (cle = zoneserver_list.CheckAuth(id,password,ip))) || (cle = zoneserver_list.CheckAuth(id, password)))
 #endif
 				{
 					if (cle->AccountID() == 0) {
@@ -212,7 +218,10 @@ bool Client::HandlePacket(const APPLAYER *app) {
 					cout << "Logged in: ";
 					if (firstlogin)
 						cout << "FirstLogin ";
-					cout << "LS#" << cle->LSID() << ": " << cle->LSName() << endl;
+					if(minilogin)
+						cout << "Account #" << cle->AccountID() << ": " << cle->AccountName() << endl;
+					else
+						cout << "LS#" << cle->LSID() << ": " << cle->LSName() << endl;
 					APPLAYER* outapp;
 					if(firstlogin)
 					{

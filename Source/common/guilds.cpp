@@ -2,7 +2,7 @@
 
 extern GuildRanks_Struct guilds[512];
 
-int32 Database::GetGuildEQID(int32 guilddbid) {
+/*int32 Database::GetGuildEQID(int32 guilddbid) {
 	if (guilddbid == 0)
 		return 0xFFFFFFFF;
 	for (int32 i=0; i<512; i++) {
@@ -10,7 +10,8 @@ int32 Database::GetGuildEQID(int32 guilddbid) {
 			return i;
 	}
 	return 0xFFFFFFFF;
-/*
+
+
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -33,5 +34,5 @@ int32 Database::GetGuildEQID(int32 guilddbid) {
 	}
 	
 	return 0xFFFFFFFF;
-*/
-}
+
+}*/

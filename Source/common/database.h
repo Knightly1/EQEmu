@@ -163,6 +163,8 @@ public:
 	void	SaveTraderItem(uint32 char_id,uint32 itemid,uint32 itemcost,int8 slot);
 	void	DeleteTraderItem(uint32 char_id);
 	void	DeleteTraderItem(uint32 char_id,int16 slot_id);
+
+	
 	Trader_Struct* LoadTraderItem(uint32 char_id);
 	char	commands[200][200];
 	sint16	commandslevels[200];
@@ -209,6 +211,8 @@ public:
 	bool	MoveCharacterToZone(int32 iCharID, const char* iZonename);
 	bool	SetGMSpeed(int32 account_id, int8 gmspeed);
 	int8	GetGMSpeed(int32 account_id);
+	int32	GetMiniLoginAccount(char* ip);
+	void	GetAccountFromID(int32 id, char* oAccountName, sint16* oStatus);
 	void	DeletePetitionFromDB(Petition* wpet);
 	void	ExtraOptions();
 	void	SetPublicNote(int32 guildid,char* charname, char* note);

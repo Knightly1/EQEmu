@@ -103,12 +103,13 @@ public:
 	void	CLERemoveZSRef(ZoneServer* iZS);
 	ClientListEntry* CheckAuth(int32 iLSID, const char* iKey);
 	ClientListEntry* CheckAuth(const char* iName, const char* iPassword);
+	ClientListEntry* CheckAuth(int32 id, const char* iKey, int32 ip);
 	ClientListEntry* FindCharacter(const char* name);
 	ClientListEntry* FindCLEByAccountID(int32 iAccID);
 	ClientListEntry* GetCLE(int32 iID);
 	void	CLCheckStale();
 	void	CLEKeepAlive(int32 numupdates, int32* wid);
-	void	CLEAdd(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin = 0);
+	void	CLEAdd(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin = 0, int32 ip = 0);
 
 	void	SendWhoAll(int32 fromid,const char* to, sint16 admin, Who_All_Struct* whom, WorldTCPConnection* connection);
 	void    ConsoleSendWhoAll(const char* to, sint16 admin, Who_All_Struct* whom, WorldTCPConnection* connection);
@@ -155,7 +156,7 @@ private:
 
 class ClientListEntry {
 public:
-	ClientListEntry(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin = 0);
+	ClientListEntry(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin = 0, int32 ip = 0);
 	ClientListEntry(int32 iAccID, const char* iAccName, MD5& iMD5Pass, sint16 iAdmin = 0);
 	ClientListEntry(ZoneServer* iZS, ServerClientList_Struct* scl, sint8 iOnline);
 	~ClientListEntry();
@@ -163,6 +164,7 @@ public:
 	void	Update(ZoneServer* zoneserver, ServerClientList_Struct* scl, sint8 iOnline = CLE_Status_InZone);
 	bool	CheckAuth(int32 iLSID, const char* key);
 	bool	CheckAuth(const char* iName, MD5& iMD5Password);
+	bool	CheckAuth(int32 id, const char* key, int32 ip);
 	void	SetOnline(ZoneServer* iZS, sint8 iOnline);
 	void	SetOnline(sint8 iOnline = CLE_Status_Online);
 	void	SetChar(int32 iCharID, const char* iCharName);
