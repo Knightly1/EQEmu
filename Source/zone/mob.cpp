@@ -1059,6 +1059,7 @@ void Mob::SendIllusionPacket(int16 in_race, int8 in_gender, int16 in_texture, in
 	APPLAYER* outapp = new APPLAYER(OP_Illusion, sizeof(Illusion_Struct));
 	memset(outapp->pBuffer, 0, sizeof(outapp->pBuffer));
 	Illusion_Struct* is = (Illusion_Struct*) outapp->pBuffer;
+	is->spawnid = this->GetID();
 	strcpy(is->charname, GetCleanName());
 	is->race = this->race;
 	is->gender = this->gender;
@@ -1074,7 +1075,7 @@ void Mob::SendIllusionPacket(int16 in_race, int8 in_gender, int16 in_texture, in
 	is->unknown_26 = 26;
 	is->unknown016 = 0xffffffff;
 	*/
-	//DumpPacket(outapp);
+	DumpPacket(outapp);
 	entity_list.QueueClients(this, outapp);
 	safe_delete(outapp);
 }

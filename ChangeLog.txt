@@ -1,5 +1,9 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==10/30/2004
+LethalEncounter: Fixed a few issues with item charges.
+LethalEncounter: Fixed illusions.
+
 ==10/27/2004
 Cofruben: Added LDoN adventure system.Please,source the new sql file(thanks to skorch for testing).
 LethalEncounter: Mob deaths should be sent to all players now.

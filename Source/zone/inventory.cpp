@@ -118,7 +118,6 @@ void Client::SummonItem(uint32 item_id, sint8 charges) {
 		Message(0, "No such item: %i", item_id);
 		return;
 	}
-	
 	// Checking to see if the Item is lore or not.
 	bool foundlore = CheckLoreConflict(item);
 	

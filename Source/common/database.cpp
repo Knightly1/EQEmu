@@ -2090,8 +2090,13 @@ bool Database::SaveInventory(uint32 char_id, const ItemInst* inst, sint16 slot_i
 		else {
 			// Update/Insert item
 			uint32 account_id = GetAccountIDByChar(char_id);
+			int16 charges = 0;
+			if(inst->GetCharges() >= 0)
+				charges = inst->GetCharges();
+			else
+				charges = 255;
 			uint32 len_query =  MakeAnyLenString(&query, "REPLACE INTO sharedbank VALUES(%i,%i,%i,%i)",
-				account_id, slot_id, inst->GetItem()->ItemNumber, inst->GetCharges());
+				account_id, slot_id, inst->GetItem()->ItemNumber, charges);
 			
 			ret = RunQuery(query, len_query, errbuf);
 		}
@@ -2113,9 +2118,14 @@ bool Database::SaveInventory(uint32 char_id, const ItemInst* inst, sint16 slot_i
 			// @merth: need to delete augments here
 		}
 		else {
+			int16 charges = 0;
+			if(inst->GetCharges() >= 0)
+				charges = inst->GetCharges();
+			else
+				charges = 255;
 			// Update/Insert item
 			uint32 len_query = MakeAnyLenString(&query, "REPLACE INTO inventory (charid,slotid,itemid,charges,color) VALUES(%i,%i,%i,%i,%i)",
-				char_id, slot_id, inst->GetItem()->ItemNumber, inst->GetCharges(), inst->GetColor() );
+				char_id, slot_id, inst->GetItem()->ItemNumber, charges, inst->GetColor() );
 			
 			ret = RunQuery(query, len_query, errbuf);
 		}
@@ -2802,7 +2812,7 @@ bool Database::GetInventory(uint32 char_id, Inventory* inv) {
 		while ((row = mysql_fetch_row(result))) {	
 			sint16 slot_id	= (sint16)atoi(row[0]);
 			uint32 item_id	= (uint32)atoi(row[1]);
-			sint8 charges	= (uint8)atoi(row[2]);
+			int16 charges	= (int16)atoi(row[2]);
 			uint32 color		= (uint32)atoi(row[3]);
 			const Item_Struct* item = GetItem(item_id);
 			
@@ -2813,7 +2823,10 @@ bool Database::GetInventory(uint32 char_id, Inventory* inv) {
 					ItemCommonInst common(item, charges);
 					if (color > 0)
 						common.SetColor(color);
-					common.SetCharges(charges);
+					if(charges==255)
+						common.SetCharges(-1);
+					else
+						common.SetCharges(charges);
 					put_slot_id = inv->PutItem(slot_id, (ItemInst&)common);
 				}
 				else if (item->ItemClass == ItemTypeContainer) {

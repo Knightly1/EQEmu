@@ -48,7 +48,6 @@ ItemInst* ItemInst::Create(const Item_Struct* item, sint16 charges)
 	if (item) {
 		if (charges == 0)
 			charges = item->Common.MaxCharges;
-		
 		switch (item->ItemClass) {
 		case ItemTypeCommon:
 			inst = new ItemCommonInst(item, charges);
@@ -60,6 +59,7 @@ ItemInst* ItemInst::Create(const Item_Struct* item, sint16 charges)
 			inst = new ItemBookInst(item, charges);
 			break;
 		}
+		inst->SetCharges(charges);
 	}
 	
 	return inst;
@@ -1057,6 +1057,8 @@ string ItemInst::Serialize(sint16 slot_id) const
 		charges=-1;
 	int32 spellcharges = m_item->SpellCharges;
 	if(spellcharges && m_item->Common.SpellId > 0 && m_item->Common.SpellId<65000 && m_item->Charges <= 1)
+		spellcharges = charges;
+	if(charges==-1)
 		spellcharges = charges;
 	sprintf(ch,
 		"%i|%i|%i|%i|%i|%i|%i|%i|%i|\"%i|%s|%s|%s|%i|%i|%i|%i|%i|%i|%i|%i",
