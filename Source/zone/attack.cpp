@@ -1003,7 +1003,9 @@ void Mob::Heal()
 }
 
 void NPC::Heal() {
-		CastToMob()->Heal();
+	SetMaxHP();
+	SendHPUpdate();
+	LogFile->write(EQEMuLog::Normal,"%s healed via #heal", name);
 }
 
 void Client::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, bool avoidable, sint8 buffslot, bool iBuffTic)
@@ -1256,7 +1258,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 		if (other->IsNPC())
 			parse->Event(6, other->GetNPCTypeID(), 0, other, this->CastToMob());
 		
-		if(IsDueling() || other->CastToClient()->IsDueling()) {
+		if(other->IsClient() && (IsDueling() || other->CastToClient()->IsDueling())) {
 			SetDueling(false);
 			SetDuelTarget(0);
 			if (other->IsClient() && other->CastToClient()->IsDueling() && other->CastToClient()->GetDuelTarget() == GetID())

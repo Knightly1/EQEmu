@@ -600,7 +600,7 @@ sint16 Client::acmod() {
 				return(65);
 		}
 	}
-	LogFile->write(EQEMuLog::Error, "Error in Client::acmod()");
+	LogFile->write(EQEMuLog::Error, "Error in Client::acmod(): Agility: %i, Level: %i",agility,level);
 	return 0;
 };
 
