@@ -1513,6 +1513,7 @@ int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn
 			safe_delete_array(query);
 			
 			row = mysql_fetch_row(result);
+			if (row == NULL) return false;
 			if (row[0]) tmp = atoi(row[0]);
 			if (row[1]) tmp2 = atoi(row[1]);
 			
@@ -1547,6 +1548,7 @@ int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn
 			safe_delete_array(query);
 			
 			row = mysql_fetch_row(result);
+			if (row == NULL) return false;
 			if (row[0]) tmp = atoi(row[0]);
 			if (row[1]) tmp2 = atoi(row[1]);
 			mysql_free_result(result);
