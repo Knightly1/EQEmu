@@ -104,7 +104,7 @@ public:
 	virtual void	SendCommands(const char * event, int32 npcid, Mob* npcmob, Mob* mob);
 	int32	QGexpdate(char * name, char * options);
 
-	virtual int	HasQuestFile(int32 npcid);
+	int	HasQuestFile(int32 npcid);
 
 private:
 

@@ -664,7 +664,7 @@ sint32 Client::CalcMaxMana()
 				  }
 		case 'W': {
 			int lev = GetLevel();
-			int mana_calc = GetINT()*lev/5 + lev+lev;
+			int mana_calc = GetWIS()*lev/5 + lev+lev;
 			max_mana = mana_calc + spellbonuses.Mana + itembonuses.Mana;
 			if(GetLevel() > 2)
 				max_mana += (GetLevel()/2)-1;
@@ -682,7 +682,6 @@ sint32 Client::CalcMaxMana()
 	}
 	if (cur_mana > max_mana) {
 		cur_mana = max_mana;
-		//SendManaUpdatePacket();
 	}
 #if EQDEBUG >= 11
 	LogFile->write(EQEMuLog::Debug, "Client::CalcMaxMana() called for %s - returning %d", GetName(), max_mana);

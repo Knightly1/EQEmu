@@ -493,6 +493,9 @@ bool logpos;
 	float DistNoRoot(const Mob &);
 	float DistNoRootNoZ(const Mob &);
 	
+	bool IsTargeted() { return targeted; }
+	void IsTargeted(bool in_tar) { targeted = in_tar; }
+
 	inline const float&	GetX()				{ return x_pos; }
 	inline const float&	GetY()				{ return y_pos; }
 	inline const float&	GetZ()				{ return z_pos; }
@@ -773,6 +776,7 @@ protected:
 	int PR;
 	
 	bool moving;
+	bool targeted;
 	sint32  cur_hp;
 	sint32  max_hp;
 	sint32	base_hp;

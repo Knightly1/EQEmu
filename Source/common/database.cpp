@@ -2239,7 +2239,9 @@ void  Database::SetGroupID(const char* name,int32 id){
     char *query = 0;
 	if (!RunQuery(query, MakeAnyLenString(&query, "update character_ set groupid=%i where name='%s'",id,name), errbuf))
 		printf("Unable to get group id: %s\n",errbuf);	
-printf("Set group id on '%s' to %d\n", name, id);
+#ifdef _EQDEBUG
+	printf("Set group id on '%s' to %d\n", name, id);
+#endif
 	safe_delete_array(query);
 }
 

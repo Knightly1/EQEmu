@@ -101,7 +101,7 @@ Mob::Mob(const char*   in_name,
 		 ) : 
 		attack_timer(2000),
 		tic_timer(6000),
-		mana_timer(5000),
+		mana_timer(2000),
 		attack_dw_timer(2000),
 		spellend_timer(0),
 		stunned_timer(0),
@@ -109,6 +109,7 @@ Mob::Mob(const char*   in_name,
 		bindwound_timer(10000)
 	//	mezzed_timer(0)
 {
+	targeted = false;
 logpos = false;
 	tar_ndx=0;
 	tar_vector=0;

@@ -141,7 +141,6 @@ Client::Client(EQNetworkConnection* ieqnc)
 	), 
 	position_timer(250),
 	hpregen_timer(1800),
-	hpupdate_timer(15000),
 	camp_timer(29000),
 	process_timer(100),
 	disc_timer(60000),
@@ -1476,12 +1475,10 @@ void Client::SendManaUpdatePacket() {
 		return;
 	APPLAYER* outapp = new APPLAYER(OP_ManaChange, sizeof(ManaChange_Struct));
 	ManaChange_Struct* manachange = (ManaChange_Struct*)outapp->pBuffer;
-//	manachange->new_mana = cur_mana*1.1+2;
 	manachange->new_mana = cur_mana;
 	manachange->stamina = 6000;
 	manachange->spell_id = casting_spell_id;
 	outapp->priority = 6;
-//	Message(0, "Queueing a manachange with %d new mana (%d max)", manachange->new_mana, GetMaxMana());
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }

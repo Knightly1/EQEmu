@@ -1280,7 +1280,7 @@ string ItemBookInst::Serialize(sint16 slot_id) const
 		"0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|"		// ended with Color
 		"0|0|0|-1|0|0|0|1.000000|0|0|0|0|0|0|0|0|0|0|0|0|"	// ended with SpellShield
 		"0|0|0|0|0|0|0|0|0|0|0||0|0|0|0|0|0|0|0|0|"			// ended with Unknown100
-		"0|0|0|0|%i|%i|%s|0|0|0|0|0|\"||||||||||",			// bag/books stuff
+		"0|0|0|0|%i|%i|%s|0|0|0|0|0|0|\"||||||||||",			// bag/books stuff
 		ItemInst::Serialize(slot_id).c_str(),
 		book->BookType,
 		book->Unknown105,

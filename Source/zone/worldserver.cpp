@@ -1000,7 +1000,9 @@ void WorldServer::Process() {
 			ServerGroupIDReply_Struct* ids = (ServerGroupIDReply_Struct*) pack->pBuffer;
 			cur_groupid = ids->start;
 			last_groupid = ids->end;
+#ifdef _EQDEBUG
 			printf("Got new group id set: %lu -> %lu\n", cur_groupid, last_groupid);
+#endif
 			break;
 		}
 		case ServerOP_GroupLeave: {
@@ -1009,14 +1011,21 @@ void WorldServer::Process() {
 			if(client) {
 				Group *theirgroup = client->GetGroup();
 				if(theirgroup) {
+#ifdef _EQDEBUG
 printf("Got successful group leave message for '%s'\n", sgl->member_name);
+#endif
 					theirgroup->DelMember(client, false);
-				} else {
+				} 
+#ifdef _EQDEBUG
+				else {
 					cout << "Got GroupLeave message for " << sgl->member_name << " but they are not in a group." << endl;
 				}
-			} else {
-				cout << "Got GroupLeave message for " << sgl->member_name << " but they are not in this zone." << endl;
+#endif
 			}
+#ifdef _EQDEBUG
+			else
+				cout << "Got GroupLeave message for " << sgl->member_name << " but they are not in this zone." << endl;
+#endif
 			break;
 		}
 		default: {

@@ -1,5 +1,9 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==10/16/2004
+LethalEncounter: Fixed mana bug that was causing people not to regen their full mana.
+LethalEncounter: HP Adjustments, will now send your hp update every tic and only the mob you have targeted (not including group hp updates) to reduce bandwidth.
+
 ==10/15/2004
 LethalEncounter: Changes necessary for the new MiniLogin :)
 LethalEncounter: Z loc fix, it was placing you ten times the z loc it was supposed to :P

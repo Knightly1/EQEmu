@@ -667,7 +667,6 @@ private:
 	
 	PTimerList p_timers;		//persistent timers
 	Timer	hpregen_timer;
-	Timer	hpupdate_timer;
 	Timer	camp_timer;
 	Timer	process_timer;
 	Timer	disc_timer;		//only for avaliable message, pTimerDisciplineReuse enforces reuse time

@@ -517,7 +517,7 @@ bool NPC::Process()
 		}
 	}
 
-	if (sendhpupdate_timer.Check()) {
+	if (sendhpupdate_timer.Check() && IsTargeted()) {
 		if(!IsFullHP || cur_hp<max_hp){
 			SendHPUpdate();
 		}
