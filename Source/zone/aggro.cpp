@@ -208,8 +208,8 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 			if(attacker->GetLevelCon(mob->GetLevel()) != CON_GREEN
 				&& (
 					//not sure if this primary check is needed, faction con might take care of it for us
-					mob->CastToNPC()->GetPrimaryFaction() == sender->CastToNPC()->GetPrimaryFaction()
-					|| mob->GetFactionCon(sender)<= FACTION_AMIABLE )
+//					mob->CastToNPC()->GetPrimaryFaction() == sender->CastToNPC()->GetPrimaryFaction() ||
+					mob->GetFactionCon(sender)<= FACTION_AMIABLE )
 			  ) {
 				//attacking someone on same faction
 				
