@@ -78,7 +78,7 @@ static int buffsize=0;
 	}
 	ptr++;
 
-	for(i=(item_file->GetNamePosition()-1);i<item_file->GetMaxField()-11;i++) {
+	for(i=(item_file->GetNamePosition()-1);i<(item_file->GetMaxField()-1);i++) {
 		end=ptr-1;
 		while((end=strchr(end+1,'|'))!=NULL) {
 			if (*(end-1)!='\\')
@@ -113,8 +113,8 @@ static int buffsize=0;
 		return false;
 	}
 	ptr++;
-
-	items[atoi(field[item_file->GetIDPosition()].c_str())]=field;
+	int32 id = atoi(field[item_file->GetIDPosition()].c_str());
+	items[id]=field;
 
 	for(i=0;i<10;i++) {
 		if (*ptr=='"') {
