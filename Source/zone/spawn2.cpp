@@ -41,6 +41,7 @@ gridtimer(10000)
     respawn_ = respawn;
 	variance_ = variance;
 	grid_ = grid;
+	npcthis = NULL;
 	if(timeleft!=0){
 		//printf("Timeleft: %i\n",timeleft);
 		timer = new Timer( timeleft );
