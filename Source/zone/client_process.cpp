@@ -187,17 +187,7 @@ int Client::HandlePacket(const APPLAYER *app)
 				ServerFilter(filter);
 			}
 			else if (app->opcode == OP_SendAATable) {
-				int size=0;
-				for(int i=0;i<zone->GetTotalAAs();i++){
-					SendAA_Struct* saa=zone->GetAAList()->aa[i];
-					saa->seq=i+1;
-					size=sizeof(SendAA_Struct)+sizeof(AA_Ability)*saa->total_abilities;
-					APPLAYER* outapp = new APPLAYER(OP_SendAATable,size);
-					memcpy(outapp->pBuffer,saa,size);
-					QueuePacket(outapp);
-					DumpPacket(outapp);
-					safe_delete(outapp);
-				}
+				SendAAList();
 			}
 			else if (app->opcode == OP_ReqClientSpawn) {
 				
@@ -4196,6 +4186,13 @@ sa->parameter = 0;
 				}
 				case OP_AAAction: {
 					DumpPacket(app);
+					if(app->size!=sizeof(AA_Action)){
+						printf("Error! OP_AAAction size didnt match!\n");
+						break;
+					}
+					AA_Action* action=(AA_Action*)app->pBuffer;
+					if(action->action==3)//BUY
+						BuyAA(action);
 /*
 					if(app->size < 1) 
 						break;

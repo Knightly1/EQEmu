@@ -657,6 +657,10 @@ bool Client::Save(int8 iCommitNow) {
 	m_pp.z = z_pos;
 	m_pp.guildrank=guildrank;
 	m_pp.heading = heading;
+	for(int a=0;a<MAX_AAS;a++){
+		m_pp.aa_array[a].AA=aa.aa_list[a].aa_skill;
+		m_pp.aa_array[a].value=aa.aa_list[a].aa_value;
+	}
 	if (GetHP() <= 0) {
 		if (GetMaxHP() > 30000)
 			m_pp.cur_hp = 30000;
@@ -1212,9 +1216,6 @@ bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
 #endif
 
 void Client::AddEXP(int32 add_exp) {
-#ifdef GUILDWARS
-	m_pp.perAA = 0;
-#endif
 	if (m_pp.perAA<0 || m_pp.perAA>100) m_pp.perAA=0;	// stop exploit with sanity check
 	int32 add_aaxp = (int32)((float)add_exp * ((float)(m_pp.perAA) / 100.0f));
 
@@ -1234,12 +1235,6 @@ void Client::AddEXP(int32 add_exp) {
 }
 
 void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
-#ifdef GUILDWARS
-	if(set_exp > m_pp.exp && GuildDBID() == 0 && GetLevel() >= NOGUILDCAPLEVEL-1)
-		return;
-	if(set_exp > m_pp.exp && GetLevel() == SETLEVEL && set_exp >= GetEXPForLevel(GAINLEVEL))
-		return;
-#endif
 	max_AAXP = GetEXPForLevel(52) - GetEXPForLevel(51);
 	if (max_AAXP == 0 || GetEXPForLevel(GetLevel()) == 0xFFFFFFFF) {
 		Message(13, "Error in Client::SetEXP. EXP not set.");
@@ -1550,13 +1545,7 @@ sint32 Client::CalcMaxHP() {
 		if (GetAA(28) == 3)
 			max_hp += (sint32)(max_hp * ((GetAA(120)!=0) ? 12:10))/100;
 	}
-/*
-	if (GetAA(120) != 0) {
-		LogFile->write(EQEMuLog::Debug, "Physical Enhancement: MaxHP=%i", max_hp);
-		max_hp += (uint32)((float)max_hp/100.0f) * 2.3f;
-		LogFile->write(EQEMuLog::Debug, "Physical Enhancement: MaxHP=%i", max_hp);
-	}
-*/
+
 	if (cur_hp > max_hp)
 		cur_hp = max_hp;
 	return max_hp;
@@ -2590,7 +2579,6 @@ void Client::MoveLootCharges(ItemInst &from, sint16 to_slot)
 	}
 }
 
-
 void Client::SendItemLink(const ItemInst* inst, bool send_to_all)
 {
 	if (!inst)
@@ -3262,17 +3250,6 @@ bool Client::CheckAccess(sint16 iDBLevel, sint16 iDefaultLevel) {
 	else
 		return false;
 }
-
-void Client::SendAAStats() {
-	APPLAYER* outapp = new APPLAYER(OP_SendAAStats, sizeof(AltAdvStats_Struct));
-	AltAdvStats_Struct *aps = (AltAdvStats_Struct *)outapp->pBuffer;
-	aps->experience = m_pp.expAA;
-	aps->experience = (int32)(((float)330.0f * (float)m_pp.expAA) / (float)max_AAXP);
-	aps->unspent = m_pp.aapoints;
-	aps->percentage = m_pp.perAA;
-	QueuePacket(outapp);
-	safe_delete(outapp);
-}
 void Client::MemorizeSpell(int32 slot,int32 spellid,int32 scribing){
 	APPLAYER* outapp = new APPLAYER(OP_MemorizeSpell,sizeof(MemorizeSpell_Struct));
 	MemorizeSpell_Struct* mss=(MemorizeSpell_Struct*)outapp->pBuffer;
@@ -3282,53 +3259,6 @@ void Client::MemorizeSpell(int32 slot,int32 spellid,int32 scribing){
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
-void Client::SendAATimer(UseAA_Struct *uaa){
-	APPLAYER* outapp = new APPLAYER(OP_AAAction,sizeof(UseAA_Struct));
-	UseAA_Struct* uaaout = (UseAA_Struct*)outapp->pBuffer;
-	uaaout->ability=uaa->ability;
-	uaaout->begin=uaa->begin;
-	uaaout->end=uaa->end;
-	QueuePacket(outapp);
-	safe_delete(outapp);
-}
-void Client::ActivateAA(int activate){
-	int32 timermod=0;
-	switch(activate){
-		case 50:
-			MemorizeSpell(8,2750,3);
-			CastToMob()->CastSpell(2750,this->GetID());
-			timermod=7200;
-			break;
-		case 51:
-			MemorizeSpell(8,2751,3);
-			CastToMob()->CastSpell(2751,target->GetID());
-			timermod=112;
-			break;
-		case 80:
-			MemorizeSpell(8,2765,3);
-			CastToMob()->CastSpell(2765,this->GetID());
-			timermod=7;
-			break;
-	}
-	time_t timestamp=time(NULL);
-	
-	APPLAYER* outapp = new APPLAYER(OP_AAAction,sizeof(UseAA_Struct));
-	UseAA_Struct* uaa = (UseAA_Struct*)outapp->pBuffer;
-	uaa->ability=activate;
-	uaa->begin=timestamp;
-	uaa->end=timestamp;
-	database.UpdateAATimers(this->CharacterID(),timestamp+timermod,timestamp,activate);
-	QueuePacket(outapp);
-	safe_delete(outapp);
-}
-void Client::SendAATable() {
-    APPLAYER* outapp = new APPLAYER(OP_RespondAA, sizeof(PlayerAA_Struct));
-    memcpy(outapp->pBuffer,&aa,outapp->size);
-	outapp->Deflate();
-    QueuePacket(outapp);
-    safe_delete(outapp);
-}
-
 bool Client::LootToStack(int32 itemid) {  //Loots stackable items to existing stacks - Wiz
 	// @merth: Need to do loot code with new inventory struct
 	/*
@@ -3384,27 +3314,27 @@ void Client::SetFeigned(bool in_feigned) {
 
 sint16	Client::GetMR()
 {
-    return 20 + itembonuses->MR + spellbonuses->MR + aa.general_skills.named.innate_magic_protection * 5;
+    return 20 + itembonuses->MR + spellbonuses->MR + GetAA(Innate_Magic_Protection) * 5;
 }
 
 sint16	Client::GetFR()
 {
-    return 20 + itembonuses->FR + spellbonuses->FR + aa.general_skills.named.innate_fire_protection * 5;
+    return 20 + itembonuses->FR + spellbonuses->FR + GetAA(Innate_Fire_Protection) * 5;
 }
 
 sint16	Client::GetDR()
 {
-    return 20 + itembonuses->DR + spellbonuses->DR + aa.general_skills.named.innate_disease_protection * 5;
+    return 20 + itembonuses->DR + spellbonuses->DR + GetAA(Innate_Disease_Protection) * 5;
 }
 
 sint16	Client::GetPR()
 {
-    return 20 + itembonuses->PR + spellbonuses->PR + aa.general_skills.named.innate_poison_protection * 5;
+    return 20 + itembonuses->PR + spellbonuses->PR + GetAA(Innate_Poison_Protection) * 5;
 }
 
 sint16	Client::GetCR()
 {
-    return 20 + itembonuses->CR + spellbonuses->CR + aa.general_skills.named.innate_cold_protection * 5;
+    return 20 + itembonuses->CR + spellbonuses->CR + GetAA(Innate_Cold_Protection) * 5;
 }
 
 void Client::LogMerchant(Client* player, Mob* merchant, Merchant_Sell_Struct* mp, const Item_Struct* item, bool buying)
@@ -4209,12 +4139,6 @@ void Client::Discipline(ClientDiscipline_Struct* disc_in, Mob* tar) {
     }
 	disc_inuse = disc_in->disc_id;
 }
-
-uint16 Client::GetAA(uint8 aa_id){
-	uint8 *aa_ = &(((uint8 *)&aa)[aa_id]);
-	return (uint16)*aa_;
-}
-
 void Client::DyeArmor(DyeStruct* dye)
 {
 	sint16 item_slot;
@@ -4247,21 +4171,6 @@ void Client::DyeArmor(DyeStruct* dye)
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	Save();
-}
-
-bool Client::SetAA(uint8 aa_id, uint8 new_value){
-	for (int cur = 0 ; cur <= 121; cur++){
-		if (m_pp.aa_array[cur].AA == 0 && m_pp.aa_array[cur].value == 0){
-			m_pp.aa_array[cur].AA = aa_id;
-			m_pp.aa_array[cur].value = new_value;
-			return true;
-		}
-		else if (m_pp.aa_array[cur].AA == aa_id) {
-			m_pp.aa_array[cur].value = new_value;
-			return true;
-		}
-	}
-	return false;
 }
 bool Client::CheckCheat(){
 	float dx=cheat_x-x_pos;

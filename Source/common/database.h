@@ -40,6 +40,7 @@
 #include "../zone/loottable.h"
 #include "../zone/faction.h"
 #include "../zone/message.h"
+#include "../zone/AA.h"
 #include <string>
 #include <vector>
 #ifdef GUILDWARS

@@ -82,6 +82,7 @@ public:
 	void	LoadAAs();
 	int		GetTotalAAs() { return totalAAs; }
 	AA_List* GetAAList() { return aas; }
+	SendAA_Struct* FindAA(int32 id);
 	void	LoadZoneDoors(const char* zone);
 
 	int32	CountSpawn2();

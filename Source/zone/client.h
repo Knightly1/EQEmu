@@ -342,6 +342,9 @@ public:
 	inline void	SetDueling(bool duel) { duelaccepted = duel; }
 	void  SendAAStats();
 	void  SendAATable();
+	void  SendAAList();
+	void  SendAA(int32 id, int seq=1, bool update=false);
+	void  BuyAA(AA_Action* action);
 	// solar: this function is used by some AA stuff
 	void MemorizeSpell(int32 slot,int32 spellid,int32 scribing);
 	// use this one instead
@@ -394,9 +397,8 @@ public:
 	inline PTimerList &GetPTimers() { return(p_timers); }
 	
 	PlayerAA_Struct *GetAAStruct(void) { return &aa; }
-	uint16 GetAA(uint8 aa_id);
-	bool SetAA(uint8 aa_id, uint8 new_value);
-	bool TrainAA(uint8 aa_id, uint8 new_value);
+	int32 GetAA(int32 aa_id);
+	bool SetAA(int32 aa_id, int32 new_value);
 	void	SendTribute();
 	sint16 acmod();
 	

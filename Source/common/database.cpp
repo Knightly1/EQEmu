@@ -6030,6 +6030,7 @@ void Database::LoadAAs(AA_List* load){
 		while(row = mysql_fetch_row(result)) {
 			skill=atoi(row[0]);
 			load->aa[ndx]=GetAASkillVars(skill);
+			load->aa[ndx]->seq=ndx+1;
 			ndx++;
 		}
 	}
@@ -6078,7 +6079,7 @@ SendAA_Struct* Database::GetAASkillVars(int32 skill_id)
 			sendaa->max_level=atoi(row[1]);
 			sendaa->hotkey_sid=atoi(row[2]);
 			sendaa->id=skill_id;
-			sendaa->hotkey_sid2=atoi(row[3]) > 0 ? atoi(row[3]) : 0xFFFFFFFF;
+			sendaa->hotkey_sid2=atoi(row[3]);
 			sendaa->title_sid=atoi(row[4]);
 			sendaa->desc_sid=atoi(row[5]);
 			sendaa->type=atoi(row[6]);
@@ -6088,8 +6089,8 @@ SendAA_Struct* Database::GetAASkillVars(int32 skill_id)
 			sendaa->spell_refresh=atoi(row[10]);
 			sendaa->classes=atoi(row[11]);
 			sendaa->berserker=atoi(row[12]);
-			sendaa->unknown68=0xFFFFFFFF;
-			sendaa->unknown32=1;
+			sendaa->last_id=0xFFFFFFFF;
+			sendaa->current_level=1;
 			sendaa->spellid=atoi(row[14]);
 			switch(sendaa->type){
 				case 1:
@@ -6109,12 +6110,10 @@ SendAA_Struct* Database::GetAASkillVars(int32 skill_id)
 					break;
 			}
 			sendaa->total_abilities=total_abilities;
-			if(sendaa->hotkey_sid==0){
-				sendaa->hotkey_sid=0xFFFFFFFF;
-				sendaa->id2=skill_id+1;
-			}
+			if(sendaa->hotkey_sid==0xFFFFFFFF)
+				sendaa->next_id=skill_id+1;
 			else
-				sendaa->id2=0xFFFFFFFF;
+				sendaa->next_id=0xFFFFFFFF;
 			RetrieveAALevels(sendaa);
 		}
 		mysql_free_result(result);
@@ -6135,16 +6134,6 @@ bool Database::SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Stru
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char query[256+sizeof(PlayerAA_Struct)*2+1];
 	char* end = query;
-	
-	//if (strlen(name) > 15)
-	//	return false;
-	
-	/*for (int i=0; i< 'a' || name[i] > 'z') && 
-	(name[i] < 'A' || name[i] > 'Z') && 
-	(name[i] < '0' || name[i] > '9'))
-	return 0;
-}*/
-	
 	
 	end += sprintf(end, "UPDATE character_ SET alt_adv=\'");
 	end += DoEscapeString(end, (char*)aa, sizeof(PlayerAA_Struct));
@@ -6175,12 +6164,6 @@ int32 Database::GetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Str
     char *query = 0;
     MYSQL_RES *result;
     MYSQL_ROW row;
-	
-	/*for (int i=0; i< 'a' || name[i] > 'z') && 
-	(name[i] < 'A' || name[i] > 'Z') && 
-	(name[i] < '0' || name[i] > '9'))
-	return 0;
-}*/
 	
 	unsigned long* lengths;
 	unsigned long len = 0;

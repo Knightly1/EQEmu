@@ -479,19 +479,6 @@ Zone::~Zone()
 	safe_delete(db_update);
 #endif
 }
-void Zone::LoadAAs(){
-	int32 size=database.GetSizeAA();
-	if(size>=sizeof(SendAA_Struct)){
-		aa_buffer = new uchar[size];
-		aas=(AA_List*)aa_buffer;
-		database.LoadAAs(aas);
-		totalAAs=database.CountAAs();
-	}
-	else{
-		LogFile->write(EQEMuLog::Error, "Failed to load AAs!");
-		aas=NULL;
-	}
-};
 bool Zone::LoadZoneCFG(const char* filename, bool DontLoadDefault) {
 	memset(&newzone_data, 0, sizeof(NewZone_Struct));
 	NewZone_Struct* nsc = database.GetZoneCFG(database.GetZoneID(filename));

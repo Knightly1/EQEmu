@@ -256,7 +256,7 @@ void EntityList::MobProcess() {
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
-		if(!iterator.GetData()->Process()){
+ 		if(!iterator.GetData()->Process()){
 			Mob* mob=iterator.GetData();
 			if(mob->IsNPC())
 				entity_list.RemoveNPC(mob->CastToNPC()->GetID());

@@ -143,7 +143,10 @@
 #define SENTINEL_TRIG_OTHER 6725 //%1 has triggered your sentinel.
 #define IDENTIFY_SPELL 6765 //Item Lore: %1.
 #define NOT_HOLDING_ITEM 12452 //You are not holding an item!
-
+#define AA_GAIN_ABILITY 410 //You have gained the ability "%T1" at a cost of %2 ability %T3.
+#define AA_IMPROVE 411 //You have improved %T1 %2 at a cost of %3 ability %T4.
+#define AA_POINT 1197 //point
+#define AA_POINTS 1215 //points
 #define MERCHANT_GREETING 1144 //Welcome to my shop, %3.
 #define MERCHANT_HANDY_ITEM1 1145 //Hello there, %3. How about a nice %4?
 #define MERCHANT_HANDY_ITEM2 1146 //Greetings, %3. You look like you could use a %4.
