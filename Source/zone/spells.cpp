@@ -3358,6 +3358,10 @@ neotokyo: i need those formulas checked!!!!
 			result = ubase + updownsign * (caster_level * 3); break;
 		case 105:	// solar: confirmed 2/6/04
 			result = ubase + updownsign * (caster_level * 4); break;
+
+		case 107:	// Shutting this thing up, this is wrong
+			result = ubase + updownsign * (caster_level * 4); break;
+
 		case 108:
 			result = ubase + updownsign * (caster_level / 3); break;
 		case 109:	// solar: confirmed 2/6/04
@@ -3372,7 +3376,11 @@ neotokyo: i need those formulas checked!!!!
             result = ubase + 12 * (caster_level - 34); break;
 		case 114:
             result = ubase + 15 * (caster_level - 44); break;
-		//case 115:	// solar: this is only in symbol of transal
+
+		//more bullshit to shut it up, this is prolly wrong
+		case 115:	// solar: this is only in symbol of transal
+			result = ubase + 15 * (caster_level - 54); break;
+
 		//case 116:	// solar: this is only in symbol of ryltan
 		//case 117:	// solar: this is only in symbol of pinzarn
 		//case 118:	// solar: used in naltron and a few others
@@ -3464,7 +3472,7 @@ void Client::CalcItemBonuses(StatBonuses* newbon) {
 		const ItemInst* inst = m_inv[i];
 		if (inst && inst->IsType(ItemTypeCommon)) {
 			const Item_Struct *item = inst->GetItem();
-			const ItemCommon_Struct& common = inst->GetItem()->Common;
+			const ItemCommon_Struct& common = item->Common;
 			if( GetLevel() >= common.RecommendedLevel )
 			{
 				newbon->AC += common.AC;

@@ -554,7 +554,38 @@ sint32 GetMaxSpellID() {
 	char* spell_line = spell_line_start;
 	char token[64]="";
 	char seps[] = "^";
-	ifstream in(SPELLS_FILE);
+	//ifstream in(SPELLS_FILE);
+	
+	struct stat s;
+	if(stat(SPELLS_FILE, &s) != 0) {
+		LogFile->write(EQEMuLog::Error, "File '%s' not found (stat failed) in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
+		return(-1);
+	}
+	
+	FILE *sf = fopen(SPELLS_FILE, "r");
+	
+	if(sf == NULL) {
+		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
+		return -1;
+	}
+	
+	fgets(spell_line, sizeof(spell_line_start), sf);
+	while(!feof(sf)) {
+		strcpy(token,strtok(spell_line, seps));
+		if(token!=NULL);
+		{
+			tempid = atoi(token);
+			if(tempid>oldid)
+				oldid = tempid;
+			else
+				break;
+		}
+		fgets(spell_line, sizeof(spell_line_start), sf);
+	}
+	
+	fclose(sf);
+	
+	/*ifstream in(SPELLS_FILE);
 	
 	if(!in) {
 		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
@@ -574,7 +605,8 @@ sint32 GetMaxSpellID() {
 				break;
 		}
 		in.getline(spell_line, sizeof(spell_line_start));
-	}
+	}*/
+	
 		
 	return oldid;
 }
@@ -624,21 +656,33 @@ bool FileLoadSPDat(SPDat_Spell_Struct* sp, sint32 iMaxSpellID) {
 	char spell_line[2048];
 	LogFile->write(EQEMuLog::Status,"FileLoadSPDat() Loading spells from %s", SPELLS_FILE);
 	
-	ifstream in(SPELLS_FILE);
+	FILE *sf = fopen(SPELLS_FILE, "r");
+	
+	if(sf == NULL) {
+		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
+		return -1;
+	}
+/*	ifstream in(SPELLS_FILE);
 	if(!in) {
 		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
 		return false;
 	}
+	*/
 	if (iMaxSpellID < 0) {
 		LogFile->write(EQEMuLog::Error,"FileLoadSPDat() Loading spells FAILED! iMaxSpellID:%i < 0", iMaxSpellID);
 		return false;
 	}
+/*
+
+This is hanging on freebsd for me, not sure why...
+
 //#if EQDEBUG >= 1
 	else {
 		LogFile->write(EQEMuLog::Debug,"FileLoadSPDat() Highest spell ID:%i", iMaxSpellID);
 	}
 //#endif
-	in.close();
+*/
+/*	in.close();
 	in.open(SPELLS_FILE);
 	if(!in) {
 		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
@@ -656,6 +700,21 @@ bool FileLoadSPDat(SPDat_Spell_Struct* sp, sint32 iMaxSpellID) {
 			LogFile->write(EQEMuLog::Error, "FATAL FileLoadSPDat() tempid:%i >= iMaxSpellID:%i", tempid, iMaxSpellID);
 			return false;
 		}
+		*/
+		
+	while(!feof(sf)) {
+		fgets(spell_line, sizeof(spell_line), sf);
+		Seperator sep(spell_line, '^', 200, 100, false, 0, 0, false);
+		
+		if(spell_line[0]=='\0')
+			break;
+		
+		tempid = atoi(sep.arg[0]);
+		if (tempid > iMaxSpellID) {
+			LogFile->write(EQEMuLog::Error, "FATAL FileLoadSPDat() tempid:%i >= iMaxSpellID:%i", tempid, iMaxSpellID);
+			return false;
+		}
+		
 		counter++;
 		strcpy(sp[tempid].name, sep.arg[1]);
 		strcpy(sp[tempid].player_1, sep.arg[2]);
@@ -743,7 +802,8 @@ bool FileLoadSPDat(SPDat_Spell_Struct* sp, sint32 iMaxSpellID) {
 			sp[tempid].Spacing4[y] = atoi(sep.arg[158+y]);
 	} 
 	LogFile->write(EQEMuLog::Status, "FileLoadSPDat() spells loaded: %i", counter);
-	in.close();
+	//in.close();
+	fclose(sf);
 
 	return true;
 }
@@ -764,6 +824,9 @@ void LoadSPDat(SPDat_Spell_Struct** SpellsPointer) {
 	char sep='^';
 	LogFile->write(EQEMuLog::Normal, "If this is the last message you see, you forgot to move spells_en.txt from your EQ dir to this dir.");
 
+#ifdef FREEBSD
+#error ifstreams seem to break BSD...
+#endif
 	ifstream in;in.open(SPELLS_FILE);
 	
 	if(!in.is_open()){

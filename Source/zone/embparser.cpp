@@ -237,7 +237,10 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, Mob* npcmob
 			if(!HASITEM_ISNULLITEM(itemid))
 			{ 
 				MakeAnyLenString(&hi_decl, "push (@{$%s{%d}},%d);",hashname.c_str(),itemid,slot); 
+//Father Nitwit: this is annoying
+#if EQDEBUG >= 7
 				LogFile->write(EQEMuLog::Debug, "declare hasitem : %s",hi_decl); 
+#endif
 				perl->eval(hi_decl); 
 			} 
 		}

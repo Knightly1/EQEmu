@@ -332,6 +332,9 @@ const LootTable_Struct* Database::GetLootTable(int32 loottable_id) {
 			loottable_array[loottable_id]->Entries[i].lootdrop_id = atoi(row[1]);
 			loottable_array[loottable_id]->Entries[i].multiplier = atoi(row[2]);
 			loottable_array[loottable_id]->Entries[i].probability = atoi(row[3]);
+			
+			if(loottable_array[loottable_id]->Entries[i].multiplier > NumEntries)
+				loottable_array[loottable_id]->Entries[i].multiplier = NumEntries;
 			i++;
 		}
 		mysql_free_result(result);
@@ -465,6 +468,8 @@ void Database::AddLootDropToNPC(NPC* npc,int32 lootdrop_id, ItemList* itemlist) 
 	 //   LogFile->write(EQEMuLog::Error, "Database Or Memory error GetLootDrop(%i) == 0, npc:%s", lootdrop_id, npc->GetName());
 		return;
 	}
+	if(lds->NumEntries == 0)	//nothing possible to add
+		return;
 
 // This is Wiz's updated Pool Looting functionality.  Eventually, the database format should be moved over to use this
 // or implemented to support both methods.  (A unique identifier in lootable_entries indicates to roll for a pool item
@@ -519,38 +524,33 @@ void Database::AddLootDropToNPC(NPC* npc,int32 lootdrop_id, ItemList* itemlist) 
 		(*itemlist).Append(item);
 	}
 #else
-	int x=0;
-	int32 k;
+	int32 r;
 	int32 totalchance = 0;
-	for (k=0; k<lds->NumEntries; k++) {
-		totalchance += lds->Entries[k].chance;
-	}
-	int32 thischance = 0;
-	for (k=0; k<lds->NumEntries; k++) {
-		x++;
-		LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-		iterator.Reset();
-		int itemon=0;
-		while(iterator.MoreElements()){
-		    const Item_Struct* item = database.GetItem(iterator.GetData()->item_id);
-		    if (item) {
-		          if(iterator.GetData()->item_id==lds->Entries[k].item_id)
-                        itemon=1;
-      		}
-      		iterator.Advance();
+	for (r = 0; r < lds->NumEntries; r++) {
+		totalchance += lds->Entries[r].chance;
 		}
-		thischance += lds->Entries[k].chance;
-		int drop_chance = rand()%totalchance;
+	uint32 thischance = 0;
+	unsigned short k;
+	bool found = false;
+	
+	while(!found) {
+		k = rand() % lds->NumEntries;
+		
+		thischance = lds->Entries[k].chance;
+		unsigned int drop_chance = rand() % totalchance;
 #if EQDEBUG>=11
 			LogFile->write(EQEMuLog::Debug, "Drop chance for npc: %s, total chance:%i this chance:%i, drop roll:%i", npc->GetName(), totalchance, thischance, drop_chance);
 #endif
-		if (totalchance == 0 || (lds->Entries[k].chance != 0 && (int32)drop_chance < thischance && (lds->Entries[k].chance!=100 && itemon==0)) || (lds->Entries[k].chance==100 && itemon==0)) {
+		if (   totalchance == 0 
+			|| thischance == 100
+			|| thischance == totalchance // only droppable item in loot table
+			|| drop_chance < thischance	//can never be true if thischance is 0
+			) {
+			found = true;
 			int32 itemid = lds->Entries[k].item_id;
+			
 			const Item_Struct* dbitem = database.GetItem(itemid);
 			if (dbitem != 0) {
-				//cerr << "Error in AddLootDropToNPC: dbitem=0, item#=" << itemid << ", lootdrop_id=" << lootdrop_id << endl;
-			//}
-			//else {				
 				ServerLootItem_Struct* item = new ServerLootItem_Struct;
 #if EQDEBUG>=11
 					LogFile->write(EQEMuLog::Debug, "Adding drop to npc: %s, Item: %i",npc->GetName(),dbitem->ItemNumber);
@@ -638,10 +638,15 @@ void Database::AddLootDropToNPC(NPC* npc,int32 lootdrop_id, ItemList* itemlist) 
 				}
 				(*itemlist).Append(item);
 			}
+#if EQDEBUG>=11
+			else {					
+				LogFile->write(EQEMuLog::Debug, "Error in AddLootDropToNPC: dbitem==NULL, item#=%lu, lootdrop_id=%ld", itemid, lootdrop_id);
+			}
+#endif
 			break;
 			//continue;
-		}
-	}
+		}	//end if it will drop
+	}	//end loop
 #endif
 	
 }

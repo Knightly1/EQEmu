@@ -1934,11 +1934,13 @@ struct WearChange_Struct{
 ** Type:   Bind Wound Structure
 ** Length: 8 Bytes
 */
+//Fixed for 7-14-04 patch
 struct BindWound_Struct
 {
 /*002*/	int16	to;			// TargetID
-/*004*/	int16	type;		// ***Placeholder
-/*006*/	sint32	hp;					// Hitpoints -- Guess
+/*004*/	int16	unknown2;		// ***Placeholder
+/*006*/	int16	type;
+/*008*/	int16	unknown6;
 };
 #if 0 // old stuff
 struct BindWound_Struct {
@@ -2777,7 +2779,7 @@ struct Item_Shop_Struct {
 /*
 ** Illusion_Struct
 ** Changes client visible features
-** Size: 104 bytes
+** Size: 168 bytes
 ** Used In: OP_Illusion, #face, Mob::SendIllusionPacket()
 ** Fields from the deprecated struct:
 **	int8	unknown_26; //Always 26
@@ -2788,20 +2790,21 @@ struct Item_Shop_Struct {
 **	int8	hairstyle;
 **	int8	aa_title;
 **	int8	luclinface; // and beard
+** Updated by Father Nitwit for 7-14-04 patch
 **
 */
 struct Illusion_Struct {
-/*000*/	uint32	unknown004;
-/*004*/ char	charname[64];
-/*068*/	uint16	race;
-/*070*/	char	unknown006[2];
-/*072*/	uint8	gender;
-/*074*/	uint8	texture;	
-/*075*/	uint8	helmtexture;
-/*076*/ uint8	unknown011;
-/*077*/ uint32	face;
-/*081*/	char	unknown020[87];
-/*168*/ 
+/*000*/	uint32	spawnid;
+		char charname[64];		//fix for 7-14-04 patch
+/**/	uint16	race;
+/**/	char	unknown006[2];
+/**/	uint8	gender;
+/**/	uint8	texture;	
+/**/	uint8	helmtexture;
+/**/	uint8	unknown011;
+/**/	uint32	face;
+/**/	char	unknown020[88];
+/**/
 };
 
 struct MerchantItemD_Struct {

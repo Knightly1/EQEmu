@@ -362,7 +362,7 @@ void EntityList::AddObject(Object* obj, bool SendSpawnPacket) {
 	if (SendSpawnPacket) {
 		APPLAYER app;
 		obj->CreateSpawnPacket(&app);
-		#if (EQDEBUG >= 5)
+		#if (EQDEBUG >= 6)
 			DumpPacket(&app);
 		#endif
 		QueueClients(0, &app,false);

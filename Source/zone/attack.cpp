@@ -1084,6 +1084,7 @@ damage += (damage*percent);
 		if (IsMezzed())
 			this->BuffFadeByEffect(SE_Mez);
 		if (attack_skill == BASH && GetLevel() < 56) {
+			if(itembonuses->StunResist <= 0 || rand()%101 >= itembonuses->StunResist)
 			Stun(0);
 		}
 		if (IsRooted() && spell_id != 0xFFFF) { // neotoyko: only spells cancel root
@@ -1748,6 +1749,7 @@ damage += (damage*percent);
 
 		}
 		if (attack_skill == BASH && GetLevel() < 56) {
+			if(itembonuses->StunResist <= 0 || rand()%101 >= itembonuses->StunResist)
 			Stun(0);
 		}
 		if (IsRooted() && spell_id != 0xFFFF) // neotoyko: only spells cancel root

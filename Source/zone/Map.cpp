@@ -33,6 +33,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 //#define OPTIMIZE_QT_LOOKUPS
 
 //#define DEBUG_SEEK 1
+//#define DEBUG_BEST_Z 1
 
 /*
  of note:
@@ -103,7 +104,7 @@ bool Map::loadMap(FILE *fp) {
 	if(head.version != MAP_VERSION) {
 		//invalid version... if there really are multiple versions,
 		//a conversion routine could be possible.
-		printf("Invalid map version 0x%lx\n", head.version);
+		printf("Invalid map version 0x%x\n", head.version);
 		return(false);
 	}
 	
@@ -411,6 +412,7 @@ bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *resu
 	for(i = 0; i < _node->faces.count; i++) {
 		cur = &mFinalFaces[ *cfl ];
 		if(LineIntersectsFace(cur,p1, p2, result)) {
+			if(on != NULL)
 			*on = cur;
 			return(true);
 		}
@@ -448,25 +450,32 @@ float Map::FindBestZ( NodeRef node_r, VERTEX p1, VERTEX *result, FACE **on) {
 	PFACE cur;
 	unsigned long *cfl = mFaceLists + _node->faces.offset;
 
+#ifdef DEBUG_BEST_Z
 printf("Start finding best Z...\n");
+#endif
 	for(i = 0; i < _node->faces.count; i++) {
 		cur = &mFinalFaces[ *cfl ];
 //printf("Intersecting with face %lu\n", *cfl);
 		if(LineIntersectsFace(cur, p1, p2, result)) {
+#ifdef DEBUG_BEST_Z
 printf("  %lu (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n",
 				*cfl, cur->a.x, cur->a.y, cur->a.z,
 				cur->b.x, cur->b.y, cur->b.z, 
 				cur->c.x, cur->c.y, cur->c.z);
 printf("Found a z: %.2f\n", result->z);
+#endif
 			if (result->z > best_z) {
+				if(on != NULL)
 				*on = cur;
 				best_z = result->z;
 			}
 		}
 		cfl++;
 	}
+#ifdef DEBUG_BEST_Z
 fflush(stdout);
 printf("Best Z found: %.2f\n", best_z);
+#endif
 
 	return best_z;
 }

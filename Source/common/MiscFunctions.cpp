@@ -20,6 +20,8 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <iostream>
 #include <iomanip>
 #ifdef WIN32

@@ -419,7 +419,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_SendCharInfo			0x0102	// Send all chars visible @ char select
 #define OP_ExpansionInfo		0x00e1	// Which expansions user has
 #define OP_CharacterCreate		0x0104	// Create character @ char select
-#define OP_RandomNameGenerator	0x02ad	// Returns a random name
+#define OP_RandomNameGenerator	0x02ab	// Returns a random name
 #define OP_GuildsList			0x005d	// Server sending client list of guilds
 #define OP_ApproveName			0x0125	// Approving new character name @ char creation
 #define OP_EnterWorld			0x0261	// Server approval for client to enter world

@@ -551,9 +551,9 @@ void Mob::CreateSpawnPacket(APPLAYER* app, NewSpawn_Struct* ns) {
 	// Custom packet data
 	NewSpawn_Struct* ns2 = (NewSpawn_Struct*)app->pBuffer;
 	strcpy(ns2->spawn.name, ns->spawn.name);
-	if (ns->spawn.class_==MERCHANT)
+	/*if (ns->spawn.class_==MERCHANT)
 		strcpy(ns2->spawn.last_name, "EQEmu Shopkeeper");
-	else if (ns->spawn.class_==TRIBUTE_MASTER)
+	else*/ if (ns->spawn.class_==TRIBUTE_MASTER)
 		strcpy(ns2->spawn.last_name, "Tribute Master");
 	else if (ns->spawn.class_==BANKER)
 		strcpy(ns2->spawn.last_name, "EQEmu Banker");
@@ -2947,8 +2947,8 @@ bool Mob::CheckLos(Mob* other) {
 
 //I believe this is contributing to breaking mob spawns when a map is loaded
 //		NodeRef pnode = zone->map->SeekNode( zone->map->GetRoot(), tmp_x, tmp_y );
-		NodeRef pnode = NULL;
-		if (pnode != 0)
+		NodeRef pnode = NODE_NONE;
+		if (pnode != NODE_NODE)
 		{
 			int *iface = zone->map->SeekFace( pnode, tmp_x, tmp_y );
 			if (*iface == -1) {

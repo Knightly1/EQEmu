@@ -655,6 +655,7 @@ uint32 Object::TypeToSkill(uint32 type) {
 		case OT_FORGE:
 		case OT_TEIRDALFORGE:
 		case OT_OGGOKFORGE:
+		case OT_FIERDALF:
 		case OT_STORMGUARDF: {
 			tradeskill = BLACKSMITHING;
 			break;
@@ -675,6 +676,7 @@ uint32 Object::TypeToSkill(uint32 type) {
 			tradeskill = POTTERY;
 			break;
 		}
+		case OT_OVEN:
 		case OT_KILN: {
 			tradeskill = BAKING;
 			break;
