@@ -55,7 +55,9 @@ enum RESISTTYPE
 	RESIST_PHYSICAL = 8	// see Muscle Shock, Back Swing
 };
 
-enum {	//body types
+//This stuff is outdated and already in bodytypes.h
+
+/*enum {	//body types
 	bodyTypePerson = 1,	//dont know the right name for this...
 	bodyTypeUndead = 3,
 	bodyTypeSummoned = 8,	//this might be wrong... this is an older value
@@ -63,6 +65,7 @@ enum {	//body types
 	bodyTypeFramiliar = 24,	//an NPC's framiliar had this type, dunno exact
 	bodyTypeSwarmPet = 63
 };
+*/
 
 //Target Type IDs
 #define ST_TargetOptional	0x01 // Target is used if present, but not required. ex: Flare, Fireworks

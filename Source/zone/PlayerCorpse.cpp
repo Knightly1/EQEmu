@@ -643,6 +643,8 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 		client->Message(13, "Error: Corpse locked by GM.");
 		return;
 	}
+	if(BeingLootedBy == 0)
+		BeingLootedBy = 0xFFFFFFFF;
 	if (this->BeingLootedBy != 0xFFFFFFFF) {
 		// lets double check....
 		Entity* looter = entity_list.GetID(this->BeingLootedBy);

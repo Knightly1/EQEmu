@@ -38,7 +38,7 @@ extern GuildWars guildwars;
 #include "../common/database.h"
 #include "../common/packet_dump.h"
 #include "../common/packet_functions.h"
-
+#include "../common/bodytypes.h"
 #include <stdio.h>
 extern EntityList entity_list;
 #ifndef NEW_LoadSPDat
@@ -1224,7 +1224,7 @@ Mob* Mob::GetOwnerOrSelf() {
     if (owner->GetFamiliarID() == this->GetID()) {
         return owner;
     }
-    if (GetBodyType() == bodyTypeSwarmPet) {		//Dook- swarm pets
+    if (GetBodyType() == BT_SwarmPet) {		//Dook- swarm pets
     	return(owner);
    	}
 	SetOwnerID(0);
@@ -1241,7 +1241,7 @@ Mob* Mob::GetOwner() {
     {
         return owner;
     }
-    if (GetBodyType() == bodyTypeSwarmPet) {		//Dook- swarm pets
+    if (GetBodyType() == BT_SwarmPet) {		//Dook- swarm pets
     	return(owner);
    	}
 	SetOwnerID(0);

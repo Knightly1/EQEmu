@@ -29,6 +29,7 @@
 #define BT_Summoned3 28
 #define BT_Dragon 30
 #define BT_NoTarget2 60
+#define BT_SwarmPet 63
 /* bodytypes above 64 make the mob not show up */
 
 #endif

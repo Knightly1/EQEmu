@@ -152,7 +152,7 @@ void NPC::SpellProcess()
 	}
 	
 	//Dook- swarm pets 
-	if(GetBodyType() == bodyTypeSwarmPet) {
+	if(GetBodyType() == BT_SwarmPet) {
 		if(swarm_timer.Check()) {
 			Depop(); 
 			swarm_timer.Disable();
@@ -1115,7 +1115,7 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 		// target required for these
 		case ST_Undead: {
 			spell_target = entity_list.GetMob(target_id);
-			if(!spell_target || spell_target->GetBodyType() != bodyTypeUndead)
+			if(!spell_target || spell_target->GetBodyType() != BT_SummonedUndead)
 			{
 				//invalid target
 				Message_StringID(13,SPELL_NEED_TAR);
@@ -1127,7 +1127,8 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 		
 		case ST_Summoned: {
 			spell_target = entity_list.GetMob(target_id);
-			if(!spell_target || spell_target->GetBodyType() != bodyTypeSummoned)
+			int8 body_type = spell_target->GetBodyType();
+			if(!spell_target || (body_type != BT_Summoned && body_type != BT_Summoned2 && body_type != BT_Summoned3))
 			{
 				//invalid target
 				Message_StringID(13,SPELL_NEED_TAR);
@@ -1139,7 +1140,7 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 		
 		case ST_Animal: {
 			spell_target = entity_list.GetMob(target_id);
-			if(!spell_target || spell_target->GetBodyType() != bodyTypeAnimal)
+			if(!spell_target || spell_target->GetBodyType() != BT_Animal)
 			{
 				//invalid target
 				Message_StringID(13,SPELL_NEED_TAR);

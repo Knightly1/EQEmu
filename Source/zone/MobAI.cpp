@@ -29,6 +29,7 @@ using namespace std;
 #include "../common/moremath.h"
 #include "parser.h"
 #include "StringIDs.h"
+#include "../common/bodytypes.h"
 #ifdef GUILDWARS
 #include "../GuildWars/GuildWars.h"
 extern GuildWars guildwars;
@@ -469,7 +470,7 @@ void Mob::AI_Process() {
 		bool is_combat_range = CombatRange(target);
 		
 		//swarm pet procs. Adapted from Dook's work
-		if(GetBodyType() == bodyTypeSwarmPet 
+		if(GetBodyType() == BT_SwarmPet 
 			&& is_combat_range
 			&& IsAttackAllowed(target) ) {
 			if(GetClass() == RANGER) {

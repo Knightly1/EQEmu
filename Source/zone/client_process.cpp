@@ -4497,7 +4497,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					if( GetSkill(TRACKING)==0 )
 						SetSkill(TRACKING,1);
 					else
-						CheckIncreaseSkill(TRACKING,150);
+						CheckIncreaseSkill(TRACKING,15); 
 
 					entity_list.MakeTrackPacket(this);
 					break;
@@ -6099,6 +6099,7 @@ void Client::SendItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType
 	//outapp->Deflate();
 		if(slot_id >= 22)
 			outapp->priority = 6;
+	//DumpPacket(outapp);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }

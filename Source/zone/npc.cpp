@@ -37,6 +37,7 @@ using namespace std;
 #include "entity.h"
 #include "masterentity.h"
 #include "spdat.h"
+#include "../common/bodytypes.h"
 #include "spawngroup.h"
 
 #ifdef GUILDWARS
@@ -451,7 +452,7 @@ bool NPC::Process()
         Mob* owner = entity_list.GetMob(this->ownerid);
         if (owner != 0)
         {
-        	if(GetBodyType() != bodyTypeSwarmPet)
+        	if(GetBodyType() != BT_SwarmPet)
 	            owner->SetPetID(0);
 			this->ownerid = 0;
             this->petid = 0;
@@ -1762,7 +1763,7 @@ void NPC::DoClassAttacks(Mob *target) {
 	//general stuff, for all classes....
 	//only gets used when their primary ability get used too
 	//this might be bad for pally's with long reuse time
-	if (GetOwner() != NULL && taunting && target->IsNPC() && target->GetBodyType() != bodyTypeUndead && taunt_timer.Check()) {
+	if (GetOwner() != NULL && taunting && target->IsNPC() && target->GetBodyType() != BT_Undead && taunt_timer.Check()) {
 		Taunt(target->CastToNPC(), false);
 	}
 	

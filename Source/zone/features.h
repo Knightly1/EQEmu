@@ -98,7 +98,7 @@ enum {	//reuse times
 	FishingReuseTime = 12,
 	ForagingReuseTime = 75,		//this is wrong
 	MendReuseTime = 300,
-	TrackingReuseTime = 150,
+	TrackingReuseTime = 10,
 	BashReuseTime = 8,
 	BackstabReuseTime = 10,
 	KickReuseTime = 8,
