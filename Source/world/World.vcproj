@@ -38,7 +38,7 @@
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
-				OutputFile="../build/WorldDebug.exe"
+				OutputFile="../build/DebugBuild/WorldDebug.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="TRUE"
 				IgnoreDefaultLibraryNames="LIBCMT,LIBC"
@@ -138,20 +138,20 @@
 				ProgramDataBaseFileName=".\../Build/World/Release/"
 				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"/>
+				DebugInformationFormat="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
-				OutputFile=".\../build/World.exe"
+				OutputFile=".\../build/ReleaseBuild/World.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				IgnoreDefaultLibraryNames="libc"
-				GenerateDebugInformation="TRUE"
+				GenerateDebugInformation="FALSE"
 				ProgramDatabaseFile=".\../build/World.pdb"
-				GenerateMapFile="TRUE"
+				GenerateMapFile="FALSE"
 				MapFileName="../Build/World.map"
 				SubSystem="1"/>
 			<Tool
@@ -301,20 +301,20 @@
 				ProgramDataBaseFileName=".\../Build/World/Release/"
 				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"/>
+				DebugInformationFormat="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
-				OutputFile=".\../build/World.exe"
+				OutputFile=".\../build/PerlBuild/World.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				IgnoreDefaultLibraryNames="libc"
-				GenerateDebugInformation="TRUE"
+				GenerateDebugInformation="FALSE"
 				ProgramDatabaseFile=".\../build/World.pdb"
-				GenerateMapFile="TRUE"
+				GenerateMapFile="FALSE"
 				MapFileName="../Build/World.map"
 				SubSystem="1"/>
 			<Tool

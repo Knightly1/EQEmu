@@ -38,8 +38,8 @@
 				IgnoreImportLibrary="TRUE"
 				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
-				OutputFile=".\../Build/EMuShareMem.dll"
-				LinkIncremental="2"
+				OutputFile="../Build/DebugBuild/EMuShareMem.dll"
+				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../Build/EMuShareMem.pdb"
@@ -87,7 +87,7 @@
 				ObjectFile=".\../Build/EMuShareMem/Release/"
 				ProgramDataBaseFileName=".\../Build/EMuShareMem/Release/"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"/>
+				DebugInformationFormat="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
@@ -95,12 +95,12 @@
 				IgnoreImportLibrary="TRUE"
 				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
-				OutputFile=".\../Build/EMuShareMem.dll"
+				OutputFile=".\../Build/ReleaseBuild/EMuShareMem.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				GenerateDebugInformation="TRUE"
+				GenerateDebugInformation="FALSE"
 				ProgramDatabaseFile=".\../Build/EMuShareMem.pdb"
-				GenerateMapFile="TRUE"
+				GenerateMapFile="FALSE"
 				MapFileName="../Build/EMuShareMem.map"
 				ImportLibrary=".\../Build/EMuShareMem.lib"/>
 			<Tool
@@ -146,7 +146,7 @@
 				ObjectFile=".\../Build/EMuShareMem/Release/"
 				ProgramDataBaseFileName=".\../Build/EMuShareMem/Release/"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"/>
+				DebugInformationFormat="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
@@ -154,12 +154,12 @@
 				IgnoreImportLibrary="TRUE"
 				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
-				OutputFile=".\../Build/EMuShareMem.dll"
+				OutputFile=".\../Build/PerlBuild/EMuShareMem.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				GenerateDebugInformation="TRUE"
+				GenerateDebugInformation="FALSE"
 				ProgramDatabaseFile=".\../Build/EMuShareMem.pdb"
-				GenerateMapFile="TRUE"
+				GenerateMapFile="FALSE"
 				MapFileName="../Build/EMuShareMem.map"
 				ImportLibrary=".\../Build/EMuShareMem.lib"/>
 			<Tool
