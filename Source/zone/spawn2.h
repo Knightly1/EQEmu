@@ -45,7 +45,7 @@ public:
 protected:
 	friend class Zone;
 	Timer*	timer;
-	Timer*	gridtimer;
+	Timer	gridtimer;
 private:
 	int32	resetTimer();
 

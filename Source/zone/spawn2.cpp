@@ -29,7 +29,8 @@ extern Zone* zone;
 extern Database database;
 
 
-Spawn2::Spawn2(int32 in_spawn2_id, int32 spawngroup_id, float in_x, float in_y, float in_z, float in_heading, int32 respawn, int32 variance, int32 timeleft, int16 grid)
+Spawn2::Spawn2(int32 in_spawn2_id, int32 spawngroup_id, float in_x, float in_y, float in_z, float in_heading, int32 respawn, int32 variance, int32 timeleft, int16 grid):
+gridtimer(10000)
 {
 	spawn2_id = in_spawn2_id;
 	spawngroup_id_ = spawngroup_id;
@@ -55,7 +56,6 @@ Spawn2::Spawn2(int32 in_spawn2_id, int32 spawngroup_id, float in_x, float in_y, 
 	else {
 		timer->Start(0);
 	}
-	gridtimer = new Timer(10000);
 }
 
 Spawn2::~Spawn2()
@@ -110,8 +110,8 @@ bool Spawn2::Process() {
 			Reset();
 		} 
 	}
-	if(gridtimer->Check() && npcthis){
-		gridtimer->Disable();
+	if(gridtimer.Check() && npcthis){
+		gridtimer.Disable();
 		if (grid_ > 0)
 			npcthis->AssignWaypoints(grid_);
 	}
