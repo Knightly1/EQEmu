@@ -92,16 +92,6 @@ Zone extensions and features
 //Uncomment to make group buffs affect group pets
 #define GROUP_BUFF_PETS
 
-//Uncomment this line to enable named quest files:
-#define QUEST_SCRIPTS_BYNAME
-
-#ifdef QUEST_SCRIPTS_BYNAME
-//extends byname system to look in a templates directory
-//independant of zone name
-#define QUEST_TEMPLATES_BYNAME
-#define QUEST_TEMPLATES_DIRECTORY "templates"
-#endif
-
 /*
 
 Zone Numerical configuration
