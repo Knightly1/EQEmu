@@ -2894,6 +2894,31 @@ struct AdventurePoints_Update_Struct {
 /*044*/	uint8				unknown_apu042[216];
 };
 
+
+struct AdventureFinish_Struct{
+	uint32 win_lose;//Cofruben: 00 is a lose,01 is win.
+	uint32 points;
+};
+//OP_AdventureRequest
+struct AdventureRequest_Struct{
+	int32 risk;//1 normal,2 hard.
+	int32 entity_id;
+};
+struct AdventureRequestResponse_Struct{
+	int32 unknown000;
+	char text[2048];
+	int32 timetoenter;
+	int32 timeleft;
+	int32 risk;
+	float x;
+	float y;
+	float z;
+	int32 showcompass;
+	int32 unknown2080;
+};
+
+
+
 struct Item_Shop_Struct {
 	uint16 merchantid;
 	int8 itemtype;

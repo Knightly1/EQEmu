@@ -55,6 +55,7 @@
 #define BERSERKERGM 35
 #define BANKER 40 
 #define MERCHANT 41
+#define ADVENTURERECRUITER 60
 #define ADVENTUREMERCHANT 61
 #define TRIBUTE_MASTER	63
 #define warrior_1 1

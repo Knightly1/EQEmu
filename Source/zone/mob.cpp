@@ -585,6 +585,8 @@ void Mob::CreateSpawnPacket(APPLAYER* app, NewSpawn_Struct* ns) {
 		strcpy(ns2->spawn.last_name, "EQEmu Shopkeeper");
 	else*/ if (ns->spawn.class_==TRIBUTE_MASTER)
 		strcpy(ns2->spawn.last_name, "Tribute Master");
+	else if (ns->spawn.class_==ADVENTURERECRUITER)
+		strcpy(ns2->spawn.last_name, "Adventure Recruiter");
 	else if (ns->spawn.class_==BANKER)
 		strcpy(ns2->spawn.last_name, "EQEmu Banker");
 	else if (ns->spawn.class_==ADVENTUREMERCHANT)
