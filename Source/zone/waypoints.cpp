@@ -16,8 +16,10 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemu.org)
 	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 #include "../common/debug.h"
-//#include <iostream>
-//using namespace std;
+#ifdef _EQDEBUG
+#include <iostream>
+using namespace std;
+#endif
 //#include <iomanip>
 #include <stdlib.h>
 #include <math.h>

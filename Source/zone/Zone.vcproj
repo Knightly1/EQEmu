@@ -410,13 +410,22 @@
 				RelativePath=".\PlayerCorpse.cpp">
 			</File>
 			<File
+				RelativePath="aggro.cpp">
+			</File>
+			<File
 				RelativePath=".\attack.cpp">
 			</File>
 			<File
 				RelativePath="beacon.cpp">
 			</File>
 			<File
+				RelativePath="bonuses.cpp">
+			</File>
+			<File
 				RelativePath=".\client.cpp">
+			</File>
+			<File
+				RelativePath="client_mods.cpp">
 			</File>
 			<File
 				RelativePath=".\client_process.cpp">
@@ -426,6 +435,9 @@
 			</File>
 			<File
 				RelativePath=".\doors.cpp">
+			</File>
+			<File
+				RelativePath="effects.cpp">
 			</File>
 			<File
 				RelativePath=".\entity.cpp">
@@ -440,7 +452,55 @@
 				RelativePath=".\groups.cpp">
 			</File>
 			<File
+				RelativePath="guilds.cpp">
+				<FileConfiguration
+					Name="GuildWars Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Profiling|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="GotFrags|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="GuildWars|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Win9x|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath=".\hate_list.cpp">
+			</File>
+			<File
+				RelativePath="inventory.cpp">
 			</File>
 			<File
 				RelativePath=".\loottables.cpp">
@@ -461,13 +521,34 @@
 				RelativePath=".\petitions.cpp">
 			</File>
 			<File
+				RelativePath="pets.cpp">
+			</File>
+			<File
 				RelativePath=".\spawn2.cpp">
 			</File>
 			<File
 				RelativePath=".\spawngroup.cpp">
 			</File>
 			<File
+				RelativePath="spdat.cpp">
+			</File>
+			<File
+				RelativePath="spell_effects.cpp">
+			</File>
+			<File
 				RelativePath=".\spells.cpp">
+			</File>
+			<File
+				RelativePath="tradeskills.cpp">
+			</File>
+			<File
+				RelativePath="trading.cpp">
+			</File>
+			<File
+				RelativePath="trap.cpp">
+			</File>
+			<File
+				RelativePath="waypoints.cpp">
 			</File>
 			<File
 				RelativePath=".\worldserver.cpp">
@@ -519,6 +600,9 @@
 				RelativePath=".\faction.h">
 			</File>
 			<File
+				RelativePath="features.h">
+			</File>
+			<File
 				RelativePath="..\common\files.h">
 			</File>
 			<File
@@ -562,6 +646,9 @@
 			</File>
 			<File
 				RelativePath=".\spdat.h">
+			</File>
+			<File
+				RelativePath="trap.h">
 			</File>
 			<File
 				RelativePath=".\worldserver.h">
