@@ -1253,12 +1253,12 @@ AdventureInfo Database::GetAdventureInfo(int32 questid,int32 mobid,int8 advtype)
 		safe_delete_array(query);
 		if (row = mysql_fetch_row(result)) {
 			rvalue.NPCID=atoi(row[0]);
-			rvalue.type==atoi(row[1]);
+			rvalue.type=atoi(row[1]);
 			rvalue.Objetive=atoi(row[2]);
 			rvalue.ObjetiveValue=atoi(row[3]);
 			strcpy(rvalue.text,row[4]);
 			rvalue.minutes=atoi(row[5]);
-			rvalue.points==atoi(row[6]);
+			rvalue.points=atoi(row[6]);
 			rvalue.x=atof(row[7]);
 			rvalue.y=atof(row[8]);
 			rvalue.in_use=atoi(row[9]);
@@ -1267,11 +1267,11 @@ AdventureInfo Database::GetAdventureInfo(int32 questid,int32 mobid,int8 advtype)
 			rvalue.zoneid=atoi(row[12]);
 			rvalue.status=atoi(row[13]);
 			mysql_free_result(result);
-			return rvalue;
 		}
 		else
 			printf("error: %s\n",errbuf);
 	}
+	return rvalue;
 }
 void Database::SetAdventureInfo(int32 questid,bool inuse,int32 status){
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -1296,7 +1296,8 @@ int32 Database::GetAdventureChar(int32 n,int32 questid){
     char *query = 0;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
-	if (RunQuery(query, MakeAnyLenString(&query, "Select charid%i from adventure_charids where questid=%i",id, qid), errbuf, &result)) {
+	int32 charid = 0;
+	if (RunQuery(query, MakeAnyLenString(&query, "Select charid%i from adventure_charids where questid=%i",n, questid), errbuf, &result)) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {
 			row = mysql_fetch_row(result);
@@ -1304,6 +1305,7 @@ int32 Database::GetAdventureChar(int32 n,int32 questid){
 			charid = atoi(row[0]);
 		}
 	}
+	return charid;
 }
 char* Database::GetAdventureNPCText(int32 npcid){
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -3183,7 +3185,7 @@ int32 Database::GetMiniLoginAccount(char* ip){
 	int32 retid = 0;
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id FROM account WHERE minilogin_ip='%s'", ip), errbuf, &result)) {
 		safe_delete_array(query);
-		if (row = mysql_fetch_row(result))
+		if ((row = mysql_fetch_row(result)))
 			retid = atoi(row[0]);
 		mysql_free_result(result);
 	}
@@ -5270,15 +5272,14 @@ void Database::GetAccountFromID(int32 id, char* oAccountName, sint16* oStatus) {
     MYSQL_RES *result;
     MYSQL_ROW row;
 	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, name, status FROM account WHERE id=%i", id), errbuf, &result))
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT name, status FROM account WHERE id=%i", id), errbuf, &result))
 	{
 		if (mysql_num_rows(result) == 1) {
 			row = mysql_fetch_row(result);
-			int32 account_id = atoi(row[0]);
 			if (oAccountName)
-				strcpy(oAccountName, row[1]);
+				strcpy(oAccountName, row[0]);
 			if (oStatus)
-				*oStatus = atoi(row[2]);
+				*oStatus = atoi(row[1]);
 		}
 		mysql_free_result(result);
 	}
