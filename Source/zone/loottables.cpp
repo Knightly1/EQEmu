@@ -599,6 +599,11 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 	 			
 	item->item_id = item2->ItemNumber;
 	item->charges = charges;
+	item->aug1 = 0;
+	item->aug2 = 0;
+	item->aug3 = 0;
+	item->aug4 = 0;
+	item->aug5 = 0;
 	if (equipit) {
 		uint8 eslot = 0xFF;
 		//const Item_Struct* item2 = database.GetItem(item->item_id);
