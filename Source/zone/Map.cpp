@@ -103,7 +103,7 @@ bool Map::loadMap(FILE *fp) {
 	if(head.version != MAP_VERSION) {
 		//invalid version... if there really are multiple versions,
 		//a conversion routine could be possible.
-		printf("Invalid map version 0x%x\n", head.version);
+		printf("Invalid map version 0x%lx\n", head.version);
 		return(false);
 	}
 	
@@ -233,7 +233,7 @@ if(_node->node4 != NULL) {
 #endif
 		//NOTE: could precalc these and store them in node headers
 
-		NodeRef tmp = NULL;
+		NodeRef tmp = NODE_NONE;
 #ifdef OPTIMIZE_QT_LOOKUPS
 		float midx = _node->minx + (_node->maxx - _node->minx) * 0.5;
 		float midy = _node->miny + (_node->maxy - _node->miny) * 0.5;
