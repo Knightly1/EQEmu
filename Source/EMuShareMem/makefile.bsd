@@ -1,0 +1,49 @@
+# Generated automatically from Makefile.in by configure.
+APP=libEMuShareMem.so
+SF=MMFMutex.o Doors.o Items.o Spells.o NPCFactionLists.o MMF.o Loot.o ../common/timer.o ../common/unix.o ../common/EMuShareMem.o Opcodes.o
+
+CC=gcc
+LD=ld
+
+#this does not need to link with mysql
+
+#For FreeBSD uncomment these, comment the matching ones further down.
+MYSQL_CFLAGS=-I'/usr/local/include/mysql'
+DFLAGS=-DDEBUG=1 -DSHAREMEM -DCATCH_CRASH -DEMUSHAREMEM -DFREEBSD
+
+#For Linux, and defaults that don't need to be overwritten.
+#MYSQL_CFLAGS=`mysql_config --cflags`
+#DFLAGS=-DDEBUG=1 -DSHAREMEM -DCATCH_CRASH -DEMUSHAREMEM
+
+WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual -Wstrict-prototypes -Wno-deprecated -Wcomment -Wcast-align
+
+#pthreads
+#COPTS=$(WFLAGS) $(DFLAGS) -g -fPIC -O2 -D_GNU_SOURCE -DINVERSEXY -DFX $(MYSQL_CFLAGS)
+#LINKOPTS=-L. -L/usr/local/lib -lstdc++
+
+#linux threads
+COPTS=$(WFLAGS) $(DFLAGS) -g -fPIC -O2 -D_GNU_SOURCE -DINVERSEXY -DFX $(MYSQL_CFLAGS)
+#COPTS+=-I/usr/local/include/pthread/linuxthreads
+LINKOPTS=-L. -L/usr/local/lib -llstdc++
+
+#profile it:
+#COPTS+=-pg
+#LINKOPTS=-L. -L/usr/local/lib -llstdc++_p -pg
+
+all: $(APP)
+
+	
+
+$(APP): $(SF)
+	$(CC) -g -shared -Wl,-soname,$(APP) -o $(APP) $(SF) $(LINKOPTS)
+
+clean:
+	rm -f $(SF) $(APP)
+
+%.o: %.cpp
+	$(CC) $(COPTS) -c $< -o $@
+
+.obj/debug.o: ../common/debug.h ../common/debug.cpp
+	mkdir -p .obj
+	$(CC) $(COPTS) -c ../common/debug.cpp -o .obj/debug.o
+
