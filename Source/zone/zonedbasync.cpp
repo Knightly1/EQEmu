@@ -28,6 +28,12 @@ void DispatchFinishedDBAsync(DBAsyncWork* dbaw) {
 				}
 			}
 		}*/
+		case DBA_b4_Zone: {
+			if(zone == NULL)
+				break;
+			zone->DBAWComplete(workpt.b1(), dbaw);
+			break;
+		}
 		case DBA_b4_Entity: {
 			Entity* entity = entity_list.GetID(workpt.w2_3());
 			if (!entity)

@@ -42,7 +42,7 @@ public:
 	void summonitem(int32 itemid, uint8 charges = 0);
 	//getZoneID(const char *short_name)
 	void write(const char *file, const char *str);
-	void spawn2(int npc_type, int grid, int unused, float x, float y, float z, float heading);
+	int16 spawn2(int npc_type, int grid, int unused, float x, float y, float z, float heading);
 	void setstat(int stat, int value);
 	void castspell(int spell_id, int target_id);
 	void selfcast(int spell_id);

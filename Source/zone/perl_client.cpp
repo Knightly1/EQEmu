@@ -28,6 +28,7 @@
 #include "features.h"
 #ifdef EMBPERL_XS_CLASSES
 #include "embperl.h"
+
 #include "client.h"
 
 XS(XS_Client_SendSound); /* prototype to pass -Wmissing-prototypes */

@@ -107,6 +107,17 @@ public:
         return;
     }
 
+    int count()
+    {
+    	int count = 0;
+		MyQueueNode<T>* d = head;
+        while(d != 0) {
+        	count++;
+        	d = d->next;
+		}
+        return(count);
+    }
+
 private:
     MyQueueNode<T>* head;
     MyQueueNode<T>* tail;

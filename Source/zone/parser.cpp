@@ -306,8 +306,10 @@ int Parser::HasQuestFile(int32 npcid)
 return true;
 }
 
-void Parser::Event(int event, int32 npcid, const char * data, NPC* npcmob, Mob* mob) {
+void Parser::Event(QuestEventID event, int32 npcid, const char * data, NPC* npcmob, Mob* mob) {
 	if (npcid == 0)
+		return;
+	if(event >= _LargestEventID)
 		return;
 	sint32 qstID = GetNPCqstID(npcid);
 	int success=1;

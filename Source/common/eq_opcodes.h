@@ -397,13 +397,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_SendTributes		0x02f5
 #define OP_TributeInfo		0x02f6
 #define OP_SelectTribute	0x02f7
-#define OP_TributeID		0x02f8		//4 bytes, seems to be from offset 5760 in the PlayerProfile
+#define OP_TributeTimer		0x02f8
 #define OP_StartTribute		0x02f9
 #define OP_TributeNPC		0x02fa		//no idea what this is
 #define OP_TributeMoney		0x02fe
 #define OP_TributeToggle	0x0364
 
-//Father Nitwit OpCodes:
 //New Tradeskill Interface
 #define OP_RecipesFavorite	0x0322
 #define OP_RecipesSearch	0x01f9

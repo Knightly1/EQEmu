@@ -24,6 +24,7 @@
 #define SEPERATOR_H
 
 #include <string.h>
+#include <stdlib.h>
 
 class Seperator
 {
@@ -94,13 +95,13 @@ public:
 			safe_delete(arg[i]);
 		safe_delete_array(arg);
 		safe_delete_array(argplus);
-		//if (msg)
-		//	delete(msg);
+		if (msg)
+			free(msg);
 	}
 	int16 argnum;
 	char** arg;
 	const char** argplus;
-	const char * msg;
+	char * msg;
 	bool IsNumber(int num) const {
 		return IsNumber(arg[num]);
 	}

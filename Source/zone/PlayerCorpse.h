@@ -33,7 +33,7 @@ public:
 	static void Corpse::SendLootReqErrorPacket(Client* client, int8 response = 2);
 	static Corpse* Corpse::LoadFromDBData(int32 in_corpseid, int32 in_charid, char* in_charname, uchar* in_data, int32 in_datasize, float in_x, float in_y, float in_z, float in_heading, char* timeofdeath, bool rezzed = false);
 
-	Corpse::Corpse(NPC* in_npc, ItemList** in_itemlist, int32 in_npctypeid, NPCType** in_npctypedata, int32 in_decaytime = 600000);
+	Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, NPCType** in_npctypedata, int32 in_decaytime = 600000);
 	Corpse::Corpse(Client* client, sint32 in_rezexp);
 	Corpse::Corpse(int32 in_corpseid, int32 in_charid, char* in_charname, ItemList* in_itemlist, int32 in_copper, int32 in_silver, int32 in_gold, int32 in_plat, float in_x, float in_y, float in_z, float in_heading, float in_size, int8 in_gender, int16 in_race, int8 in_class, int8 in_deity, int8 in_level, int8 in_texture, int8 in_helmtexture,int32 in_rezexp);
 	Corpse::~Corpse();
@@ -100,7 +100,7 @@ private:
 	sint32		pkitem;
 	int32		dbid;
 	int32		charid;
-	ItemList*	itemlist;
+	ItemList	itemlist;
 	uint32		copper;
 	uint32		silver;
 	uint32		gold;

@@ -444,7 +444,7 @@ void Client::TemporaryPets(int16 spell_id) {
 void Client::EnableAAEffect(aaEffectType type, int32 duration) {
 	if(type > 32)
 		return;	//for now, special logic needed.
-	m_pp.aa_effects |= 1 << (type-1);
+	m_epp.aa_effects |= 1 << (type-1);
 	
 	if(duration > 0) {
 		p_timers.Start(pTimerAAEffectStart + type, duration);
@@ -457,8 +457,8 @@ void Client::DisableAAEffect(aaEffectType type) {
 	if(type > 32)
 		return;	//for now, special logic needed.
 	uint32 bit = 1 << (type-1);
-	if(m_pp.aa_effects & bit) {
-		m_pp.aa_effects ^= bit;
+	if(m_epp.aa_effects & bit) {
+		m_epp.aa_effects ^= bit;
 	}
 	p_timers.Clear(pTimerAAEffectStart + type);
 }
@@ -470,7 +470,7 @@ a duration timer is set.
 bool Client::CheckAAEffect(aaEffectType type) {
 	if(type > 32)
 		return(false);	//for now, special logic needed.
-	if(m_pp.aa_effects & (1 << (type-1))) {	//is effect enabled?
+	if(m_epp.aa_effects & (1 << (type-1))) {	//is effect enabled?
 		//has our timer expired?
 		if(p_timers.Expired(pTimerAAEffectStart + type)) {
 			DisableAAEffect(type);

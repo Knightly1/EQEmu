@@ -37,8 +37,6 @@ class ItemParse;			// Parses item packets
 #include <list>
 using namespace std;
 #include "../common/eq_packet_structs.h"
-#include "../common/database.h"
-extern Database database;
 
 // Helper typedefs
 typedef list<ItemInst*>::const_iterator					iter_queue;
@@ -56,12 +54,14 @@ typedef map<uint8, ItemInst*>::const_iterator			iter_bag;
 #define MATERIAL_FEET		6
 #define MATERIAL_PRIMARY	7
 #define MATERIAL_SECONDARY	8
+#define MAX_MATERIALS 9	//number of equipables
 
 // Indexing positions to the beginning slot_id's for a bucket of slots
 #define IDX_EQUIP		0
 #define IDX_CURSOR_BAG	331
 #define IDX_INV			22
 #define IDX_INV_BAG		251
+#define IDX_TRIBUTE		400
 #define IDX_BANK		2000
 #define IDX_BANK_BAG	2031
 #define IDX_SHBANK		2500
@@ -174,6 +174,7 @@ enum InventorySlot
 class ItemInstQueue
 {
 public:
+	~ItemInstQueue();
 	/////////////////////////
 	// Public Methods
 	/////////////////////////
@@ -206,7 +207,7 @@ public:
 	// Public Methods
 	///////////////////////////////
 	
-	virtual ~Inventory() {}
+	virtual ~Inventory();
 	
 	// Retrieve a writeable item at specified slot
 	ItemInst* GetItem(sint16 slot_id) const;
@@ -311,17 +312,7 @@ public:
 			m_color = 0;
 	}
 	
-	ItemInst(uint32 item_id, sint16 charges = 0) {
-		m_use_type = ItemUseNormal;
-		m_item = database.GetItem(item_id);
-		m_charges = charges;
-		m_price = 0;
-		m_merchantslot = 0;
-		if(m_item && m_item->ItemClass == ItemTypeCommon)
-			m_color = m_item->Common.Color;
-		else
-			m_color = 0;
-	}
+	ItemInst(uint32 item_id, sint16 charges = 0);
 	
 	ItemInst(ItemUseType use_type) {
 		m_use_type = use_type;
@@ -481,7 +472,11 @@ protected:
 	
 };
 
-
+typedef enum {
+	byFlagIgnore,	//do not consider this flag
+	byFlagSet,		//apply action if the flag is set
+	byFlagNotSet	//apply action if the flag is NOT set
+} byFlagSetting;
 
 // ########################################
 // Class: ItemContainerInst
@@ -522,6 +517,11 @@ public:
 	// Remove all items from container
 	void Clear();
 	
+	//Remove items based on their flags
+	//the three flag types (nodrop, norent, flags) are ORed
+	//but all the flags in flags_set must be set to match that
+	void ClearByFlags(byFlagSetting is_nodrop, byFlagSetting is_norent, byFlagSetting is_flags = byFlagIgnore, ItemAttrib flags_set = ItemAttribUnknown);
+	
 	// Query item type
 	virtual bool IsType(ItemType item_type) const;
 	
@@ -534,8 +534,8 @@ protected:
 	// Protected Methods
 	//////////////////////////
 	
-	iter_bag _begin()	{ return m_contents.begin(); }
-	iter_bag _end()		{ return m_contents.end(); }
+	iter_bag _begin()		{ return m_contents.begin(); }
+	iter_bag _end()			{ return m_contents.end(); }
 	friend sint16 Inventory::_HasItem(map<sint16, ItemInst*>& bucket, const Item_Struct* item, uint8 quantity);
 	friend sint16 Inventory::_HasItem(ItemInstQueue& queue, const Item_Struct* item, uint8 quantity);
 	friend sint16 Inventory::_HasItemByUse(map<sint16, ItemInst*>& bucket, uint8 use, uint8 quantity);

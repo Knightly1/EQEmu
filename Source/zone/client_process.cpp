@@ -99,6 +99,10 @@ bool Client::Process() {
 			SendAllPackets();
 		}
 		
+#ifdef PACKET_UPDATE_MANAGER
+		update_manager.Process();
+#endif
+		
 		if(dead)
 			SetHP(-100);
 		if(dead && this->client_state == CLIENT_LINKDEAD) {
@@ -436,6 +440,10 @@ bool Client::Process() {
 			}
 		}
 		
+		if(tribute_timer.Check()) {
+			ToggleTribute(true);	//re-activate the tribute.
+		}
+		
 		adverrorinfo = 3;
 		SpellProcess();
 		adverrorinfo = 4;
@@ -706,62 +714,6 @@ void Client::BulkSendInventoryItems()
 	}
 }
 #endif*/
-// Send an item packet (including all subitems of the item)
-void Client::SendItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type)
-{
-	if (!inst)
-		return;
-	
-	// Serialize item into |-delimited string
-	string packet = inst->Serialize(slot_id);
-	
-	uint16 opcode = 0;
-	APPLAYER* outapp = NULL;
-	ItemPacket_Struct* itempacket = NULL;
-	
-	// Construct packet
-	opcode = (packet_type==ItemPacketViewLink) ? OP_ItemLinkResponse : OP_ItemPacket;
-	outapp = new APPLAYER(opcode, packet.length()+5);
-	itempacket = (ItemPacket_Struct*)outapp->pBuffer;
-	memcpy(itempacket->SerializedItem, packet.c_str(), packet.length());
-	itempacket->PacketType = packet_type;
-	
-#if EQDEBUG >= 9
-		DumpPacket(outapp);
-#endif
-	//outapp->Deflate();
-		if(slot_id >= 22)
-			outapp->priority = 6;
-	//DumpPacket(outapp);
-	QueuePacket(outapp);
-	safe_delete(outapp);
-}
-
-APPLAYER* Client::ReturnItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type)
-{
-	if (!inst)
-		return 0;
-	
-	// Serialize item into |-delimited string
-	string packet = inst->Serialize(slot_id);
-	
-	uint16 opcode = 0;
-	APPLAYER* outapp = NULL;
-	BulkItemPacket_Struct* itempacket = NULL;
-	
-	// Construct packet
-	opcode = OP_ItemPacket;
-	outapp = new APPLAYER(opcode, packet.length()+1);
-	itempacket = (BulkItemPacket_Struct*)outapp->pBuffer;
-	memcpy(itempacket->SerializedItem, packet.c_str(), packet.length());
-
-#if EQDEBUG >= 9
-		DumpPacket(outapp);
-#endif
-
-	return outapp;
-}
-
 void Client::RemoveData() {
 	eqnc->RemoveData();
 }
@@ -781,7 +733,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 	std::list<TempMerchantList> tmp_merlist = zone->tmpmerchanttable[npcid];
 	std::list<TempMerchantList>::iterator tmp_itr;
 
-	int i=1;
+	int32 i=1;
 	int8 handychance = 0;
 	for(itr = merlist.begin();itr != merlist.end() && i<numItemSlots;itr++){
 		MerchantList ml = *itr;
@@ -822,7 +774,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 			else
 				handychance--;
 			int charges=1;
-			if(item->ItemClass==ItemTypeCommon && ml.charges <= item->Common.MaxCharges)
+			if(item->ItemClass==ItemTypeCommon && (sint16)ml.charges <= item->Common.MaxCharges)
 				charges=ml.charges;
 			else
 				charges = item->Common.MaxCharges;

@@ -235,6 +235,9 @@ void DumpZoneProfile() {
 	end = data.end();
 	
 	for(; cur != end; cur++) {
+		if(cur->count == 0)
+			continue;	//dont print empty timers.
+		
 		LogFile->write(EQEMuLog::Debug, "..%s: %llu calls, %.4fms", cur->str, cur->count, cur->dur);
 	}
 

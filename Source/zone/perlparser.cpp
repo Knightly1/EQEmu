@@ -15,21 +15,20 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-#include "features.h"
-#include "entity.h"
-#ifdef EMBPERL
-#ifdef EMBPERL_XS
 
+#include "features.h"
 #include "perlparser.h"
 #include "questmgr.h"
 #include "embxs.h"
+#include "entity.h"
 
-
+#ifdef EMBPERL
+#ifdef EMBPERL_XS
 /*
 
 Some useful perl API info:
 
-SvUV == string to unsigned value (char->long)
+SvUV == string to unsigned value (char->ulong)
 SvIV == string to signed value (char->long)
 SvNV == string to real value (float,double)
 SvPV_nolen == string with no length restriction
@@ -37,10 +36,10 @@ SvPV_nolen == string with no length restriction
 
 */
 
-PerlXSParser::PerlXSParser() {
-	perl = NULL;
+PerlXSParser::PerlXSParser() : PerlembParser() {
 	_empty_sv = newSV(0);
-	ReloadQuests();
+	ReloadQuests();	//not sure WHY I have to call this again
+				//but if I dont, it dosent call the right map_funs
 }
 
 void PerlXSParser::map_funs() {
@@ -263,7 +262,10 @@ XS(XS__spawn)
 	dXSARGS;
 	if (items != 6)
 		Perl_croak(aTHX_ "Usage: spawn(npc_type, grid, unused, x, y, z)");
-
+	
+	int16		RETVAL;
+	dXSTARG;
+	
 	int	npc_type = (int)SvIV(ST(0));
 	int	grid = (int)SvIV(ST(1));
 	int	unused = (int)SvIV(ST(2));
@@ -271,9 +273,10 @@ XS(XS__spawn)
 	float	y = (float)SvNV(ST(4));
 	float	z = (float)SvNV(ST(5));
 
-	quest_manager.spawn2(npc_type, grid, unused, x, y, z, 0);
-
-	XSRETURN_EMPTY;
+	RETVAL = quest_manager.spawn2(npc_type, grid, unused, x, y, z, 0);
+	XSprePUSH; PUSHu((UV)RETVAL);
+	
+	XSRETURN(1);
 }
 
 XS(XS__spawn2);
@@ -282,7 +285,10 @@ XS(XS__spawn2)
 	dXSARGS;
 	if (items != 7)
 		Perl_croak(aTHX_ "Usage: spawn2(npc_type, grid, unused, x, y, z, heading)");
-
+	
+	int16		RETVAL;
+	dXSTARG;
+	
 	int	npc_type = (int)SvIV(ST(0));
 	int	grid = (int)SvIV(ST(1));
 	int	unused = (int)SvIV(ST(2));
@@ -291,9 +297,10 @@ XS(XS__spawn2)
 	float	z = (float)SvNV(ST(5));
 	float	heading = (float)SvNV(ST(6));
 
-	quest_manager.spawn2(npc_type, grid, unused, x, y, z, heading);
-
-	XSRETURN_EMPTY;
+	RETVAL = quest_manager.spawn2(npc_type, grid, unused, x, y, z, heading);
+	XSprePUSH; PUSHu((UV)RETVAL);
+	
+	XSRETURN(1);
 }
 
 XS(XS__setstat);

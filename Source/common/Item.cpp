@@ -29,9 +29,12 @@
 #include <sstream>
 #include <iostream>
 #include "../common/Item.h"
+#include "../common/database.h"
 #include "../common/misc.h"
 #include "../common/races.h"
 using namespace std;
+
+extern Database database;
 
 // Create appropriate ItemInst class
 #ifndef PACKETCOLLECTOR
@@ -66,6 +69,74 @@ ItemInst* ItemInst::Create(const Item_Struct* item, sint16 charges, uint32 aug1,
 	return inst;
 }
 
+ItemInst::ItemInst(uint32 item_id, sint16 charges) {
+	m_use_type = ItemUseNormal;
+	m_item = database.GetItem(item_id);
+	m_charges = charges;
+	m_price = 0;
+	m_merchantslot = 0;
+	if(m_item && m_item->ItemClass == ItemTypeCommon)
+		m_color = m_item->Common.Color;
+	else
+		m_color = 0;
+}
+
+ItemInstQueue::~ItemInstQueue() {
+	iter_queue cur,end;
+	cur = m_list.begin();
+	end = m_list.end();
+	for(; cur != end; cur++) {
+		ItemInst *tmp = * cur;
+		safe_delete(tmp);
+	}
+	m_list.clear();
+}
+
+Inventory::~Inventory() {
+	map<sint16, ItemInst*>::iterator cur,end;
+	
+	
+	cur = m_worn.begin();
+	end = m_worn.end();
+	for(; cur != end; cur++) {
+		ItemInst *tmp = cur->second;
+		safe_delete(tmp);
+	}
+	m_worn.clear();
+	
+	cur = m_inv.begin();
+	end = m_inv.end();
+	for(; cur != end; cur++) {
+		ItemInst *tmp = cur->second;
+		safe_delete(tmp);
+	}
+	m_inv.clear();
+	
+	cur = m_bank.begin();
+	end = m_bank.end();
+	for(; cur != end; cur++) {
+		ItemInst *tmp = cur->second;
+		safe_delete(tmp);
+	}
+	m_bank.clear();
+	
+	cur = m_shbank.begin();
+	end = m_shbank.end();
+	for(; cur != end; cur++) {
+		ItemInst *tmp = cur->second;
+		safe_delete(tmp);
+	}
+	m_shbank.clear();
+	
+	cur = m_trade.begin();
+	end = m_trade.end();
+	for(; cur != end; cur++) {
+		ItemInst *tmp = cur->second;
+		safe_delete(tmp);
+	}
+	m_trade.clear();
+}
+
 ItemCommonInst::ItemCommonInst(const Item_Struct* item , sint16 charges , uint32 aug1 , uint32 aug2 , uint32 aug3 , uint32 aug4 , uint32 aug5 ) : ItemInst(item, charges)
 {
 	PutAugment(0,aug1);
@@ -83,7 +154,7 @@ ItemCommonInst::ItemCommonInst(uint32 item_id, sint16 charges , uint32 aug1 , ui
 	PutAugment(3,aug4);
 	PutAugment(4,aug5);
 }
-		 
+
 // Make a copy of an ItemCommonInst object
 ItemCommonInst::ItemCommonInst(const ItemCommonInst& copy) : ItemInst((ItemInst&)copy)
 {
@@ -421,14 +492,80 @@ void ItemContainerInst::DeleteItem(uint8 index)
 void ItemContainerInst::Clear()
 {
 	// Destroy container contents
-	//iter_bag it;
-	//for (it=m_contents.begin(); it!=m_contents.end(); it++) {
-		//ItemInst* inst = it->second;
-		//safe_delete(inst);
+	iter_bag cur, end;
+	cur = m_contents.begin();
+	end = m_contents.end();
+	for (; cur != end; cur++) {
+		ItemInst* inst = cur->second;
+		safe_delete(inst);
+	}
+	m_contents.clear();
+}
 
-	//}
-	for(int i=0;i<10;i++)
-		m_contents.erase(i);
+// Remove all items from container
+void ItemContainerInst::ClearByFlags(byFlagSetting is_nodrop, byFlagSetting is_norent, byFlagSetting is_flags, ItemAttrib flags_set)
+{
+	// Destroy container contents
+	iter_bag cur, end, del;
+	cur = m_contents.begin();
+	end = m_contents.end();
+	for (; cur != end;) {
+		ItemInst* inst = cur->second;
+		const Item_Struct* item = inst->GetItem();
+		del = cur;
+		cur++;
+		
+		switch(is_nodrop) {
+		case byFlagSet:
+			if (item->NoDrop == 0) {
+				safe_delete(inst);
+				m_contents.erase(del->first);
+				continue;
+			}
+		case byFlagNotSet:
+			if (item->NoDrop != 0) {
+				safe_delete(inst);
+				m_contents.erase(del->first);
+				continue;
+			}
+		default:
+			break;
+		}
+		
+		switch(is_norent) {
+		case byFlagSet:
+			if (item->NoRent == 0) {
+				safe_delete(inst);
+				m_contents.erase(del->first);
+				continue;
+			}
+		case byFlagNotSet:
+			if (item->NoRent != 0) {
+				safe_delete(inst);
+				m_contents.erase(del->first);
+				continue;
+			}
+		default:
+			break;
+		}
+		
+		switch(is_flags) {
+		case byFlagSet:
+			if ((item->attribs & flags_set) == flags_set) {
+				safe_delete(inst);
+				m_contents.erase(del->first);
+				continue;
+			}
+		case byFlagNotSet:
+			if ((item->attribs & flags_set) != flags_set) {
+				safe_delete(inst);
+				m_contents.erase(del->first);
+				continue;
+			}
+		default:
+			break;
+		}
+	}
 }
 
 // Remove item from container without memory delete
@@ -925,9 +1062,11 @@ sint16 Inventory::_PutItem(sint16 slot_id, ItemInst* inst)
 {
 	// If putting a NULL into slot, we need to remove slot without memory delete
 	if (inst == NULL) {
+		//Why do we not delete the poped item here????
 		PopItem(slot_id);
 		return slot_id;
 	}
+printf("Putting item 0x%lx into slot %u\n", inst, slot_id);
 	
 	sint16 result = SLOT_INVALID;
 	

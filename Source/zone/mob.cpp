@@ -69,7 +69,7 @@ Mob::Mob(const char*   in_name,
          float	in_z_pos,
 
          int8    in_light,
-         const int8*   in_equipment,
+         const int32*   in_equipment,
 		 int8	 in_texture,
 		 int8	 in_helmtexture,
 		 int16	 in_ac,
@@ -210,7 +210,7 @@ logpos = false;
 
 	int i = 0;
 
-	for (i=0; i<9; i++)
+	for (i=0; i < MAX_MATERIALS; i++)
 	{
 		if (in_equipment == NULL)
 		{
@@ -221,10 +221,14 @@ logpos = false;
 			equipment[i] = in_equipment[i];
 		}
 	}
+/*
+	I dont think this is right, many places use the
+	equipment array as an item id.
 	if(in_d_meele_texture1)
 		equipment[MATERIAL_PRIMARY] = in_d_meele_texture1;
 	if(in_d_meele_texture2)
 		equipment[MATERIAL_SECONDARY] = in_d_meele_texture2;
+*/
 
 	/*	for (i=0; i<74; i++) { // socket 12-29-01
 	if (in_skills == 0) {
@@ -791,6 +795,9 @@ void Mob::SendHPUpdate()
 	// destructor will free the pBuffer
  	CreateHPPacket(&hp_app);
 
+#ifdef MANAGE_HP_UPDATES
+	entity_list.QueueManaged(this, &hp_app, true);
+#else
 	// send to people who have us targeted
  	entity_list.QueueClientsByTarget(this, &hp_app, false, 0, false);
 
@@ -813,6 +820,7 @@ void Mob::SendHPUpdate()
 	{
 		GetPet()->CastToClient()->QueuePacket(&hp_app, false);
 	}
+#endif	//PACKET_UPDATE_MANAGER
 
 	// send to self - we need the actual hps here
 	if(IsClient())
@@ -828,12 +836,26 @@ void Mob::SendHPUpdate()
 }
 
 // this one just warps the mob to the current location
-void Mob::SendPosition(){
+void Mob::SendPosition() {
 	APPLAYER* app = new APPLAYER(OP_MobUpdate, sizeof(SpawnPositionUpdate_Struct));
 	SpawnPositionUpdate_Struct* spu = (SpawnPositionUpdate_Struct*)app->pBuffer;	
 	MakeSpawnUpdate(spu);
 //?	spu->heading *= 8;
-	entity_list.QueueCloseClients(0, app, true, 800);
+#ifdef PACKET_UPDATE_MANAGER
+	entity_list.QueueManaged(this, app, true);
+#else
+	entity_list.QueueCloseClients(this, app, true, 800);
+#endif
+	safe_delete(app);
+}
+
+// this one just warps the mob to the current location
+void Mob::SendAllPosition() {
+	APPLAYER* app = new APPLAYER(OP_MobUpdate, sizeof(SpawnPositionUpdate_Struct));
+	SpawnPositionUpdate_Struct* spu = (SpawnPositionUpdate_Struct*)app->pBuffer;	
+	MakeSpawnUpdate(spu);
+//?	spu->heading *= 8;
+	entity_list.QueueClients(this, app, true);
 	safe_delete(app);
 }
 
@@ -847,16 +869,17 @@ void Mob::SendPosUpdate(int8 iSendToSelf) {
 			this->CastToClient()->FastQueuePacket(&app);
 	}
 	else
+#ifdef PACKET_UPDATE_MANAGER
+		entity_list.QueueManaged(this, app, (iSendToSelf==0));
+#else
 		entity_list.QueueCloseClients(this, app, (iSendToSelf==0), 800);
+#endif
 	safe_delete(app);
 }
 
 // this is for SendPosition()
 void Mob::MakeSpawnUpdate(SpawnPositionUpdate_Struct *spu){
 //if(logpos) {
-if(GetOwner() && GetOwner()->IsClient()) {
-printf("SPU POS %s: (%.2f, %.2f, %.2f) @%.2f\n", GetName(), y_pos, x_pos, z_pos, heading);
-}
 	spu->spawn_id	= GetID();
 	spu->y		= FloatToEQ19(y_pos);
 	spu->x		= FloatToEQ19(x_pos);
@@ -868,9 +891,6 @@ printf("SPU POS %s: (%.2f, %.2f, %.2f) @%.2f\n", GetName(), y_pos, x_pos, z_pos,
 
 // this is for SendPosUpdate()
 void Mob::MakeSpawnUpdate(PlayerPositionUpdateServer_Struct* spu) {
-if(logpos) {
-printf("SPU POS %s: (%.2f, %.2f, %.2f) d (%.2f, %.2f, %.2f) @%.2f\n", GetName(), y_pos, x_pos, z_pos, delta_x, delta_y, delta_z, heading);
-}
 	spu->spawn_id	= GetID();
 	spu->y_pos		= FloatToEQ19(x_pos);
 	spu->x_pos		= FloatToEQ19(y_pos);
@@ -973,7 +993,7 @@ void Mob::GMMove(float x, float y, float z, float heading) {
 		this->heading = heading;
 	if(IsNPC())
 		SaveGuardSpot(true);
-	SendPosition();
+	SendAllPosition();
 	//SendPosUpdate(1);
 }
 
@@ -1186,73 +1206,13 @@ void Mob::ChangeSize(float in_size = 0, bool bNoRestriction) {
 	SendAppearancePacket(AT_Size, (int32) in_size);
 }
 
-Mob* Mob::GetFamiliar() {
-	Mob* tmp = entity_list.GetMob(this->GetFamiliarID());
-
-	if (tmp) {
-		if (tmp->GetOwnerID() == this->GetID()) {
-			return tmp;
-		}
-		else {
-			this->SetFamiliarID(0);
-			return 0;
-		}
-	}
-	return 0;
-}
-
-Mob* Mob::GetPet() {
-	Mob* tmp = entity_list.GetMob(this->GetPetID());
-
-	if (tmp) {
-		if (tmp->GetOwnerID() == this->GetID()) {
-			return tmp;
-		}
-		else {
-			this->SetPetID(0);
-			return 0;
-		}
-	}
-	return 0;
-}
-
-void Mob::SetPet(Mob* newpet) {
-	Mob* oldpet = GetPet();
-	if (oldpet) {
-		oldpet->SetOwnerID(0);
-	}
-	if (newpet == 0) {
-		SetPetID(0);
-	}
-	else {
-		SetPetID(newpet->GetID());
-		Mob* oldowner = entity_list.GetMob(newpet->GetOwnerID());
-		if (oldowner)
-			oldowner->SetPetID(0);
-		newpet->SetOwnerID(this->GetID());
-	}
-}
-
-void Mob::SetPetID(int16 NewPetID) {
-	if (NewPetID == GetID() && NewPetID != 0)
-		return;
-	petid = NewPetID;
-}
-
-void Mob::SetFamiliarID(int16 NewPetID) {
-	if (NewPetID == GetID() && NewPetID != 0)
-		return;
-	familiarid = NewPetID;
-}
-
-
-
 Mob* Mob::GetOwnerOrSelf() {
 	if (!GetOwnerID())
 		return this;
 	Mob* owner = entity_list.GetMob(this->GetOwnerID());
 	if (!owner) {
 		SetOwnerID(0);
+		return(this);
 	}
 	if (owner->GetPetID() == this->GetID()) {
 		return owner;
@@ -1261,8 +1221,8 @@ Mob* Mob::GetOwnerOrSelf() {
         return owner;
     }
     if (GetBodyType() == BT_SwarmPet) {		//Dook- swarm pets
-    	return(owner);
-   	}
+		return(owner);
+	}
 	SetOwnerID(0);
 	return this;
 }

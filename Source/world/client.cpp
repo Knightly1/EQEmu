@@ -39,6 +39,7 @@ using namespace std;
 #include "../common/classes.h"
 #include "../common/languages.h"
 #include "../common/skills.h"
+#include "../common/extprofile.h"
 #include "LoginServer.h"
 #include "zoneserver.h"
 #include "net.h"
@@ -953,6 +954,7 @@ void Client::SendApproveWorld()
 bool Client::OPCharCreate(CharCreate_Struct *cc)
 {
 	PlayerProfile_Struct pp; 
+	ExtendedProfile_Struct ext;
 	Inventory inv;
 	time_t bday = time(NULL);
 	char startzone[50]={0};
@@ -985,7 +987,9 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 
 	// Convert incoming cc_s to the new PlayerProfile_Struct
 	memset(&pp, 0, sizeof(PlayerProfile_Struct));	// start building the profile
-
+	
+	InitExtendedProfile(&ext);
+	
 	strncpy(pp.name, cc->name, 63);
 	// clean the capitalization of the name
 #if 0	// on second thought, don't - this will just make the creation fail
@@ -1096,7 +1100,7 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 			
 	// now we give the pp and the inv we made to StoreCharacter
 	// to see if we can store it
-	if (!database.StoreCharacter(GetAccountID(), &pp, &inv))
+	if (!database.StoreCharacter(GetAccountID(), &pp, &inv, &ext))
 	{
 		printf("Character creation failed: %s\n", pp.name);
 		return false;

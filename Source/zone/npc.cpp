@@ -116,6 +116,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	assist_timer(AIassistcheck_delay),
 	sendhpupdate_timer(1000)
 {
+	//What is the point of this, since the names get mangled..
 	Mob* mob = entity_list.GetMob(name);
 	if(mob != 0)
 		entity_list.RemoveEntity(mob->GetID());
@@ -129,7 +130,6 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	swarm_timer.Disable();
 
 	proximity = NULL;
-	itemlist = new ItemList();
 	copper = 0;
 	silver = 0;
 	gold = 0;
@@ -280,7 +280,6 @@ NPC::~NPC()
 		entity_list.RemoveProximity(GetID());
 		safe_delete(proximity);
 	}
-	safe_delete(itemlist);
 	safe_delete(NPCTypedata);
  #ifdef IPC	  
 	if(IsInteractive())
@@ -292,6 +291,28 @@ NPC::~NPC()
 	    }
     }
 #endif
+	
+	{
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* item = *cur;
+		safe_delete(item);
+	}
+	itemlist.clear();
+	}
+	
+	{
+	list<struct NPCFaction*>::iterator cur,end;
+	cur = faction_list.begin();
+	end = faction_list.end();
+	for(; cur != end; cur++) {
+		struct NPCFaction* fac = *cur;
+		safe_delete(fac);
+	}
+	faction_list.clear();
+	}
 }
 
 void NPC::SetTarget(Mob* mob) {
@@ -306,66 +327,66 @@ void NPC::SetTarget(Mob* mob) {
 }
 
 ServerLootItem_Struct* NPC::GetItem(int slot_id) {
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-	iterator.Reset();
-	while(iterator.MoreElements()) {
-		ServerLootItem_Struct* item = iterator.GetData();
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* item = *cur;
 		if (item->equipSlot == slot_id) {
 			return item;
 		}
-		iterator.Advance();
 	}
-	cout << "no item found for slot: " << slot_id << endl;
-	return 0;
+	return(NULL);
 }
 	  
 void NPC::RemoveItem(uint16 item_id, int16 quantity, int16 slot) {
-  LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-  iterator.Reset();
-  while(iterator.MoreElements()) {
-    //if (iterator.GetData()->ItemNumber == item_id && iterator.GetData()->lootslot == slot)
-    if (iterator.GetData()->item_id == item_id && slot <= 0  && quantity <= 0) {
-          //cout<<"NPC::RemoveItem"<<" equipSlot:"<<iterator.GetData()->equipSlot<<endl;
-      iterator.RemoveCurrent();
-      return;
-    }
-    else if (iterator.GetData()->item_id == item_id && iterator.GetData()->equipSlot == slot  && quantity >= 1) {
-          //cout<<"NPC::RemoveItem"<<" equipSlot:"<<iterator.GetData()->equipSlot<<" quantity:"<< quantity<<endl;
-          iterator.GetData()->charges -= quantity;
-          if (iterator.GetData()->charges <= 0)
-            iterator.RemoveCurrent();
-          return;
-    }
-    iterator.Advance();
-  }
-  return;
-}
-	  
-void NPC::ClearItemList() {
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-
-	iterator.Reset();
-	while(iterator.MoreElements()) {
-		iterator.RemoveCurrent();
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* item = *cur;
+		if (item->item_id == item_id && slot <= 0 && quantity <= 0) {
+			itemlist.erase(cur);
+			return;
+		}
+		else if (item->item_id == item_id && item->equipSlot == slot  && quantity >= 1) {
+			//cout<<"NPC::RemoveItem"<<" equipSlot:"<<iterator.GetData()->equipSlot<<" quantity:"<< quantity<<endl;
+			if (item->charges <= quantity)
+				itemlist.erase(cur);
+			else
+				item->charges -= quantity;
+			return;
+		}
 	}
 }
 	  
+void NPC::ClearItemList() {
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* item = *cur;
+		safe_delete(item);
+	}
+	itemlist.clear();
+}
+	  
 void NPC::QueryLoot(Client* to) {
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-
-	iterator.Reset();
 	int x = 0;
 	to->Message(0, "Coin: %ip %ig %is %ic", platinum, gold, silver, copper);
-	while(iterator.MoreElements()) {
-		const Item_Struct* item = database.GetItem(iterator.GetData()->item_id);
+
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		const Item_Struct* item = database.GetItem((*cur)->item_id);
 		if (item)
 		    to->Message(0, "  %d: %s", item->ItemNumber, item->Name);
 		else
 		    LogFile->write(EQEMuLog::Error, "Database error, invalid item");
 		x++;
-		iterator.Advance();
 	}
-	to->Message(0, "%i items on %s.", x, this->GetName());
+	to->Message(0, "%i items on %s.", x, GetName());
 }
 
 void NPC::AddCash(int16 in_copper, int16 in_silver, int16 in_gold, int16 in_platinum) {
@@ -869,36 +890,22 @@ bool NPC::Process()
 }
 
 int32 NPC::CountLoot() {
-	if (itemlist == 0)
-		return 0;
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-	int32 count = 0;
-	
-	iterator.Reset();
-	while(iterator.MoreElements())	
-	{
-		count++;
-		iterator.Advance();
-	}
-	return count;
+	return(itemlist.size());
 }
 
 void NPC::DumpLoot(int32 npcdump_index, ZSDump_NPC_Loot* npclootdump, int32* NPCLootindex) {
-	if (itemlist == 0)
-		return;
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-	//int32 count = 0;
-	
-	iterator.Reset();
-	while(iterator.MoreElements())	
-	{
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* item = *cur;
 		npclootdump[*NPCLootindex].npc_dump_index = npcdump_index;
-		npclootdump[*NPCLootindex].itemid = iterator.GetData()->item_id;
-		npclootdump[*NPCLootindex].charges = iterator.GetData()->charges;
-		npclootdump[*NPCLootindex].equipSlot = iterator.GetData()->equipSlot;
+		npclootdump[*NPCLootindex].itemid = item->item_id;
+		npclootdump[*NPCLootindex].charges = item->charges;
+		npclootdump[*NPCLootindex].equipSlot = item->equipSlot;
 		(*NPCLootindex)++;
-		iterator.RemoveCurrent();
 	}
+	ClearItemList();
 }
 
 void NPC::Depop(bool StartSpawnTimer) {
@@ -1445,13 +1452,13 @@ int32 Database::NPCSpawnDB(int8 command, const char* zone, NPC* spawn, int32 ext
 			printf("Crash\n");
 #endif
 			SpawnGroup* newSpawnGroup = new SpawnGroup( last_insert_id, tmpstr);
-			zone->spawn_group_list->AddSpawnGroup(newSpawnGroup);
+			zone->spawn_group_list.AddSpawnGroup(newSpawnGroup);
 #ifdef GWDEBUG
 			printf("Crash2\n");
 #endif
 			SpawnEntry* newSpawnEntry = new SpawnEntry( spawn->GetNPCTypeID(), 100);
-			if (zone->spawn_group_list->GetSpawnGroup(last_insert_id))
-				zone->spawn_group_list->GetSpawnGroup(last_insert_id)->AddSpawnEntry(newSpawnEntry);
+			if (zone->spawn_group_list.GetSpawnGroup(last_insert_id))
+				zone->spawn_group_list.GetSpawnGroup(last_insert_id)->AddSpawnEntry(newSpawnEntry);
 #ifdef GWDEBUG
 			printf("Crash3\n");
 #endif
@@ -1611,14 +1618,15 @@ void NPC::PickPocket(Client* thief) {
 	bool steal_item = (rand()%100 < 50 || no_coin);
 	if (steal_item)
 	{
-		LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-		iterator.Reset();
-		while(iterator.MoreElements())
-		{
-			const Item_Struct* item = database.GetItem(iterator.GetData()->item_id);
+		ItemList::iterator cur,end;
+		cur = itemlist.begin();
+		end = itemlist.end();
+		for(; cur != end && x < 49; cur++) {
+			ServerLootItem_Struct* citem = *cur;
+			const Item_Struct* item = database.GetItem(citem->item_id);
 			if (item)
 			{
-				inst = ItemInst::Create(item,iterator.GetData()->charges);
+				inst = ItemInst::Create(item, citem->charges);
 				int slot_id = thief->GetInv().FindFreeSlot(false, true, inst->GetItem()->Size);
 				if (/*!Equipped(item->ItemNumber) &&*/
 					 !item->loreflag && !item->Common.Magic && item->NoDrop != 0 && !inst->IsType(ItemTypeContainer) && slot_id != SLOT_INVALID 
@@ -1629,16 +1637,14 @@ void NPC::PickPocket(Client* thief) {
 					if (inst->IsStackable())
 						charges[x] = 1;
 					else
-						charges[x] = iterator.GetData()->charges;
+						charges[x] = citem->charges;
 					x++;
-					break;
 				}
 			}
-			iterator.Advance();
 		}
 		if (x > 0)
 		{
-			int random = rand()%x;
+			int random = MakeRandomInt(0, x-1);
 			const Item_Struct* item = database.GetItem(steal_items[random]);
 			inst = ItemInst::Create(item,charges[random]);
 
@@ -1868,6 +1874,9 @@ void Mob::NPCSpecialAttacks(const char* parse, int permtag) {
 			break;
 		case 'I':
 			SpecAttacks[UNSNAREABLE] = true;
+			break;
+		case 'D':
+			SpecAttacks[UNFEARABLE] = true;
 			break;
 		case 'A':
 			SpecAttacks[IMMUNE_MEELE] = true;

@@ -71,6 +71,7 @@ extern volatile bool ZoneLoaded;
 #include "../common/EQNetwork.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/Mutex.h"
+#include "../common/version.h"
 #include "../common/files.h"
 #include "../common/EQEMuError.h"
 #include "../common/packet_dump_file.h"
@@ -315,6 +316,7 @@ int main(int argc, char** argv) {
 	Timer temp_timer(10);
 	temp_timer.Start();
 	while(RunLoops) {
+		{	//profiler block to omit the sleep from times
 		_ZP(net_main);
 		Timer::SetCurrentTime();
 		while ((eqnc = eqns.NewQueuePop())) {
@@ -475,6 +477,7 @@ int main(int argc, char** argv) {
 		}
 #endif
 #endif
+		}	//end extra profiler block
 		Sleep(1);
 	}
 	
@@ -510,8 +513,13 @@ int main(int argc, char** argv) {
 #ifdef NEW_LoadSPDat
 	safe_delete(spells_delete);
 #endif
-
+	command_deinit();
+//	Needed if REUSE_ZLIB is defined in packet_functions.h
+//	DeflatePacket(NULL, 0, NULL, 0);
+//	InflatePacket(NULL, 0, NULL, 0, false);
+	
 	CheckEQEMuErrorAndPause();
+	LogFile->write(EQEMuLog::Status, "Proper zone shutdown complete.");
 	return 0;
 }
 

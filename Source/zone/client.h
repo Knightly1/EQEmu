@@ -36,6 +36,7 @@ class Client;
 #include "AA.h"
 #include "../common/seperator.h"
 #include "../common/Item.h"
+#include "updatemgr.h"
 
 #define ITEM_MAX_STACK 20
 
@@ -132,11 +133,6 @@ typedef enum {	//disciplines for disc_inuse
 	discLeechCurse		= 27
 };
 
-#define TRIBUTE_NONE 0xFFFFFFFF
-typedef struct {
-	uint32 tribute;
-	uint32 level;
-} ClientTributeInfo;
 
 class Client : public Mob
 {
@@ -234,6 +230,7 @@ public:
 	void	WorldKick();
 	inline int8	GetAnon()		{  return m_pp.anon; }
 	inline PlayerProfile_Struct& GetPP()	{ return m_pp; }
+	inline ExtendedProfile_Struct& GetEPP()	{ return m_epp; }
 	inline Inventory& GetInv()				{ return m_inv; }
 	bool	CheckAccess(sint16 iDBLevel, sint16 iDefaultLevel);
 	
@@ -485,6 +482,9 @@ public:
 	void	SetFeigned(bool in_feigned);
 	inline bool    GetFeigned()	{ return(appearance != 3 ? false : feigned); }
 	EQNetworkConnection* Connection() { return eqnc; }
+#ifdef PACKET_PROFILER
+	void DumpPacketProfile() { if(eqnc) eqnc->DumpPacketProfile(); }
+#endif
 	int8	guildchange;
 	int16	otherleaderid;
 	sint32 GetEquipment(int8 material_slot);	// returns item id
@@ -521,6 +521,8 @@ public:
 	sint32	TributeMoney(int32 platinum);
 	void	AddTributePoints(sint32 ammount);
 	void	ChangeTributeSettings(TributeInfo_Struct *t);
+	void	SendTributeTimer();
+	void	ToggleTribute(bool enabled);
 	
 	inline PTimerList &GetPTimers() { return(p_timers); }
 	
@@ -590,6 +592,8 @@ public:
 	void	RangedAttack(Mob* other);
 	void	ThrowingAttack(Mob* other);
 	
+	void	ChangeSQLLog(const char *file);
+	void	LogSQL(const char *fmt, ...);
 	void	GoFish();
 	void	ForageItem();
 	//Calculate vendor price modifier based on CHA: (reverse==selling)
@@ -601,6 +605,9 @@ public:
 	bool	TrainDiscipline(int32 itemid);
 	void	SendDisciplineUpdate();
 	bool	UseDiscipline(int32 spell_id, int32 target);
+#ifdef PACKET_UPDATE_MANAGER
+	inline UpdateManager *GetUpdateManager() { return(&update_manager); }
+#endif
 
 	void    SetLanguageSkill(int langid, int value); // bUsh
 
@@ -675,6 +682,7 @@ private:
 	int16				weight;
 
 	PlayerProfile_Struct		m_pp;
+	ExtendedProfile_Struct		m_epp;
 	Inventory					m_inv;
 	ServerSideFilters_Struct	ssfs;
 	Object*						m_tradeskill_object;
@@ -713,6 +721,11 @@ private:
 #ifdef REVERSE_AGGRO
 	Timer	scanarea_timer;
 #endif
+	Timer	tribute_timer;
+	
+#ifdef PACKET_UPDATE_MANAGER
+	UpdateManager update_manager;
+#endif
 	
 	Timer	proximity_timer;
 	float	proximity_x;
@@ -726,11 +739,9 @@ private:
 	LinkedList<FactionValue*> factionvalue_list;
 	sint32	GetCharacterFactionLevel(sint32 faction_id);
 	
-	sint32 tribute_points;
-	bool tribute_active;
 	int32 tribute_master_id;
-	ClientTributeInfo tributes[MAX_PLAYER_TRIBUTES];
 	
+	FILE *SQL_log;
 	bool IsSettingGuildDoor;
 	int16 SetGuildDoorID;
 	int32       max_AAXP;

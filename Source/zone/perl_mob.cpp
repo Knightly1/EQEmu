@@ -2234,13 +2234,14 @@ XS(XS_Mob_ResistSpell); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_ResistSpell)
 {
 	dXSARGS;
-	if (items != 3)
-		Perl_croak(aTHX_ "Usage: Mob::ResistSpell(THIS, spell_id, caster)");
+	if (items != 4)
+		Perl_croak(aTHX_ "Usage: Mob::ResistSpell(THIS, ressit_type, spell_id, caster)");
 	{
 		Mob *		THIS;
 		double		RETVAL;
 		dXSTARG;
-		int16		spell_id = (int16)SvUV(ST(1));
+		uint8		ressit_type = (uint8)SvUV(ST(1));
+		int16		spell_id = (int16)SvUV(ST(2));
 		Mob *		caster;
 
 		if (sv_derived_from(ST(0), "Mob")) {
@@ -2250,14 +2251,14 @@ XS(XS_Mob_ResistSpell)
 		else
 			Perl_croak(aTHX_ "THIS is not of type Mob");
 
-		if (sv_derived_from(ST(2), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(2)));
+		if (sv_derived_from(ST(3), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(3)));
 			caster = INT2PTR(Mob *,tmp);
 		}
 		else
 			Perl_croak(aTHX_ "caster is not of type Mob");
 
-		RETVAL = THIS->ResistSpell(spell_id, caster);
+		RETVAL = THIS->ResistSpell(ressit_type, spell_id, caster);
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -5555,7 +5556,7 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "GetActSpellCost"), XS_Mob_GetActSpellCost, file, "$$$");
 		newXSproto(strcpy(buf, "GetActSpellDuration"), XS_Mob_GetActSpellDuration, file, "$$$");
 		newXSproto(strcpy(buf, "GetActSpellCasttime"), XS_Mob_GetActSpellCasttime, file, "$$$");
-		newXSproto(strcpy(buf, "ResistSpell"), XS_Mob_ResistSpell, file, "$$$");
+		newXSproto(strcpy(buf, "ResistSpell"), XS_Mob_ResistSpell, file, "$$$$");
 		newXSproto(strcpy(buf, "GetSpecializeSkill"), XS_Mob_GetSpecializeSkill, file, "$$");
 		newXSproto(strcpy(buf, "GetNPCTypeID"), XS_Mob_GetNPCTypeID, file, "$");
 		newXSproto(strcpy(buf, "GetNPCSpellsID"), XS_Mob_GetNPCSpellsID, file, "$");

@@ -110,7 +110,7 @@ Client::Client(EQNetworkConnection* ieqnc)
 	0,	// y
 	0,	// z
 	0,	// light
-	0,	// equip
+	NULL,	// equip
 	0xFF,	// texture
 	0xFF,	// helmtexture
 	0,	// ac
@@ -157,6 +157,10 @@ Client::Client(EQNetworkConnection* ieqnc)
 #ifdef REVERSE_AGGRO
 	scanarea_timer(AIClientScanarea_delay),
 #endif
+	tribute_timer(Tribute_duration),
+#ifdef PACKET_UPDATE_MANAGER
+	update_manager(ieqnc),
+#endif
 	proximity_timer(ClientProximity_interval)
 {
 	for(int cf=0;cf<21;cf++)
@@ -178,6 +182,7 @@ Client::Client(EQNetworkConnection* ieqnc)
 	admin = 0;
 	lsaccountid = 0;
 	shield_target = NULL;
+	SQL_log = NULL;
 	guilddbid = 0;
 	guildeqid = GUILD_NONE;
 	guildrank = 0;
@@ -231,14 +236,8 @@ Client::Client(EQNetworkConnection* ieqnc)
 	tgb = false;
 	AbilityTimer=false;
 	memset(zonesummon_name, 0, sizeof(zonesummon_name));
-	tribute_master_id = 0;
-	tribute_active = false;
-	tribute_points = 0;
-	int r;
-	for(r = 0; r < MAX_PLAYER_TRIBUTES; r++) {
-		tributes[r].tribute = TRIBUTE_NONE;
-		tributes[r].level = 0;
-	}
+	tribute_master_id = 0xFFFFFFFF;
+	tribute_timer.Disable();
 	
 	disc_timer.Disable();
 	disc_elapse.Disable();
@@ -267,7 +266,8 @@ Client::~Client() {
 	
 //	if(AbilityTimer || GetLevel()>=51)
 //		database.UpdateAndDeleteAATimers(CharacterID());
-
+	
+	ChangeSQLLog(NULL);
 	if(IsDueling() && GetDuelTarget() != 0) {
 		Entity* entity = entity_list.GetID(GetDuelTarget());
 		if(entity != NULL && entity->IsClient()) {
@@ -359,7 +359,7 @@ bool Client::Save(int8 iCommitNow) {
 			m_pp.buffs[i].diseasecounters = buffs[i].diseasecounters;
 		}
 		else {
-			m_pp.buffs[i].spellid = 0;	//should this be SPELL_UNKNOWN?
+			m_pp.buffs[i].spellid = SPELL_UNKNOWN;
 			m_pp.buffs[i].duration = 0;
 			m_pp.buffs[i].level = 0;
 			m_pp.buffs[i].effect = 0;
@@ -373,14 +373,23 @@ bool Client::Save(int8 iCommitNow) {
 	}
 
 	if (GetPet() && !GetPet()->IsFamiliar() && GetPet()->CastToNPC()->GetPetSpellID() && !dead) {
-		m_pp.pet_id = GetPet()->CastToNPC()->GetPetSpellID();
-		m_pp.pet_hp = GetPet()->GetHP();
+		NPC *pet = GetPet()->CastToNPC();
+		m_epp.pet_id = pet->CastToNPC()->GetPetSpellID();
+		m_epp.pet_hp = pet->GetHP();
+		m_epp.pet_mana = pet->GetMana();
+		pet->GetPetState(m_epp.pet_buffs, m_epp.pet_items, m_epp.pet_name);
 	} else {
-		m_pp.pet_id = 0;
-		m_pp.pet_hp = 0;
+		m_epp.pet_id = 0;
+		m_epp.pet_hp = 0;
 	}
 	
-	//FatherNitwit: I dont know if there is a better place for this:
+	if(tribute_timer.Enabled()) {
+		m_pp.tribute_time_remaining = tribute_timer.GetRemainingTime();
+	} else {
+		m_pp.tribute_time_remaining = 0xFFFFFFFF;
+		m_pp.tribute_active = 0;
+	}
+	
 	p_timers.Store();
 	
 //	printf("Dumping inventory on save:\n");
@@ -393,7 +402,7 @@ bool Client::Save(int8 iCommitNow) {
 		workpt.w2_3() = GetID();
 		workpt.b1() = DBA_b1_Entity_Client_Save;
 		DBAsyncWork* dbaw = new DBAsyncWork(MTdbafq, workpt, DBAsync::Write, 0xFFFFFFFF);
-		dbaw->AddQuery(iCommitNow == 0 ? true : false, &query, database.SetPlayerProfile_MQ(&query, account_id, character_id, &m_pp, &m_inv), false);
+		dbaw->AddQuery(iCommitNow == 0 ? true : false, &query, database.SetPlayerProfile_MQ(&query, account_id, character_id, &m_pp, &m_inv, &m_epp), false);
 		if (iCommitNow == 0){
 			pQueuedSaveWorkID = dbasync->AddWork(&dbaw, 2500);
 		}
@@ -404,7 +413,7 @@ bool Client::Save(int8 iCommitNow) {
 		safe_delete_array(query);
 		return true;
 	}
-	else if (database.SetPlayerProfile(account_id, character_id, &m_pp, &m_inv)) {
+	else if (database.SetPlayerProfile(account_id, character_id, &m_pp, &m_inv, &m_epp)) {
 		SaveBackup();
 	}
 	else {
@@ -881,7 +890,7 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 	
 	m_pp.expAA = set_aaxp;
 
-	int8 maxlevel = 66;
+	int8 maxlevel = LEVEL_CAP + 1;
 
 #ifdef RAIDADDICTS
 	maxlevel = raidaddicts.GetZoneLevel();
@@ -939,9 +948,6 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 }
 
 #ifndef GUILDWARS
-#ifndef WIN32
-	#warning The LDON stuff has moved in the player profile and needs to be rediscovered, I broke Client::GetLDoNPoints because of this
-#endif
 
 bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
 {
@@ -1106,6 +1112,12 @@ return;
 }
 }
 #endif
+	if(GetPetID() != 0 && zonename == 0) {
+		Mob *p = GetPet();
+		if(p != NULL) {
+			p->GMMove(x+15, y, z);	//so it dosent have to run across the map.
+		}
+	}
 	if (IsAIControlled() && zonename == 0) {
 		GMMove(x, y, z);
 		return;
@@ -1201,8 +1213,9 @@ void Client::SetLevel(int8 set_level, bool command)
 	lu->level_old = level;
 	level = set_level;
 
-	if(set_level > m_pp.level) // Yes I am aware that you could delevel yourself and relevel this is just to test!
-		m_pp.points += 5;
+	if(set_level > m_pp.level) { // Yes I am aware that you could delevel yourself and relevel this is just to test!
+		m_pp.points += 5 * (set_level - m_pp.level);
+	}
 
 	m_pp.level = set_level;
 	if (command){
@@ -2957,6 +2970,34 @@ void Client::Insight(int32 t_id)
 
 	Message(0,"Your target is a level %i %s. It appears %s and %s for its level. It seems %s",who->GetLevel(),GetEQClassName(who->GetClass(),1),dmg,hitpoints,resists);
 }
+
+void Client::ChangeSQLLog(const char *file) {
+	if(SQL_log != NULL) {
+		fclose(SQL_log);
+		SQL_log = NULL;
+	}
+	if(file != NULL) {
+		char buf[512];
+		snprintf(buf, 511, "%s%s", SQL_LOG_PATH, file);
+		buf[511] = '\0';
+		SQL_log = fopen(buf, "a");
+		if(SQL_log == NULL) {
+			Message(13, "Unable to open SQL log file: %s\n", strerror(errno));
+		}
+	}
+}
+
+void Client::LogSQL(const char *fmt, ...) {
+	if(SQL_log == NULL)
+		return;
+	
+	va_list argptr;
+	va_start(argptr, fmt);
+	vfprintf(SQL_log, fmt, argptr );
+	fputc('\n', SQL_log);
+	va_end(argptr);
+}
+
 
 
 

@@ -1,4 +1,5 @@
 #include "../common/types.h"
+#include "../zone/features.h"
 #include "../zone/faction.h"
 #include "../common/EMuShareMem.h"
 
@@ -15,5 +16,5 @@ struct MMFNPCFactionLists_Struct {
 
 bool	pDLLLoadNPCFactionLists(CALLBACK_DBLoadNPCFactionLists cbDBLoadNPCFactionLists, int32 iNPCFactionListStructSize, sint32* iNPCFactionListCount, int32* iMaxNPCFactionListID, int8 iMaxNPCFactions);
 bool	pAddNPCFactionList(uint32 id, const NPCFactionList* nfl);
-bool	pSetNPCFaction(int32 id, uint32* factionid, sint32* factionvalue);
+bool	pSetNPCFaction(int32 id, uint32* factionid, sint32* factionvalue, sint8 *factionnpcvalue);
 const NPCFactionList* pGetNPCFactionList(uint32 id);

@@ -19,6 +19,10 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "masterentity.h"
 #include "StringIDs.h"
 
+#ifdef EMBPERL
+#include "embparser.h"
+#endif
+
 // ##########################################
 // Trade implementation
 // ##########################################
@@ -336,7 +340,11 @@ void Client::FinishTrade(NPC* with){
 	
 	//dont bother with this crap unless we have a quest...
 	//pets never have quests...
+#ifdef EMBPERL
+	if(!with->GetOwner() && ((PerlembParser *)parse)->HasQuestSub(with->GetNPCTypeID(), "EVENT_ITEM")) {
+#else
 	if(!with->GetOwner() && parse->HasQuestFile(with->GetNPCTypeID())) {
+#endif
 		char temp1[100];
 		memset(temp1,0x0,100);
 		char temp2[100];
@@ -379,14 +387,8 @@ void Client::FinishTrade(NPC* with){
 //		Message(0, "Normal NPC: keeping items.");
 		
 		//else, we do not have a quest, give the items to the NPC
-	
-		LinkedListIterator<ServerLootItem_Struct*> iterator(*with->itemlist);
-		iterator.Reset();
-		int xy = 0;
-		while(iterator.MoreElements()) {
-			xy++;
-			iterator.Advance();
-		}
+		
+		int xy = with->CountLoot();
 		
 		for(int y=0; y < 4; y++) {
 			if (xy >= 20)
@@ -397,7 +399,7 @@ void Client::FinishTrade(NPC* with){
 			if (item2) { //no "no drop" items for j00!
 				//if was not no drop item, let the NPC have it
 				if(GetGM() || item2->NoDrop != 0)
-					with->AddLootDrop(item2, with->itemlist, charges[y], true, true);
+					with->AddLootDrop(item2, &with->itemlist, charges[y], true, true);
 				//else 
 				//	with->AddLootDrop(item2, NULL, charges[y], false, true);
 				

@@ -25,93 +25,7 @@
 
 #define BUFF_COUNT 20
 
-/*
-** Item packet types
-**
-*/
-enum ItemPacketType
-{
-	ItemPacketViewLink			= 0x00,
-	ItemPacketTradeView			= 0x65,
-	ItemPacketLoot				= 0x66,
-	ItemPacketTrade				= 0x67,
-	ItemPacketCharInventory		= 0x69,
-	ItemPacketSummonItem		= 0x6A,
-	ItemPacketMerchant			= 0x64,
-	ItemPacketWorldContainer	= 0x6B
-};
-
-/*
-** Item attributes
-**
-*/
-enum ItemAttrib
-{
-	ItemAttribLore			= (1 << 0),
-	ItemAttribArtifact		= (1 << 1),
-	ItemAttribSummoned		= (1 << 2),
-	ItemAttribMagic			= (1 << 3),
-	ItemAttribAugment		= (1 << 4),
-	ItemAttribPendingLore	= (1 << 5),
-	ItemAttribNone			= 0,
-	ItemAttribUnknown		= 0xFFFFFFFF
-};
-
-/*
-** Item types
-**
-*/
-enum ItemType
-{
-	ItemTypeCommon		= 0,
-	ItemTypeContainer	= 1,
-	ItemTypeBook		= 2
-};
-
-/*
-** Item uses
-**
-*/
-enum ItemUses
-{
-	ItemUse1HS			= 0,
-	ItemUse2HS			= 1,
-	ItemUsePierce		= 2,
-	ItemUse1HB			= 3,
-	ItemUse2HB			= 4,
-	ItemUseBow			= 5,
-	ItemUseThrowing		= 7,
-	ItemUseShield		= 8,
-	ItemUseArmor		= 10,
-	ItemUseUnknon		= 11,	//A lot of random crap has this item use.
-	ItemUseLockPick		= 12,
-	ItemUseFood			= 14,
-	ItemUseDrink		= 15,
-	ItemUseLightSource	= 16,
-	ItemUseStackable	= 17,	//Not all stackable items are this use...
-	ItemUseBandage		= 18,
-	ItemUseThrowingv2	= 19,
-	ItemUseSpell		= 20,	//spells and tomes
-	ItemUsePotion		= 21,
-	ItemUseWindInstr	= 23,
-	ItemUseStringInstr	= 24,
-	ItemUseBrassInstr	= 25,
-	ItemUseDrumInstr	= 26,
-	ItemUseArrow		= 27,
-	ItemUseJewlery		= 29,
-	ItemUseKey			= 33,
-	ItemUse2HPierce		= 35,
-	ItemUseFishingPole	= 36,
-	ItemUseFishingBait	= 37,
-	ItemUseAlcohol		= 38,
-	ItemUseCompass		= 40,
-	ItemUsePoison		= 42,	//might be wrong, but includes poisons
-	ItemUseHand2Hand	= 45,
-	ItemUseCharm		= 52,
-	ItemUseAugment		= 54,
-	ItemUseAugmentSolvent=55,
-	ItemUseAugmentDistill=56
-};
+#include "eq_constants.h"
 
 /*
 ** Compiler override to ensure
@@ -367,53 +281,6 @@ struct NewZone_Struct {
 /*0672*/	char	unknown672[8];
 };
 
-/*
-** New Zone Struct
-** Length: 576 Bytes
-** Last Updated: Jul-04-2003
-*/
-struct OLDZone_Struct {
-/*0000*/	char	char_name[64];			// Character Name
-/*0064*/	char	zone_short_name[32];	// Zone Short Name
-/*0096*/	char	zone_long_name[278];	// Zone Long Name
-/*0310*/	uint8	ztype;					// Zone type (usually FF)
-/*0311*/	uint8	fog_red[4];				// Zone fog (red)
-/*0315*/	uint8	fog_green[4];			// Zone fog (green)
-/*0319*/	uint8	fog_blue[4];			// Zone fog (blue)
-/*0374*/	uint8	unknown230[87];			// Unknown
-/*0474*/	uint8	sky;					// Sky Type
-/*0475*/	uint8	unknown331[13];			// ***Placeholder
-/*0488*/	float	zone_exp_multiplier;	// Experience Multiplier
-/*0492*/	float	safe_x;					// Zone Safe X (Not Inversed)
-/*0496*/	float	safe_y;					// Zone Safe Y (Not Inversed)
-/*0500*/	float	safe_z;					// Zone Safe Z
-/*0504*/	float	unknown0504;			// ***Placeholder
-/*0508*/	float	underworld;				// Underworld (Not Sure?)
-/*0512*/	float	minclip;
-	// Minimum View Distance
-/*0516*/	float	maxclip;				// Maximum View DIstance
-/*0520*/	int8	unknown_end[68];		// ***Placeholder
-/*0588*/
-};
-
-struct CFGNewZone_Struct {
-/*0000*/	char	char_name[64];			// Character Name
-/*0064*/	char	zone_short_name[32];	// Zone Short Name
-/*0096*/	char	zone_long_name[278];	// Zone Long Name
-/*0278*/	int8	unknown230[100];		// ***Placeholder
-/*0378*/	int8	sky;		  			// Sky Type
-/*0379*/	int8	unknown331[9];			// ***Placeholder
-/*0388*/	float	zone_exp_multiplier;	// Experience Multiplier
-/*0392*/	float	safe_x;					// Zone Safe X (Not Inversed)
-/*0396*/	float	safe_y;					// Zone Safe Y (Not Inversed)
-/*0400*/	float	safe_z;					// Zone Safe Z
-/*0404*/	float	unknown256;				// ***Placeholder
-/*0408*/	float	underworld;				// Underworld (Not Sure?)
-/*0412*/	float	minclip;				// Minimum View Distance
-/*0416*/	float	maxclip;				// Maximum View DIstance
-/*0420*/	int8	unknown_end[56];		// ***Placeholder
-};
-
 struct Discipline_Struct {
 /*0000*/	int8 unknown0000[4];
 /*0004*/	char  charname[64];
@@ -439,43 +306,7 @@ int32 slot;     // Spot in the spell book/memorized slot
 int32 spell_id; // Spell id (200 or c8 is minor healing, etc) 
 int32 scribing; // 1 if memorizing a spell, set to 0 if scribing to book, 2 if un-memming
 int32 unknown12;
-}; 
-
-/*
-** Spell Cast On Struct
-** Length: 36 Bytes
-**
-*/
-#if 0	// solar: see Action_Struct and CombatDamage_Struct
-struct CastOn_Struct {
-
-/*00*/	int16	target_id;
-/*02*/	int16	source_id;
-/*04*/	int8	source_level;
-/*05*/	int8	unknown1;
-/*06*/	int8	unknown2; // = 0A
-/*07*/	int8	unknown_zero1[7];
-/*16*/	float	heading;
-/*20*/	int8	unknown_zero2[4];
-/*22*/	int32	action;
-/*26*/	int8	unknown3;
-/*27*/	int16	spell_id;
-/*29*/	int8	unknown29;
-/*30*/	int8	unknown30; //always 04??
 };
-struct CastBuff_Struct{
-/*00*/	int16	target_id;
-/*02*/	int16	source_id;
-/*04*/	int8	unknown4; //always E7??
-/*05*/	int16	spell_id; //always E7??
-/*07*/	sint32	damage;
-/*11*/	int8	unknown_zero7[4];
-/*17*/	float	heading2;
-/*21*/	int8	unknown_zero21[4];
-};
-#endif
-
-
 
 /*
 ** Make Charmed Pet
@@ -529,19 +360,6 @@ struct BeginCast_Struct
 /*004*/	int32	cast_time;		// in miliseconds
 };
 
-#if 0 // solar: this is some old stuff
-struct _Buff_Struct
-{
-/*000*/uint32 target_id;
-/*004*/uint32 b_unknown1;
-/*008*/uint16 spell_id;
-/*010*/uint32 b_unknown2;
-/*014*/uint16 b_unknown3;
-/*016*/uint32 buff_slot;
-/*020*/
-};
-#endif
-
 struct CastSpell_Struct
 {
 	int32	slot;
@@ -550,35 +368,6 @@ struct CastSpell_Struct
 	int32	target_id;
 	int8    cs_unknown[4];
 };
-
-#define AT_Die				0	// this causes the client to keel over and zone to bind point
-#define AT_WhoLevel		1	// the level that shows up on /who
-#define AT_Invis			3	// 0 = visible, 1 = invisible
-#define AT_PVP				4	// 0 = blue, 1 = pvp (red)
-#define AT_Light			5	// light type emitted by player (lightstone, shiny shield)
-#define AT_Anim				14	// 100=standing, 110=sitting, 111=ducking, 115=feigned, 105=looting
-#define AT_Sneak			15	// 0 = normal, 1 = sneaking
-#define AT_SpawnID		16	// server to client, sets player spawn id
-#define AT_HP					17	// Client->Server, my HP has changed (like regen tic)
-#define AT_Linkdead		18	// 0 = normal, 1 = linkdead
-#define AT_Levitate		19	// 0=off, 1=flymode, 2=levitate
-#define AT_GM					20	// 0 = normal, 1 = GM - all odd numbers seem to make it GM
-#define AT_Anon				21	// 0 = normal, 1 = anon, 2 = roleplay
-#define AT_GuildID		22
-#define AT_GuildRank	23	// 0=member, 1=officer, 2=leader
-#define AT_AFK				24	// 0 = normal, 1 = afk
-#define AT_Split			28	// 0 = normal, 1 = autosplit on
-#define AT_Size				29	// spawn's size
-#define AT_NPCName		31	// change PC's name's color to NPC color 0 = normal, 1 = npc name
-//#define AT_Trader			300  // Bazzar Trader Mode
-
-// solar: animations for AT_Anim
-#define ANIM_FREEZE	102
-#define	ANIM_STAND		0x64
-#define	ANIM_SIT		0x6e
-#define	ANIM_CROUCH		0x6f
-#define	ANIM_DEATH		0x73
-#define ANIM_LOOT		0x69
 
 /*
 ** SpawnAppearance_Struct
@@ -596,7 +385,6 @@ struct SpawnAppearance_Struct
 };
 
 
-#if 1
 // solar: this is used inside profile
 struct SpellBuff_Struct
 {
@@ -609,16 +397,6 @@ struct SpellBuff_Struct
 /*010*/ int8	poisoncounters;
 /*012*/	int8	Unknown012[2];
 };
-#else
-struct SpellBuff_Struct
-{
-/*000*/	int8  b_unknown1[5];		// ***Placeholder
-/*005*/	int8  level;				// Level of person who casted buff
-/*006*/	int16  effect;				// ***Placeholder
-/*008*/	int32 spellid;				// Spell
-/*0012*/	int32 duration;				// Duration in ticks
-};
-#endif
 
 // Length: 24
 struct SpellBuffFade_Struct {
@@ -680,29 +458,6 @@ struct ConsentResponse_Struct {
 	int8 permission;
 	char zonename[32];
 };
-/* 
-** Diety List
-*/
-#define DEITY_UNKNOWN			0
-#define DEITY_AGNOSTIC			396
-#define DEITY_BRELL				202
-#define DEITY_CAZIC				203
-#define DEITY_EROL				204
-#define DEITY_BRISTLE			205
-#define DEITY_INNY				206
-#define DEITY_KARANA			207
-#define DEITY_MITH				208
-#define DEITY_PREXUS			209
-#define DEITY_QUELLIOUS			210
-#define DEITY_RALLOS			211
-#define DEITY_SOLUSEK			213
-#define DEITY_TRIBUNAL			214
-#define DEITY_TUNARE			215
-
-//Guessed:
-#define DEITY_BERT				201	
-#define DEITY_RODCET			212
-#define DEITY_VEESHAN			216
 
 /*
 ** Name Generator Struct
@@ -780,6 +535,13 @@ struct AA_Array
 
 struct Disciplines_Struct {
 	uint32 values[MAX_PP_DISCIPLINES];
+};
+
+#define MAX_PLAYER_TRIBUTES 5
+#define TRIBUTE_NONE 0xFFFFFFFF
+struct Tribute_Struct {
+	uint32 tribute;
+	uint32 tier;
 };
 
 
@@ -912,15 +674,19 @@ struct PlayerProfile_Struct
 /*4540*/	uint32				zone_id;			// Current zone of the player
 /*4544*/	SpellBuff_Struct	buffs[BUFF_COUNT];			// Buffs currently on the player
 /*4864*/	char 				groupMembers[6][64];		//
-		//hack variables for pet conservation, prolly not valid
-/*5248*/	int16				pet_id;
-/*5250*/	int16				pet_hp;
-/*5252*/	uint32				aa_effects;	//another hack, need it somewhere...
+/*5248*/	int32				unknown5248;
+/*5252*/	uint32				unknown5252;
 /*5256*/	uint32				unknown4380[11];	//one word became pet stuff above
-/*5300*/	uint32				unknown4460[166];
-/*5964*/	uint32				unknown5760; //0xFF FF FF FF
-/*5968*/	uint32				unknown5968[15];
-/*6028*/	uint32				adventure_id; //not sure.
+/*5300*/	uint32				adventure_id;		//this is WRONG!
+/*5304*/	uint32				unknown4460[165];
+/*5964*/	uint32				tribute_time_remaining;	//in miliseconds
+/*5968*/	uint32				unknown5968;
+/*5972*/	uint32				career_tribute_points;
+/*5976*/	uint32				unknown5976;
+/*5980*/	uint32				tribute_points;
+/*5984*/	uint32				unknown5984;
+/*5988*/	uint32				tribute_active;		//1=active
+/*5992*/	Tribute_Struct		tributes[MAX_PLAYER_TRIBUTES];
 /*6032*/	Disciplines_Struct	disciplines;			//fathernitwit: 10-06-04
 /*6232*/	uint32				unknown5764[130];
 /*6752*/	uint32				air_remaining;
@@ -929,1008 +695,6 @@ struct PlayerProfile_Struct
 /*11368*/	uint32				unknown11368;
 /*11372*/	uint32				aapoints;
 /*11376*/	uint32				unknown11376[10];
-};
-struct Before_Sep14th_PlayerProfile_Struct
-{
-/*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
-/*0004*/	char				name[64];			// Name of player sizes not right
-/*0068*/	char				last_name[32];		// Last name of player sizes not right
-/*0100*/	uint32				gender;				// Player Gender - 0 Male, 1 Female
-/*0104*/	uint32				race;				// Player race
-/*0108*/	uint32				class_;				// Player class
-/*0112*/	uint32				unknown0112;		//
-/*0116*/	uint32				level;				// Level of player (might be one byte)
-/*0120*/	uint32				bind_zone_id;		// Zone player is bound in
-/*0124*/	float				bind_x;				// Bind loc x coord
-/*0128*/	float				bind_y;				// Bind loc y coord
-/*0132*/	float				bind_z;				// Bind loc z coord
-/*0136*/	uint8				unknown0136[4];		//
-/*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
-/*0148*/	uint32				birthday;			// characters bday
-/*0152*/	uint32				lastlogin;			// last login or zone time
-/*0156*/	uint32				timeplayed;			// in minutes
-/*0160*/	uint8				fatigue;			// Sta bar % depleted (ie, 30 = 70% sta)
-/*0161*/	uint8				pvp;
-/*0162*/	uint8				unknown162;
-/*0163*/	uint8				gm;				// 1=gm, 0=not gm
-/*0164*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
-/*0165*/	uint8				guildrank;					
-/*0166*/	uint8				unknown0165[42];	//
-/*0208*/	uint8				ability_time_seconds;
-/*0209*/	uint8				ability_number; //ability used
-/*0210*/	uint8				ability_time_minutes;
-/*0211*/	uint8				ability_time_hours;//place holder
-/*0212*/	uint8				haircolor;			// Player hair color
-/*0213*/	uint8				beardcolor;			// Player beard color
-/*0214*/	uint8				eyecolor1;			// Player left eye color
-/*0215*/	uint8				eyecolor2;			// Player right eye color
-/*0216*/	uint8				hairstyle;			// Player hair style
-/*0217*/	uint8				beard;				// Beard type
-
-/*0218*/	uint8				unknown0218[2];		// @bp Spacer/Flag?
-/*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
-/*0256*/	uint8				unknown0256[52];
-/*0308*/	Color_Struct		item_tint[9];
-/*0344*/	AA_Array			aa_array[120];
-/*1304*/	char				servername[64];		// length probably not right
-/*1368*/	uint32				guildid2;		//
-/*1372*/	uint32				exp;				// Current Experience
-/*1376*/	uint32				points;				// Unspent Practice points
-/*1380*/	uint32				mana;				// current mana
-/*1384*/	uint32				cur_hp;				// current hp
-/*1388*/	uint32				unknown0672;		// 0x05
-/*1392*/	uint32				STR;				// Strength
-/*1396*/	uint32				STA;				// Stamina
-/*1400*/	uint32				CHA;				// Charisma
-/*1404*/	uint32				DEX;				// Dexterity
-/*1408*/	uint32				INT;				// Intelligence
-/*1412*/	uint32				AGI;				// Agility
-/*1416*/	uint32				WIS;				// Wisdom
-/*1420*/	uint8				face;				// Player face
-/*1421*/	uint8				unknown0705[11];	// ?
-/*1432*/	int32				unknown712[9];		// RR GG BB 00
-/*1468*/	uint8				languages[MAX_PP_LANGUAGE];
-/*1496*/	uint8				unknown0780[4];		// All 0x00
-/*1500*/	int32				spell_book[MAX_PP_SPELLBOOK];
-/*3100*/	uint8				unknown2384[448];	// all 0xff   
-/*3548*/	int32				mem_spells[MAX_PP_MEMSPELL];
-/*3580*/	uint8				unknown2864[32];	//
-/*3612*/	uint32				unknown2896;		//
-/*3616*/	float				y;					// Player y position
-/*3620*/	float				x;					// Player x position
-/*3624*/	float				z;					// Player z position
-/*3628*/	float				heading;			// Direction player is facing
-/*3632*/	uint8				unknown2909[4];		//
-/*3636*/	sint32				platinum;			// Platinum Pieces on player
-/*3640*/	sint32				gold;				// Gold Pieces on player
-/*3644*/	sint32				silver;				// Silver Pieces on player
-/*3648*/	sint32				copper;				// Copper Pieces on player
-/*3652*/	sint32				platinum_bank;		// Platinum Pieces in Bank
-/*3656*/	sint32				gold_bank;			// Gold Pieces in Bank
-/*3660*/	sint32				silver_bank;		// Silver Pieces in Bank
-/*3664*/	sint32				copper_bank;		// Copper Pieces in Bank
-/*3668*/	sint32				platinum_cursor;	// Platinum on cursor
-/*3672*/	sint32				gold_cursor;		// Gold on cursor
-/*3676*/	sint32				silver_cursor;		// Silver on cursor
-/*3680*/	sint32				copper_cursor;		// Copper on cursor
-/*3684*/	sint32				platinum_shared;	// Platinum shared between characters
-/*3688*/	uint8				unknown2972[16];   	// @bp unknown skills?
-/*3708*/	uint32				skills[MAX_PP_SKILL];
-/*4008*/	uint32				unknown_skills[44];	// @bp unknown skills?
-/*4188*/	uint8				unknown3472[96];	//
-/*4276*/	uint32				perAA;				// % on the AA exp bar
-/*4280*/	uint8				unknown3564[12];	//28
-/*4292*/	uint8				pvp2;	//
-/*4293*/	uint8				unknown3591[15];	//
-/*4308*/	uint32				zone_change_count;	// Number of times user has zoned in their career (guessing)
-/*4312*/	uint8				unknown3596[20];	//
-/*4332*/	int32				ability_down;
-/*4336*/	uint8				unknown3620[20];	//
-/*4356*/	int32				expAA;
-/*4360*/	int32				unknown3644;
-/*4364*/	int32				expansion;		// expansion setting
-/*4368*/	sint32				unknown3648;
-/*4372*/	char				unknown3656[16];	//
-/*4388*/	sint32				hunger_level;
-/*4392*/	sint32				thirst_level;
-/*4396*/	int32				ability_up;
-/*4400*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
-/*4404*/	char				unknown3688[12];				
-/*4416*/	uint32				zone_id;			// Current zone of the player
-/*4420*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
-/*4660*/	char 				groupMembers[6][64];		//
-/*5044*/	uint8				unknown4328[4]; 		//
-/*5048*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
-/*5052*/	uint32				ldon_mirugal_points;		// Earned Mirugal' Mebagerie points - Verified by Doodman
-/*5056*/	uint32				ldon_mistmoore_points;		// Earned Mismoore Catacombs Points - Verified by Doodman
-/*5060*/	uint32				ldon_rujarkian_points;		// Earned Rujarkian Hills points - Verified by Doodman
-/*5064*/	uint32				ldon_takish_points;		// Earned Takish points - Doodman: guessing based on others that were known
-/*5068*/	uint8				unknown4352[24]; 		//
-/*5092*/	uint32				ldon_available_points;		// Earned Rujarkian Hills points - Verified
-/*5096*/	uint32				unknown4380[20];
-/*5176*/	uint32				unknown4460[146];
-/*5760*/	uint32				unknown5760; //0xFF FF FF FF
-/*5764*/	uint32				unknown5764[1339]; //added in last patch, crazy bastards
-};
-struct Before_Aug13th_PlayerProfile_Struct
-{
-/*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
-/*0004*/	char				name[64];			// Name of player sizes not right
-/*0068*/	char				last_name[32];		// Last name of player sizes not right
-/*0100*/	uint32				gender;				// Player Gender - 0 Male, 1 Female
-/*0104*/	uint32				race;				// Player race
-/*0108*/	uint32				class_;				// Player class
-/*0112*/	uint32				unknown0112;		//
-/*0116*/	uint32				level;				// Level of player (might be one byte)
-/*0120*/	uint32				bind_zone_id;		// Zone player is bound in
-/*0124*/	float				bind_x;				// Bind loc x coord
-/*0128*/	float				bind_y;				// Bind loc y coord
-/*0132*/	float				bind_z;				// Bind loc z coord
-/*0136*/	uint8				unknown0136[4];		//
-/*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
-/*0148*/	uint32				birthday;			// characters bday
-/*0152*/	uint32				lastlogin;			// last login or zone time
-/*0156*/	uint32				timeplayed;			// in minutes
-/*0160*/	uint8				fatigue;			// Sta bar % depleted (ie, 30 = 70% sta)
-/*0161*/	uint8				pvp;
-/*0162*/	uint8				unknown162;
-/*0163*/	uint8				gm;				// 1=gm, 0=not gm
-/*0164*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
-/*0165*/	uint8				guildrank;					
-/*0166*/	uint8				unknown0165[42];	//
-/*0208*/	uint8				ability_time_seconds;
-/*0209*/	uint8				ability_number; //ability used
-/*0210*/	uint8				ability_time_minutes;
-/*0211*/	uint8				ability_time_hours;//place holder
-/*0212*/	uint8				haircolor;			// Player hair color
-/*0213*/	uint8				beardcolor;			// Player beard color
-/*0214*/	uint8				eyecolor1;			// Player left eye color
-/*0215*/	uint8				eyecolor2;			// Player right eye color
-/*0216*/	uint8				hairstyle;			// Player hair style
-/*0217*/	uint8				beard;				// Beard type
-
-/*0218*/	uint8				unknown0218[2];		// @bp Spacer/Flag?
-/*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
-/*0256*/	uint8				unknown0256[52];
-/*0308*/	Color_Struct		item_tint[9];
-/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
-
-
-/*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
-/*0656*/	uint32				exp;				// Current Experience
-/*0660*/	uint32				points;				// Unspent Practice points
-/*0664*/	uint32				mana;				// current mana
-/*0668*/	uint32				cur_hp;				// current hp
-/*0672*/	uint32				unknown0672;		// 0x05
-/*0676*/	uint32				STR;				// Strength
-/*0680*/	uint32				STA;				// Stamina
-/*0684*/	uint32				CHA;				// Charisma
-/*0688*/	uint32				DEX;				// Dexterity
-/*0692*/	uint32				INT;				// Intelligence
-/*0696*/	uint32				AGI;				// Agility
-/*0700*/	uint32				WIS;				// Wisdom
-/*0704*/	uint8				face;				// Player face
-/*0705*/	uint8				unknown0705[11];	// ?
-/*0716*/	int32				unknown712[9];		// RR GG BB 00
-/*0752*/	uint8				languages[MAX_PP_LANGUAGE];
-/*0780*/	uint8				unknown0780[4];		// All 0x00
-/*0784*/	int32				spell_book[MAX_PP_SPELLBOOK];
-/*2384*/	uint8				unknown2384[448];	// all 0xff   
-/*2832*/	int32				mem_spells[MAX_PP_MEMSPELL];
-/*2864*/	uint8				unknown2864[32];	//
-/*2896*/	uint32				unknown2896;		//
-/*2900*/	float				y;					// Player y position
-/*2904*/	float				x;					// Player x position
-/*2908*/	float				z;					// Player z position
-/*2912*/	float				heading;			// Direction player is facing
-/*2916*/	uint8				unknown2909[4];		//
-/*2920*/	sint32				platinum;			// Platinum Pieces on player
-/*2924*/	sint32				gold;				// Gold Pieces on player
-/*2928*/	sint32				silver;				// Silver Pieces on player
-/*2932*/	sint32				copper;				// Copper Pieces on player
-/*2936*/	sint32				platinum_bank;		// Platinum Pieces in Bank
-/*2940*/	sint32				gold_bank;			// Gold Pieces in Bank
-/*2944*/	sint32				silver_bank;		// Silver Pieces in Bank
-/*2948*/	sint32				copper_bank;		// Copper Pieces in Bank
-/*2952*/	sint32				platinum_cursor;	// Platinum on cursor
-/*2956*/	sint32				gold_cursor;		// Gold on cursor
-/*2960*/	sint32				silver_cursor;		// Silver on cursor
-/*2964*/	sint32				copper_cursor;		// Copper on cursor
-/*2968*/	sint32				platinum_shared;	// Platinum shared between characters
-/*2972*/	uint8				unknown2972[16];   	// @bp unknown skills?
-/*2992*/	uint32				skills[MAX_PP_SKILL];
-/*3288*/	uint32				unknown_skills[46];	// @bp unknown skills?
-/*3472*/	uint8				unknown3472[88];	//
-/*3560*/	uint32				perAA;				// % on the AA exp bar
-/*3564*/	uint8				unknown3564[12];	//28
-/*3576*/	uint8				pvp2;	//
-/*3591*/	uint8				unknown3591[15];	//
-/*3592*/	uint32				zone_change_count;	// Number of times user has zoned in their career (guessing)
-/*3596*/	uint8				unknown3596[20];	//
-/*3616*/	int32				ability_down;
-/*3620*/	uint8				unknown3620[20];	//
-/*3640*/	int32				expAA;
-/*3644*/	int32				unknown3644;
-/*3648*/	int32				expansion;		// expansion setting
-/*3652*/	sint32				unknown3648;
-/*3656*/	char				unknown3656[16];	//
-/*3672*/	sint32				hunger_level;
-/*3676*/	sint32				thirst_level;
-/*3680*/	int32				ability_up;
-/*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
-/*3688*/	char				unknown3688[12];				
-/*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
-/*3944*/	char 				groupMembers[6][64];		//
-/*4328*/	uint8				unknown4328[4]; 		//
-/*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
-/*4336*/	uint32				ldon_mirugal_points;		// Earned Mirugal' Mebagerie points - Verified by Doodman
-/*4340*/	uint32				ldon_mistmoore_points;		// Earned Mismoore Catacombs Points - Verified by Doodman
-/*4344*/	uint32				ldon_rujarkian_points;		// Earned Rujarkian Hills points - Verified by Doodman
-/*4348*/	uint32				ldon_takish_points;		// Earned Takish points - Doodman: guessing based on others that were known
-/*4352*/	uint8				unknown4352[24]; 		//
-/*4376*/	uint32				ldon_available_points;		// Earned Rujarkian Hills points - Verified
-/*4380*/	uint32				unknown4380[20];
-/*4460*/	uint32				unknown4460[146];
-/*5044*/	uint32				unknown5040; //0xFF FF FF FF
-/*5048*/	uint32				unknown4384[132];
-/*5576*/	uint32				unknown4644[46];
-/*5760*/	uint32				unknown5760[1160]; //added in last patch, crazy bastards
-};
-struct PlayerProfile_Struct_Before_May26th
-{
-/*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
-/*0004*/	char				name[64];			// Name of player sizes not right
-/*0068*/	char				last_name[32];		// Last name of player sizes not right
-/*0100*/	uint32				gender;				// Player Gender - 0 Male, 1 Female
-/*0104*/	uint32				race;				// Player race
-/*0108*/	uint32				class_;				// Player class
-/*0112*/	uint32				unknown0112;		//
-/*0116*/	uint32				level;				// Level of player (might be one byte)
-/*0120*/	uint32				bind_zone_id;		// Zone player is bound in
-/*0124*/	float				bind_x;				// Bind loc x coord
-/*0128*/	float				bind_y;				// Bind loc y coord
-/*0132*/	float				bind_z;				// Bind loc z coord
-/*0136*/	uint8				unknown0136[4];		//
-/*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
-/*0148*/	uint32				birthday;			// characters bday
-/*0152*/	uint32				lastlogin;			// last login or zone time
-/*0156*/	uint32				timeplayed;			// in minutes
-/*0160*/	uint8				fatigue;			// Sta bar % depleted (ie, 30 = 70% sta)
-/*0161*/	uint8				pvp;
-/*0162*/	uint8				unknown162;
-/*0163*/	uint8				gm;				// 1=gm, 0=not gm
-/*0164*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
-/*0165*/	uint8				guildrank;					
-/*0166*/	uint8				unknown0165[42];	//
-/*0208*/	uint8				ability_time_seconds;
-/*0209*/	uint8				ability_number; //ability used
-/*0210*/	uint8				ability_time_minutes;
-/*0211*/	uint8				ability_time_hours;//place holder
-/*0212*/	uint8				haircolor;			// Player hair color
-/*0213*/	uint8				beardcolor;			// Player beard color
-/*0214*/	uint8				eyecolor1;			// Player left eye color
-/*0215*/	uint8				eyecolor2;			// Player right eye color
-/*0216*/	uint8				hairstyle;			// Player hair style
-/*0217*/	uint8				beard;				// Beard type
-
-/*0218*/	uint8				unknown0218[2];		// @bp Spacer/Flag?
-/*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
-/*0256*/	uint8				unknown0256[52];
-/*0308*/	Color_Struct		item_tint[9];
-/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
-
-/*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
-/*0656*/	uint32				exp;				// Current Experience
-/*0660*/	uint32				points;				// Unspent Practice points
-/*0664*/	uint32				mana;				// current mana
-/*0668*/	uint32				cur_hp;				// current hp
-/*0672*/	uint32				unknown0672;		// 0x05
-/*0676*/	uint32				STR;				// Strength
-/*0680*/	uint32				STA;				// Stamina
-/*0684*/	uint32				CHA;				// Charisma
-/*0688*/	uint32				DEX;				// Dexterity
-/*0692*/	uint32				INT;				// Intelligence
-/*0696*/	uint32				AGI;				// Agility
-/*0700*/	uint32				WIS;				// Wisdom
-/*0704*/	uint8				face;				// Player face
-/*0705*/	uint8				unknown0705[11];	// ?
-/*0716*/	int32				unknown712[9];		// RR GG BB 00
-/*0752*/	uint8				languages[MAX_PP_LANGUAGE];
-/*0780*/	uint8				unknown0780[4];		// All 0x00
-/*0784*/	int32				spell_book[MAX_PP_SPELLBOOK];
-/*2384*/	uint8				unknown2384[448];	// all 0xff   
-/*2832*/	int32				mem_spells[MAX_PP_MEMSPELL];
-/*2864*/	uint8				unknown2864[32];	//
-/*2896*/	uint32				unknown2896;		//
-/*2900*/	float				y;					// Player y position
-/*2904*/	float				x;					// Player x position
-/*2908*/	float				z;					// Player z position
-/*2912*/	float				heading;			// Direction player is facing
-/*2916*/	uint8				unknown2909[4];		//
-/*2920*/	sint32				platinum;			// Platinum Pieces on player
-/*2924*/	sint32				gold;				// Gold Pieces on player
-/*2928*/	sint32				silver;				// Silver Pieces on player
-/*2932*/	sint32				copper;				// Copper Pieces on player
-/*2936*/	sint32				platinum_bank;		// Platinum Pieces in Bank
-/*2940*/	sint32				gold_bank;			// Gold Pieces in Bank
-/*2944*/	sint32				silver_bank;		// Silver Pieces in Bank
-/*2948*/	sint32				copper_bank;		// Copper Pieces in Bank
-/*2952*/	sint32				platinum_cursor;	// Platinum on cursor
-/*2956*/	sint32				gold_cursor;		// Gold on cursor
-/*2960*/	sint32				silver_cursor;		// Silver on cursor
-/*2964*/	sint32				copper_cursor;		// Copper on cursor
-/*2968*/	sint32				platinum_shared;	// Platinum shared between characters
-/*2972*/	uint8				unknown2972[16];   	// @bp unknown skills?
-/*2992*/	uint32				skills[MAX_PP_SKILL];
-/*3288*/	uint32				unknown_skills[46];	// @bp unknown skills?
-/*3472*/	uint8				unknown3472[88];	//
-/*3560*/	uint32				perAA;				// % on the AA exp bar
-/*3564*/	uint8				unknown3564[12];	//28
-/*3576*/	uint8				pvp2;	//
-/*3591*/	uint8				unknown3591[15];	//
-/*3592*/	uint32				zone_change_count;	// Number of times user has zoned in their career (guessing)
-/*3596*/	uint8				unknown3596[20];	//
-/*3616*/	int32				ability_down;
-/*3620*/	uint8				unknown3620[20];	//
-/*3640*/	int32				expAA;
-/*3644*/	int32				unknown3644;
-/*3648*/	int32				expansion;		// expansion setting
-/*3652*/	sint32				unknown3648;
-/*3656*/	char				unknown3656[16];	//
-/*3672*/	sint32				hunger_level;
-/*3676*/	sint32				thirst_level;
-/*3680*/	int32				ability_up;
-/*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
-/*3688*/	char				unknown3688[12];				
-/*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
-/*3944*/	char 				groupMembers[6][64];		//
-/*4328*/	uint8				unknown4328[4]; 		//
-/*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
-/*4336*/	uint32				ldon_mirugal_points;		// Earned Mirugal' Mebagerie points - Verified by Doodman
-/*4340*/	uint32				ldon_mistmoore_points;		// Earned Mismoore Catacombs Points - Verified by Doodman
-/*4344*/	uint32				ldon_rujarkian_points;		// Earned Rujarkian Hills points - Verified by Doodman
-/*4348*/	uint32				ldon_takish_points;		// Earned Takish points - Doodman: guessing based on others that were known
-/*4352*/	uint8				unknown4352[24]; 		//
-/*4376*/	uint32				ldon_available_points;		// Earned Rujarkian Hills points - Verified
-/*4380*/	uint32				unknown4380[20];
-/*4460*/	uint32				unknown4460[146];
-/*5044*/	uint32				unknown5040; //0xFF FF FF FF
-/*5048*/	uint32				unknown4384[132];
-/*5576*/	uint32				unknown4644[46];
-/*5760*/	uint32				unknown5760[1158]; //added in last patch, crazy bastards
-};
-struct BeforeMay5th_PlayerProfile_Struct
-{
-/*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
-/*0004*/	char				name[64];			// Name of player sizes not right
-/*0068*/	char				last_name[32];		// Last name of player sizes not right
-/*0100*/	uint32				gender;				// Player Gender - 0 Male, 1 Female
-/*0104*/	uint32				race;				// Player race
-/*0108*/	uint32				class_;				// Player class
-/*0112*/	uint32				unknown0112;		//
-/*0116*/	uint32				level;				// Level of player (might be one byte)
-/*0120*/	uint32				bind_zone_id;		// Zone player is bound in
-/*0124*/	float				bind_x;				// Bind loc x coord
-/*0128*/	float				bind_y;				// Bind loc y coord
-/*0132*/	float				bind_z;				// Bind loc z coord
-/*0136*/	uint8				unknown0136[4];		//
-/*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
-/*0148*/	uint32				birthday;			// characters bday
-/*0152*/	uint32				lastlogin;			// last login or zone time
-/*0156*/	uint32				timeplayed;			// in minutes
-/*0160*/	uint8				fatigue;			// Sta bar % depleted (ie, 30 = 70% sta)
-/*0161*/	uint8				pvp;
-/*0162*/	uint8				unknown162;
-/*0163*/	uint8				gm;				// 1=gm, 0=not gm
-/*0164*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
-/*0165*/	uint8				guildrank;					
-/*0166*/	uint8				unknown0165[42];	//
-/*0208*/	uint8				ability_time_seconds;
-/*0209*/	uint8				ability_number; //ability used
-/*0210*/	uint8				ability_time_minutes;
-/*0211*/	uint8				ability_time_hours;//place holder
-/*0212*/	uint8				haircolor;			// Player hair color
-/*0213*/	uint8				beardcolor;			// Player beard color
-/*0214*/	uint8				eyecolor1;			// Player left eye color
-/*0215*/	uint8				eyecolor2;			// Player right eye color
-/*0216*/	uint8				hairstyle;			// Player hair style
-/*0217*/	uint8				beard;				// Beard type
-
-/*0218*/	uint8				unknown0218[2];		// @bp Spacer/Flag?
-/*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
-/*0256*/	uint8				unknown0256[52];
-/*0308*/	Color_Struct		item_tint[9];
-/*0344*/	int16			aa_array[122];		// Length may not be right but i assume no class has more than this
-
-/*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
-/*0656*/	uint32				exp;				// Current Experience
-/*0660*/	uint32				points;				// Unspent Practice points
-/*0664*/	uint32				mana;				// current mana
-/*0668*/	uint32				cur_hp;				// current hp
-/*0672*/	uint32				unknown0672;		// 0x05
-/*0676*/	uint32				STR;				// Strength
-/*0680*/	uint32				STA;				// Stamina
-/*0684*/	uint32				CHA;				// Charisma
-/*0688*/	uint32				DEX;				// Dexterity
-/*0692*/	uint32				INT;				// Intelligence
-/*0696*/	uint32				AGI;				// Agility
-/*0700*/	uint32				WIS;				// Wisdom
-/*0704*/	uint8				face;				// Player face
-/*0705*/	uint8				unknown0705[11];	// ?
-/*0716*/	int32				unknown712[9];		// RR GG BB 00
-/*0752*/	uint8				languages[MAX_PP_LANGUAGE];
-/*0780*/	uint8				unknown0780[4];		// All 0x00
-/*0784*/	int32				spell_book[MAX_PP_SPELLBOOK];
-/*2384*/	uint8				unknown2384[448];	// all 0xff   
-/*2832*/	int32				mem_spells[MAX_PP_MEMSPELL];
-/*2864*/	uint8				unknown2864[32];	//
-/*2896*/	uint32				unknown2896;		//
-/*2900*/	float				y;					// Player y position
-/*2904*/	float				x;					// Player x position
-/*2908*/	float				z;					// Player z position
-/*2912*/	float				heading;			// Direction player is facing
-/*2916*/	uint8				unknown2909[4];		//
-/*2920*/	sint32				platinum;			// Platinum Pieces on player
-/*2924*/	sint32				gold;				// Gold Pieces on player
-/*2928*/	sint32				silver;				// Silver Pieces on player
-/*2932*/	sint32				copper;				// Copper Pieces on player
-/*2936*/	sint32				platinum_bank;		// Platinum Pieces in Bank
-/*2940*/	sint32				gold_bank;			// Gold Pieces in Bank
-/*2944*/	sint32				silver_bank;		// Silver Pieces in Bank
-/*2948*/	sint32				copper_bank;		// Copper Pieces in Bank
-/*2952*/	sint32				platinum_cursor;	// Platinum on cursor
-/*2956*/	sint32				gold_cursor;		// Gold on cursor
-/*2960*/	sint32				silver_cursor;		// Silver on cursor
-/*2964*/	sint32				copper_cursor;		// Copper on cursor
-/*2968*/	sint32				platinum_shared;	// Platinum shared between characters
-/*2972*/	uint8				unknown2972[16];   	// @bp unknown skills?
-/*2992*/	uint32				skills[MAX_PP_SKILL];
-/*3288*/	uint32				unknown_skills[46];	// @bp unknown skills?
-/*3472*/	uint8				unknown3472[88];	//
-/*3560*/	uint32				perAA;				// % on the AA exp bar
-/*3564*/	uint8				unknown3564[12];	//28
-/*3576*/	uint8				pvp2;	//
-/*3591*/	uint8				unknown3591[15];	//
-/*3592*/	uint32				zone_change_count;	// Number of times user has zoned in their career (guessing)
-/*3596*/	uint8				unknown3596[20];	//
-/*3616*/	int32				ability_down;
-/*3620*/	uint8				unknown3620[20];	//
-/*3640*/	int32				expAA;
-/*3644*/	int32				unknown3644;
-/*3648*/	int32				expansion;		// expansion setting
-/*3652*/	sint32				unknown3648;
-/*3656*/	char				unknown3656[16];	//
-/*3672*/	sint32				hunger_level;
-/*3676*/	sint32				thirst_level;
-/*3680*/	int32				ability_up;
-/*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
-/*3688*/	char				unknown3688[12];				
-/*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
-/*3944*/	char 				groupMembers[6][64];		//
-/*4328*/	uint8				unknown4328[4]; 		//
-/*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
-/*4336*/	uint32				ldon_mirugal_points;		// Earned Mirugal' Mebagerie points - Verified by Doodman
-/*4340*/	uint32				ldon_mistmoore_points;		// Earned Mismoore Catacombs Points - Verified by Doodman
-/*4344*/	uint32				ldon_rujarkian_points;		// Earned Rujarkian Hills points - Verified by Doodman
-/*4348*/	uint32				ldon_takish_points;		// Earned Takish points - Doodman: guessing based on others that were known
-/*4352*/	uint8				unknown4352[24]; 		//
-/*4376*/	uint32				ldon_available_points;		// Earned Rujarkian Hills points - Verified
-/*4380*/	uint32				unknown4380[20];
-/*4460*/	uint32				unknown4460[146];
-/*5044*/	uint32				unknown5040; //0xFF FF FF FF
-/*5048*/	uint32				unknown4384[132];
-/*5576*/	uint32				unknown4644[46];
-/*5760*/	uint32				unknown5760[1152]; //added in last patch, crazy bastards
-};
-struct BeforeApr21st_PlayerProfile_Struct
-{
-/*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
-/*0004*/	char				name[64];			// Name of player sizes not right
-/*0068*/	char				last_name[32];		// Last name of player sizes not right
-/*0100*/	uint32				gender;				// Player Gender - 0 Male, 1 Female
-/*0104*/	uint32				race;				// Player race
-/*0108*/	uint32				class_;				// Player class
-/*0112*/	uint32				unknown0112;		//
-/*0116*/	uint32				level;				// Level of player (might be one byte)
-/*0120*/	uint32				bind_zone_id;		// Zone player is bound in
-/*0124*/	float				bind_x;				// Bind loc x coord
-/*0128*/	float				bind_y;				// Bind loc y coord
-/*0132*/	float				bind_z;				// Bind loc z coord
-/*0136*/	uint8				unknown0136[4];		//
-/*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
-/*0148*/	uint32				birthday;			// characters bday
-/*0152*/	uint32				lastlogin;			// last login or zone time
-/*0156*/	uint32				timeplayed;			// in minutes
-/*0160*/	uint8				fatigue;			// Sta bar % depleted (ie, 30 = 70% sta)
-/*0161*/	uint8				pvp;
-/*0162*/	uint8				unknown162;
-/*0163*/	uint8				gm;				// 1=gm, 0=not gm
-/*0164*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
-/*0165*/	uint8				guildrank;					
-/*0166*/	uint8				unknown0165[42];	//
-/*0208*/	uint8				ability_time_seconds;
-/*0209*/	uint8				ability_number; //ability used
-/*0210*/	uint8				ability_time_minutes;
-/*0211*/	uint8				ability_time_hours;//place holder
-/*0212*/	uint8				haircolor;			// Player hair color
-/*0213*/	uint8				beardcolor;			// Player beard color
-/*0214*/	uint8				eyecolor1;			// Player left eye color
-/*0215*/	uint8				eyecolor2;			// Player right eye color
-/*0216*/	uint8				hairstyle;			// Player hair style
-/*0217*/	uint8				beard;				// Beard type
-
-/*0218*/	uint8				unknown0218[2];		// @bp Spacer/Flag?
-/*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
-/*0256*/	uint8				unknown0256[52];
-/*0308*/	Color_Struct		item_tint[9];
-/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
-
-/*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
-/*0656*/	uint32				exp;				// Current Experience
-/*0660*/	uint32				points;				// Unspent Practice points
-/*0664*/	uint32				mana;				// current mana
-/*0668*/	uint32				cur_hp;				// current hp
-/*0672*/	uint32				unknown0672;		// 0x05
-/*0676*/	uint32				STR;				// Strength
-/*0680*/	uint32				STA;				// Stamina
-/*0684*/	uint32				CHA;				// Charisma
-/*0688*/	uint32				DEX;				// Dexterity
-/*0692*/	uint32				INT;				// Intelligence
-/*0696*/	uint32				AGI;				// Agility
-/*0700*/	uint32				WIS;				// Wisdom
-/*0704*/	uint8				face;				// Player face
-/*0705*/	uint8				unknown0705[11];	// ?
-/*0716*/	int32				unknown712[9];		// RR GG BB 00
-/*0752*/	uint8				languages[MAX_PP_LANGUAGE];
-/*0780*/	uint8				unknown0780[4];		// All 0x00
-/*0784*/	int32				spell_book[MAX_PP_SPELLBOOK];
-/*2384*/	uint8				unknown2384[448];	// all 0xff   
-/*2832*/	int32				mem_spells[MAX_PP_MEMSPELL];
-/*2864*/	uint8				unknown2864[32];	//
-/*2896*/	uint32				unknown2896;		//
-/*2900*/	float				y;					// Player y position
-/*2904*/	float				x;					// Player x position
-/*2908*/	float				z;					// Player z position
-/*2912*/	float				heading;			// Direction player is facing
-/*2916*/	uint8				unknown2909[4];		//
-/*2920*/	sint32				platinum;			// Platinum Pieces on player
-/*2924*/	sint32				gold;				// Gold Pieces on player
-/*2928*/	sint32				silver;				// Silver Pieces on player
-/*2932*/	sint32				copper;				// Copper Pieces on player
-/*2936*/	sint32				platinum_bank;		// Platinum Pieces in Bank
-/*2940*/	sint32				gold_bank;			// Gold Pieces in Bank
-/*2944*/	sint32				silver_bank;		// Silver Pieces in Bank
-/*2948*/	sint32				copper_bank;		// Copper Pieces in Bank
-/*2952*/	sint32				platinum_cursor;	// Platinum on cursor
-/*2956*/	sint32				gold_cursor;		// Gold on cursor
-/*2960*/	sint32				silver_cursor;		// Silver on cursor
-/*2964*/	sint32				copper_cursor;		// Copper on cursor
-/*2968*/	sint32				platinum_shared;	// Platinum shared between characters
-/*2972*/	uint8				unknown2972[16];   	// @bp unknown skills?
-/*2992*/	uint32				skills[MAX_PP_SKILL];
-/*3288*/	uint32				unknown_skills[46];	// @bp unknown skills?
-/*3472*/	uint8				unknown3472[88];	//
-/*3560*/	uint32				perAA;				// % on the AA exp bar
-/*3564*/	uint8				unknown3564[12];	//28
-/*3576*/	uint8				pvp2;	//
-/*3591*/	uint8				unknown3591[15];	//
-/*3592*/	uint32				zone_change_count;	// Number of times user has zoned in their career (guessing)
-/*3596*/	uint8				unknown3596[20];	//
-/*3616*/	int32				ability_down;
-/*3620*/	uint8				unknown3620[20];	//
-/*3640*/	int32				expAA;
-/*3644*/	int32				unknown3644;
-/*3648*/	int32				expansion;		// expansion setting
-/*3652*/	sint32				unknown3648;
-/*3656*/	char				unknown3656[16];	//
-/*3672*/	sint32				hunger_level;
-/*3676*/	sint32				thirst_level;
-/*3680*/	int32				ability_up;
-/*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
-/*3688*/	char				unknown3688[12];				
-/*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
-/*3944*/	char 				groupMembers[6][64];		//
-/*4328*/	uint8				unknown4328[4]; 		//
-/*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
-/*4336*/	uint32				ldon_mirugal_points;		// Earned Mirugal' Mebagerie points - Verified by Doodman
-/*4340*/	uint32				ldon_mistmoore_points;		// Earned Mismoore Catacombs Points - Verified by Doodman
-/*4344*/	uint32				ldon_rujarkian_points;		// Earned Rujarkian Hills points - Verified by Doodman
-/*4348*/	uint32				ldon_takish_points;		// Earned Takish points - Doodman: guessing based on others that were known
-/*4352*/	uint8				unknown4352[24]; 		//
-/*4376*/	uint32				ldon_available_points;		// Earned Rujarkian Hills points - Verified
-/*4380*/	uint32				unknown4380[20];
-/*4460*/	uint32				unknown4460[146];
-/*5044*/	uint32				unknown5040; //0xFF FF FF FF
-/*5048*/	uint32				unknown4384[132];
-/*5576*/	uint32				unknown4644[46];
-};
-struct BeforeApril14th_PlayerProfile_Struct
-{
-/*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
-/*0004*/	char				name[64];			// Name of player sizes not right
-/*0068*/	char				last_name[32];		// Last name of player sizes not right
-/*0100*/	uint32				gender;				// Player Gender - 0 Male, 1 Female
-/*0104*/	uint32				race;				// Player race
-/*0108*/	uint32				class_;				// Player class
-/*0112*/	uint32				unknown0112;		//
-/*0116*/	uint32				level;				// Level of player (might be one byte)
-/*0120*/	uint32				bind_zone_id;		// Zone player is bound in
-/*0124*/	float				bind_x;				// Bind loc x coord
-/*0128*/	float				bind_y;				// Bind loc y coord
-/*0132*/	float				bind_z;				// Bind loc z coord
-/*0136*/	uint8				unknown0136[4];		//
-/*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
-/*0148*/	uint32				birthday;			// characters bday
-/*0152*/	uint32				lastlogin;			// last login or zone time
-/*0156*/	uint32				timeplayed;			// in minutes
-/*0160*/	uint8				fatigue;			// Sta bar % depleted (ie, 30 = 70% sta)
-/*0161*/	uint8				pvp;
-/*0162*/	uint8				unknown162;
-/*0163*/	uint8				gm;				// 1=gm, 0=not gm
-/*0164*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
-/*0165*/	uint8				guildrank;					
-/*0166*/	uint8				unknown0165[42];	//
-/*0208*/	uint8				ability_time_seconds;
-/*0209*/	uint8				ability_number; //ability used
-/*0210*/	uint8				ability_time_minutes;
-/*0211*/	uint8				ability_time_hours;//place holder
-/*0212*/	uint8				haircolor;			// Player hair color
-/*0213*/	uint8				beardcolor;			// Player beard color
-/*0214*/	uint8				eyecolor1;			// Player left eye color
-/*0215*/	uint8				eyecolor2;			// Player right eye color
-/*0216*/	uint8				hairstyle;			// Player hair style
-/*0217*/	uint8				beard;				// Beard type
-
-/*0218*/	uint8				unknown0218[2];		// @bp Spacer/Flag?
-/*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
-/*0256*/	uint8				unknown0256[52];
-/*0308*/	Color_Struct		item_tint[9];
-/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
-
-/*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
-/*0656*/	uint32				exp;				// Current Experience
-/*0660*/	uint32				points;				// Unspent Practice points
-/*0664*/	uint32				mana;				// current mana
-/*0668*/	uint32				cur_hp;				// current hp
-/*0672*/	uint32				unknown0672;		// 0x05
-/*0676*/	uint32				STR;				// Strength
-/*0680*/	uint32				STA;				// Stamina
-/*0684*/	uint32				CHA;				// Charisma
-/*0688*/	uint32				DEX;				// Dexterity
-/*0692*/	uint32				INT;				// Intelligence
-/*0696*/	uint32				AGI;				// Agility
-/*0700*/	uint32				WIS;				// Wisdom
-/*0704*/	uint8				face;				// Player face
-/*0705*/	uint8				unknown0705[11];	// ?
-/*0716*/	int32				unknown712[9];		// RR GG BB 00
-/*0752*/	uint8				languages[MAX_PP_LANGUAGE];
-/*0780*/	uint8				unknown0780[4];		// All 0x00
-/*0784*/	int32				spell_book[MAX_PP_SPELLBOOK];
-/*2384*/	uint8				unknown2384[448];	// all 0xff   
-/*2832*/	int32				mem_spells[MAX_PP_MEMSPELL];
-/*2864*/	uint8				unknown2864[32];	//
-/*2896*/	uint32				unknown2896;		//
-/*2900*/	float				y;					// Player y position
-/*2904*/	float				x;					// Player x position
-/*2908*/	float				z;					// Player z position
-/*2912*/	float				heading;			// Direction player is facing
-/*2916*/	uint8				unknown2909[4];		//
-/*2920*/	sint32				platinum;			// Platinum Pieces on player
-/*2924*/	sint32				gold;				// Gold Pieces on player
-/*2928*/	sint32				silver;				// Silver Pieces on player
-/*2932*/	sint32				copper;				// Copper Pieces on player
-/*2936*/	sint32				platinum_bank;		// Platinum Pieces in Bank
-/*2940*/	sint32				gold_bank;			// Gold Pieces in Bank
-/*2944*/	sint32				silver_bank;		// Silver Pieces in Bank
-/*2948*/	sint32				copper_bank;		// Copper Pieces in Bank
-/*2952*/	sint32				platinum_cursor;	// Platinum on cursor
-/*2956*/	sint32				gold_cursor;		// Gold on cursor
-/*2960*/	sint32				silver_cursor;		// Silver on cursor
-/*2964*/	sint32				copper_cursor;		// Copper on cursor
-/*2968*/	sint32				platinum_shared;	// Platinum shared between characters
-/*2972*/	uint8				unknown2972[16];   	// @bp unknown skills?
-/*2992*/	uint32				skills[MAX_PP_SKILL];
-/*3288*/	uint32				unknown_skills[46];	// @bp unknown skills?
-/*3472*/	uint8				unknown3472[88];	//
-/*3560*/	uint32				perAA;				// % on the AA exp bar
-/*3564*/	uint8				unknown3564[12];	//28
-/*3576*/	uint8				pvp2;	//
-/*3591*/	uint8				unknown3591[15];	//
-/*3592*/	uint32				zone_change_count;	// Number of times user has zoned in their career (guessing)
-/*3596*/	uint8				unknown3596[20];	//
-/*3616*/	int32				ability_down;
-/*3620*/	uint8				unknown3620[20];	//
-/*3640*/	int32				expAA;
-/*3644*/	int32				unknown3644;
-/*3648*/	int32				expansion;		// expansion setting
-/*3652*/	sint32				unknown3648;
-/*3656*/	char				unknown3656[16];	//
-/*3672*/	sint32				hunger_level;
-/*3676*/	sint32				thirst_level;
-/*3680*/	int32				ability_up;
-/*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
-/*3688*/	char				unknown3688[12];				
-/*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
-/*3944*/	char 				groupMembers[6][64];		//
-/*4328*/	uint8				unknown4328[4]; 		//
-/*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
-/*4336*/	uint32				ldon_mirugal_points;		// Earned Mirugal' Mebagerie points - Verified by Doodman
-/*4340*/	uint32				ldon_mistmoore_points;		// Earned Mismoore Catacombs Points - Verified by Doodman
-/*4344*/	uint32				ldon_rujarkian_points;		// Earned Rujarkian Hills points - Verified by Doodman
-/*4348*/	uint32				ldon_takish_points;		// Earned Takish points - Doodman: guessing based on others that were known
-/*4352*/	uint8				unknown4352[24]; 		//
-/*4376*/	uint32				ldon_available_points;		// Earned Rujarkian Hills points - Verified
-/*4380*/	uint32				unknown4380[20];
-/*4460*/	uint32				unknown4460[146];
-/*5044*/	uint32				unknown5040; //0xFF FF FF FF
-/*5048*/	uint32				unknown4384[112];
-/*5496*/	uint32				unknown4644[46];
-};
-
-struct BeforeFeb18_PlayerProfile_Struct
-{
-/*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
-/*0004*/	char				name[64];			// Name of player sizes not right
-/*0068*/	char				last_name[32];		// Last name of player sizes not right
-/*0100*/	uint32				gender;				// Player Gender - 0 Male, 1 Female
-/*0104*/	uint32				race;				// Player race
-/*0108*/	uint32				class_;				// Player class
-/*0112*/	uint32				unknown0112;		//
-/*0116*/	uint32				level;				// Level of player (might be one byte)
-/*0120*/	uint32				bind_zone_id;		// Zone player is bound in
-/*0124*/	float				bind_x;				// Bind loc x coord
-/*0128*/	float				bind_y;				// Bind loc y coord
-/*0132*/	float				bind_z;				// Bind loc z coord
-/*0136*/	uint8				unknown0136[4];		//
-/*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
-/*0148*/	uint32				birthday;			// characters bday
-/*0152*/	uint32				lastlogin;			// last login or zone time
-/*0156*/	uint32				timeplayed;			// in minutes
-/*0160*/	uint8				fatigue;			// Sta bar % depleted (ie, 30 = 70% sta)
-/*0161*/	uint8				pvp;
-/*0162*/	uint8				unknown162;
-/*0163*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
-/*0164*/	uint8				gm;				// 1=gm, 0=not gm
-/*0165*/	uint8				guildrank;					
-/*0166*/	uint8				unknown0165[42];	//
-/*0208*/	uint8				ability_time_seconds;
-/*0209*/	uint8				ability_number; //ability used
-/*0210*/	uint8				ability_time_minutes;
-/*0211*/	uint8				ability_time_hours;//place holder
-/*0212*/	uint8				haircolor;			// Player hair color
-/*0213*/	uint8				beardcolor;			// Player beard color
-/*0214*/	uint8				eyecolor1;			// Player left eye color
-/*0215*/	uint8				eyecolor2;			// Player right eye color
-/*0216*/	uint8				hairstyle;			// Player hair style
-/*0217*/	uint8				beard;				// Beard type
-
-/*0218*/	uint8				unknown0218[2];		// @bp Spacer/Flag?
-/*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
-/*0256*/	uint8				unknown0256[52];
-/*0308*/	Color_Struct		item_tint[9];
-/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
-
-/*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
-/*0656*/	uint32				exp;				// Current Experience
-/*0660*/	uint32				points;				// Unspent Practice points
-/*0664*/	uint32				mana;				// current mana
-/*0668*/	uint32				cur_hp;				// current hp
-/*0672*/	uint32				unknown0672;		// 0x05
-/*0676*/	uint32				STR;				// Strength
-/*0680*/	uint32				STA;				// Stamina
-/*0684*/	uint32				CHA;				// Charisma
-/*0688*/	uint32				DEX;				// Dexterity
-/*0692*/	uint32				INT;				// Intelligence
-/*0696*/	uint32				AGI;				// Agility
-/*0700*/	uint32				WIS;				// Wisdom
-/*0704*/	uint8				face;				// Player face
-/*0705*/	uint8				unknown0705[11];	// ?
-/*0716*/	int32				unknown712[9];		// RR GG BB 00
-/*0752*/	uint8				languages[MAX_PP_LANGUAGE];
-/*0780*/	uint8				unknown0780[4];		// All 0x00
-/*0784*/	int32				spell_book[MAX_PP_SPELLBOOK];
-/*2384*/	uint8				unknown2384[448];	// all 0xff   
-/*2832*/	int32				mem_spells[MAX_PP_MEMSPELL];
-/*2864*/	uint8				unknown2864[32];	//
-/*2896*/	uint32				unknown2896;		//
-/*2900*/	float				y;					// Player y position
-/*2904*/	float				x;					// Player x position
-/*2908*/	float				z;					// Player z position
-/*2912*/	float				heading;			// Direction player is facing
-/*2916*/	uint8				unknown2909[4];		//
-/*2920*/	uint32				platinum;			// Platinum Pieces on player
-/*2924*/	uint32				gold;				// Gold Pieces on player
-/*2928*/	uint32				silver;				// Silver Pieces on player
-/*2932*/	uint32				copper;				// Copper Pieces on player
-/*2936*/	uint32				platinum_bank;		// Platinum Pieces in Bank
-/*2940*/	uint32				gold_bank;			// Gold Pieces in Bank
-/*2944*/	uint32				silver_bank;		// Silver Pieces in Bank
-/*2948*/	uint32				copper_bank;		// Copper Pieces in Bank
-/*2952*/	uint32				platinum_cursor;	// Platinum on cursor
-/*2956*/	uint32				gold_cursor;		// Gold on cursor
-/*2960*/	uint32				silver_cursor;		// Silver on cursor
-/*2964*/	uint32				copper_cursor;		// Copper on cursor
-/*2968*/	uint32				platinum_shared;	// Platinum shared between characters
-/*2972*/	uint8				unknown2972[16];   	// @bp unknown skills?
-/*2992*/	uint32				skills[MAX_PP_SKILL];
-/*3288*/	uint32				unknown_skills[46];	// @bp unknown skills?
-/*3472*/	uint8				unknown3472[88];	//
-/*3560*/	uint32				perAA;				// % on the AA exp bar
-/*3564*/	uint8				unknown3564[12];	//28
-/*3576*/	uint8				pvp2;	//
-/*3591*/	uint8				unknown3591[15];	//
-/*3592*/	uint32				zone_change_count;	// Number of times user has zoned in their career (guessing)
-/*3596*/	uint8				unknown3596[20];	//
-/*3616*/	int32				ability_down;
-/*3620*/	uint8				unknown3620[20];	//
-/*3640*/	int32				expAA;
-/*3644*/	int32				unknown3644;
-/*3648*/	int32				expansion;		// expansion setting
-/*3652*/	sint32				unknown3648;
-/*3656*/	char				unknown3656[16];	//
-/*3672*/	sint32				hunger_level;
-/*3676*/	sint32				thirst_level;
-/*3680*/	int32				ability_up;
-/*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
-/*3688*/	char				unknown3688[12];				
-/*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
-/*3944*/	char 				groupMembers[6][64];		//
-/*4328*/	uint8				unknown4328[4]; 		//
-/*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
-/*4336*/	uint32				ldon_mirugal_points;		// Earned Mirugal' Mebagerie points - Verified by Doodman
-/*4340*/	uint32				ldon_mistmoore_points;		// Earned Mismoore Catacombs Points - Verified by Doodman
-/*4344*/	uint32				ldon_rujarkian_points;		// Earned Rujarkian Hills points - Verified by Doodman
-/*4348*/	uint32				ldon_takish_points;		// Earned Takish points - Doodman: guessing based on others that were known
-/*4352*/	uint8				unknown4352[24]; 		//
-/*4376*/	uint32				ldon_available_points;		// Earned Rujarkian Hills points - Verified
-/*4380*/	uint32				unknown4380[20];
-/*4460*/	uint32				unknown4460[145];
-/*5040*/	uint32				unknown5040; //0xFF FF FF FF
-/*5044*/	uint32				unknown4384[111];
-/*5488*/	uint32				unknown4644[46];
-};
-struct OldPlayerProfile_Struct
-{
-/*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
-/*0004*/	char				name[64];			// Name of player sizes not right
-/*0068*/	char				last_name[32];		// Last name of player sizes not right
-/*0100*/	uint32				gender;				// Player Gender - 0 Male, 1 Female
-/*0104*/	uint32				race;				// Player race
-/*0108*/	uint32				class_;				// Player class
-/*0112*/	uint32				unknown0112;		//
-/*0116*/	uint32				level;				// Level of player (might be one byte)
-/*0120*/	uint32				bind_zone_id;		// Zone player is bound in
-/*0124*/	float				bind_x;				// Bind loc x coord
-/*0128*/	float				bind_y;				// Bind loc y coord
-/*0132*/	float				bind_z;				// Bind loc z coord
-/*0136*/	uint8				unknown0136[4];		//
-/*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
-/*0148*/	uint32				birthday;			// characters bday
-/*0152*/	uint32				lastlogin;			// last login or zone time
-/*0156*/	uint32				timeplayed;			// in minutes
-/*0160*/	uint8				pvp;			// Sta bar % depleted (ie, 30 = 70% sta)
-/*0161*/	uint8				unknown0161;				// Level again.
-/*0162*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
-/*0163*/	uint8				gm;				// 1=gm, 0=not gm
-/*0164*/	uint8				guildrank;					
-/*0165*/	uint8				unknown0165[43];	//
-/*0208*/	uint8				ability_time_seconds;
-/*0209*/	uint8				ability_number; //ability used
-/*0210*/	uint8				ability_time_minutes;
-/*0211*/	uint8				ability_time_hours;//place holder
-/*0212*/	uint8				haircolor;			// Player hair color
-/*0213*/	uint8				beardcolor;			// Player beard color
-/*0214*/	uint8				eyecolor1;			// Player left eye color
-/*0215*/	uint8				eyecolor2;			// Player right eye color
-/*0216*/	uint8				hairstyle;			// Player hair style
-/*0217*/	uint8				beard;				// Beard type
-
-/*0218*/	uint8				unknown0218;		// @bp Spacer/Flag?
-/*0219*/	uint8				fatigue;			//wrong spot but needed to go somewhere
-/*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
-/*0256*/	uint8				unknown0256[52];
-/*0308*/	Color_Struct		item_tint[9];
-/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
-
-/*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
-/*0656*/	uint32				exp;				// Current Experience
-/*0660*/	uint32				points;				// Unspent Practice points
-/*0664*/	uint32				mana;				// current mana
-/*0668*/	uint32				cur_hp;				// current hp
-/*0672*/	uint32				unknown0672;		// 0x05
-/*0676*/	uint32				STR;				// Strength
-/*0680*/	uint32				STA;				// Stamina
-/*0684*/	uint32				CHA;				// Charisma
-/*0688*/	uint32				DEX;				// Dexterity
-/*0692*/	uint32				INT;				// Intelligence
-/*0696*/	uint32				AGI;				// Agility
-/*0700*/	uint32				WIS;				// Wisdom
-/*0704*/	uint8				face;				// Player face
-/*0705*/	uint8				unknown0705[11];	// ?
-/*0716*/	int32				unknown712[9];		// RR GG BB 00
-/*0752*/	uint8				languages[MAX_PP_LANGUAGE];
-/*0780*/	uint8				unknown0780[4];		// All 0x00
-/*0784*/	int32				spell_book[MAX_PP_SPELLBOOK];
-/*2384*/	uint8				unknown2384[448];	// all 0xff   
-/*2832*/	int32				mem_spells[MAX_PP_MEMSPELL];
-/*2864*/	uint8				unknown2864[32];	//
-/*2896*/	uint32				unknown2896;		//
-/*2900*/	float				y;					// Player y position
-/*2904*/	float				x;					// Player x position
-/*2908*/	float				z;					// Player z position
-/*2912*/	float				heading;			// Direction player is facing
-/*2916*/	uint8				unknown2909[4];		//
-/*2920*/	uint32				platinum;			// Platinum Pieces on player
-/*2922*/	uint32				gold;				// Gold Pieces on player
-/*2928*/	uint32				silver;				// Silver Pieces on player
-/*2932*/	uint32				copper;				// Copper Pieces on player
-/*2936*/	uint32				platinum_bank;		// Platinum Pieces in Bank
-/*2940*/	uint32				gold_bank;			// Gold Pieces in Bank
-/*2944*/	uint32				silver_bank;		// Silver Pieces in Bank
-/*2948*/	uint32				copper_bank;		// Copper Pieces in Bank
-/*2952*/	uint32				platinum_cursor;	// Platinum on cursor
-/*2956*/	uint32				gold_cursor;		// Gold on cursor
-/*2960*/	uint32				silver_cursor;		// Silver on cursor
-/*2964*/	uint32				copper_cursor;		// Copper on cursor
-/*2968*/	uint32				platinum_shared;	// Platinum shared between characters
-/*2972*/	uint8				unknown2972[16];   	// @bp unknown skills?
-/*2992*/	uint32				skills[MAX_PP_SKILL];
-/*3288*/	uint32				unknown_skills[46];	// @bp unknown skills?
-/*3472*/	uint8				unknown3472[88];	//
-/*3560*/	uint32				perAA;				// % on the AA exp bar
-/*3564*/	uint8				unknown3564[12];	//28
-/*3576*/	uint8				pvp2;	//
-/*3591*/	uint8				unknown3591[15];	//
-/*3592*/	uint32				zone_change_count;	// Number of times user has zoned in their career (guessing)
-/*3596*/	uint8				unknown3596[20];	//
-/*3616*/	int32				ability_down;
-/*3620*/	uint8				unknown3620[20];	//
-/*3640*/	int32				expAA;
-/*3644*/	int32				unknown3644;
-/*3648*/	int32				expansion;		// expansion setting
-/*3652*/	sint32				unknown3648;
-/*3656*/	char				unknown3656[16];	//
-/*3672*/	sint32				hunger_level;
-/*3676*/	sint32				thirst_level;
-/*3680*/	int32				ability_up;
-/*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
-/*3688*/	char				unknown3688[12];				
-/*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
-/*3944*/	char 				groupMembers[6][64];		//
-/*4328*/	uint8				unknown4328[4]; 		//
-/*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
-/*4336*/	uint32				ldon_mirugal_points;		// Earned Mirugal' Mebagerie points - Verified by Doodman
-/*4340*/	uint32				ldon_mistmoore_points;		// Earned Mismoore Catacombs Points - Verified by Doodman
-/*4344*/	uint32				ldon_rujarkian_points;		// Earned Rujarkian Hills points - Verified by Doodman
-/*4348*/	uint32				ldon_takish_points;		// Earned Takish points - Doodman: guessing based on others that were known
-/*4352*/	uint8				unknown4352[24]; 		//
-/*4376*/	uint32				ldon_available_points;		// Earned Rujarkian Hills points - Verified
-/*4380*/	uint32				unknown4380[20]; //added in last patch
-/*4460*/	uint32				unknown4460; //0xFF FF FF FF
-/*4464*/	uint32				unknown4384[110];
-/*4904*/	uint32				unknown4644[4];
 };
 
 /*
@@ -2003,83 +767,6 @@ struct SpecialMesg_Struct
 /*11*/	char	message[0];				// What is being said?
 };
 
-// msg_type's for custom usercolors 
-#define MT_Say					256
-#define MT_Tell					257
-#define MT_Group				258
-#define MT_Guild				259
-#define MT_OOC					260
-#define MT_Auction				261
-#define MT_Shout				262
-#define MT_Emote				263
-#define MT_Spells				264
-#define MT_YouHitOther			265
-#define MT_OtherHitsYou			266
-#define MT_YouMissOther			267
-#define MT_OtherMissesYou		268
-#define MT_Broadcasts			269
-#define MT_Skills				270
-#define MT_Disciplines			271
-#define MT_CritMelee			301
-#define	MT_Unused1				272
-#define MT_DefaultText			273
-#define MT_Unused2				274
-#define MT_MerchantOffer		275
-#define MT_MerchantBuySell		276
-#define	MT_YourDeath			277
-#define MT_OtherDeath			278
-#define MT_OtherHits			279
-#define MT_OtherMisses			280
-#define	MT_Who					281
-#define MT_YellForHelp			282
-#define MT_NonMelee				283
-#define MT_WornOff				284
-#define MT_MoneySplit			285
-#define MT_LootMessages			286
-#define MT_DiceRoll				287
-#define MT_OtherSpells			288
-#define MT_Fizzles				289
-#define MT_Chat					290
-#define MT_Channel1				291
-#define MT_Channel2				292
-#define MT_Channel3				293
-#define MT_Channel4				294
-#define MT_Channel5				295
-#define MT_Channel6				296
-#define MT_Channel7				297
-#define MT_Channel8				298
-#define MT_Channel9				299
-#define MT_Channel10			300
-#define MT_CritMelee			301
-#define MT_SpellCrits			302
-#define MT_TooFarAway			303
-#define MT_Rampage				304
-#define MT_Flurry				305
-#define MT_Enrage				306
-#define MT_SayEcho				307
-#define MT_TellEcho				308
-#define MT_GroupEcho			309
-#define MT_GuildEcho			310
-#define MT_OOCEcho				311
-#define MT_AuctionEcho			312
-#define MT_ShoutECho			313
-#define MT_EmoteEcho			314
-#define MT_Chat1Echo			315
-#define MT_Chat2Echo			316
-#define MT_Chat3Echo			317
-#define MT_Chat4Echo			318
-#define MT_Chat5Echo			319
-#define MT_Chat6Echo			320
-#define MT_Chat7Echo			321
-#define MT_Chat8Echo			322
-#define MT_Chat9Echo			323
-#define MT_Chat10Echo			324
-#define MT_DoTDamage			315
-#define MT_ItemLink				316
-#define MT_RaidSay				317
-#define MT_MyPet				318
-#define MT_DS					320
-
 /*
 ** When somebody changes what they're wearing
 **      or give a pet a weapon (model changes)
@@ -2105,15 +792,6 @@ struct BindWound_Struct
 /*006*/	int16	type;
 /*008*/	int16	unknown6;
 };
-#if 0 // old stuff
-struct BindWound_Struct {
-// Size 4
-    uint16  to; // entity id
-    uint8    type; // This could be an int16
-    // 0 or 1 complete, 2 Unknown, 3 ACK, 4 Died, 5 Left, 6 they moved, 7 you moved
-    uint8    placeholder; //
-};
-#endif
 
 
 /*
@@ -2121,13 +799,6 @@ struct BindWound_Struct {
 ** Length: 70 Bytes-2 = 68 bytes 
 ** OpCode: a320
 */
-
-#define ZONE_ERROR_NOMSG 0
-#define ZONE_ERROR_NOTREADY -1
-#define ZONE_ERROR_VALIDPC -2
-#define ZONE_ERROR_STORYZONE -3
-#define ZONE_ERROR_NOEXPANSION -6
-#define ZONE_ERROR_NOEXPERIENCE -7
 
 struct ZoneChange_Struct {
 /*000*/	char	char_name[64];     // Character Name
@@ -2142,18 +813,6 @@ struct Animation_Struct {
 	int8 animation;
 };
 
-#if 0
-struct Action_Struct
-{
-	// len = 24
-	int16 target;
-	int16 source;
-	int8 type;
-	int16 spell;
-	sint32 damage;
-	int8 unknown1[12];
-};
-#endif
 // solar: this is what causes the caster to animate and the target to
 // get the particle effects around them when a spell is cast
 // also causes a buff icon
@@ -3126,24 +1785,6 @@ struct PetitionUpdate_Struct {
 	char charname[64];
 };
 
-/*struct Petition_Struct {
-	int32 petnumber;
-	int32 urgency;
-	char accountid[32];
-	char lastgm[64];
-	int32	zone;
-	//char zone[32];
-	char charname[32];
-	int32 charlevel;
-	int32 charclass;
-	int32 charrace;
-	time_t senttime; // Time?
-	int32 checkouts;
-	int32 unavail;
-	int8 unknown5[4];
-	char petitiontext[1024];
-};*/
-
 struct Petition_Struct {
 	int32 petnumber;
 	int32 urgency;
@@ -3265,26 +1906,7 @@ struct SetServerFilter_Struct {
 	/*0076*/ int32	mypethits;
 	/*0080*/ int32	mypetmisses;
 };
-#define FILTER_DAMAGESHIELD 0
-#define FILTER_NPCSPELLS	1
-#define FILTER_PCSPELLS		2
-#define FILTER_BARDSONGS	3
-#define FILTER_GUILDSAY		4
-#define FILTER_SOCIALS		5
-#define FILTER_GROUP		6
-#define FILTER_SHOUT		7
-#define FILTER_AUCTION		8
-#define FILTER_OOC			9
-#define FILTER_MYMISSES		10
-#define FILTER_OTHERMISSES	11
-#define FILTER_OTHERHITS	12
-#define FILTER_ATKMISSESME	13
-#define FILTER_CRITSPELLS	14
-#define FILTER_CRITMELEE	15
-#define FILTER_SPELLDAMAGE	16
-#define FILTER_DOTDAMAGE	17
-#define FILTER_MYPETHITS	18
-#define FILTER_MYPETMISSES	19
+
 //Op_SetServerFilterAck
 struct SetServerFilterAck_Struct {
 	int8 blank[8];
@@ -3317,18 +1939,6 @@ struct IncreaseStat_Struct{
 	/*0139*/	int8	poison2;
 	/*0140*/	int8	disease2;
 };
-#define	STAT_STR		0
-#define	STAT_STA		1
-#define	STAT_AGI		2
-#define	STAT_DEX		3
-#define	STAT_INT		4
-#define	STAT_WIS		5
-#define	STAT_CHA		6
-#define	STAT_FIRE		7
-#define	STAT_COLD		8
-#define	STAT_MAGIC		9
-#define	STAT_POISON		10
-#define	STAT_DISEASE	11
 
 struct GMName_Struct {
 	char oldname[64];
@@ -3446,10 +2056,14 @@ struct ClickObjectAck_Struct {
 };
 
 /*
-** Struct with two uses
+** This is different now, mostly unknown
 **
 */
-struct CloseContainer_Struct : public ClickObjectAck_Struct {
+struct CloseContainer_Struct {
+/*00*/	uint32	player_id;	// Entity Id of player who clicked object
+/*04*/	uint32	drop_id;	// Zone-specified unique object identifier
+/*08*/	uint32	open;		// 1=opening, 0=closing
+/*12*/	uint32	unknown12[12];
 };
 
 /*
@@ -3734,204 +2348,6 @@ struct Tracking_Struct {
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// @Bigpull: 0.4.4 item struct for InjectToRaw()
-struct OLDItem_Struct
-{
-/*0000*/ char      name[64];        // Name of item
-/*0064*/ char      lore[80];        // Lore text
-/*0144*/ char      idfile[30];      // This is the filename of the item graphic when held/worn.
-									// Changed to 30 bytes for correct item conversion
-/*0174*/ uint8	   weight;          // Weight of item
-/*0175*/ sint8     nosave;          // Nosave flag 1=normal, 0=nosave, -1=spell?
-/*0176*/ sint8     nodrop;          // Nodrop flag 1=normal, 0=nodrop, -1=??
-/*0177*/ uint8     size;            // Size of item
-/*0178*/ int8      type;
-/*0179*/ uint8     unknown0178;     // ***Placeholder
-/*0180*/ uint16    item_nr;         // Unique Item number
-/*0182*/ uint16    icon_nr;         // Icon Number
-/*0184*/ sint16    equipSlot;       // Current Equip slot
-/*0186*/ uint8     unknwn0186[2];   // Equip slot cont.?
-/*0188*/ uint32    equipableSlots;  // Slots where this item goes
-/*0192*/ sint32    cost;            // Item cost in copper
-/*0196*/ uint8     unknown0196[32]; // ***Placeholder
-union
-{
-	struct
-	{
-	// 0228- have different meanings depending on flags
-	/*0228*/ sint8    STR;              // Strength
-	/*0229*/ sint8    STA;              // Stamina
-	/*0230*/ sint8    CHA;              // Charisma
-	/*0231*/ sint8    DEX;              // Dexterity
-	/*0232*/ sint8    INT;              // Intelligence
-	/*0233*/ sint8    AGI;              // Agility
-	/*0234*/ sint8    WIS;              // Wisdom
-	/*0235*/ sint8    MR;               // Magic Resistance
-	/*0236*/ sint8    FR;               // Fire Resistance
-	/*0237*/ sint8    CR;               // Cold Resistance
-	/*0238*/ sint8    DR;               // Disease Resistance
-	/*0239*/ sint8    PR;               // Poison Resistance
-	/*0240*/ sint16   HP;               // Hitpoints
-	/*0242*/ sint16   MANA;             // Mana
-	/*0244*/ sint16   AC;               // Armor Class
-	/*0246*/ uint8    MaxCharges;       // Maximum number of charges, for rechargable? (Sept 25, 2002)
-	/*0247*/ sint8    GMFlag;           // GM flag 0  - normal item, -1 - gm item (Sept 25, 2002)
-	/*0248*/ uint8    light;            // Light effect of this item
-	/*0249*/ uint8    delay;            // Weapon Delay
-	/*0250*/ uint8    damage;           // Weapon Damage
-	/*0251*/ sint8    effecttype0;      // 0=combat, 1=click anywhere w/o class check, 2=latent/worn, 3=click anywhere EXPENDABLE, 4=click worn, 5=click anywhere w/ class check, -1=no effect
-	/*0252*/ uint8    range;            // Range of weapon
-	/*0253*/ uint8    skill;            // Skill of this weapon, refer to weaponskill chart
-	/*0254*/ sint8    magic;            // Magic flag
-                        //   00  (0000)  =   ???
-                        //   01  (0001)  =  magic
-                        //   12  (1100)  =   ???
-                        //   14  (1110)  =   ???
-                        //   15  (1111)  =   ???
-	/*0255*/ sint8    level0;           // Casting level
-	/*0256*/ uint8    material;         // Material?
-	/*0257*/ uint8    unknown0258[3];   // ***Placeholder
-	/*0260*/ uint32   color;            // Amounts of RGB in original color
-	/*0264*/ uint8    unknown0264[2];   // ***Placeholder (Asiel: Has to do with Diety, will unwrap later)
-	/*0266*/ uint16   spellId0;         // SpellID of special effect
-	/*0268*/ uint16   classes;          // Classes that can use this item
-	/*0270*/ uint8    unknown0270[2];   // ***Placeholder
-	union
-	{
-		struct
-		{
-		/*0272*/ uint16   races;            // Races that can use this item
-		/*0274*/ sint8    unknown0274[2];   // ***Placeholder
-		/*0276*/ sint8    stackable;        //  1= stackable, 3 = normal, 0 = ? (not stackable)
-		} normal;
-	};
-	/*0277*/ uint8    level;            // Casting level
-	union // 0278 has different meanings depending on an stackable
-	{
-	/*0278*/ sint8    number;          // Number of items in stack
-	/*0278*/ int8    charges;         // Number of charges (-1 = unlimited)
-	};
-	/*0279*/ sint8    effecttype;      // 0=combat, 1=click anywhere w/o class check, 2=latent/worn, 3=click anywhere EXPENDABLE, 4=click worn, 5=click anywhere w/ class check, -1=no effect
-		 uint16   spellId;         // spellId of special effect
-		 uint8    unknown0282[10]; // ***Placeholder 0288
-		 uint32   casttime;        // Cast time of clicky item in miliseconds
-		 uint8    unknown0296[16]; // ***Placeholder
-		 uint16   skillModId;
-		 sint16   skillModPercent;
-		 sint16   BaneDMGRace;
-		 sint16   BaneDMGBody;
-			 // 1 Humanoid, 2 Lycanthrope, 3 Undead, 4 Giant, 5 Construct, 6 Extraplanar, 7 Magical
-		 uint8    BaneDMG;
-		 uint8    unknown0316[3];
-		 uint8    RecLevel;         // max should be 65
-		 uint8    RecSkill;         // Max should be 252
-		 uint8    unknown0325[2];
-		 uint8    ElemDmgType; 
-			// 1 Magic, 2 Fire, 3 Cold, 4 Poison, 5 Disease
-		 uint8    ElemDmg;
-		 uint8    unknown0330[22];
-		 uint8    ReqLevel; // Required level
-		 uint8    unknown0352[5];
-	/*0358*/ int16    focusspellId;
-	} common;
-	struct // Book Structure (flag == 0x7669)
-	{
-	/*0228*/ sint8    unknown0172[6];      // ***Placeholder
-	/*0234*/ char     file[15];            // Filename of book text on server
-	/*0249*/ sint8    unknown0190[15];    // ***Placeholder
-	} book;
-	struct // containers flag == 0x5400 or 0x5450
-	{
-		/*0228*/ sint8    unknown0212[41];     // ***Placeholder
-		/*0269*/ uint8    numSlots;        // number of slots in container
-		/*0270*/ sint8    unknown0214;     // ***Placeholder
-		/*0271*/ sint8    sizeCapacity;    // Maximum size item container can hold
-		/*0272*/ uint8    weightReduction; // % weight reduction of container
-		/*0273*/ uint8    unknown0273[3];     // ***Placeholder
-		} container;
-};
-	inline bool	IsNormal() const		{ return (bool) (type == 0x00); } // ie, not book, not bag
-	inline bool	IsBook() const			{ return (bool) (type == 0x02); }
-	inline bool	IsBag() const			{ return (bool) (type == 0x01); }
-	inline bool	IsStackable() const		{ return (bool) ((type == 0x00) && (common.normal.stackable == 1 || (common.effecttype == 0 && common.normal.stackable == 2))); }
-inline bool	IsEquipable(int16 race, int16 class_) const		{
-	 if (!this) { /*LogFile->write(EQEMuLog::Debug, "Database error: IsEquipable() called on null item.");*/ return false; }
-	 bool israce = false,isclass = false;
-	 if (type != 0x00 && equipableSlots == 0) {
-	   //LogFile->write(EQEMuLog::Debug, "IsEquipable() type != 0x00 && equipableSlots == 0");
-      return false;
-     }
-     else if (common.classes == 0) {
-	   //LogFile->write(EQEMuLog::Debug, "IsEquipable() common.classes == 0");
-         return false;
-     }
-     else if(common.classes == 32767 && common.normal.races == 32767){
-         return true;
-     }
-  else {
-     int16 classes_ = common.classes;
-     int16 races_ = common.normal.races;
-
-     if(common.classes == 32767) {
-	      isclass = true;
-     }
-     if(common.normal.races == 32767) {
-   	      israce = true;
-     }
-     for (int cur_class = 1; cur_class <= 15; cur_class++) {
-        if (classes_ % 2 == 1) {
-    	    if(cur_class == class_) {
-    	        isclass = true;
-	        }
-        }
-        classes_ = classes_/2;
-     }
-     for (int cur_race = 1; cur_race <= 14; cur_race++) {
-        if (races_ %2 == 1) {
-    	    if(cur_race == race) {
-    		    israce = true;
-   		    }
-        }
-        races_ = races_/2;
-     }
-  }
-  //LogFile->write(EQEMuLog::Debug, "IsEquipable(%i,%i) israce:%i:%i isclass:%i:%i", race, class_, israce,common.normal.races, isclass, common.classes);
-     if(israce && isclass)
-          return true;
-     else
-          return false;
-	}
-	inline bool	IsExpendable() const	{ return (bool) (common.skill == 21 || common.skill == 11); }
-	inline bool	IsGM() const			{ return (bool) (common.GMFlag == -1); }
-	inline bool	IsLore() const			{ return (bool) (strstr(lore, "*") != 0); }
-	inline bool	IsPendingLore() const	{ return (bool) (strstr(lore, "~") != 0); }
-	inline bool	IsArtifact() const		{ return (bool) (strstr(lore, "#") != 0); }
-	inline bool IsWeapon() const	{ return (bool) common.damage; }
-};
-
 /*
 ** ZoneServerInfo_Struct
 ** Zone server information
@@ -4161,13 +2577,6 @@ struct PetitionBug_Struct{
 	char	text[1028];
 };
 
-/*struct DyeColorStruct{
-	int8	blue;
-	int8	green;
-	int8	red;
-	int8	unknown;
-};*/
-
 struct DyeStruct
 {
 	union
@@ -4206,8 +2615,7 @@ struct ZoneInSendName_Struct2 {
 	int32	unknown68[145];
 };
 
-#define MAX_TRIBUTE_LEVELS 10
-#define MAX_PLAYER_TRIBUTES 5
+#define MAX_TRIBUTE_TIERS 10
 
 struct StartTribute_Struct {
    int32	client_id;
@@ -4216,17 +2624,15 @@ struct StartTribute_Struct {
 };
 
 struct TributeLevel_Struct {
-   int32	cost;	//backwards byte order!
    uint32	level;	//backwards byte order!
    int32	tribute_item_id;	//backwards byte order!
+   int32	cost;	//backwards byte order!
 };
 
 struct TributeAbility_Struct {
 	int32	tribute_id;	//backwards byte order!
-	TributeLevel_Struct levels[MAX_TRIBUTE_LEVELS];
-//the cost of the last tribute takes on a strange value
-//from the set: { 0A 14 15 17 1D 23 25 28 3C }
-	int32 unknown;
+	int32	unknown;	//backwards byte order!
+	TributeLevel_Struct tiers[MAX_TRIBUTE_TIERS];
 	char	name[0];
 };
 
@@ -4245,7 +2651,7 @@ struct SelectTributeReply_Struct {
 struct TributeInfo_Struct {
 	int32	active;		//0 == inactive, 1 == active
 	uint32	tributes[MAX_PLAYER_TRIBUTES];	//-1 == NONE
-	int32	levels[MAX_PLAYER_TRIBUTES];		//all 00's
+	int32	tiers[MAX_PLAYER_TRIBUTES];		//all 00's
 	int32	tribute_master_id;
 };
 
@@ -4257,9 +2663,9 @@ struct TributeItem_Struct {
 };
 
 struct TributePoint_Struct {
-	sint32   new_value;
+	sint32   tribute_points;
 	int32   unknown04;
-	sint32   old_value;
+	sint32   career_tribute_points;
 	int32   unknown12;
 };
 
@@ -4365,6 +2771,10 @@ struct TempMerchantList{
 	uint32	charges; //charges/quantity
 	uint32	origslot;
 };
+
+//old structures live here:
+#include "eq_old_structs.h"
+
 // Restore structure packing to default
 #pragma pack()
 

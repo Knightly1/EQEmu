@@ -74,8 +74,11 @@ public:
 	void eval(const char * code);
 	//execute a subroutine.  throws lasterr on failure
 	void dosub(const char * subname, const std::vector<std::string> * args = NULL, int mode = G_SCALAR|G_DISCARD|G_EVAL);
+	
+	//Access to perl variables
+	//all varnames here should be of the form package::name
 	//returns the contents of the perl variable named in varname as a c int
-	int geti(const char * varname) { return SvIV(my_get_sv(varname));};
+	int geti(const char * varname) { return SvIV(my_get_sv(varname)); };
 	//returns the contents of the perl variable named in varname as a c double
 	double getd(const char * varname) { return SvNV(my_get_sv(varname));};
 	//returns the contents of the perl variable named in varname as a string
@@ -83,11 +86,31 @@ public:
 		SV * temp = my_get_sv(varname);
 		return std::string(SvPV_nolen(temp),SvLEN(temp));
 	}
+	
+	//put an integer into a perl varable
+	void seti(const char *varname, int val) const {
+		SV *t = get_sv(varname, true);
+		sv_setiv(t, val);
+	}
+	//put a real into a perl varable
+	void setd(const char *varname, double val) const {
+		SV *t = get_sv(varname, true);
+		sv_setnv(t, val);
+	}
+	//put a string into a perl varable
+	void setstr(const char *varname, const char *val) const {
+		SV *t = get_sv(varname, true);
+		sv_setpv(t, val);
+	}
+	
 	//loads a file and compiles it into our interpreter (assuming it hasn't already been read in)
 	//idea borrowed from perlembed
 	void eval_file(const char * packagename, const char * filename);
 	
 	inline bool InUse() const { return(in_use); }
+	
+	//check to see if a sub exists in package
+	bool SubExists(const char *package, const char *sub);
 };
 #endif //EMBPERL
 

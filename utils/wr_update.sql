@@ -47,6 +47,21 @@ CREATE TABLE timers (
 	PRIMARY KEY(char_id, type)
 );
 
+CREATE TABLE aa_actions (
+	aaid mediumint unsigned not null,
+	rank tinyint unsigned not null,
+	reuse_time mediumint unsigned not null,
+	spell_id mediumint unsigned not null,
+	target tinyint unsigned not null,
+	nonspell_action tinyint unsigned not null,
+	nonspell_mana mediumint unsigned not null,
+	nonspell_duration mediumint unsigned not null,
+	redux_aa mediumint unsigned not null,
+	redux_rate tinyint not null,
+	
+	PRIMARY KEY(aaid, rank)
+);
+
 CREATE TABLE aa_swarmpets (
 	spell_id mediumint unsigned not null,
 	count tinyint unsigned not null,
@@ -55,188 +70,173 @@ CREATE TABLE aa_swarmpets (
 	PRIMARY KEY(spell_id)
 );
 
-DROP TABLE IF EXISTS aa_actions;
-CREATE TABLE aa_actions (
-  aaid mediumint(8) unsigned NOT NULL default '0',
-  rank tinyint(3) unsigned NOT NULL default '0',
-  reuse_time mediumint(8) unsigned NOT NULL default '0',
-  spell_id mediumint(8) unsigned NOT NULL default '0',
-  target tinyint(3) unsigned NOT NULL default '0',
-  nonspell_action tinyint(3) unsigned NOT NULL default '0',
-  nonspell_mana mediumint(8) unsigned NOT NULL default '0',
-  nonspell_duration mediumint(8) unsigned NOT NULL default '0',
-  redux_aa mediumint(8) unsigned NOT NULL default '0',
-  redux_rate tinyint(4) NOT NULL default '0',
-  PRIMARY KEY  (aaid,rank)
-) TYPE=MyISAM;
+INSERT INTO `aa_actions` VALUES (35,0,4320,0,0,1,1,0,0,264,10);
+INSERT INTO `aa_actions` VALUES (36,0,64800,2738,1,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (37,0,7,2739,1,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (38,0,900,2740,100,1,6,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (39,0,8640,2741,0,2,0,0,0,154,10);
+INSERT INTO `aa_actions` VALUES (40,0,4320,2776,2500,2,0,0,0,155,10);
+INSERT INTO `aa_actions` VALUES (40,1,4320,2777,2500,2,0,0,0,155,10);
+INSERT INTO `aa_actions` VALUES (40,2,4320,2778,2500,2,0,0,0,155,10);
+INSERT INTO `aa_actions` VALUES (41,0,1800,2742,0,2,0,0,0,156,10);
+INSERT INTO `aa_actions` VALUES (43,0,4320,2771,100,1,0,0,0,159,10);
+INSERT INTO `aa_actions` VALUES (46,0,4320,2761,6000,2,7,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (46,1,4320,2760,6000,2,7,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (46,2,4320,2759,6000,2,7,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (38,1,900,3250,100,1,6,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (38,2,900,3251,100,1,6,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (47,0,180,2749,2500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (50,0,7200,2750,100,1,0,0,0,158,10);
+INSERT INTO `aa_actions` VALUES (52,1,480,3264,16000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (52,0,480,2758,16000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (53,0,4320,2734,100,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (57,0,8640,2753,2000,1,0,0,0,157,10);
+INSERT INTO `aa_actions` VALUES (58,0,2160,2752,1,5,0,0,0,161,10);
+INSERT INTO `aa_actions` VALUES (60,0,4320,2754,2000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (61,0,900,2795,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (61,1,900,2796,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (61,2,900,2797,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (62,0,900,2798,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (62,1,900,2799,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (62,2,900,2800,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (63,0,900,2792,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (63,1,900,2793,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (63,2,900,2794,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (64,0,900,2789,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (64,1,900,2790,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (64,2,900,2791,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (66,0,4320,2779,2500,1,0,0,0,162,10);
+INSERT INTO `aa_actions` VALUES (66,1,4320,2780,2500,1,0,0,0,162,10);
+INSERT INTO `aa_actions` VALUES (66,2,4320,2781,2500,1,0,0,0,162,10);
+INSERT INTO `aa_actions` VALUES (68,0,8640,2755,6000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (69,0,4320,2756,3000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (70,0,4320,2757,3000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (71,0,7,2772,3000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (72,0,4320,2764,5000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (73,0,30,2190,1500,2,0,0,0,196,24);
+INSERT INTO `aa_actions` VALUES (76,0,4320,2775,0,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (77,0,1,2871,2000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (80,0,7,2765,1,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (85,0,1,2918,2000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (86,0,4320,0,1,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (87,0,4320,2766,1,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (98,0,4320,2190,0,1,0,0,0,165,10);
+INSERT INTO `aa_actions` VALUES (102,0,4320,5244,0,1,0,0,0,166,10);
+INSERT INTO `aa_actions` VALUES (107,0,4320,5232,0,1,0,0,0,167,10);
+INSERT INTO `aa_actions` VALUES (109,0,6000,5233,0,1,0,0,0,164,10);
+INSERT INTO `aa_actions` VALUES (110,0,900,5234,0,1,0,0,0,163,10);
+INSERT INTO `aa_actions` VALUES (111,0,2160,5229,0,4,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (111,1,2160,5230,0,4,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (111,2,2160,5231,0,4,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (117,0,4320,2748,2000,2,0,0,0,160,10);
+INSERT INTO `aa_actions` VALUES (126,0,300,3290,3000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (127,0,720,3289,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (128,0,900,3291,5000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (153,0,180,3297,3500,1,0,0,0,256,10);
+INSERT INTO `aa_actions` VALUES (153,1,180,3297,3500,1,0,0,0,256,10);
+INSERT INTO `aa_actions` VALUES (153,2,180,3297,3500,1,0,0,0,256,10);
+INSERT INTO `aa_actions` VALUES (169,0,180,3252,750,4,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (169,1,180,3253,750,4,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (169,2,180,3254,750,4,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (170,0,240,3255,1000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (170,1,240,3255,1000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (170,2,240,3255,1000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (171,0,120,3274,2000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (171,1,120,3274,2000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (171,2,120,3274,2000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (172,0,480,3338,10000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (173,0,600,3258,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (173,1,600,3258,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (173,2,600,3258,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (174,0,540,3265,500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (174,1,540,3266,500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (174,2,540,3267,500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (175,0,540,3268,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (175,1,540,3269,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (175,2,540,3270,8000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (176,0,0,3248,4000,5,10,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (176,1,0,3249,4000,5,10,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (177,0,720,3283,6500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (177,1,720,3284,6500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (177,2,720,3285,6500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (180,0,2160,3261,0,1,0,0,0,282,10);
+INSERT INTO `aa_actions` VALUES (180,1,2160,3262,0,1,0,0,0,282,10);
+INSERT INTO `aa_actions` VALUES (180,2,2160,3263,0,1,0,0,0,282,10);
+INSERT INTO `aa_actions` VALUES (184,0,900,3271,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (184,1,900,3272,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (184,2,900,3273,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (185,0,1320,3277,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (185,1,1320,3278,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (185,2,1320,3279,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (199,0,18,3282,0,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (207,0,1320,3286,6500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (207,1,1320,3287,6500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (207,2,1320,3288,6500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (208,0,900,3292,6500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (208,1,900,3293,6500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (208,2,900,3294,6500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (212,0,0,5243,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (217,0,0,0,0,1,13,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (219,0,5,3614,1750,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (226,0,8640,2751,6000,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (245,0,4320,0,0,1,11,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (254,0,7200,4549,3000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (247,0,60,4788,0,2,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (254,1,7200,4550,3000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (254,2,7200,4551,3000,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (255,0,1800,4790,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (255,1,1800,4791,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (255,2,1800,4792,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (255,3,1800,4793,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (255,4,1800,4794,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (257,0,1800,4796,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (257,1,1800,4797,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (257,2,1800,4798,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (257,3,1800,4799,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (257,4,1800,4800,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (261,0,4320,4552,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (261,1,4320,4553,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (261,2,4320,4554,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (265,0,900,0,0,1,5,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (276,0,3600,0,0,1,4,0,10000,0,0);
+INSERT INTO `aa_actions` VALUES (277,0,1800,4564,500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (277,1,1800,4565,500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (277,2,1800,4566,500,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (285,0,180,3297,0,1,0,0,0,256,10);
+INSERT INTO `aa_actions` VALUES (285,1,180,3298,0,1,0,0,0,256,10);
+INSERT INTO `aa_actions` VALUES (285,2,180,3299,0,1,0,0,0,256,10);
+INSERT INTO `aa_actions` VALUES (286,0,4320,0,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (289,0,4320,0,0,1,2,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (290,0,4320,0,0,1,3,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (298,0,1800,4828,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (298,1,1800,4829,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (298,2,1800,4830,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (298,3,1800,4831,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (298,4,1800,4832,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (300,0,3600,4925,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (300,1,3600,4926,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (300,2,3600,4927,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (303,0,60,4833,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (304,0,60,4834,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (305,0,69,4835,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (307,0,1800,4836,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (307,1,1800,4837,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (307,2,1800,4838,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (307,3,1800,4839,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (307,4,1800,4840,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (308,0,4320,5245,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (308,1,4320,5245,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (308,2,4320,5245,0,1,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (89,0,0,1471,0,0,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (89,1,0,2712,0,0,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (89,2,0,2718,0,0,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (89,3,0,3228,0,0,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (89,4,0,4908,0,0,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (89,5,0,4910,0,0,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (68,1,0,2488,0,0,0,0,0,0,0);
+INSERT INTO `aa_actions` VALUES (276,1,3600,0,0,1,4,0,10000,0,0);
+INSERT INTO `aa_actions` VALUES (276,2,3600,0,0,1,4,0,10000,0,0);
 
-
-INSERT INTO aa_actions VALUES("35", "0", "4320", "0", "1", "1", "0", "0", "264", "10");
-INSERT INTO aa_actions VALUES("36", "0", "64800", "1", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("37", "0", "7", "1", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("38", "0", "900", "100", "1", "6", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("39", "0", "8640", "0", "2", "0", "0", "0", "154", "10");
-INSERT INTO aa_actions VALUES("40", "0", "4320", "2500", "2", "0", "0", "0", "155", "10");
-INSERT INTO aa_actions VALUES("40", "1", "4320", "2500", "2", "0", "0", "0", "155", "10");
-INSERT INTO aa_actions VALUES("40", "2", "4320", "2500", "2", "0", "0", "0", "155", "10");
-INSERT INTO aa_actions VALUES("41", "0", "1800", "0", "2", "0", "0", "0", "156", "10");
-INSERT INTO aa_actions VALUES("43", "0", "4320", "100", "1", "0", "0", "0", "159", "10");
-INSERT INTO aa_actions VALUES("46", "0", "4320", "6000", "2", "7", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("46", "1", "4320", "6000", "2", "7", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("46", "2", "4320", "6000", "2", "7", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("38", "1", "900", "100", "1", "6", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("38", "2", "900", "100", "1", "6", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("47", "0", "180", "2500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("50", "0", "7200", "100", "1", "0", "0", "0", "158", "10");
-INSERT INTO aa_actions VALUES("52", "1", "480", "16000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("52", "0", "480", "16000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("53", "0", "4320", "100", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("57", "0", "8640", "2000", "1", "0", "0", "0", "157", "10");
-INSERT INTO aa_actions VALUES("58", "0", "2160", "1", "5", "0", "0", "0", "161", "10");
-INSERT INTO aa_actions VALUES("60", "0", "4320", "2000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("61", "0", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("61", "1", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("61", "2", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("62", "0", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("62", "1", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("62", "2", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("63", "0", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("63", "1", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("63", "2", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("64", "0", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("64", "1", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("64", "2", "900", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("66", "0", "4320", "2500", "1", "0", "0", "0", "162", "10");
-INSERT INTO aa_actions VALUES("66", "1", "4320", "2500", "1", "0", "0", "0", "162", "10");
-INSERT INTO aa_actions VALUES("66", "2", "4320", "2500", "1", "0", "0", "0", "162", "10");
-INSERT INTO aa_actions VALUES("68", "0", "8640", "6000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("69", "0", "4320", "3000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("70", "0", "4320", "3000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("71", "0", "7", "3000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("72", "0", "4320", "5000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("73", "0", "30", "1500", "2", "0", "0", "0", "196", "24");
-INSERT INTO aa_actions VALUES("76", "0", "4320", "0", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("77", "0", "1", "2000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("80", "0", "7", "1", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("85", "0", "1", "2000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("86", "0", "4320", "1", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("87", "0", "4320", "1", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("98", "0", "4320", "0", "1", "0", "0", "0", "165", "10");
-INSERT INTO aa_actions VALUES("102", "0", "4320", "0", "1", "0", "0", "0", "166", "10");
-INSERT INTO aa_actions VALUES("107", "0", "4320", "0", "1", "0", "0", "0", "167", "10");
-INSERT INTO aa_actions VALUES("109", "0", "6000", "0", "1", "0", "0", "0", "164", "10");
-INSERT INTO aa_actions VALUES("110", "0", "900", "0", "1", "0", "0", "0", "163", "10");
-INSERT INTO aa_actions VALUES("111", "0", "2160", "0", "4", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("111", "1", "2160", "0", "4", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("111", "2", "2160", "0", "4", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("117", "0", "4320", "2000", "2", "0", "0", "0", "160", "10");
-INSERT INTO aa_actions VALUES("126", "0", "300", "3000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("127", "0", "720", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("128", "0", "900", "5000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("153", "0", "180", "3500", "1", "0", "0", "0", "256", "10");
-INSERT INTO aa_actions VALUES("153", "1", "180", "3500", "1", "0", "0", "0", "256", "10");
-INSERT INTO aa_actions VALUES("153", "2", "180", "3500", "1", "0", "0", "0", "256", "10");
-INSERT INTO aa_actions VALUES("169", "0", "180", "750", "4", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("169", "1", "180", "750", "4", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("169", "2", "180", "750", "4", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("170", "0", "240", "1000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("170", "1", "240", "1000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("170", "2", "240", "1000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("171", "0", "120", "2000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("171", "1", "120", "2000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("171", "2", "120", "2000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("172", "0", "480", "10000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("173", "0", "600", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("173", "1", "600", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("173", "2", "600", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("174", "0", "540", "500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("174", "1", "540", "500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("174", "2", "540", "500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("175", "0", "540", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("175", "1", "540", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("175", "2", "540", "8000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("176", "0", "0", "4000", "5", "10", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("176", "1", "0", "4000", "5", "10", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("177", "0", "720", "6500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("177", "1", "720", "6500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("177", "2", "720", "6500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("180", "0", "2160", "0", "1", "0", "0", "0", "282", "10");
-INSERT INTO aa_actions VALUES("180", "1", "2160", "0", "1", "0", "0", "0", "282", "10");
-INSERT INTO aa_actions VALUES("180", "2", "2160", "0", "1", "0", "0", "0", "282", "10");
-INSERT INTO aa_actions VALUES("184", "0", "900", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("184", "1", "900", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("184", "2", "900", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("185", "0", "1320", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("185", "1", "1320", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("185", "2", "1320", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("199", "0", "18", "0", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("207", "0", "1320", "6500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("207", "1", "1320", "6500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("207", "2", "1320", "6500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("208", "0", "900", "6500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("208", "1", "900", "6500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("208", "2", "900", "6500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("212", "0", "0", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("217", "0", "0", "0", "1", "13", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("219", "0", "5", "1750", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("226", "0", "8640", "6000", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("245", "0", "4320", "0", "1", "11", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("254", "0", "7200", "3000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("247", "0", "60", "0", "2", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("254", "1", "7200", "3000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("254", "2", "7200", "3000", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("255", "0", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("255", "1", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("255", "2", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("255", "3", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("255", "4", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("257", "0", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("257", "1", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("257", "2", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("257", "3", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("257", "4", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("261", "0", "4320", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("261", "1", "4320", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("261", "2", "4320", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("265", "0", "900", "0", "1", "5", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("276", "0", "3600", "0", "1", "4", "0", "10000", "0", "0");
-INSERT INTO aa_actions VALUES("277", "0", "1800", "500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("277", "1", "1800", "500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("277", "2", "1800", "500", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("285", "0", "180", "0", "1", "0", "0", "0", "256", "10");
-INSERT INTO aa_actions VALUES("285", "1", "180", "0", "1", "0", "0", "0", "256", "10");
-INSERT INTO aa_actions VALUES("285", "2", "180", "0", "1", "0", "0", "0", "256", "10");
-INSERT INTO aa_actions VALUES("286", "0", "4320", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("289", "0", "4320", "0", "1", "2", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("290", "0", "4320", "0", "1", "3", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("298", "0", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("298", "1", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("298", "2", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("298", "3", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("298", "4", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("300", "0", "3600", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("300", "1", "3600", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("300", "2", "3600", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("303", "0", "60", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("304", "0", "60", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("305", "0", "69", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("307", "0", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("307", "1", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("307", "2", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("307", "3", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("307", "4", "1800", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("308", "0", "4320", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("308", "1", "4320", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("308", "2", "4320", "0", "1", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("89", "0", "0", "0", "0", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("89", "1", "0", "0", "0", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("89", "2", "0", "0", "0", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("89", "3", "0", "0", "0", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("89", "4", "0", "0", "0", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("89", "5", "0", "0", "0", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("68", "1", "0", "0", "0", "0", "0", "0", "0", "0");
-INSERT INTO aa_actions VALUES("276", "1", "3600", "0", "1", "4", "0", "10000", "0", "0");
-INSERT INTO aa_actions VALUES("276", "2", "3600", "0", "1", "4", "0", "10000", "0", "0");
 
 INSERT INTO fishing (zoneid,Itemid,skill_level,chance) VALUES(0, 51176, 0, 100);
 INSERT INTO fishing (zoneid,Itemid,skill_level,chance) VALUES(0, 51191, 0, 100);

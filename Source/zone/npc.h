@@ -23,6 +23,8 @@ class NPC;
 #include "mob.h"
 //#include "spawn.h"
 
+#include <list>
+using namespace std;
 
 #include "spawn2.h"
 #include "loottable.h"
@@ -79,6 +81,8 @@ public:
 	void	GoToBind()	{ GMMove(org_x, org_y, org_z, org_heading); }
 	void	Gate();
 
+	void	GetPetState(SpellBuff_Struct *buffs, int32 *items, char *name);
+	void	SetPetState(SpellBuff_Struct *buffs, int32 *items);
 	void	InteractiveChat(int8 chan_num, int8 language, const char * message, const char* targetname,Mob* sender);
 	void	TakenAction(int8 action,Mob* actiontaker);
 	virtual void SpellProcess();
@@ -107,7 +111,6 @@ public:
 	void	AddCash(int16 in_copper, int16 in_silver, int16 in_gold, int16 in_platinum);
 	void	AddCash();
 	void	RemoveCash();
-	ItemList*	GetItemList() { return itemlist; }
 	void	QueryLoot(Client* to);
 	int32	CountLoot();
 	bool	passengers;
@@ -177,7 +180,7 @@ public:
 	
 	inline bool WillAggroNPCs() const { return(npc_aggro); }
 	
-	ItemList*	itemlist; //kathgar - why is this public?  Doing other things or I would check the code
+	ItemList	itemlist; //kathgar - why is this public?  Doing other things or I would check the code
 	
 	NPCProximity* proximity;
 	
@@ -186,7 +189,7 @@ public:
 	Spawn2*	respawn2;
 protected:
 	friend class EntityList;
-	LinkedList<struct NPCFaction*> faction_list;
+	list<struct NPCFaction*> faction_list;
 	Mob*	ignore_target;
 	uint32	copper;
 	uint32	silver;

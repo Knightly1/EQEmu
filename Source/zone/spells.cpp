@@ -1330,7 +1330,7 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 			}
 		}
 	}
-	
+
 	//
 	// solar: Switch #2 - execute the spell
 	//
@@ -1998,12 +1998,13 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		return false;
 	}
 
+
 	// solar: resist check - every spell can be resisted, beneficial or not
 	// add: ok this isn't true, eqlive's spell data is fucked up, buffs are
 	// not all unresistable, so changing this to only check certain spells
 	if(IsResistableSpell(spell_id))
 	{
-		spell_effectiveness = spelltar->ResistSpell(spell_id, this);
+		spell_effectiveness = spelltar->ResistSpell(spells[spell_id].resisttype, spell_id, this);
 		if(spell_effectiveness < 100)
 		{
 			if(spell_effectiveness == 0 || !IsPartialCapableSpell(spell_id) )
@@ -2022,6 +2023,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	{
 		spell_effectiveness = 100;
 	}
+
 
 	if(spell_id == 982)	// Cazic Touch, hehe =P
 	{
@@ -2388,7 +2390,10 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 	// client vs client fear
 	if(IsEffectInSpell(spell_id, SE_Fear))
 	{
-		if(IsClient() && caster->IsClient())
+		if(SpecAttacks[UNFEARABLE]) {
+			caster->Message_StringID(MT_Shout, IMMUNE_FEAR);
+			return true;
+		} else if(IsClient() && caster->IsClient())
 		{
 			caster->Message_StringID(MT_Shout, IMMUNE_FEAR);
 			return true;
@@ -2475,14 +2480,15 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 // it landed, and anything else means it was resisted; however there are some
 // spells that can be partially effective, and this value can be used there.
 //
-double Mob::ResistSpell(int16 spell_id, Mob *caster)
+float Mob::ResistSpell(int8 resist_type, int16 spell_id, Mob *caster)
 {
 	int caster_level, target_level, resist;
-	double roll, roll2, effectiveness_index;
-	double no_resist_chance, full_hit_cutoff, partial_hit_cutoff;
+	float roll, roll2, effectiveness_index;
+	float no_resist_chance, full_hit_cutoff, partial_hit_cutoff;
 	
-	int8 resist_type = spells[spell_id].resisttype;
-	
+	/*
+	Why is this completely different? is this researched,
+	or was it just made up..?
 	if (spell_id == 0) //elem damage!
 	{
 		adverrorinfo = 91;
@@ -2512,9 +2518,9 @@ double Mob::ResistSpell(int16 spell_id, Mob *caster)
 		if (rand()%100 < resistchance)
 			return 100;
 		return 0;
-	}
+	}*/
 	
-	if(!IsValidSpell(spell_id))
+	if(spell_id != 0 && !IsValidSpell(spell_id))
 	{
 		return 0;
 	}
@@ -2524,7 +2530,12 @@ double Mob::ResistSpell(int16 spell_id, Mob *caster)
 	}
 
 	target_level = GetLevel();
-	caster_level = caster ? caster->GetCasterLevel(spell_id) : target_level;
+	
+	if(spell_id == 0) {
+		caster_level = caster->GetLevel();
+	} else {
+		caster_level = caster ? caster->GetCasterLevel(spell_id) : target_level;
+	}
 
 	// if NPC target and more than X levels above caster, it's always resisted
 	if(IsNPC() && target_level - caster_level > AUTO_RESIST_LEVEL_DIFF)
@@ -2587,7 +2598,8 @@ double Mob::ResistSpell(int16 spell_id, Mob *caster)
 	}
 
 	// value in spell to adjust base resist by
-	resist += spells[spell_id].ResistDiff;
+	if(spell_id != 0)
+		resist += spells[spell_id].ResistDiff;
 
 	//
 	// solar: at this point we have:
@@ -2626,7 +2638,7 @@ double Mob::ResistSpell(int16 spell_id, Mob *caster)
 	no_resist_chance -= resist / 2.0;
 	
 	//still working on this...
-	if (IsFearSpell(spell_id)) {
+	if (spell_id != 0 && IsFearSpell(spell_id)) {
 		sint16 rchance = 0;
 		switch (GetAA(aaFearResistance))
 		{
@@ -2650,6 +2662,7 @@ double Mob::ResistSpell(int16 spell_id, Mob *caster)
 	
 	//this is prolly wrong, but I dont see a good way to roll
 	//it into the rest of this stuff
+	//should this apply for elemental damage?
 	sint16 bonus_resists = spellbonuses.ResistSpellChance + itembonuses.ResistSpellChance;
 	no_resist_chance -= bonus_resists;
 

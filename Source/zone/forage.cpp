@@ -310,8 +310,10 @@ void Client::GoFish()
 		
 		Message_StringID(MT_Skills, FISHING_SUCCESS);
 		const ItemInst* inst = ItemInst::Create(food_item, 1);
-		PutItemInInventory(SLOT_CURSOR, *inst);
-		SendItemPacket(SLOT_CURSOR,inst,ItemPacketSummonItem);
+		if(inst != NULL) {
+			PutItemInInventory(SLOT_CURSOR, *inst);
+			SendItemPacket(SLOT_CURSOR,inst,ItemPacketSummonItem);
+		}
 	}
 	else
 	{
@@ -382,8 +384,10 @@ void Client::ForageItem() {
 			
 			Message_StringID(MT_Skills, stringid);
 			const ItemInst* inst = ItemInst::Create(food_item, 1);
-			PutItemInInventory(SLOT_CURSOR,*inst);
-			SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
+			if(inst != NULL) {
+				PutItemInInventory(SLOT_CURSOR,*inst);
+				SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
+			}
 		}
 		
 	} else {

@@ -28,6 +28,7 @@ spawn2 mediumblob, npcs mediumblob, npc_loot mediumblob, gmspawntype mediumblob,
 #define ZONEDUMP_H
 #include "faction.h"
 #include "../common/eq_packet_structs.h"
+#include "../common/Item.h"
 
 #pragma pack(1)
 
@@ -57,7 +58,7 @@ struct NPCType
 	sint32	npc_faction_id;
 	uint32	merchanttype;
     int8    light;
-    int8    equipment[9];
+    int32    equipment[MAX_MATERIALS];
 	
 	int16	AC;
 	int16	Mana;

@@ -156,7 +156,7 @@ int CalcPetHp(int levelb, int classb, int STA)
 
 
 
-void Mob::MakePet(int16 spell_id, const char* pettype) {
+void Mob::MakePet(int16 spell_id, const char* pettype, const char *petname) {
 /*Baron-Sprite: Pet types were conflicting all over...
  * was rushed it appears.  I have corrected pet types and
  * assigned ranges for pet types. PLEASE follow these ranges 
@@ -415,7 +415,7 @@ void Mob::MakePet(int16 spell_id, const char* pettype) {
 				break;
 
 		}
-		MakePet(spell_id, tmplevel, tmpclass, tmprace, tmptexture, tmptype, 3, 217);
+		MakePet(spell_id, tmplevel, tmpclass, tmprace, tmptexture, tmptype, 3, 217, 0, 0, petname);
 		return;
 
 /*        MakePet(spell_id, 27,1,46,1,120,3,217); //Baron-Sprite: This Pettype is reserved to 120-124.
@@ -455,7 +455,7 @@ void Mob::MakePet(int16 spell_id, const char* pettype) {
 			break;
 	    default:
 			cout << "Unknown pettype: " << tmp<< " : Generating default type." << endl;
-			MakePet(spell_id, 24, 1, 42, 0, 40, 7, 3);
+			MakePet(spell_id, 24, WARRIOR, 42, 0, 40, 7, 3, 0, 0, petname);
 			return;
 		}
     } else if (strncmp(pettype, "BLpet", 5) == 0) { //Baron-Sprite: This Pettype is reserved to 125-137
@@ -537,7 +537,7 @@ void Mob::MakePet(int16 spell_id, const char* pettype) {
 			database.MakePet(&petstruct,125,5,2.3*size_mod);
 			break;
 		default:
-			MakePet(spell_id, 10, 1, prace, mat, 125, 2*size_mod, 5);
+			MakePet(spell_id, 10, 1, prace, mat, 125, 2*size_mod, 5, 0, 0, petname);
 	        cout << "ptype not found: Making default BL pet." << endl;
 			break;
 		}
@@ -593,13 +593,13 @@ void Mob::MakePet(int16 spell_id, const char* pettype) {
 			database.MakePet(&petstruct,46,2);
 			break;
 		default:
-			MakePet(spell_id, 1, 1, 127, 0, 46, 6, 2);
+			MakePet(spell_id, 1, WARRIOR, 127, 0, 46, 6, 2, 0, 0, petname);
 			cout << "ptype not found: Making default animation pet." << endl;
 			return;
 		}
     } else if (strncmp(pettype, "SumSword", 8) == 0) { //Baron-Sprite: This Pettype is reserved to 18.
         // for testing make an chanter pet
-		MakePet(spell_id, 59, 1, 127,0,46,0,2);
+		MakePet(spell_id, 59, WARRIOR, 127,0,46,0,2, 0, 0, petname);
     } else if (strncmp(pettype, "skel_pet_", 9) == 0) { //Baron-Sprite: This Pettype is reserved to 22-39.
 		char sztmp[50];
 		strcpy(sztmp, pettype);
@@ -667,29 +667,31 @@ void Mob::MakePet(int16 spell_id, const char* pettype) {
     } else if (strncmp(pettype, "SumMageMultiElement", 19) == 0) {
 		database.MakePet(&petstruct,4,15);
 	//Pet types from WR, not sure if they are real or not...
+	//the arguments for these are fucked up too... 
 	} else if (strncmp(pettype, "SumHammer", 9) == 0) {
-		MakePet(spell_id, 50, WARRIOR, 127, 0, 6, 0, 13, 3);
+		MakePet(spell_id, 50, WARRIOR, 127, 0, 6, 0, 13, 0, 0, petname);
 		return;
 		//another cleric pet: cleric_hammer_67_ (spell 5256)
 		//and SumCelestialSpirit (spell 5865)
 	} else if (strncmp(pettype, "SumSword2", 9) == 0) {
-		MakePet(spell_id, 54, WARRIOR, 127, 0, 5, 0, 500, 3);
+		MakePet(spell_id, 54, WARRIOR, 127, 0, 5, 0, 500, 0, 0, petname);
 		return;
 	} else if (strncmp(pettype, "SumSword", 8) == 0) {
-		MakePet(spell_id, 52, WARRIOR, 127, 0, 5, 0, 100, 3);
+		MakePet(spell_id, 52, WARRIOR, 127, 0, 5, 0, 100, 0, 0, petname);
 		return;
 	} else if (strncmp(pettype, "CrysSpider", 9) == 0) {
-		MakePet(spell_id, 50, WARRIOR, 38, 5, 0, 0, 2500, 8);
+		MakePet(spell_id, 50, WARRIOR, 38, 5, 0, 0, 2500, 0, 0, petname);
 		return;
 	} else {
 		Message(13, "Unknown pet type: %s", pettype);
 	}
-	MakePet(spell_id, petstruct.level,petstruct.class_,petstruct.race,petstruct.texture,petstruct.pettype,petstruct.size,petstruct.type,petstruct.min_dmg,petstruct.max_dmg);
+	MakePet(spell_id, petstruct.level,petstruct.class_,petstruct.race,petstruct.texture,petstruct.pettype,petstruct.size,petstruct.type,petstruct.min_dmg,petstruct.max_dmg,petname);
 }
 
 void Mob::MakePet(int16 spell_id, int8 in_level, int8 in_class, int16 in_race,
                   int8 in_texture, int8 in_pettype, float in_size,
-                  int8 type, int32 min_dmg, int32 max_dmg) {
+                  int8 type, int32 min_dmg, int32 max_dmg,
+                  const char *petname) {
 	if (this->GetPetID() != 0) {
 		return;
 	}
@@ -707,8 +709,10 @@ void Mob::MakePet(int16 spell_id, int8 in_level, int8 in_class, int16 in_race,
 		npc_type->gender = 1;
 	else
 		npc_type->gender = 2;
-
-	if (in_pettype >= 1 && in_pettype <= 4) {
+	
+	if(petname != NULL) {
+		strncpy(npc_type->name, petname, 64);
+	} else if (in_pettype >= 1 && in_pettype <= 4) {
 		strcpy(npc_type->name, this->GetName());
 		npc_type->name[19] = '\0';
 		strcat(npc_type->name, "`s_familiar");
@@ -747,7 +751,7 @@ void Mob::MakePet(int16 spell_id, int8 in_level, int8 in_class, int16 in_race,
        case 217: {
     	// wizards familiars
     	char f_name[50];
-    	strcpy(f_name,this->GetCleanName());
+    	strcpy(f_name,GetCleanName());
     	strcat(f_name,"'s Familiar");
     	strcpy(npc_type->name, f_name);
     	npc_type->min_dmg = 0;  //Baron-Sprite: Naughty Familiar.  No Attack 4 u.
@@ -987,6 +991,226 @@ void Mob::MakePet(int16 spell_id, int8 in_level, int8 in_class, int16 in_race,
     else
 	    this->SetFamiliarID(npc->GetID());	
 	npc->SetPetSpellID(spell_id);
+}
+
+
+
+Mob* Mob::GetFamiliar() {
+	Mob* tmp = entity_list.GetMob(this->GetFamiliarID());
+
+	if (tmp) {
+		if (tmp->GetOwnerID() == this->GetID()) {
+			return tmp;
+		}
+		else {
+			this->SetFamiliarID(0);
+			return 0;
+		}
+	}
+	return 0;
+}
+
+Mob* Mob::GetPet() {
+	Mob* tmp = entity_list.GetMob(this->GetPetID());
+
+	if (tmp) {
+		if (tmp->GetOwnerID() == this->GetID()) {
+			return tmp;
+		}
+		else {
+			this->SetPetID(0);
+			return 0;
+		}
+	}
+	return 0;
+}
+
+void Mob::SetPet(Mob* newpet) {
+	Mob* oldpet = GetPet();
+	if (oldpet) {
+		oldpet->SetOwnerID(0);
+	}
+	if (newpet == 0) {
+		SetPetID(0);
+	}
+	else {
+		SetPetID(newpet->GetID());
+		Mob* oldowner = entity_list.GetMob(newpet->GetOwnerID());
+		if (oldowner)
+			oldowner->SetPetID(0);
+		newpet->SetOwnerID(this->GetID());
+	}
+}
+
+void Mob::SetPetID(int16 NewPetID) {
+	if (NewPetID == GetID() && NewPetID != 0)
+		return;
+	petid = NewPetID;
+}
+
+void Mob::SetFamiliarID(int16 NewPetID) {
+	if (NewPetID == GetID() && NewPetID != 0)
+		return;
+	familiarid = NewPetID;
+}
+
+void Database::MakePet(Make_Pet_Struct* pet,int16 id,int16 type,float size){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char *query = 0;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	if (database.RunQuery(query, MakeAnyLenString(&query, "SELECT level,class, race, texture, size, min_dmg, max_dmg from pets where id=%i",id), errbuf, &result)) {
+		safe_delete_array(query);
+		if((row = mysql_fetch_row(result))) {
+			if(size<=0)
+				size=atof(row[4]);
+			pet->level=atoi(row[0]);
+			pet->class_=atoi(row[1]);
+			pet->race=atoi(row[2]);
+			pet->texture=atoi(row[3]);
+			pet->size=size;
+			pet->type=type;
+			pet->pettype=id;
+			pet->min_dmg = atoi(row[4]);
+			pet->max_dmg = atoi(row[5]);
+		}
+		mysql_free_result(result);
+	} 
+	else
+		safe_delete_array(query);
+}
+
+void Database::GetPetStats(NPCType* pet,int16 id){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char *query = 0;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	if (database.RunQuery(query, MakeAnyLenString(&query, "SELECT max_hp , cur_hp, min_dmg, max_dmg from pets where id=%i",id), errbuf, &result)) {
+		safe_delete_array(query);
+		if((row = mysql_fetch_row(result))) {
+			pet->max_hp = atoi(row[0]);//hmmm
+			pet->cur_hp = atoi(row[1]);
+			pet->min_dmg = atoi(row[2]);
+			pet->max_dmg = atoi(row[3]);
+		}
+		mysql_free_result(result);
+	}
+	else
+		safe_delete_array(query);
+}
+
+void NPC::GetPetState(SpellBuff_Struct *pet_buffs, int32 *items, char *name) {
+	//save the pet name
+	strncpy(name, GetCleanName(), 64);
+	name[63] = '\0';
+	
+	//save their items
+	int i;
+	memset(items, 0, sizeof(int32)*MAX_MATERIALS);
+	i = 0;
+	
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* item = *cur;
+		items[i] = item->item_id;
+		i++;
+		if (i >= MAX_MATERIALS)
+			break;
+		//dont need to save anything else... since these items only
+		//exist for the pet, nobody else can get at them AFAIK
+	}
+	
+	//save their buffs.
+	for (i=0; i < BUFF_COUNT; i++) {
+		if (buffs[i].spellid != SPELL_UNKNOWN) {
+			pet_buffs[i].spellid = buffs[i].spellid;
+// solar: fix this if buffs struct is fixed
+			pet_buffs[i].slotid = i+1/*2*/;
+			pet_buffs[i].duration = buffs[i].ticsremaining;
+			pet_buffs[i].level = buffs[i].casterlevel;
+			pet_buffs[i].effect = 10;
+			pet_buffs[i].poisoncounters = buffs[i].poisoncounters;
+			pet_buffs[i].diseasecounters = buffs[i].diseasecounters;
+		}
+		else {
+			pet_buffs[i].spellid = SPELL_UNKNOWN;
+			pet_buffs[i].duration = 0;
+			pet_buffs[i].level = 0;
+			pet_buffs[i].effect = 0;
+			pet_buffs[i].poisoncounters = 0;
+			pet_buffs[i].diseasecounters = 0;
+		}
+	}
+}
+
+void NPC::SetPetState(SpellBuff_Struct *pet_buffs, int32 *items) {
+	//restore their buffs...
+	
+	int i;
+	for (i = 0; i < BUFF_COUNT; i++) {
+		for(int z = 0; z < BUFF_COUNT; z++) {
+		// check for duplicates
+			if(buffs[z].spellid != SPELL_UNKNOWN && buffs[z].spellid == pet_buffs[i].spellid) {
+				buffs[z].spellid = SPELL_UNKNOWN;
+				pet_buffs[i].spellid = 0xFFFFFFFF;
+			}
+		}
+		
+		if (pet_buffs[i].spellid <= (int32)SPDAT_RECORDS && pet_buffs[i].spellid != 0 && pet_buffs[i].duration > 0) {
+			if(pet_buffs[i].level == 0 || pet_buffs[i].level > 100)
+				pet_buffs[i].level = 1;
+			buffs[i].spellid			= pet_buffs[i].spellid;
+			buffs[i].ticsremaining		= pet_buffs[i].duration;
+			buffs[i].casterlevel		= pet_buffs[i].level;
+			buffs[i].casterid			= 0;
+			buffs[i].durationformula	= spells[buffs[i].spellid].buffdurationformula;
+			buffs[i].poisoncounters		= pet_buffs[i].poisoncounters;
+			buffs[i].diseasecounters	= pet_buffs[i].diseasecounters;
+		}
+		else {
+			buffs[i].spellid = SPELL_UNKNOWN;
+			pet_buffs[i].spellid = 0xFFFFFFFF;
+			pet_buffs[i].slotid = 0;
+			pet_buffs[i].level = 0;
+			pet_buffs[i].duration = 0;
+			pet_buffs[i].effect = 0;
+		}
+	}
+	for (int j1=0; j1 < BUFF_COUNT; j1++) {
+		if (buffs[j1].spellid <= (int32)SPDAT_RECORDS) {
+			for (int x1=0; x1 < EFFECT_COUNT; x1++) {
+				switch (spells[buffs[j1].spellid].effectid[x1]) {
+					case SE_Charm:
+					case SE_Rune:
+					case SE_Illusion:
+						buffs[j1].spellid = SPELL_UNKNOWN;
+						pet_buffs[j1].spellid = SPELLBOOK_UNKNOWN;
+						pet_buffs[j1].slotid = 0;
+						pet_buffs[j1].level = 0;
+						pet_buffs[j1].duration = 0;
+						pet_buffs[j1].effect = 0;
+						x1 = EFFECT_COUNT;
+						break;
+					// We can't send appearance packets yet, put down at CompleteConnect
+				}
+			}
+		}
+	}
+	
+	//restore their equipment...
+	for(i = 0; i < MAX_MATERIALS; i++) {
+		if(items[i] == 0)
+			continue;
+		
+		const Item_Struct* item2 = database.GetItem(items[i]);
+		if (item2 && item2->NoDrop != 0) {
+			//dont bother saving item charges for now, NPCs never use them
+			//and nobody should be able to get them off the corpse..?
+			AddLootDrop(item2, &itemlist, 0, true, true);
+		}
+	}
 }
 
 

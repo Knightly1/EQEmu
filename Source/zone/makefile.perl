@@ -16,7 +16,7 @@ SF=../common/EQNetwork.o \
    inventory.o client_mods.o tradeskills.o waypoints.o pets.o \
    effects.o AA.o trap.o perl_client.o perl_entity.o perl_mob.o perl_npc.o \
    perl_PlayerCorpse.o perl_groups.o questmgr.o client_logs.o perlparser.o \
-   ../common/rdtsc.o
+   ../common/rdtsc.o ../common/extprofile.o
 
 
 CC=gcc

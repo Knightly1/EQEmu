@@ -90,7 +90,7 @@ bool Spawn2::Process() {
 	if (timer->Check())	{
 		timer->Disable();
 		
-		SpawnGroup* sg = zone->spawn_group_list->GetSpawnGroup(spawngroup_id_);
+		SpawnGroup* sg = zone->spawn_group_list.GetSpawnGroup(spawngroup_id_);
 		if (sg == 0)
 			return false;
 		
@@ -113,7 +113,7 @@ bool Spawn2::Process() {
 	}
 	if(gridtimer.Check() && npcthis){
 		gridtimer.Disable();
-		if (grid_ > 0)
+		if (grid_ > 0 && entity_list.IsMobInZone(npcthis))
 			npcthis->AssignWaypoints(grid_);
 	}
 	return true;

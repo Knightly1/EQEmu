@@ -25,7 +25,7 @@ typedef enum {
 } questMode;
 
 struct EventRecord {
-	int event;
+	QuestEventID event;
 	int32 npcid;
 	string data;
 	NPC* npcmob;
@@ -36,7 +36,11 @@ class PerlembParser : public Parser
 {
 protected:
 	
+	//could prolly get rid of this map now, since I check for the
+	//actual subroutine in the quest package as opposed to just seeing
+	//if they do not have a quest or the default.
 	map<int32, questMode> hasQuests;	//npcid -> questMode
+	
 	queue<EventRecord> eventQueue;		//for events that happen when perl is in use.
 	bool eventQueueProcessing;
 	
@@ -52,13 +56,20 @@ public:
 	//todo, consider making the following two methods static (need to check for perl!=null, first, then)
 	bool isloaded(const char *packagename) const { return perl->geti(std::string("$").append(packagename).append("::isloaded").c_str()); }
 //	bool isdefault(const char *packagename) const { return perl->geti(std::string("$").append(packagename).append("::isdefault").c_str()); }
-	void Event(int event, int32 npcid, const char * data, NPC* npcmob, Mob* mob);
+	void Event(QuestEventID event, int32 npcid, const char * data, NPC* npcmob, Mob* mob);
 	int LoadScript(int npcid, const char * zone, Mob* activater=0);
+	
 	//expose a var to the script (probably parallels addvar))
 	//i.e. exportvar("qst1234", "name", "somemob"); 
 	//would expose the variable $name='somemob' to the script that handles npc1234
-	//I don't escape the strings, so use caution!!
 	void ExportVar(const char * pkgprefix, const char * varname, const char * value) const;
+	void ExportVar(const char * pkgprefix, const char * varname, int value) const;
+	void ExportVar(const char * pkgprefix, const char * varname, unsigned int value) const;
+	void ExportVar(const char * pkgprefix, const char * varname, double value) const;
+	//I don't escape the strings, so use caution!!
+	//Same as export var, except value is not quoted, and is evaluated as perl
+	void ExportVarComplex(const char * pkgprefix, const char * varname, const char * value) const;
+	
 	//get an appropriate namespage/packagename from an npcid
 	std::string GetPkgPrefix(int32 npcid, bool defaultOK = true);
 	//call the appropriate perl handler. afterwards, parse and dispatch the command queue
@@ -67,6 +78,8 @@ public:
 	void ReloadQuests();
 	
 	int	HasQuestFile(int32 npcid);
+	
+	bool HasQuestSub(int32 npcid, const char *subname);
 	
 #ifdef EMBPERL_COMMANDS
 	void ExecCommand(Client *c, Seperator *sep);

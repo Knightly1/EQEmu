@@ -37,10 +37,12 @@
 #include "../common/guilds.h"
 #include "../common/MiscFunctions.h"
 #include "../common/Mutex.h"
+#include "../common/Item.h"
 #include "../zone/loottable.h"
 #include "../zone/faction.h"
 #include "../zone/message.h"
 #include "../zone/AA.h"
+#include "extprofile.h"
 #include <string>
 #include <vector>
 #ifdef GUILDWARS
@@ -283,9 +285,9 @@ public:
 	int32	NumberInGuild(int32 guilddbid);
 	bool	SetHackerFlag(const char* accountname, const char* charactername, const char* hacked);
     void	GetCharSelectInfo(int32 account_id, CharacterSelect_Struct*);
-	bool	GetPlayerProfile(uint32 account_id, char* name, PlayerProfile_Struct* pp, Inventory* inv, char* current_zone = 0);
-	bool	SetPlayerProfile(uint32 account_id, uint32 charid, PlayerProfile_Struct* pp, Inventory* inv, uint32 current_zone = 0);
-	int32	SetPlayerProfile_MQ(char** query, uint32 account_id, uint32 charid, PlayerProfile_Struct* pp, Inventory* inv, uint32 current_zone = 0);
+	bool	GetPlayerProfile(uint32 account_id, char* name, PlayerProfile_Struct* pp, Inventory* inv, ExtendedProfile_Struct *ext, char* current_zone = 0);
+	bool	SetPlayerProfile(uint32 account_id, uint32 charid, PlayerProfile_Struct* pp, Inventory* inv, ExtendedProfile_Struct *ext, uint32 current_zone = 0);
+	int32	SetPlayerProfile_MQ(char** query, uint32 account_id, uint32 charid, PlayerProfile_Struct* pp, Inventory* inv, ExtendedProfile_Struct *ext, uint32 current_zone = 0);
 	bool	GetSharedBank(uint32 id, Inventory* inv, bool is_charid);
 	bool	GetInventory(uint32 char_id, Inventory* inv);
 	bool	GetInventory(uint32 account_id, char* name, Inventory* inv);
@@ -295,7 +297,7 @@ public:
 	bool	CheckUsedName(const char* name);
 	bool	ReserveName(int32 account_id, char* name);
 	bool	CreateCharacter(uint32 account_id, char* name, int16 gender, int16 race, int16 class_, int8 str, int8 sta, int8 cha, int8 dex, int8 int_, int8 agi, int8 wis, int8 face);
-	bool	StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inventory* inv);
+	bool	StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inventory* inv, ExtendedProfile_Struct *ext);
 	bool	DeleteCharacter(char* name);
 	//bool    SetStartingItems(PlayerProfile_Struct* pp, Inventory* inv, int16 si_race, int8 si_class, int16 si_deity, int16 si_current_zone, char* si_name, sint16 GM_FLAG = 0);
 	bool    SetStartingItems(PlayerProfile_Struct* pp, Inventory* inv, uint32 si_race, uint32 si_class, uint32 si_deity, uint32 si_current_zone, char* si_name, int admin);
@@ -307,12 +309,12 @@ public:
 	int32	GetCharacterInfo(const char* iName, int32* oAccID = 0, int32* oZoneID = 0, float* oX = 0, float* oY = 0, float* oZ = 0);
 	bool	GetAccountInfoForLogin(int32 account_id, sint16* admin = 0, char* account_name = 0, int32* lsaccountid = 0, int8* gmspeed = 0, bool* revoked = 0);
 	bool	GetAccountInfoForLogin_result(MYSQL_RES* result, sint16* admin = 0, char* account_name = 0, int32* lsaccountid = 0, int8* gmspeed = 0, bool* revoked = 0);
-	bool	GetCharacterInfoForLogin(const char* name, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, uint32* pplen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
+	bool	GetCharacterInfoForLogin(const char* name, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, ExtendedProfile_Struct *ext = 0, uint32* pplen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
 	int32	GetGroupID(const char* name);
 	void	SetGroupID(const char* name, int32 id);
 	void	ClearGroup(int32 gid = 0);
 	char*	GetGroupLeaderForLogin(const char* name,char* leaderbuf);
-	bool	GetCharacterInfoForLogin_result(MYSQL_RES* result, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, uint32* pplen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
+	bool	GetCharacterInfoForLogin_result(MYSQL_RES* result, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, ExtendedProfile_Struct *ext = 0, uint32* pplen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
 	bool	SetLocalPassword(uint32 accid, const char* password);
 	
 	bool	InsertNewsPost(int8 type,char* logone,char* logtwo,int32 levelone,int32 leveltwo);
@@ -394,7 +396,7 @@ public:
 	bool	GetNPCFactionList(int32 npcfaction_id, sint32* faction_id, sint32* value, sint32* primary_faction = 0);
 	bool	GetFactionData(FactionMods* fd, uint32 class_mod, uint32 race_mod, uint32 deity_mod, sint32 faction_id); //rembrant, needed for factions Dec, 16 2001
 	bool	GetFactionName(sint32 faction_id, char* name, int32 buflen); // rembrant, needed for factions Dec, 16 2001
-	bool	GetFactionIdsForNPC(sint32 nfl_id, LinkedList<struct NPCFaction*> *faction_list, sint32* primary_faction = 0); // neotokyo: improve faction handling
+	bool	GetFactionIdsForNPC(sint32 nfl_id, list<struct NPCFaction*> *faction_list, sint32* primary_faction = 0); // neotokyo: improve faction handling
 	bool	SetCharacterFactionLevel(int32 char_id, sint32 faction_id, sint32 value,LinkedList<FactionValue*>* val_list); // rembrant, needed for factions Dec, 16 2001
 	bool	LoadFactionData();
 	bool	LoadFactionValues(int32 char_id, LinkedList<FactionValue*>* val_list);
@@ -474,6 +476,7 @@ public:
 	
 	int8	GetZoneW(int32 zoneid);
 	bool	SetZoneW(int32 zoneid, int8 w);
+	bool	InjectToRaw();
 	void	UpdateTimeleftWorld();
 	void	UpdateTimeleft(int32 id,int32 timeleft);
 	void	HandleMysqlError(int32 errnum);

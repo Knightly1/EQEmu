@@ -38,6 +38,23 @@
 extern char* itoa(int integer);
 #endif
 
+//these MUST be in the same order as the QuestEventID enum
+const char *QuestEventSubroutines[_LargestEventID] = {
+	"EVENT_SAY",
+	"EVENT_ITEM",
+	"EVENT_DEATH",
+	"EVENT_SPAWN",
+	"EVENT_ATTACK",
+	"EVENT_SLAY",
+	"EVENT_WAYPOINT",
+	"EVENT_TIMER",
+	"EVENT_SIGNAL",
+	"EVENT_HP",
+	"EVENT_AGGRO",
+	"EVENT_ENTER",
+	"EVENT_EXIT"
+};
+
 PerlembParser::PerlembParser(void) : Parser()
 {
 	perl = NULL;
@@ -55,11 +72,69 @@ void PerlembParser::ExportVar(const char * pkgprefix, const char * varname, cons
 {
 	if(!perl)
 		return;
+	//this crap cant possibly throw anything in its current state... oh well
+	try
+	{
+		perl->setstr(std::string(pkgprefix).append("::").append(varname).c_str(), value);
+		//todo: consider replacing ' w/ ", so that values can be expanded on the perl side
+// MYRA - fixed eval in ExportVar per Eglin
+//		perl->eval(std::string("$").append(pkgprefix).append("::").append(varname).append("=q(").append(value).append(");").c_str());
+//end Myra
+		
+	}
+	catch(const char * err)
+	{ //todo: consider rethrowing 
+		LogFile->write(EQEMuLog::Status, "Error exporting var: %s", err);
+	}
+}
+
+void PerlembParser::ExportVar(const char * pkgprefix, const char * varname, int value) const
+{
+	if(!perl)
+		return;
+	//this crap cant possibly throw anything in its current state... oh well
+	try {
+		perl->seti(std::string(pkgprefix).append("::").append(varname).c_str(), value);
+		
+	} catch(const char * err) {
+		LogFile->write(EQEMuLog::Status, "Error exporting var: %s", err);
+	}
+}
+
+void PerlembParser::ExportVar(const char * pkgprefix, const char * varname, unsigned int value) const
+{
+	if(!perl)
+		return;
+	//this crap cant possibly throw anything in its current state... oh well
+	try {
+		perl->seti(std::string(pkgprefix).append("::").append(varname).c_str(), value);
+		
+	} catch(const char * err) {
+		LogFile->write(EQEMuLog::Status, "Error exporting var: %s", err);
+	}
+}
+
+void PerlembParser::ExportVar(const char * pkgprefix, const char * varname, double value) const
+{
+	if(!perl)
+		return;
+	//this crap cant possibly throw anything in its current state... oh well
+	try {
+		perl->setd(std::string(pkgprefix).append("::").append(varname).c_str(), value);
+	} catch(const char * err) {
+		LogFile->write(EQEMuLog::Status, "Error exporting var: %s", err);
+	}
+}
+
+void PerlembParser::ExportVarComplex(const char * pkgprefix, const char * varname, const char * value) const
+{
+	if(!perl)
+		return;
 	try
 	{
 		//todo: consider replacing ' w/ ", so that values can be expanded on the perl side
 // MYRA - fixed eval in ExportVar per Eglin
-		perl->eval(std::string("$").append(pkgprefix).append("::").append(varname).append("=q(").append(value).append(");").c_str());
+		perl->eval(std::string("$").append(pkgprefix).append("::").append(varname).append("=").append(value).append(";").c_str());
 //end Myra
 
 	}
@@ -84,9 +159,12 @@ void PerlembParser::HandleQueue() {
 	eventQueueProcessing = false;
 }
 
-void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob, Mob* mob)
+void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NPC* npcmob, Mob* mob)
 {
 	if(!perl)
+		return;
+	
+	if(event >= _LargestEventID)
 		return;
 	
 	if(perl->InUse()) {
@@ -108,7 +186,14 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 	{
 		LoadScript(npcid, zone->GetShortName());
 	}
-
+	
+	const char *sub_name = QuestEventSubroutines[event];
+	
+	//make sure the sub we need even exists before we even do all this crap.
+	if(!perl->SubExists(packagename.c_str(), sub_name))
+		return;
+	
+	
 //	packagename = GetPkgPrefix(npcid);
 
 // SCORPIOUS2K - load global variables
@@ -132,7 +217,7 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 			charid=-npcmob->GetNPCTypeID();		// make char id negative npc id as a fudge
 		}
 
-		ExportVar(packagename.c_str(),"charid",itoa(charid));
+		ExportVar(packagename.c_str(),"charid",charid);
 
 		database.RunQuery(query, MakeAnyLenString(&query, 
 		  "SELECT name,value FROM quest_globals WHERE (npcid=%i || npcid=0) && (charid=%i || charid=0) && (zoneid=%i || zoneid=0) && expdate >= unix_timestamp(now())", 
@@ -157,20 +242,12 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 	}
 
 
-	if (event == EVENT_TIMER)
-	{
-		ExportVar(packagename.c_str(), "timer", data);
-	}
 	int8 fac = 0;
 	if (mob && mob->IsClient()) {
-		ExportVar(packagename.c_str(), "uguildid", itoa(mob->CastToClient()->GuildDBID()));
-// MYRA - corrected spelling for var $uguildrank for event_timer (was $uguildrang)
-		ExportVar(packagename.c_str(), "uguildrank", itoa(mob->CastToClient()->GuildRank()));
-//end Myra
-// MYRA - added vars $status & $cumflag per Eglin
-		ExportVar(packagename.c_str(), "status", itoa(mob->CastToClient()->Admin())); 
-		ExportVar(packagename.c_str(), "cumflag", itoa(mob->CastToClient()->flag[50])); 
-//end Myra
+		ExportVar(packagename.c_str(), "uguildid", mob->CastToClient()->GuildDBID());
+		ExportVar(packagename.c_str(), "uguildrank", mob->CastToClient()->GuildRank());
+		ExportVar(packagename.c_str(), "status", mob->CastToClient()->Admin()); 
+		ExportVar(packagename.c_str(), "cumflag", mob->CastToClient()->flag[50]); 
 	}
 
 	if (mob && npcmob && mob->IsClient() && npcmob->IsNPC()) {
@@ -195,26 +272,26 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 		ExportVar(packagename.c_str(), "name", mob->GetName());
 		ExportVar(packagename.c_str(), "race", GetRaceName(mob->GetRace()));
 		ExportVar(packagename.c_str(), "class", GetEQClassName(mob->GetClass()));
-		ExportVar(packagename.c_str(), "ulevel", itoa(mob->GetLevel()));
-		ExportVar(packagename.c_str(), "userid", itoa(mob->GetID()));
+		ExportVar(packagename.c_str(), "ulevel", mob->GetLevel());
+		ExportVar(packagename.c_str(), "userid", mob->GetID());
 	}
 	if (npcmob)
 	{
 		ExportVar(packagename.c_str(), "mname", npcmob->GetName());
 // MYRA - added vars $mobid & $mlevel per Eglin
-		ExportVar(packagename.c_str(), "mobid", itoa(npcmob->GetID())); 
-		ExportVar(packagename.c_str(), "mlevel", itoa(npcmob->GetLevel())); 
+		ExportVar(packagename.c_str(), "mobid", npcmob->GetID()); 
+		ExportVar(packagename.c_str(), "mlevel", npcmob->GetLevel()); 
 //end Myra
 // hp event
-		ExportVar(packagename.c_str(), "hpevent", itoa((int)npcmob->GetNextHPEvent())); 
-		ExportVar(packagename.c_str(), "hpratio", itoa((int)npcmob->GetHPRatio()));
+		ExportVar(packagename.c_str(), "hpevent", npcmob->GetNextHPEvent()); 
+		ExportVar(packagename.c_str(), "hpratio",npcmob->GetHPRatio());
 // sandy bug fix
-		ExportVar(packagename.c_str(), "x", itoa( (int)npcmob->GetX() )); 
-		ExportVar(packagename.c_str(), "y", itoa( (int)npcmob->GetY() )); 
-		ExportVar(packagename.c_str(), "z", itoa( (int)npcmob->GetZ() )); 
-		ExportVar(packagename.c_str(), "h", itoa( (int)npcmob->GetHeading() ));
+		ExportVar(packagename.c_str(), "x", npcmob->GetX() ); 
+		ExportVar(packagename.c_str(), "y", npcmob->GetY() ); 
+		ExportVar(packagename.c_str(), "z", npcmob->GetZ() ); 
+		ExportVar(packagename.c_str(), "h", npcmob->GetHeading() );
 		if ( npcmob->GetTarget() ) {
-			ExportVar(packagename.c_str(), "targetid", itoa(npcmob->GetTarget()->GetID()));
+			ExportVar(packagename.c_str(), "targetid", npcmob->GetTarget()->GetID());
 			ExportVar(packagename.c_str(), "targetname", npcmob->GetTarget()->GetName());
 		}
 	}
@@ -225,7 +302,7 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 
 	if (zone) {
 // SCORPIOUS2K- added variable zoneid
-		ExportVar(packagename.c_str(), "zoneid", itoa(zone->GetZoneID()));
+		ExportVar(packagename.c_str(), "zoneid", zone->GetZoneID());
 		ExportVar(packagename.c_str(), "zoneln", zone->GetLongName());
 		ExportVar(packagename.c_str(), "zonesn", zone->GetShortName());
 	}
@@ -238,7 +315,9 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 	if(mob && mob->IsClient())
 	{ 
 		string hashname = packagename + std::string("::hasitem"); 
+#if EQDEBUG >= 7
 		LogFile->write(EQEMuLog::Debug, "starting hasitem, on : %s",hashname.c_str() ); 
+#endif
 
 		//start with an empty hash 
 		perl->eval(std::string("%").append(hashname).append(" = ();").c_str()); 
@@ -259,26 +338,19 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 		}
 	}
 
+	//do any event-specific stuff...
 	switch (event) {
 		case EVENT_SAY: {
 			npcmob->FaceTarget(mob);
 
-			ExportVar(packagename.c_str(), "data", itoa(npcid));
+			ExportVar(packagename.c_str(), "data", npcid);
 			ExportVar(packagename.c_str(), "text", data);
-			SendCommands(packagename.c_str(), "EVENT_SAY", npcid, npcmob, mob);
-			break;
-		}
-		case EVENT_TIMER: {
-			SendCommands(packagename.c_str(), "EVENT_TIMER", npcid, npcmob, mob);
-			break;
-		}
-		case EVENT_DEATH: {
-			SendCommands(packagename.c_str(), "EVENT_DEATH", npcid, npcmob, mob);
 			break;
 		}
 		case EVENT_ITEM: {
 			npcmob->FaceTarget(mob);
-
+			
+			//this is such a hack... why arnt these just set directly..
 			ExportVar(packagename.c_str(), "item1", GetVar("item1", npcid).c_str());
 			ExportVar(packagename.c_str(), "item2", GetVar("item2", npcid).c_str()); 
 			ExportVar(packagename.c_str(), "item3", GetVar("item3", npcid).c_str()); 
@@ -291,54 +363,35 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 			perl->eval(std::string("%").append(hashname).append(" = ();").c_str()); 
 			perl->eval(std::string("++$").append(hashname).append("{$").append(packagename).append("::item1};").c_str()); 
 			perl->eval(std::string("++$").append(hashname).append("{$").append(packagename).append("::item2};").c_str()); 
-			perl->eval(std::string("++$").append(hashname).append("{$").append(packagename).append("::item3};").c_str()); 
-			perl->eval(std::string("++$").append(hashname).append("{$").append(packagename).append("::item4};").c_str()); 
-			SendCommands(packagename.c_str(), "EVENT_ITEM", npcid, npcmob, mob);
-			
-			break;
-		}
-		case EVENT_SPAWN: {
-			SendCommands(packagename.c_str(), "EVENT_SPAWN", npcid, npcmob, mob);
-			break;
-		}
-		case EVENT_ATTACK: {
-			SendCommands(packagename.c_str(), "EVENT_ATTACK", npcid, npcmob, mob);
-			break;
-		}
-		case EVENT_SLAY: {
-			SendCommands(packagename.c_str(), "EVENT_SLAY", npcid, npcmob, mob);
+			perl->eval(std::string("++$").append(hashname).append("{$").append(packagename).append("::item3};").c_str());
+			perl->eval(std::string("++$").append(hashname).append("{$").append(packagename).append("::item4};").c_str());
 			break;
 		}
 		case EVENT_WAYPOINT: {
 			std::string temp = "wp";
 				temp += itoa(npcid);
 			ExportVar(packagename.c_str(), temp.c_str(), data);
-			SendCommands(packagename.c_str(), "EVENT_WAYPOINT", npcid, npcmob, mob);
 			break;
 		}
-		case EVENT_SIGNAL: {
-			SendCommands(packagename.c_str(), "EVENT_SIGNAL", npcid, npcmob, mob);
-			break;
-		}
-// event hp
 		case EVENT_HP: {
-			if (npcmob) {
-				SendCommands(packagename.c_str(), "EVENT_HP", npcid, npcmob, mob); 
-			} 
+			if (!npcmob)	//not sure if this is needed...
+				return;
 			break; 
 		}
-		case EVENT_AGGRO: {
-			SendCommands(packagename.c_str(), "EVENT_AGGRO", npcid, npcmob, mob); 
-			break; 
+		case EVENT_TIMER: {
+			ExportVar(packagename.c_str(), "timer", data);
+			break;
 		}
-		case EVENT_ENTER: {
-			SendCommands(packagename.c_str(), "EVENT_ENTER", npcid, npcmob, mob); 
-			break; 
-		}
-		case EVENT_EXIT: {
-			SendCommands(packagename.c_str(), "EVENT_EXIT", npcid, npcmob, mob); 
-			break; 
-		}
+		//nothing special about these events
+		case EVENT_DEATH:
+		case EVENT_SPAWN:
+		case EVENT_ATTACK:
+		case EVENT_SLAY:
+		case EVENT_SIGNAL:
+		case EVENT_AGGRO:
+		case EVENT_ENTER:
+		case EVENT_EXIT:
+			break;
 
 		default: {
 			// should we do anything here?
@@ -346,6 +399,8 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 		}
 	}
 	
+	SendCommands(packagename.c_str(), sub_name, npcid, npcmob, mob); 
+
 	//now handle any events that cropped up...
 	HandleQueue();
 }
@@ -543,7 +598,6 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 		curmode = questDefault;
 	}
 	
-//LogFile->write(EQEMuLog::Debug, "	final mode = %d", curmode);
 	hasQuests[npcid] = curmode;
 	return(1);
 }
@@ -573,6 +627,19 @@ int PerlembParser::HasQuestFile(int32 npcid) {
 		return(false);
 	
 	return(true);
+}
+
+bool PerlembParser::HasQuestSub(int32 npcid, const char *subname) {
+	sint32 qstID = GetNPCqstID(npcid);
+	
+	if (qstID == -1) {
+		if(!LoadScript(npcid, zone->GetShortName()))
+			return(false);
+	}
+	
+	string packagename = GetPkgPrefix(npcid);
+	
+	return(perl->SubExists(packagename.c_str(), subname));
 }
 
 //utility - return something of the form "qst1234"... 
@@ -659,7 +726,6 @@ void PerlembParser::ExecCommand(Client *c, Seperator *sep) {
 	{
 		c->Message(13, "Error executing perl command, check the logs.");
 		LogFile->write(EQEMuLog::Quest, "Script error: %s", err);
-		return;
 	}
 	
 	//now handle any events that cropped up...
@@ -669,7 +735,6 @@ void PerlembParser::ExecCommand(Client *c, Seperator *sep) {
 
 void PerlembParser::map_funs()
 {
-LogFile->write(EQEMuLog::Error, "Starting command queue Mapping...\n");
 	//map each "exported" function to a variable list that we can access from c
 	//todo:
 	//	break 1|settimer 2|stoptimer 1|dbspawnadd 2|flagcheck 1|write 2|

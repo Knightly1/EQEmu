@@ -54,7 +54,6 @@
 	#endif
 #endif
 
-
 #ifndef ThrowError
 	void CatchSignal(int);
 	#if defined(CATCH_CRASH) || defined(_EQDEBUG)
@@ -89,6 +88,7 @@
 
 #include "../common/Mutex.h"
 #include <stdio.h>
+#include <stdarg.h>
 
 
 class EQEMuLog {
@@ -102,6 +102,7 @@ public:
 		Error,
 		Debug,
 		Quest,
+		Commands,
 		MaxLogID
 	};
 	
@@ -155,4 +156,3 @@ public:
 };
 #endif
 #endif
-

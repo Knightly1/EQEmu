@@ -724,7 +724,9 @@ void Mob::AI_Process() {
 					case SPO_Follow: 
 					{
 						
-						Mob* owner = GetOwnerOrSelf();
+						Mob* owner = GetOwner();
+						if(owner == NULL)
+							break;
 						
 						//if(owner->IsClient())
 						//	printf("Pet start pos: (%f, %f, %f)\n", GetX(), GetY(), GetZ());

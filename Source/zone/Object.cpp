@@ -226,6 +226,16 @@ void Object::PutItem(uint8 index, const ItemInst* inst)
 	}
 }
 
+void Object::Close() {
+	m_inuse = false;
+	
+	//Clear out no-drop and no-rent items
+	if (m_inst && m_inst->IsType(ItemTypeContainer)) {
+		ItemContainerInst* bag = (ItemContainerInst*)m_inst;
+		bag->ClearByFlags(byFlagSet, byFlagSet);
+	}
+}
+
 // Remove item from container
 void Object::DeleteItem(uint8 index)
 {

@@ -22,7 +22,9 @@
 
 //uncomment this to enable the packet profiler. Counts the number
 //of each type of packet sent or received on a connection.
+#ifdef ZONE
 //#define PACKET_PROFILER 1
+#endif
 
 #include <string.h>
 #include <map>
@@ -35,6 +37,9 @@ using namespace std;
 #include "../common/queue.h"
 #include "../common/Mutex.h"
 #include "../common/packet_functions.h"
+#ifdef PACKET_PROFILER
+#include "../common/rdtsc.h"
+#endif
 
 #define EQNC_TIMEOUT	60000
 #define NAS_TIMER	100
@@ -77,8 +82,17 @@ public:
 			pBuffer = new uchar[size];
 			memset(pBuffer, 0, size);
 		}
+		refCount = 1;
 	}
-	~APPLAYER() { safe_delete_array(pBuffer); }
+	~APPLAYER();
+/*	~APPLAYER() {
+#if EQDEBUG >= 4
+		if(refCount > 1) {
+			LogFile->write(EQEMuLog::Debug, "Error: Packet with opcode 0x%.4x deleted with a refcount of %d", opcode, refCount);
+		}
+#endif
+		safe_delete_array(pBuffer);
+	}*/
 	APPLAYER* Copy() const {
 		if (this == 0) {
 			return 0;
@@ -144,6 +158,30 @@ public:
 		uint32 from_ip,to_ip;
 		sint64* encrypt_key;
 	#endif
+	
+	void PacketReferenced() {
+		refCount++;
+//LogFile->write(EQEMuLog::Debug, "Incrementing refcount to %d for op 0x%.4x\n", refCount, opcode);
+	}
+	
+	//decrement the reference count, delete if it hits 0
+	static void PacketUsed(APPLAYER **it_p) {
+		APPLAYER* it = *it_p;
+		if(it == NULL)
+			return;
+		it->refCount--;
+
+//LogFile->write(EQEMuLog::Debug, "Decrementing refcount to %d for op 0x%.4x\n", it->refCount, it->opcode);
+#if EQDEBUG >= 4
+		if(it->refCount < 0)
+			LogFile->write(EQEMuLog::Debug, "Error: Packet with opcode 0x%.4x got to a negative refcount of %d", it->opcode, it->refCount);
+		else
+#endif
+		if(it->refCount == 0)
+			safe_delete(*it_p);
+	}
+protected:
+	sint32 refCount;	//number of references to this packet.
 };
 
     /************ Contain ack stuff ************/
@@ -324,6 +362,10 @@ public:
 	void			RecvData(uchar* data, int32 size);
 	void			OutQueuePush(APPLAYER* app);
 
+#ifdef PACKET_PROFILER
+	void DumpPacketProfile();
+#endif
+
 protected:
 	friend class EQNetworkServer;
 #ifdef WIN32
@@ -405,6 +447,7 @@ private:
 	} _ppData;
 	map<uint16, _ppData> _packetProfileIn;	//opcode -> data
 	map<uint16, _ppData> _packetProfileOut;	//opcode -> data
+	RDTSC_Timer _packetProfileTimer;
 #endif
 };
 

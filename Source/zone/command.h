@@ -21,6 +21,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #define COMMAND_H
 
 #include "../common/seperator.h"
+#include "../common/EQNetwork.h"
 #include "client.h"
 
 #define	COMMAND_CHAR	'#'
@@ -243,6 +244,7 @@ void command_hp(Client *c, const Seperator *sep);
 void command_ginfo(Client *c, const Seperator *sep);
 void command_logs(Client *c, const Seperator *sep);
 void command_nologs(Client *c, const Seperator *sep);
+void command_logsql(Client *c, const Seperator *sep);
 
 #ifdef GUILDWARS
 void command_zonelocations(Client *c, const Seperator *sep);
@@ -266,11 +268,15 @@ void command_showpoints(Client *c, const Seperator *sep);
 void command_embperl_plugin(Client *c, const Seperator *sep);
 void command_embperl_eval(Client *c, const Seperator *sep);
 void command_reloadpl(Client *c, const Seperator *sep);
-#endif 
+#endif
 
 #ifdef EQPROFILE
 void command_profiledump(Client *c, const Seperator *sep);
 void command_profilereset(Client *c, const Seperator *sep);
+#endif
+
+#ifdef PACKET_PROFILER
+void command_packetprofile(Client *c, const Seperator *sep);
 #endif
 
 #endif

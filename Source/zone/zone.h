@@ -26,7 +26,7 @@
 #include "../common/database.h"
 #include "../common/eqtime.h"
 #include "../common/servertalk.h"
-//#include "spawn.h"
+#include "spawngroup.h"
 #include "mob.h"
 #include "features.h"
 #include "zonedump.h"
@@ -93,7 +93,7 @@ public:
 	ZonePoint* GetClosestZonePoint(float x, float y, float z, const char* to_name);
 	ZonePoint* GetClosestZonePoint(float x, float y, float z, int32	to);
 	ZonePoint* GetClosestZonePointWithoutZone(float x, float y, float z);
-	SpawnGroupList* spawn_group_list;
+	SpawnGroupList spawn_group_list;
 
 	bool RemoveSpawnEntry(uint32 spawnid);
 	bool RemoveSpawnGroup(uint32 in_id);
@@ -119,10 +119,13 @@ public:
 	void		SetStaticZone(bool sz)	{ staticzone = sz; }
 	inline bool	IsStaticZone()			{ return staticzone; }
 	inline void	GotCurTime(bool time)	{ gottime = time; }
-
+	void DBAWComplete(int8 workpt_b1, DBAsyncWork* dbaw);
+	
 	void	GetMerchantDataForZoneLoad();
 	void	LoadNewMerchantData(uint32 merchantid);
 	void	LoadTempMerchantData();
+	void	LoadTempMerchantData_result(MYSQL_RES* result);
+	void	LoadMerchantData_result(MYSQL_RES* result);
 	int		SaveTempItem(int32 merchantid, int32 npcid, int32 item, sint32 charges, bool sold=false);
 
 	map<uint32,NPCType *> npctable;
@@ -185,6 +188,9 @@ private:
 
 	bool	staticzone;
 	bool	gottime;
+	
+	int32 pQueuedMerchantsWorkID;
+	int32 pQueuedTempMerchantsWorkID;
 
 	Timer	autoshutdown_timer;
 	Timer	clientauth_timer;

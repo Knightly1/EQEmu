@@ -21,6 +21,10 @@
 #include "../common/linked_list.h"
 #include "../common/types.h"
 
+#include <map>
+#include <list>
+using namespace std;
+
 class SpawnEntry
 {
 public:
@@ -34,26 +38,27 @@ class SpawnGroup
 {
 public:
 	SpawnGroup(uint32 in_id, char* name );
-	~SpawnGroup() { }
+	~SpawnGroup();
 	uint32 GetNPCType();
 	void AddSpawnEntry( SpawnEntry* newEntry );
 	uint32 id;
 private:
 	char name_[120];
-    LinkedList<SpawnEntry*> list_;
+    list<SpawnEntry*> list_;
 };
 
 class SpawnGroupList
 {
 public:
-	SpawnGroupList() {};
-	~SpawnGroupList() {};
+	SpawnGroupList() {printf("Creating an SGL\n");};
+	~SpawnGroupList();
 
 	void AddSpawnGroup(SpawnGroup* newGroup);
 	SpawnGroup* GetSpawnGroup(uint32 id);
 	bool RemoveSpawnGroup(uint32 in_id);
 private:
-    LinkedList<SpawnGroup*> list_;
+//    LinkedList<SpawnGroup*> list_;
+	map<uint32, SpawnGroup*> groups;
 };
 
 #endif

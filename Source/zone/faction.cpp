@@ -190,11 +190,11 @@ FACTION_VALUE NPC::GetFactionCon(Mob* iOther) {
 //Look through our faction list and return a faction con based 
 //on the npc_value for the other person's primary faction in our list.
 FACTION_VALUE NPC::CheckNPCFactionAlly(sint32 other_faction) {
-	LinkedListIterator<struct NPCFaction*> fac_iteratorcur(faction_list);
-	fac_iteratorcur.Reset();
-
-	while(fac_iteratorcur.MoreElements()) {
-		NPCFaction* fac = fac_iteratorcur.GetData();
+	list<struct NPCFaction*>::iterator cur,end;
+	cur = faction_list.begin();
+	end = faction_list.end();
+	for(; cur != end; cur++) {
+		struct NPCFaction* fac = *cur;
 		if ((sint32)fac->factionID == other_faction) {
 			if (fac->npc_value > 0)
 				return FACTION_ALLY;
@@ -203,22 +203,19 @@ FACTION_VALUE NPC::CheckNPCFactionAlly(sint32 other_faction) {
 			else
 				return FACTION_INDIFFERENT;
 		}
-
-		fac_iteratorcur.Advance();
 	}
 	return FACTION_INDIFFERENT;
 }
 
 
 bool NPC::IsFactionListAlly(uint32 other_faction) {
-	LinkedListIterator<struct NPCFaction*> fac_iteratorcur(faction_list);
-	fac_iteratorcur.Reset();
-
-	while(fac_iteratorcur.MoreElements()) {
-		if (fac_iteratorcur.GetData()->factionID == other_faction && fac_iteratorcur.GetData()->value_mod <= 0)
+	list<struct NPCFaction*>::iterator cur,end;
+	cur = faction_list.begin();
+	end = faction_list.end();
+	for(; cur != end; cur++) {
+		struct NPCFaction* fac = *cur;
+		if (fac->factionID == other_faction && fac->value_mod <= 0)
 			return(true);
-
-		fac_iteratorcur.Advance();
 	}
 	return(false);
 }
@@ -859,9 +856,17 @@ bool Database::LoadFactionData()
 	return true;
 }
 
-bool Database::GetFactionIdsForNPC(sint32 nfl_id, LinkedList<struct NPCFaction*> *faction_list, sint32* primary_faction) {
+bool Database::GetFactionIdsForNPC(sint32 nfl_id, list<struct NPCFaction*> *faction_list, sint32* primary_faction) {
 	if (nfl_id <= 0) {
-		(*faction_list).Clear();
+		list<struct NPCFaction*>::iterator cur,end;
+		cur = faction_list->begin();
+		end = faction_list->end();
+		for(; cur != end; cur++) {
+			struct NPCFaction* tmp = *cur;
+			safe_delete(tmp);
+		}
+		
+		faction_list->clear();
 		if (primary_faction)
 			*primary_faction = nfl_id;
 		return true;
@@ -871,7 +876,15 @@ bool Database::GetFactionIdsForNPC(sint32 nfl_id, LinkedList<struct NPCFaction*>
 		return false;
 	if (primary_faction)
 		*primary_faction = nfl->primaryfaction;
-	(*faction_list).Clear();
+	
+	list<struct NPCFaction*>::iterator cur,end;
+	cur = faction_list->begin();
+	end = faction_list->end();
+	for(; cur != end; cur++) {
+		struct NPCFaction* tmp = *cur;
+		safe_delete(tmp);
+	}
+	faction_list->clear();
 	for (int i=0; i<MAX_NPC_FACTIONS; i++) {
 		struct NPCFaction *pFac;
 		if (nfl->factionid[i]) {
@@ -884,7 +897,7 @@ bool Database::GetFactionIdsForNPC(sint32 nfl_id, LinkedList<struct NPCFaction*>
 			else
 				pFac->primary = false;
 */
-			faction_list->Insert(pFac);
+			faction_list->push_back(pFac);
 		}
 	}
 	return true;

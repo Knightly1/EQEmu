@@ -37,6 +37,10 @@ void Protect(string &s, char what)
 	}
 }
 #ifdef PACKETCOLLECTOR
+/*the map argument is:
+	item id -> fields_list
+		each fields_list is a map of field index -> value
+*/
 bool ItemParse(const char *data, int length, map<int,map<int,string> > &items, int level)
 {
 int i;

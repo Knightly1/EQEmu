@@ -45,6 +45,7 @@ using namespace std;
 
 CREATE TABLE tributes (
 	id INT UNSIGNED AUTO_INCREMENT,
+	unknown INT UNSIGNED NOT NULL,
 	name VARCHAR(255) NOT NULL,
 	descr MEDIUMTEXT NOT NULL,
 	PRIMARY KEY(id)
@@ -58,6 +59,365 @@ CREATE TABLE tribute_levels (
 	PRIMARY KEY(tribute_id,level)
 );
 */
+
+/*
+
+The server periodicly sends tribute timer updates to the client on live,
+but I dont see a point to that right now, so I dont do it.
+
+*/
+
+#define TRIBUTE_SLOT_START 400
+
+class TributeData {
+public:
+	//this level data stored in regular byte order and must be flipped before sending
+	TributeLevel_Struct tiers[MAX_TRIBUTE_TIERS];
+	uint8 tier_count;
+	uint32 unknown;
+	string name;
+	string description;
+};
+
+map<int32, TributeData> tribute_list;
+
+void Client::ToggleTribute(bool enabled) {
+	if(enabled) {
+		//make sure they have enough points to be activating this...
+		int r;
+		uint32 cost = 0;
+		int32 level = GetLevel();
+		for(r = 0; r < MAX_PLAYER_TRIBUTES; r++) {
+			uint32 tid = m_pp.tributes[r].tribute;
+			if(tid == TRIBUTE_NONE)
+				continue;
+			
+			if(tribute_list.count(tid) != 1)
+				continue;
+			
+			if(m_pp.tributes[r].tier >= MAX_TRIBUTE_TIERS) {
+				m_pp.tributes[r].tier = 0;	//sanity check.
+				continue;
+			}
+			
+			TributeData &d = tribute_list[tid];
+			
+			TributeLevel_Struct &tier = d.tiers[m_pp.tributes[r].tier];
+			
+			if(level < tier.level) {
+				Message(0, "You are not high enough level to activate this tribute!");
+				ToggleTribute(false);
+				continue;
+			}
+			
+			cost += tier.cost;
+		}
+		
+		if(cost > m_pp.tribute_points) {
+			Message(13, "You do not have enough tribute points to activate your tribute!");
+			ToggleTribute(false);
+			return;
+		}
+		AddTributePoints(0-cost);
+		
+		//reset their timer, since they just paid for a full duration
+		m_pp.tribute_time_remaining = Tribute_duration;	//full duration
+		tribute_timer.Start(m_pp.tribute_time_remaining);
+		
+		m_pp.tribute_active = 1;
+	} else {
+		m_pp.tribute_active = 0;
+	}
+	DoTributeUpdate();
+}
+
+void Client::DoTributeUpdate() {
+	APPLAYER outapp(OP_TributeUpdate, sizeof(TributeInfo_Struct));
+	TributeInfo_Struct *tis = (TributeInfo_Struct *) outapp.pBuffer;
+	
+	tis->active = m_pp.tribute_active ? 1 : 0;
+	tis->tribute_master_id = tribute_master_id;	//Dont know what this is for
+	
+	int r;
+	for(r = 0; r < MAX_PLAYER_TRIBUTES; r++) {
+		if(m_pp.tributes[r].tribute != TRIBUTE_NONE) {
+			tis->tributes[r] = m_pp.tributes[r].tribute;
+			tis->tiers[r] = m_pp.tributes[r].tier;
+		} else {
+			tis->tributes[r] = TRIBUTE_NONE;
+			tis->tiers[r] = 0;
+		}
+	}
+		
+	QueuePacket(&outapp);
+	
+	SendTributeTimer();
+	
+	if(m_pp.tribute_active) {
+		//send and equip tribute items...
+		for(r = 0; r < MAX_PLAYER_TRIBUTES; r++) {
+			uint32 tid = m_pp.tributes[r].tribute;
+			if(tid == TRIBUTE_NONE) {
+				if(m_inv[TRIBUTE_SLOT_START+r])
+					DeleteItemInInventory(TRIBUTE_SLOT_START+r, 0, true);
+				continue;
+			}
+			
+			if(tribute_list.count(tid) != 1) {
+				if(m_inv[TRIBUTE_SLOT_START+r])
+					DeleteItemInInventory(TRIBUTE_SLOT_START+r, 0, true);
+				continue;
+			}
+			
+			//sanity check
+			if(m_pp.tributes[r].tier >= MAX_TRIBUTE_TIERS) {
+				if(m_inv[TRIBUTE_SLOT_START+r])
+					DeleteItemInInventory(TRIBUTE_SLOT_START+r, 0, true);
+				m_pp.tributes[r].tier = 0;
+				continue;
+			}
+			
+			TributeData &d = tribute_list[tid];
+			
+			TributeLevel_Struct &tier = d.tiers[m_pp.tributes[r].tier];
+			
+			int32 item_id = tier.tribute_item_id;
+			
+			//summon the item for them
+			const ItemInst* inst = ItemInst::Create(item_id, 1);
+			if(inst == NULL)
+				continue;
+			PutItemInInventory(TRIBUTE_SLOT_START+r, *inst, false);
+			SendItemPacket(TRIBUTE_SLOT_START+r, inst, ItemPacketTributeItem);
+		}
+	} else {
+		//unequip tribute items...
+		for(r = 0; r < MAX_PLAYER_TRIBUTES; r++) {
+			if(m_inv[TRIBUTE_SLOT_START+r])
+				DeleteItemInInventory(TRIBUTE_SLOT_START+r, 0, true);
+		}
+	}
+}
+
+void Client::SendTributeTimer() {
+	//update their timer.
+	APPLAYER outapp2(OP_TributeTimer, sizeof(uint32));
+	uint32 *timeleft = (uint32 *) outapp2.pBuffer;
+	if(m_pp.tribute_active)
+		*timeleft = m_pp.tribute_time_remaining;
+	else
+		*timeleft = Tribute_duration;	//full duration
+	QueuePacket(&outapp2);
+}
+
+void Client::ChangeTributeSettings(TributeInfo_Struct *t) {
+	int r;
+	for(r = 0; r < MAX_PLAYER_TRIBUTES; r++) {
+		
+		m_pp.tributes[r].tribute = TRIBUTE_NONE;
+		
+		uint32 tid = t->tributes[r];
+		if(tid == TRIBUTE_NONE)
+			continue;
+		
+		if(tribute_list.count(tid) != 1)
+			continue;	//print a cheater warning?
+		
+		TributeData &d = tribute_list[tid];
+		
+		//make sure they chose a valid tier
+		if(t->tiers[r] >= d.tier_count)
+			continue;	//print a cheater warning?
+		
+		//might want to check required level, even though its checked before activate
+		
+		m_pp.tributes[r].tribute = tid;
+		m_pp.tributes[r].tier = t->tiers[r];
+	}
+	
+	DoTributeUpdate();
+}
+
+void Client::SendTributeDetails(int32 client_id, uint32 tribute_id) {
+	if(tribute_list.count(tribute_id) != 1) {
+		LogFile->write(EQEMuLog::Error, "Details request for invalid tribute %lu", tribute_id);
+		return;
+	}
+	TributeData &td = tribute_list[tribute_id];
+
+	int len = td.description.length();
+	APPLAYER outapp(OP_SelectTribute, sizeof(SelectTributeReply_Struct)+len+1);
+	SelectTributeReply_Struct *t = (SelectTributeReply_Struct *) outapp.pBuffer;
+	
+	t->client_id = client_id;
+	t->tribute_id = tribute_id;
+	memcpy(t->desc, td.description.c_str(), len);
+	t->desc[len] = '\0';
+	
+	QueuePacket(&outapp);
+}
+
+//returns the number of points received from the tribute
+sint32 Client::TributeItem(int32 slot, int32 quantity) {
+	const ItemInst*inst = m_inv[slot];
+	
+	if(inst == NULL)
+		return(0);
+	
+	//figure out what its worth
+	sint32 pts = inst->GetItem()->tribute;
+	if(pts < 1) {
+		Message(13, "This item is worthless for tribute.");
+		return(0);
+	}
+	
+	//make sure they have enough of them
+	//and remove it from inventory
+	if(inst->IsStackable()) {
+		if(inst->GetCharges() < (sint32)quantity)	//dont have enough....
+			return(0);
+		m_inv.DeleteItem(slot, quantity);
+	} else {
+		quantity = 1;
+		m_inv.DeleteItem(slot);
+	}
+	
+	pts *= quantity;
+	
+	//add the tribute value in points
+	AddTributePoints(pts);
+	return(pts);
+}
+
+//returns the number of points received from the tribute
+sint32 Client::TributeMoney(int32 platinum) {
+	if(!TakeMoneyFromPP(platinum * 1000)) {
+		Message(13, "You do not have that much money!");
+		return(0);
+	}
+	
+	//add the tribute value in points
+	AddTributePoints(platinum);
+	return(platinum);
+}
+
+void Client::AddTributePoints(sint32 ammount) {
+	APPLAYER outapp(OP_TributePointUpdate, sizeof(TributePoint_Struct));
+	TributePoint_Struct *t = (TributePoint_Struct *) outapp.pBuffer;
+	
+	//change the point values.
+	m_pp.tribute_points += ammount;
+	
+	//career only tracks points earned, not spent.
+	if(ammount > 0)
+		m_pp.career_tribute_points += ammount;
+	
+	//fill in the packet.
+	t->career_tribute_points = m_pp.career_tribute_points;
+	t->tribute_points = m_pp.tribute_points;
+
+	QueuePacket(&outapp);
+}
+
+void Client::SendTribute() {
+	
+	map<int32, TributeData>::iterator cur,end;
+	cur = tribute_list.begin();
+	end = tribute_list.end();
+
+	//is there a way to make a big combined packet for this?
+	for(; cur != end; cur++) {
+		int len = cur->second.name.length();
+		APPLAYER outapp(OP_TributeInfo, sizeof(TributeAbility_Struct) + len + 1);
+		TributeAbility_Struct* tas = (TributeAbility_Struct*)outapp.pBuffer;
+		
+		tas->tribute_id = htonl(cur->first);
+		tas->unknown = htonl(cur->second.unknown);
+		
+		//gotta copy over the data from tiers, and flip all the
+		//byte orders, no idea why its flipped here
+		int32 r, c;
+		c = cur->second.tier_count;
+		TributeLevel_Struct *dest = tas->tiers;
+		TributeLevel_Struct *src = cur->second.tiers;
+		for(r = 0; r < c; r++, dest++, src++) {
+			dest->cost = htonl(src->cost);
+			dest->level = htonl(src->level);
+			dest->tribute_item_id = htonl(src->tribute_item_id);
+		}
+		
+		memcpy(tas->name, cur->second.name.c_str(), len);
+		tas->name[len] = '\0';
+		
+		QueuePacket(&outapp);
+	}
+}
+
+bool Database::LoadTributes() {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	
+	TributeData t;
+	memset(&t.tiers, 0, sizeof(t.tiers));
+	t.tier_count = 0;
+	
+	tribute_list.clear();
+	
+	const char *query = "SELECT id,name,descr,unknown FROM tributes";
+	if (RunQuery(query, strlen(query), errbuf, &result)) {
+		int r;
+		while ((row = mysql_fetch_row(result))) {
+			r = 0;
+			int32 id = atoul(row[r++]);
+			t.name = row[r++];
+			t.description = row[r++];
+			t.unknown = strtoul(row[r++], NULL, 10);
+			
+			tribute_list[id] = t;
+		}
+		mysql_free_result(result);
+	} else {
+		LogFile->write(EQEMuLog::Error, "Error in LoadTributes first query '%s': %s", query, errbuf);
+		return false;
+	}
+	
+
+	const char *query2 = "SELECT tribute_id,level,cost,item_id FROM tribute_levels ORDER BY tribute_id,level";
+	if (RunQuery(query2, strlen(query2), errbuf, &result)) {
+		int r;
+		while ((row = mysql_fetch_row(result))) {
+			r = 0;
+			int32 id = atoul(row[r++]);
+			
+			if(tribute_list.count(id) != 1) {
+				LogFile->write(EQEMuLog::Error, "Error in LoadTributes: unknown tribute %lu in tribute_levels", id);
+				continue;
+			}
+			
+			TributeData &cur = tribute_list[id];
+			
+			if(cur.tier_count >= MAX_TRIBUTE_TIERS) {
+				LogFile->write(EQEMuLog::Error, "Error in LoadTributes: on tribute %lu: more tiers defined than permitted", id);
+				continue;
+			}
+			
+			TributeLevel_Struct &s = cur.tiers[cur.tier_count];
+			
+			s.level = atoul(row[r++]);
+			s.cost = atoul(row[r++]);
+			s.tribute_item_id = atoul(row[r++]);
+			cur.tier_count++;
+		}
+		mysql_free_result(result);
+	} else {
+		LogFile->write(EQEMuLog::Error, "Error in LoadTributes level query '%s': %s", query, errbuf);
+		return false;
+	}
+	
+	return true;
+}
+
 
 /*
 
@@ -317,269 +677,6 @@ Deactivate Tribute:
    0: C0 27 09 00                                        | .'..
 
 */
-
-class TributeData {
-public:
-	//this level data stored in regular byte order and must be flipped before sending
-	TributeLevel_Struct levels[MAX_TRIBUTE_LEVELS];
-	uint8 level_count;
-	string name;
-	string description;
-};
-
-map<int32, TributeData> tribute_list;
-
-void Client::DoTributeUpdate() {
-	APPLAYER outapp(OP_TributeUpdate, sizeof(TributeInfo_Struct));
-	TributeInfo_Struct *tis = (TributeInfo_Struct *) outapp.pBuffer;
-	
-	tis->active = tribute_active ? 1 : 0;
-	tis->tribute_master_id = tribute_master_id;	//Dont know what this is for
-	
-	int r;
-	for(r = 0; r < MAX_PLAYER_TRIBUTES; r++) {
-		if(tributes[r].tribute != TRIBUTE_NONE) {
-			tis->tributes[r] = tributes[r].tribute;
-			tis->levels[r] = tributes[r].level;
-		} else {
-			tis->tributes[r] = TRIBUTE_NONE;
-			tis->levels[r] = 0;
-		}
-	}
-#ifdef _DEBUG
-printf("Tribute update:\n");
-DumpPacket(&outapp);
-#endif
-	QueuePacket(&outapp);
-/*
-need to send this guy too, but I dont know what the contents are.	
-  [OPCode: 0x02f8] [Raw OPCode: 0x02f8] [Size: 4]
-   0: C0 27 09 00                                        | .'..
-*/
-	APPLAYER outapp2(OP_TributeID, sizeof(uint32));
-	uint32 *id = (uint32 *) outapp2.pBuffer;
-	*id = 0x000927C0;	//TODO: put a real value into here
-	QueuePacket(&outapp2);
-	
-	if(tribute_active) {
-		//send and equip tribute items...
-		for(r = 0; r < MAX_PLAYER_TRIBUTES; r++) {
-			uint32 tid = tributes[r].tribute;
-			if(tid == TRIBUTE_NONE)
-				continue;
-			
-			if(tribute_list.count(tid) != 1)
-				continue;
-			
-			TributeData &d = tribute_list[tid];
-			
-			TributeLevel_Struct &level = d.levels[tributes[r].level];
-			
-			int32 item_id = level.tribute_item_id;
-			
-			//slot = 400 + r;
-			
-			//TODO: make the item and equip it
-		}
-	} else {
-		//unequip tribute items...
-		for(r = 0; r < MAX_PLAYER_TRIBUTES; r++) {
-			//clear out slot 400 + r
-		}
-	}
-}
-
-void Client::ChangeTributeSettings(TributeInfo_Struct *t) {
-printf("Tribute Change:\n");
-DumpPacket((const uchar *)t, sizeof(TributeInfo_Struct));
-	int r;
-	for(r = 0; r < MAX_PLAYER_TRIBUTES; r++) {
-		
-		tributes[r].tribute = TRIBUTE_NONE;
-		
-		uint32 tid = t->tributes[r];
-		if(tid == TRIBUTE_NONE)
-			continue;
-		
-		if(tribute_list.count(tid) != 1)
-			continue;	//print a cheater warning?
-		
-		TributeData &d = tribute_list[tid];
-		
-		if(t->levels[r] >= d.level_count)
-			continue;	//print a cheater warning?
-		
-		tributes[r].tribute = tid;
-		tributes[r].level = t->levels[r];
-	}
-	
-	DoTributeUpdate();
-}
-
-void Client::SendTributeDetails(int32 client_id, uint32 tribute_id) {
-	if(tribute_list.count(tribute_id) != 1) {
-		LogFile->write(EQEMuLog::Error, "Details request for invalid tribute %lu", tribute_id);
-		return;
-	}
-	TributeData &td = tribute_list[tribute_id];
-
-	int len = td.description.length();
-	APPLAYER outapp(OP_SelectTribute, sizeof(SelectTributeReply_Struct)+len+1);
-	SelectTributeReply_Struct *t = (SelectTributeReply_Struct *) outapp.pBuffer;
-	
-	t->client_id = client_id;
-	t->tribute_id = tribute_id;
-	memcpy(t->desc, td.description.c_str(), len);
-	t->desc[len] = '\0';
-	
-	QueuePacket(&outapp);
-}
-
-//returns the number of points received from the tribute
-sint32 Client::TributeItem(int32 slot, int32 quantity) {
-	//get the instance from inventory
-	//make sure it exists, error and return 0 if not.
-	//remove it from inventory
-	
-	//figure out what its worth
-	sint32 pts = 4;
-	
-	//add the tribute value in points
-	AddTributePoints(pts);
-	return(pts);
-}
-
-//returns the number of points received from the tribute
-sint32 Client::TributeMoney(int32 platinum) {
-	if(!TakeMoneyFromPP(platinum * 1000)) {
-		Message(13, "You do not have that much money!");
-		return(0);
-	}
-	
-	//add the tribute value in points
-	AddTributePoints(platinum);
-	return(platinum);
-}
-
-void Client::AddTributePoints(sint32 ammount) {
-	APPLAYER outapp(OP_TributePointUpdate, sizeof(TributePoint_Struct));
-	TributePoint_Struct *t = (TributePoint_Struct *) outapp.pBuffer;
-	
-	t->old_value = tribute_points;
-	
-	tribute_points += ammount;
-	
-	t->new_value = tribute_points;
-
-t->unknown04 = 88;
-t->unknown12 = 99;
-
-
-printf("Points update:\n");
-DumpPacket(&outapp);
-
-	QueuePacket(&outapp);
-}
-
-void Client::SendTribute() {
-	
-	map<int32, TributeData>::iterator cur,end;
-	cur = tribute_list.begin();
-	end = tribute_list.end();
-
-	//is there a way to make a big combined packet for this?
-	for(; cur != end; cur++) {
-		int len = cur->second.name.length();
-		APPLAYER outapp(OP_TributeInfo, sizeof(TributeAbility_Struct) + len + 1);
-		TributeAbility_Struct* tas = (TributeAbility_Struct*)outapp.pBuffer;
-		
-		tas->tribute_id = htonl(cur->first);
-		
-		//gotta copy over the data from levels, and flip all the
-		//byte orders, no idea why its flipped here
-		int32 r, c;
-		c = cur->second.level_count;
-		TributeLevel_Struct *dest = tas->levels;
-		TributeLevel_Struct *src = cur->second.levels;
-		for(r = 0; r < c; r++, dest++, src++) {
-			dest->cost = htonl(src->cost);
-			dest->level = htonl(src->level);
-			dest->tribute_item_id = htonl(src->tribute_item_id);
-		}
-		
-		memcpy(tas->name, cur->second.name.c_str(), len);
-		tas->name[len] = '\0';
-		
-		QueuePacket(&outapp);
-	}
-}
-
-bool Database::LoadTributes() {
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	
-	TributeData t;
-	memset(&t.levels, 0, sizeof(t.levels));
-	t.level_count = 0;
-	
-	tribute_list.clear();
-	
-	const char *query = "SELECT id,name,descr FROM tributes";
-	if (RunQuery(query, strlen(query), errbuf, &result)) {
-		int r;
-		while ((row = mysql_fetch_row(result))) {
-			r = 0;
-			int32 id = atoul(row[r++]);
-			t.name = row[r++];
-			t.description = row[r++];
-			
-			tribute_list[id] = t;
-		}
-		mysql_free_result(result);
-	} else {
-		LogFile->write(EQEMuLog::Error, "Error in LoadTributes first query '%s': %s", query, errbuf);
-		return false;
-	}
-	
-
-	const char *query2 = "SELECT tribute_id,level,cost,item_id FROM tribute_levels ORDER BY tribute_id,level";
-	if (RunQuery(query2, strlen(query2), errbuf, &result)) {
-		int r;
-		while ((row = mysql_fetch_row(result))) {
-			r = 0;
-			int32 id = atoul(row[r++]);
-			
-			if(tribute_list.count(id) != 1) {
-				LogFile->write(EQEMuLog::Error, "Error in LoadTributes: unknown tribute %lu in tribute_levels", id);
-				continue;
-			}
-			
-			TributeData &cur = tribute_list[id];
-			
-			if(cur.level_count >= MAX_TRIBUTE_LEVELS) {
-				LogFile->write(EQEMuLog::Error, "Error in LoadTributes: on tribute %lu: more levels defined than permitted", id);
-				continue;
-			}
-			
-			TributeLevel_Struct &s = cur.levels[cur.level_count];
-			
-			s.level = atoul(row[r++]);
-			s.cost = atoul(row[r++]);
-			s.tribute_item_id = atoul(row[r++]);
-			cur.level_count++;
-		}
-		mysql_free_result(result);
-	} else {
-		LogFile->write(EQEMuLog::Error, "Error in LoadTributes level query '%s': %s", query, errbuf);
-		return false;
-	}
-	
-	return true;
-}
-
-
-
 
 
 

@@ -5,7 +5,7 @@ SF=../common/EQNetwork.o \
    ../common/classes.o ../common/TCPConnection.o ../common/eqtime.o ../common/crc32.o \
    client.o net.o console.o zoneserver.o LoginServer.o ../common/md5.o ../common/dbcore.o \
    ../common/dbasync.o ../common/EMuShareMem.o ../common/EQEMuError.o ../common/misc.o \
-   .obj/debug.o .obj/database.o .obj/Item.o
+   .obj/debug.o .obj/database.o .obj/Item.o ../common/extprofile.o
 
 MYSQL_CFLAGS=-I'/usr/local/include/mysql'
 

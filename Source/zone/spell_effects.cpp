@@ -110,18 +110,6 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 					// take partial damage into account
 					dmg = (sint32) (dmg * partial / 100);
 					
-					
-					//these spell IDs are prolly wrong...
-					if (spell_id == 2751) //Manaburn
-					{
-						dmg = GetMana()*-3;
-						SetMana(0);
-					} else if (spell_id == 2488) //Lifeburn
-					{
-						dmg = GetHP()*-15/10;
-						SetHP(1);
-					}
-					
 					//handles AAs and what not...
 					if(caster)
 						dmg = caster->GetActSpellDamage(spell_id, dmg);
@@ -156,8 +144,20 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Current Hitpoints Once: %+i", effect_value);
 #endif
+				
+				sint32 dmg = effect_value;
+				if (spell_id == 2751) //Manaburn
+				{
+					dmg = GetMana()*-3;
+					SetMana(0);
+				} else if (spell_id == 2755) //Lifeburn
+				{
+					dmg = GetHP()*-15/10;
+					SetHP(1);
+				}
+				
 				//do any AAs apply to these spells?
-				ChangeHP(caster, effect_value, spell_id, buffslot);
+				ChangeHP(caster, dmg, spell_id, buffslot);
 				break;
 			}
 

@@ -51,7 +51,7 @@
 #define OT_TEIRDALFORGE	0x20
 #define OT_OGGOKFORGE	0x21
 #define OT_STORMGUARDF	0x22
-#define OT_TACKLEBOX	0x2e	//Father Nitwit
+#define OT_TACKLEBOX	0x2e
 #define OT_FIERDALF		0x30
 #define OT_AUGMENT		0x35
 
@@ -84,7 +84,7 @@ public:
 	bool IsGroundSpawn() { return m_ground_spawn; }
 	// Event handlers
 	bool HandleClick(Client* sender, const ClickObject_Struct* click_object);
-	void Close() { m_inuse = false; }
+	void Close();
 	void Delete(bool reset_state=false); // Object itself
 	static void HandleCombine(Client* user, const NewCombine_Struct* in_combine, Object *worldo);
 	static void HandleAugmentation(Client* user, const AugmentItem_Struct* in_augment, Object *worldo);

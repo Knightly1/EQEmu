@@ -203,6 +203,7 @@ public:
 	void	QueueClientsStatus(Mob* sender, const APPLAYER* app, bool ignore_sender = false, int8 minstatus = 0, int8 maxstatus = 0);
 	void	QueueClientsGuild(Mob* sender, const APPLAYER* app, bool ignore_sender = false, int32 guildeqid = 0);
 	void	QueueClientsByTarget(Mob* sender, const APPLAYER* app, bool iSendToSender = true, Mob* SkipThisMob = 0, bool ackreq = true);
+	void    QueueManaged(Mob* sender, const APPLAYER* app, bool ignore_sender=false, bool ackreq = true);
 
 	void	AEAttack(Mob *attacker, float dist, int Hand = 13, int count = 0);
 	void	AETaunt(Client *caster, float range = 0);

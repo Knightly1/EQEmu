@@ -989,11 +989,11 @@ void EntityList::QueueClientsByTarget(Mob* sender, const APPLAYER* app, bool iSe
 		iterator.Advance();
 	}	
 }
+
 void EntityList::FilterQueueCloseClients(int8 filter, int8 required, Mob* sender, const APPLAYER* app, bool ignore_sender, float dist, Mob* SkipThisMob, bool ackreq){
 	if(dist <= 0) {
 		dist = 600;
 	}
-
 	float dist2 = dist * dist; //pow(dist, 2);
 	
 	LinkedListIterator<Client*> iterator(client_list);
@@ -1002,20 +1002,21 @@ void EntityList::FilterQueueCloseClients(int8 filter, int8 required, Mob* sender
 	while(iterator.MoreElements()) {
 
 		Client* ent = iterator.GetData();
-			int8 filterval=ent->GetFilter(filter);
-			if(required==0)
-				required=1;
-			if(filterval==required){
-				if ((!ignore_sender || ent != sender) && (ent != SkipThisMob)
-			  		) {
-					if(ent->Connected() &&  (ent->DistNoRoot(*sender) <= dist2 || dist == 0)) {
-							ent->QueuePacket(app, ackreq);
-					}
+		int8 filterval=ent->GetFilter(filter);
+		if(required==0)
+			required=1;
+		if(filterval==required){
+			if ((!ignore_sender || ent != sender) && (ent != SkipThisMob)
+		  		) {
+				if(ent->Connected() &&  (ent->DistNoRoot(*sender) <= dist2 || dist == 0)) {
+						ent->QueuePacket(app, ackreq);
 				}
 			}
+		}
 		iterator.Advance();
 	}
 }
+
 void EntityList::QueueCloseClients(Mob* sender, const APPLAYER* app, bool ignore_sender, float dist, Mob* SkipThisMob, bool ackreq,int8 filter) {
 	if (sender == 0) {
 		QueueClients(sender, app, ignore_sender);
@@ -1024,7 +1025,6 @@ void EntityList::QueueCloseClients(Mob* sender, const APPLAYER* app, bool ignore
 	if(dist <= 0) {
 		dist = 600;
 	}
-
 	float dist2 = dist * dist; //pow(dist, 2);
 	
 	LinkedListIterator<Client*> iterator(client_list);
@@ -1034,18 +1034,19 @@ void EntityList::QueueCloseClients(Mob* sender, const APPLAYER* app, bool ignore
 
 		Client* ent = iterator.GetData();
 
-			if ((!ignore_sender || ent != sender) && (ent != SkipThisMob)) {
-				int8 filter2=ent->GetFilter(filter);
-				if(ent->Connected() && (ent->DistNoRoot(*sender) <= dist2 || dist == 0) && 
-					(filter==0 || (filter2==1 || 
-					(filter2==99 && entity_list.GetGroupByClient(ent)!=0 && 
-					 entity_list.GetGroupByClient(ent)->IsGroupMember(sender))
-					 || (filter2==98 && ent==sender)))) {
-						ent->QueuePacket(app, ackreq, Client::CLIENT_CONNECTED);
-				}
+		if ((!ignore_sender || ent != sender) && (ent != SkipThisMob)) {
+			int8 filter2=ent->GetFilter(filter);
+			if(ent->Connected() && 
+				(filter==0 || (filter2==1 || 
+				(filter2==99 && entity_list.GetGroupByClient(ent)!=0 && 
+				 entity_list.GetGroupByClient(ent)->IsGroupMember(sender))
+				 || (filter2==98 && ent==sender)))
+			&& (ent->DistNoRoot(*sender) <= dist2 || dist == 0)) {
+				ent->QueuePacket(app, ackreq, Client::CLIENT_CONNECTED);
 			}
+		}
 		iterator.Advance();
-	}	
+	}
 }
 
 void EntityList::QueueClients(Mob* sender, const APPLAYER* app, bool ignore_sender, bool ackreq) {
@@ -1058,10 +1059,171 @@ void EntityList::QueueClients(Mob* sender, const APPLAYER* app, bool ignore_send
 
 		if ((!ignore_sender || ent != sender))
 		{
-            ent->QueuePacket(app, ackreq, Client::CLIENT_CONNECTED);
+			ent->QueuePacket(app, ackreq, Client::CLIENT_CONNECTED);
 		}
 		iterator.Advance();
-	}	
+	}
+}
+
+/*
+rewrite of all the queue close methods to use the update manager
+void EntityList::FilterQueueCloseClients(int8 filter, int8 required, Mob* sender, const APPLAYER* app, bool ignore_sender, float dist, Mob* SkipThisMob, bool ackreq){
+	if(dist <= 0) {
+		dist = 600;
+	}
+
+#ifdef PACKET_UPDATE_MANAGER
+	APPLAYER* tmp_app = app->Copy();
+#else
+	float dist2 = dist * dist; //pow(dist, 2);
+#endif
+	
+	LinkedListIterator<Client*> iterator(client_list);
+	
+	iterator.Reset();
+	while(iterator.MoreElements()) {
+
+		Client* ent = iterator.GetData();
+		int8 filterval=ent->GetFilter(filter);
+		if(required==0)
+			required=1;
+		if(filterval==required){
+			if ((!ignore_sender || ent != sender) && (ent != SkipThisMob)
+		  		) {
+#ifdef PACKET_UPDATE_MANAGER
+				if(ent->Connected()) {
+					ent->GetUpdateManager()->QueuePacket(tmp_app, ackreq, sender, ent->DistNoRoot(*sender));
+				}
+#else
+				if(ent->Connected() &&  (ent->DistNoRoot(*sender) <= dist2 || dist == 0)) {
+						ent->QueuePacket(app, ackreq);
+				}
+#endif
+			}
+		}
+		iterator.Advance();
+	}
+#ifdef PACKET_UPDATE_MANAGER
+	APPLAYER::PacketUsed(&tmp_app);
+#endif
+}
+
+void EntityList::QueueCloseClients(Mob* sender, const APPLAYER* app, bool ignore_sender, float dist, Mob* SkipThisMob, bool ackreq,int8 filter) {
+	if (sender == 0) {
+		QueueClients(sender, app, ignore_sender);
+		return;
+	}
+	if(dist <= 0) {
+		dist = 600;
+	}
+#ifdef PACKET_UPDATE_MANAGER
+	APPLAYER* tmp_app = app->Copy();
+#else
+	float dist2 = dist * dist; //pow(dist, 2);
+#endif
+
+	
+	LinkedListIterator<Client*> iterator(client_list);
+	
+	iterator.Reset();
+	while(iterator.MoreElements()) {
+
+		Client* ent = iterator.GetData();
+
+		if ((!ignore_sender || ent != sender) && (ent != SkipThisMob)) {
+			int8 filter2=ent->GetFilter(filter);
+			if(ent->Connected() && 
+				(filter==0 || (filter2==1 || 
+				(filter2==99 && entity_list.GetGroupByClient(ent)!=0 && 
+				 entity_list.GetGroupByClient(ent)->IsGroupMember(sender))
+				 || (filter2==98 && ent==sender)))
+#ifdef PACKET_UPDATE_MANAGER
+			) {
+				ent->GetUpdateManager()->QueuePacket(tmp_app, ackreq, sender, ent->DistNoRoot(*sender));
+			}
+#else
+			&& (ent->DistNoRoot(*sender) <= dist2 || dist == 0)) {
+				ent->QueuePacket(app, ackreq, Client::CLIENT_CONNECTED);
+			}
+#endif
+		}
+		iterator.Advance();
+	}
+#ifdef PACKET_UPDATE_MANAGER
+	APPLAYER::PacketUsed(&tmp_app);
+#endif
+}
+
+void EntityList::QueueClients(Mob* sender, const APPLAYER* app, bool ignore_sender, bool ackreq) {
+	LinkedListIterator<Client*> iterator(client_list);
+	
+#ifdef PACKET_UPDATE_MANAGER
+	APPLAYER* tmp_app = app->Copy();
+#endif
+	
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		Client* ent = iterator.GetData();
+
+		if ((!ignore_sender || ent != sender))
+		{
+#ifdef PACKET_UPDATE_MANAGER
+			ent->GetUpdateManager()->QueuePacket(tmp_app, ackreq, sender, ent->DistNoRoot(*sender));
+#else
+			ent->QueuePacket(app, ackreq, Client::CLIENT_CONNECTED);
+#endif
+		}
+		iterator.Advance();
+	}
+#ifdef PACKET_UPDATE_MANAGER
+	APPLAYER::PacketUsed(&tmp_app);
+#endif
+}
+*/
+
+/*
+void EntityList::QueueManaged(Mob* sender, const APPLAYER* app, bool ignore_sender, bool ackreq) {
+	LinkedListIterator<Client*> iterator(client_list);
+	
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		Client* ent = iterator.GetData();
+
+		if ((!ignore_sender || ent != sender))
+		{
+			ent->QueuePacket(app, ackreq, Client::CLIENT_CONNECTED);
+		}
+		iterator.Advance();
+	}
+}*/
+
+void EntityList::QueueManaged(Mob* sender, const APPLAYER* app, bool ignore_sender, bool ackreq) {
+	LinkedListIterator<Client*> iterator(client_list);
+	
+#ifdef PACKET_UPDATE_MANAGER
+	APPLAYER* tmp_app = app->Copy();
+#endif
+	
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		Client* ent = iterator.GetData();
+
+		if ((!ignore_sender || ent != sender))
+		{
+#ifdef PACKET_UPDATE_MANAGER
+			ent->GetUpdateManager()->QueuePacket(tmp_app, ackreq, sender, ent->DistNoRoot(*sender));
+#else
+			ent->QueuePacket(app, ackreq, Client::CLIENT_CONNECTED);
+#endif
+		}
+		iterator.Advance();
+	}
+#ifdef PACKET_UPDATE_MANAGER
+	APPLAYER::PacketUsed(&tmp_app);
+#endif
 }
 
 
@@ -1866,10 +2028,14 @@ void EntityList::Depop() {
 	LinkedListIterator<NPC*> iterator(npc_list);
 	
 	iterator.Reset();
-	while(iterator.MoreElements())
+	for(; iterator.MoreElements(); iterator.Advance())
 	{
-		iterator.GetData()->Depop();
-		iterator.Advance();
+		NPC *it = iterator.GetData();
+		Mob *own = it->GetOwner();
+		//do not depop player's pets...
+		if(it && own && own->IsClient())
+			continue;
+		it->Depop();
 	}
 }
 
@@ -1933,7 +2099,11 @@ void EntityList::SendPositionUpdates(Client* client, int32 cLastUpdate, float ra
 			}
 		}
 		if(mob && mob->IsClient() && mob->GetID()>0)
+/*#ifdef PACKET_UPDATE_MANAGER
+			client->GetUpdateManager()->QueuePacket(outapp, false, mob, mob->DistNoRoot(*client));
+#else*/
 			client->QueuePacket(outapp, false, Client::CLIENT_CONNECTED);
+//#endif
 		safe_delete(outapp);
 		outapp = 0;	
 		iterator.Advance();
@@ -2420,7 +2590,7 @@ void EntityList::AddHealAggro(Mob* target, Mob* caster, int16 thedam)
 	while(iterator.MoreElements())
 	{
 		cur = iterator.GetData();
-		if (!cur->GetOwner() && !cur->IsMezzed() && !cur->IsStunned() 
+		if (!cur->GetOwnerID() && !cur->IsMezzed() && !cur->IsStunned() 
 			&& cur->CheckAggro(target))
 		{
 			int16 tmpd = thedam;

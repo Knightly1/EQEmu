@@ -259,8 +259,11 @@ enum RESISTTYPE
 #define SE_Rampage					205
 #define SE_AETaunt					206
 #define SE_ReduceSkillTimer			227	//not implemented
+#define SE_DivineSave				232	//not implemented (base == % chance on death to insta-res)
 #define SE_Blank					254
 #define SE_ExtraAttackChance		266 //not implemented
+#define SE_CriticalDoTChance		273	//not implemented
+#define SE_CriticalSpellChance		295 //not implemented
 #define SE_WakeTheDead				299
 #define SE_Doppelganger				300
 #define SE_NoCombatSkills			311

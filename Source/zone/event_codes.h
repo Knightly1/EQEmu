@@ -1,13 +1,25 @@
-#define EVENT_SAY		1
-#define EVENT_ITEM		2
-#define EVENT_DEATH		3
-#define EVENT_SPAWN		4
-#define EVENT_ATTACK	5
-#define EVENT_SLAY		6
-#define EVENT_WAYPOINT  7
-#define EVENT_TIMER     8
-#define EVENT_SIGNAL    9
-#define EVENT_HP		10
-#define EVENT_AGGRO		11
-#define EVENT_ENTER		12
-#define EVENT_EXIT		13
+#ifndef EVENT_CODES_H
+#define EVENT_CODES_H
+
+typedef enum {
+	EVENT_SAY = 0,
+	EVENT_ITEM,
+	EVENT_DEATH,
+	EVENT_SPAWN,
+	EVENT_ATTACK,
+	EVENT_SLAY,
+	EVENT_WAYPOINT,
+	EVENT_TIMER,
+	EVENT_SIGNAL,
+	EVENT_HP,
+	EVENT_AGGRO,
+	EVENT_ENTER,
+	EVENT_EXIT,
+	
+	_LargestEventID
+} QuestEventID;
+
+extern const char *QuestEventSubroutines[_LargestEventID];
+
+#endif
+

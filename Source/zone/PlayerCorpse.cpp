@@ -78,7 +78,7 @@ Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname
 	for (unsigned int i=0; i < dbpc->itemcount; i++) {
 		tmp = new ServerLootItem_Struct;
 		memcpy(tmp, &dbpc->items[i], sizeof(ServerLootItem_Struct));
-		itemlist->Append(tmp);
+		itemlist->push_back(tmp);
 	}
 	Corpse* pc = new Corpse(in_dbid, in_charid, in_charname, itemlist, dbpc->copper, dbpc->silver, dbpc->gold, dbpc->plat, in_x, in_y, in_z, in_heading, dbpc->size, dbpc->gender, dbpc->race, dbpc->class_, dbpc->deity, dbpc->level, dbpc->texture, dbpc->helmtexture,dbpc->exp);
 	if (dbpc->locked)
@@ -107,7 +107,7 @@ Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname
 
 // To be used on NPC death and ZoneStateLoad
 // Mongrel: added see_invis and see_invis_undead
-Corpse::Corpse(NPC* in_npc, ItemList** in_itemlist, int32 in_npctypeid, NPCType** in_npctypedata, int32 in_decaytime)
+Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, NPCType** in_npctypedata, int32 in_decaytime)
 // vesuvias - appearence fix
  : Mob("Unnamed_Corpse","",0,0,in_npc->GetGender(),in_npc->GetRace(),in_npc->GetClass(),0//bodytype added
        ,in_npc->GetDeity(),in_npc->GetLevel(),in_npc->GetNPCTypeID(),0,in_npc->GetSize(),0,0,in_npc->GetHeading(),in_npc->GetX(),in_npc->GetY(),in_npc->GetZ(),0,0,in_npc->GetTexture(),in_npc->GetHelmTexture(),0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,1,0,0,0,0,0),
@@ -121,10 +121,7 @@ Corpse::Corpse(NPC* in_npc, ItemList** in_itemlist, int32 in_npctypeid, NPCType*
 	BeingLootedBy = 0xFFFFFFFF;
 	if (in_itemlist) {
 		itemlist = *in_itemlist;
-		*in_itemlist = 0;
-	}
-	else {
-		itemlist = new ItemList();
+		in_itemlist->clear();
 	}
 	AddCash(in_npc->GetCopper(), in_npc->GetSilver(), in_npc->GetGold(), in_npc->GetPlatinum());
 	
@@ -226,7 +223,6 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 	p_PlayerCorpse	= true;
 	pLocked			= false;
 	BeingLootedBy	= 0xFFFFFFFF;
-	itemlist		= new ItemList();
 	charid			= client->CharacterID();
 	dbid			= 0;
 	p_depop			= false;
@@ -322,7 +318,7 @@ Corpse::Corpse(int32 in_dbid, int32 in_charid, char* in_charname, ItemList* in_i
 	dbid = in_dbid;
 	p_depop = false;
 	charid = in_charid;
-	itemlist = in_itemlist;
+	itemlist = *in_itemlist;
 	
 	strcpy(orgname, in_charname);
 	strcpy(name, in_charname);
@@ -339,14 +335,22 @@ Corpse::Corpse(int32 in_dbid, int32 in_charid, char* in_charname, ItemList* in_i
 }
 
 Corpse::~Corpse() {
-	if (p_PlayerCorpse && itemlist) {
+	if (p_PlayerCorpse) {
 		if (IsEmpty() && dbid != 0)
 			database.DeletePlayerCorpse(dbid);
 		else if (!IsEmpty() && !(p_depop && dbid == 0))
 			Save();
 	}
-	safe_delete(itemlist);
 	safe_delete(NPCTypedata);
+	
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* item = *cur;
+		safe_delete(item);
+	}
+	itemlist.clear();
 }
 
 /*
@@ -399,12 +403,13 @@ bool Corpse::Save() {
 	dbpc->face = luclinface;
 	dbpc->beard = beard;
 	
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-	iterator.Reset();
 	int32 x = 0;
-	while(iterator.MoreElements()) {
-		memcpy((char*) &dbpc->items[x++], (char*) iterator.GetData(), sizeof(ServerLootItem_Struct));
-		iterator.Advance();
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* item = *cur;
+		memcpy((char*) &dbpc->items[x++], (char*) item, sizeof(ServerLootItem_Struct));
 	}
 
 	dbpc->crc = CRC32::Generate(&((uchar*) dbpc)[4], tmpsize - 4);
@@ -445,7 +450,7 @@ int32 Corpse::CountItems() {
 		iterator.Advance();
 	}
 	*/
-	return itemlist->Count();
+	return itemlist.size();
 }
 
 void Corpse::AddItem(uint32 itemnum, int8 charges, sint16 slot, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5) {
@@ -462,18 +467,19 @@ void Corpse::AddItem(uint32 itemnum, int8 charges, sint16 slot, uint32 aug1, uin
 	item->aug3=aug3;
 	item->aug4=aug4;
 	item->aug5=aug5;
-	(*itemlist).Append(item);
+	itemlist.push_back(item);
 }
 
 ServerLootItem_Struct* Corpse::GetItem(int16 lootslot, ServerLootItem_Struct** bag_item_data)
 {
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
 	ServerLootItem_Struct *sitem = 0, *sitem2;
 	
 	// find the item
-	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
-	{
-		sitem = iterator.GetData();
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		sitem = *cur;
 		if(sitem->lootslot == lootslot)
 			break;
 	}
@@ -482,9 +488,10 @@ ServerLootItem_Struct* Corpse::GetItem(int16 lootslot, ServerLootItem_Struct** b
 	{
 		sint16 bagstart = Inventory::CalcSlotId(sitem->equipSlot, 0);
 
-		for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
-		{
-			sitem2 = iterator.GetData();
+		cur = itemlist.begin();
+		end = itemlist.end();
+		for(; cur != end; cur++) {
+			sitem2 = *cur;
 			if(sitem2->equipSlot >= bagstart && sitem2->equipSlot < bagstart + 10)
 			{
 				bag_item_data[sitem2->equipSlot - bagstart] = sitem2;
@@ -496,16 +503,15 @@ ServerLootItem_Struct* Corpse::GetItem(int16 lootslot, ServerLootItem_Struct** b
 }
 
 uint32 Corpse::GetWornItem(sint16 equipSlot) {
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-	
-	iterator.Reset();
-	while(iterator.MoreElements())
-	{
-		if (iterator.GetData()->equipSlot == equipSlot)
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* item = *cur;
+		if (item->equipSlot == equipSlot)
 		{
-			return iterator.GetData()->item_id;
+			return item->item_id;
 		}
-		iterator.Advance();
 	}
 	
 	return 0;
@@ -513,15 +519,15 @@ uint32 Corpse::GetWornItem(sint16 equipSlot) {
 
 void Corpse::RemoveItem(int16 lootslot)
 {
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-	ServerLootItem_Struct *sitem;
 
 	if (lootslot == 0xFFFF)
 		return;
 	
-	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
-	{
-		sitem = iterator.GetData();
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* sitem = *cur;
 		if (sitem->lootslot == lootslot)
 		{
 			RemoveItem(sitem);
@@ -532,22 +538,24 @@ void Corpse::RemoveItem(int16 lootslot)
 
 void Corpse::RemoveItem(ServerLootItem_Struct* item_data)
 {
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-	ServerLootItem_Struct *sitem;
 	int8 material;
 	
-	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
-	{
-		sitem = iterator.GetData();
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* sitem = *cur;
 		if (sitem == item_data)
 		{
 			pIsChanged = true;
-			iterator.RemoveCurrent();
+			itemlist.erase(cur);
 
 			material = Inventory::CalcMaterialFromSlot(sitem->equipSlot);
 			if(material != 0xFF)
 				SendWearChange(material);
-
+			
+			safe_delete(sitem);
+			
 			return;
 		}
 	}
@@ -572,9 +580,7 @@ void Corpse::RemoveCash() {
 bool Corpse::IsEmpty() {
 	if (copper != 0 || silver != 0 || gold != 0 || platinum != 0)
 		return false;
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-	iterator.Reset();
-	return !iterator.MoreElements();
+	return(itemlist.size() == 0);
 }
 
 bool Corpse::Process() {
@@ -758,12 +764,14 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 			client->QueuePacket(app);
 			return;
 		}
-		LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+		
 		int i = 0;
 		const Item_Struct* item = 0;
-		for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
-		{
-			ServerLootItem_Struct* item_data = iterator.GetData();
+		ItemList::iterator cur,end;
+		cur = itemlist.begin();
+		end = itemlist.end();
+		for(; cur != end; cur++) {
+			ServerLootItem_Struct* item_data = *cur;
 			item_data->lootslot = 0xFFFF;
 
 			// Dont display the item if it's in a bag
@@ -823,7 +831,8 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 	}
 	const Item_Struct* item = 0;
 	ItemInst *inst = 0;
-	ServerLootItem_Struct* item_data, *bag_item_data[10];
+	ServerLootItem_Struct* item_data = NULL, *bag_item_data[10];
+	
 	memset(bag_item_data, 0, sizeof(bag_item_data));
 	if(GetPKItem()>1)
 		item = database.GetItem(GetPKItem());
@@ -839,7 +848,7 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 	
 	if (item != 0)
 	{
-		inst = ItemInst::Create(item, item_data->charges, item_data->aug1, item_data->aug2, item_data->aug3, item_data->aug4, item_data->aug5);
+		inst = ItemInst::Create(item, item_data?item_data->charges:0, item_data->aug1, item_data->aug2, item_data->aug3, item_data->aug4, item_data->aug5);
 	}
 
 	if (client && inst)
@@ -959,20 +968,20 @@ void Corpse::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 }
 
 void Corpse::QueryLoot(Client* to) {
-	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
-	
-	iterator.Reset();
 	int x = 0;
 	to->Message(0, "Coin: %ip %ig %is %ic", platinum, gold, silver, copper);
-	while(iterator.MoreElements())
-	{
-		const Item_Struct* item = database.GetItem(iterator.GetData()->item_id);
+
+	ItemList::iterator cur,end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; cur++) {
+		ServerLootItem_Struct* sitem = *cur;
+		const Item_Struct* item = database.GetItem(sitem->item_id);
 		if (item)
 			to->Message(0, "  %d: %s", item->ItemNumber, item->Name);
 		else
-			to->Message(0, "  Error: 0x%04x", iterator.GetData()->item_id);
+			to->Message(0, "  Error: 0x%04x", sitem->item_id);
 		x++;
-		iterator.Advance();
 	}
 	to->Message(0, "%i items on %s.", x, this->GetName());
 }

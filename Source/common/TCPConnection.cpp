@@ -816,8 +816,7 @@ bool TCPConnection::RecvData(char* errbuf) {
 #endif
 			return false;
 		}
-	} else
-		return false;
+	}
 	if ((TCPMode == modePacket || TCPMode == modeTransition) && timeout_timer->Check()) {
 		if (errbuf)
 			snprintf(errbuf, TCPConnection_ErrorBufferSize, "TCPConnection::RecvData(): Connection timeout");
@@ -1378,14 +1377,15 @@ void* TCPConnectionLoop(void* tmp) {
 	TCPConnection* tcpc = (TCPConnection*) tmp;
 	tcpc->MLoopRunning.lock();
 	while (tcpc->RunLoop()) {
-		_CP(TCPConnectionLoop);
 		Sleep(1);
 		if (tcpc->GetState() != TCPS_Ready) {
+			_CP(TCPConnectionLoop);
 			if (!tcpc->Process()) {
 				tcpc->Disconnect();
 			}
 		}
 		else if (tcpc->GetAsyncConnect()) {
+			_CP(TCPConnectionLoop);
 			if (tcpc->charAsyncConnect)
 				tcpc->Connect(tcpc->charAsyncConnect, tcpc->GetrPort());
 			else

@@ -47,7 +47,7 @@ Core Zone features
 #define EMBPERL_XS
 
 //enable classes in the new XS based parser
-//#define EMBPERL_XS_CLASSES
+#define EMBPERL_XS_CLASSES
 
 //enable IO capture and transmission to in game clients
 #define EMBPERL_IO_CAPTURE
@@ -104,6 +104,7 @@ Zone extensions and features
 #define QUEST_TEMPLATES_DIRECTORY "templates"
 #endif
 
+//Warning: this does not work very well:
 //Uncomment to enable map based fear pathing
 //#define ENABLE_FEAR_PATHING 1
 
@@ -117,8 +118,21 @@ Zone extensions and features
 //uncomment to allow perl commands to override compiled commands
 #define COMMANDS_PERL_OVERRIDE
 
+//enable logging of commands used
+#define COMMANDS_LOGGING
+
+//only log commands which require this minimum status or more
+#define COMMANDS_LOGGING_MIN_STATUS 1
+
+//path to where sql logs should be placed
+#define SQL_LOG_PATH "sql_logs/"
+
 //New aggro system to reduce overhead.
 #define REVERSE_AGGRO
+
+//Enable spacial queue to manage NPC update packets
+//#define PACKET_UPDATE_MANAGER
+//#define MANAGE_HP_UPDATES
 
 /*
 
@@ -163,7 +177,8 @@ enum {	//timer settings, all in milliseconds
 	AIscanarea_delay = 500,
 	AIClientScanarea_delay = 750,	//used in REVERSE_AGGRO
 	AIassistcheck_delay = 3000,		//now often a fighting NPC will yell for help
-	ClientProximity_interval = 1000
+	ClientProximity_interval = 1000,
+	Tribute_duration = 600000
 };
 	
 
@@ -211,6 +226,35 @@ enum {	//timer settings, all in milliseconds
 #define MAX_FACTION	 1500
 #define MIN_FACTION -1500
 
+//The Level Cap:
+#define LEVEL_CAP 65
+
+//Some hard coded statuses from commands and other places:
+enum {
+	minStatusToBeGM = 40,
+	minStatusToUseGMCommands = 80,
+	minStatusToKick = 150,
+	minStatusToAvoidFalling = 100,
+	commandMovecharSelfOnly = 80,	//below this == only self move allowed
+	commandMovecharToSpecials = 200,	//ability to send people to cshom/load zones
+	commandZoneToSpecials = 80,		//zone to cshome, out of load zones
+	commandToggleAI = 250,			//can turn NPC AI on and off
+	commandCastSpecials = 100,		//can cast special spells
+	commandInstacast = 100,			//insta-cast all #casted spells
+	commandLevelAboveCap = 100,		//can #level players above level cap
+	commandLevelNPCAboveCap = 100,	//can #level NPCs above level cap
+	commandSetSkillsOther = 100,	//ability to setskills on others
+	commandRaceOthers = 100,	//ability to #race on others
+	commandGenderOthers = 100,	//ability to #gender on others
+	commandTextureOthers = 100,	//ability to #texture on others
+	commandDoAnimOthers = 100,	//can #doanim on others
+	commandLockZones = 101,		//can lock or unlock zones
+	commandEditPlayerCorpses = 150,	//can Edit Player Corpses
+	commandChangeFlags = 200,		//ability to set/refresh flags
+	commandBanPlayers = 100,		//can set bans on players
+	commandChangeDatarate = 201,	//edit client's data rate
+	commandZoneToCoords = 0			//can #zone with coords
+};
 
 /*
 
@@ -224,8 +268,8 @@ Developer configuration
 
 #define COMMON_PROFILE
 
-//#define PROFILE_DUMP_TIME 10*60
-#endif
+//#define PROFILE_DUMP_TIME 3*60
+#endif	//EQPROFILE
 
 
 

@@ -104,7 +104,6 @@ void Doors::HandleClick(Client* sender)
 		return;
 	}
 
-#if 1
     APPLAYER* outapp = new APPLAYER(OP_MoveDoor, sizeof(MoveDoor_Struct));
 	MoveDoor_Struct* md=(MoveDoor_Struct*)outapp->pBuffer;
 	//DumpPacket(app);
@@ -258,11 +257,12 @@ void Doors::HandleClick(Client* sender)
         close_timer.Disable();
 				SetOpenState(false);
     }
-#endif	// 1
 
-    if (opentype == 58 && strncmp(dest_zone,"NONE",sizeof("NONE")) != 0 ){ // Teleport door!
-        if ( strncmp(dest_zone,zone_name,sizeof(zone_name)) == 0){
-            sender->GMMove(dest_x,dest_y,dest_z);
+    if (opentype == 58 && strncmp(dest_zone,"NONE",strlen("NONE")) != 0 ){ // Teleport door!
+        if ( strncmp(dest_zone,zone_name,strlen(zone_name)) == 0) {
+  			//dunno why, but this dosent seem to work all the time:
+            //sender->GMMove(dest_x,dest_y,dest_z);
+           	sender->MovePC((const char*) NULL, dest_x, dest_y, dest_z);
         }
         else {
            	sender->MovePC(dest_zone, dest_x, dest_y, dest_z);

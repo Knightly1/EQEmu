@@ -38,6 +38,9 @@ chance tinyint(2) unsigned default 1 not null, primary key (lootdrop_id, item_id
 #include "zonedump.h"
 #include "../common/linked_list.h"
 
+#include <list>
+using namespace std;
+
 #pragma pack(1)
 struct LootTableEntries_Struct {
 	int32	lootdrop_id;
@@ -66,6 +69,6 @@ struct LootDrop_Struct {
 };
 #pragma pack()
 
-typedef LinkedList<ServerLootItem_Struct*> ItemList;
+typedef list<ServerLootItem_Struct*> ItemList;
 
 #endif

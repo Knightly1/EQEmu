@@ -92,8 +92,7 @@ void QuestManager::Process() {
 	list<QuestTimer>::iterator cur = TimerList.begin(), end, tmp;
 	
 	end = TimerList.end();
-	while (cur != end)
-	{
+	while (cur != end) {
 		if (cur->Timer_.Enabled() && cur->Timer_.Check()) {
 			//make sure the mob is still in zone.
 			if(entity_list.IsMobInZone(cur->mob)) {
@@ -174,7 +173,7 @@ void QuestManager::write(const char *file, const char *str) {
 	fclose (pFile);
 }
 
-void QuestManager::spawn2(int npc_type, int grid, int unused, float x, float y, float z, float heading) {
+int16 QuestManager::spawn2(int npc_type, int grid, int unused, float x, float y, float z, float heading) {
 	const NPCType* tmp = 0;
 	//int8 guildwarset = atoi(arglist[2]);
 	if ((tmp = database.GetNPCType(npc_type))) 
@@ -196,7 +195,9 @@ void QuestManager::spawn2(int npc_type, int grid, int unused, float x, float y, 
 			}
 			npc->SendPosUpdate();
 //		}
+		return(npc->GetID());
 	}
+	return(0);
 }
 
 void QuestManager::setstat(int stat, int value) {
@@ -769,7 +770,7 @@ void QuestManager::setglobal(const char *varname, const char *newvalue, int opti
 	if (!database.RunQuery(query, MakeAnyLenString(&query, 
 	  "INSERT INTO quest_globals (charid,npcid,zoneid,name,value,expdate) VALUES (%i,%i,%i,'%s','%s',unix_timestamp(now())+%i)",
 	  qgCharid,qgNpcid,qgZoneid,varname,newvalue,
-	  QGexpdate(varname,newvalue)
+	  QGexpdate(varname,duration)
 	  ), errbuf, &result)) 
 	{
 		cerr << "setglobal error inserting " << varname << " : " << errbuf << endl;

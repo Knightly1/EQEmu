@@ -293,7 +293,13 @@ void Embperl::eval(const char * code)
 //end Myra
 }
 
-
+bool Embperl::SubExists(const char *package, const char *sub) {
+	HV *stash = gv_stashpv(package, false);
+	if(!stash)
+		return(false);
+	int len = strlen(sub);
+	return(hv_exists(stash, sub, len));
+}
 
 
 #endif //EMBPERL

@@ -329,8 +329,10 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 	EQNetworkServer* eqns = (EQNetworkServer*) tmp;
 	eqns->MLoopRunning.lock();
 	while (eqns->RunLoop) {
-		_CP(EQNetworkServerLoop);
-		eqns->Process();
+		{
+			_CP(EQNetworkServerLoop);
+			eqns->Process();
+		}
 		Sleep(1);
 	}
 	eqns->MLoopRunning.unlock();
@@ -357,9 +359,11 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 	Timer* tmp_timer = new Timer(100);
 	tmp_timer->Start();
 	while (eqnc->RunLoop) {
-		_CP(EQNetworkConnectionInLoop);
-		if(tmp_timer->Check())
-		eqnc->DoRecvData();
+		{
+			_CP(EQNetworkConnectionInLoop);
+			if(tmp_timer->Check())
+				eqnc->DoRecvData();
+		}
 		Sleep(1);
 	}
 	safe_delete(tmp_timer);
@@ -387,9 +391,11 @@ EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 	Timer* tmp_timer = new Timer(100);
 	tmp_timer->Start();
 	while (eqnc->RunLoop) {
-		_CP(EQNetworkConnectionOutLoop);
-		if(tmp_timer->Check())
-		eqnc->Process(eqnc->outsock);
+		{
+			_CP(EQNetworkConnectionOutLoop);
+			if(tmp_timer->Check())
+				eqnc->Process(eqnc->outsock);
+		}
 		Sleep(1);
 	}
 	safe_delete(tmp_timer);
@@ -427,6 +433,9 @@ EQNetworkConnection::EQNetworkConnection(int32 irIP, int16 irPort) {
 	SetDataRate(500);
 	if (rIP && rPort)
 		pState = EQNC_Active;
+#ifdef PACKET_PROFILER
+	_packetProfileTimer.start();
+#endif
 }
 
 EQNetworkConnection::EQNetworkConnection() {
@@ -458,9 +467,15 @@ EQNetworkConnection::EQNetworkConnection() {
 	combined_timer->Start();
 #endif
 	SetDataRate(500);
+#ifdef PACKET_PROFILER
+	_packetProfileTimer.start();
+#endif
 }
 
 EQNetworkConnection::~EQNetworkConnection() {
+#ifdef PACKET_PROFILER
+	DumpPacketProfile();
+#endif
 	if (ConnectionType == Outgoing) {
 		CloseSock();
 		RunLoop = false;
@@ -472,12 +487,14 @@ EQNetworkConnection::~EQNetworkConnection() {
 	}
 	InQueue_Struct* iqs = 0;
 	while ((iqs = InQueue.pop())) {
-		safe_delete(iqs->app);
+		APPLAYER::PacketUsed(&iqs->app);
+//		safe_delete(iqs->app);
 		safe_delete(iqs);
 	}
 	APPLAYER* app = 0;
 	while ((app = OutQueue.pop())) {
-		safe_delete(app);
+//		safe_delete(app);
+		APPLAYER::PacketUsed(&app);
 	}
 #ifdef COMBINED
 	if(CombinedPacket)
@@ -492,35 +509,75 @@ EQNetworkConnection::~EQNetworkConnection() {
 	safe_delete(combined_timer);
 #endif
 //	safe_delete(datakeepalive_timer);
+}
 
 #ifdef PACKET_PROFILER
-	//last thing we do before we die is dump our profile
+void EQNetworkConnection::DumpPacketProfile() {
+	
+	_packetProfileTimer.stop();	//yes, this can be stopped multiple times
+	float ttime = _packetProfileTimer.getDuration();
+	
 	struct in_addr ia;
 	ia.s_addr = rIP;
 	LogFile->write(EQEMuLog::Debug, "Packet profile for connection %s:%i", inet_ntoa(ia), ntohs(rPort));
+	LogFile->write(EQEMuLog::Debug, "   Total connection lifetime: %.4f ms", ttime);
 	uint32 ratio;
+	
+	ttime /= 1000.0f;	//convert to seconds
+	
+	float rate;
 	map<uint16, _ppData>::iterator cur, stop;
 	cur = _packetProfileIn.begin();
 	stop = _packetProfileIn.end();
-	LogFile->write(EQEMuLog::Debug, "Incoming Packets:");
+	LogFile->write(EQEMuLog::Debug, " Incoming Packets:");
 	while(cur != stop) {
 		const _ppData &pp = cur->second;
 		ratio = pp.lengthSum / pp.count;
-		LogFile->write(EQEMuLog::Debug, "	0x%.4x: count=%lu, total length=%lu, avg. length=%lu", cur->first, pp.count, pp.lengthSum, ratio);
+		rate = pp.count / ttime;
+		LogFile->write(EQEMuLog::Debug, "   0x%.4x: count=%lu, length=%lu, avg. length=%lu, rate=%.2f/s", cur->first, pp.count, pp.lengthSum, ratio, rate);
 		cur++;
 	}
 	
 	cur = _packetProfileOut.begin();
 	stop = _packetProfileOut.end();
-	LogFile->write(EQEMuLog::Debug, "Outgoing Packets:");
+	LogFile->write(EQEMuLog::Debug, " Outgoing Packets:");
 	while(cur != stop) {
 		const _ppData &pp = cur->second;
 		ratio = pp.lengthSum / pp.count;
-		LogFile->write(EQEMuLog::Debug, "	0x%.4x: count=%lu, total length=%lu, avg. length=%lu", cur->first, pp.count, pp.lengthSum, ratio);
+		rate = pp.count / ttime;
+		LogFile->write(EQEMuLog::Debug, "   0x%.4x: count=%lu, length=%lu, avg. length=%lu, rate=%.2f/s", cur->first, pp.count, pp.lengthSum, ratio, rate);
 		cur++;
 	}
-#endif
+	
+	//count lengths of all our queues, maybe it will help some day
+	int inq_count = 0, outq_count = 0, sendq_count = 0, bp_count = 0;
+	MInQueueLock.lock();
+	inq_count = InQueue.count();
+	MInQueueLock.unlock();
+	MOutQueueLock.lock();
+	inq_count = OutQueue.count();
+	MOutQueueLock.unlock();
+	
+	LinkedListIterator<EQNetworkPacket*> iterator(SendQueue);
+	iterator.Reset();
+	if (iterator.MoreElements()) {
+		sendq_count++;
+		iterator.Advance();
+	}
+	
+	
+	LinkedListIterator<EQNetworkPacket*> iterator2(BufferedPackets);
+	iterator2.Reset();
+	while(iterator2.MoreElements()) {
+		bp_count++;
+		iterator2.Advance();
+	}
+
+	LogFile->write(EQEMuLog::Debug, " Packet Queues:");
+	LogFile->write(EQEMuLog::Debug, "   In: %d, Out: %d, Send: %d, Buffered: %d", inq_count, outq_count, sendq_count, bp_count);
+
 }
+#endif
 
 int8 EQNetworkConnection::GetState() {
 	MStateLock.lock();
@@ -589,7 +646,8 @@ void EQNetworkConnection::FastQueuePacket(APPLAYER** app, bool ackreq) {
 		ThrowError("EQNetworkConnection::FastQueuePacket(): *app = 0!");
 	}
 	if (!CheckActive()) {
-		safe_delete(*app);
+//		safe_delete(*app);
+		APPLAYER::PacketUsed(app);
 		return;
 	}
 	InQueue_Struct* iqs = new InQueue_Struct;
@@ -707,12 +765,14 @@ void EQNetworkConnection::CloseSock() {
 
 	InQueue_Struct* iqs = 0;
 	while ((iqs = InQueue.pop())) {
-		safe_delete(iqs->app);
+//		safe_delete(iqs->app);
+		APPLAYER::PacketUsed(&iqs->app);
 		delete iqs;
 	}
 	APPLAYER* app = 0;
 	while ((app = OutQueue.pop())) {
-		safe_delete(app);
+//		safe_delete(app);
+		APPLAYER::PacketUsed(&app);
 	}
 	LockMutex lock2(&MSocketLock);
 	if (outsock) {
@@ -776,7 +836,8 @@ void EQNetworkConnection::Process(int sock)
 	InQueue_Struct* iqs = 0;
 	while ((iqs = InQueuePop())) {
 		MakeEQPacket(iqs->app, iqs->ackreq);
-		safe_delete(iqs->app);
+//		safe_delete(iqs->app);
+		APPLAYER::PacketUsed(&iqs->app);
 		delete iqs;
 	}
 #ifdef COMBINED
@@ -2327,6 +2388,15 @@ bool EQDataPacket::Decode(sint64* key, int16 opCode, int8* buf, sint32 buflen) {
 	OutQueue.push(app);
 	return true;
 }
+
+APPLAYER::~APPLAYER() {
+#if EQDEBUG >= 4
+		if(refCount > 1) {
+			LogFile->write(EQEMuLog::Debug, "Error: Packet with opcode 0x%.4x deleted with a refcount of %d", opcode, refCount);
+		}
+#endif
+		safe_delete_array(pBuffer);
+	}
 
 // Determine the length of a type of eq message
 // Taken from ShowEQ (Thanks guys!)

@@ -699,20 +699,19 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 	}
 	
 	if(itemlist != NULL)
-		itemlist->Append(item);
+		itemlist->push_back(item);
 	else
-		delete item;
+		safe_delete(item);
 	
 	if(wearchange && outapp) {
 		entity_list.QueueClients(this, outapp);
 	 	safe_delete(outapp);
 	}
 }
-
 	  
 void NPC::AddItem(const Item_Struct* item, int8 charges, uint8 slot) {
 	//slot isnt needed, its determined from the item.
-	AddLootDrop(item, itemlist, charges, true, true);
+	AddLootDrop(item, &itemlist, charges, true, true);
 }
 
 void NPC::AddItem(int32 itemid, int8 charges, uint8 slot) {
@@ -720,212 +719,13 @@ void NPC::AddItem(int32 itemid, int8 charges, uint8 slot) {
 	const Item_Struct * i = database.GetItem(itemid);
 	if(i == NULL)
 		return;
-	AddLootDrop(i, itemlist, charges, true, true);
+	AddLootDrop(i, &itemlist, charges, true, true);
 }
 	  
 void NPC::AddLootTable() {
 	if (npctype_id != 0) { // check if it's a GM spawn
-	  database.AddLootTableToNPC(this,loottable_id, itemlist, &copper, &silver, &gold, &platinum);
+	  database.AddLootTableToNPC(this,loottable_id, &itemlist, &copper, &silver, &gold, &platinum);
 	}
 }
 
 
-/*#if 0
-// Queries the loottable: adds item & coin to the npc
-void Database::AddLootTableToNPC(int32 loottable_id, ItemList* itemlist, int32* copper, int32* silver, int32* gold, int32* plat) {
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	*copper = 0;
-	*silver = 0;
-	*gold = 0;
-	*plat = 0;
-	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, mincash, maxcash, avgcoin FROM loottable WHERE id=%i", loottable_id), errbuf, &result)) {
-		safe_delete_array(query);
-		if (mysql_num_rows(result) == 1) {
-			row = mysql_fetch_row(result);
-			int32 mincash = atoi(row[1]);
-			int32 maxcash = atoi(row[2]);
-			if (mincash > maxcash) {
-				cerr << "Error in loottable #" << row[0] << ": mincash > maxcash" << endl;
-			}
-			else if (maxcash != 0) {
-				int32 cash = 0;
-				if (mincash == maxcash)
-					cash = mincash;
-				else
-					cash = (rand() % (maxcash - mincash)) + mincash;
-				if (cash != 0) {
-					int32 coinavg = atoi(row[3]);
-					if (coinavg != 0) {
-						int32 mincoin = (int32) (coinavg * 0.75 + 1);
-						int32 maxcoin = (int32) (coinavg * 1.25 + 1);
-						*copper = (rand() % (maxcoin - mincoin)) + mincoin - 1;
-						*silver = (rand() % (maxcoin - mincoin)) + mincoin - 1;
-						*gold = (rand() % (maxcoin - mincoin)) + mincoin - 1;
-						cash -= *copper;
-						cash -= *silver * 10;
-						cash -= *gold * 10;
-					}
-					*plat = cash / 1000;
-					cash -= *plat * 1000;
-					int32 gold2 = cash / 100;
-					cash -= gold2 * 100;
-					int32 silver2 = cash / 10;
-					cash -= silver2 * 10;
-					*gold += gold2;
-					*silver += silver2;
-					*copper += cash;
-				}
-			}
-		}
-		else {
-			mysql_free_result(result);
-			return;
-		}
-		mysql_free_result(result);
-	}
-	else
-	{
-		cerr << "Error in AddLootTableToNPC get coin query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return;
-	}
-	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT loottable_id, lootdrop_id, multiplier, probability FROM loottable_entries WHERE loottable_id=%i", loottable_id), errbuf, &result)) {
-		safe_delete_array(query);
-		while ((row = mysql_fetch_row(result))) {
-			int multiplier = atoi(row[2]);
-			for (int i = 1; i <= multiplier; i++) {
-				if ( ((rand()%1)*100) < atoi(row[3])) {
-					AddLootDropToNPC(atoi(row[1]), itemlist);
-				}
-			}
-		}
-		mysql_free_result(result);
-	}
-	else {
-		cerr << "Error in AddLootTableToNPC get items query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return;
-	}
-	
-	return;
-}
-
-// Called by AddLootTableToNPC
-// maxdrops = size of the array npcd
-void Database::AddLootDropToNPC(int32 lootdrop_id, ItemList* itemlist) {
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	
-// This is Wiz's updated Pool Looting functionality.  Eventually, the database format should be moved over to use this
-// or implemented to support both methods.  (A unique identifier in lootable_entries indicates to roll for a pool item
-// in another table.
-#ifdef POOLLOOTING
-	int32 chancepool = 0;
-	int32 items[50];
-	int32 itemchance[50];
-	int16 itemcharges[50];
-	int8 i = 0;
-	
-	for (int m=0;m < 50;m++)
-	{
-		items[m]=0;
-		itemchance[m]=0;
-		itemcharges[m]=0;
-	}
-	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT lootdrop_id, item_id, item_charges, equip_item, chance FROM lootdrop_entries WHERE lootdrop_id=%i order by chance desc", lootdrop_id), errbuf, &result))
-	{
-		safe_delete_array(query);
-		while (row = mysql_fetch_row(result))
-		{
-			items[i] = atoi(row[1]);
-			itemchance[i] = atoi(row[4]) + chancepool;
-			itemcharges[i] = atoi(row[2]);
-			chancepool += atoi(row[4]);
-			i++;
-		}
-		int32 res;
-		i = 0;
-		
-        if (chancepool!=0) //avoid divide by zero if some mobs have 0 for chancepool
-        {
-            res = rand()%chancepool;
-        }
-        else
-        {
-            res = 0;
-        }
-		
-		while (items[i] != 0)
-		{
-			if (res <= itemchance[i])
-				break;
-			else
-				i++;
-		}
-		const Item_Struct* dbitem = database.GetItem(items[i]);
-		if (dbitem == 0)
-		{
-			LogFile->write(EQEMuLog::Error, "AddLootDropToNPC: dbitem=0, item#=%i, lootdrop_id=%i", items[i], lootdrop_id);
-		}
-		else
-		{
-			//printf("Adding item2: %i",item->item_id);
-			//cout << "Adding item to Mob" << endl;
-			ServerLootItem_Struct* item = new ServerLootItem_Struct;
-			item->item_id = dbitem->ItemNumber;
-			item->charges = itemcharges[i];
-			item->equipSlot = 0;
-			(*itemlist).Append(item);
-		}
-		mysql_free_result(result);
-	}
-#else
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT lootdrop_id, item_id, item_charges, equip_item, chance FROM lootdrop_entries WHERE lootdrop_id=%i order by chance desc", lootdrop_id), errbuf, &result))
-	{
-		safe_delete_array(query);
-		while ((row = mysql_fetch_row(result)))
-		{
-			int8 LootDropMod=1;  // place holder till I put it in a database variable to make it configurable.
-			if( (rand()%100) < ((atoi(row[4]) * LootDropMod)) )
-			{
-				int32 itemid = atoi(row[1]);
-				const Item_Struct* dbitem = database.GetItem(itemid);
-				if (dbitem == 0)
-				{
-					LogFile->write(EQEMuLog::Error, "AddLootDropToNPC: dbitem=0, item#=%i, lootdrop_id=%i", itemid, lootdrop_id);
-				}
-				else
-				{
-					printf("Adding item: %i",item->ItemNumber);
-					ServerLootItem_Struct* item = new ServerLootItem_Struct;
-					item->item_id = dbitem->item_id;
-					item->charges = atoi(row[2]);
-					item->equipSlot = 0;
-					(*itemlist).Append(item);
-				}
-				
-				//mysql_free_result(result);
-				//return;
-			}
-		}
-		mysql_free_result(result);
-	}
-#endif
-	else
-	{
-		LogFile->write(EQEMuLog::Error, "Error in AddLootDropToNPC query '%s' %s", query, errbuf);
-		safe_delete_array(query);
-		return;
-	}
-	
-	return;
-}
-#endif*/

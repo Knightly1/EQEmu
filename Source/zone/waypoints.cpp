@@ -961,5 +961,333 @@ void Mob::CalculateFearPosition() {
 #endif
 
 
+int8 Database::GetGridType2(int16 grid, int16 zoneid) {
+	char *query = 0;
+	char errbuff[MYSQL_ERRMSG_SIZE];
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	int type2 = 0;
+	if (RunQuery(query, MakeAnyLenString(&query,"SELECT type2 from grid where id = %i and zoneid = %i",grid,zoneid),errbuff,&result)) {
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			type2 = atoi( row[0] );
+		}
+		mysql_free_result(result);
+	} else {
+		LogFile->write(EQEMuLog::Error, "Error in GetGridType2 query '%s': %s", query, errbuff);
+		safe_delete_array(query);
+	}
 
+	return(type2);
+}
+
+bool Database::GetWaypoints(int16 grid,int16 zoneid, int16 num, wplist* wp) {
+	_CP(Database_GetWaypoints);
+	char *query = 0;
+	char errbuff[MYSQL_ERRMSG_SIZE];
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	if (RunQuery(query, MakeAnyLenString(&query,"SELECT x, y, z, pause from grid_entries where gridid = %i and number = %i and zoneid = %i",grid,num,zoneid),errbuff,&result)) {
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			if ( wp ) {
+				wp->x = atof( row[0] );
+				wp->y = atof( row[1] );
+				wp->z = atof( row[2] );
+				wp->pause = atoi( row[3] );
+			}
+			mysql_free_result(result);
+			return true;
+		}
+		mysql_free_result(result);
+	}
+	else {
+		LogFile->write(EQEMuLog::Error, "Error in GetWaypoints query '%s': %s", query, errbuff);
+		safe_delete_array(query);
+	}
+	return false;
+}
+
+void Database::AssignGrid(Client *client, float x, float y, int32 grid)
+{
+	char *query = 0;
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	int matches = 0, fuzzy = 0, spawn2id = 0;
+	int32 affected_rows;
+	float dbx = 0, dby = 0;
+
+	// solar: looks like most of the stuff in spawn2 is straight integers
+	// so let's try that first
+	RunQuery(
+		query,
+		MakeAnyLenString(
+			&query,
+			"SELECT id,x,y FROM spawn2 WHERE zone='%s' AND x=%i AND y=%i",
+			zone->GetShortName(), (int)x, (int)y
+		),
+		errbuf,
+		&result
+	);
+	safe_delete_array(query);
+
+// how much it's allowed to be off by
+#define _GASSIGN_TOLERANCE	1.0
+	if(!(matches = mysql_num_rows(result)))	// try a fuzzy match if that didn't find it
+	{
+		mysql_free_result(result);
+		RunQuery(
+			query,
+			MakeAnyLenString(
+				&query,
+				"SELECT id,x,y FROM spawn2 WHERE zone='%s' AND "
+				"ABS( ABS(x) - ABS(%f) ) < %f AND "
+				"ABS( ABS(y) - ABS(%f) ) < %f",
+				zone->GetShortName(), x, _GASSIGN_TOLERANCE, y, _GASSIGN_TOLERANCE
+			),
+			errbuf,
+			&result
+		);
+		safe_delete_array(query);
+		fuzzy = 1;
+		if(!(matches = mysql_num_rows(result)))
+			mysql_free_result(result);
+	}
+	if(matches)
+	{
+		if(matches > 1)
+		{
+			client->Message(0, "ERROR: Unable to assign grid - multiple spawn2 rows match");
+			mysql_free_result(result);
+		}
+		else
+		{
+			row = mysql_fetch_row(result);
+			spawn2id = atoi(row[0]);
+			dbx = atof(row[1]);
+			dby = atof(row[2]);
+			RunQuery(
+				query,
+				MakeAnyLenString(
+					&query,
+					"UPDATE spawn2 SET pathgrid = %d WHERE id = %d", grid, spawn2id
+				),
+				errbuf,
+				&result,
+				&affected_rows
+			);
+			if(affected_rows == 1)
+			{
+				if(fuzzy)
+				{
+					float difference;
+					difference = sqrt(pow(fabs(x-dbx),2) + pow(fabs(y-dby),2));
+					client->Message(0, 
+						"Grid assign: spawn2 id = %d updated - fuzzy match: deviation %f",
+						spawn2id, difference
+					);
+				}
+				else
+				{
+					client->Message(0, "Grid assign: spawn2 id = %d updated - exact match", spawn2id);
+				}
+			}
+			else
+			{
+				client->Message(0, "ERROR: found spawn2 id %d but the update query failed", spawn2id);
+			}
+		}
+	}
+	else
+	{
+		client->Message(0, "ERROR: Unable to assign grid - can't find it in spawn2");
+	}
+}
+
+/******************
+* ModifyGrid - Either adds an empty grid, or removes a grid and all its waypoints, for a particular zone.
+*	remove:		TRUE if we are deleting the specified grid, FALSE if we are adding it
+*	id:		The ID# of the grid to add or delete
+*	type,type2:	The type and type2 values for the grid being created (ignored if grid is being deleted)
+*	zoneid:		The ID number of the zone the grid is being created/deleted in
+*/
+
+void Database::ModifyGrid(bool remove, int16 id, int8 type, int8 type2, int16 zoneid)
+{    char *query = 0;
+	if (!remove)
+	{
+		RunQuery(query, MakeAnyLenString(&query,"INSERT INTO grid(id,zoneid,type,type2) VALUES(%i,%i,%i,%i)",id,zoneid,type,type2));
+		safe_delete_array(query);
+	}
+	else
+	{
+		RunQuery(query, MakeAnyLenString(&query,"DELETE FROM grid where id=%i",id));
+		safe_delete_array(query);
+		query = 0;
+		RunQuery(query, MakeAnyLenString(&query,"DELETE FROM grid_entries WHERE zoneid=%i AND gridid=%i",zoneid,id));
+		safe_delete_array(query);
+	}
+} /*** END Database::ModifyGrid() ***/
+
+/**************************************
+* AddWP - Adds a new waypoint to a specific grid for a specific zone.
+*/
+
+void Database::AddWP(int32 gridid, int8 wpnum, float xpos, float ypos, float zpos, int32 pause, int16 zoneid)
+{   char *query = 0;
+
+	RunQuery(query,MakeAnyLenString(&query,"INSERT INTO grid_entries (gridid,zoneid,`number`,x,y,z,pause) values (%i,%i,%i,%f,%f,%f,%i)",gridid,zoneid,wpnum,xpos,ypos,zpos,pause));
+	safe_delete_array(query);
+} /*** END Database::AddWP() ***/
+
+
+/**********
+* ModifyWP() has been obsoleted.  The #wp command either uses AddWP() or DeleteWaypoint()
+***********/
+
+/******************
+* DeleteWaypoint - Removes a specific waypoint from the grid
+*	grid_id:	The ID number of the grid whose wp is being deleted
+*	wp_num:		The number of the waypoint being deleted
+*	zoneid:		The ID number of the zone that contains the waypoint being deleted
+*/
+
+void Database::DeleteWaypoint(int16 grid_num, int32 wp_num, int16 zoneid)
+{    char *query=0;
+	RunQuery(query, MakeAnyLenString(&query,"DELETE FROM grid_entries where gridid=%i and zoneid=%i and `number`=%i",grid_num,zoneid,wp_num));
+	safe_delete_array(query);
+} /*** END Database::DeleteWaypoint() ***/
+
+
+/******************
+* AddWPForSpawn - Used by the #wpadd command - for a given spawn, this will add a new waypoint to whatever grid that spawn is assigned to.
+* If there is currently no grid assigned to the spawn, a new grid will be created using the next available Grid ID number for the zone
+* the spawn is in.
+* Returns 0 if the function didn't have to create a new grid.  If the function had to create a new grid for the spawn, then the ID of
+* the created grid is returned.
+*/
+
+int32 Database::AddWPForSpawn(int32 spawn2id, float xpos, float ypos, float zpos, int32 pause, int type1, int type2, int16 zoneid)
+{   char	*query = 0;
+    int32	grid_num,	// The grid number the spawn is assigned to (if spawn has no grid, will be the grid number we end up creating)
+		next_wp_num;	// The waypoint number we should be assigning to the new waypoint
+    bool	CreatedNewGrid;	// Did we create a new grid in this function?
+    MYSQL_RES	*result;
+    MYSQL_ROW	row;
+	
+	// See what grid number our spawn is assigned
+	if(RunQuery(query, MakeAnyLenString(&query,"SELECT pathgrid FROM spawn2 WHERE id=%i",spawn2id),0,&result))
+	{   safe_delete_array(query);
+	    if(mysql_num_rows(result) > 0)
+	    {
+		row = mysql_fetch_row(result);
+		grid_num = atoi(row[0]);
+	    }
+	    else	// This spawn ID was not found in the `spawn2` table
+		return 0;
+
+	    mysql_free_result(result);
+	}
+	else	// Query error
+		return 0;
+
+	if (grid_num == 0)	// Our spawn doesn't have a grid assigned to it -- we need to create a new grid and assign it to the spawn
+	{   
+	    CreatedNewGrid = true;
+	    if((grid_num = GetFreeGrid(zoneid)) == 0)	// There are no grids for the current zone -- create Grid #1
+		grid_num = 1;
+
+	    RunQuery(query, MakeAnyLenString(&query,"insert into grid set id='%i',zoneid= %i, type='%i', type2='%i'",grid_num,zoneid,type1,type2));
+	    safe_delete_array(query);
+
+	    query = 0;
+	    RunQuery(query, MakeAnyLenString(&query,"update spawn2 set pathgrid='%i' where id='%i'",grid_num,spawn2id));
+		safe_delete_array(query);
+	}
+	else	// NPC had a grid assigned to it
+		CreatedNewGrid = false;
+	
+	
+	// Find out what the next waypoint is for this grid
+	query = 0;
+	if(RunQuery(query, MakeAnyLenString(&query,"SELECT max(`number`) FROM grid_entries WHERE zoneid='%i' AND gridid='%i'",zoneid,grid_num),0,&result))
+	{
+	    safe_delete_array(query);
+	    row = mysql_fetch_row(result);
+	    if(row[0] != 0)
+		next_wp_num = atoi(row[0]) + 1;
+	    else	// No waypoints in this grid yet
+		next_wp_num = 1;
+
+	    mysql_free_result(result);
+	}
+	else	// Query error
+		return 0;
+
+	query = 0;
+	RunQuery(query, MakeAnyLenString(&query,"INSERT INTO grid_entries(gridid,zoneid,`number`,x,y,z,pause) VALUES (%i,%i,%i,%f,%f,%f,%i)",grid_num,zoneid,next_wp_num,xpos,ypos,zpos,pause));
+		safe_delete_array(query);
+	
+	if(CreatedNewGrid)	return grid_num;
+	else			return 0;
+} /*** END Database::AddWPForSpawn() ***/
+
+
+int16 Database::GetFreeGrid(int16 zoneid) {
+    char *query = 0;
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	if (RunQuery(query, MakeAnyLenString(&query,"SELECT max(id) from grid where zoneid = %i",zoneid),errbuf,&result)) {
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			int16 tmp=0;
+			if (row[0]) 
+				tmp = atoi(row[0]);
+			mysql_free_result(result);
+			tmp++;
+			return tmp;
+		}
+		mysql_free_result(result);
+	}
+	else {
+		LogFile->write(EQEMuLog::Error, "Error in GetFreeGrid query '%s': %s", query, errbuf);
+		safe_delete_array(query);
+	}
+	return 0;
+}
+
+bool Database::CreateSpawn2(int32 spawngroup, const char* zone, float heading, float x, float y, float z, int32 respawn, int32 variance)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+
+    char *query = 0;
+	int32 affected_rows = 0;
+	
+	//	if(GetInverseXY()==1) {
+	//		float temp=x;
+	//		x=y;
+	//		y=temp;
+	//	}
+	if (RunQuery(query, MakeAnyLenString(&query, "INSERT INTO spawn2 (spawngroupID,zone,x,y,z,heading,respawntime,variance) Values (%i, '%s', %f, %f, %f, %f, %i, %i)", spawngroup, zone, x, y, z, heading, respawn, variance), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+		if (affected_rows == 1) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	else {
+		LogFile->write(EQEMuLog::Error, "Error in CreateSpawn2 query '%s': %s", query, errbuf);
+		safe_delete_array(query);
+		return false;
+	}
+	
+	return false;
+}
 

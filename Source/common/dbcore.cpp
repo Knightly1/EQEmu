@@ -206,8 +206,10 @@ ThreadReturnType DBAsyncLoop(void* tmp) {
 	DBAsync* dba = (DBAsync*) tmp;
 	dba->MLoopRunning.lock();
 	while (dba->RunLoop()) {
-		_CP(DBAsyncLoop_loop);
-		dba->Process();
+		{
+			_CP(DBAsyncLoop_loop);
+			dba->Process();
+		}
 		Sleep(1);
 	}
 	dba->MLoopRunning.unlock();

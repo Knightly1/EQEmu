@@ -91,11 +91,12 @@ enum {
 	SPECATK_FLURRY,		//F
 	SPECATK_TRIPLE,		//T
 	SPECATK_QUAD,		//Q
-	UNSLOWABLE,		//U
-	UNMEZABLE,		//M
+	UNSLOWABLE,			//U
+	UNMEZABLE,			//M
 	UNCHARMABLE,		//C
-	UNSTUNABLE,		//N
+	UNSTUNABLE,			//N
 	UNSNAREABLE,		//I
+	UNFEARABLE,			//D
 	IMMUNE_MEELE,		//A
 	IMMUNE_MAGIC,		//B
 	SPECATK_MAXNUM
@@ -316,7 +317,7 @@ bool logpos;
 	    float	in_y_pos,
 	    float	in_z_pos,
 	    int8    in_light,
-	    const	int8* in_equipment,
+	    const	int32* in_equipment,
 		int8	in_texture,
 		int8	in_helmtexture,
 		int16	in_ac,
@@ -388,6 +389,7 @@ bool logpos;
 	void MakeSpawnUpdate(SpawnPositionUpdate_Struct* spu);
 	void MakeSpawnUpdate(PlayerPositionUpdateServer_Struct* spu);
 	void SendPosition();
+	void SendAllPosition();
 	bool Rezzed() { return rez; }
 	void Rezzed(bool in_rez) { rez = in_rez; }
 
@@ -420,9 +422,9 @@ bool logpos;
 	bool	FindType(int8 type, bool bOffensive = false, int16 threshold = 100);
 	sint8	GetBuffSlotFromType(int8 type);
 	
-	void	MakePet(int16 spell_id, const char* pettype);
-	inline void	MakePetType(int16 spell_id, const char* pettype) { MakePet(spell_id, pettype); }	//for perl
-	void	MakePet(int16 spell_id, int8 in_level, int8 in_class, int16 in_race, int8 in_texture = 0, int8 in_pettype = 0, float in_size = 0, int8 type = 0, int32 min_dmg = 0, int32 max_dmg = 0);
+	void	MakePet(int16 spell_id, const char* pettype, const char *petname = NULL);
+	inline void	MakePetType(int16 spell_id, const char* pettype, const char *petname = NULL) { MakePet(spell_id, pettype, petname); }	//for perl
+	void	MakePet(int16 spell_id, int8 in_level, int8 in_class, int16 in_race, int8 in_texture = 0, int8 in_pettype = 0, float in_size = 0, int8 type = 0, int32 min_dmg = 0, int32 max_dmg = 0, const char *petname = NULL);
 	
 	bool	CombatRange(Mob* other);
 	int8	flag[60];		//this is for quests or something...
@@ -494,7 +496,7 @@ bool logpos;
 	virtual sint32 GetActSpellCost(int16 spell_id, sint32 cost){ return cost;}
 	virtual sint32 GetActSpellDuration(int16 spell_id, sint32 duration){ return duration;}
 	virtual sint32 GetActSpellCasttime(int16 spell_id, sint32 casttime);
-	double ResistSpell(int16 spell_id, Mob *caster);
+	float ResistSpell(int8 resist_type, int16 spell_id, Mob *caster);
 	int GetSpecializeSkill(int16 spell_id);
 	
 	void ShowStats(Client* client);

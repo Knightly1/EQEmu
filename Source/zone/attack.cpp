@@ -598,6 +598,10 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	if (Hand == 14)	// Kaiyodo - Pick weapon from the attacking hand
 		weapon = GetInv().GetItem(SLOT_SECONDARY);
 	
+	const Item_Struct *weapon_item = NULL;
+	if(weapon != NULL)
+		weapon_item = weapon->GetItem();
+	
 	// calculate attack_skill and skillinuse depending on hand and weapon
 	// also send Packet to near clients
 	AttackAnimation(attack_skill, skillinuse, Hand, weapon);
@@ -623,6 +627,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 
 			if(skillinuse == 28) // weapon is hand-to-hand
 			{
+				//dont some weapons use the hand to hand skill?
 				if(GetClass() == MONK || GetClass() == BEASTLORD)
 					weapon_damage = GetMonkHandToHandDamage();	// Damage changes based on level
 				else
@@ -634,73 +639,17 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 					weapon_damage = weapon->GetItem()->Common.Damage;
 					if (weapon_damage < 1)
 						weapon_damage = 1;
+					
+					// Elemental damage
+					if(weapon_item && weapon_item->Common.ElemDmg) {
+						float resist = other->ResistSpell(weapon_item->Common.ElemDmgType, 0, this);
+						if(resist > 0) {
+							weapon_damage += (int)( weapon_item->Common.ElemDmg * resist / 100.0f);
+						} //else: print message?
+					}
 				}
 			}
-			/*#if 0 // Elemental damage
-			int elemental_damage = 0;
-			if (weapon && weapon->CommonElemDmgType && weapon->common.ElemDmg) {
-                		if(EQDEBUG>=11)
-					LogFile->write(EQEMuLog::Debug, "%s::Attack(%s) Elemental damage in, type:%i damage:%i weapon_damage:%i", GetName(), other->GetName(), weapon->common.ElemDmgType, weapon->common.ElemDmg, weapon_damage);
-                		int resist = 0;
-                		// 1 Magic, 2 Fire, 3 Cold, 4 Poison, 5 Disease
-                		switch((int)weapon->common.ElemDmgType) {
-					case 1: resist = GetMR(); break;
-					case 2: resist = GetFR(); break;
-					case 3:	resist = GetCR(); break;
-					case 4:	resist = GetPR(); break;
-					case 5:	resist = GetDR(); break;
-					default:
-                                		LogFile->write(EQEMuLog::Normal, "Unknown Resist type: %i", (int)weapon->common.ElemDmgType);
-					break;
-				}
-                        	bool partial = true;
-				// 360 for a level 60 entity means 100% of resisting
-				// npcs will by default have 1.5 * Level as resist if not defined otherwise in database
-				// so in level 60 a default npc will have 90 resist thus a 25% chance to evade damage
-                        	float maxchance = GetLevel() * 6;
-				// we get additional resist if this->Level > other->Level
-				// on the same side we lose resists if we are of lower level than caster
-				// cap it on 30 levels below and above
-                        	float leveladjust = 5.5f * (GetLevel() - level);
-                        	if (leveladjust < -150)
-                                	leveladjust = -150;
-                        	if (leveladjust > 150)
-					leveladjust = 150;
-                        	resist += (int)leveladjust;
-                        	float chance = (resist / maxchance);
-				// cap resists so it CAN be possible to land spells even if big difference
-				// in levels resist
-                        	if (chance < 0.01)
-                                	chance = 0.01;
-				if (chance > 0.99)
-					chance = 0.99;
-
-				float random = float(rand())/float(RAND_MAX);
-        
-				if (partial && (random > chance - 0.50)) {
-					weapon_damage += (int) ((float)weapon->common.ElemDmg*0.5f);
-				}
-				else if (partial && random > chance - 0.40) {
-					weapon_damage += (int) ((float)weapon->common.ElemDmg*0.6f);
-				}
-				else if (partial && random > chance - 0.30) {
-					weapon_damage += (int) ((float)weapon->common.ElemDmg*0.7f);
-				}
-				else if (partial && random > chance - 0.20) {
-					weapon_damage += (int) ((float)weapon->common.ElemDmg*0.8f);
-				}
-				else if (partial && random > chance - 0.10)
-				{
-					weapon_damage += (int) ((float)weapon->common.ElemDmg*0.9f);
-				}
-				else if (random >= chance) { // Full
-					weapon_damage += (int) weapon->common.ElemDmg;
-				}
-                        	if(EQDEBUG>=11) 
-					LogFile->write(EQEMuLog::Debug, "%s::Attack(%s) Elemental damage out, type:%i damage:%i weapon_damage:%i",
-						GetName(), other->GetName(), weapon->common.ElemDmgType, weapon->common.ElemDmg, weapon_damage);
-			}
-			#endif // Elemental damage*/
+			
 			
 			/*#if 0 // Racial bane damage
 						if (weapon && weapon->Common.BaneDmgAmt && weapon->Common.BaneDmgRace && other && other->GetRace() == weapon->common.BaneDMGRace) {
@@ -729,9 +678,9 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 				}
 			#endif // Weighted MDF type damage*/
 			// Only apply the damage bonus to the main hand
-			if(weapon && (Hand==13))	// Kaiyodo - If we're not using the DWDA stuff, will always be the primary hand
+			if(weapon_item && (Hand==13))	// Kaiyodo - If we're not using the DWDA stuff, will always be the primary hand
 			{
-				int damage_bonus = GetWeaponDamageBonus(weapon->GetItem());	// Can be NULL, will then assume fists
+				int damage_bonus = GetWeaponDamageBonus(weapon_item);	// Can be NULL, will then assume fists
 				min_hit += damage_bonus;
 				max_hit += damage_bonus;
 			}
@@ -889,8 +838,8 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 				int RAND_CRIT = rand()%critMod;
 					
 				uint8 item_dmg = 0;
-				if (weapon && weapon->IsWeapon())
-					item_dmg = weapon->GetItem()->Common.Damage;
+				if (weapon_item && weapon->IsWeapon())
+					item_dmg = weapon_item->Common.Damage;
 				damage += ((( mylevel / 4) + item_dmg) * RAND_CRIT);
 				if(damage < 0)
 					damage = 0;
@@ -922,9 +871,8 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	////////  PROC CODE
 	////////  Kaiyodo - Check for proc on weapon based on DEX
 	///////////////////////////////////////////////////////////
-	const Item_Struct* item = (weapon) ? weapon->GetItem() : NULL;
 	if(other && (other->GetHP() > -10)) {
-		TryWeaponProc(item, other);
+		TryWeaponProc(weapon_item, other);
 	}
    	if (damage <= 0) {
 		return false;

@@ -21,8 +21,8 @@ using namespace std;
 EQEMuLog* LogFile = new EQEMuLog;
 AutoDelete<EQEMuLog> adlf(&LogFile);
 
-static const char* FileNames[EQEMuLog::MaxLogID] = { "logs/eqemu", "logs/eqemu", "logs/eqemu_error", "logs/eqemu_debug", "logs/eqemu_quest" };
-static const char* LogNames[EQEMuLog::MaxLogID] = { "Status", "Normal", "Error", "Debug", "Quest" };
+static const char* FileNames[EQEMuLog::MaxLogID] = { "logs/eqemu", "logs/eqemu", "logs/eqemu_error", "logs/eqemu_debug", "logs/eqemu_quest", "logs/eqemu_commands" };
+static const char* LogNames[EQEMuLog::MaxLogID] = { "Status", "Normal", "Error", "Debug", "Quest", "Command" };
 
 EQEMuLog::EQEMuLog() {
 //	MOpen = new Mutex;
@@ -45,6 +45,7 @@ EQEMuLog::EQEMuLog() {
 	pLogStatus[Status] = 2;
 	pLogStatus[Error] = 2;
 	pLogStatus[Quest] = 2;
+	pLogStatus[Commands] = 1;
 #endif
 }
 

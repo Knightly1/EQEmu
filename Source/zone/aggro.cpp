@@ -208,7 +208,7 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 			if(attacker->GetLevelCon(mob->GetLevel()) != CON_GREEN
 				&& (
 					//not sure if this primary check is needed, faction con might take care of it for us
-//					mob->CastToNPC()->GetPrimaryFaction() == sender->CastToNPC()->GetPrimaryFaction() ||
+					//mob->CastToNPC()->GetPrimaryFaction() == sender->CastToNPC()->GetPrimaryFaction() ||
 					mob->GetFactionCon(sender)<= FACTION_AMIABLE )
 			  ) {
 				//attacking someone on same faction
@@ -738,8 +738,8 @@ bool Mob::IsBeneficialAllowed(Mob *target)
 	
 	// first figure out if we're pets.  we always look at the master's flags.
 	// no need to compare pets to anything
-	mob1 = this->GetOwner() ? this->GetOwner() : this;
-	mob2 = target->GetOwner() ? target->GetOwner() : target;
+	mob1 = this->GetOwnerID() ? this->GetOwner() : this;
+	mob2 = target->GetOwnerID() ? target->GetOwner() : target;
 
 	// if it's self target or our own pet it's ok
 	if(mob1 == mob2)
@@ -786,15 +786,15 @@ bool Mob::IsBeneficialAllowed(Mob *target)
 		}
 		else if(_NPC(mob1))
 		{
-#ifdef GUILDWARS
 			if(_CLIENT(mob2))
 			{
+#ifdef GUILDWARS
 				return true;
-			}
-			else if(_NPC(mob2))						// npc to npc
 #else
-			if(_NPC(mob2))						// npc to npc
+				return false;
 #endif
+			}
+			if(_NPC(mob2))						// npc to npc
 			{
 				return true;
 			}

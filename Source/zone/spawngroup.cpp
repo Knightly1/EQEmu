@@ -22,6 +22,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include <iostream>
 using namespace std;
 #include "../common/types.h"
+#include "../common/MiscFunctions.h"
 
 SpawnEntry::SpawnEntry( uint32 in_NPCType, int in_chance ) 
 {
@@ -31,7 +32,7 @@ SpawnEntry::SpawnEntry( uint32 in_NPCType, int in_chance )
 
 SpawnGroup::SpawnGroup( uint32 in_id, char* name ) {
 	id = in_id;
-	strcpy( name_, name );
+	strncpy( name_, name, 120);
 }
 
 uint32 SpawnGroup::GetNPCType() {
@@ -41,69 +42,75 @@ uint32 SpawnGroup::GetNPCType() {
 	int npcType = -1;
 	int totalchance = 0;
 	
-	LinkedListIterator<SpawnEntry*> iterator(list_);
-	iterator.Reset();
-	while(iterator.MoreElements()) {
-		totalchance += iterator.GetData()->chance;
-		iterator.Advance();
+	list<SpawnEntry*>::iterator cur,end;
+	cur = list_.begin();
+	end = list_.end();
+	for(; cur != end; cur++) {
+		totalchance += (*cur)->chance;
 	}
 	sint32 roll = 0;
 	if(totalchance != 0)
-		roll = (rand()%totalchance);
+		roll = MakeRandomInt(0, totalchance);
 	else
 		return 0;
 	
-	iterator.Reset();
-	while(iterator.MoreElements()) {
-		if (roll < iterator.GetData()->chance) {
-			npcType = iterator.GetData()->NPCType;
+	cur = list_.begin();
+	for(; cur != end; cur++) {
+		if (roll < (*cur)->chance) {
+			npcType = (*cur)->NPCType;
 			break;
 		}
 		else {
-			roll -= iterator.GetData()->chance;
+			roll -= (*cur)->chance;
 		}
-		iterator.Advance();
 	}
 	//CODER  implement random table
 	return npcType;
 }
 
 void SpawnGroup::AddSpawnEntry( SpawnEntry* newEntry ) {
-	list_.Insert( newEntry );
+	list_.push_back( newEntry );
+}
+
+SpawnGroup::~SpawnGroup() {
+	list<SpawnEntry*>::iterator cur,end;
+	cur = list_.begin();
+	end = list_.end();
+	for(; cur != end; cur++) {
+		SpawnEntry* tmp = *cur;
+		safe_delete(tmp);
+	}
+	list_.clear();
+}
+
+SpawnGroupList::~SpawnGroupList() {
+	map<uint32, SpawnGroup*>::iterator cur,end;
+	cur = groups.begin();
+	end = groups.end();
+	for(; cur != end; cur++) {
+		SpawnGroup* tmp = cur->second;
+		safe_delete(tmp);
+	}
+	groups.clear();
 }
 
 void SpawnGroupList::AddSpawnGroup(SpawnGroup* newGroup) {
-	list_.Insert(newGroup);
+	if(newGroup == NULL)
+		return;
+	groups[newGroup->id] = newGroup;
 }
 
 SpawnGroup* SpawnGroupList::GetSpawnGroup(uint32 in_id) {
-	LinkedListIterator<SpawnGroup*> iterator(list_);
-	
-	iterator.Reset();
-	while(iterator.MoreElements())
-	{
-		if (iterator.GetData()->id == in_id)
-		{
-			return iterator.GetData();
-		}
-		iterator.Advance();
-	}
-    return 0;  // shouldn't happen, but need to handle it anyway
+	if(groups.count(in_id) != 1)
+		return(false);
+	return(groups[in_id]);
 }
 
 bool SpawnGroupList::RemoveSpawnGroup(uint32 in_id) {
-	LinkedListIterator<SpawnGroup*> iterator(list_);
+	if(groups.count(in_id) != 1)
+		return(false);
 	
-	iterator.Reset();
-	while(iterator.MoreElements())
-	{
-		if (iterator.GetData()->id == in_id)
-		{
-			iterator.RemoveCurrent();
-			return true;
-		}
-		iterator.Advance();
-	}
-    return 0;  // shouldn't happen, but need to handle it anyway
+	groups.erase(in_id);
+	return(true);
 }
 

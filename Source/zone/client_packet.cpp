@@ -88,6 +88,7 @@ extern EntityList entity_list;
 
 int Client::HandlePacket(const APPLAYER *app)
 {
+	_ZP(Client_HandlePacket);
 	bool ret = true;
 	
 	if (app->opcode == OP_AckPacket) {
@@ -167,7 +168,7 @@ int Client::HandlePacket(const APPLAYER *app)
 					workpt.b1() = DBA_b1_Entity_Client_InfoForLogin;
 					DBAsyncWork* dbaw = new DBAsyncWork(MTdbafq, workpt, DBAsync::Read);
 					dbaw->AddQuery(1, &query, MakeAnyLenString(&query, "SELECT status,name,lsaccount_id,gmspeed,revoked FROM account WHERE id=%i", account_id));
-					dbaw->AddQuery(2, &query, MakeAnyLenString(&query, "SELECT id,profile,zonename,x,y,z,guild,guildrank FROM character_ WHERE id=%i", character_id));
+					dbaw->AddQuery(2, &query, MakeAnyLenString(&query, "SELECT id,profile,zonename,x,y,z,guild,guildrank,extprofile FROM character_ WHERE id=%i", character_id));
 					dbaw->AddQuery(3, &query, MakeAnyLenString(&query, "SELECT faction_id,current_value FROM faction_values WHERE char_id = %i", character_id));
 					if (!(pDBAsyncWorkID = dbasync->AddWork(&dbaw))) {
 						safe_delete(dbaw);
@@ -349,11 +350,19 @@ int Client::HandlePacket(const APPLAYER *app)
 				case OP_SpawnAppearance:
 					break;
 				case OP_WearChange: {
-					if(app->size==9 && app->pBuffer[8]==6){
+					if(app->size==9 && (app->pBuffer[8]==6 || app->pBuffer[8]==5)) {
 						CompleteConnect();
 						SendHPUpdate();
 					}
 					break;
+				}
+				case OP_ClientUpdate: {
+					//Once we get this, the client thinks it is connected
+					//So give it the benefit of the doubt and move to connected
+					//this is because some chars dont get the expected stream of 
+					//OP_WearChange that we are expecting above...
+					CompleteConnect();
+					SendHPUpdate();
 				}
 				case OP_ClientError: {
 					// Client reporting error to server
@@ -378,10 +387,10 @@ int Client::HandlePacket(const APPLAYER *app)
 				}
 				default:{
 				LogFile->write(EQEMuLog::Error, "HandlePacket() Opcode error: Unexpected packet during CLIENT_CONNECTING: opcode: 0x%04x, size: %i", app->opcode, app->size);
-//#if EQDEBUG >= 9
+#if EQDEBUG >= 9
 					cout << "Unexpected packet during CLIENT_CONNECTING: OpCode: 0x" << hex << setw(4) << setfill('0') << app->opcode << dec << ", size: " << app->size << endl;
 					DumpPacket(app);
-//#endif
+#endif
 				}
 			}
 			break;
@@ -477,7 +486,11 @@ int Client::HandlePacket(const APPLAYER *app)
  						if (gmhideme)
  							entity_list.QueueClientsStatus(this,outapp,true,Admin(),250);
  						else
- 						entity_list.QueueCloseClients(this,outapp,true,300);
+#ifdef PACKET_UPDATE_MANAGER
+ 							entity_list.QueueManaged(this,outapp,true);
+#else
+ 							entity_list.QueueCloseClients(this,outapp,true,300);
+#endif
  						safe_delete(outapp);
  					}
 					break;
@@ -1937,7 +1950,7 @@ ldon_avaliable_points needs to be rediscovered.
 						cout << "Wrong size on OP_GMZoneRequest. Got: " << app->size << ", Expected: " << sizeof(GMZoneRequest_Struct) << endl;
 						break;
 					}
-					if (this->Admin() < 80) {
+					if (this->Admin() < minStatusToBeGM) {
 						Message(13, "Your account has been reported for hacking.");
 						database.SetHackerFlag(this->account_name, this->name, "/zone");
 						break;
@@ -2612,7 +2625,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					
 					// Send ack on to trade initiator if client
 					Mob* with = trade->With();
-					if (with->IsClient()) {
+					if (with && with->IsClient()) {
 						with->CastToClient()->QueuePacket(app);
 					}
 					break;
@@ -2746,7 +2759,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 				}
 				case OP_GMHideMe: {
 					int reqlevel = database.CommandRequirement("!gm");
-					reqlevel = reqlevel == 255 ? 80 : reqlevel;
+					reqlevel = reqlevel == 255 ? minStatusToUseGMCommands : reqlevel;
 					if(this->Admin() < reqlevel) {
 						Message(13, "Your account has been reported for hacking.");
 						database.SetHackerFlag(this->account_name, this->name, "/hideme");
@@ -2759,7 +2772,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 
 				case OP_GMNameChange: {
 					const GMName_Struct* gmn = (const GMName_Struct *)app->pBuffer;
-					if(this->Admin() < 100){
+					if(this->Admin() < minStatusToUseGMCommands){
 						Message(13, "Your account has been reported for hacking.");
 						database.SetHackerFlag(this->account_name, this->name, "/name");
 						break;
@@ -2798,7 +2811,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					break;
 				}
 				case OP_GMKill: {
-					if(this->Admin() < 100) {
+					if(this->Admin() < minStatusToUseGMCommands) {
 						Message(13, "Your account has been reported for hacking.");
 						database.SetHackerFlag(this->account_name, this->name, "/kill");
 						break;
@@ -2847,7 +2860,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 							Message(13, "/LastName: %s not found", gmln->name);
 						}
 						else {
-							if (this->Admin() < 80) {
+							if (this->Admin() < minStatusToUseGMCommands) {
 								Message(13, "Your account has been reported for hacking.");
 								database.SetHackerFlag(client->account_name, client->name, "/lastname");
 								break;
@@ -2869,7 +2882,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						cout << "Wrong size on OP_GMToggle. Got: " << app->size << ", Expected: " << 36 << endl;
 						break;
 					}
-					if (this->Admin() < 80) {
+					if (this->Admin() < minStatusToUseGMCommands) {
 						Message(13, "Your account has been reported for hacking.");
 						database.SetHackerFlag(this->account_name, this->name, "/toggle");
 						break;
@@ -2924,7 +2937,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						cout << "Wrong size on OP_GMGoto. Got: " << app->size << ", Expected: " << sizeof(GMSummon_Struct) << endl;
 						break;
 					}
-					if (this->Admin() < 80) {
+					if (this->Admin() < minStatusToUseGMCommands) {
 						Message(13, "Your account has been reported for hacking.");
 						database.SetHackerFlag(this->account_name, this->name, "/goto");
 						break;
@@ -3325,13 +3338,14 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					if (app->size != sizeof(CloseContainer_Struct)) {
 						LogFile->write(EQEMuLog::Error, "Invalid size on CloseContainer_Struct: Expected %i, Got %i",
 							sizeof(CloseContainer_Struct), app->size);
+DumpPacket(app);
 						break;
 					}
 
 					SetTradeskillObject(NULL);
 					
 					ClickObjectAck_Struct* oos = (ClickObjectAck_Struct*)app->pBuffer;
-					Entity* entity = entity_list.GetID(oos->drop_id);
+					Entity* entity = entity_list.GetEntityObject(oos->drop_id);
 					if (entity && entity->IsObject()) {
 						Object* object = entity->CastToObject();
 						object->Close();
@@ -3679,25 +3693,6 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					}
 					break;
 				}
-				case OP_GroupUpdate: {
-					GroupUpdate2_Struct* gu=(GroupUpdate2_Struct*)app->pBuffer;
-					if(gu->action == 8){//Cofruben: should we care only about the action 8?
-						APPLAYER* outapp=new APPLAYER(OP_GroupUpdate,sizeof(GroupJoin_Struct));
-						Client* client=entity_list.GetClientByName(gu->yourname);
-						Client* client2=entity_list.GetClientByName(gu->membername[0]);
-						Group* g=entity_list.GetGroupByClient(client);
-						if(!g->IsLeader(client->CastToMob()))break;
-						for(int z=0;z<6;z++)
-							if(g && g->members[z]!= NULL && g->members[z]->IsClient())
-								g->members[z]->CastToClient()->QueuePacket(app);
-						g->SetLeader(client2->CastToMob());
-					}
-					else {
-						printf("Unknown action in OP_GroupUpdate:\n");
-						DumpPacket(app);
-					}
-					break;
-				}
 				case OP_GroupDisband: {
 					printf("Member Disband Request\n");
 					
@@ -3722,7 +3717,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					break;
 				}
 				case OP_GMEmoteZone: {
-					if(this->Admin() < 80) {
+					if(this->Admin() < minStatusToUseGMCommands) {
 						Message(13, "Your account has been reported for hacking.");
 						database.SetHackerFlag(this->account_name, this->name, "/emote");
 						break;
@@ -4130,7 +4125,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					break;
 				}
 				case OP_GMDelCorpse: {
-					if(this->Admin() < 100) {
+					if(this->Admin() < commandEditPlayerCorpses) {
 						Message(13, "Your account has been reported for hacking.");
 						database.SetHackerFlag(this->account_name, this->name, "/delcorpse");
 						break;
@@ -4149,7 +4144,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					break;
 				}
 				case OP_GMKick: {
-					if(this->Admin() < 150) {
+					if(this->Admin() < minStatusToKick) {
 						Message(13, "Your account has been reported for hacking.");
 						database.SetHackerFlag(this->account_name, this->name, "/kick");
 						break;
@@ -4210,7 +4205,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					break;
 				}
 				case OP_GMBecomeNPC: {
-					if(this->Admin() < 80) {
+					if(this->Admin() < minStatusToUseGMCommands) {
 						Message(13, "Your account has been reported for hacking.");
 						database.SetHackerFlag(this->account_name, this->name, "/becomenpc");
 						break;
@@ -4303,7 +4298,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 				}
 				case OP_EnvDamage: {
 					EnvDamage2_Struct* ed = (EnvDamage2_Struct*)app->pBuffer;
-					if(admin>=100 && GetGM()){
+					if(admin >= minStatusToAvoidFalling && GetGM()){
 						Message(13, "Your GM status protects you from %i points of type %i environmental damage.", ed->damage, ed->dmgtype);
 						SetHP(GetHP()-1);//needed or else the client wont acknowledge
 						break;
@@ -4437,7 +4432,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					break;
 				}
 				case OP_GMFind: {
-					if (this->Admin() < 80) {
+					if (this->Admin() < minStatusToUseGMCommands) {
 						Message(13, "Your account has been reported for hacking.");
 						database.SetHackerFlag(this->account_name, this->name, "/find");
 						break;
@@ -4746,7 +4741,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						Message(13, "You do not have enough money to do that split.");
 						break;
 					}
-					cgroup->SplitMoney(split->copper, split->silver, split->gold, split->platinum, this);
+					cgroup->SplitMoney(split->copper, split->silver, split->gold, split->platinum);
 					
 					break;
 				}
@@ -4930,8 +4925,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						LogFile->write(EQEMuLog::Error, "Invalid size on OP_TributeToggle packet");
 					else {
 						int32 *val = (int32 *) app->pBuffer;
-						tribute_active = *val? true : false;
-						DoTributeUpdate();
+						ToggleTribute(*val? true : false);
 					}
 					break;
 				}
@@ -5028,7 +5022,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 			database.GetAccountInfoForLogin_result(result, 0, account_name, &lsaccountid, &gmspeed, &revoked);
 		}
 		else if (dbaq->QPT() == 2) {
-			loaditems = database.GetCharacterInfoForLogin_result(result, 0, 0, &m_pp, &m_inv, &pplen, &guilddbid, &guildrank);
+			loaditems = database.GetCharacterInfoForLogin_result(result, 0, 0, &m_pp, &m_inv, &m_epp, &pplen, &guilddbid, &guildrank);
 		}
 		else if (dbaq->QPT() == 3) {
 			database.LoadFactionValues_result(result, &factionvalue_list);
@@ -5130,7 +5124,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	//m_pp.birthday=1057434792;
 	//m_pp.lastlogin=1057464792;
 
-	if (m_pp.gm && admin < 80)
+	if (m_pp.gm && admin < minStatusToBeGM)
 		m_pp.gm = 0;
 	
 	if (m_pp.platinum < 0 || m_pp.gold < 0 || m_pp.silver < 0 || m_pp.copper < 0 || m_pp.platinum > 1000000 || m_pp.gold > 1000000 || m_pp.silver > 1000000 || m_pp.copper > 1000000)
@@ -5424,7 +5418,6 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	m_pp.air_remaining = 60; //Reset to max so they dont drown on zone in if its underwater
 	if(zone->IsPVPZone())
 		m_pp.pvp=1;
-	m_pp.level2 = m_pp.level;
 	CRC32::SetEQChecksum((unsigned char*)&m_pp, sizeof(PlayerProfile_Struct)-4);
 	outapp = new APPLAYER(OP_PlayerProfile,sizeof(PlayerProfile_Struct));
 #ifdef SOLAR
@@ -5437,7 +5430,22 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	safe_delete(outapp);
 
 	
-	
+	//this was moved before the spawn packets are sent 
+	//in hopes that it adds more consistency...
+	//Remake pet
+	if (m_epp.pet_id > 1 && !GetPet() && m_epp.pet_id <= SPDAT_RECORDS)
+	{
+	printf("Remaking pet %d\b", m_epp.pet_id);
+		MakePet(m_epp.pet_id, spells[m_epp.pet_id].teleport_zone, m_epp.pet_name);
+		if (GetPet() && GetPet()->IsNPC()) {
+	printf("I have a pet!\n");
+			NPC *pet = GetPet()->CastToNPC();
+			pet->SetHP(m_epp.pet_hp);
+			pet->SetMana(m_epp.pet_mana);
+			pet->SetPetState(m_epp.pet_buffs, m_epp.pet_items);
+		}
+		m_epp.pet_id = 0;
+	}
 	
 	////////////////////////////////////////////////////////////
 	// Server Zone Entry Packet
@@ -5505,16 +5513,21 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 void Client::CompleteConnect()
 {
 
+	UpdateWho();
+//	database.UpdateTimersClientConnected(CharacterID());
+	client_state = CLIENT_CONNECTED;
+	
 	hpupdate_timer.Start();
 	position_timer.Start();
 	SetDuelTarget(0);
 	SetDueling(false);
 	
-	DoTributeUpdate();
 	
-	UpdateWho();
-//	database.UpdateTimersClientConnected(CharacterID());
-	client_state = CLIENT_CONNECTED;
+	DoTributeUpdate();
+	if(m_pp.tribute_active) {
+		//restart the tribute timer where we left off
+		tribute_timer.Start(m_pp.tribute_time_remaining);
+	}
 
 	iter_queue it;
 	for (it=m_inv.cursor_begin();it!=m_inv.cursor_end();it++) {
@@ -5622,20 +5635,30 @@ void Client::CompleteConnect()
 	}
 	
 	//Remake pet
-	if (!GetPet() && m_pp.pet_id > 1 && m_pp.pet_id <= SPDAT_RECORDS)
+/*	if (!GetPet() && m_epp.pet_id > 1 && m_epp.pet_id <= SPDAT_RECORDS)
 	{
-		printf("Making pet with id %d\n", m_pp.pet_id);
-		fflush(stdout);
-		MakePet(m_pp.pet_id, spells[m_pp.pet_id].teleport_zone);
-		if (GetPet())
-			GetPet()->SetHP(m_pp.pet_hp);
+	printf("Remaking pet %d\b", m_epp.pet_id);
+		MakePet(m_epp.pet_id, spells[m_epp.pet_id].teleport_zone, m_epp.pet_name);
+		if (GetPet() && GetPet()->IsNPC()) {
+	printf("I have a pet!\n");
+			NPC *pet = GetPet()->CastToNPC();
+			pet->SetHP(m_epp.pet_hp);
+			pet->SetMana(m_epp.pet_mana);
+			pet->SetPetState(m_epp.pet_buffs, m_epp.pet_items);
+		}
 	}
-	m_pp.pet_id = 0;
-	m_pp.pet_hp = 0;
+	//m_epp.pet_id = 0;
+*/
 	
 	client_data_loaded = true;
-	for(int x=0;x<8;x++)
+	int x;
+	for(x=0;x<8;x++)
 		SendWearChange(x);
+	Mob *pet = GetPet();
+	if(pet != NULL) {
+		for(x=0;x<8;x++)
+			pet->SendWearChange(x);
+	}
 	zoneinpacket_timer.Start();
 }
 
