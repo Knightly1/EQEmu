@@ -123,7 +123,7 @@ public:
 	void	GetMerchantDataForZoneLoad();
 	void	LoadNewMerchantData(uint32 merchantid);
 	void	LoadTempMerchantData();
-	int		SaveTempItem(int32 merchantid, int32 npcid, int32 item, int32 charges);
+	int		SaveTempItem(int32 merchantid, int32 npcid, int32 item, sint32 charges, bool sold=false);
 
 	map<uint32,NPCType *> npctable;
 	map<uint32,std::list<MerchantList> > merchanttable;

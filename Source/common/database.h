@@ -333,6 +333,7 @@ public:
 	bool	SetGuildMOTD(int32 guilddbid, const char* motd);
 	char*	GetGuildMOTD(int32 guilddbid);
 	void	SaveMerchantTemp(int32 npcid, int32 slot, int32 item, int32 charges);
+	void	DeleteMerchantTemp(int32 npcid, int32 slot);
 	bool	GetSafePoints(const char* short_name, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, sint16* minstatus = 0, int8* minlevel = 0);
 	bool	GetSafePoints(int32 zoneID, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, sint16* minstatus = 0, int8* minlevel = 0) { return GetSafePoints(GetZoneName(zoneID), safe_x, safe_y, safe_z, minstatus, minlevel); }
 	

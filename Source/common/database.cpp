@@ -5756,6 +5756,15 @@ void Database::SaveMerchantTemp(int32 npcid, int32 slot, int32 item, int32 charg
 	}
 	safe_delete_array(query);	
 }
+void Database::DeleteMerchantTemp(int32 npcid, int32 slot){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+
+	if (!RunQuery(query, MakeAnyLenString(&query, "delete from merchantlist_temp where npcid=%d and slot=%d", npcid, slot), errbuf)) {
+		cerr << "Error in SaveMerchantTemp query '" << query << "' " << errbuf << endl;
+	}
+	safe_delete_array(query);	
+}
 bool Database::UpdateName(const char* oldname, const char* newname) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;

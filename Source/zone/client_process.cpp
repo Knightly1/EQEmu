@@ -2368,7 +2368,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 									InterruptSpell(castspell->spell_id);	//CHEATER!!
 									break;
 								}
-
+								DeleteItemInInventory(castspell->inventoryslot,1,true);
 								if ((item->Common.EffectType == 1) || (item->Common.EffectType == 3) || (item->Common.EffectType == 4) || (item->Common.EffectType == 5))
 								{
 									CastSpell(item->Common.SpellId, castspell->target_id, castspell->slot, item->Common.CastTime, 0, 0, castspell->inventoryslot);
@@ -2966,6 +2966,8 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					Mob* tmp = entity_list.GetMob(mc->npcid);
 					if (tmp != 0)
 						merchantid=tmp->CastToNPC()->MerchantType;
+					else
+						break;
 
 					int action = 1;
 					if(merchantid == 0)
@@ -3025,7 +3027,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					safe_delete(outapp);
 
 					if (action == 1)
-						BulkSendMerchantInventory(merchantid,mc->npcid);
+						BulkSendMerchantInventory(merchantid,tmp->GetNPCTypeID());
 					
 					break;
 				}
@@ -3051,7 +3053,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 #endif
 					
 					int merchantid;
-					
+					bool tmpmer_used = false;
 					Mob* tmp = entity_list.GetMob(mp->npcid);
 					if (tmp != 0)
 						merchantid=tmp->CastToNPC()->MerchantType;
@@ -3069,13 +3071,34 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						}
 					}
 					const Item_Struct* item = NULL;
-					if (item_id == 0) { // Inventory item?
-						//blah
-					} else {
-						item = database.GetItem(item_id);
-					}
-					if (!item)
+					int32 prevcharges = 0;
+					if (item_id == 0) { //check to see if its on the temporary table
+						std::list<TempMerchantList> tmp_merlist = zone->tmpmerchanttable[tmp->GetNPCTypeID()];
+						std::list<TempMerchantList>::const_iterator tmp_itr;
+						TempMerchantList ml;
+						for(tmp_itr = tmp_merlist.begin();tmp_itr != tmp_merlist.end();tmp_itr++){
+							ml = *tmp_itr;
+							if(findslot == ml.slot){
+								item_id = ml.item;
+								tmpmer_used = true;
+								prevcharges = ml.charges;
+								break;
+							}
+						}
+					} 
+					item = database.GetItem(item_id);
+					if (!item){
+						//error finding item, client didnt get the update packet for whatever reason, roleplay a tad
+						Message(15,"%s tells you 'Sorry, that item is for display purposes only.' as they take the item off the shelf.",tmp->GetCleanName());						
+						APPLAYER* delitempacket = new APPLAYER(OP_ShopDelItem, sizeof(Merchant_DelItem_Struct));
+						Merchant_DelItem_Struct* delitem = (Merchant_DelItem_Struct*)delitempacket->pBuffer;
+						delitem->itemslot = mp->itemslot;
+						delitem->npcid = mp->npcid;
+						delitem->playerid = mp->playerid;
+						entity_list.QueueCloseClients(tmp,delitempacket); //que for anyone that could be using the merchant so they see the update
+						safe_delete(delitempacket);
 						break;
+					}
 					if (CheckLoreConflict(item))
 					{
 						Message(15,"You can only have one of a lore item.");
@@ -3085,11 +3108,10 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					APPLAYER* outapp = new APPLAYER(OP_ShopPlayerBuy, sizeof(Merchant_Sell_Struct));
 					Merchant_Sell_Struct* mpo=(Merchant_Sell_Struct*)outapp->pBuffer;
 					mpo->quantity = mp->quantity;
-
+					mpo->playerid = mp->playerid;
 					mpo->npcid = mp->npcid;
 					mpo->itemslot=mp->itemslot;
 					
-					mpo->price = (int)((item->Cost*mp->quantity)*1.27);
 					sint16 freeslotid=0;
 					freeslotid = m_inv.FindFreeSlot(false, true, item->Size);
 					
@@ -3109,18 +3131,38 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					}
 
  					string packet;
-					if(mp->quantity==1 && item->Common.MaxCharges>0 && item->Common.MaxCharges<255)
+					if(tmpmer_used && (mp->quantity > prevcharges))
+						mp->quantity = prevcharges;
+					else if(mp->quantity==1 && item->Common.MaxCharges>0 && item->Common.MaxCharges<255)
 						mp->quantity=item->Common.MaxCharges;
+					
 					ItemInst* inst = ItemInst::Create(item, mp->quantity);
 					if (inst) {
+						mpo->price = (item->Cost*127/100)*mp->quantity;
 						PutItemInInventory(freeslotid, *inst);
-
 						SendItemPacket(freeslotid, inst, ItemPacketTrade);
-						safe_delete(inst);
 					}
 					else {
 						LogFile->write(EQEMuLog::Error, "OP_ShopPlayerBuy: item->ItemClass Unknown! Type: %i", item->ItemClass);
 					}
+
+					QueuePacket(outapp);
+					if(inst && tmpmer_used){
+						sint32 new_charges = prevcharges - mp->quantity;
+						zone->SaveTempItem(merchantid, tmp->GetNPCTypeID(),item_id,new_charges);
+						if(new_charges<=0){
+							APPLAYER* delitempacket = new APPLAYER(OP_ShopDelItem, sizeof(Merchant_DelItem_Struct));
+							Merchant_DelItem_Struct* delitem = (Merchant_DelItem_Struct*)delitempacket->pBuffer;
+							delitem->itemslot = mp->itemslot;
+							delitem->npcid = mp->npcid;
+							delitem->playerid = mp->playerid;
+							delitempacket->priority = 6;
+							entity_list.QueueClients(tmp,delitempacket); //que for anyone that could be using the merchant so they see the update
+							safe_delete(delitempacket);
+						}
+					}
+					safe_delete(inst);
+					safe_delete(outapp);
 					
 					if (zone->merchantvar!=0){
 						if (zone->merchantvar==7){
@@ -3151,9 +3193,6 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 								LogMerchant(this,tmp,mpo,item,true);	
 						}
 					}
-					
-					QueuePacket(outapp);
-					safe_delete(outapp);
 					break;
 				}
 				case OP_ShopPlayerSell: {
@@ -3225,7 +3264,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						charges = mp->quantity;
 					else
 						charges = inst->GetCharges();
-					if((freeslot = zone->SaveTempItem(vendor->CastToNPC()->MerchantType, vendor->GetID(),itemid,charges)) > 0){
+					if((freeslot = zone->SaveTempItem(vendor->CastToNPC()->MerchantType, vendor->GetNPCTypeID(),itemid,charges,true)) > 0){
 						ItemInst* inst2 = inst->Clone();
 						inst2->SetPrice(item->Cost*127/100);
 						inst2->SetUnknown5(freeslot+84);
@@ -6207,9 +6246,9 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 			return;
 	}
 	std::list<TempMerchantList> tmp_merlist = zone->tmpmerchanttable[npcid];
-	std::list<TempMerchantList>::const_iterator tmp_itr;
+	std::list<TempMerchantList>::iterator tmp_itr;
 
-	int i=0;
+	int i=1;
 	int8 handychance = 0;
 	for(itr = merlist.begin();itr != merlist.end() && i<numItemSlots;itr++){
 		MerchantList ml = *itr;
@@ -6238,17 +6277,22 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 		}
 		i++;
 	}
-	for(tmp_itr = tmp_merlist.begin();tmp_itr != tmp_merlist.end() && i<numItemSlots;tmp_itr++){
+	std::list<TempMerchantList> origtmp_merlist = zone->tmpmerchanttable[npcid];
+	tmp_merlist.clear();
+	for(tmp_itr = origtmp_merlist.begin();tmp_itr != origtmp_merlist.end() && i<numItemSlots;tmp_itr++){
 		TempMerchantList ml = *tmp_itr;
 		item=database.GetItem(ml.item);
+		ml.slot=i;
 		if (item) {
 			if(handychance==0)
 				handyitem=item;
 			else
 				handychance--;
 			int charges=1;
-			if(item->ItemClass==ItemTypeCommon)
-				charges=item->Common.MaxCharges;
+			if(item->ItemClass==ItemTypeCommon && ml.charges <= item->Common.MaxCharges)
+				charges=ml.charges;
+			else
+				charges = item->Common.MaxCharges;
 			ItemInst* inst = ItemInst::Create(item,charges);
 			if (inst) {
 				inst->SetPrice(item->Cost*127/100);
@@ -6261,10 +6305,12 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 				safe_delete(inst);
 			}
 		}
+		tmp_merlist.push_back(ml);
 		i++;
 	}
-	Mob* merch = entity_list.GetMob(npcid);
-	
+	//this resets the slot
+	zone->tmpmerchanttable[npcid] = tmp_merlist;
+	Mob* merch = entity_list.GetMobByNpcTypeID(npcid);
 	if(merch != NULL && handyitem){
 		char handy_id[8]={0};
 		int greeting=rand()%5;

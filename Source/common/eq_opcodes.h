@@ -160,6 +160,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_ShopPlayerBuy	0x0065
 	// not used	#define OP_ShopTakeMoney	0x0066
 #define OP_ShopPlayerSell	0x006a
+#define OP_ShopDelItem		0x006d
 		#define OP_ShopEndConfirm	0x4f6d
 #define OP_ShopRequest		0x00f7	// right-click on merchant
 #define OP_ShopEnd			0x006c	// Finished shopping at merchant

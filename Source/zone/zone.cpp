@@ -300,7 +300,7 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 	LogFile->write(EQEMuLog::Debug, "Default weather for zone is:%i", zone->weather_type);
 	return true;
 }
-int Zone::SaveTempItem(int32 merchantid, int32 npcid, int32 item, int32 charges){
+int Zone::SaveTempItem(int32 merchantid, int32 npcid, int32 item, sint32 charges, bool sold){
 	int freeslot = 0;
 	
 	std::list<MerchantList> merlist = merchanttable[merchantid];
@@ -310,8 +310,6 @@ int Zone::SaveTempItem(int32 merchantid, int32 npcid, int32 item, int32 charges)
 		MerchantList ml = *itr;
 		if(ml.item == item)
 			return 0;
-		if(i<ml.slot)
-			freeslot=i;
 		else
 			i++;
 	}
@@ -319,21 +317,21 @@ int Zone::SaveTempItem(int32 merchantid, int32 npcid, int32 item, int32 charges)
 	std::list<TempMerchantList>::const_iterator tmp_itr;
 	bool update_charges = false;
 	TempMerchantList ml;
-	for(tmp_itr = tmp_merlist.begin();tmp_itr != tmp_merlist.end();tmp_itr++){
-		ml = *tmp_itr;
-		if(ml.item == item){
-			update_charges = true;
-			freeslot = 0;
-			break;
-		}
-		if(i<ml.slot)
-			freeslot=i;
-		else
-			i++;
-	}
-	if(!update_charges && i<80)
+	while(freeslot == 0 && !update_charges){
 		freeslot = i;
-	else if(update_charges){
+		for(tmp_itr = tmp_merlist.begin();tmp_itr != tmp_merlist.end();tmp_itr++){
+			ml = *tmp_itr;
+			if(ml.item == item){
+				update_charges = true;
+				freeslot = 0;
+				break;
+			}
+			if(ml.origslot==i)
+				freeslot=0;
+		}
+		i++;
+	}
+	if(update_charges){
 		tmp_merlist.clear();
 		std::list<TempMerchantList> oldtmp_merlist = tmpmerchanttable[npcid];
 		for(tmp_itr = oldtmp_merlist.begin();tmp_itr != oldtmp_merlist.end();tmp_itr++){
@@ -341,12 +339,25 @@ int Zone::SaveTempItem(int32 merchantid, int32 npcid, int32 item, int32 charges)
 			if(ml2.item != item)
 				tmp_merlist.push_back(ml2);
 		}
-		ml.charges = ml.charges + charges;
-		tmp_merlist.push_back(ml);
+		if(sold)
+			ml.charges = ml.charges + charges;
+		else
+			ml.charges = charges;
+		if(!ml.origslot)
+			ml.origslot = ml.slot;
+		if(charges>0){
+			database.SaveMerchantTemp(npcid, ml.origslot, item, ml.charges);
+			tmp_merlist.push_back(ml);
+		}
+		else{
+			database.DeleteMerchantTemp(npcid,ml.origslot);
+		}
 		tmpmerchanttable[npcid] = tmp_merlist;
-		database.SaveMerchantTemp(npcid, ml.slot, item, ml.charges);
+		
 	}
 	if(freeslot){
+		if(charges<0) //sanity check only, shouldnt happen
+			charges = 255;
 		database.SaveMerchantTemp(npcid, freeslot, item, charges);
 		tmp_merlist = tmpmerchanttable[npcid];
 		TempMerchantList ml2;
@@ -354,6 +365,7 @@ int Zone::SaveTempItem(int32 merchantid, int32 npcid, int32 item, int32 charges)
 		ml2.item = item;
 		ml2.npcid = npcid;
 		ml2.slot = freeslot;
+		ml2.origslot = ml2.slot;
 		tmp_merlist.push_back(ml2);
 		tmpmerchanttable[npcid] = tmp_merlist;
 	}
@@ -380,6 +392,7 @@ void Zone::LoadTempMerchantData(){
 			ml.slot = atoul(row[1]);
 			ml.item = atoul(row[2]);
 			ml.charges = atoul(row[3]);
+			ml.origslot = ml.slot;
 			merlist.push_back(ml);
 		}
 		if(npcid > 0)

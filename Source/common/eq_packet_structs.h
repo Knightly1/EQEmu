@@ -2915,7 +2915,11 @@ struct Merchant_Purchase_Struct {
 /*008*/	int32	quantity;
 /*012*/	int32	price;
 };
-
+struct Merchant_DelItem_Struct{
+/*000*/	int32	npcid;			// Merchant NPC's entity id
+/*004*/	int32	playerid;		// Player's entity id
+/*008*/	int32	itemslot;
+};
 struct Adventure_Purchase_Struct {
 /*000*/	int32	npcid;
 /*004*/	int32	itemid;
@@ -4310,6 +4314,7 @@ struct TempMerchantList{
 	uint32	slot;
 	uint32	item;
 	uint32	charges; //charges/quantity
+	uint32	origslot;
 };
 // Restore structure packing to default
 #pragma pack()
