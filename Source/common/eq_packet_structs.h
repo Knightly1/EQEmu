@@ -914,7 +914,9 @@ struct PlayerProfile_Struct
 /*5968*/	uint32				unknown5968[15];
 /*6028*/	uint32				adventure_id; //not sure.
 /*6032*/	Disciplines_Struct	disciplines;			//fathernitwit: 10-06-04
-/*6232*/	uint32				unknown5764[1283]; //added in last patch, crazy bastards
+/*6232*/	uint32				unknown5764[130];
+/*6752*/	uint32				air_remaining;
+/*6756*/	uint32				unknown6756[1152]; //added in last patch, crazy bastards
 /*11364*/	uint32				aapoints_spent;
 /*11368*/	uint32				unknown11368;
 /*11372*/	uint32				aapoints;

@@ -1,6 +1,10 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==10/24/2004
+LethalEncounter: Fixed bug where you lost air supply on zoning in underwater.
+LethalEncounter: Fixed GM damage bug.
+
 ==10/23/2004
 FatherNitwit: Enable named quests by default (in features.h)
 FatherNitwit: Fixed decaying world containers problem

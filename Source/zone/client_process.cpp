@@ -4136,9 +4136,11 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					if(admin>=100 && GetGM()){
 						Message(13, "Your GM status protects you from %i points of type %i environmental damage.", ed->damage, ed->dmgtype);
 						SetHP(GetHP()-1);//needed or else the client wont acknowledge
+						break;
 					} else if(GetInvul()) {
 						Message(13, "Your invuln status protects you from %i points of type %i environmental damage.", ed->damage, ed->dmgtype);
 						SetHP(GetHP()-1);//needed or else the client wont acknowledge
+						break;
 					}
 					
 					int damage = ed->damage;
@@ -5194,7 +5196,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	m_inv.dumpInventory();
 #endif
 	strcpy(m_pp.servername,"eqemulator");
-	
+	m_pp.air_remaining = 60; //Reset to max so they dont drown on zone in if its underwater
 	CRC32::SetEQChecksum((unsigned char*)&m_pp, sizeof(PlayerProfile_Struct)-4);
 	outapp = new APPLAYER(OP_PlayerProfile,sizeof(PlayerProfile_Struct));
 #ifdef SOLAR
