@@ -497,8 +497,8 @@ void Client::BuyAA(AA_Action* action){
 	//find the AA information from the database
 	SendAA_Struct* aa2 = zone->FindAA(action->ability);
 	if(!aa2) {
-		for(int i=1;i<5;i++){
-			if((aa2 = zone->FindAA(action->ability-i)))
+		for(int i=1;i<15;i++){
+			if(((action->ability - i) <= 0) || (aa2 = zone->FindAA(action->ability-i)))
 				break;
 		}
 	}
