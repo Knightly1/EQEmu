@@ -103,11 +103,18 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_LeaveBoat		0x00bc
 
 #define OP_FindRequest		0x02dc //Cofruben: used when you press find on a NPC.30/08/2004
-#define OP_AdventureFinish	0x02c9 //Cofruben:Used when you win a dungeon,is the same for lost?
-#define OP_LDoNButton		0x02a9 //Cofruben: uses an int8,00 is decline,01 is accept.
-#define OP_AdventureRequest	0x02a6 //Cofruben: used when you press request button.
-#define OP_AdventureDetails	0x02ba //Cofruben: Sent when you accept the adventure.
-#define OP_AdventureInfo	0x02b9 //Cofruben:Sent when you right click on the recruiter.
+
+#define OP_AdventureInfoRequest	0x02b8 //Cofruben:received when client click on the recruiter.
+#define OP_AdventureInfo	0x02b9 //Cofruben:sent when client right click on the recruiter.
+#define OP_AdventureRequest	0x02a6 //Cofruben: received when client press request button.1 normal,2 hard
+#define OP_AdventureDetails 0x02a8 //Cofruben: sent when client press request button.
+#define OP_LDoNButton		0x02a9 //Cofruben: Received button.(int8)00 decline,01 accept.
+#define OP_AdventureData	0x02ba //Cofruben: Sent when client press accept button.
+
+#define OP_AdventureFinish	0x02c9 //Cofruben:Used when you win/lose a dungeon
+#define OP_LeaveAdventure	0x02c6 //Cofruben:received when client press leave adventure button
+#define OP_AdventureUpdate	0x02ce
+
 
 #define OP_SendExpZonein		0x002b	// 0 length packets
 #define OP_ZoneInSendName		0x01e5
@@ -145,11 +152,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 		
 #define OP_PetCommands		0x01ac
 #define OP_TradeSkillCombine 0x0042
-
-
-#define OP_AdventureFinish	0x02c9 //Cofruben:Used when you win/lose a dungeon
-#define OP_LeaveAdventure	0x02c6 //Cofruben:received when client press leave adventure button
-#define OP_AdventureUpdate	0x02ce
 
 
 

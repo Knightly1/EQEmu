@@ -1239,9 +1239,11 @@ void Database::GetEventLogs(const char* name,char* target,int32 account_id,int8 
 	}
 }
 
-/* Cofruben:Starting adventure database functions.*/
+/*
+	Cofruben:Starting adventure database functions.
+*/
 
-AdventureInfo Database::GetAdventureInfo(int32 questid,int32 mobid){
+AdventureInfo Database::GetAdventureInfo(int32 questid,int32 mobid,int8 advtype){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	MYSQL_RES *result;
@@ -1251,12 +1253,12 @@ AdventureInfo Database::GetAdventureInfo(int32 questid,int32 mobid){
 		safe_delete_array(query);
 		if (row = mysql_fetch_row(result)) {
 			rvalue.NPCID=atoi(row[0]);
-			rvalue.type=atoi(row[1]);
+			rvalue.type==atoi(row[1]);
 			rvalue.Objetive=atoi(row[2]);
 			rvalue.ObjetiveValue=atoi(row[3]);
 			strcpy(rvalue.text,row[4]);
 			rvalue.minutes=atoi(row[5]);
-			rvalue.points=atoi(row[6]);
+			rvalue.points==atoi(row[6]);
 			rvalue.x=atof(row[7]);
 			rvalue.y=atof(row[8]);
 			rvalue.in_use=atoi(row[9]);
@@ -1265,9 +1267,11 @@ AdventureInfo Database::GetAdventureInfo(int32 questid,int32 mobid){
 			rvalue.zoneid=atoi(row[12]);
 			rvalue.status=atoi(row[13]);
 			mysql_free_result(result);
+			return rvalue;
 		}
+		else
+			printf("error: %s\n",errbuf);
 	}
-	return rvalue;
 }
 void Database::SetAdventureInfo(int32 questid,bool inuse,int32 status){
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -1279,31 +1283,43 @@ void Database::SetAdventureInfo(int32 questid,bool inuse,int32 status){
 	safe_delete_array(query);
 	return;
 }
-int Database::GetAdventureCharID(uint32 qid,int id){
+void Database::SetAdventureChar(int32 n,int32 charid,int32 questid){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	if (!RunQuery(query, MakeAnyLenString(&query, "update adventures set char%i=%i where QuestID=%i", n+1,charid,questid), errbuf)) {
+		printf("Error updating adventure characters: %s\n",errbuf);
+	}
+	safe_delete_array(query);
+}
+int32 Database::GetAdventureChar(int32 n,int32 questid){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
-	int32 charid = 0;
 	if (RunQuery(query, MakeAnyLenString(&query, "Select charid%i from adventure_charids where questid=%i",id, qid), errbuf, &result)) {
 		safe_delete_array(query);
-		if(row=mysql_fetch_row(result)){
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
 			mysql_free_result(result);
 			charid = atoi(row[0]);
 		}
 	}
-	return charid;
 }
-void Database::SetAdventureCharID(uint32 qid,int id,int32 charid){
+char* Database::GetAdventureNPCText(int32 npcid){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
-	if (!RunQuery(query, MakeAnyLenString(&query, "update adventure_charids set charid%i=%i  where questid=%i",id,charid, qid), errbuf, &result)) 
-		RunQuery(query,MakeAnyLenString(&query,"insert into adventure_charids (questid,charid%i) values (%i,%i)",id,qid,charid),errbuf,&result);
-	safe_delete_array(query);
+	if (RunQuery(query, MakeAnyLenString(&query, "Select Text from adventures_maintext where NPCID=%i", npcid), errbuf, &result)) {
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			mysql_free_result(result);
+			return row[0];
+		}
+	}
+	return NULL;
 }
-
 bool Database::GetLDoNDungeon(uint32 zoneid){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
