@@ -647,7 +647,7 @@ void Client::ChannelMessageReceived(int8 chan_num, int8 language, const char* me
 		
 		if (target != 0 && target->IsNPC() && !target->CastToNPC()->IsEngaged()) {
 			if (DistNoRootNoZ(*target) <= 200) {
-				if(target->CastToNPC()->IsMoving())
+				if(target->CastToNPC()->IsMoving() && !target->CastToNPC()->IsOnHatelist(target))
 					target->CastToNPC()->PauseWandering(5);
 				parse->Event(EVENT_SAY, target->GetNPCTypeID(), message, target->CastToNPC(), this);
 			#ifdef IPC
