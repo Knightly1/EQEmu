@@ -418,7 +418,13 @@ public:
 	int8	GetUseCFGSafeCoords();
 	int8	CopyCharacter(const char* oldname, const char* newname, int32 acctid);
 	int32	GetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa);
-	int32	GetAASkillVars(int32 skill_id, char* name_buf, int *cost, int *max_level);
+	SendAA_Struct*	GetAASkillVars(int32 skill_id);
+	int8	GetTotalAALevels(int32 skill_id);
+	int32	GetSizeAA();
+	int32	CountAALevels();
+	int32	CountAAs();
+	void	LoadAAs(AA_List* load);
+	void	RetrieveAALevels(SendAA_Struct* aa_struct);
 	bool	SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa);
 	bool	SetLSAdmin(int32 account_id, int8 in_status);
 	void	FindAccounts(char* whom, Client* from);

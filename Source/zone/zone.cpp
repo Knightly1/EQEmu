@@ -272,7 +272,8 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 			LogFile->write(EQEMuLog::Debug, "GroupEXPBonus set to:%i", zone->GroupEXPBonus);
 			LogFile->write(EQEMuLog::Debug, "AAEXPMod set to:%i", zone->AAXPMod);
 #endif
-	
+	LogFile->write(EQEMuLog::Normal, "Loading AAs...");
+	zone->LoadAAs();
 	//g_LogFile.write("AI LEVEL set to %d\n",iAILevel);
 	petition_list.ClearPetitions();
 	petition_list.ReadDatabase();
@@ -471,14 +472,26 @@ Zone::~Zone()
 	safe_delete(Weather_Timer);
 	zone_point_list.Clear();
 	entity_list.Clear();
-	
+	safe_delete(aa_buffer);
 #ifdef GUILDWARS
 	location_list.ClearLocations();
 	guildwars.Deconstruct();
 	safe_delete(db_update);
 #endif
 }
-
+void Zone::LoadAAs(){
+	int32 size=database.GetSizeAA();
+	if(size>=sizeof(SendAA_Struct)){
+		aa_buffer = new uchar[size];
+		aas=(AA_List*)aa_buffer;
+		database.LoadAAs(aas);
+		totalAAs=database.CountAAs();
+	}
+	else{
+		LogFile->write(EQEMuLog::Error, "Failed to load AAs!");
+		aas=NULL;
+	}
+};
 bool Zone::LoadZoneCFG(const char* filename, bool DontLoadDefault) {
 	memset(&newzone_data, 0, sizeof(NewZone_Struct));
 	NewZone_Struct* nsc = database.GetZoneCFG(database.GetZoneID(filename));

@@ -5968,42 +5968,161 @@ Get the name of the alternate advancement skill with the given 'index'.
 Return true if the name was found, otherwise false.
 False will also be returned if there is a database error.
 */
-int32 Database::GetAASkillVars(int32 skill_id, char* name_buf, int *cost, int *max_level)
+int8 Database::GetTotalAALevels(int32 skill_id) {
+char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	int total=0;
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(ability) from aa_levels where aa_id=%i", skill_id), errbuf, &result)) {
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			total=atoi(row[0]);
+		}
+		mysql_free_result(result);
+	} else {
+		cerr << "Error in GetTotalAALevels '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+	}
+	return total;
+}
+int32 Database::CountAAs(){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	int count=0;
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(skill_id) from altadv_vars"), errbuf, &result)) {
+		if(row = mysql_fetch_row(result))
+			count = atoi(row[0]);
+	}
+	safe_delete_array(query);
+	mysql_free_result(result);
+	return count;
+}
+int32 Database::CountAALevels(){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	int count=0;
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(id) from aa_levels"), errbuf, &result)) {
+		if(row = mysql_fetch_row(result))
+			count = atoi(row[0]);
+	}
+	safe_delete_array(query);
+	mysql_free_result(result);
+	return count;
+}
+int32 Database::GetSizeAA(){
+	return (CountAAs()*sizeof(SendAA_Struct))+(CountAALevels()*sizeof(AA_Ability));
+}
+void Database::LoadAAs(AA_List* load){
+	if(!load)
+		return;
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT skill_id from altadv_vars order by skill_id"), errbuf, &result)) {
+		int skill=0,ndx=0;
+		while(row = mysql_fetch_row(result)) {
+			skill=atoi(row[0]);
+			load->aa[ndx]=GetAASkillVars(skill);
+			ndx++;
+		}
+	}
+	safe_delete_array(query);
+	mysql_free_result(result);
+}
+void Database::RetrieveAALevels(SendAA_Struct* aa_struct){
+	if(!aa_struct)
+		return;
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT ability, increase_amt, level from aa_levels where aa_id=%i order by level asc", aa_struct->id), errbuf, &result)) {
+		int ndx=0;
+		while(row = mysql_fetch_row(result)) {
+			aa_struct->abilities[ndx].skill_id=atoi(row[0]);
+			aa_struct->abilities[ndx].increase_amt=atoi(row[1]);
+			aa_struct->abilities[ndx].last_level=atoi(row[2]);
+			ndx++;
+		}
+	}
+	safe_delete_array(query);
+	mysql_free_result(result);
+}
+
+SendAA_Struct* Database::GetAASkillVars(int32 skill_id)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
     MYSQL_ROW row;
-	
-	unsigned long* lengths;
-	unsigned long len = 0;
-	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT name, cost, max_level FROM altadv_vars WHERE skill_id=%i", skill_id), errbuf, &result)) {
+	SendAA_Struct* sendaa = NULL;
+	uchar* buffer;
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT cost, max_level, hotkey_sid, hotkey_sid2, title_sid, desc_sid, type, prereq_skill, prereq_minpoints, spell_type, spell_refresh, classes, berserker,spellid FROM altadv_vars WHERE skill_id=%i", skill_id), errbuf, &result)) {
 		safe_delete_array(query);
-		*name_buf = 0;
-		*cost = 0;
-		*max_level = 0;
-		if (mysql_num_rows(result) == 1) {	
-
+		if (mysql_num_rows(result) == 1) {
+			int total_abilities = GetTotalAALevels(skill_id);
+			int totalsize = total_abilities * sizeof(AA_Ability) + sizeof(SendAA_Struct);
+			buffer = new uchar[totalsize];
+			memset(buffer,0,totalsize);
 			row = mysql_fetch_row(result);
-			lengths = mysql_fetch_lengths(result);
-			len = result->lengths[0];
-			strcpy(name_buf, row[0]);  // memcpy(name_buf, row[0], len);
-			*cost = atoi(row[1]);
-			*max_level = atoi(row[2]);
-		} else {
-			mysql_free_result(result);
-			return 0;
+			sendaa = (SendAA_Struct*)buffer;
+			sendaa->cost=atoi(row[0]);
+			sendaa->cost2=sendaa->cost;
+			sendaa->max_level=atoi(row[1]);
+			sendaa->hotkey_sid=atoi(row[2]);
+			sendaa->id=skill_id;
+			sendaa->hotkey_sid2=atoi(row[3]) > 0 ? atoi(row[3]) : 0xFFFFFFFF;
+			sendaa->title_sid=atoi(row[4]);
+			sendaa->desc_sid=atoi(row[5]);
+			sendaa->type=atoi(row[6]);
+			sendaa->prereq_skill=atoi(row[7]);
+			sendaa->prereq_minpoints=atoi(row[8]);
+			sendaa->spell_type=atoi(row[9]);
+			sendaa->spell_refresh=atoi(row[10]);
+			sendaa->classes=atoi(row[11]);
+			sendaa->berserker=atoi(row[12]);
+			sendaa->unknown68=0xFFFFFFFF;
+			sendaa->unknown32=1;
+			sendaa->spellid=atoi(row[14]);
+			switch(sendaa->type){
+				case 1:
+					sendaa->class_type=0x33;
+					break;
+				case 2:
+					sendaa->class_type=0x37;
+					break;
+				case 3:
+					sendaa->class_type=0x3B;
+					break;
+				case 4:
+					sendaa->class_type=0x3D;
+					break;
+				case 5:
+					sendaa->class_type=0x3E;
+					break;
+			}
+			sendaa->total_abilities=total_abilities;
+			if(sendaa->hotkey_sid==0){
+				sendaa->hotkey_sid=0xFFFFFFFF;
+				sendaa->id2=skill_id+1;
+			}
+			else
+				sendaa->id2=0xFFFFFFFF;
+			RetrieveAALevels(sendaa);
 		}
 		mysql_free_result(result);
-		return len;
 	} else {
 		cerr << "Error in GetAASkillVars '" << query << "' " << errbuf << endl;
 		safe_delete_array(query);
-		return 0;
 	}
-	
-	//return true;
+	return sendaa;
 }
 
 /*

@@ -194,18 +194,10 @@ int Client::HandlePacket(const APPLAYER *app)
 					size=sizeof(SendAA_Struct)+sizeof(AA_Ability)*saa->total_abilities;
 					APPLAYER* outapp = new APPLAYER(OP_SendAATable,size);
 					memcpy(outapp->pBuffer,saa,size);
-					
-					//outapp->pBuffer=(uchar*)saa;
-					if(saa->type<8){
 					QueuePacket(outapp);
 					DumpPacket(outapp);
-					}
 					safe_delete(outapp);
 				}
-				/*outapp = new APPLAYER(0x0367,sizeof(blah2));
-				memcpy(outapp->pBuffer,blah2,sizeof(blah2));
-				QueuePacket(outapp);
-				safe_delete(outapp);*/
 			}
 			else if (app->opcode == OP_ReqClientSpawn) {
 				

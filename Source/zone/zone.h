@@ -54,7 +54,6 @@ struct ZoneClientAuth_Struct {
 	char	lskey[30];
 	bool	stale;
 };
-
 extern EntityList entity_list;
 
 class Zone
@@ -80,7 +79,9 @@ public:
 	inline const float&	safe_z()		{ return psafe_z; }
 	inline const int32& GetMaxClients() { return pMaxClients; }
 
-	
+	void	LoadAAs();
+	int		GetTotalAAs() { return totalAAs; }
+	AA_List* GetAAList() { return aas; }
 	void	LoadZoneDoors(const char* zone);
 
 	int32	CountSpawn2();
@@ -161,6 +162,9 @@ private:
 	char	file_name[16];
 	char*	long_name;
 	char*	address;
+	int		totalAAs;
+	AA_List* aas;
+	uchar*	aa_buffer;
 	int16	port;
 	int8*	zonepoints_raw;
 	int32	zonepoints_raw_size;
