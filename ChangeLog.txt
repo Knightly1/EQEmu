@@ -1,8 +1,18 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+
 ==10/23/2004
+FatherNitwit: Enable named quests by default (in features.h)
+FatherNitwit: Fixed decaying world containers problem
+FatherNitwit: Fixed undead nuke spells
+FatherNitwit: Minor line of sight optimization
+FatherNitwit: Minor tradeskill change to avoid a crash
+FatherNitwit: Changed the way fear duration is calculated, hopefully it is better.
+FatherNitwit: Implemented beta fear pathing code (disabled by default in features.h)
 LethalEncounter: Reworked AA system and fixed some of the bugs with it.
 LethalEncounter: Dyes should work correctly now.
+LethalEncounter: Fixed Bazaar trader bug.
+LethalEncounter: Zones now display the proper fog when you update your zone table with the latest.
 
 ==10/22/2004
 LethalEncounter: Fixed item deletion bug not updating client.

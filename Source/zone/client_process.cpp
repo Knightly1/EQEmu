@@ -3069,8 +3069,12 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					if(itemid == 0)
 						break;
 					const Item_Struct* item = database.GetItem(itemid);
-					
-					if(mp->quantity > 1 && (sint16)mp->quantity > this->GetInv().GetItem(mp->itemslot)->GetCharges())
+					ItemInst* inst = GetInv().GetItem(mp->itemslot);
+					if(!inst){
+						Message(13,"You seemed to have misplaced that item..");
+						break;
+					}
+					if(mp->quantity > 1 && (sint16)mp->quantity > inst->GetCharges())
 						break;
 
 					if (item){
