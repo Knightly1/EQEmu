@@ -1,0 +1,1116 @@
+/*  EQEMu:  Everquest Server Emulator
+	Copyright (C) 2001-2003  EQEMu Development Team (http://eqemulator.net)
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+  
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY except by those people which sell it, which
+	are required to give you total support for your newly bought product;
+	without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+	A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+	
+	  You should have received a copy of the GNU General Public License
+	  along with this program; if not, write to the Free Software
+	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+/*
+New class for handeling corpses and everything associated with them.
+Child of the Mob class.
+-Quagmire
+*/
+#include "../common/debug.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <iostream>
+using namespace std;
+#ifdef WIN32
+#define snprintf	_snprintf
+#define vsnprintf	_vsnprintf
+#define strncasecmp	_strnicmp
+#define strcasecmp  _stricmp
+#endif
+
+#include "masterentity.h"
+#include "../common/packet_functions.h"
+#include "../common/crc32.h"
+#include "StringIDs.h"
+
+extern Database database;
+extern EntityList entity_list;
+extern Zone* zone;
+extern npcDecayTimes_Struct npcCorpseDecayTimes[100];
+
+void Corpse::SendEndLootErrorPacket(Client* client) {
+	APPLAYER* outapp = new APPLAYER(OP_LootComplete, 0);
+	client->QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+void Corpse::SendLootReqErrorPacket(Client* client, int8 response) {
+	APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
+	moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer;
+	d->response		= response;
+	d->unknown1		= 0x5a;
+	d->unknown2		= 0x40;
+	client->QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname, uchar* in_data, int32 in_datasize, float in_x, float in_y, float in_z, float in_heading, char* timeofdeath) {
+	if (in_datasize < sizeof(DBPlayerCorpse_Struct)) {
+		cout << "Corpse::LoadFromDBData: Corrupt data: in_datasize < sizeof(DBPlayerCorpse_Struct)" << endl;
+		return 0;
+	}
+	DBPlayerCorpse_Struct* dbpc = (DBPlayerCorpse_Struct*) in_data;
+	if (in_datasize != (sizeof(DBPlayerCorpse_Struct) + (dbpc->itemcount * sizeof(ServerLootItem_Struct)))) {
+		cout << "Corpse::LoadFromDBData: Corrupt data: in_datasize != expected size" << endl;
+		return 0;
+	}
+	if (dbpc->crc != CRC32::Generate(&((uchar*) dbpc)[4], in_datasize - 4)) {
+		cout << "Corpse::LoadFromDBData: Corrupt data: crc failure" << endl;
+		return 0;
+	}
+	ItemList* itemlist = new ItemList();
+	ServerLootItem_Struct* tmp = 0;
+	for (unsigned int i=0; i < dbpc->itemcount; i++) {
+		tmp = new ServerLootItem_Struct;
+		memcpy(tmp, &dbpc->items[i], sizeof(ServerLootItem_Struct));
+		itemlist->Append(tmp);
+	}
+	Corpse* pc = new Corpse(in_dbid, in_charid, in_charname, itemlist, dbpc->copper, dbpc->silver, dbpc->gold, dbpc->plat, in_x, in_y, in_z, in_heading, dbpc->size, dbpc->gender, dbpc->race, dbpc->class_, dbpc->deity, dbpc->level, dbpc->texture, dbpc->helmtexture,dbpc->exp);
+	if (dbpc->locked)
+		pc->Lock();
+
+	// load tints
+	memcpy(pc->item_tint, dbpc->item_tint, sizeof(pc->item_tint));
+	// appearance
+	pc->haircolor = dbpc->haircolor;
+	pc->beardcolor = dbpc->beardcolor;
+	pc->eyecolor1 = dbpc->eyecolor1;
+	pc->eyecolor2 = dbpc->eyecolor2;
+	pc->hairstyle = dbpc->hairstyle;
+	pc->luclinface = dbpc->face;
+	pc->beard = dbpc->beard;
+
+	if (pc->IsEmpty()) {
+		safe_delete(pc);
+		return 0;
+	}
+	else {
+		return pc;
+	}
+}
+
+// To be used on NPC death and ZoneStateLoad
+// Mongrel: added see_invis and see_invis_undead
+Corpse::Corpse(NPC* in_npc, ItemList** in_itemlist, int32 in_npctypeid, NPCType** in_npctypedata, int32 in_decaytime)
+// vesuvias - appearence fix
+ : Mob("Unnamed_Corpse","",0,0,in_npc->GetGender(),in_npc->GetRace(),in_npc->GetClass(),0//bodytype added
+       ,in_npc->GetDeity(),in_npc->GetLevel(),in_npc->GetNPCTypeID(),0,in_npc->GetSize(),0,0,in_npc->GetHeading(),in_npc->GetX(),in_npc->GetY(),in_npc->GetZ(),0,0,in_npc->GetTexture(),in_npc->GetHelmTexture(),0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,1,0,0,0,0,0)
+
+{
+	memset(item_tint, 0, sizeof(item_tint));
+	pIsChanged = false;
+	p_PlayerCorpse = false;
+	pLocked = false;
+	BeingLootedBy = 0xFFFFFFFF;
+	if (in_itemlist) {
+		itemlist = *in_itemlist;
+		*in_itemlist = 0;
+	}
+	else {
+		itemlist = new ItemList();
+	}
+	AddCash(in_npc->GetCopper(), in_npc->GetSilver(), in_npc->GetGold(), in_npc->GetPlatinum());
+	
+	NPCTypedata = 0;
+	npctype_id = in_npctypeid;
+	if (in_npctypedata) {
+		NPCTypedata = *in_npctypedata;
+		*in_npctypedata = 0;
+	}
+	
+	charid = 0;
+	dbid = 0;
+	p_depop = false;
+	strcpy(orgname, in_npc->GetName());
+	strcpy(name, in_npc->GetName());
+	corpse_decay_timer = new Timer(in_decaytime);
+	corpse_delay_timer = new Timer(in_decaytime/2);
+	// Added By Hogie 
+	for(int count = 0; count < 100; count++) {
+		if ((level >= npcCorpseDecayTimes[count].minlvl) && (level <= npcCorpseDecayTimes[count].maxlvl)) {
+			corpse_decay_timer->SetTimer(npcCorpseDecayTimes[count].seconds*1000);
+			corpse_delay_timer->SetTimer(npcCorpseDecayTimes[count].seconds*100);
+			break;
+		}
+	}
+	// Added By Hogie -- End
+	for (int i=0; i<MAX_LOOTERS; i++)
+		memset(looters[i], 0, sizeof(looters[i]));
+	this->rezzexp = 0;
+	corpse_decay_timer->Start();
+	corpse_delay_timer->Start();
+}
+
+// To be used on PC death
+// Mongrel: added see_invis and see_invis_undead
+Corpse::Corpse(Client* client, sint32 in_rezexp)
+// vesuvias - appearence fix
+: Mob
+(
+	"Unnamed_Corpse",
+	"",
+	0,
+	0,
+	client->GetGender(),
+	client->GetRace(),
+	client->GetClass(), 
+	0, // bodytype added
+	client->GetDeity(),
+	client->GetLevel(),
+	0,
+	0,
+	client->GetSize(),
+	0,
+	0,
+	client->GetHeading(),	// heading
+	client->GetX(),
+	client->GetY(),
+	client->GetZ(),
+	0,
+	0,
+	client->GetTexture(),
+	client->GetHelmTexture(),
+	0,	// AC
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,	// CHA
+	client->GetPP().haircolor,
+	client->GetPP().beardcolor,
+	client->GetPP().eyecolor1,
+	client->GetPP().eyecolor2,
+	client->GetPP().hairstyle,
+	client->GetPP().face,
+	client->GetPP().beard,
+	0xff,	// aa title
+	1,
+	0,
+	0,
+	0,
+	0,
+	0	// qglobal
+)
+{
+	int i;
+	PlayerProfile_Struct *pp = &client->GetPP();
+	ItemInst *item;
+
+	memset(item_tint, 0, sizeof(item_tint));
+	for (i=0; i<MAX_LOOTERS; i++)
+		memset(looters[i], 0, sizeof(looters[i]));
+
+	pIsChanged		= true;
+	NPCTypedata		= 0;
+	rezzexp			= in_rezexp;
+	p_PlayerCorpse	= true;
+	pLocked			= false;
+	BeingLootedBy	= 0xFFFFFFFF;
+	itemlist		= new ItemList();
+	charid			= client->CharacterID();
+	dbid			= 0;
+	p_depop			= false;
+	strcpy(orgname, pp->name);
+	strcpy(name, pp->name);
+	corpse_decay_timer = 0;
+	corpse_delay_timer = 0;
+
+
+	// cash
+	AddCash(pp->copper, pp->silver, pp->gold, pp->platinum);
+	pp->copper = 0;
+	pp->silver = 0;
+	pp->gold = 0;
+	pp->platinum = 0;
+
+	// get their tints
+	memcpy(item_tint, &client->GetPP().item_tint, sizeof(item_tint));
+
+	// solar: TODO soulbound items need not be added to corpse, but they need
+	// to go into the regular slots on the player, out of bags
+
+	// worn + inventory + cursor
+	for(i = 0; i <= 30; i++)
+	{
+		item = client->GetInv().GetItem(i);
+		if((item && (!client->IsBecomeNPC())) || (item && client->IsBecomeNPC() && !item->GetItem()->NoRent))
+		{
+			MoveItemToCorpse(client, item, i);
+		}
+	}
+	// cursor queue
+	for(i = 8000; i <= 8010; i++)
+	{
+		item = client->GetInv().GetItem(i);
+		if((item && (!client->IsBecomeNPC())) || (item && client->IsBecomeNPC() && !item->GetItem()->NoRent))
+		{
+			MoveItemToCorpse(client, item, i);
+		}
+	}
+
+	if(client->IsBecomeNPC())
+	{
+		become_npc = true;
+		corpse_decay_timer = new Timer(1800000);
+		corpse_delay_timer = new Timer(600000);
+	}
+
+	Save();
+	client->Save();
+}
+
+// solar: helper function for client corpse constructor
+void Corpse::MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot)
+{
+	int bagindex;
+	sint16 interior_slot;
+	ItemInst *interior_item;
+
+	AddItem(item->GetItem()->ItemNumber, item->GetCharges(),  equipslot);
+	if(item->IsType(ItemTypeContainer))
+	{
+		for(bagindex = 0; bagindex <= 10; bagindex++)
+		{
+			interior_slot = Inventory::CalcSlotId(equipslot, bagindex);
+			interior_item = client->GetInv().GetItem(interior_slot);
+			if(interior_item)
+			{
+				AddItem(interior_item->GetItem()->ItemNumber, interior_item->GetCharges(), interior_slot);
+				client->DeleteItemInInventory(interior_slot, interior_item->GetCharges(), false);
+			}
+		}
+	}
+	client->DeleteItemInInventory(equipslot, item->GetCharges(), false);
+}
+
+// To be called from LoadFromDBData
+// Mongrel: added see_invis and see_invis_undead
+Corpse::Corpse(int32 in_dbid, int32 in_charid, char* in_charname, ItemList* in_itemlist, int32 in_copper, int32 in_silver, int32 in_gold, int32 in_plat, float in_x, float in_y, float in_z, float in_heading, float in_size, int8 in_gender, int16 in_race, int8 in_class, int8 in_deity, int8 in_level, int8 in_texture, int8 in_helmtexture,int32 in_rezexp)
+// vesuvias - appearence fix
+ : Mob("Unnamed_Corpse","",0,0,in_gender, in_race, in_class, 0, in_deity, in_level,0,0, in_size, 0, 0, in_heading, in_x, in_y, in_z,0,0,in_texture,in_helmtexture,0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,1,0,0,0,0,0)
+
+{
+	memset(item_tint, 0, sizeof(item_tint));
+	pIsChanged = false;
+	NPCTypedata = 0;
+	p_PlayerCorpse = true;
+	pLocked = false;
+	BeingLootedBy = 0xFFFFFFFF;
+	dbid = in_dbid;
+	p_depop = false;
+	charid = in_charid;
+	itemlist = in_itemlist;
+	
+	strcpy(orgname, in_charname);
+	strcpy(name, in_charname);
+	this->copper = in_copper;
+	this->silver = in_silver;
+	this->gold = in_gold;
+	this->platinum = in_plat;
+	corpse_decay_timer = 0;
+	corpse_delay_timer = 0;
+	rezzexp = in_rezexp;
+	for (int i=0; i<MAX_LOOTERS; i++)
+		memset(looters[i], 0, sizeof(looters[i]));
+}
+
+Corpse::~Corpse() {
+	if (p_PlayerCorpse && itemlist) {
+		if (IsEmpty() && dbid != 0)
+			database.DeletePlayerCorpse(dbid);
+		else if (!IsEmpty() && !(p_depop && dbid == 0))
+			Save();
+	}
+	safe_delete(itemlist);
+	safe_delete(corpse_decay_timer);
+	safe_delete(corpse_delay_timer);
+	safe_delete(NPCTypedata);
+}
+
+/*
+this needs to be called AFTER the entity_id is set
+the client does this too, so it's unchangable
+*/
+void Corpse::CalcCorpseName() {
+	EntityList::RemoveNumbers(name);
+	char tmp[64];
+	snprintf(tmp, sizeof(tmp), "'s corpse%d", GetID());
+	name[(sizeof(name) - 1) - strlen(tmp)] = 0;
+	strcat(name, tmp);
+}
+
+bool Corpse::Save() {
+	if (IsEmpty()) {
+		Delete();
+		return true;
+	}	
+	if (!p_PlayerCorpse)
+		return true;
+	if (!pIsChanged)
+		return true;
+	
+	int32 tmp = this->CountItems();
+	int32 tmpsize = sizeof(DBPlayerCorpse_Struct) + (tmp * sizeof(ServerLootItem_Struct));
+	DBPlayerCorpse_Struct* dbpc = (DBPlayerCorpse_Struct*) new uchar[tmpsize];
+	memset(dbpc, 0, tmpsize);
+	dbpc->itemcount = tmp;
+	dbpc->size = this->size;
+	dbpc->locked = pLocked;
+	dbpc->copper = this->copper;
+	dbpc->silver = this->silver;
+	dbpc->gold = this->gold;
+	dbpc->plat = this->platinum;
+	dbpc->race = race;
+	dbpc->class_ = class_;
+	dbpc->gender = gender;
+	dbpc->deity = deity;
+	dbpc->level = level;
+	dbpc->texture = this->texture;
+	dbpc->helmtexture = this->helmtexture;
+	dbpc->exp = rezzexp;
+
+	memcpy(dbpc->item_tint, item_tint, sizeof(dbpc->item_tint));
+	dbpc->haircolor = haircolor;
+	dbpc->beardcolor = beardcolor;
+	dbpc->eyecolor2 = eyecolor1;
+	dbpc->hairstyle = hairstyle;
+	dbpc->face = luclinface;
+	dbpc->beard = beard;
+	
+	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+	iterator.Reset();
+	int32 x = 0;
+	while(iterator.MoreElements()) {
+		memcpy((char*) &dbpc->items[x++], (char*) iterator.GetData(), sizeof(ServerLootItem_Struct));
+		iterator.Advance();
+	}
+
+	dbpc->crc = CRC32::Generate(&((uchar*) dbpc)[4], tmpsize - 4);
+
+	if (dbid == 0)
+		dbid = database.CreatePlayerCorpse(charid, orgname, zone->GetZoneID(), (uchar*) dbpc, tmpsize, x_pos, y_pos, z_pos, heading);
+	else
+		dbid = database.UpdatePlayerCorpse(dbid, charid, orgname, zone->GetZoneID(), (uchar*) dbpc, tmpsize, x_pos, y_pos, z_pos, heading);
+	safe_delete(dbpc);
+	if (dbid == 0) {
+		cout << "Error: Failed to save player corpse '" << this->GetName() << "'" << endl;
+		return false;
+	}
+	return true;
+}
+
+void Corpse::Delete() {
+	if (IsPlayerCorpse() && dbid != 0)
+		database.DeletePlayerCorpse(dbid);
+	dbid = 0;
+
+	p_depop = true;
+}
+
+void Corpse::Depop(bool StartSpawnTimer) {
+	if (IsNPCCorpse())
+		p_depop = true;
+}
+
+int32 Corpse::CountItems() {
+	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+	
+	iterator.Reset();
+	int32 x = 0;
+	while(iterator.MoreElements())
+	{
+		x++;
+		iterator.Advance();
+	}
+	
+	return x;
+}
+
+void Corpse::AddItem(uint32 itemnum, int8 charges, sint16 slot) {
+	if (!database.GetItem(itemnum))
+		return;
+	pIsChanged = true;
+	ServerLootItem_Struct* item = new ServerLootItem_Struct;
+	memset(item, 0, sizeof(ServerLootItem_Struct));
+	item->item_id = itemnum;
+	item->charges = charges;
+	item->equipSlot = slot;
+	(*itemlist).Append(item);
+}
+
+ServerLootItem_Struct* Corpse::GetItem(int16 lootslot, ServerLootItem_Struct** bag_item_data)
+{
+	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+	ServerLootItem_Struct *sitem = 0, *sitem2;
+	
+	// find the item
+	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
+	{
+		sitem = iterator.GetData();
+		if(sitem->lootslot == lootslot)
+			break;
+	}
+
+	if (sitem && bag_item_data && Inventory::SupportsContainers(sitem->equipSlot))
+	{
+		sint16 bagstart = Inventory::CalcSlotId(sitem->equipSlot, 0);
+
+		for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
+		{
+			sitem2 = iterator.GetData();
+			if(sitem2->equipSlot >= bagstart && sitem2->equipSlot < bagstart + 10)
+			{
+				bag_item_data[sitem2->equipSlot - bagstart] = sitem2;
+			}
+		}
+	}
+	
+	return sitem;
+}
+
+uint32 Corpse::GetWornItem(sint16 equipSlot) {
+	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+	
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		if (iterator.GetData()->equipSlot == equipSlot)
+		{
+			return iterator.GetData()->item_id;
+		}
+		iterator.Advance();
+	}
+	
+	return 0;
+}
+
+void Corpse::RemoveItem(int16 lootslot)
+{
+	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+	ServerLootItem_Struct *sitem;
+
+	if (lootslot == 0xFFFF)
+		return;
+	
+	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
+	{
+		sitem = iterator.GetData();
+		if (sitem->lootslot == lootslot)
+		{
+			RemoveItem(sitem);
+			return;
+		}
+	}
+}
+
+void Corpse::RemoveItem(ServerLootItem_Struct* item_data)
+{
+	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+	ServerLootItem_Struct *sitem;
+	int8 material;
+	
+	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
+	{
+		sitem = iterator.GetData();
+		if (sitem == item_data)
+		{
+			pIsChanged = true;
+			iterator.RemoveCurrent();
+
+			material = Inventory::CalcMaterialFromSlot(sitem->equipSlot);
+			if(material != 0xFF)
+				SendWearChange(material);
+
+			return;
+		}
+	}
+}
+
+void Corpse::AddCash(int16 in_copper, int16 in_silver, int16 in_gold, int16 in_platinum) {
+	this->copper = in_copper;
+	this->silver = in_silver;
+	this->gold = in_gold;
+	this->platinum = in_platinum;
+	pIsChanged = true;
+}
+
+void Corpse::RemoveCash() {
+	this->copper = 0;
+	this->silver = 0;
+	this->gold = 0;
+	this->platinum = 0;
+	pIsChanged = true;
+}
+
+bool Corpse::IsEmpty() {
+	if (copper != 0 || silver != 0 || gold != 0 || platinum != 0)
+		return false;
+	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+	iterator.Reset();
+	return !iterator.MoreElements();
+}
+
+bool Corpse::Process() {
+	if (p_depop)
+		return false;
+	if(corpse_delay_timer) {
+		if(corpse_delay_timer->Check())
+		{
+	for (int i=0; i<MAX_LOOTERS; i++)
+		memset(looters[i], 0, sizeof(looters[i]));
+		corpse_delay_timer->Disable();
+			return true;
+		}
+	}
+	if (corpse_decay_timer) {
+		if(corpse_decay_timer->Check()) {
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+void Corpse::SetDecayTimer(int32 decaytime) {
+	if (corpse_decay_timer) {
+		corpse_decay_timer = new Timer(1);
+	}
+	if (decaytime == 0)
+		corpse_decay_timer->Trigger();
+	else
+		corpse_decay_timer->Start(decaytime);
+}
+
+bool Corpse::CanMobLoot(const char* iName) {
+	int8 z=0;
+	for(int i=0; i<MAX_LOOTERS; i++) {
+		if(looters[i][0] != 0)
+			z++;
+
+		if (strcasecmp(looters[i], iName) == 0)
+			return true;
+	}
+	if(z == 0)
+		return true;
+	else
+		return false;
+}
+
+void Corpse::AllowMobLoot(const char* iName, int8 slot)
+{
+	if(slot >= MAX_LOOTERS)
+		return;
+
+	strcpy(looters[slot], iName);
+}
+
+// @merth: this function needs some work
+void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
+	// Added 12/08.  Started compressing loot struct on live.
+
+	if(p_depop)
+	{
+		SendLootReqErrorPacket(client, 0);
+		return;
+	}
+
+	if (IsPlayerCorpse() && dbid == 0) {
+//		SendLootReqErrorPacket(client, 0);
+		client->Message(13, "Warning: Corpse's dbid = 0! Corpse will not survive zone shutdown!");
+		cout << "Error: PlayerCorpse::MakeLootRequestPackets: dbid = 0!" << endl;
+//		return;
+	}
+	if (pLocked && client->Admin() < 100) {
+		SendLootReqErrorPacket(client, 0);
+		client->Message(13, "Error: Corpse locked by GM.");
+		return;
+	}
+	if (this->BeingLootedBy != 0xFFFFFFFF) {
+		// lets double check....
+		Entity* looter = entity_list.GetID(this->BeingLootedBy);
+		if (looter == 0)
+			this->BeingLootedBy = 0xFFFFFFFF;
+	}
+	int8 tCanLoot = 2;
+	if (this->BeingLootedBy != 0xFFFFFFFF && this->BeingLootedBy != client->GetID()) {
+		// ok, now we tell the client to fuck off
+		// Quagmire - i think this is the right packet, going by pyro's logs
+		SendLootReqErrorPacket(client, 0);
+		tCanLoot = 0;
+//		cout << "Telling " << client->GetName() << " corpse '" << this->GetName() << "' is busy..." << endl;
+	}
+	else if (IsPlayerCorpse() && this->charid != client->CharacterID() && !become_npc) {
+		// Not their corpse... get lost
+		tCanLoot = 1;
+		if (client->Admin() < 100) {
+			SendLootReqErrorPacket(client, 2);
+		}
+//		cout << "Telling " << client->GetName() << " corpse '" << this->GetName() << "' is busy..." << endl;
+	}
+	else if ((IsNPCCorpse() || become_npc) && !CanMobLoot(client->GetName())) {
+		tCanLoot = 1;
+		if (client->Admin() < 100) {
+			SendLootReqErrorPacket(client, 2);
+		}
+	}
+	if (tCanLoot == 2 || (tCanLoot == 1 && client->Admin() >= 100))
+	{
+		this->BeingLootedBy = client->GetID();
+		APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
+		moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer;
+		
+		d->response		= 1;
+		d->unknown1		= 0x42;
+		d->unknown2		= 0xef;
+		if (tCanLoot == 2) { // dont take the coin off if it's a gm peeking at the corpse
+			if (zone->lootvar!=0){
+				int admin=client->Admin();
+				if (zone->lootvar==7){
+						client->LogLoot(client,this,0);
+				}
+				else if ((admin>=10) && (admin<20)){
+					if ((zone->lootvar<8) && (zone->lootvar>5))
+						client->LogLoot(client,this,0);
+				}
+				else if (admin<=20){
+					if ((zone->lootvar<8) && (zone->lootvar>4))
+						client->LogLoot(client,this,0);
+				}
+				else if (admin<=80){
+					if ((zone->lootvar<8) && (zone->lootvar>3))
+						client->LogLoot(client,this,0);
+				}
+				else if (admin<=100){
+					if ((zone->lootvar<9) && (zone->lootvar>2))
+						client->LogLoot(client,this,0);
+				}
+				else if (admin<=150){
+					if (((zone->lootvar<8) && (zone->lootvar>1)) || (zone->lootvar==9))
+						client->LogLoot(client,this,0);
+				}
+				else if (admin<=255){
+					if ((zone->lootvar<8) && (zone->lootvar>0))
+						client->LogLoot(client,this,0);	
+				}
+			}
+			#ifdef GUILDWARS
+				if (this->GetPlatinum()>10000)
+					this->RemoveCash();
+			#endif
+			
+			if(client->isgrouped && client->AutoSplitEnabled() && entity_list.GetGroupByClient(client)) {
+				d->copper		= 0;
+				d->silver		= 0;
+				d->gold			= 0;
+				d->platinum		= 0;
+				Group *cgroup = entity_list.GetGroupByClient(client);
+				cgroup->SplitMoney(this->GetCopper(),this->GetSilver(),this->GetGold(),this->GetPlatinum());
+			} else {
+				d->copper		= this->GetCopper();
+				d->silver		= this->GetSilver();
+				d->gold			= this->GetGold();
+				d->platinum		= this->GetPlatinum();
+				client->AddMoneyToPP(this->GetCopper(),this->GetSilver(),this->GetGold(),this->GetPlatinum(),false);
+			}
+			this->RemoveCash();
+		}
+		outapp->priority = 6;
+		client->QueuePacket(outapp); 
+		safe_delete(outapp);
+		
+		LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+		int i = 0;
+		const Item_Struct* item = 0;
+		for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
+		{
+			ServerLootItem_Struct* item_data = iterator.GetData();
+			item_data->lootslot = 0xFFFF;
+
+			// Dont display the item if it's in a bag
+			if(!IsPlayerCorpse() || item_data->equipSlot <= 30)
+			{
+				if (i >= 30)
+				{
+						Message(13, "Warning: Too many items to display. Loot some then re-loot the corpse to see the rest");
+				}
+				else
+				{
+					item = database.GetItem(item_data->item_id);
+					if (client && item)
+					{
+						ItemInst* inst = ItemInst::Create(item, item_data->charges);
+						if (inst)
+						{
+							client->SendItemPacket(i + 22, inst, ItemPacketLoot);
+							safe_delete(inst);
+						}
+						item_data->lootslot = i;
+					}
+				}
+				i++;
+			}
+		}
+	}
+	
+	// Disgrace: Client seems to require that we send the packet back...
+	client->QueuePacket(app);
+}
+
+void Corpse::LootItem(Client* client, const APPLAYER* app)
+{
+	LootingItem_Struct* lootitem = (LootingItem_Struct*)app->pBuffer;
+
+	if (this->BeingLootedBy != client->GetID()) {
+		client->Message(13, "Error: Corpse::LootItem: BeingLootedBy != client");
+		SendEndLootErrorPacket(client);
+		return;
+	}
+	if (IsPlayerCorpse() && !become_npc && (this->charid != client->CharacterID() && client->Admin() < 150)) {
+		client->Message(13, "Error: This is a player corpse and you dont own it.");
+		SendEndLootErrorPacket(client);
+		return;
+	}
+	if (pLocked && client->Admin() < 100) {
+		SendLootReqErrorPacket(client, 0);
+		client->Message(13, "Error: Corpse locked by GM.");
+		return;
+	}
+	
+	const Item_Struct* item = 0;
+	ItemInst *inst = 0;
+	ServerLootItem_Struct* item_data, *bag_item_data[10];
+	memset(bag_item_data, 0, sizeof(bag_item_data));
+
+	item_data = GetItem(lootitem->slot_id - 22, bag_item_data);
+
+	if (item_data != 0)
+	{
+		item = database.GetItem(item_data->item_id);
+	}
+	
+	if (item != 0)
+	{
+		inst = ItemInst::Create(item, item_data->charges);
+	}
+
+	if (client && inst)
+	{
+		if (client->CheckLoreConflict(item))
+		{
+			client->Message_StringID(0,LOOT_LORE_ERROR);
+			SendEndLootErrorPacket(client);
+			return;
+		}
+
+		if (zone->lootvar != 0)
+		{
+			int admin=client->Admin();
+			if (zone->lootvar==7){
+					client->LogLoot(client,this,item);
+			}
+			else if ((admin>=10) && (admin<20)){
+				if ((zone->lootvar<8) && (zone->lootvar>5))
+					client->LogLoot(client,this,item);
+			}
+			else if (admin<=20){
+				if ((zone->lootvar<8) && (zone->lootvar>4))
+					client->LogLoot(client,this,item);
+			}
+			else if (admin<=80){
+				if ((zone->lootvar<8) && (zone->lootvar>3))
+					client->LogLoot(client,this,item);
+			}
+			else if (admin<=100){
+				if ((zone->lootvar<9) && (zone->lootvar>2))
+					client->LogLoot(client,this,item);
+			}
+			else if (admin<=150){
+				if (((zone->lootvar<8) && (zone->lootvar>1)) || (zone->lootvar==9))
+					client->LogLoot(client,this,item);
+			}
+			else if (admin<=255){
+				if ((zone->lootvar<8) && (zone->lootvar>0))
+					client->LogLoot(client,this,item);	
+			}
+		}
+
+
+		// first add it to the looter - this will do the bag contents too
+		if(lootitem->auto_loot)
+		{
+			if(!client->AutoPutLootInInventory(*inst, true, true, bag_item_data))
+				client->PutLootInInventory(SLOT_CURSOR, *inst, bag_item_data);
+		}
+		else
+		{
+			client->PutLootInInventory(SLOT_CURSOR, *inst, bag_item_data);
+		}
+
+		// now remove it from the corpse
+		RemoveItem(item_data->lootslot);
+
+		// remove bag contents too
+		if (item->ItemClass == ItemTypeContainer)
+		{
+			for (int i=0; i < 10; i++)
+			{
+				if (bag_item_data[i])
+				{
+					RemoveItem(bag_item_data[i]);
+				}
+			}
+		}
+	}
+	else
+	{
+		SendEndLootErrorPacket(client);
+		return;
+	}
+
+	safe_delete(inst);
+
+	ItemCommonInst inst2(item);
+
+	if (IsPlayerCorpse())
+		client->SendItemLink(&inst2);
+	else
+		client->SendItemLink(&inst2, true);
+	
+	client->QueuePacket(app);
+}
+
+void Corpse::EndLoot(Client* client, const APPLAYER* app) {
+	APPLAYER* outapp = new APPLAYER;
+	outapp->opcode = OP_LootComplete;
+	outapp->size = 0;
+	client->QueuePacket(outapp);
+	safe_delete(outapp);
+	
+	client->Save();
+	this->Save();
+	this->BeingLootedBy = 0xFFFFFFFF;
+	if (this->IsEmpty()) {
+		Delete();
+	}
+}
+
+void Corpse::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
+{
+	Mob::FillSpawnStruct(ns, ForWho);
+	
+	if (IsPlayerCorpse())
+		ns->spawn.npc = 3;
+	else
+		ns->spawn.npc = 2;
+}
+
+void Corpse::QueryLoot(Client* to) {
+	LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
+	
+	iterator.Reset();
+	int x = 0;
+	to->Message(0, "Coin: %ip %ig %is %ic", platinum, gold, silver, copper);
+	while(iterator.MoreElements())
+	{
+		const Item_Struct* item = database.GetItem(iterator.GetData()->item_id);
+		if (item)
+			to->Message(0, "  %d: %s", item->ItemNumber, item->Name);
+		else
+			to->Message(0, "  Error: 0x%04x", iterator.GetData()->item_id);
+		x++;
+		iterator.Advance();
+	}
+	to->Message(0, "%i items on %s.", x, this->GetName());
+}
+
+void Corpse::Summon(Client* client,bool spell) {
+	// TODO: Check consent list
+	if (!spell) {
+		if (this->GetCharID() == client->CharacterID()) {
+			if (this->IsLocked() && client->Admin() < 100) {
+				client->Message(13, "Error: Corpse locked by GM.");
+			}
+			else if (DistNoZ(*client) <= 100) {
+				GMMove(client->GetX(), client->GetY(), client->GetZ());
+				pIsChanged = true;
+			}
+			else
+				client->Message(0, "Corpse is too far away.");
+		}
+		else {
+			client->Message(0, "Error: You dont own the corpse");
+		}
+	}
+	else {
+		GMMove(client->GetX(), client->GetY(), client->GetZ());
+		pIsChanged = true;
+	}
+	Save();
+}
+
+void Corpse::CompleteRezz(){
+	rezzexp = 0;
+	pIsChanged = true;
+	this->Save();
+}
+
+int32 Database::UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char* query = new char[256+(datasize*2)];
+	char* end = query;
+	int32 affected_rows = 0;
+	
+	end += sprintf(end, "Update player_corpses SET data=");
+	*end++ = '\'';
+	end += DoEscapeString(end, (char*)data, datasize);
+	*end++ = '\'';
+	end += sprintf(end,", charname='%s', zoneid=%u, charid=%d, x=%1.1f, y=%1.1f, z=%1.1f, heading=%1.1f WHERE id=%d", charname, zoneid, charid, x, y, z, heading, dbid);
+	
+	if (!RunQuery(query, (int32) (end - query), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+        cerr << "Error1 in UpdatePlayerCorpse query " << errbuf << endl;
+		return 0;
+    }
+	safe_delete_array(query);
+	
+	if (affected_rows == 0) {
+        cerr << "Error2 in UpdatePlayerCorpse query: affected_rows = 0" << endl;
+		return 0;
+	}
+	
+	return dbid;
+}
+
+int32 Database::CreatePlayerCorpse(int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char* query = new char[256+(datasize*2)];
+	char* end = query;
+    //MYSQL_RES *result;
+    //MYSQL_ROW row;
+	int32 affected_rows = 0;
+	int32 last_insert_id = 0;
+	
+	end += sprintf(end, "Insert into player_corpses SET data=");
+	*end++ = '\'';
+	end += DoEscapeString(end, (char*)data, datasize);
+	*end++ = '\'';
+	end += sprintf(end,", charname='%s', zoneid=%u, charid=%d, x=%1.1f, y=%1.1f, z=%1.1f, heading=%1.1f, timeofdeath=Now()", charname, zoneid, charid, x, y, z, heading);
+	
+    if (!RunQuery(query, (int32) (end - query), errbuf, 0, &affected_rows, &last_insert_id)) {
+		safe_delete_array(query);
+        cerr << "Error1 in CreatePlayerCorpse query " << errbuf << endl;
+		return 0;
+    }
+	safe_delete_array(query);
+	
+	if (affected_rows == 0) {
+        cerr << "Error2 in CreatePlayerCorpse query: affected_rows = 0" << endl;
+		return 0;
+	}
+
+	if (last_insert_id == 0) {
+        cerr << "Error3 in CreatePlayerCorpse query: last_insert_id = 0" << endl;
+		return 0;
+	}
+	
+	return last_insert_id;
+}
+
+bool Database::LoadPlayerCorpses(int32 iZoneID) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	
+	//	int char_num = 0;
+	unsigned long* lengths;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, charid, charname, x, y, z, heading, data, timeofdeath FROM player_corpses WHERE zoneid='%u'", iZoneID), errbuf, &result)) {
+		//                                               0   1       2         3  4  5  6        7     8
+		safe_delete_array(query);
+		while ((row = mysql_fetch_row(result))) {
+			lengths = mysql_fetch_lengths(result);
+			entity_list.AddCorpse(Corpse::LoadFromDBData(atoi(row[0]), atoi(row[1]), row[2], (uchar*) row[7], lengths[7], atof(row[3]), atoi(row[4]), atoi(row[5]), atoi(row[6]), row[8]));
+		}
+		mysql_free_result(result);
+	}
+	else {
+		cerr << "Error in LoadPlayerCorpses query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+	
+	return true;
+}
+
+bool Database::DeletePlayerCorpse(int32 dbid) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	
+	if (!RunQuery(query, MakeAnyLenString(&query, "Delete from player_corpses where id=%d", dbid), errbuf)) {
+		cerr << "Error in DeletePlayerCorpse query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+	
+	safe_delete_array(query);
+	return true;
+}
+
+// these functions operate with a material slot, which is from 0 to 8
+sint32 Corpse::GetEquipment(int8 material_slot)
+{
+	int invslot;
+	
+	if(material_slot > 8)
+	{
+		return -1;
+	}
+
+	invslot = Inventory::CalcSlotFromMaterial(material_slot);
+	if(invslot == -1)
+		return -1;
+
+	return GetWornItem(invslot);
+}
+
+sint32 Corpse::GetEquipmentColor(int8 material_slot)
+{
+	const Item_Struct *item;
+
+	if(material_slot > 8)
+	{
+		return -1;
+	}
+
+	item = database.GetItem(GetEquipment(material_slot));
+	if(item != 0)
+	{
+		return item_tint[material_slot].rgb.use_tint ?
+			item_tint[material_slot].color :
+			item->Common.Color;
+	}
+
+	return 0;
+}
+
+
+

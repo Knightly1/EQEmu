@@ -1,0 +1,127 @@
+/*  EQEMu:  Everquest Server Emulator
+	Copyright (C) 2001-2003  EQEMu Development Team (http://eqemulator.net)
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; version 2 of the License.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY except by those people which sell it, which
+	are required to give you total support for your newly bought product;
+	without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+	A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+#ifndef OBJECT_H
+#define OBJECT_H
+
+// Object Class:
+// Represents Zone Objects (forges, ovens, brew barrels, items dropped to ground, etc)
+
+#include "../common/types.h"
+#include "../common/linked_list.h"
+#include "../common/eq_opcodes.h"
+#include "../common/eq_packet_structs.h"
+#include "../common/Item.h"
+#include "client.h"
+#include "mob.h"
+#include "npc.h"
+#include "entity.h"
+#include "../common/timer.h"
+
+// Object Types
+#define OT_DROPPEDITEM	0x01
+#define OT_MEDICINEBAG	0x09
+#define OT_OVEN			0x0F
+#define OT_SEWINGKIT	0x10	//and loom
+#define OT_FORGE		0x11
+#define OT_FLETCHINGKIT	0x12
+#define OT_BREWBARREL	0x13
+#define OT_JEWELERSKIT	0x14
+#define OT_POTTERYWHEEL	0x15
+#define OT_KILN			0x16
+#define OT_KEYMAKER		0x17
+#define OT_WIZARDLEX	0x18
+#define OT_MAGELEX		0x19
+#define OT_NECROLEX		0x1A
+#define OT_ENCHLEX		0x1B
+#define OT_TEIRDALFORGE	0x20
+#define OT_OGGOKFORGE	0x21
+#define OT_STORMGUARDF	0x22
+#define OT_TACKLEBOX	0x2e	//Father Nitwit
+#define OT_FIERDALF		0x30
+
+// Icon values:
+//0x0453 a pie
+//0x0454 cookies?
+//0x0455 is a piece of meat?
+//0x0456 is fletching sticks
+//0x0457 looks like a burnt cookie or something :/
+//0x0458 is a pottery wheel
+//0x0459 is a oven
+//0x045A is an oven
+//0x045B is a forge
+//0x045C is brewing barrel
+//0x045D is a hammer
+//0x045E is a wierd rope shape
+
+class Object: public Entity
+{
+public:
+	// Loading object from database
+	Object(uint32 id, uint32 type, uint32 icon, const Object_Struct& data, const ItemInst* inst);
+	Object(const ItemInst* inst, char* name,float max_x,float min_x,float max_y,float min_y,float z,float heading,int32 respawntimer);
+	// Loading object from client dropping item on ground
+	Object(Client* client, const ItemInst* inst);
+	
+	// Destructor
+	~Object();
+	Timer* respawn;
+	Timer* decay_timer;
+	bool Process();
+	bool IsGroundSpawn() { return m_ground_spawn; }
+	// Event handlers
+	bool HandleClick(Client* sender, const ClickObject_Struct* click_object);
+	void Close() { m_inuse = false; }
+	void Delete(bool reset_state=false); // Object itself
+	static void HandleCombine(Client* user, const NewCombine_Struct* in_combine, Object *worldo);
+	static void HandleAutoCombine(Client* user, const RecipeAutoCombine_Struct* rac);
+	
+	static uint32 TypeToSkill(uint32 type);
+	
+	// Packet functions
+	void CreateSpawnPacket(APPLAYER* app);
+	void CreateDeSpawnPacket(APPLAYER* app);
+	
+	// Container functions
+	void PutItem(uint8 index, const ItemInst* inst);
+	void DeleteItem(uint8 index); // Item inside container
+	ItemInst* PopItem(uint8 index); // Pop item out of container
+	
+	// Override base class implementations
+	virtual bool IsObject()	{ return true; }
+	virtual bool Save();
+	virtual void SetID(int16 set_id);
+	
+protected:
+	void	ResetState();	// Set state back to original
+	
+	Object_Struct	m_data;		// Packet data
+	ItemInst*		m_inst;		// Item representing object
+	bool			m_inuse;	// Currently in use by a client?
+	uint32			m_id;		// Database key, different than drop_id
+	uint32			m_type;		// Object Type, ie, forge, oven, dropped item, etc
+	uint32			m_icon;		// Icon to use for forge, oven, etc
+	float			m_max_x;
+	float			m_max_y;
+	float			m_min_x;
+	float			m_min_y;
+	float			m_z;
+	float			m_heading;
+	bool			m_ground_spawn;
+};
+
+#endif
