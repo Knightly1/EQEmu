@@ -9,8 +9,6 @@
 #include <errno.h>
 #endif
 
-using namespace std;
-
 #ifdef WIN32
 /*
 
