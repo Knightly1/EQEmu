@@ -445,7 +445,7 @@ float Mob::GetWalkspeed()
         return 0.0f;
     float aa_speed = 1.0f;
     if (IsClient()){
-        float aa_item = CastToClient()->GetAA(aaInnateRunSpeed);
+        int32 aa_item = CastToClient()->GetAA(aaInnateRunSpeed);
         if (aa_item > 0 && aa_item < 4){
             aa_speed += aa_item/100;
         }
@@ -466,7 +466,7 @@ float Mob::GetRunspeed()
 {
     float aa_speed = 1.0f;
     if (IsClient()){
-        float aa_item = CastToClient()->GetAA(aaInnateRunSpeed);
+        int32 aa_item = CastToClient()->GetAA(aaInnateRunSpeed);
         if (aa_item > 0 && aa_item < 4){
             aa_speed += aa_item/100;
         }

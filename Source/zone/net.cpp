@@ -743,7 +743,7 @@ This is hanging on freebsd for me, not sure why...
 		strcpy(sp[tempid].cast_on_other, sep.arg[7]);
 		strcpy(sp[tempid].spell_fades, sep.arg[8]);
 
-		sp[tempid].range=atoi(sep.arg[9]);
+		sp[tempid].range=atof(sep.arg[9]);
 		sp[tempid].aoerange=atof(sep.arg[10]);
 		sp[tempid].pushback=atof(sep.arg[11]);
 		sp[tempid].pushup=atof(sep.arg[12]);

@@ -336,7 +336,7 @@ void Parser::Event(int event, int32 npcid, const char * data, Mob* npcmob, Mob* 
 
 		else
 		{
-			charid=-npcmob->GetNPCTypeID();		// make char id negative npc id as a fudge
+			charid=npcmob->GetNPCTypeID();		// make char id negative npc id as a fudge
 		}
 
 		AddVar("charid.g",itoa(charid));

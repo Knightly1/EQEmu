@@ -7040,9 +7040,9 @@ bool Database::GetStartZone(PlayerProfile_Struct* in_pp, CharCreate_Struct* in_c
 	if(row)
 	{         
 		LogFile->write(EQEMuLog::Status, "Found starting location in start_zones");
-		in_pp->x = atoi(row[0]); 
-		in_pp->y = atoi(row[1]); 
-		in_pp->z = atoi(row[2]); 
+		in_pp->x = atof(row[0]); 
+		in_pp->y = atof(row[1]); 
+		in_pp->z = atof(row[2]); 
 		in_pp->zone_id = atoi(row[3]); 
 		in_pp->bind_zone_id = atoi(row[4]); 
 	} 

@@ -733,7 +733,7 @@ bool logpos;
 	int32	GetLevelHP(int8 tlevel);
 	int16	CheckAggroAmount(int16 spellid);
 	int16	CheckHealAggroAmount(int16 spellid);
-	virtual uint16 GetAA(uint8 aa_id) { return(0); }
+	virtual int32 GetAA(int32 aa_id) { return(0); }
 	
 	
 	int CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level = 1);

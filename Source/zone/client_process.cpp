@@ -5774,7 +5774,7 @@ bool Client::Process() {
 			else if(target->GetHP() > -10) {
 				float DualWieldProbability = (GetSkill(DUAL_WIELD) + GetLevel()) / 400.0f; // 78.0 max
 				if(GetAA(aaAmbidexterity))
-					DualWieldProbability += 0.1;
+					DualWieldProbability += 0.1f;
 				//discipline effects:
 				DualWieldProbability += (spellbonuses.DualWeildChance + itembonuses.DualWeildChance) / 100.0f;
 				
@@ -6921,7 +6921,7 @@ void Client::OPCombatAbility(const APPLAYER *app) {
 				dmg*=.76;
 			else{
 				CheckIncreaseSkill(KICK);
-				dmg*=1.2;//small increase for warriors
+				dmg*=1.2f;//small increase for warriors
 			}
 			target->Damage(this, (int32)dmg, 0xffff, 0x1e);
 			DoAnim(animKick);
@@ -6932,7 +6932,7 @@ void Client::OPCombatAbility(const APPLAYER *app) {
 		if (target!=this) {
 			float dmg=((((GetSkill(KICK) + GetSTR() + GetLevel())/250)*multiple)+5) * ( MakeRandomFloat(0, 1) );
 			if(target->IsClient())
-				dmg*=.67;
+				dmg*=.67f;
 			else
 				CheckIncreaseSkill(KICK);
 			target->Damage(this, (int32)dmg, 0xffff, 0x1e);

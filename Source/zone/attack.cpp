@@ -831,22 +831,22 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 			switch( amount )
 			{
 			case 0:
-				critChance += 0.03;
+				critChance += 0.03f;
 				break;
 			case 1:
-				critChance += 0.05;
+				critChance += 0.05f;
 				break;
 			case 2:
-				critChance += 0.07;
+				critChance += 0.07f;
 				break;
 			case 3:
-				critChance += 0.10;
+				critChance += 0.10f;
 				break;
 			}
 
 			// 3x base crit chance when berserk
 			if( this->berserk )
-				critChance += 0.06;
+				critChance += 0.06f;
 			
 			if(berserk)
 				critMod = 10;	//crippling blow
@@ -863,13 +863,13 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 				switch( amount )
 				{
 				case 1:
-					critChance += 0.02;
+					critChance += 0.02f;
 					break;
 				case 2:
-					critChance += 0.04;
+					critChance += 0.04f;
 					break;
 				case 3:
-					critChance += 0.07;
+					critChance += 0.07f;
 					break;
 				}
 			} else {
@@ -2090,7 +2090,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 type)
 #if EQDEBUG >= 11
     LogFile->write(EQEMuLog::Debug,"MonkSpecialAttack() 4 - %d", hitsuccess);
 #endif
-	float ackwardtest = 2.4;
+	float ackwardtest = 2.4f;
 	float random = (float)rand()/RAND_MAX;
 	if(random <= 0.2)
 	{
