@@ -2948,7 +2948,7 @@ bool Mob::CheckLos(Mob* other) {
 //I believe this is contributing to breaking mob spawns when a map is loaded
 //		NodeRef pnode = zone->map->SeekNode( zone->map->GetRoot(), tmp_x, tmp_y );
 		NodeRef pnode = NODE_NONE;
-		if (pnode != NODE_NODE)
+		if (pnode != NODE_NONE)
 		{
 			int *iface = zone->map->SeekFace( pnode, tmp_x, tmp_y );
 			if (*iface == -1) {
