@@ -189,9 +189,9 @@ int16	lockpick;
 int16	keyitem;
 int8	trigger_door;
 int8	trigger_type;
-uint16	liftheight;
+int32	door_param;
 int invert_state;
-
+int16	size;
 char    dest_zone[16];
 float   dest_x;
 float   dest_y;
