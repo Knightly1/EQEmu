@@ -453,8 +453,8 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Fear: %+i", effect_value);
 #endif
-// solar: random duration, removing this later
-				buffs[buffslot].ticsremaining = MakeRandomInt(1, buffs[buffslot].ticsremaining);
+				//use resistance value for duration...
+				buffs[buffslot].ticsremaining = (sint32) (buffs[buffslot].ticsremaining * partial * 0.01);
 				
 				int resist = spellbonuses.ResistFearChance + itembonuses.ResistFearChance;
 				if(resist > 0 && MakeRandomInt(0,99) < resist) {
@@ -463,8 +463,12 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 				}
 				else
 				{
+#ifdef ENABLE_FEAR_PATHING
+					SetFeared(caster, buffs[buffslot].ticsremaining * 6000);
+#else				//poor man's fear
 					//kathgar: Its basicly fear, they don't move
 					Stun(buffs[buffslot].ticsremaining * 6000);
+#endif
 				}
                 
 				break;

@@ -374,9 +374,9 @@ void Client::FinishTrade(NPC* with){
 //		memset(temp1,0x0,100);
 //		memset(temp2,0x0,100);
 		parse->Event(EVENT_ITEM, with->GetNPCTypeID(), NULL, with, this);
-		Message(0, "Quest NPC: eating items.");
+//		Message(0, "Quest NPC: eating items.");
 	} else {
-		Message(0, "Normal NPC: keeping items.");
+//		Message(0, "Normal NPC: keeping items.");
 		
 		//else, we do not have a quest, give the items to the NPC
 	

@@ -308,7 +308,9 @@ logpos = false;
 	cur_wp=0;
 	patrol=0;
 	follow=0;
-
+	
+	fear_state = fearStateNotFeared;
+	
 	permarooted = ( walkspeed == 0 ) && ( runspeed == 0 );
 
 	movetimercompleted = false;

@@ -5270,7 +5270,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 void Client::CompleteConnect()
 {
 
-	hpregen_timer.Start();
+	hpupdate_timer.Start();
 	position_timer.Start();
 	SetDuelTarget(0);
 	SetDueling(false);
@@ -5434,7 +5434,7 @@ bool Client::Process() {
 			LeaveGroup();
 			return false;
 		}
-		if(hpregen_timer.Check())
+		if(hpupdate_timer.Check())
 			SendHPUpdate();	
 		if(mana_timer.Check())
 			SendManaUpdatePacket();

@@ -173,8 +173,9 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	} else{
 		for (uint8 i=0; i<10; i++){
 			const ItemInst* inst = container->GetItem(i);
-			if (inst)
+			if (inst) {
 				user->DeleteItemInInventory(Inventory::CalcSlotId(in_combine->container_slot,i),0,true);
+			}
 		}
 		container->Clear();
 	}
@@ -624,5 +625,224 @@ void Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskil
 	}
 }
 
+
+
+bool Database::GetTradeRecipe(const ItemContainerInst* container, uint8 c_type, uint8 tradeskill, 
+	DBTradeskillRecipe_Struct *spec)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+    char *query = 0;
+	char buf2[220];
+	
+	uint32 sum = 0;
+	uint32 count = 0;
+	uint32 qcount = 0;
+	uint32 qlen = 0;
+	
+	//use the world item type as type if we have a world item
+	//otherwise use the item's ID... this make the assumption that
+	//no tradeskill containers will have an item ID which is
+	//below the highest ID of objects, which is currently 0x30
+	uint32 type = c_type;
+	
+	//dunno why I have to cast this up to call GetItem
+	const Item_Struct *istruct = ((const ItemInst *) container)->GetItem();
+	if(c_type == 0 && istruct) {
+		type = istruct->ItemNumber;
+	}
+	
+	buf2[0] = '\0';
+	
+	//Could prolly watch for stacks in this loop and handle them properly...
+	//just increment sum and count accordingly
+	bool first = true;
+	uint8 i;
+	char *pos = buf2;
+	for (i=0; i<10; i++) {
+		const ItemInst* inst = container->GetItem(i);
+		if (inst) {
+			const Item_Struct* item = GetItem(inst->GetItem()->ItemNumber);
+			if (item) {
+				if(first) {
+					pos += snprintf(pos, 19, "%d", item->ItemNumber);
+					first = false;
+				} else {
+					pos += snprintf(pos, 19, ",%d", item->ItemNumber);
+				}
+				sum += item->ItemNumber;
+				count++;
+			}
+		}
+	}
+	
+	if(count < 1) {
+		return(false);	//no items == no recipe
+	}
+	
+	qlen = MakeAnyLenString(&query, "SELECT tre.recipe_id "
+	" FROM tradeskill_recipe_entries AS tre"
+	" WHERE ( tre.item_id IN(%s) AND tre.componentcount>0 )"
+	"  OR ( tre.item_id=%u AND tre.iscontainer=1 )"
+	" GROUP BY tre.recipe_id HAVING sum(tre.componentcount) = %u"
+	"  AND sum(tre.item_id * tre.componentcount) = %u", buf2, type, count, sum);
+	
+	if (!RunQuery(query, qlen, errbuf, &result)) {
+		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept search, query: %s", query);
+		safe_delete_array(query);
+		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept search, error: %s", errbuf);
+		return(false);
+	}
+	safe_delete_array(query);
+	
+	qcount = mysql_num_rows(result);
+	if(qcount > 1) {
+		//multiple recipes, partial match... do an extra query to get it exact.
+		//this happens when combining components for a smaller recipe
+		//which is completely contained within another recipe
+		
+		first = true;
+		pos = buf2;
+		for (i = 0; i < qcount; i++) {
+			row = mysql_fetch_row(result);
+			uint32 recipeid = (uint32) atoi(row[0]);
+			if(first) {
+				pos += snprintf(pos, 19, "%u", recipeid);
+				first = false;
+			} else {
+				pos += snprintf(pos, 19, ",%u", recipeid);
+			}
+		}
+		
+		qlen = MakeAnyLenString(&query, "SELECT tre.recipe_id"
+		" FROM tradeskill_recipe_entries AS tre"
+		" WHERE tre.recipe_id IN (%s)"
+		" GROUP BY tre.recipe_id HAVING sum(tre.componentcount) = %u"
+		"  AND sum(tre.item_id * tre.componentcount) = %u", buf2, count, sum);
+		
+		if (!RunQuery(query, qlen, errbuf, &result)) {
+			LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept, re-query: %s", query);
+			safe_delete_array(query);
+			LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept, error: %s", errbuf);
+			return(false);
+		}
+		safe_delete_array(query);
+	
+		qcount = mysql_num_rows(result);
+	}
+	if (qcount != 1) {
+		if(qcount > 1) {
+			LogFile->write(EQEMuLog::Error, "Combine error: Recipe is not unique!");
+		}
+		//else, just not found i guess..
+		return(false);
+	}
+	
+	row = mysql_fetch_row(result);
+	uint32 recipe_id = (uint32)atoi(row[0]);
+	mysql_free_result(result);
+	
+	return(GetTradeRecipe(recipe_id, c_type, tradeskill, spec));
+}
+	
+
+
+bool Database::GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint8 tradeskill, 
+	DBTradeskillRecipe_Struct *spec)
+{	
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+    char *query = 0;
+	
+	uint32 qcount = 0;
+	uint32 qlen;
+	
+	qlen = MakeAnyLenString(&query, "SELECT tr.skillneeded, tr.trivial, tr.nofail"
+	" FROM tradeskill_recipe AS tr"
+	" WHERE tr.id = %lu AND tr.tradeskill = %u", recipe_id, tradeskill);
+		
+	if (!RunQuery(query, qlen, errbuf, &result)) {
+		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept, query: %s", query);
+		safe_delete_array(query);
+		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept, error: %s", errbuf);
+		return(false);
+	}
+	safe_delete_array(query);
+	
+	qcount = mysql_num_rows(result);
+	if(qcount != 1) {
+		//just not found i guess..
+		return(false);
+	}
+	
+	row = mysql_fetch_row(result);
+	spec->skill_needed	= (sint16)atoi(row[0]);
+	spec->trivial		= (uint16)atoi(row[1]);
+	spec->nofail		= atoi(row[2]) ? true : false;
+	mysql_free_result(result);
+	
+	//Pull the on-success items...
+	qlen = MakeAnyLenString(&query, "SELECT item_id,successcount FROM tradeskill_recipe_entries"
+	 " WHERE successcount>0 AND componentcount=0 AND recipe_id=%u", recipe_id);
+	 
+	if (!RunQuery(query, qlen, errbuf, &result)) {
+		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept success query '%s': %s", query, errbuf);
+		safe_delete_array(query);
+		return(false);
+	}
+	safe_delete_array(query);
+	
+	qcount = mysql_num_rows(result);
+	if(qcount < 1) {
+		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept success: no success items returned");
+		return(false);
+	}
+	uint8 r;
+	spec->onsuccess.clear();
+	for(r = 0; r < qcount; r++) {
+		row = mysql_fetch_row(result);
+		/*if(r == 0) {
+			*product1_id	= (uint32)atoi(row[0]);
+			*productcount	= (uint32)atoi(row[1]);
+		} else if(r == 1) {
+			*product2_id	= (uint32)atoi(row[0]);
+		} else {
+			LogFile->write(EQEMuLog::Warning, "Warning: recipe returned more than 2 products, not yet supported.");
+		}*/
+		uint32 item = (uint32)atoi(row[0]);
+		uint8 num = (uint8) atoi(row[1]);
+		spec->onsuccess.push_back(pair<uint32,uint8>::pair(item, num));
+	}
+	mysql_free_result(result);
+	
+	
+	//Pull the on-fail items...
+	qlen = MakeAnyLenString(&query, "SELECT item_id,failcount FROM tradeskill_recipe_entries"
+	 " WHERE failcount>0 AND componentcount=0 AND recipe_id=%u", recipe_id);
+
+	spec->onfail.clear();
+	if (RunQuery(query, qlen, errbuf, &result)) {
+		
+		qcount = mysql_num_rows(result);
+		uint8 r;
+		for(r = 0; r < qcount; r++) {
+			row = mysql_fetch_row(result);
+			/*if(r == 0) {
+				*failproduct_id	= (uint32)atoi(row[0]);
+			} else {
+				LogFile->write(EQEMuLog::Warning, "Warning: recipe returned more than 1 fail product, not yet supported.");
+			}*/
+			uint32 item = (uint32)atoi(row[0]);
+			uint8 num = (uint8) atoi(row[1]);
+			spec->onfail.push_back(pair<uint32,uint8>::pair(item, num));
+		}
+		mysql_free_result(result);
+	}
+	safe_delete_array(query);
+	
+	return(true);
+}
 
 

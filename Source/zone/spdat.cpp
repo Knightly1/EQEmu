@@ -327,7 +327,7 @@ bool IsPureNukeSpell(int16 spell_id)
 
 bool IsPartialCapableSpell(int16 spell_id)
 {
-	if(IsPureNukeSpell(spell_id))
+	if(IsPureNukeSpell(spell_id) || IsFearSpell(spell_id))
 		return true;
 	
 	return false;

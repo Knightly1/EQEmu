@@ -75,8 +75,13 @@
 #include "hate_list.h"
 #include "../common/Kaiyodo-LList.h"
 #include "../common/skills.h"
+#include "map.h"
 
-enum FindSpellType { SPELLTYPE_SELF, SPELLTYPE_OFFENSIVE, SPELLTYPE_OTHER };
+enum FindSpellType {
+	SPELLTYPE_SELF,
+	SPELLTYPE_OFFENSIVE,
+	SPELLTYPE_OTHER
+};
 
 enum {
 	SPECATK_NONE = 0,
@@ -97,6 +102,13 @@ enum {
 				//X,Y,Z are old interactive NPC codes
 };
 
+enum {	//fear states
+	fearStateNotFeared = 0,
+	fearStateRunning,
+	fearStateRunningForever,	//can run straight until spell ends
+	fearStateRunningToStick,	//im stuck when i hit my waypoint
+	fearStateStuck
+};
 
 struct TradeEntity;
 class Trade;
@@ -911,7 +923,13 @@ protected:
 	AISpells_Struct	AIspells[MAX_AISPELLS]; // expected to be pre-sorted, best at low index
 	HateList hate_list;
 	
-	 
+	
+#ifdef ENABLE_FEAR_PATHING
+	void SetFeared(Mob *caster, int32 duration);
+	void CalculateFearPosition();
+	VERTEX fear_vector;
+	uint8 fear_state;
+#endif
 	
 	bool	pAIControlled;
 	bool	roamer;

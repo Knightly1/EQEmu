@@ -29,7 +29,6 @@ PERL_FLAGS=perl -MExtUtils::Embed -e ccopts
 PERL_LIB=perl -MExtUtils::Embed -e ldopts
 DFLAGS+=-DEMBPERL -DEMBPERL_PLUGIN 
 
-DFLAGS+=-DQUEST_SCRIPTS_BYNAME
 WFLAGS=-Wall -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -Wno-deprecated  -Wcomment -Wcast-align -Wuninitialized
 #COPTS=$(WFLAGS) -O -g -pg -march=i686 -pthread -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
 

@@ -1115,7 +1115,11 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 		// target required for these
 		case ST_Undead: {
 			spell_target = entity_list.GetMob(target_id);
-			if(!spell_target || spell_target->GetBodyType() != BT_SummonedUndead)
+			if(!spell_target || (
+				spell_target->GetBodyType() != BT_SummonedUndead 
+				&& spell_target->GetBodyType() != BT_Undead
+				)
+			)
 			{
 				//invalid target
 				Message_StringID(13,SPELL_NEED_TAR);
@@ -1994,7 +1998,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		spell_effectiveness = spelltar->ResistSpell(spell_id, this);
 		if(spell_effectiveness < 100)
 		{
-			if(!IsPartialCapableSpell(spell_id) || spell_effectiveness == 0)
+			if(spell_effectiveness == 0 || !IsPartialCapableSpell(spell_id) )
 			{
 				Message_StringID(MT_Shout, TARGET_RESISTED, spells[spell_id].name);
 				spelltar->Message_StringID(MT_Shout, YOU_RESIST, spells[spell_id].name);
@@ -2288,6 +2292,12 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 			case SE_Root:
 			{
 				rooted = false;
+				break;
+			}
+
+			case SE_Fear:
+			{
+				fear_state = fearStateNotFeared;
 				break;
 			}
 		}

@@ -272,7 +272,7 @@ void Object::CreateDeSpawnPacket(APPLAYER* app)
 	co->player_id = 0;
 }
 bool Object::Process(){
-	if(decay_timer.Enabled() && decay_timer.Check()) {
+	if(m_type == OT_DROPPEDITEM && decay_timer.Enabled() && decay_timer.Check()) {
 		// Send click to all clients (removes entity on client)
 		APPLAYER* outapp = new APPLAYER(OP_ClickObject, sizeof(ClickObject_Struct));
 		ClickObject_Struct* click_object = (ClickObject_Struct*)outapp->pBuffer;

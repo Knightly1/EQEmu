@@ -337,10 +337,10 @@ void Mob::AI_Start(int32 iMoveDelay) {
 	if (pAIControlled)
 		return;
 	pAIControlled = true;
-	AIthink_timer = new Timer(50);
+	AIthink_timer = new Timer(AIthink_duration);
 	AIthink_timer->Trigger();
 	AIwalking_timer = new Timer(0);
-	AImovement_timer = new Timer(100);
+	AImovement_timer = new Timer(AImovement_duration);
 	AIautocastspell_timer = new Timer(750);
 	AIautocastspell_timer->Start(RandomTimer(0, 15000), false);
 	AIscanarea_timer = new Timer(500);
@@ -458,6 +458,31 @@ void Mob::AI_Process() {
 	if (IsCasting())
 		return;
 
+#ifdef ENABLE_FEAR_PATHING
+	if(fear_state != fearStateNotFeared) {
+		if(fear_state == fearStateStuck)
+			return;	//stuck in a corner, cant do anything
+		
+		//otherwise assume state is fearStateRunning
+		if(IsRooted()) {
+			if(IsMoving())
+			{
+				SetHeading(CalculateHeadingToTarget(target->GetX(), target->GetY()));
+				SetRunAnimSpeed(0);
+				SendPosition();
+				SetMoving(false);
+				moved=false;
+			}
+			return;
+		}
+		
+		if(AImovement_timer->Check()) {
+			CalculateFearPosition();
+		}
+		return;
+	}
+#endif
+	
 	if (IsEngaged()) 
 	{
 		if (IsRooted())
@@ -606,6 +631,7 @@ void Mob::AI_Process() {
 			// See if we can summon the mob to us
 			if (!HateSummon()) 
 			{
+				//could not summon them, start pursuing...
 // TODO: Check here for another person on hate list with close hate value
 				if (AIautocastspell_timer->Check()) 
 				{
@@ -861,7 +887,7 @@ void Mob::AI_Process() {
 						{	// this mob is under quest control
 							if (movetimercompleted==true)    
 							{ // time to pause has ended
-								this->CastToNPC()->SetGrid( 0 - this->CastToNPC()->GetGrid()); // revert to AI control
+								CastToNPC()->SetGrid( 0 - CastToNPC()->GetGrid()); // revert to AI control
 								SetAppearance(0, false); 
 							}
 						}

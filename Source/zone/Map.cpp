@@ -338,8 +338,11 @@ bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *r
 	step.y *= factor;
 	step.z *= factor;
 	
-	NodeRef cnode, lnode;
-	lnode = NODE_NONE;
+	NodeRef cnode, lnode, finalnode;
+	lnode = NODE_NONE;	//last node visited
+	
+	finalnode = SeekNode(GetRoot(), end.x, end.y);
+	
 	//while we are not past end
 	//always do this once, even if start == end.
 	do {
@@ -350,6 +353,9 @@ bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *r
 				return(true);
 			lnode = cnode;
 		}
+		if(cnode == finalnode)
+			return(false);	//we checked in the node the end point is in
+							//we will never find another node before the end
 		
 		//move 1 step
 		cur.x += step.x;

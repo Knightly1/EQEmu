@@ -142,7 +142,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_Trader			0x01e8 // /trader
 #define OP_Bazaar			0x01e7 // /bazaar search
 
-#define OP_BecomeTrader		0x01c5
+#define OP_BecomeTrader		0x01c4
 #define	OP_BazaarInspect	0x01f4
 #define OP_TraderItemUpdate	0x006e
 #define	OP_TraderDelItem	0x017c

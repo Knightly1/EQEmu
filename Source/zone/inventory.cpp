@@ -48,7 +48,8 @@ uint32 Client::NukeItem(uint32 itemnum) {
 		return 0;
 	uint32 x = 0;
 	
-	for (int i=0; i<=29; i++) { // Equipped and personal inventory
+	int i;
+	for (i=0; i<=29; i++) { // Equipped and personal inventory
 		if (GetItemIDAt(i) == itemnum || (itemnum == 0xFFFE && GetItemIDAt(i) != INVALID_ID)) {
 			DeleteItemInInventory(i, 0, true);
 			x++;

@@ -140,7 +140,7 @@ Client::Client(EQNetworkConnection* ieqnc)
 
 	), 
 	position_timer(250),
-	hpregen_timer(1800),
+	hpupdate_timer(1800),
 	camp_timer(29000),
 	process_timer(100),
 	disc_timer(60000),

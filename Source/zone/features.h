@@ -42,6 +42,18 @@ Core Zone features
 //when there are no players in it, mobs stop wandering, etc..
 #define IDLE_WHEN_EMPTY
 
+//Uncomment this line to enable named quest files:
+#define QUEST_SCRIPTS_BYNAME
+
+#ifdef QUEST_SCRIPTS_BYNAME
+//extends byname system to look in a templates directory
+//independant of zone name
+#define QUEST_TEMPLATES_BYNAME
+#define QUEST_TEMPLATES_DIRECTORY "templates"
+#endif
+
+//Uncomment to enable map based fear pathing
+//#define ENABLE_FEAR_PATHING 1
 
 /*
 
@@ -126,6 +138,11 @@ enum {	//various hard caps
 	eqManaRegenItemCap = 15,
 	eqHPRegenItemCap = 15
 };
+
+enum {	//timer settings
+	AImovement_duration = 100,
+	AIthink_duration = 50
+};
 	
 
 //max number of people per group.
@@ -155,6 +172,9 @@ enum {	//various hard caps
 //this should prolly be dynamic based on ping time or something.. who knows
 //Values found in the emu somewhere at one point in time: 36, 43
 #define NPC_RUNANIM_RATIO 34
+
+//this is used to multiply an NPCs movement rate, yeilding map units..
+#define NPC_SPEED_MULTIPLIER 2.8
 
 //minimum level to do alchemy
 #define MIN_LEVEL_ALCHEMY 25
