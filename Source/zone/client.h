@@ -199,7 +199,7 @@ public:
 	void	SendAdventureFinish(uint32 state=0,uint32 points=0,bool grouptoo=false);
 	void	SendAdventureInfoRequest(const APPLAYER* app);
 	void	SendAdventureUpdate();
-	void	SendAdventureRequestData(Group* group = NULL,bool EnteredDungeon=false,bool EnteredZone=false);
+	void	SendAdventureRequestData(Group* group = NULL,bool EnteredDungeon=false,bool EnteredZone=false,bool Zoned=false);
 	void	SendAdventureRequest();
 	void	DeleteCharInAdventure(int32 id,int32 qid);
 

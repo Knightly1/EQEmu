@@ -259,9 +259,12 @@ int Client::HandlePacket(const APPLAYER *app)
 						if(zone->GetZoneID() == ai.zoneid) {
 							SendAdventureRequestData(entity_list.GetGroupByClient(this),false,true);
 						}
-						else if(zone->GetZoneID() == ai.zonedungeonid && database.GetLDoNDungeon(zone->GetZoneID()) == true ){
+						else if(zone->GetZoneID() == ai.zonedungeonid && 
+							database.GetLDoNDungeon(zone->GetZoneID()) == true ){
 							SendAdventureRequestData(entity_list.GetGroupByClient(this),true,false);
 						}
+						else
+							SendAdventureRequestData(NULL,false,false,true);
 					}
 					break;
 				}
@@ -5545,12 +5548,9 @@ bool Client::Process() {
         // try to send all packets that weren't send before
 		if(!IsLD())
 			SendAllPackets();
-		if(IsLD())
-			if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 		if(dead)
 			SetHP(-100);
 		if(dead && this->client_state == CLIENT_LINKDEAD) {
-			if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 			LeaveGroup();
 			return false;
 		}
@@ -5577,17 +5577,14 @@ bool Client::Process() {
 		if((p_timers.Get(pTimerAdventureTimer) && p_timers.Expired(pTimerAdventureTimer,false))){
 			p_timers.Disable(pTimerAdventureTimer);
 			printf("terminado %s\n",GetName());
-			Message(0,"TELL ME IF YOU SEE THIS!!");
 			SendAdventureFinish(0,0);
 		}
 		else if(p_timers.Get(pTimerStartAdventureTimer) && p_timers.Expired(pTimerStartAdventureTimer,false)){
 			p_timers.Disable(pTimerStartAdventureTimer);
 			printf("terminado %s\n",GetName());
-			Message(0,"TELL ME IF YOU SEE THIS!!");
 			SendAdventureFinish(0,0);
 		}		
 		if(linkdead_timer.Check()){
-			if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 			Save();
 			LeaveGroup();
 			return false; //delete client
@@ -5935,7 +5932,6 @@ bool Client::Process() {
 	}
 	
 	if (client_state == CLIENT_ERROR) {
-		if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 		LeaveGroup();
 		eqnc->Close();
 		cout << "Client disconnected (cs=e): " << GetName() << endl;
@@ -5943,7 +5939,6 @@ bool Client::Process() {
 	}
 	
 	if (client_state != CLIENT_LINKDEAD && !eqnc->CheckActive()) {
-		if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 		LeaveGroup();
 		cout << "Client linkdead: " << name << endl;
 		eqnc->Close();
@@ -6014,7 +6009,6 @@ bool Client::Process() {
 		}
 		else
 		{
-			if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 			adverrorinfo = 814;
 			LinkDead();
 			LeaveGroup();

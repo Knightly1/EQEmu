@@ -3081,9 +3081,12 @@ void Client::SendAdventureRequest(){
 	safe_delete(buffer1);
 	
 }
-void Client::SendAdventureRequestData(Group* group,bool EnteredDungeon,bool EnteredZone){
+void Client::SendAdventureRequestData(Group* group,bool EnteredDungeon,bool EnteredZone,bool Zoned){
 	AdventureInfo AF=database.GetAdventureInfo(GetAdventureID());
-	if(strlen(AF.text)<2)strcpy(AF.text,"Adventure not found");
+	if(strlen(AF.text)<2){
+		printf("adventure with id %i not found!\n",GetAdventureID());
+		return;
+	}
 	APPLAYER* outapp = new APPLAYER(OP_AdventureData,sizeof(AdventureRequestResponse_Struct));
 	memset(outapp->pBuffer,0,outapp->size);
 	AdventureRequestResponse_Struct* adrr=(AdventureRequestResponse_Struct*)outapp->pBuffer;
@@ -3111,10 +3114,22 @@ void Client::SendAdventureRequestData(Group* group,bool EnteredDungeon,bool Ente
 		printf("Client %s entered compass zone.\n", GetName());
 		QueuePacket(outapp);
 		safe_delete(outapp);
-		return;
+		if(Zoned==false)return;
 	}
 	else
 		adrr->showcompass=0;
+
+	if(Zoned==true) {
+		if(p_timers.GetRemainingTime(pTimerAdventureTimer)>0)
+			adrr->timeleft=p_timers.GetRemainingTime(pTimerAdventureTimer);
+		else if(p_timers.GetRemainingTime(pTimerStartAdventureTimer)>0)
+			adrr->timeleft=p_timers.GetRemainingTime(pTimerStartAdventureTimer);
+		else
+			return;
+		QueuePacket(outapp);
+		safe_delete(outapp);
+		return;
+	}
 
 	for(int xx=0;xx<6;xx++){
 		if(EnteredDungeon==false && EnteredZone==false){
