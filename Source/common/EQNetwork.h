@@ -22,7 +22,7 @@
 
 //uncomment this to enable the packet profiler. Counts the number
 //of each type of packet sent or received on a connection.
-#define PACKET_PROFILER 1
+//#define PACKET_PROFILER 1
 
 #include <string.h>
 #include <map>
