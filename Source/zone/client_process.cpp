@@ -5447,7 +5447,6 @@ bool Client::Process() {
 			LeaveGroup();
 			return false;
 		}
-		DoManaRegen();
 		if(hpregen_timer.Check())
 			SendHPUpdate();	
 		if(mana_timer.Check())
