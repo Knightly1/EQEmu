@@ -155,7 +155,7 @@ bool EQEMuLog::write(LogIDs id, const char *fmt, ...) {
     return true;
 }
 
-bool EQEMuLog::write(LogIDs id, const char *buf, int8 size, int32 count) {
+bool EQEMuLog::writebuf(LogIDs id, const char *buf, int8 size, int32 count) {
 	if (!this) {
 		return false;
     }

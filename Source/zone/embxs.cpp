@@ -25,7 +25,6 @@
 #include "embxs.h" 
 
 extern Database database; 
-#undef write
 
 const char *getItemName(unsigned itemid) 
 { 
@@ -97,7 +96,7 @@ XS(XS_EQEmuIO_PRINT)
 		int len = 0;
 		for(i = 0; *cur != '\0'; i++, cur++) {
 			if(*cur == '\n') {
-				LogFile->write(EQEMuLog::Quest, str + pos, 1, len);
+				LogFile->writebuf(EQEMuLog::Quest, str + pos, 1, len);
 				len = 0;
 				pos = i+1;
 			} else {
@@ -105,7 +104,7 @@ XS(XS_EQEmuIO_PRINT)
 			}
 		}
 		if(len > 0) {
-			LogFile->write(EQEMuLog::Quest, str + pos, 1, len);
+			LogFile->writebuf(EQEMuLog::Quest, str + pos, 1, len);
 		}
  	}
  	

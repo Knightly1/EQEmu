@@ -109,7 +109,7 @@ public:
 	void SetCallback(LogIDs id, msgCallbackFmt proc);
 	void SetCallback(LogIDs id, msgCallbackBuf proc);
 	
-	bool write(LogIDs id, const char *buf, int8 size, int32 count);
+	bool writebuf(LogIDs id, const char *buf, int8 size, int32 count);
 	bool write(LogIDs id, const char *fmt, ...);
 	bool Dump(LogIDs id, int8* data, int32 size, int32 cols=16, int32 skip=0);
 private:
