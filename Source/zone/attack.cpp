@@ -1925,6 +1925,11 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 			level = kg->GetHighestLevel();
 			kg->SplitExp(guildwars.CalculateEXPEarning(level, GetLevel(), true), this);
 #else
+			if(give_exp->CastToClient()->GetAdventureID()>0){
+				AdventureInfo AF=database.GetAdventureInfo(give_exp->CastToClient()->GetAdventureID());
+				if(zone->GetZoneID() == AF.zonedungeonid && AF.type==ADVENTURE_MASSKILL && AF.Objetive==GetNPCTypeID())
+					give_exp->CastToClient()->SendAdventureUpdate();
+			}
 			kg->SplitExp((level*level*75*35/10), this);
 #endif
 		}

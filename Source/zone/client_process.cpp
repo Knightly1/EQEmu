@@ -254,6 +254,15 @@ int Client::HandlePacket(const APPLAYER *app)
 
 					if(strncasecmp(zone->GetShortName(),"bazaar",6)==0)
 						SendBazaarWelcome();
+					if(GetAdventureID()>0){
+						AdventureInfo ai=database.GetAdventureInfo(GetAdventureID());
+						if(zone->GetZoneID() == ai.zoneid) {
+							SendAdventureRequestData(entity_list.GetGroupByClient(this),false,true);
+						}
+						else if(zone->GetZoneID() == ai.zonedungeonid && database.GetLDoNDungeon(zone->GetZoneID()) == true ){
+							SendAdventureRequestData(entity_list.GetGroupByClient(this),true,false);
+						}
+					}
 					break;
 				}
 				case OP_SendExpZonein: {
@@ -655,8 +664,41 @@ int Client::HandlePacket(const APPLAYER *app)
 					*/
 					break;
 				}
-				case OP_Consume: {
-					if (app->size != sizeof(Consume_Struct))
+				case OP_AdventureInfoRequest:{
+					SendAdventureInfoRequest(app);
+					break;
+				}
+				case OP_AdventureRequest:
+					SendAdventureRequest();
+					break;
+				case OP_LDoNButton:{
+					bool* p=(bool*)app->pBuffer;
+					if(*p == true ) {
+						Group* group=entity_list.GetGroupByClient(this);
+						SendAdventureRequestData(group);
+					}
+					else
+						SetAdventureID(0);
+					break;
+				}
+				case OP_LeaveAdventure:{
+					uchar lol[4]={0x3F,0x2A,0x00,0x00};
+					APPLAYER* outapp=new APPLAYER(0x02e4,4);
+					uchar* x=(uchar*)outapp->pBuffer;
+					memcpy(x,lol,4);
+					QueuePacket(outapp);
+					safe_delete(outapp);
+					//Cofruben: lol2 for message,lol for leave confirmation.
+					uchar lol2[12]={0x0F,0x14,0x00,0x00,0x0D,0x00,0x00,0x00,0x01,0x00,0x00,0x00};
+					APPLAYER* outapp2=new APPLAYER(0x01d7,12);
+					uchar* xx=(uchar*) outapp2->pBuffer;
+					memcpy(xx,lol2,12);
+					QueuePacket(outapp2);
+					safe_delete(outapp2);
+					SendAdventureFinish(0,0);
+					break;
+
+				}
 					{
 						LogFile->write(EQEMuLog::Error, "OP size error: OP_Consume expected:%i got:%i", sizeof(Consume_Struct), app->size);
 						break;
@@ -1362,6 +1404,7 @@ int Client::HandlePacket(const APPLAYER *app)
 				}
 				case OP_Camp: {
 					//LogFile->write(EQEMuLog::Debug, "%s sent a camp packet.", GetName());
+					if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 					Save();
 					LeaveGroup();
 					if (GetGM()) {
@@ -1701,6 +1744,7 @@ int Client::HandlePacket(const APPLAYER *app)
 						tarheading = zone_point->target_heading;
 						//strcpy(target_zone,zone_point->target_zone);
 					}
+
 					// if not -2 -2 -2, zone to these coords. -2, -2, -2 = not a zonesummon zonerequest
 					else if (!(zonesummon_x == -2 && zonesummon_y == -2 && (zonesummon_z == -2 || zonesummon_z == -20))) {
 						tarx = zonesummon_x;
@@ -5477,10 +5521,12 @@ bool Client::Process() {
         // try to send all packets that weren't send before
 		if(!IsLD())
 			SendAllPackets();
-		
+		if(IsLD())
+			if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 		if(dead)
 			SetHP(-100);
 		if(dead && this->client_state == CLIENT_LINKDEAD) {
+			if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 			LeaveGroup();
 			return false;
 		}
@@ -5504,8 +5550,20 @@ bool Client::Process() {
 			}
 			return(false);
 		}
-		
+		if((p_timers.Get(pTimerAdventureTimer) && p_timers.Expired(pTimerAdventureTimer,false))){
+			p_timers.Disable(pTimerAdventureTimer);
+			printf("terminado %s\n",GetName());
+			Message(0,"TELL ME IF YOU SEE THIS!!");
+			SendAdventureFinish(0,0);
+		}
+		else if(p_timers.Get(pTimerStartAdventureTimer) && p_timers.Expired(pTimerStartAdventureTimer,false)){
+			p_timers.Disable(pTimerStartAdventureTimer);
+			printf("terminado %s\n",GetName());
+			Message(0,"TELL ME IF YOU SEE THIS!!");
+			SendAdventureFinish(0,0);
+		}		
 		if(linkdead_timer.Check()){
+			if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 			Save();
 			LeaveGroup();
 			return false; //delete client
@@ -5836,6 +5894,7 @@ bool Client::Process() {
 	
 	
 	if (client_state == CLIENT_KICKED) {
+		if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 		LeaveGroup();
 		Save();
 		eqnc->Close();
@@ -5844,6 +5903,7 @@ bool Client::Process() {
 	}
 	
 	if (client_state == DISCONNECTED) {
+		if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 		LeaveGroup();
 		eqnc->Close();
 		cout << "Client disconnected (cs=d): " << GetName() << endl;
@@ -5851,6 +5911,7 @@ bool Client::Process() {
 	}
 	
 	if (client_state == CLIENT_ERROR) {
+		if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 		LeaveGroup();
 		eqnc->Close();
 		cout << "Client disconnected (cs=e): " << GetName() << endl;
@@ -5858,6 +5919,7 @@ bool Client::Process() {
 	}
 	
 	if (client_state != CLIENT_LINKDEAD && !eqnc->CheckActive()) {
+		if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 		LeaveGroup();
 		cout << "Client linkdead: " << name << endl;
 		eqnc->Close();
@@ -5875,6 +5937,7 @@ bool Client::Process() {
 	/************ Get all packets from packet manager out queue and process them ************/
 	adverrorinfo = 5;
 	if((int32)eqnc == 0xFEEEFEEE){
+		if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 		LeaveGroup();
 		eqnc->Close();
 		safe_delete(eqnc);
@@ -5927,6 +5990,7 @@ bool Client::Process() {
 		}
 		else
 		{
+			if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
 			adverrorinfo = 814;
 			LinkDead();
 			LeaveGroup();

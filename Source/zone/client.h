@@ -193,6 +193,16 @@ public:
 	void	Message(uint32 type, const char* message, ...);
 	void	operator<<(const char* message)		{ Message(0, "%s", message); }
 	void	SendSound();
+
+	int32   GetAdventureID(){return m_pp.adventure_id; }
+	void    SetAdventureID(int32 i){ m_pp.adventure_id=i; }
+	void	SendAdventureFinish(uint32 state=0,uint32 points=0,bool grouptoo=false);
+	void	SendAdventureInfoRequest(const APPLAYER* app);
+	void	SendAdventureUpdate();
+	void	SendAdventureRequestData(Group* group = NULL,bool EnteredDungeon=false,bool EnteredZone=false);
+	void	SendAdventureRequest();
+	void	DeleteCharInAdventure(int32 id,int32 qid);
+
 	APPLAYER*	ReturnItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type);
 	
 	bool	GetRevoked() { return revoked; }
