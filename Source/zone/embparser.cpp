@@ -78,8 +78,6 @@ void PerlembParser::HandleQueue() {
 		EventRecord e = eventQueue.front();
 		eventQueue.pop();
 
-printf("Running queued event for '%s' type %d\n", e.npcmob->GetName(), e.event);
-
 		Event(e.event, e.npcid, e.data.c_str(), e.npcmob, e.mob);
 	}
 	
@@ -92,7 +90,6 @@ void PerlembParser::Event(int event, int32 npcid, const char * data, NPC* npcmob
 		return;
 	
 	if(perl->InUse()) {
-LogFile->write(EQEMuLog::Debug, "Queued event for %s: %d\n", npcmob->GetName(), event);
 		//queue the event for later.
 		EventRecord e;
 		e.event = event;
@@ -382,9 +379,6 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 {
 	if(!perl)
 		return(0);
-if(npcid == 45054)
-printf("Starting LoadQuest for %d:\n", npcid);
-
 	
 	//we have allready tried to load this quest...
 	if(hasQuests.count(npcid) == 1) {
@@ -515,9 +509,6 @@ printf("Starting LoadQuest for %d:\n", npcid);
 #endif //QUEST_SCRIPTS_BYNAME
 
 	}
-
-if(npcid == 45054)
-printf("LoadQuest for %d: settled on '%s'\n", npcid, filename.c_str());
 
 //LogFile->write(EQEMuLog::Debug, "	finally settling on '%s'", filename.c_str());
 //	LogFile->write(EQEMuLog::Status, "Looking for quest file: '%s'", filename.c_str());
@@ -655,10 +646,9 @@ void PerlembParser::ExecCommand(Client *c, Seperator *sep) {
 	char namebuf[128];
 	snprintf(namebuf, 128, "commands::%s", sep->arg[0]+1);
 	namebuf[127] = '\0';
-	
 	std::vector<std::string> args;
 	int i;
-	for(i = 1; i < sep->argnum; i++) {
+	for(i = 1; i <= sep->argnum; i++) {
 		args.push_back(sep->arg[i]);
 	}
 	

@@ -224,7 +224,7 @@ Developer configuration
 
 #define COMMON_PROFILE
 
-#define PROFILE_DUMP_TIME 10*60
+//#define PROFILE_DUMP_TIME 10*60
 #endif
 
 

@@ -33,6 +33,342 @@ typedef const char Const_char;
 
 #include "mob.h"
 
+XS(XS_Mob_IsClient); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_IsClient)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::IsClient(THIS)");
+	{
+		Mob *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->IsClient();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_IsNPC); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_IsNPC)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::IsNPC(THIS)");
+	{
+		Mob *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->IsNPC();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_IsMob); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_IsMob)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::IsMob(THIS)");
+	{
+		Mob *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->IsMob();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_IsCorpse); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_IsCorpse)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::IsCorpse(THIS)");
+	{
+		Mob *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->IsCorpse();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_IsPlayerCorpse); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_IsPlayerCorpse)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::IsPlayerCorpse(THIS)");
+	{
+		Mob *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->IsPlayerCorpse();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_IsNPCCorpse); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_IsNPCCorpse)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::IsNPCCorpse(THIS)");
+	{
+		Mob *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->IsNPCCorpse();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_IsObject); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_IsObject)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::IsObject(THIS)");
+	{
+		Mob *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->IsObject();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_IsDoor); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_IsDoor)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::IsDoor(THIS)");
+	{
+		Mob *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->IsDoor();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_IsTrap); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_IsTrap)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::IsTrap(THIS)");
+	{
+		Mob *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->IsTrap();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_IsBeacon); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_IsBeacon)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::IsBeacon(THIS)");
+	{
+		Mob *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->IsBeacon();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_CastToClient); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_CastToClient)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::CastToClient(THIS)");
+	{
+		Mob *		THIS;
+		Client *		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->CastToClient();
+		ST(0) = sv_newmortal();
+		sv_setref_pv(ST(0), "Client", (void*)RETVAL);
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_CastToNPC); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_CastToNPC)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::CastToNPC(THIS)");
+	{
+		Mob *		THIS;
+		NPC *		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->CastToNPC();
+		ST(0) = sv_newmortal();
+		sv_setref_pv(ST(0), "NPC", (void*)RETVAL);
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_CastToMob); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_CastToMob)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::CastToMob(THIS)");
+	{
+		Mob *		THIS;
+		Mob *		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->CastToMob();
+		ST(0) = sv_newmortal();
+		sv_setref_pv(ST(0), "Mob", (void*)RETVAL);
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_CastToCorpse); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_CastToCorpse)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::CastToCorpse(THIS)");
+	{
+		Mob *		THIS;
+		Corpse *		RETVAL;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+
+		RETVAL = THIS->CastToCorpse();
+		ST(0) = sv_newmortal();
+		sv_setref_pv(ST(0), "Corpse", (void*)RETVAL);
+	}
+	XSRETURN(1);
+}
+
 XS(XS_Mob_GetID); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_GetID)
 {
@@ -107,30 +443,6 @@ XS(XS_Mob_Depop)
 		THIS->Depop(StartSpawnTimer);
 	}
 	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_CastToMob); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_CastToMob)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::CastToMob(THIS)");
-	{
-		Mob *		THIS;
-		Mob *		RETVAL;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-
-		RETVAL = THIS->CastToMob();
-		ST(0) = sv_newmortal();
-		sv_setref_pv(ST(0), "Mob", (void*)RETVAL);
-	}
-	XSRETURN(1);
 }
 
 XS(XS_Mob_SetSkill); /* prototype to pass -Wmissing-prototypes */
@@ -5155,10 +5467,23 @@ XS(boot_Mob)
 
 	XS_VERSION_BOOTCHECK ;
 
+		newXSproto(strcpy(buf, "IsClient"), XS_Mob_IsClient, file, "$");
+		newXSproto(strcpy(buf, "IsNPC"), XS_Mob_IsNPC, file, "$");
+		newXSproto(strcpy(buf, "IsMob"), XS_Mob_IsMob, file, "$");
+		newXSproto(strcpy(buf, "IsCorpse"), XS_Mob_IsCorpse, file, "$");
+		newXSproto(strcpy(buf, "IsPlayerCorpse"), XS_Mob_IsPlayerCorpse, file, "$");
+		newXSproto(strcpy(buf, "IsNPCCorpse"), XS_Mob_IsNPCCorpse, file, "$");
+		newXSproto(strcpy(buf, "IsObject"), XS_Mob_IsObject, file, "$");
+		newXSproto(strcpy(buf, "IsDoor"), XS_Mob_IsDoor, file, "$");
+		newXSproto(strcpy(buf, "IsTrap"), XS_Mob_IsTrap, file, "$");
+		newXSproto(strcpy(buf, "IsBeacon"), XS_Mob_IsBeacon, file, "$");
+		newXSproto(strcpy(buf, "CastToClient"), XS_Mob_CastToClient, file, "$");
+		newXSproto(strcpy(buf, "CastToNPC"), XS_Mob_CastToNPC, file, "$");
+		newXSproto(strcpy(buf, "CastToMob"), XS_Mob_CastToMob, file, "$");
+		newXSproto(strcpy(buf, "CastToCorpse"), XS_Mob_CastToCorpse, file, "$");
 		newXSproto(strcpy(buf, "GetID"), XS_Mob_GetID, file, "$");
 		newXSproto(strcpy(buf, "GetName"), XS_Mob_GetName, file, "$");
 		newXSproto(strcpy(buf, "Depop"), XS_Mob_Depop, file, "$;$");
-		newXSproto(strcpy(buf, "CastToMob"), XS_Mob_CastToMob, file, "$");
 		newXSproto(strcpy(buf, "SetSkill"), XS_Mob_SetSkill, file, "$$$");
 		newXSproto(strcpy(buf, "GetSkill"), XS_Mob_GetSkill, file, "$$");
 		newXSproto(strcpy(buf, "Gate"), XS_Mob_Gate, file, "$");

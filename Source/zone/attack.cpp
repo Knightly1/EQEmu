@@ -1703,7 +1703,7 @@ void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, b
 	        AddToHateList(other, damage, damage,true,false, iBuffTic);   // normal aggro for everything else
     }
     
-	if(SpecAttacks[IMMUNE_MAGIC]) {
+	if(SpecAttacks[IMMUNE_MEELE]) {
 		damage = -5;
 	}
 

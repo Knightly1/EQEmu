@@ -5596,7 +5596,10 @@ bool Database::MoveCharacterToZone(const char* charname, const char* zonename,in
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
 	int32	affected_rows = 0;
-	assert(strlen(zonename) != 0);
+	
+	if(zonename == NULL || strlen(zonename) == 0)
+		return(false);
+	
 	if (!RunQuery(query, MakeAnyLenString(&query, "UPDATE character_ SET zonename = '%s',zoneid=%i,x=-1, y=-1, z=-1 WHERE name='%s'", zonename,zoneid, charname), errbuf, 0,&affected_rows)) {
 		cerr << "Error in MoveCharacterToZone(name) query '" << query << "' " << errbuf << endl;
 		return false;

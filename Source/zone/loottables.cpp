@@ -704,6 +704,25 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 	}
 }
 
+	  
+void NPC::AddItem(const Item_Struct* item, int8 charges, uint8 slot) {
+	//slot isnt needed, its determined from the item.
+	AddLootDrop(item, itemlist, charges, true, true);
+}
+
+void NPC::AddItem(int32 itemid, int8 charges, uint8 slot) {
+	//slot isnt needed, its determined from the item.
+	const Item_Struct * i = database.GetItem(itemid);
+	if(i == NULL)
+		return;
+	AddLootDrop(i, itemlist, charges, true, true);
+}
+	  
+void NPC::AddLootTable() {
+	if (npctype_id != 0) { // check if it's a GM spawn
+	  database.AddLootTableToNPC(this,loottable_id, itemlist, &copper, &silver, &gold, &platinum);
+	}
+}
 
 
 /*#if 0

@@ -319,30 +319,6 @@ ServerLootItem_Struct* NPC::GetItem(int slot_id) {
 	return 0;
 }
 	  
-void NPC::AddItem(const Item_Struct* item, int8 charges, uint8 slot) {
-	//cout << "[adding to spawn] item:" << item->Name << " lore:" << item->lore << " id:" << item->ItemNumber << endl;
-	ServerLootItem_Struct* item_data = new ServerLootItem_Struct;
-	item_data->charges = charges;
-	item_data->equipSlot = slot;
-	item_data->item_id = item->ItemNumber;
-	(*itemlist).Append(item_data);
-}
-
-void NPC::AddItem(int32 itemid, int8 charges, uint8 slot) {
-	//cout << "[adding to spawn] item:" << item->Name << " lore:" << item->lore << " id:" << item->ItemNumber << endl;
-	ServerLootItem_Struct* item_data = new ServerLootItem_Struct;
-	item_data->charges = charges;
-	item_data->equipSlot = slot;
-	item_data->item_id = itemid;
-	(*itemlist).Append(item_data);
-}
-	  
-void NPC::AddLootTable() {
-	if (npctype_id != 0) { // check if it's a GM spawn
-	  database.AddLootTableToNPC(this,loottable_id, itemlist, &copper, &silver, &gold, &platinum);
-	}
-}
-	  
 void NPC::RemoveItem(uint16 item_id, int16 quantity, int16 slot) {
   LinkedListIterator<ServerLootItem_Struct*> iterator(*itemlist);
   iterator.Reset();
