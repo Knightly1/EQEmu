@@ -1028,7 +1028,7 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 	printf("Current location: %s  %0.2f, %0.2f, %0.2f\n",
 		database.GetZoneName(pp.zone_id), pp.x, pp.y, pp.z);
 	printf("Bind location: %s  %0.2f, %0.2f, %0.2f\n",
-		database.GetZoneName(pp.bind_zone_id), pp.bind_x, pp.bind_y, pp.bind_z);
+		database.GetZoneName(pp.bind_zone_id), pp.bind_x[0], pp.bind_y[0], pp.bind_z[0]);
 
 
 	// Starting Items inventory

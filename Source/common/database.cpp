@@ -6047,7 +6047,7 @@ int32 Database::CountAAs(){
     MYSQL_ROW row;
 	int count=0;
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(skill_id) from altadv_vars"), errbuf, &result)) {
-		if(row = mysql_fetch_row(result))
+		if((row = mysql_fetch_row(result))!=NULL)
 			count = atoi(row[0]);
 	}
 	safe_delete_array(query);
@@ -6061,7 +6061,7 @@ int32 Database::CountAALevels(){
     MYSQL_ROW row;
 	int count=0;
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(id) from aa_levels"), errbuf, &result)) {
-		if(row = mysql_fetch_row(result))
+		if((row = mysql_fetch_row(result))!=NULL)
 			count = atoi(row[0]);
 	}
 	safe_delete_array(query);
@@ -6080,7 +6080,7 @@ void Database::LoadAAs(AA_List* load){
     MYSQL_ROW row;
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT skill_id from altadv_vars order by skill_id"), errbuf, &result)) {
 		int skill=0,ndx=0;
-		while(row = mysql_fetch_row(result)) {
+		while((row = mysql_fetch_row(result))!=NULL) {
 			skill=atoi(row[0]);
 			load->aa[ndx]=GetAASkillVars(skill);
 			load->aa[ndx]->seq=ndx+1;
@@ -6099,7 +6099,7 @@ void Database::RetrieveAALevels(SendAA_Struct* aa_struct){
     MYSQL_ROW row;
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT ability, increase_amt, level from aa_levels where aa_id=%i order by level asc", aa_struct->id), errbuf, &result)) {
 		int ndx=0;
-		while(row = mysql_fetch_row(result)) {
+		while((row = mysql_fetch_row(result))!=NULL) {
 			aa_struct->abilities[ndx].skill_id=atoi(row[0]);
 			aa_struct->abilities[ndx].increase_amt=atoi(row[1]);
 			aa_struct->abilities[ndx].last_level=atoi(row[2]);

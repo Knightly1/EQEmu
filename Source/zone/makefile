@@ -10,7 +10,7 @@ SF=../common/EQNetwork.o \
    ../common/dbasync.o zonedbasync.o parser.o beacon.o\
    ../common/EMuShareMem.o ../common/EQEMuError.o ../common/ptimer.o \
    .obj/debug.o .obj/database.o .obj/Item.o .obj/misc.o \
-   doors.o command.o
+   doors.o command.o AA.o
 
 
 CC=gcc

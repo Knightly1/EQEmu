@@ -351,7 +351,7 @@ bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *r
 	step.z *= factor;
 	
 	NodeRef cnode, lnode;
-	lnode = NULL;
+	lnode = NODE_NONE;
 	//while we are not past end
 	//always do this once, even if start == end.
 	do {
@@ -386,7 +386,7 @@ bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *r
 
 bool Map::LocWithinNode( NodeRef node_r, float x, float y ) {
 	if( node_r == NODE_NONE || node_r >= m_Nodes) {
-		return(NULL);
+		return(false);
 	}
 	PNODE _node = &mNodes[node_r];
 	//this function exists so nobody outside of MAP needs to know
@@ -425,7 +425,7 @@ bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *resu
 
 float Map::FindBestZ( NodeRef node_r, VERTEX p1, VERTEX *result, FACE **on) {
 	if( node_r == NODE_NONE || node_r >= m_Nodes) {
-		return(NULL);
+		return(0.0f);
 	}
 	PNODE _node = &mNodes[node_r];
 	if(!(_node->flags & nodeFinal)) {
