@@ -4720,7 +4720,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						Message(13, "You do not have enough money to do that split.");
 						break;
 					}
-					cgroup->SplitMoney(split->copper, split->silver, split->gold, split->platinum);
+					cgroup->SplitMoney(split->copper, split->silver, split->gold, split->platinum, this);
 					
 					break;
 				}

@@ -91,7 +91,7 @@ Group::Group(Mob* leader)
 
 //Cofruben:Split money used in OP_Split.
 //Rewritten by Father Nitwit
-void Group::SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinum) {
+void Group::SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinum, Client *splitter) {
 	//avoid unneeded work
 	if(copper == 0 && silver == 0 && gold == 0 && platinum == 0)
 		return;
@@ -115,17 +115,17 @@ void Group::SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinu
   uint32 mod;
   //try to handle round off error a little better
   if(membercount > 1) {
-	 mod = platinum % membercount;
+	mod = platinum % membercount;
   	if((mod) > 0) {
   		platinum -= mod;
   		gold += 10 * mod;
   	}
-	 mod = gold % membercount;
+	mod = gold % membercount;
   	if((mod) > 0) {
   		gold -= mod;
   		silver += 10 * mod;
   	}
-	 mod = silver % membercount;
+	mod = silver % membercount;
   	if((mod) > 0) {
   		silver -= mod;
   		copper += 10 * mod;
@@ -134,15 +134,13 @@ void Group::SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinu
   
   //calculate the splits
   //We can still round off copper pieces, but I dont care
+  uint32 sc;
   uint32 cpsplit = copper / membercount;
+  sc = copper   % membercount;
   uint32 spsplit = silver / membercount;
   uint32 gpsplit = gold / membercount;
   uint32 ppsplit = platinum / membercount;
-  
-  //make sure they at least get something, since they started with something...
-  if(cpsplit == 0 && spsplit == 0 && gpsplit == 0 && ppsplit == 0)
-  	cpsplit = 1;
-  
+
   char buf[128];
   buf[63] = '\0';
   string msg = "You receive";
@@ -170,6 +168,8 @@ void Group::SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinu
   if(cpsplit > 0) {
 	 if(one)
 	 	msg += ",";
+	 //this message is not 100% accurate for the splitter
+	 //if they are receiving any roundoff
 	 snprintf(buf, 63, " %u copper", cpsplit);
 	 msg += buf;
 	 one = true;
@@ -185,6 +185,8 @@ void Group::SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinu
 		  mus->gold = c->GetPP().gold;
 		  mus->silver = c->GetPP().silver;
 		  mus->copper = c->GetPP().copper;
+		  if(c == splitter)
+		  	mus->copper += sc;
 		  c->QueuePacket(outapp);
 		  
 		  c->Message(2, msg.c_str());

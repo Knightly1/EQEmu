@@ -1,5 +1,8 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==11/04/2004
+FatherNitwit: Fixed exploit with split that kathgar found.
+
 ==11/01/2004
 LethalEncounter: Inventory items on zone in are now sent in one packet like live instead of individual packets.  This will save on bandwidth and processing time.
 Cofruben: Added support for /makeleader command.

@@ -54,7 +54,7 @@ public:
 	void	SplitExp(uint32 exp, Mob* other);
 	void	GroupMessage(Mob* sender,const char* message);
 	int32	GetTotalGroupDamage(Mob* other);
-	void	SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinum);
+	void	SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinum, Client *splitter = NULL);
 	void	SetLeader(Mob* newleader){ leader=newleader; };
 	Mob*	GetLeader(){ return leader; };
 	char*	GetLeaderName(){ return membername[0]; };

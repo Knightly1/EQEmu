@@ -718,13 +718,13 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 				d->gold			= 0;
 				d->platinum		= 0;
 				Group *cgroup = client->GetGroup();
-				cgroup->SplitMoney(this->GetCopper(),this->GetSilver(),this->GetGold(),this->GetPlatinum());
+				cgroup->SplitMoney(GetCopper(), GetSilver(), GetGold(), GetPlatinum(), this);
 			} else {
 				d->copper		= this->GetCopper();
 				d->silver		= this->GetSilver();
 				d->gold			= this->GetGold();
 				d->platinum		= this->GetPlatinum();
-				client->AddMoneyToPP(this->GetCopper(),this->GetSilver(),this->GetGold(),this->GetPlatinum(),false);
+				client->AddMoneyToPP(GetCopper(),GetSilver(),GetGold(),GetPlatinum(),false);
 			}
 			RemoveCash();
 		}
