@@ -1,5 +1,9 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+
+==11/08/2004
+FatherNitwit: Fixed taunt crash.
+
 ==11/07/2004
 LethalEncounter: Added in three variables per feature request.
 

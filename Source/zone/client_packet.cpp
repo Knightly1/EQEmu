@@ -2519,7 +2519,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					}
 					p_timers.Start(pTimerTaunt, TauntReuseTime-1);
 					
-					if(!GetTarget()->IsNPC())
+					if(GetTarget() == NULL || !GetTarget()->IsNPC())
 						break;
 					
 					Taunt(GetTarget()->CastToNPC(), false);
