@@ -183,12 +183,12 @@ bool MMF::Open(const char* iName, int32 iSize) {
 	if (!pMMFMutex){
 		assert(false);
 	}
-	int share_id = shmget(share_key, tmpSize, IPC_CREAT|IPC_EXCL|IPC_NOWAIT|SHM_R|SHM_W);
+	int share_id = shmget(share_key, tmpSize, IPC_CREAT|IPC_EXCL|SHM_R|SHM_W);
 	if ( share_id <= 0) {
-		share_id = shmget(share_key, tmpSize, IPC_NOWAIT|0400);
+		share_id = shmget(share_key, tmpSize, 0400);
 		if (share_id <= 0) {
 		    shmid_ds mem_size;
-		    share_id = shmget(share_key, 0, IPC_NOWAIT|0400);
+		    share_id = shmget(share_key, 0, 0400);
 		    lpvMem = shmat(share_id, NULL,SHM_RDONLY);
 		    if( (shmctl(share_id, IPC_STAT, &mem_size)) == 0){
 		          if (mem_size.shm_segsz != tmpSize){
@@ -198,7 +198,7 @@ bool MMF::Open(const char* iName, int32 iSize) {
                                     cout<<"[Warning] Attempting resize"<<endl;
                                     shmctl(share_id, IPC_RMID, 0);
                                     shmdt(lpvMem);
-                                    if ((share_id = shmget(share_key, tmpSize, IPC_CREAT|IPC_EXCL|IPC_NOWAIT|SHM_R|SHM_W)) <= 0) {
+                                    if ((share_id = shmget(share_key, tmpSize, IPC_CREAT|IPC_EXCL|SHM_R|SHM_W)) <= 0) {
                                     	// Failed proceed on malloc
                                     }
                                     else{
