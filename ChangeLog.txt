@@ -6,6 +6,9 @@ FatherNitwit: Fixed Disciplines and Abilities (lay hands & harm touch)
 FatherNitwit: Added new server variable: DisableNoDrop (set to 1 takes nodrop off items when loaded)
 FatherNitwit: Fixed NPC buffing through walls
 FatherNitwit: Fixed symbol spell forumulas
+LethalEncounter: Fixed equip bug when using two handed weapons.
+LethalEncounter: Fixed resurrect bug that let you regain xp more than once.
+LethalEncounter: Fixed bug that was making players corpses disappear on death when they shouldnt have.
 
 ==10/18/2004
 LethalEncounter: Fixed pet only spells.

@@ -289,6 +289,10 @@ bool ZoneServer::Process() {
 			zoneserver_list.SendEmoteMessageRaw(sem->to, sem->guilddbid, sem->minstatus, sem->type, sem->message);
 			break;
 		}
+		case ServerOP_RezzPlayerAccept: {
+			zoneserver_list.SendPacket(pack);
+			break;
+		}
 		case ServerOP_RezzPlayer: {
 
 		    RezzPlayer_Struct* sRezz = (RezzPlayer_Struct*) pack->pBuffer;

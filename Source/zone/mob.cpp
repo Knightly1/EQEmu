@@ -354,7 +354,10 @@ Mob::~Mob()
 	}
 	APPLAYER app;
 	CreateDespawnPacket(&app);
-	entity_list.QueueClients(this, &app, true);
+	Corpse* corpse = entity_list.GetCorpseByID(GetID());
+	if(!corpse || (corpse && !corpse->IsPlayerCorpse()))
+		entity_list.QueueClients(this, &app, true);
+	
 	entity_list.RemoveFromTargets(this);
 	
 	safe_delete(trade);

@@ -59,7 +59,7 @@ void Corpse::SendLootReqErrorPacket(Client* client, int8 response) {
 	safe_delete(outapp);
 }
 
-Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname, uchar* in_data, int32 in_datasize, float in_x, float in_y, float in_z, float in_heading, char* timeofdeath) {
+Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname, uchar* in_data, int32 in_datasize, float in_x, float in_y, float in_z, float in_heading, char* timeofdeath, bool rezzed) {
 	if (in_datasize < sizeof(DBPlayerCorpse_Struct)) {
 		cout << "Corpse::LoadFromDBData: Corrupt data: in_datasize < sizeof(DBPlayerCorpse_Struct)" << endl;
 		return 0;
@@ -94,7 +94,7 @@ Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname
 	pc->hairstyle = dbpc->hairstyle;
 	pc->luclinface = dbpc->face;
 	pc->beard = dbpc->beard;
-
+	pc->Rezzed(rezzed);
 	if (pc->IsEmpty()) {
 		safe_delete(pc);
 		return 0;
@@ -274,7 +274,7 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 		corpse_decay_timer.Disable();
 		corpse_delay_timer.Disable();
 	}
-
+	Rezzed(false);
 	Save();
 	client->Save();
 }
@@ -409,7 +409,7 @@ bool Corpse::Save() {
 	if (dbid == 0)
 		dbid = database.CreatePlayerCorpse(charid, orgname, zone->GetZoneID(), (uchar*) dbpc, tmpsize, x_pos, y_pos, z_pos, heading);
 	else
-		dbid = database.UpdatePlayerCorpse(dbid, charid, orgname, zone->GetZoneID(), (uchar*) dbpc, tmpsize, x_pos, y_pos, z_pos, heading);
+		dbid = database.UpdatePlayerCorpse(dbid, charid, orgname, zone->GetZoneID(), (uchar*) dbpc, tmpsize, x_pos, y_pos, z_pos, heading,Rezzed());
 	safe_delete(dbpc);
 	if (dbid == 0) {
 		cout << "Error: Failed to save player corpse '" << this->GetName() << "'" << endl;
@@ -908,11 +908,11 @@ void Corpse::EndLoot(Client* client, const APPLAYER* app) {
 	safe_delete(outapp);
 	
 	client->Save();
-	this->Save();
 	this->BeingLootedBy = 0xFFFFFFFF;
-	if (this->IsEmpty()) {
+	if (this->IsEmpty())
 		Delete();
-	}
+	else
+		Save();
 }
 
 void Corpse::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
@@ -976,7 +976,7 @@ void Corpse::CompleteRezz(){
 	this->Save();
 }
 
-int32 Database::UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading) {
+int32 Database::UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading, bool rezzed) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char* query = new char[256+(datasize*2)];
 	char* end = query;
@@ -999,7 +999,12 @@ int32 Database::UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charnam
         cerr << "Error2 in UpdatePlayerCorpse query: affected_rows = 0" << endl;
 		return 0;
 	}
-	
+	if(rezzed){
+		if (!RunQuery(query, MakeAnyLenString(&query, "update player_corpses set rezzed = 1 WHERE id=%d",dbid), errbuf)) {
+			safe_delete_array(query);
+			cerr << "Error in UpdatePlayerCorpse/Rezzed query: " << errbuf << endl;
+		}
+	}
 	return dbid;
 }
 
@@ -1047,17 +1052,18 @@ bool Database::LoadPlayerCorpses(int32 iZoneID) {
 	//	int char_num = 0;
 	unsigned long* lengths;
 	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, charid, charname, x, y, z, heading, data, timeofdeath FROM player_corpses WHERE zoneid='%u'", iZoneID), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, charid, charname, x, y, z, heading, data, timeofdeath, rezzed FROM player_corpses WHERE zoneid='%u'", iZoneID), errbuf, &result)) {
 		//                                               0   1       2         3  4  5  6        7     8
 		safe_delete_array(query);
 		while ((row = mysql_fetch_row(result))) {
 			lengths = mysql_fetch_lengths(result);
-			entity_list.AddCorpse(Corpse::LoadFromDBData(atoi(row[0]), atoi(row[1]), row[2], (uchar*) row[7], lengths[7], atof(row[3]), atoi(row[4]), atoi(row[5]), atoi(row[6]), row[8]));
+			entity_list.AddCorpse(Corpse::LoadFromDBData(atoi(row[0]), atoi(row[1]), row[2], (uchar*) row[7], lengths[7], atof(row[3]), atoi(row[4]), atoi(row[5]), atoi(row[6]), row[8],atoi(row[9])==1));
 		}
 		mysql_free_result(result);
 	}
 	else {
 		cerr << "Error in LoadPlayerCorpses query '" << query << "' " << errbuf << endl;
+		cerr << "Note that if your missing the 'rezzed' field you can add it with:\nALTER TABLE `player_corpses` ADD `rezzed` TINYINT UNSIGNED DEFAULT \"0\";\n";
 		safe_delete_array(query);
 		return false;
 	}

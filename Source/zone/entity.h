@@ -116,6 +116,7 @@ public:
 	Group*  GetGroupByLeaderName(char* leader);
 	Corpse*	GetCorpseByOwner(Client* client);
 	Corpse* GetCorpseByID(int16 id);
+	Corpse* GetCorpseByName(char* name);
 	void ClearClientPetitionQueue();
     bool CanAddHateForMob(Mob *p);
 	void	SendGuildJoin(GuildJoin_Struct* gj);

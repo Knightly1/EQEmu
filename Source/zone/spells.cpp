@@ -2093,6 +2093,11 @@ void Corpse::CastRezz(int16 spellid, Mob* Caster){
 		return;
 	}
 */
+	if(Rezzed()){
+		if(Caster && Caster->IsClient())
+			Caster->Message(13,"This character has already been resurrected.");
+		return;
+	}
 
 	APPLAYER* outapp = new APPLAYER(OP_RezzRequest, sizeof(Resurrect_Struct));
 	Resurrect_Struct* rezz = (Resurrect_Struct*) outapp->pBuffer;

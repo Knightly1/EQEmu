@@ -846,6 +846,15 @@ void WorldServer::Process() {
 			else if (sus->status == 1) petition_list.ReadDatabase(); // Until I fix this to be better....
 			break;
 		}
+		case ServerOP_RezzPlayerAccept:{
+			SimpleName_Struct* name = (SimpleName_Struct*)pack->pBuffer;
+			Corpse* corpse = entity_list.GetCorpseByName(name->name);
+			if(corpse){
+				corpse->Rezzed(true);
+				corpse->Save();
+			}
+			break;
+		};
 		case ServerOP_RezzPlayer: {
 			RezzPlayer_Struct* srs = (RezzPlayer_Struct*) pack->pBuffer;
 			if (srs->rezzopcode == OP_RezzRequest){
@@ -865,7 +874,13 @@ void WorldServer::Process() {
                       LogFile->write(EQEMuLog::Debug, "Sending gm cast rez");
                         client->AddEXP(srs->exp);
                     }
-                    ServerPacket* pack = new ServerPacket;
+					ServerPacket* pack = new ServerPacket(ServerOP_RezzPlayerAccept,sizeof(SimpleName_Struct));
+					SimpleName_Struct* corpse = (SimpleName_Struct*)pack->pBuffer;
+					strcpy(corpse->name,srs->rez.corpse_name);
+					worldserver.SendPacket(pack);
+					safe_delete(pack);
+
+                    pack = new ServerPacket;
                     pack->opcode = ServerOP_ZonePlayer;
                     pack->size = sizeof(ServerZonePlayer_Struct);
                     pack->pBuffer = new uchar[pack->size];

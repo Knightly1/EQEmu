@@ -31,7 +31,7 @@ class Corpse : public Mob
 public:
 	static void Corpse::SendEndLootErrorPacket(Client* client);
 	static void Corpse::SendLootReqErrorPacket(Client* client, int8 response = 2);
-	static Corpse* Corpse::LoadFromDBData(int32 in_corpseid, int32 in_charid, char* in_charname, uchar* in_data, int32 in_datasize, float in_x, float in_y, float in_z, float in_heading, char* timeofdeath);
+	static Corpse* Corpse::LoadFromDBData(int32 in_corpseid, int32 in_charid, char* in_charname, uchar* in_data, int32 in_datasize, float in_x, float in_y, float in_z, float in_heading, char* timeofdeath, bool rezzed = false);
 
 	Corpse::Corpse(NPC* in_npc, ItemList** in_itemlist, int32 in_npctypeid, NPCType** in_npctypedata, int32 in_decaytime = 600000);
 	Corpse::Corpse(Client* client, sint32 in_rezexp);

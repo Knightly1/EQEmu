@@ -235,7 +235,7 @@ public:
 	int16	GetFreeGrid(int16 zoneid);
 	sint8	LoadZoneState(const char* zonename, LinkedList<Spawn2*>& spawn2_list);
 	int32	CreatePlayerCorpse(int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading);
-	int32	UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading);
+	int32	UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading, bool rezzed = false);
 	sint32	DeleteStalePlayerCorpses();
 	sint32	DeleteStalePlayerBackups();
 	void	DeleteGrid(int32 sg2, int16 grid_num, bool grid_too,int16 zoneid);

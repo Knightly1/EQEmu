@@ -1179,7 +1179,18 @@ Corpse* EntityList::GetCorpseByID(int16 id){
 	}
 	return 0;
 }
-
+Corpse* EntityList::GetCorpseByName(char* name){
+	LinkedListIterator<Corpse*> iterator(corpse_list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		if (strcmp(iterator.GetData()->GetName(),name)==0) {
+			return iterator.GetData();
+		}
+		iterator.Advance();
+	}
+	return 0;
+}
 Group* EntityList::GetGroupByMob(Mob* mob) 
 { 
 	LinkedListIterator<Group*> iterator(group_list); 
@@ -1929,7 +1940,7 @@ void EntityList::SendPositionUpdates(Client* client, int32 cLastUpdate, float ra
 					mob->MakeSpawnUpdate(ppu);
 			}
 		}
-		if(mob && mob->IsClient())
+		if(mob && mob->IsClient() && mob->GetID()>0)
 			client->QueuePacket(outapp, false, Client::CLIENT_CONNECTED);
 		safe_delete(outapp);
 		outapp = 0;	

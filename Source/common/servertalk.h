@@ -62,7 +62,7 @@
 #define ServerOP_GroupIDReq			0x0030
 #define ServerOP_GroupIDReply		0x0031
 #define ServerOP_GroupLeave			0x0032	// for disbanding out of zone folks
-
+#define ServerOP_RezzPlayerAccept	0x0033
 #define ServerOP_LSInfo				0x1000
 #define ServerOP_LSStatus			0x1001
 #define ServerOP_LSClientAuth		0x1002
@@ -488,7 +488,9 @@ struct ServerGroupIDReply_Struct {
 struct ServerGroupLeave_Struct {
 	char member_name[64];	//kick this member from their group
 };
-
+struct SimpleName_Struct{
+	char name[64];
+};
 #pragma pack()
 
 #endif

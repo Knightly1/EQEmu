@@ -323,7 +323,12 @@ bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_curs
 						}
 					}
 				}
-
+				if( i== SLOT_SECONDARY && m_inv[SLOT_PRIMARY]) // check to see if primary slot is a two hander
+				{
+					int8 use = m_inv[SLOT_PRIMARY]->GetItem()->Common.ItemUse;
+					if(use == ItemUse2HS || use == ItemUse2HB || use == ItemUse2HPierce)
+						continue;
+				}
 				if
 				(
 					i == SLOT_SECONDARY &&
