@@ -1126,12 +1126,6 @@ string ItemInst::Serialize(sint16 slot_id) const
 	
 	char ch[250] = {0}; // Estimate on largest possible
 	
-	uint32 mslot=0;
-	if (m_merchantslot!=0xFFFFFFFF && m_merchantslot!=0)// && merchant_slot!=0xFFFFFFFFCCCCCCCC)
-		mslot = m_merchantslot;
-	else
-		mslot = m_item->Unknown004;
-	
 	// Format pipe-delimited string for packet
 	int charges=m_charges;
 	if(charges==255)
@@ -1147,8 +1141,8 @@ string ItemInst::Serialize(sint16 slot_id) const
 		m_item->Unknown001,
 		slot_id,
 		m_price,
-		mslot,
-		m_item->Unknown005,
+		m_item->Unknown004,
+		(m_merchantslot==0) ? m_item->Unknown005 : m_merchantslot,
 		m_item->Unknown006,
 		spellcharges,
 		m_item->Attuneable,

@@ -1,5 +1,8 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==11/20/2004
+Doodman: Fixed merchant selling bug on merchant slot
+
 ==11/18/2004
 Doodman: Fixed the initialization of augs on NPC loot that was causing a zone crash when looting NPC's
 

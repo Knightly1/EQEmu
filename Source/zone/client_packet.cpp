@@ -3067,7 +3067,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						LogFile->write(EQEMuLog::Debug, "%s, purchase item..", GetName());
 						DumpPacket(app);
 #endif
-					
+
 					int merchantid;
 					bool tmpmer_used = false;
 					Mob* tmp = entity_list.GetMob(mp->npcid);
@@ -3288,7 +3288,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					if((freeslot = zone->SaveTempItem(vendor->CastToNPC()->MerchantType, vendor->GetNPCTypeID(),itemid,charges,true)) > 0){
 						ItemInst* inst2 = inst->Clone();
 						inst2->SetPrice(item->Cost*127/100);
-						//inst2->SetUnknown5(freeslot+84);
+						inst2->SetMerchantSlot(freeslot+84);
 						if(inst2->IsStackable())
 							inst2->SetCharges(mp->quantity);
 						SendItemPacket(freeslot-1, inst2, ItemPacketMerchant);
