@@ -682,6 +682,11 @@ struct AA_Array
 	int32 AA;
 	int32 value;	
 };
+
+struct Disciplines_Struct {
+	uint32 disciplines[50];
+};
+
 /*
 ** Player Profile
 **
@@ -818,7 +823,9 @@ struct PlayerProfile_Struct
 /*5220*/	uint32				unknown4380[20];
 /*5300*/	uint32				unknown4460[166];
 /*5964*/	uint32				unknown5760; //0xFF FF FF FF
-/*5968*/	uint32				unknown5764[1349]; //added in last patch, crazy bastards
+/*5968*/	uint32				unknown5968[16];
+/*6032*/	Disciplines_Struct	disciplines;			//fathernitwit: 10-06-04
+/*6232*/	uint32				unknown5764[1283]; //added in last patch, crazy bastards
 /*11364*/	uint32				aapoints_spent;
 /*11368*/	uint32				unknown11368;
 /*11372*/	uint32				aapoints;
