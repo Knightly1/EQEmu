@@ -190,6 +190,7 @@
 				ObjectFile=".\../Build/Zone/Debug/"
 				ProgramDataBaseFileName=".\../Build/Zone/Debug/"
 				BrowseInformation="1"
+				WarningLevel="1"
 				SuppressStartupBanner="TRUE"
 				DebugInformationFormat="4"/>
 			<Tool
@@ -425,7 +426,13 @@
 				RelativePath=".\client.cpp">
 			</File>
 			<File
+				RelativePath="client_logs.cpp">
+			</File>
+			<File
 				RelativePath="client_mods.cpp">
+			</File>
+			<File
+				RelativePath="client_packet.cpp">
 			</File>
 			<File
 				RelativePath=".\client_process.cpp">
@@ -518,10 +525,34 @@
 				RelativePath=".\parser.cpp">
 			</File>
 			<File
+				RelativePath="perl_PlayerCorpse.cpp">
+			</File>
+			<File
+				RelativePath="perl_client.cpp">
+			</File>
+			<File
+				RelativePath="perl_entity.cpp">
+			</File>
+			<File
+				RelativePath="perl_groups.cpp">
+			</File>
+			<File
+				RelativePath="perl_mob.cpp">
+			</File>
+			<File
+				RelativePath="perl_npc.cpp">
+			</File>
+			<File
+				RelativePath="perlparser.cpp">
+			</File>
+			<File
 				RelativePath=".\petitions.cpp">
 			</File>
 			<File
 				RelativePath="pets.cpp">
+			</File>
+			<File
+				RelativePath="questmgr.cpp">
 			</File>
 			<File
 				RelativePath=".\spawn2.cpp">
@@ -579,10 +610,16 @@
 				RelativePath=".\PlayerCorpse.h">
 			</File>
 			<File
+				RelativePath="StringIDs.h">
+			</File>
+			<File
 				RelativePath="beacon.h">
 			</File>
 			<File
 				RelativePath=".\client.h">
+			</File>
+			<File
+				RelativePath="client_logs.h">
 			</File>
 			<File
 				RelativePath=".\command.h">
@@ -633,7 +670,13 @@
 				RelativePath=".\parser.h">
 			</File>
 			<File
+				RelativePath="perlparser.h">
+			</File>
+			<File
 				RelativePath=".\petitions.h">
+			</File>
+			<File
+				RelativePath="questmgr.h">
 			</File>
 			<File
 				RelativePath=".\skills.h">

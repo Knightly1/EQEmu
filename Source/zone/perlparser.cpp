@@ -16,14 +16,15 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#ifdef EMBPERL
+#ifdef EMBPERL_XS
+
 #include "features.h"
 #include "perlparser.h"
 #include "questmgr.h"
 #include "embxs.h"
 #include "entity.h"
 
-#ifdef EMBPERL
-#ifdef EMBPERL_XS
 /*
 
 Some useful perl API info:

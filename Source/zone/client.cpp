@@ -907,7 +907,9 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 }
 
 #ifndef GUILDWARS
-#warning The LDON stuff has moved in the player profile and needs to be rediscovered, I broke Client::GetLDoNPoints because of this
+#ifndef WIN32
+	#warning The LDON stuff has moved in the player profile and needs to be rediscovered, I broke Client::GetLDoNPoints because of this
+#endif
 
 bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
 {

@@ -420,23 +420,48 @@ void QuestManager::givecash(int copper, int silver, int gold, int platinum) {
 	initiator->AddMoneyToPP(d->copper, d->silver, d->gold, d->platinum,true); 
 	initiator->QueuePacket(outapp);
 	string tmp;
-	if (d->platinum>0) tmp = "You receive "+(string)itoa(d->platinum)+" plat"; 
-	if (d->gold>0)
-		if (tmp.length()==0)
-			tmp = "You receive "+(string)itoa(d->gold)+" gold";
-		else
-			tmp = tmp + ","+(string)itoa(d->gold)+" gold";
-	if(d->silver>0) 
-		if (tmp.length()==0)
-			tmp = "You receive "+(string)itoa(d->silver)+" silver";
-		else
-			tmp = tmp + ","+(string)itoa(d->silver)+" silver";
-	if(d->copper>0)
-		if (tmp.length()==0)
-			tmp = "You receive "+(string)itoa(d->copper)+" copper";
-		else
-			tmp = tmp + ","+(string)itoa(d->copper)+" copper";
-	tmp = tmp + " pieces.";
+	if (d->platinum>0){
+		tmp = "You receive ";
+		tmp += d->platinum;
+		tmp += " plat"; 
+	}
+	if (d->gold>0){
+		if (tmp.length()==0){
+			tmp = "You receive ";
+			tmp += d->gold;
+			tmp += " gold";
+		}
+		else{
+			tmp += ",";
+			tmp += d->gold;
+			tmp += " gold";
+		}
+	}
+	if(d->silver>0){
+		if (tmp.length()==0){
+			tmp = "You receive ";
+			tmp += d->silver;
+			tmp += " silver";
+		}
+		else{
+			tmp += ",";
+			tmp += d->silver;
+			tmp += " silver";
+		}
+	}
+	if(d->copper>0){
+		if (tmp.length()==0){
+			tmp = "You receive ";
+			tmp += d->copper;
+			tmp += " copper";
+		}
+		else{
+			tmp += ",";
+			tmp += d->copper;
+			tmp += " copper";
+		}
+	}
+	tmp += " pieces.";
 	if (initiator) 
 		initiator->Message(MT_OOC,tmp.c_str());
 	}
