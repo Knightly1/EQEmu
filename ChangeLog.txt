@@ -1,6 +1,9 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 ==09/26/2004
+LethalEncounter: Fixed AAs, you can now buy them correctly.  Big thanks to Xabob for PacketCollecting the information for me!!
+
+==09/26/2004
 LethalEncounter: Fixed the displaying of AAs, moving them into two tables. Be SURE to source aa.sql for these updates.
 		 (Will fix the buying aspect soon)
 
