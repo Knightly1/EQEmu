@@ -536,7 +536,7 @@ bool Client::Process() {
 #ifdef REVERSE_AGGRO
 	//At this point, we are still connected, everything important has taken
 	//place, now check to see if anybody wants to aggro us.
-	if(scanarea_timer.Check()) {
+	if(ret && scanarea_timer.Check()) {
 		entity_list.CheckClientAggro(this);
 	}
 #endif	

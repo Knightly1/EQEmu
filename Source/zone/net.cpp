@@ -137,6 +137,7 @@ Database database;
 #endif
 
 void Shutdown();
+extern void MapOpcodes();
 
 //bool ZoneBootup(int32 iZoneID, bool iStaticZone = false);
 char *strsep(char **stringp, const char *delim);
@@ -196,6 +197,8 @@ int main(int argc, char** argv) {
 #endif
 	net.SaveInfo(address, port, worldaddress,filename);
 	
+	LogFile->write(EQEMuLog::Status, "Mapping Opcodes");
+	MapOpcodes();
 	LogFile->write(EQEMuLog::Status, "Loading Variables");
 	database.LoadVariables();
 	LogFile->write(EQEMuLog::Status, "Loading zone names");

@@ -415,6 +415,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 				caster->SetPet(this);
 				SetOwnerID(caster->GetID());
 				SetPetOrder(SPO_Follow);
+				
+				//Need to handle the case where the charmed mob has a pet...
+				//SetPet(NULL);
                 
 				// tell caster it has a pet
 				if(caster->IsClient())

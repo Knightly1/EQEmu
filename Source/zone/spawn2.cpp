@@ -196,6 +196,36 @@ Spawn2* Database::LoadSpawn2(LinkedList<Spawn2*> &spawn2_list, int32 spawn2id, i
 	return 0;
 }
 
+bool Database::CreateSpawn2(Client *c, int32 spawngroup, const char* zone, float heading, float x, float y, float z, int32 respawn, int32 variance)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+
+    char *query = 0;
+	int32 affected_rows = 0;
+	
+	//	if(GetInverseXY()==1) {
+	//		float temp=x;
+	//		x=y;
+	//		y=temp;
+	//	}
+	if (RunQuery(query, MakeAnyLenString(&query, "INSERT INTO spawn2 (spawngroupID,zone,x,y,z,heading,respawntime,variance) Values (%i, '%s', %f, %f, %f, %f, %i, %i)", spawngroup, zone, x, y, z, heading, respawn, variance), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+		if (affected_rows == 1) {
+			if(c) c->LogSQL(query);
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	else {
+		LogFile->write(EQEMuLog::Error, "Error in CreateSpawn2 query '%s': %s", query, errbuf);
+		safe_delete_array(query);
+		return false;
+	}
+	
+	return false;
+}
 
 int32 Zone::CountSpawn2() {
 	LinkedListIterator<Spawn2*> iterator(spawn2_list);

@@ -2208,7 +2208,7 @@ void command_dbspawn2(Client *c, const Seperator *sep)
 
 	if (sep->IsNumber(1) && sep->IsNumber(2) && sep->IsNumber(3)) {
 		LogFile->write(EQEMuLog::Normal,"Spawning database spawn");
-		database.CreateSpawn2(atoi(sep->arg[1]), zone->GetShortName(), c->GetHeading(), c->GetX(), c->GetY(), c->GetZ(), atoi(sep->arg[2]), atoi(sep->arg[3]));
+		database.CreateSpawn2(c, atoi(sep->arg[1]), zone->GetShortName(), c->GetHeading(), c->GetX(), c->GetY(), c->GetZ(), atoi(sep->arg[2]), atoi(sep->arg[3]));
 	}
 	else {
 		c->Message(0, "Usage: #dbspawn2 spawngroup respawn variance");
@@ -2274,9 +2274,9 @@ void command_setpass(Client *c, const Seperator *sep)
 void command_grid(Client *c, const Seperator *sep)
 {
 	if (strcasecmp("add",sep->arg[1]) == 0)
-		database.ModifyGrid(false,atoi(sep->arg[2]),atoi(sep->arg[3]), atoi(sep->arg[4]),zone->GetZoneID());
+		database.ModifyGrid(c, false,atoi(sep->arg[2]),atoi(sep->arg[3]), atoi(sep->arg[4]),zone->GetZoneID());
 	else if (strcasecmp("delete",sep->arg[1]) == 0)
-		database.ModifyGrid(true,atoi(sep->arg[2]),0,0,zone->GetZoneID());
+		database.ModifyGrid(c, true,atoi(sep->arg[2]),0,0,zone->GetZoneID());
 	else
 		c->Message(0,"Usage: #grid add/delete grid_num wandertype pausetype");
 }
@@ -2284,9 +2284,9 @@ void command_grid(Client *c, const Seperator *sep)
 void command_wp(Client *c, const Seperator *sep)
 {
 	if (strcasecmp("add",sep->arg[1]) == 0)
-		database.AddWP(atoi(sep->arg[2]),atoi(sep->arg[4]), c->GetX(), c->GetY(), c->GetZ(), atoi(sep->arg[3]),zone->GetZoneID());
+		database.AddWP(c, atoi(sep->arg[2]),atoi(sep->arg[4]), c->GetX(), c->GetY(), c->GetZ(), atoi(sep->arg[3]),zone->GetZoneID());
 	else if (strcasecmp("delete",sep->arg[1]) == 0)
-		database.DeleteWaypoint(atoi(sep->arg[2]),atoi(sep->arg[4]),zone->GetZoneID());
+		database.DeleteWaypoint(c, atoi(sep->arg[2]),atoi(sep->arg[4]),zone->GetZoneID());
 	else
 		c->Message(0,"Usage: #wp add/delete grid_num pause wp_num");
 }
@@ -5067,7 +5067,7 @@ void command_wpadd(Client *c, const Seperator *sep)
 		if (sep->arg[1] && !strcasecmp(strlwr(sep->arg[1]),"random"))	type1=2;
 		if (sep->arg[1] && !strcasecmp(strlwr(sep->arg[1]),"patrol"))	type1=3;
 		if (sep->arg[2] && atoi(sep->arg[2]) > 0)	pause=atoi(sep->arg[2]);
-		    int32 tmp_grid = database.AddWPForSpawn(s2info->GetID(), c->GetX(),c->GetY(),c->GetZ(), pause, type1, type2, zone->GetZoneID());
+		    int32 tmp_grid = database.AddWPForSpawn(c, s2info->GetID(), c->GetX(),c->GetY(),c->GetZ(), pause, type1, type2, zone->GetZoneID());
 		if (tmp_grid)
 			t->CastToNPC()->SetGrid(tmp_grid);
 		t->CastToNPC()->AssignWaypoints(t->CastToNPC()->GetGrid());

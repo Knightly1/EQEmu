@@ -116,6 +116,14 @@ Embperl::Embperl()
 		GvIMPORTED_CV_on(exitgp);
 	}
 	
+	//ruin the perl sleep command:
+	eval_pv("sub my_sleep {}",true);
+	if(gv_stashpv("CORE::GLOBAL", FALSE)) {
+		GV *sleepgp = gv_fetchpv("CORE::GLOBAL::sleep", TRUE, SVt_PVCV);
+		GvCV(sleepgp) = perl_get_cv("my_sleep", TRUE);
+		GvIMPORTED_CV_on(sleepgp);
+	}
+	
 	//declare our file eval routine.
 	try {
 		init_eval_file();

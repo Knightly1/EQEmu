@@ -2984,6 +2984,10 @@ void Client::ChangeSQLLog(const char *file) {
 		SQL_log = NULL;
 	}
 	if(file != NULL) {
+		if(strstr(file, "..") != NULL) {
+			Message(13, ".. is forbibben in SQL log file names.");
+			return;
+		}
 		char buf[512];
 		snprintf(buf, 511, "%s%s", SQL_LOG_PATH, file);
 		buf[511] = '\0';

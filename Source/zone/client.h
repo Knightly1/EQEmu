@@ -138,6 +138,8 @@ typedef enum {	//disciplines for disc_inuse
 class Client : public Mob
 {
 public:
+	//pull in opcode mappings:
+	#include "client_packet.h"
 	
 	PRange_Struct* pr;
 	Client(EQNetworkConnection* ieqnc);
