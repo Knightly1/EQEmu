@@ -2498,7 +2498,8 @@ struct GuildMember_Struct { //not an eqlive sturct just one for us
 struct GuildMOTD_Struct{
 /*0000*/	int32	unknown0;
 /*0004*/	char	name[64];
-/*0068*/	int32	unknown65[17];
+/*0068*/	char	setby_name[64];
+/*0132*/	int32	unknown132;
 /*0136*/	char	motd[512];
 };
 struct GuildUpdate_PublicNote{

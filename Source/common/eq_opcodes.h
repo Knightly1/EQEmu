@@ -77,7 +77,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_ChannelMessage	0x0024
 #define OP_SimpleMessage    0x01d7
 #define OP_FormattedMessage 0x01d8
-/**/ #define OP_RaidInvite		0x01e4	// from seq - not used by eqemu
+/*#define OP_RaidInvite		0x01e4*/ 	// wrong. from seq - not used by eqemu
 /**/ #define OP_RaidJoin		0x01e5	// from seq - not used by eqemu
 	// not used	#define OP_ApplyPoison		0x00b7
 #define OP_TGB				0x01c6 // /targetgroupbuff
@@ -117,8 +117,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 
 
 #define OP_SendExpZonein		0x002b	// 0 length packets
-#define OP_ZoneInSendName		0x01e5
-#define OP_ZoneInSendName2		0x01c0
+#define OP_ZoneInSendName		0x01e4
 	/*Guild Opcodes*/
 #define OP_GuildLeader		 0x01bf // /guildleader, was 00a7
 #define OP_GuildPeace		 0x009a // /guildpeace
@@ -163,7 +162,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 	// not used	#define OP_ShopTakeMoney	0x0066
 #define OP_ShopPlayerSell	0x006a
 #define OP_ShopDelItem		0x006d
-		#define OP_ShopEndConfirm	0x4f6d
+		#define OP_ShopEndConfirm	0x0f6d
 #define OP_ShopRequest		0x00f7	// right-click on merchant
 #define OP_ShopEnd			0x006c	// Finished shopping at merchant
 
@@ -184,7 +183,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 
 #define	OP_MoneyUpdate		0x01b5
 
-		#define OP_GroupDelete		0x9721
+		#define OP_GroupDelete		0x0721
 #define	OP_GroupAcknowledge	0x0272
 
 #define OP_GroupUpdate		0x024a
@@ -218,7 +217,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_ItemLinkResponse	0x01f4
 #define OP_ItemLinkText		0x01d9
 
-		#define OP_RezzRequest		0x2a41
+		#define OP_RezzRequest		0x0a41
 #define OP_RezzAnswer		0x00e5
 #define OP_RezzComplete		0x019b
 
@@ -259,7 +258,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_EmoteAnim		0x0140 // solar: untested
 #define OP_Consider			0x015c
 #define OP_FaceChange		0x01cb	// /face
-	// not used	#define OP_Report			0x41e0
+	// not used	#define OP_Report			0x01e0
 #define OP_RandomReq		0x0197
 #define OP_RandomReply		0x0087
 #define OP_Camp				0x01c3
@@ -268,7 +267,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 
 #define OP_Buff				0x0157
 #define OP_BuffFadeMsg		0x00c0
-		#define OP_MultiLineMsg		0x1440	// is this still good for anything?
+		#define OP_MultiLineMsg		0x0440	// is this still good for anything?
 #define OP_SpecialMesg		0x021c	// Communicate textual info to client
 #define OP_Consent			0x0013	// /consent
 #define OP_ConsentResponse	0x029d
@@ -302,7 +301,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_GMSummon			0x028c	// GM /summon		- Summon PC to self
 #define	OP_GMKick			0x010a	// GM /kick			- Boot player
 #define OP_GMKill			0x0109	// GM /kill			- Insta kill mob/pc
-		#define OP_GMNameChange		0xcb40 // /name
+		#define OP_GMNameChange		0x0b40 // /name
 #define OP_GMLastName		0x00a3	// GM /lastname		- Change user lastname
 #define OP_GMToggle			0x01b3	// GM /toggle		- Toggle ability to receive tells from other PC's
 #define OP_GMEmoteZone		0x028f	// GM /emotezone	- Send zonewide emote
@@ -333,16 +332,16 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 
 
 #define OP_SetServerFilter	0x01bb
-	// not used	#define OP_SetServerFilterAck 0xc341
+	// not used	#define OP_SetServerFilterAck 0x0341
 
 #define OP_NewSpawn			0x0218	// New NPC or PC entering zone
 #define OP_Animation		0x0140
 /**/ #define OP_MobHealth		0x022e	// health sent when a player clicks on the mob
 #define OP_ZoneChange		0x0142	// Client requesting transfer to a different zone
 #define OP_DeleteSpawn		0x00f3	// Remove a spawn from the current zone
-	// not used	#define OP_ConfirmDelete	0x4178	//Client sends this to server to confirm op_deletespawn
+	// not used	#define OP_ConfirmDelete	0x0178	//Client sends this to server to confirm op_deletespawn
 	// not used	#define OP_NewCorpse		0x00da
-		#define OP_CrashDump		0x4265
+		#define OP_CrashDump		0x0265
 	// not used	#define OP_CastOn			0x0119
 #define OP_EnvDamage		0x00e8
 
@@ -379,8 +378,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_SaveOnZoneReq    0x00a1
 #define OP_Logout           0x0185  // Last opcode seny by server when you zone or camp
 #define	OP_RequestDuel		0x0298 //Shawn319: Fixed 1/3/04
-	// OP_DeclineDuel	0x29c
-		#define OP_DuelResponse		0x4a5d
+	// OP_DeclineDuel	0x029c
+		#define OP_DuelResponse		0x0a5d
 #define OP_DuelResponse2	0x016e
 #define OP_InstillDoubt		0x007c
 
@@ -466,10 +465,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 // OLD opcodes:
 ////////////////////////////
 
-// not used	#define OP_SummonedItem		0x7841
-// not used	#define OP_HarmTouch		0x7E41
-// not used	#define OP_Drink			0x4641
-// not used	#define OP_Medding			0x5841
+// not used	#define OP_SummonedItem		0x0841
+// not used	#define OP_HarmTouch		0x0E41
+// not used	#define OP_Drink			0x0641
+// not used	#define OP_Medding			0x0841
 // not used	#define OP_SenseHeading		0x00c3	// Clicked sense heading button - solar: not used anymore
 
 	#define PET_BACKOFF			1

@@ -243,11 +243,6 @@ public:
 	int32	UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading, bool rezzed = false);
 	sint32	DeleteStalePlayerCorpses();
 	sint32	DeleteStalePlayerBackups();
-	void	DeleteGrid(int32 sg2, int16 grid_num, bool grid_too,int16 zoneid);
-	void	DeleteWaypoint(int16 grid_num, int32 wp_num,int16 zoneid);
-//	int32	AddWP(int32 sg2, int16 grid_num, int8 wp_num, float xpos, float ypos, float zpos, int32 pause, float xpos1, float ypos1, float zpos1, int type1, int type2,int16 zoneid);
-	void	AddWP(int32 gridid, int8 wpnum, float xpos, float ypos, float zpos, int32 pause, int16 zoneid);
-	int32	AddWPForSpawn(int32 spawn2id, float xpos, float ypos, float zpos, int32 pause, int type1, int type2, int16 zoneid);
 	bool	DeletePlayerCorpse(int32 dbid);
 	bool	LoadPlayerCorpses(int32 iZoneID);
 	bool	GetZoneLongName(const char* short_name, char** long_name, char* file_name = 0, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, int32* maxclients = 0);
@@ -291,7 +286,7 @@ public:
 	bool	GetSharedBank(uint32 id, Inventory* inv, bool is_charid);
 	bool	GetInventory(uint32 char_id, Inventory* inv);
 	bool	GetInventory(uint32 account_id, char* name, Inventory* inv);
-	bool	CreateSpawn2(int32 spawngroup, const char* zone, float heading, float x, float y, float z, int32 respawn, int32 variance);
+	bool	CreateSpawn2(Client *c, int32 spawngroup, const char* zone, float heading, float x, float y, float z, int32 respawn, int32 variance);
 	bool	CheckNameFilter(const char* name);
 	bool	AddToNameFilter(const char* name);
 	bool	CheckUsedName(const char* name);
@@ -458,12 +453,19 @@ public:
 	
 	int32   GetZoneForage(int32 ZoneID, int8 skill);    /* for foraging - BoB */
 	int32   GetZoneFishing(int32 ZoneID, int8 skill, uint32 &npc_id, uint8 &npc_chance);
-	void	ModifyGrid(bool remove, int16 id, int8 type = 0, int8 type2 = 0,int16 zoneid = 0);
-	void    ModifyWP(int16 grid_id, int16 wp_num, float xpos, float ypos, float zpos, int32 script=0,int16 zoneid =0);
+
+	void	DeleteGrid(Client *c, int32 sg2, int16 grid_num, bool grid_too,int16 zoneid);
+	void	DeleteWaypoint(Client *c, int16 grid_num, int32 wp_num,int16 zoneid);
+//	int32	AddWP(Client *c, int32 sg2, int16 grid_num, int8 wp_num, float xpos, float ypos, float zpos, int32 pause, float xpos1, float ypos1, float zpos1, int type1, int type2,int16 zoneid);
+	void	AddWP(Client *c, int32 gridid, int16 wpnum, float xpos, float ypos, float zpos, int32 pause, int16 zoneid);
+	int32	AddWPForSpawn(Client *c, int32 spawn2id, float xpos, float ypos, float zpos, int32 pause, int type1, int type2, int16 zoneid);
+	void	ModifyGrid(Client *c, bool remove, int16 id, int8 type = 0, int8 type2 = 0,int16 zoneid = 0);
+	void    ModifyWP(Client *c, int16 grid_id, int16 wp_num, float xpos, float ypos, float zpos, int32 script=0,int16 zoneid =0);
 	int8    GetGridType(int16 grid,int16 zoneid);
 	int8    GetGridType2(int16 grid,int16 zoneid);
 	bool    GetWaypoints(int16 grid, int16 zoneid, int16 num, wplist* wp);
 	void	AssignGrid(Client *client, float x, float y, int32 id);
+
 	bool	LoadTraps(const char* zonename);
 	int8	GetSkillCap(int8 skillid, int8 in_race, int8 in_class, int16 in_level);
 	int8	GetRaceSkill(int8 skillid, int8 in_race);
