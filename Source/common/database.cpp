@@ -2339,9 +2339,10 @@ bool ret=true;
 	char errbuf[MYSQL_ERRMSG_SIZE];
     	char* query = 0;
 	// Delete cursor items
-	if ((ret = RunQuery(query, MakeAnyLenString(&query, "DELETE FROM inventory WHERE charid=%i AND slotid >=8000 and slotid<=8999", char_id), errbuf))) {
+	if ((ret = RunQuery(query, MakeAnyLenString(&query, "DELETE FROM inventory WHERE charid=%i AND ( (slotid >=8000 and slotid<=8999) or slotid=30 or (slotid>=331 and slotid<=340))", char_id), errbuf))) {
 		for(it=start,i=8000;it!=end;it++,i++) {
-			if (!(ret=SaveInventory(char_id,*it,i)))
+			ItemInst *inst=*it;
+			if (!(ret=SaveInventory(char_id,inst,(i==8000) ? 30 : i)))
 				break;
 		}
 	} else {
@@ -3179,17 +3180,17 @@ bool Database::GetInventory(uint32 char_id, Inventory* inv) {
 				}
 				else if (item->ItemClass == ItemTypeContainer) {
 					ItemContainerInst bag(item, charges);
-					if (slot_id!=SLOT_CURSOR)
-						put_slot_id = inv->PutItem(slot_id, (ItemInst&)bag);
-					else 
+					if (slot_id>=8000 && slot_id <= 8999)
 						put_slot_id = inv->PushCursor((ItemInst&)bag);
+					else 
+						put_slot_id = inv->PutItem(slot_id, (ItemInst&)bag);
 				}
 				else if (item->ItemClass == ItemTypeBook) {
 					ItemBookInst book(item, charges);
-					if (slot_id!=SLOT_CURSOR)
-						put_slot_id = inv->PutItem(slot_id, (ItemInst&)book);
-					else 
+					if (slot_id>=8000 && slot_id <= 8999)
 						put_slot_id = inv->PushCursor((ItemInst&)book);
+					else 
+						put_slot_id = inv->PutItem(slot_id, (ItemInst&)book);
 				}
 				
 				// Save ptr to item in inventory

@@ -1407,7 +1407,7 @@ sint16 Inventory::CalcSlotId(sint16 bagslot_id, uint8 bagidx)
 	
 	sint16 slot_id = SLOT_INVALID;
 	
-	if (bagslot_id==SLOT_CURSOR) // Cursor
+	if (bagslot_id==SLOT_CURSOR || bagslot_id==8000) // Cursor
 		slot_id = IDX_CURSOR_BAG + bagidx;
 	else if (bagslot_id>=22 && bagslot_id<=29) // Inventory slots
 		slot_id = IDX_INV_BAG + (bagslot_id-22)*10 + bagidx;
