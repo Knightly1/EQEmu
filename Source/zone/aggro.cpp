@@ -25,6 +25,8 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "../common/skills.h"
 #include "StringIDs.h"
 
+//#define LOSDEBUG 6
+
 Mob* EntityList::AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssistRange) {
 	if (!sender || !sender->IsNPC())
 		return 0;
@@ -1029,7 +1031,7 @@ bool Mob::CheckLosFN(Mob* other) {
 	oloc.y = other->GetY();
 	oloc.z = other->GetZ() + (other->GetSize()==0.0?LOS_DEFAULT_HEIGHT:other->GetSize())/2 * SEE_POSITION;
 
-#if EQDEBUG>=5
+#if LOSDEBUG>=5
 	LogFile->write(EQEMuLog::Debug, "LOS from (%.2f, %.2f, %.2f) to (%.2f, %.2f, %.2f) sizes: (%.2f, %.2f)", myloc.x, myloc.y, myloc.z, oloc.x, oloc.y, oloc.z, GetSize(), other->GetSize());
 #endif
 	
@@ -1042,7 +1044,7 @@ bool Mob::CheckLosFN(Mob* other) {
 	mynode = zone->map->SeekNode( zone->map->GetRoot(), myloc.x, myloc.y);
 	if(mynode != NODE_NONE) {
 		if(zone->map->LineIntersectsNode(mynode, myloc, oloc, &hit, &onhit)) {
-#if EQDEBUG>=5
+#if LOSDEBUG>=5
 			LogFile->write(EQEMuLog::Debug, "Check LOS for %s target %s, cannot see.", GetName(), other->GetName() );
 			LogFile->write(EQEMuLog::Debug, "\tPoly: (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n",
 				onhit->a.x, onhit->a.y, onhit->a.z,
@@ -1052,7 +1054,7 @@ bool Mob::CheckLosFN(Mob* other) {
 			return(false);
 		}
 	}
-#if EQDEBUG>=5
+#if LOSDEBUG>=5
 	 else {
 		LogFile->write(EQEMuLog::Debug, "WTF, I have no node, what am I standing on??? (%.2f, %.2f).", myloc.x, myloc.y);
 	}
@@ -1064,7 +1066,7 @@ bool Mob::CheckLosFN(Mob* other) {
 		onode = zone->map->SeekNode( zone->map->GetRoot(), oloc.x, oloc.y);
 		if(onode != NODE_NONE && onode != mynode) {
 			if(zone->map->LineIntersectsNode(onode, myloc, oloc, &hit, &onhit)) {
-#if EQDEBUG>=5
+#if LOSDEBUG>=5
 			LogFile->write(EQEMuLog::Debug, "Check LOS for %s target %s, cannot see (2).", GetName(), other->GetName());
 			LogFile->write(EQEMuLog::Debug, "\tPoly: (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n",
 				onhit->a.x, onhit->a.y, onhit->a.z,
@@ -1074,7 +1076,7 @@ bool Mob::CheckLosFN(Mob* other) {
 				return(false);
 			}
 		}
-#if EQDEBUG>=5
+#if LOSDEBUG>=5
 		 else if(onode == NODE_NONE) {
 			LogFile->write(EQEMuLog::Debug, "WTF, They have no node, what are they standing on??? (%.2f, %.2f).", myloc.x, myloc.y);
 		}
@@ -1083,7 +1085,7 @@ bool Mob::CheckLosFN(Mob* other) {
 	
 	/*
 	if(zone->map->LineIntersectsZone(myloc, oloc, CHECK_LOS_STEP, &onhit)) {
-#if EQDEBUG>=5
+#if LOSDEBUG>=5
 		LogFile->write(EQEMuLog::Debug, "Check LOS for %s target %s, cannot see.", GetName(), other->GetName() );
 		LogFile->write(EQEMuLog::Debug, "\tPoly: (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n",
 			onhit->a.x, onhit->a.y, onhit->a.z,
@@ -1093,7 +1095,7 @@ bool Mob::CheckLosFN(Mob* other) {
 		return(false);
 	}*/
 	
-#if EQDEBUG>=5
+#if LOSDEBUG>=5
 			LogFile->write(EQEMuLog::Debug, "Check LOS for %s target %s, CAN SEE.", GetName(), other->GetName());
 #endif
 	
