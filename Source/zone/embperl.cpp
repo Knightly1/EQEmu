@@ -100,7 +100,8 @@ void Embperl::init_eval_file(void) const
 			"my($package, $filename) = @_;"
 			"$filename=~s/\'//g;"
 			"my $mtime = -M $filename;"
-			"if(defined $Cache{$package}{mtime}&&$Cache{$package}{mtime} <= $mtime){ return; }"
+			"if(defined $Cache{$package}{mtime}&&$Cache{$package}{mtime} <= $mtime && !($package eq 'plugin')){ return; }"
+
 			"else {"
 				"local *FH;open FH, $filename or die \"open '$filename' $!\";"
 				"local($/) = undef;my $sub = <FH>;close FH;"
