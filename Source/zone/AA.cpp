@@ -1,5 +1,6 @@
 #include "client.h"
 #include "StringIDs.h"
+#include <iostream>
 
 void Client::SendAAStats() {
 	APPLAYER* outapp = new APPLAYER(OP_SendAAStats, sizeof(AltAdvStats_Struct));
@@ -25,6 +26,7 @@ void Client::BuyAA(AA_Action* action){
 		m_pp.aapoints -= aa2->cost;
 		database.SetPlayerAlternateAdv(account_id, m_pp.name, &aa);
 		SendAA(aa2->id);
+		SendAATable();
 		char val1[20]={0};
 		char val2[20]={0};
 		char val3[20]={0};
@@ -44,6 +46,7 @@ void Client::BuyAA(AA_Action* action){
 			else
 				Message_StringID(15,AA_IMPROVE,ConvertArray(aa2->title_sid,val1),ConvertArray(cur_level,val2),ConvertArray(aa2->cost,val3),point2);
 		}
+		SendAAStats();
 	}
 }
 void Client::SendAATimer(UseAA_Struct *uaa){
@@ -109,6 +112,10 @@ void Client::SendAA(int32 id, int seq,bool update){
 		saa2=zone->GetAAList()->aa[seq];
 	else
 		saa2=zone->FindAA(id);
+	int16 classes=saa2->classes;
+	if(!((classes >> GetClass())&1) && (GetClass()!=BERSERKER || saa2->berserker==0)){
+		return;
+	}
 	int size=sizeof(SendAA_Struct)+sizeof(AA_Ability)*saa2->total_abilities;
 	uchar* buffer = new uchar[size];
 	SendAA_Struct* saa=(SendAA_Struct*)buffer;

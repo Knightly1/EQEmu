@@ -4199,14 +4199,16 @@ sa->parameter = 0;
 					AA_Action* action=(AA_Action*)app->pBuffer;
 					if(action->action==0)//AA Hotkey
 						ActivateAA(action->ability);
-					else if(action->action==1 && action->unknown08[1]>0 && action->unknown08[1]<=100) //Adjust exp ratio
+					else if(action->action==1 && action->unknown08[1]>0 && action->unknown08[1]<=100){ //Adjust exp ratio
 						m_pp.perAA = action->unknown08[1];
-					else if(action->action==2) //Turn Off AA Exp
+						SendAAStats();
+					}
+					else if(action->action==2){ //Turn Off AA Exp
 						m_pp.perAA = 0;
+						SendAAStats();
+					}
 					else if(action->action==3)//BUY
 						BuyAA(action);
-					SendAAStats();
-					SendAATable();
 					break;
 				}
 				case OP_TraderBuy:{
