@@ -2237,13 +2237,7 @@ bool Database::StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inven
 		zone, x, y, z
 	);
 	end += DoEscapeString(end, (char*)pp, sizeof(PlayerProfile_Struct));
-	end += sprintf(end, "\', alt_adv=\'");
-	end += DoEscapeString(end, (char*)playeraa, sizeof(PlayerAA_Struct));
-	end += sprintf(
-		end, 
-		"\' WHERE account_id=%d AND name='%s'",
-		account_id, pp->name
-	);
+	end += sprintf(end, "\' WHERE account_id=%d AND name='%s'",account_id, pp->name);
 	
 	RunQuery(query, (int32) (end - query), errbuf, 0, &affected_rows);
 	
@@ -2410,7 +2404,7 @@ char* Database::GetGroupLeaderForLogin(const char* name,char* leaderbuf){
 	safe_delete_array(query);
 	return leaderbuf;
 }
-bool Database::GetCharacterInfoForLogin(const char* name, uint32* character_id, char* current_zone, PlayerProfile_Struct* pp, Inventory* inv, uint32* pplen, PlayerAA_Struct* aa, int32* aalen, uint32* guilddbid, int8* guildrank) {
+bool Database::GetCharacterInfoForLogin(const char* name, uint32* character_id, char* current_zone, PlayerProfile_Struct* pp, Inventory* inv, uint32* pplen, uint32* guilddbid, int8* guildrank) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	int32 querylen;
@@ -2420,14 +2414,14 @@ bool Database::GetCharacterInfoForLogin(const char* name, uint32* character_id, 
 	
 	if (character_id && *character_id) {
 		// searching by ID should be a lil bit faster
-		querylen = MakeAnyLenString(&query, "SELECT id, profile, zonename, x, y, z, alt_adv, guild, guildrank FROM character_ WHERE id=%i", *character_id);
+		querylen = MakeAnyLenString(&query, "SELECT id, profile, zonename, x, y, z, guild, guildrank FROM character_ WHERE id=%i", *character_id);
 	}
 	else {
-		querylen = MakeAnyLenString(&query, "SELECT id, profile,zonename, x, y, z, alt_adv, guild, guildrank FROM character_ WHERE name='%s'", name);
+		querylen = MakeAnyLenString(&query, "SELECT id, profile, zonename, x, y, z, guild, guildrank FROM character_ WHERE name='%s'", name);
 	}
 	
 	if (RunQuery(query, querylen, errbuf, &result)) {
-		ret = GetCharacterInfoForLogin_result(result, character_id, current_zone, pp, inv, pplen, aa, aalen, guilddbid, guildrank);
+		ret = GetCharacterInfoForLogin_result(result, character_id, current_zone, pp, inv, pplen, guilddbid, guildrank);
 		mysql_free_result(result);
 	}
 	else {
@@ -2439,7 +2433,7 @@ bool Database::GetCharacterInfoForLogin(const char* name, uint32* character_id, 
 }
 // Process results of GetCharacterInfoForLogin()
 // Query this processes: SELECT id,profile,zonename,x,y,z,alt_adv,guild,guildrank FROM character_ WHERE id=%i
-bool Database::GetCharacterInfoForLogin_result(MYSQL_RES* result, int32* character_id, char* current_zone, PlayerProfile_Struct* pp, Inventory* inv, uint32* pplen, PlayerAA_Struct* aa, uint32* aalen, uint32* guilddbid, int8* guildrank) {
+bool Database::GetCharacterInfoForLogin_result(MYSQL_RES* result, int32* character_id, char* current_zone, PlayerProfile_Struct* pp, Inventory* inv, uint32* pplen, uint32* guilddbid, int8* guildrank) {
     MYSQL_ROW row;
 	unsigned long* lengths;
 	
@@ -2558,25 +2552,11 @@ bool Database::GetCharacterInfoForLogin_result(MYSQL_RES* result, int32* charact
 			*character_id = char_id;
 		if (current_zone)
 			strcpy(current_zone, row[2]);
-		if (aa && aalen) {
-			if(row[6] && (lengths[6] >= sizeof(PlayerAA_Struct))) {
-				memcpy(aa, row[6], sizeof(PlayerAA_Struct));
-				*aalen = result->lengths[6];
-			}
-			else { // let's support ghetto-ALTERed databases that don't contain any data in the alt_adv column
-				memset(aa, 0, sizeof(PlayerAA_Struct));
-				*aalen = sizeof(PlayerAA_Struct);
-				LogFile->write(EQEMuLog::Error, "Warning: Invalid PlayerAA_Struct size found in database");
-				for(int a=0;a<MAX_PP_AA_ARRAY;a++){
-					pp->aa_array[a].AA = 0;
-					pp->aa_array[a].value = 0;
-				}
-			}
-		}
+
 		if (guilddbid)
-			*guilddbid = atoi(row[7]);
+			*guilddbid = atoi(row[6]);
 		if (guildrank)
-			*guildrank = atoi(row[8]);
+			*guildrank = atoi(row[7]);
 		
 		// Retrieve character inventory
 		return GetInventory(char_id, inv);

@@ -442,6 +442,7 @@ public:
 	inline void	SetDuelTarget(int16 set_id) { duel_target=set_id; }
 	inline void	SetDueling(bool duel) { duelaccepted = duel; }
 	void  SendAAList();
+	void  ResetAA();
 	void  SendAA(int32 id, int seq=1);
 	void  SendPreviousAA(int32 id, int seq=1);
 	void  BuyAA(AA_Action* action);
@@ -510,7 +511,6 @@ public:
 	void DisableAAEffect(aaEffectType type);
 	bool CheckAAEffect(aaEffectType type);
 	void HandleAAAction(aaID activate);
-	PlayerAA_Struct *GetAAStruct(void) { return &aa; }
 	int32 GetAA(int32 aa_id);
 	bool SetAA(int32 aa_id, int32 new_value);
 	void TemporaryPets(int16 spell_id);
@@ -693,7 +693,8 @@ private:
 	
 	int32       max_AAXP;
 	int32		staminacount;
-	PlayerAA_Struct aa; // Alternate Advancement!
+	AA_Array* aa[MAX_PP_AA_ARRAY];
+	map<int32,int8> aa_points;
 	bool npcflag;
 	int8 npclevel;
 	bool feigned;

@@ -46,7 +46,7 @@ extern int commandcount;			// number of commands loaded
 // prototypes
 int command_init(void);
 void command_deinit(void);
-
+void command_resetaa(Client* c,const Seperator *sep);
 int command_add(const char *command_string, const char *desc, int access, CmdFuncPtr function);
 int command_notavail(Client *c, const char *message);
 int command_realdispatch(Client *c, char const *message);

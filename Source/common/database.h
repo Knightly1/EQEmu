@@ -305,12 +305,12 @@ public:
 	int32	GetCharacterInfo(const char* iName, int32* oAccID = 0, int32* oZoneID = 0, float* oX = 0, float* oY = 0, float* oZ = 0);
 	bool	GetAccountInfoForLogin(int32 account_id, sint16* admin = 0, char* account_name = 0, int32* lsaccountid = 0, int8* gmspeed = 0, bool* revoked = 0);
 	bool	GetAccountInfoForLogin_result(MYSQL_RES* result, sint16* admin = 0, char* account_name = 0, int32* lsaccountid = 0, int8* gmspeed = 0, bool* revoked = 0);
-	bool	GetCharacterInfoForLogin(const char* name, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, uint32* pplen = 0, PlayerAA_Struct* aa = 0, uint32* aalen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
+	bool	GetCharacterInfoForLogin(const char* name, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, uint32* pplen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
 	int32	GetGroupID(const char* name);
 	void	SetGroupID(const char* name, int32 id);
 	void	ClearGroup(int32 gid = 0);
 	char*	GetGroupLeaderForLogin(const char* name,char* leaderbuf);
-	bool	GetCharacterInfoForLogin_result(MYSQL_RES* result, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, uint32* pplen = 0, PlayerAA_Struct* aa = 0, uint32* aalen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
+	bool	GetCharacterInfoForLogin_result(MYSQL_RES* result, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, uint32* pplen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
 	bool	SetLocalPassword(uint32 accid, const char* password);
 	
 	bool	InsertNewsPost(int8 type,char* logone,char* logtwo,int32 levelone,int32 leveltwo);
@@ -443,9 +443,7 @@ public:
 	int32	CountAAs();
 	void	LoadAAs(AA_List* load);
 	void	RetrieveAALevels(SendAA_Struct* aa_struct);
-#ifndef FNW_AA
-	bool	SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa);
-#endif
+
 	bool	SetLSAdmin(int32 account_id, int8 in_status);
 	void	FindAccounts(char* whom, Client* from);
 	float	GetSafePoint(const char* short_name, const char* which);

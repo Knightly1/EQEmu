@@ -308,7 +308,8 @@ bool Client::Save(int8 iCommitNow) {
 	m_pp.heading = heading;
 	int spentpoints=0;
 	for(int a=0;a < MAX_PP_AA_ARRAY;a++)
-		spentpoints+=aa.aa_list[a].aa_value;
+		if(aa[a])
+			spentpoints += aa[a]->value;
 	
 	m_pp.aapoints_spent = spentpoints;
 	if (GetHP() <= 0) {

@@ -28,6 +28,7 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemu.org)
 #include "../common/races.h"
 #include "../common/classes.h"
 #include "../common/eq_packet_structs.h"
+#include "../common/packet_dump.h"
 #include "StringIDs.h"
 #ifndef NEW_LoadSPDat
 	extern SPDat_Spell_Struct spells[SPDAT_RECORDS];
@@ -36,6 +37,7 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemu.org)
 //static data arrays, really not big enough to warrant shared mem.
 AA_DBAction AA_Actions[aaHighestID][MAX_AA_ACTION_RANKS];	//[aaid][rank]
 map<int16, AA_SwarmPet> AA_SwarmPets;	//key=spell_id
+map<int32,SendAA_Struct*>aas_send;
 
 /*
 
@@ -504,12 +506,12 @@ void Client::BuyAA(AA_Action* action){
 		return;	//invalid ability...
 	
 	int32 cur_level = GetAA(aa2->id);
-	
+	if((aa2->id + cur_level) != action->ability) //got invalid AA
+		return;
 	if(m_pp.aapoints >= aa2->cost && cur_level < aa2->max_level) {
 		SetAA(aa2->id, cur_level+1);
 		
 		m_pp.aapoints -= aa2->cost;
-		database.SetPlayerAlternateAdv(account_id, m_pp.name, &aa);
 		Save();
 		
 		SendAA(aa2->id);
@@ -576,13 +578,11 @@ void Client::SendAATable() {
     APPLAYER* outapp = new APPLAYER(OP_RespondAA, sizeof(AATable_Struct));
     
     AATable_Struct* aa2 = (AATable_Struct *)outapp->pBuffer;
-	for(int i=0;i < MAX_PP_AA_ARRAY;i++) {
-		if(aa.aa_list[i].aa_value>1)
-			aa2->aa_list[i].aa_skill = aa.aa_list[i].aa_skill + aa.aa_list[i].aa_value - 1;
-		else
-			aa2->aa_list[i].aa_skill=aa.aa_list[i].aa_skill;
-		aa2->aa_list[i].aa_value=aa.aa_list[i].aa_value;
+	for(int i=0;i < MAX_PP_AA_ARRAY;i++){
+		aa2->aa_list[i].aa_skill = aa[i]->AA;
+		aa2->aa_list[i].aa_value = aa[i]->value;
 	}
+	DumpPacket(outapp);
 	outapp->Deflate();
     QueuePacket(outapp);
     safe_delete(outapp);
@@ -604,8 +604,8 @@ void Client::SendPreviousAA(int32 id, int seq){
 	outapp->size=size;
 	outapp->pBuffer=(uchar*)saa;
 	value--;
-	while(value>0){
-		memcpy(saa,saa2,size);
+	memcpy(saa,saa2,size);
+	if(value>0){
 		if(saa->spellid==0)
 			saa->spellid=0xFFFFFFFF;
 		saa->id+=value;
@@ -614,14 +614,12 @@ void Client::SendPreviousAA(int32 id, int seq){
 			saa->last_id=saa2->id;
 		else
 			saa->last_id=saa->id-1;
-		saa->current_level=value;
-		saa->cost2=saa->cost*value;
+		saa->current_level=value+1;
+		saa->cost2=saa->cost*saa->current_level;
 		if(saa->type==1) //general ability
 			saa->abilities[0].increase_amt*=value;
-		QueuePacket(outapp);
-		value--;
 	}
-	memcpy(saa,saa2,size);
+	DumpPacket(outapp);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
@@ -650,7 +648,9 @@ void Client::SendAA(int32 id, int seq) {
 	
 	value=GetAA(saa->id);
 	int32 orig_val = value;
+	bool dump = false;
 	if(value){
+		dump = true;
 		if(value < saa->max_level){
 			saa->id+=value;
 			saa->next_id=saa->id+1;
@@ -669,11 +669,13 @@ void Client::SendAA(int32 id, int seq) {
 	APPLAYER* outapp = new APPLAYER(OP_SendAATable);
 	outapp->size=size;
 	outapp->pBuffer=(uchar*)saa;
-	QueuePacket(outapp);
-	if(value && (orig_val < saa->max_level))
+	if(id==0 && value && (orig_val < saa->max_level)) //send previous AA only on zone in
 		SendPreviousAA(id, seq);
+	if(dump)
+		DumpPacket(outapp);
+	QueuePacket(outapp);
 	safe_delete(outapp);
-	//will outapp delete the buffer for us even though it didnt make it? Yes, it should
+	//will outapp delete the buffer for us even though it didnt make it?  --- Yes, it should
 }
 
 void Client::SendAAList(){
@@ -684,77 +686,62 @@ void Client::SendAAList(){
 }
 
 int32 Client::GetAA(int32 aa_id) {
-	/*
-	old version:
-	uint8 *aa_ = &(((uint8 *)&aa)[aa_id]);
-	return (uint16)*aa_;
-	
-	I think this function should be converted back to the old
-	array based system if possible because the GetAA() method is 
-	used hundreds of times, all over the place, and looping
-	through a possible 120 elements is pretty crazy to do
-	*/
-	
-	//new version
-	if(!aa.aa_list)
-		return 0;
-	for(int i=0;i < MAX_PP_AA_ARRAY;i++){
-		if(aa.aa_list[i].aa_skill==aa_id)
-			return aa.aa_list[i].aa_value;
-		else if(aa.aa_list[i].aa_skill==0)
-			break;
-	}
-	return 0;
+	return aa_points[aa_id];
 }
 
 bool Client::SetAA(int32 aa_id, int32 new_value) {
-	if(!aa.aa_list)
-		return false;
-		
+	aa_points[aa_id] = new_value;
 	for(int cur=0;cur < MAX_PP_AA_ARRAY;cur++){
-		if(aa.aa_list[cur].aa_skill==aa_id){
-			aa.aa_list[cur].aa_value=new_value;
-			m_pp.aa_array[cur].AA++;
-			m_pp.aa_array[cur].value=new_value;
+		if((aa[cur]->value > 1) && ((aa[cur]->AA - aa[cur]->value + 1)== aa_id)){
+			aa[cur]->value = new_value;
+			aa[cur]->AA++;
 			return true;
 		}
-		else if(aa.aa_list[cur].aa_skill==0){ //end of list
-			aa.aa_list[cur].aa_skill=aa_id;
-			aa.aa_list[cur].aa_value=new_value;
-			m_pp.aa_array[cur].AA=aa_id;
-			m_pp.aa_array[cur].value=new_value;
+		else if((aa[cur]->value == 1) && (aa[cur]->AA == aa_id)){
+			aa[cur]->value = new_value;
+			aa[cur]->AA++;
+			return true;
+		}
+		else if(aa[cur]->AA==0){ //end of list
+			aa[cur]->AA = aa_id;
+			aa[cur]->value = new_value;
 			return true;
 		}
 	}
-	
 	return false;
 }
 
 SendAA_Struct* Zone::FindAA(int32 id) {
-	SendAA_Struct* ret = NULL;
-	for(int i=0; i < totalAAs; i++) {
-		if(aas->aa[i]->id == id) {
-			ret = aas->aa[i];
-			break;
-		}
-	}
-	return ret;
+	return aas_send[id];
 }
 
 void Zone::LoadAAs() {
+	LogFile->write(EQEMuLog::Status, "Loading AA information...");
 	int32 size=database.GetSizeAA();
 	if(size>=sizeof(SendAA_Struct)){
 		aa_buffer = new uchar[size];
 		aas=(AA_List*)aa_buffer;
 		database.LoadAAs(aas);
 		totalAAs=database.CountAAs();
+		for(int i=0;i<totalAAs;i++){
+			SendAA_Struct* aa = aas->aa[i];
+			aas_send[aa->id] = aa;
+		}
 	}
 	else{
 		LogFile->write(EQEMuLog::Error, "Failed to load AAs!");
 		aas=NULL;
 	}
 }
-
+void Client::ResetAA(){
+	for(int i=0;i<MAX_PP_AA_ARRAY;i++){
+		aa[i]->AA = 0;
+		aa[i]->value = 0;
+	}
+	map<int32,int8>::iterator itr;
+	for(itr=aa_points.begin();itr!=aa_points.end();itr++)
+		aa_points[itr->first] = 0;
+}
 bool Database::LoadAAEffects() {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     MYSQL_RES *result;
@@ -1003,7 +990,7 @@ Update the player alternate advancement table for the given account "account_id"
 Return true if the character was found, otherwise false.
 False will also be returned if there is a database error.
 */
-bool Database::SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa)
+/*bool Database::SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char query[256+sizeof(PlayerAA_Struct)*2+1];
@@ -1016,7 +1003,7 @@ bool Database::SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Stru
 	(name[i] < 'A' || name[i] > 'Z') && 
 	(name[i] < '0' || name[i] > '9'))
 	return 0;
-}*/
+}
 	
 	
 	end += sprintf(end, "UPDATE character_ SET alt_adv=\'");
@@ -1036,7 +1023,7 @@ bool Database::SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Stru
 	
 	return true;
 }
-
+*/
 /*
 Update the player alternate advancement table for the given account "account_id" and character name "name"
 Return true if the character was found, otherwise false.

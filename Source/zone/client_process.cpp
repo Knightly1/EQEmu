@@ -185,6 +185,14 @@ int Client::HandlePacket(const APPLAYER *app)
 					break;
 				}
 				case OP_SendAATable: {
+					for(int a=0; a < MAX_PP_AA_ARRAY; a++){
+						aa[a] = &m_pp.aa_array[a];
+						int32 id = aa[a]->AA;
+						if(aa[a]->value>1)
+							aa_points[(id - aa[a]->value +1)] = aa[a]->value;
+						else
+							aa_points[id] = aa[a]->value;
+					}
 					SendAAList();
 					break;
 				}
@@ -4753,8 +4761,7 @@ void Client::DBAWComplete(int8 workpt_b1, DBAsyncWork* dbaw) {
 }
 
 bool Client::FinishConnState2(DBAsyncWork* dbaw) {
-	uint32 pplen = 0, aalen = 0;
-	memset(&m_pp, 0, sizeof(PlayerProfile_Struct));
+	uint32 pplen = 0;
 	DBAsyncQuery* dbaq = 0;
 	APPLAYER* outapp = 0;
 	MYSQL_RES* result = 0;
@@ -4776,7 +4783,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 			database.GetAccountInfoForLogin_result(result, 0, account_name, &lsaccountid, &gmspeed, &revoked);
 		}
 		else if (dbaq->QPT() == 2) {
-			loaditems = database.GetCharacterInfoForLogin_result(result, 0, 0, &m_pp, &m_inv, &pplen, &aa, &aalen, &guilddbid, &guildrank);
+			loaditems = database.GetCharacterInfoForLogin_result(result, 0, 0, &m_pp, &m_inv, &pplen, &guilddbid, &guildrank);
 		}
 		else if (dbaq->QPT() == 3) {
 			database.LoadFactionValues_result(result, &factionvalue_list);
@@ -5184,7 +5191,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	m_inv.dumpInventory();
 #endif
 	strcpy(m_pp.servername,"eqemulator");
-
+	
 	CRC32::SetEQChecksum((unsigned char*)&m_pp, sizeof(PlayerProfile_Struct)-4);
 	outapp = new APPLAYER(OP_PlayerProfile,sizeof(PlayerProfile_Struct));
 #ifdef SOLAR
@@ -5319,18 +5326,6 @@ void Client::CompleteConnect()
 			m_pp.spell_book[spellInt] = 0xFFFFFFFF;
 	}
 	
-	
-	//build our AA array representation.
-	memset(&aa, 0, sizeof(aa));
-	for(int a=0; a < MAX_PP_AA_ARRAY; a++) {
-		if(m_pp.aa_array[a].value > 0){
-			if(m_pp.aa_array[a].value>1)
-				aa.aa_list[a].aa_skill = m_pp.aa_array[a].AA - m_pp.aa_array[a].value + 1;
-			else
-				aa.aa_list[a].aa_skill = m_pp.aa_array[a].AA;
-			aa.aa_list[a].aa_value = m_pp.aa_array[a].value;
-		}
-	}
 	SendAATable();
 	
 	//reapply some buffs

@@ -160,6 +160,7 @@ int command_init(void)
 
 	if
 	(
+		command_add("resetaa","Resets a Player's AA in their profile.",200,command_resetaa) ||
 		command_add("ppoint","[add or connect] Set P Points",200,command_ppoint) ||
 		command_add("setpr","[number (1-4)] Set P_Range point",200,command_pr) ||
 		command_add("setrange","Set range after selecting all four points",200,command_range) ||
@@ -636,6 +637,14 @@ void command_range(Client* c,const Seperator *sep){
 	}
 	else
 		c->Message(0,"Not all points are set!");
+}
+void command_resetaa(Client* c,const Seperator *sep){
+	if(c->GetTarget()!=0 && c->GetTarget()->IsClient()){
+		c->GetTarget()->CastToClient()->ResetAA();
+		c->Message(13,"Successfully reset %s's AAs",c->GetTarget()->GetName());
+	}
+	else
+		c->Message(0,"Usage: Target a client and use #resetaa to reset the AA data in their Profile.");
 }
 void command_ppoint(Client* c,const Seperator *sep){
 	int32 insert_id=0;
