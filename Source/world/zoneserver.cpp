@@ -415,7 +415,7 @@ bool ZoneServer::Process() {
 				else	// need to boot one
 				{
 					int server_id;
-					if ((server_id = zoneserver_list.TriggerBootup(ztz->requested_zone_id))){
+					if (server_id = zoneserver_list.TriggerBootup(ztz->requested_zone_id)){
 						printf("World (%d): Successfully booted a zone for %s\n", GetZoneID(), ztz->name);
 						// bootup successful, ready to rock
 						ztz->response = 1;
@@ -1877,13 +1877,8 @@ void ZSList::SendCLEList(const sint16& admin, const char* to, WorldTCPConnection
 	safe_delete(output);
 }
 
-void ZSList::CLEAdd(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin, uint32 ip) {
-#ifdef DOODMAN_DEBUG
-	printf("CLEAdd: LSID=%d, account=%s, key=%.10s, admin=%d, ip=%d.%d.%d.%d\n",
-		iLSID,iLoginName,iLoginKey,iWorldAdmin,
-		*(unsigned char *)&ip, *(((unsigned char*)&ip)+1), *(((unsigned char*)&ip)+2), *(((unsigned char*)&ip)+3));
-#endif
-	ClientListEntry* tmp = new ClientListEntry(iLSID, iLoginName, iLoginKey, iWorldAdmin, ip);
+void ZSList::CLEAdd(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin) {
+	ClientListEntry* tmp = new ClientListEntry(iLSID, iLoginName, iLoginKey, iWorldAdmin);
 
 	clientlist.Append(tmp);
 }
@@ -1942,12 +1937,12 @@ void ZSList::CLEKeepAlive(int32 numupdates, int32* wid) {
 	}
 }
 
-ClientListEntry* ZSList::CheckAuth(int32 iLSID, const char* iKey, uint32 ip ) {
+ClientListEntry* ZSList::CheckAuth(int32 iLSID, const char* iKey) {
   LinkedListIterator<ClientListEntry*> iterator(clientlist);
 
 	iterator.Reset();
 	while(iterator.MoreElements()) {
-		if (iterator.GetData()->CheckAuth(iLSID, iKey, ip))
+		if (iterator.GetData()->CheckAuth(iLSID, iKey))
 			return iterator.GetData();
 		iterator.Advance();
 	}
@@ -1974,12 +1969,11 @@ ClientListEntry* ZSList::CheckAuth(const char* iName, const char* iPassword) {
 	return 0;
 }
 
-ClientListEntry::ClientListEntry(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin, uint32 ip) {
+ClientListEntry::ClientListEntry(int32 iLSID, const char* iLoginName, const char* iLoginKey, sint16 iWorldAdmin) {
 	ClearVars(true);
 
 	id = zoneserver_list.GetNextCLEID();
 	pIP = 0;
-	loginIP = ip;
 	pLSID = iLSID;
 	paccountid = database.GetAccountIDFromLSID(iLSID, paccountname, &padmin);
 	strn0cpy(plsname, iLoginName, sizeof(plsname));
@@ -2149,13 +2143,8 @@ bool ClientListEntry::CheckStale() {
 	return false;
 }
 
-bool ClientListEntry::CheckAuth(int32 iLSID, const char* iKey, int32 ip) {
-#ifdef DOODMAN_DEBUG
-	printf("Checking auth: ip=%d.%d.%d.%d,key='%.10s' vs ip=%d.%d.%d.%d,key='%.10s' (client)\n",
-		*(unsigned char *)&loginIP, *(((unsigned char*)&loginIP)+1), *(((unsigned char*)&loginIP)+2), *(((unsigned char*)&loginIP)+3),plskey,
-		*(unsigned char *)&ip, *(((unsigned char*)&ip)+1), *(((unsigned char*)&ip)+2), *(((unsigned char*)&ip)+3),iKey);
-#endif
-	if (loginIP==ip && strncmp(plskey, iKey,10) == 0) {
+bool ClientListEntry::CheckAuth(int32 iLSID, const char* iKey) {
+	if (LSID() == iLSID && strncmp(plskey, iKey,10) == 0) {
 		if (paccountid == 0) {
 			sint16 tmpStatus = net.GetDefaultStatus();
 			paccountid = database.CreateAccount(plsname, 0, tmpStatus, LSID());

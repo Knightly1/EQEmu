@@ -149,7 +149,7 @@ bool LoginServer::Process() {
 		}
 		case ServerOP_LSClientAuth: {
 			ServerLSClientAuth* slsca = (ServerLSClientAuth*) pack->pBuffer;
-			zoneserver_list.CLEAdd(slsca->lsaccount_id, slsca->name, slsca->key, slsca->worldadmin, slsca->ip);
+			zoneserver_list.CLEAdd(slsca->lsaccount_id, slsca->name, slsca->key, slsca->worldadmin);
 //cout << "New Auth received for LS#" << slsca->lsaccount_id << endl;
 //cout << "New Auth received for LS#" << slsca->lsaccount_id << ", k=" << slsca->key << endl;
 			break;

@@ -1,5 +1,7 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==09/17/2004
+Doodman: (un)fixed world to hand the LS->world hand off like it did in the past
 
 ==/09/12/2004
 FatherNitwit: Added my LOS code and map converter. Thanks to wiz for help with testing.
@@ -58,6 +60,7 @@ LethalEncounter: Finished updating few structs, can now login with latest client
 ==08/20/2004
 LethalEncounter: Fixed player profile.
 
+>>>>>>> /home/mfinger/eqemulator/Source/changelog.txt, Branch Revision: 1.20
 ==08/12/2004
 Cofruben:Added basics of begging.
 Cofruben:Added group splitting.
