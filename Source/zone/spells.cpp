@@ -2297,7 +2297,9 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 
 			case SE_Fear:
 			{
+#ifdef ENABLE_FEAR_PATHING
 				fear_state = fearStateNotFeared;
+#endif
 				break;
 			}
 		}

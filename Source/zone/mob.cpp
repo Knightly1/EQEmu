@@ -308,9 +308,9 @@ logpos = false;
 	cur_wp=0;
 	patrol=0;
 	follow=0;
-	
+#ifdef ENABLE_FEAR_PATHING
 	fear_state = fearStateNotFeared;
-	
+#endif
 	permarooted = ( walkspeed == 0 ) && ( runspeed == 0 );
 
 	movetimercompleted = false;

@@ -205,7 +205,7 @@ bool ItemCommonInst::IsStackable() const
 	//This function is not correct. Not all stackable items have itemuse 
 	//set to ItemUseStackable, example: fishing grubs
 	if (m_item)
-		return (m_item->Common.ItemUse == ItemUseStackable);
+		return ((m_item->Common.MaxCharges == 1) && (m_item->Charges>0) && (m_item->Common.ItemUse>=14) && (m_item->Common.ItemUse<=19));
 	
 	return false;
 }

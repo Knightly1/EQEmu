@@ -13,6 +13,7 @@ LethalEncounter: Reworked AA system and fixed some of the bugs with it.
 LethalEncounter: Dyes should work correctly now.
 LethalEncounter: Fixed Bazaar trader bug.
 LethalEncounter: Zones now display the proper fog when you update your zone table with the latest.
+LethalEncounter: Fixed zone crash and merchant item charge bug.
 
 ==10/22/2004
 LethalEncounter: Fixed item deletion bug not updating client.

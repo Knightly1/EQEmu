@@ -701,7 +701,7 @@ void Mob::SendToFixZ(float new_x, float new_y, float new_z) {
 }
 
 
-#define FEAR_PATHING_DEBUG
+#ifdef FEAR_PATHING_DEBUG
 void Mob::SetFeared(Mob *caster, int32 duration) {
 	if(zone->map == NULL) {
 		fear_state = fearStateStuck;
@@ -935,7 +935,7 @@ void Mob::CalculateFearPosition() {
 		GetX(), GetY(), GetZ(), normalhit.x, normalhit.y, normalhit.z);
 #endif
 }
-
+#endif
 
 
 

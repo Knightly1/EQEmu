@@ -3113,7 +3113,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					else
 						Message(0, "Error #1, item == 0");
 					
-					//not really sure if this make sense:
+	
 					if (item && GetInv().GetItem(mp->itemslot)->IsStackable())
 					{
 						unsigned int i_quan = GetInv().GetItem(mp->itemslot)->GetCharges();
@@ -3179,7 +3179,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					if (!GetInv().GetItem(mp->itemslot)->IsStackable())
 						this->DeleteItemInInventory(mp->itemslot,0,false);
 					else
-						this->DeleteItemInInventory(mp->itemslot,1*mp->quantity,false);
+						this->DeleteItemInInventory(mp->itemslot,mp->quantity,false);
 					
 					APPLAYER* outapp = new APPLAYER(OP_ShopPlayerSell, sizeof(Merchant_Purchase_Struct));
 					Merchant_Purchase_Struct* mco=(Merchant_Purchase_Struct*)outapp->pBuffer;
