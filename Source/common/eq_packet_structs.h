@@ -153,6 +153,34 @@ struct DuelResponse_Struct
 	int32 entity_id;
 	int32 unknown;
 };
+/*
+	Cofruben:
+	Adventure stuff,not a net one,just one for our use 
+*/
+#define ADVENTURE_COLLECT		0
+#define ADVENTURE_MASSKILL		1
+#define ADVENTURE_NAMED			2
+#define ADVENTURE_RESCUE		3
+
+struct AdventureInfo {
+	int32 QuestID;
+	int32 NPCID;
+	bool in_use;
+	int32 status;
+	bool ShowCompass;
+	int32 Objetive;// can be item to collect,mobs to kill,boss to kill and someone to rescue.
+	int32 ObjetiveValue;// number of items,or number of needed mob kills.
+	char text[512];
+	int8 type;
+	int32 minutes;
+	int32 points;
+	float x;
+	float y;
+	int32 zoneid;
+	int32 zonedungeonid;
+};
+///////////////////////////////////////////////////////////////////////////////
+
 
 /*
 ** Color_Struct
@@ -883,7 +911,8 @@ struct PlayerProfile_Struct
 /*5104*/	uint32				unknown4380[18];	//one word became pet stuff above
 /*5300*/	uint32				unknown4460[166];
 /*5964*/	uint32				unknown5760; //0xFF FF FF FF
-/*5968*/	uint32				unknown5968[16];
+/*5968*/	uint32				unknown5968[15];
+/*6028*/	uint32				adventure_id; //not sure.
 /*6032*/	Disciplines_Struct	disciplines;			//fathernitwit: 10-06-04
 /*6232*/	uint32				unknown5764[1283]; //added in last patch, crazy bastards
 /*11364*/	uint32				aapoints_spent;

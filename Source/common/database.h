@@ -164,6 +164,12 @@ public:
 	void	DeleteTraderItem(uint32 char_id);
 	void	DeleteTraderItem(uint32 char_id,int16 slot_id);
 
+
+	AdventureInfo	GetAdventureInfo(int32 questid=0,int32 mobid=0);
+	bool			GetLDoNDungeon(uint32 zoneid);
+	void			SetAdventureInfo(int32 questid,bool inuse,int32 status);
+	void			SetAdventureCharID(uint32 qid,int id,int32 charid);
+	int				GetAdventureCharID(uint32 qid,int id);
 	
 	Trader_Struct* LoadTraderItem(uint32 char_id);
 	char	commands[200][200];

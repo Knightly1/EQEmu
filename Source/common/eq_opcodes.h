@@ -147,6 +147,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_TradeSkillCombine 0x0042
 
 
+#define OP_AdventureFinish	0x02c9 //Cofruben:Used when you win/lose a dungeon
+#define OP_LeaveAdventure	0x02c6 //Cofruben:received when client press leave adventure button
+#define OP_AdventureUpdate	0x02ce
+
+
+
 /*Shops*/
 #define OP_ShopItem			0x02cd	// Send merchant item data to client (header = 0x64)
 #define OP_ShopPlayerBuy	0x0065
