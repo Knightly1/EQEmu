@@ -153,6 +153,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_PetCommands		0x01ac
 #define OP_TradeSkillCombine 0x0042
 #define OP_AugmentItem 0x02e5
+#define OP_ItemName 0x0367
 
 
 

@@ -3490,6 +3490,23 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					Object::HandleCombine(this, in_combine, m_tradeskill_object);
 					break;
 				}
+				case OP_ItemName: {
+					if (app->size != sizeof(ItemNamePacket_Struct)) {
+						LogFile->write(EQEMuLog::Error, "Invalid size for ItemNamePacket_Struct: Expected: %i, Got: %i",
+							sizeof(ItemNamePacket_Struct), app->size);
+						break;
+					}
+					ItemNamePacket_Struct *p = (ItemNamePacket_Struct*)app->pBuffer;
+					const Item_Struct *item = 0;
+					if ((item = database.GetItem(p->item_id))!=NULL) {
+						APPLAYER* outapp=new APPLAYER(OP_ItemName,sizeof(ItemNamePacket_Struct));
+						p=(ItemNamePacket_Struct*)outapp->pBuffer;
+						memset(p, 0, sizeof(ItemNamePacket_Struct));
+						strcpy(p->name,item->Name);
+						FastQueuePacket(&outapp);
+					}
+					break;
+				}
 				case OP_AugmentItem: {
 					if (app->size != sizeof(AugmentItem_Struct)) {
 						LogFile->write(EQEMuLog::Error, "Invalid size for AugmentItem_Struct: Expected: %i, Got: %i",
