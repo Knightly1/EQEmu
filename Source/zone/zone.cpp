@@ -378,7 +378,9 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, i
 	psafe_y = 0;
 	psafe_z = 0;
 	pMaxClients = 0;
-
+	pvpzone = false;
+	if(database.GetServerType() == 1)
+		pvpzone = true;
 	database.GetZoneLongName(short_name, &long_name, file_name, &psafe_x, &psafe_y, &psafe_z, &pMaxClients);
 
 	if (long_name == 0) {

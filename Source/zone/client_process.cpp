@@ -901,7 +901,7 @@ int Client::HandlePacket(const APPLAYER *app)
 					else
 						con->faction = 1;
 					con->level = GetLevelCon(tmob->GetLevel());
-					if(database.GetServerType() == 1) {
+					if(zone->IsPVPZone()) {
 						if (!tmob->IsNPC() )
 							con->pvpcon = tmob->CastToClient()->GetPVP();
 					}
@@ -2492,10 +2492,8 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					if (app->size != sizeof(CombatAbility_Struct)) {
 						cout << "Wrong size on OP_CombatAbility. Got: " << app->size << ", Expected: " << sizeof(CombatAbility_Struct) << endl;
 						break;
-					}
-					
-					OPCombatAbility(app);
-					
+					}		
+					OPCombatAbility(app);			
 					break;
 				}
 				case OP_Taunt: {
@@ -5312,12 +5310,15 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 #endif
 	strcpy(m_pp.servername,"eqemulator");
 	m_pp.air_remaining = 60; //Reset to max so they dont drown on zone in if its underwater
+	if(zone->IsPVPZone())
+		m_pp.pvp=1;
 	CRC32::SetEQChecksum((unsigned char*)&m_pp, sizeof(PlayerProfile_Struct)-4);
 	outapp = new APPLAYER(OP_PlayerProfile,sizeof(PlayerProfile_Struct));
 #ifdef SOLAR
 	printf("PP size: %d\n", sizeof(PlayerProfile_Struct));
 #endif
 	memcpy(outapp->pBuffer,&m_pp,outapp->size);
+	DumpPacket(outapp);
 	outapp->Deflate();
 	outapp->priority = 6;
 	QueuePacket(outapp);
@@ -5336,6 +5337,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	sze->player.spawn.npc=0;
 	sze->player.spawn.unknown367[0]=0xFFFFFFFF;
 	sze->player.spawn.unknown367[1]=0xFFFFFFFF;
+	DumpPacket(outapp);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	

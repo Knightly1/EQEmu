@@ -70,6 +70,7 @@ public:
 	bool	LoadZoneCFG(const char* filename, bool DontLoadDefault = false);
 	bool	SaveZoneCFG();
 	bool	IsLoaded();
+	bool	IsPVPZone() { return pvpzone; }
 	inline const char*	GetAddress()	{ return address; }
 	inline const char*	GetLongName()	{ return long_name; }
 	inline const char*	GetFileName()	{ return file_name; }
@@ -87,7 +88,7 @@ public:
 	AA_List* GetAAList() { return aas; }
 	SendAA_Struct* FindAA(int32 id);
 	void	LoadZoneDoors(const char* zone);
-
+	
 	int32	CountSpawn2();
 	ZonePoint* GetClosestZonePoint(float x, float y, float z, const char* to_name);
 	ZonePoint* GetClosestZonePoint(float x, float y, float z, int32	to);
@@ -168,7 +169,7 @@ private:
 	AA_List* aas;
 	uchar*	aa_buffer;
 	int16	port;
-
+	bool pvpzone;
 	float	psafe_x, psafe_y, psafe_z;
 	int32	pMaxClients;
 

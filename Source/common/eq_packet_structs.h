@@ -282,7 +282,7 @@ union {
 /*142*/ int8	haircolor;
 /*143*/ int8	invis2;		//not sure...
 /*144*/ int8	unknown144[5];
-/*149*/ int8	pvp;	//according to Wiz
+/*149*/ int8	pvp;	//according to Wiz --verified (LE)
 /*150*/ int8	light;
 /*151*/ float	size; // Size 
 /*155*/ int8	helm; 
@@ -811,8 +811,8 @@ struct PlayerProfile_Struct
 /*0228*/	uint32				birthday;			// characters bday
 /*0232*/	uint32				lastlogin;			// last login or zone time
 /*0236*/	uint32				timeplayed;			// in minutes
-/*0240*/	uint8				fatigue;			// Sta bar % depleted (ie, 30 = 70% sta)
-/*0241*/	uint8				pvp;
+/*0240*/	uint8				pvp;			
+/*0241*/	uint8				fatigue;  // Sta bar % depleted (ie, 30 = 70% sta)
 /*0242*/	uint8				unknown162;
 /*0243*/	uint8				gm;				// 1=gm, 0=not gm
 /*0244*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon

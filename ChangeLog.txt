@@ -2,6 +2,8 @@ EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 ==10/27/2004
 Cofruben: Added LDoN adventure system.Please,source the new sql file(thanks to skorch for testing).
+LethalEncounter: Mob deaths should be sent to all players now.
+LethalEncounter: ServerType 1 will make you pvp on zone in now.  Still trying figure out why the client doesnt send any pvp special combat abilities unless your dueling.
 
 ==10/26/2004
 Scorpious2k: Fixed guild doors
