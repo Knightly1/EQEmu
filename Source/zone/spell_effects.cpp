@@ -1,0 +1,2342 @@
+/*  EQEMu:  Everquest Server Emulator
+Copyright (C) 2001-2004  EQEMu Development Team (http://eqemu.org)
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY except by those people which sell it, which
+	are required to give you total support for your newly bought product;
+	without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+	A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+	  You should have received a copy of the GNU General Public License
+	  along with this program; if not, write to the Free Software
+	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+#include "../common/debug.h"
+#include "spdat.h"
+#include "masterentity.h"
+#include "../common/packet_dump.h"
+#include "../common/moremath.h"
+#include "../common/Item.h"
+#include "worldserver.h"
+#include "../common/skills.h"
+#include "../common/bodytypes.h"
+#include "../common/classes.h"
+#include <math.h>
+#include <assert.h>
+#ifndef WIN32
+#include <stdlib.h>
+#include "../common/unix.h"
+#endif
+
+#include "StringIDs.h"
+
+extern Database database;
+extern Zone* zone;
+extern volatile bool ZoneLoaded;
+#ifndef NEW_LoadSPDat
+	extern SPDat_Spell_Struct spells[SPDAT_RECORDS];
+#endif
+extern bool spells_loaded;
+extern WorldServer worldserver;
+//uchar blah[]={0x0D,0x00,0x00,0x00,0x01,0x00,0x00,0x00};
+//uchar blah2[]={0x12,0x00,0x00,0x00,0x16,0x01,0x00,0x00};
+
+
+// the spell can still fail here, if the buff can't stack
+// in this case false will be returned, true otherwise
+bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
+{
+	int caster_level, buffslot, effect, effect_value, i;
+	SPDat_Spell_Struct spell;
+#ifdef SPELL_EFFECT_SPAM
+#define _EDLEN	200
+	char effect_desc[_EDLEN];
+#endif
+
+	if(!IsValidSpell(spell_id))
+		return false;
+
+	buffslot = AddBuff(caster, spell_id);
+	if(buffslot == -1)	// stacking failure
+		return false;
+
+	spell = spells[spell_id];
+	caster_level = caster ? caster->GetCasterLevel(spell_id) : GetCasterLevel(spell_id);
+	
+#ifdef SPELL_EFFECT_SPAM
+		Message(0, "You are affected by spell '%s' (id %d)", spell.name, spell_id);
+		if(buffslot >= 0)
+		{
+			Message(0, "Buff slot:  %d  Duration:  %d tics", buffslot, buffs[buffslot].ticsremaining);
+		}
+#endif
+
+	// iterate through the effects in the spell
+	for (i = 0; i < EFFECT_COUNT; i++)
+	{
+		if(IsBlankSpellEffect(spell_id, i))
+			continue;
+
+		effect = spell.effectid[i];
+		effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
+		
+		
+
+#ifdef SPELL_EFFECT_SPAM
+		effect_desc[0] = 0;
+#endif
+
+		switch(effect)
+		{
+			case SE_CurrentHP:	// nukes, heals; also regen/dot if a buff
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Current Hitpoints: %+i", effect_value);
+#endif
+				// SE_CurrentHP is calculated at first tick if its a dot/buff
+				if (buffslot >= 0)
+					break;
+
+				// for offensive spells check if we have a spell rune on
+				sint32 dmg = effect_value;
+				if(dmg < 0)
+				{
+					// take partial damage into account
+					dmg = (sint32) (dmg * partial / 100);
+					
+					
+					//these spell IDs are prolly wrong...
+					if (spell_id == 2751) //Manaburn
+					{
+						dmg = GetMana()*-3;
+						SetMana(0);
+					} else if (spell_id == 2488) //Lifeburn
+					{
+						dmg = GetHP()*-15/10;
+						SetHP(1);
+					}
+					
+					//handles AAs and what not...
+					if(caster)
+						dmg = caster->GetActSpellDamage(spell_id, dmg);
+
+					sint32 origdmg = dmg;
+					dmg = ReduceMagicalDamage(dmg, GetMagicRune());
+					if (origdmg != dmg && caster)
+					{
+						caster->Message(15,
+							"The Spellshield absorbed %d of %d points of damage",
+							abs(origdmg - dmg), abs(origdmg));
+					}
+
+					if (dmg == 0)	// rune absorbed it all
+						break;
+				}
+				else if(dmg > 0) {
+					//healing spell...
+					if(caster)
+						dmg = caster->GetActSpellHealing(spell_id, dmg);
+				}
+
+				ChangeHP(caster, dmg, spell_id, buffslot);
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Current Hitpoints: %+i  actual: %+i", effect_value, dmg);
+#endif
+				break;
+			}
+
+			case SE_CurrentHPOnce:	// used in buffs usually, see Courage
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Current Hitpoints Once: %+i", effect_value);
+#endif
+				//do any AAs apply to these spells?
+				ChangeHP(caster, effect_value, spell_id, buffslot);
+				break;
+			}
+
+			case SE_PercentalHeal:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Percental Heal: %+i (%d%% max)", spell.max[i], effect_value);
+#endif
+				//im not 100% sure about this implementation.
+				//the spell value forumula dosent work for these... at least spell 3232 anyways
+				sint32 val = spell.max[i];
+				
+				if(caster)
+					val = caster->GetActSpellHealing(spell_id, val);
+				
+				sint32 mhp = GetMaxHP();
+				sint32 chp = GetHP();
+				sint32 cap = mhp * spell.base[i] / 100;
+				if((chp + val) > cap)
+					val = cap - chp;
+				if(val > 0)
+					ChangeHP(caster, val, spell_id, buffslot);
+				break;
+			}
+
+			case SE_CompleteHeal:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Complete Heal");
+#endif
+				//make sure they are not allready affected by this...
+				//I think that is the point of making this a buff.
+				//this is in the wrong spot, it should be in the immune
+				//section so the buff timer does not get refreshed!
+				
+				int i;
+				bool inuse = false;
+				for(i = 0; i < BUFF_COUNT; i++) {
+					if(buffs[i].spellid == spell_id && i != buffslot) {
+						Message(0, "You must wait before you can be affected by this spell again.");
+						inuse = true;
+						break;
+					}
+				}
+				if(inuse)
+					break;
+				
+				sint32 mhp = GetMaxHP();
+				ChangeHP(caster, mhp, spell_id, buffslot);
+				break;
+			}
+
+			case SE_CurrentMana:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Current Mana: %+i", effect_value);
+#endif
+				if (buffslot >= 0)
+					break;
+
+				SetMana(GetMana() + effect_value);
+				break;
+			}
+
+			case SE_Translocate:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Translocate: %s %d %d %d heading %d", 
+					spell.teleport_zone, spell.base[1], spell.base[0], 
+					spell.base[2], spell.base[3]
+				);
+#endif
+				if(IsClient())
+				{
+				Group* group = entity_list.GetGroupByClient(this->CastToClient());
+				if(caster != this && (!group || !group->IsGroupMember(caster->CastToMob())))
+					break;
+					// solar: if it's blank or "0" it means bind point
+					// TODO: MovePC needs to take heading too, which is in base[3]
+					if(spell.teleport_zone && strlen(spell.teleport_zone) > 1)
+					{
+						CastToClient()->MovePC
+						(
+							spell.teleport_zone,
+							spell.base[1],
+							spell.base[0],
+							spell.base[2]
+						);
+					}
+					else
+					{
+						Gate();
+					}
+				}
+				break;
+			}
+
+			case SE_Teleport:	// gates, rings, circles, etc
+			case SE_Teleport2:
+			case SE_Succor:
+			{
+				float x, y, z, heading;
+				char *target_zone;
+
+				x = spell.base[1];
+				y = spell.base[0];
+				z = spell.base[2];
+				heading = spell.base[3];
+								
+				if(!strcmp(spell.teleport_zone, "same"))
+				{
+					target_zone = 0;
+				}
+				else
+				{
+					target_zone = spell.teleport_zone;
+				}
+
+#ifdef SPELL_EFFECT_SPAM
+				const char *efstr = "Teleport";
+				if(effect == SE_Teleport)
+					efstr = "Teleport v1";
+				else if(effect == SE_Teleport2)
+					efstr = "Teleport v2";
+				else if(effect == SE_Succor)
+					efstr = "Succor";
+
+				snprintf(effect_desc, _EDLEN, 
+					"%s: %0.2f, %0.2f, %0.2f heading %0.2f in %s",
+					efstr, x, y, z, heading, target_zone ? target_zone : "same zone"
+				);
+#endif
+				if(IsClient())
+				{
+					// TODO: MovePC needs to take heading too, which is in base[3]
+					CastToClient()->MovePC(target_zone, x, y, z);
+				}
+				break;
+			}
+
+			case SE_HealOverTime:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Heal over Time: %+i", effect_value);
+#endif
+				// solar: this is calculated with bonuses
+				break;
+			}
+
+			case SE_MovementSpeed:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Movement Speed: %+i", effect_value);
+#endif
+				// solar: this is calculated with bonuses
+				break;
+			}
+
+			case SE_AttackSpeed:
+			case SE_AttackSpeed2:
+			case SE_AttackSpeed3:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				if(effect == SE_AttackSpeed)
+					snprintf(effect_desc, _EDLEN, "Attack Speed v1: %d%%", effect_value);
+				else if(effect == SE_AttackSpeed2)
+					snprintf(effect_desc, _EDLEN, "Attack Speed v2: %d%%", effect_value);
+				else if(effect == SE_AttackSpeed3)
+					snprintf(effect_desc, _EDLEN, "Attack Speed v3: %d%%", effect_value);
+#endif
+				// solar: this is calculated with bonuses
+				break;
+			}
+
+			case SE_Invisibility:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Invisibility");
+#endif
+				// solar: TODO already invis message and spell kill from SpellOnTarget
+				SetInvisible(true);
+				break;
+			}
+			
+			//todo: SE_InvisVsAnimals
+			
+			case SE_InvisVsUndead:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Invisibility to Undead");
+#endif
+				invisible_undead = true;		// Mongrel: We're now invis to undead
+				break;
+			}
+
+			case SE_SeeInvis:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "See Invisible");
+#endif
+				// solar: handled by client
+				break;
+			}
+
+			case SE_WaterBreathing:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Water Breathing");
+#endif
+				break;
+			}
+
+			case SE_AddFaction:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Faction Mod: %+i", effect_value);
+#endif
+				// solar: TODO implement this
+				const char *msg = "Faction Mod is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_Stun:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Stun: %d msec", effect_value);
+#endif
+				Stun(effect_value);
+				break;
+			}
+
+			case SE_Charm:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Charm: %+i", effect_value);
+#endif
+				if (!caster)	// can't be someone's pet unless we know who that someone is
+					break;
+
+				//Shawn319: This does not work. we need to re-write it. Players should never be able to charm other players
+				if (IsClient() && caster->IsClient())
+				{
+					caster->Message(0, "Unable to cast charm on a fellow player.");
+					break;
+				}
+
+				WhipeHateList();
+				caster->SetPet(this);
+				SetOwnerID(caster->GetID());
+				SetPetOrder(SPO_Follow);
+                
+				// tell caster it has a pet
+				if(caster->IsClient())
+				{
+					APPLAYER *app = new APPLAYER(OP_Charm, sizeof(Charm_Struct));
+					Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
+					ps->owner_id = caster->GetID();
+					ps->pet_id = this->GetID();
+					ps->command = 1;
+					caster->CastToClient()->FastQueuePacket(&app);
+				}
+
+				if (this->IsClient())
+				{
+					AI_Start();
+				}
+
+// solar: random duration stuff - this is going into CalcBuffDuration eventually
+				bool bBreak = false;
+
+				// define spells with fixed duration
+				// this is handled by the server, and not by the spell database
+				switch(spell_id)
+				{
+					case 3371://call of the banshee
+					case 1707://dictate
+						bBreak = true;
+				}
+				if (!bBreak)
+				{
+					int cha = caster->GetCHA();
+					float r1 = (float)rand()/(float)RAND_MAX;
+					float r2 = (float)cha  + (caster->GetLevel()/3) / 255.0f;
+					float finalPercentDuration = r1 +r2; //When resists work use partial to aid in determining length
+					if (finalPercentDuration > 1.0f) finalPercentDuration = 1.0f;
+					buffs[buffslot].ticsremaining = (int)ceil(finalPercentDuration *buffs[buffslot].ticsremaining);
+				}
+
+				break;
+			}
+
+			case SE_Fear:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Fear: %+i", effect_value);
+#endif
+// solar: random duration, removing this later
+				buffs[buffslot].ticsremaining = MakeRandomInt(1, buffs[buffslot].ticsremaining);
+				
+				int resist = spellbonuses.ResistFearChance + itembonuses.ResistFearChance;
+				if(resist > 0 && MakeRandomInt(0,99) < resist) {
+					entity_list.MessageClose_StringID(this, false, 200, MT_Disciplines, RESISTS_URGE, GetCleanName());
+					//entity_list.MessageClose(this, false, 100, 0, "%s resists the urge to flee!", GetName());
+				}
+				else
+				{
+					//kathgar: Its basicly fear, they don't move
+					Stun(buffs[buffslot].ticsremaining * 6000);
+				}
+                
+				break;
+			}
+
+			case SE_BindAffinity:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Bind Affinity");
+#endif
+				if (this->IsClient())
+				{
+					CastToClient()->SetBindPoint();
+					Save();
+				}
+				break;
+			}
+
+			case SE_Gate:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Gate");
+#endif
+				Gate();
+				break;
+			}
+
+			case SE_CancelMagic:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Cancel Magic: %d", effect_value);
+#endif
+				// solar: TODO proper dispel counters, including poison/disease/curse
+				int slot;
+				for(slot = 0; slot < BUFF_COUNT; slot++)
+				{
+					if
+					(
+						buffs[slot].spellid != SPELL_UNKNOWN &&
+						buffs[slot].durationformula != DF_Permanent &&
+			    	buffs[slot].casterlevel <= (caster_level + effect_value)
+			    )
+			    {
+						BuffFadeBySlot(slot);
+						slot = BUFF_COUNT;
+					}
+				}
+				break;
+			}
+
+			case SE_DispelDetrimental:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Dispel Detrimental: %d", effect_value);
+#endif
+				// solar: TODO implement this
+				const char *msg = "Dispel Detrimental is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_Mez:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Mesmerize");
+#endif
+				Mesmerize();
+				break;
+			}
+
+			case SE_SummonItem:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				const Item_Struct *item = database.GetItem(spell.base[i]);
+				const char *itemname = item ? item->Name : "*Unknown Item*";
+				snprintf(effect_desc, _EDLEN, "Summon Item: %s (id %d)", itemname, spell.base[i]);
+#endif
+				if(IsClient())
+				{
+					int charges;
+					if (spell.formula[i] < 100)
+					{
+						charges = spell.formula[i];
+					}
+					else	// variable charges
+					{
+						charges = CalcSpellEffectValue_formula(spell.formula[i], 0, 20, caster_level, spell_id);
+					}
+					charges = charges < 1 ? 1 : (charges > 20 ? 20 : charges);
+					CastToClient()->SummonItem(spell.base[i], charges);
+				}
+
+				break;
+			}
+
+			case SE_SummonBSTPet:
+			case SE_NecPet:
+			case SE_SummonPet:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Summon Pet: %s", spell.teleport_zone);
+#endif
+				if(GetPet())
+				{
+					Message_StringID(MT_Shout, ONLY_ONE_PET);
+				}
+				else
+				{
+					MakePet(spell_id, spell.teleport_zone);
+				}
+				break;
+			}
+
+			case SE_Familiar:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Summon Familiar: %s", spell.teleport_zone);
+#endif
+				if (GetFamiliarID())
+				{
+					Message_StringID(MT_Shout, ONLY_ONE_PET);
+				}
+				else
+				{
+					MakePet(spell_id, spell.teleport_zone);
+				}
+				break;
+			}
+
+			case SE_DivineAura:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Invulnerability");
+#endif
+				SetInvul(true);
+				break;
+			}
+
+			case SE_ShadowStep:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Shadow Step: %d", effect_value);
+#endif
+				if(IsNPC())	// see Song of Highsun - sends mob home
+				{
+					Gate();
+				}
+				// solar: shadow step is handled by client already, nothing required
+				break;
+			}
+
+			case SE_TrueNorth:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "True North");
+#endif
+				// solar: handled by client
+				break;
+			}
+
+			case SE_Blind:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Blind: %+i", effect_value);
+#endif
+				if (spells[spell_id].base[i] == 1)
+					BuffFadeByEffect(SE_Blind);
+				// solar: handled by client
+				// TODO: blind flag?
+				break;
+			}
+
+			case SE_SenseDead:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Sense Dead");
+#endif
+				// solar: handled by client
+				break;
+			}
+
+			case SE_SenseSummoned:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Sense Summoned");
+#endif
+				// solar: handled by client
+				break;
+			}
+
+			case SE_SenseAnimals:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Sense Animals");
+#endif
+				break;
+				// solar: handled by client
+			}
+
+			case SE_Rune:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Melee Absorb Rune: %+i", effect_value);
+#endif
+				SetRune(effect_value);
+				break;
+			}
+
+			case SE_AbsorbMagicAtt:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Spell Absorb Rune: %+i", effect_value);
+#endif
+				SetMagicRune(effect_value);
+				break;
+			}
+
+			case SE_Levitate:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Levitate");
+#endif
+				// solar: no need to send this, the client already knows to levitate
+				//SendAppearancePacket(AT_Levitate, 2);
+				break;
+			}
+
+			case SE_Illusion:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Illusion: race %d", effect_value);
+#endif
+				// solar: TODO fix up SendIllusionPacket
+
+				int16 tex = 0;
+				if (spell_id == 599||spell_id == 2798||spell_id == 2799||spell_id == 2800)
+					tex = 2;// water
+				else if (spell_id == 598||spell_id == 2795||spell_id == 2796||spell_id == 2797)
+					tex = 1;// fire
+				else if (spell_id == 584||spell_id == 2792||spell_id == 2793||spell_id == 2794)
+					tex = 0; //earth
+				else if (spell_id == 597||spell_id == 2789|| spell_id == 2790|| spell_id == 2791)
+					tex = 3;// air
+
+				SendIllusionPacket
+				(
+					spell.base[i],
+					Mob::GetDefaultGender(spell.base[i], GetGender()),
+					tex
+				);
+				break;
+			}
+
+			case SE_IllusionCopy:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Illusion Copy");
+#endif
+				// solar: TODO implement this
+				const char *msg = "Illusion Copy is not implemented.";
+				if(caster) caster->Message(13, msg);
+			}
+
+			case SE_DamageShield:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Damage Shield: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_ReverseDS:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Reverse Damage Shield: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_SpellDamageShield:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Reverse Damage Shield: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_Identify:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Identify");
+#endif
+				// solar: handled by client
+				break;
+			}
+
+			case SE_WipeHateList:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Memory Blur: %d", effect_value);
+#endif
+				int wipechance = spells[spell_id].base[i];
+				if(MakeRandomInt(0, 100) < wipechance)
+				{
+					if(IsAIControlled())
+					{
+						WhipeHateList();
+					}
+					Message(13, "Your mind fogs. Who are my friends? Who are my enimies?... it was all so clear a moment ago...");
+				}
+				break;
+			}
+
+			case SE_SpinTarget:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Spin: %d", effect_value);
+#endif
+				// solar: the spinning is handled by the client
+				if(buffslot >= 0)
+					Stun(buffs[buffslot].ticsremaining * 6000);
+				break;
+			}
+
+			case SE_EyeOfZomm:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Eye of Zomm");
+#endif
+				const char *msg = "Eye of Zomm is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_ReclaimPet:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Reclaim Pet");
+#endif
+				if
+				(
+					IsNPC() &&
+					GetOwnerID() &&		// I'm a pet
+					caster &&					// there's a caster
+					caster->GetID() == GetOwnerID()	&& // and it's my master
+					GetPetType() != 0xFF
+				)
+				{
+					int lvlmod = 4;
+					if(caster->IsClient() && caster->CastToClient()->GetAA(aaImprovedReclaimEnergy))
+						lvlmod = 8;	//this is an unconfirmed number, I made it up 
+					if(caster->IsClient() && caster->CastToClient()->GetAA(aaImprovedReclaimEnergy2))
+						lvlmod = 8;	//this is an unconfirmed number, I made it up 
+					caster->SetMana(caster->GetMana()+(GetLevel()*lvlmod));
+					
+					SetOwnerID(0);	// this will kill the pet
+				}
+				break;
+			}
+
+			case SE_BindSight:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Bind Sight");
+#endif
+				// solar: handled by client
+				break;
+			}
+
+			case SE_FeignDeath:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Feign Death");
+#endif
+				//todo, look up spell ID in DB
+				if(spell_id == 2488)   //Dook- Lifeburn fix 
+					break; 
+
+				if(IsClient())
+					CastToClient()->SetFeigned(true);
+				break;
+			}
+
+			case SE_VoiceGraft:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Voice Graft");
+#endif
+				//should set a flag to make this easy to check.
+				//dont know how to make it expire when the spell fades right now...
+				//const char *msg = "Voice Graft is not implemented.";
+				//if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_Sentinel:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Sentinel");
+#endif
+				if(caster)
+				{
+					if(caster == this)
+					{
+						Message_StringID(MT_Spells,
+							SENTINEL_TRIG_YOU);
+					}
+					else
+					{
+						caster->Message_StringID(MT_Spells,
+							SENTINEL_TRIG_OTHER, GetCleanName());
+					}
+				}
+				break;
+			}
+
+			case SE_LocateCorpse:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Locate Corpse");
+#endif
+				// solar: handled by client
+				break;
+			}
+
+			case SE_Revive:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Revive");	// heh the corpse won't see this
+#endif
+				if (IsCorpse() && CastToCorpse()->IsPlayerCorpse())
+					CastToCorpse()->CastRezz(spell_id, caster);
+				break;
+			}
+
+			case SE_ModelSize:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Model Size: %d%%", effect_value);
+#endif
+				ChangeSize(GetSize() * (effect_value / 100.0));
+				break;
+			}
+
+			case SE_TestSpells:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Test Spell: %+i", effect_value);
+#endif
+				break;
+			}
+
+			case SE_Root:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Root: %+i", effect_value);
+#endif
+				BuffFadeByEffect(SE_MovementSpeed);
+				rooted = true;
+				break;
+			}
+
+			case SE_SummonHorse:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Summon Mount: %s", spell.teleport_zone);
+#endif
+				if(IsClient())	// NPCs can't ride
+				{
+					CastToClient()->MakeHorseSpawnPacket(spell_id);
+				}
+				break;
+			}
+
+			case SE_SummonCorpse:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Summon Corpse: %d", effect_value);
+#endif
+				if(IsClient())	// can only summon corpses of clients
+				{
+					Corpse *corpse = entity_list.GetCorpseByOwner(CastToClient());
+					if(corpse)
+					{
+						if(caster)
+						{
+							caster->Message_StringID(4, SUMMONING_CORPSE_OTHER, GetCleanName());
+						}
+						corpse->Summon(CastToClient(), true);
+					}
+					else	// corpse not found
+					{
+						if(caster)
+						{
+							caster->Message_StringID(4, CORPSE_CANT_SENSE);
+						}
+					}
+				}
+				break;
+			}
+
+			case SE_WeaponProc:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Weapon Proc: %s (id %d)", spells[effect_value].name, effect_value);
+#endif
+				int16 procid;
+				//AA rewrites...
+				switch(spell_id) {
+					case 1376:	//shroud of undeath 
+					case 1459:	//shroud of death
+						procid = 1471;
+						break;
+					case 2574:	//scream of death 
+						procid = 2718;
+						break;
+					case 2576:	//mental corruption 
+						procid = 2712;
+						break;
+					case 3227:	//shroud of chaos
+						procid = 3228;
+						break;
+					case 4903:	//black shroud 
+						procid = 4910;
+						break;
+					case 4902:	//mental horror 
+						procid = 4908;
+						break;
+					default:
+						procid = spell.base[i];
+						break;
+				}
+				
+				AddProcToWeapon(procid);
+				break;
+			}
+
+			case SE_Calm:	// cinder jolt, enraging blow
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Hate Mod: %+i%%", effect_value);
+#endif
+				if (!IsNPC() || !caster)
+					break;
+				if (effect_value > 0) {
+					AddToHateList(caster, effect_value);
+				} else {
+					int newhate = CastToNPC()->GetHateAmount(caster) + effect_value;
+					if (newhate < 1) {
+						SetHate(caster,1);
+					} else {
+						SetHate(caster,newhate);
+					}
+				}
+				break;
+			}
+
+			case SE_ChangeAggro:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Aggro Mod: %+i%%", effect_value);
+#endif
+				break;
+			}
+
+			case SE_ChangeFrenzyRad:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Frenzy Radius Mod: %d/%d", spell.base[i], spell.max[i]);
+#endif
+				break;
+			}
+
+			case SE_Harmony:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Reaction Radius Mod: %d/%d", spell.base[i], spell.max[i]);
+#endif
+				break;
+			}
+
+			case SE_Lull:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Lull");
+#endif
+				// TODO: check vs. CHA when harmony effect failed, if caster is to be added to hatelist
+				break;
+			}
+
+			case SE_TotalHP:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Total Hitpoints: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_ManaPool:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Total Mana: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_InfraVision:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Infravision");
+#endif
+				// solar: handled by client
+				break;
+			}
+
+			case SE_UltraVision:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Ultravision");
+#endif
+				// solar: handled by client
+				break;
+			}
+
+			case SE_Stamina:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Stamina: %+i", effect_value);
+#endif
+				// solar: handled with bonuses - this is stamina regen, like CurrentHP
+				break;
+			}
+
+			case SE_ArmorClass:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Armor Class: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_ATK:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "ATK: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_STR:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "STR: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_DEX:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "DEX: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_AGI:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "AGI: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_STA:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "STA: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_INT:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "INT: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_WIS:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "WIS: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_CHA:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "CHA: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_AllStats:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "All Stats: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_ResistFire:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Resist Fire: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_ResistCold:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Resist Cold: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_ResistPoison:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Resist Poison: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_ResistDisease:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Resist Disease: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_ResistMagic:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Resist Magic: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_ResistAll:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Resist All: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_CastingLevel:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Effective Casting Level Mod: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_PoisonCounter:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Poison Counter: %+i", effect_value);
+#endif
+				if (effect_value > 0)
+					buffs[buffslot].poisoncounters = effect_value;
+				else
+				{
+					effect_value = 0 - effect_value;
+					for (int j=0; j < BUFF_COUNT; j++) {
+						if (buffs[j].spellid >= (int16)SPDAT_RECORDS)
+							continue;
+						if (buffs[j].poisoncounters == 0)
+							continue;
+						if (effect_value >= buffs[j].poisoncounters) {
+							if (caster && caster->IsClient())
+								caster->CastToClient()->Message(MT_Spells,"You have cured your target from %s!",spells[buffs[j].spellid].name);
+							effect_value -= buffs[j].poisoncounters;
+							buffs[j].poisoncounters = 0;
+							BuffFadeBySlot(j);
+						} else {
+							buffs[j].poisoncounters -= effect_value;
+							effect_value = 0;
+							break;
+						}
+					}
+				}
+				break;
+			}
+
+			case SE_DiseaseCounter:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Disease Counter: %+i", effect_value);
+#endif
+				if (effect_value > 0)
+					buffs[buffslot].diseasecounters = effect_value;
+				else
+				{
+					effect_value = 0 - effect_value;
+					for (int j=0; j < BUFF_COUNT; j++) {
+						if (buffs[j].spellid >= (int16)SPDAT_RECORDS)
+							continue;
+						if (buffs[j].diseasecounters == 0)
+							continue;
+						if (effect_value >= buffs[j].diseasecounters)
+						{
+							if (caster && caster->IsClient())
+								caster->CastToClient()->Message(MT_Spells,"You have cured your target from %s!",spells[buffs[j].spellid].name);
+							effect_value -= buffs[j].diseasecounters;
+							buffs[j].diseasecounters = 0;
+							BuffFadeBySlot(j);
+						}
+						else
+						{
+							buffs[j].diseasecounters -= effect_value;
+							effect_value = 0;
+							break;
+						}
+					}
+				}
+				break;
+			}
+
+			case SE_CurseCounter:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Curse Counter: %+i", effect_value);
+#endif
+				break;
+			}
+
+			case SE_NegateIfCombat:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Negate if Combat");
+#endif
+				// solar: TODO implement this
+				break;
+			}
+
+			case SE_Destroy:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Destroy");
+#endif
+				if(IsNPC()) {
+					//if(GetLevel() < 52)
+					//should we use Death instead of Depop here???
+					if(GetLevel() <= spells[spell_id].base[i])
+						CastToNPC()->Depop();
+				}
+				break;
+			}
+
+			case SE_Lycanthropy:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Lycanthropy: %+i", effect_value);
+#endif
+				// solar: TODO figure out what this is
+				const char *msg = "Lycanthropy is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+			
+			case SE_TossUp:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Toss Up: %d", effect_value);
+#endif
+				// solar: TODO implement this
+				const char *msg = "Toss Up is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_MagnifyVision:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Magnify Vision: %d%%", effect_value);
+#endif
+				// solar: handled by client
+				break;
+			}
+
+			case SE_StopRain:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Stop Rain");
+#endif
+				zone->zone_weather = 0;
+				zone->weatherSend();
+				break;
+			}
+
+			case SE_Sacrifice:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Sacrifice");
+#endif
+				// solar: TODO implement this
+				const char *msg = "Sacrifice is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_Silence:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Silence");
+#endif
+				// solar: TODO implement this
+				const char *msg = "Silence is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_Fearless:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Fearless");
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_CallPet:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Call Pet");
+#endif
+				// solar: this is cast on self, not on the pet
+				if(GetPet() && GetPet()->IsNPC())
+				{
+					GetPet()->CastToNPC()->GMMove(GetX(), GetY(), GetZ(), GetHeading());
+				}
+				break;
+			}
+
+			case SE_AntiGate:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Anti-Gate: %d", effect_value);
+#endif
+				// solar: TODO implement this
+				const char *msg = "Anti-Gate is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_Hunger:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Hunger");
+#endif
+				// solar: TODO implement this
+				const char *msg = "Hunger is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_MagicWeapon:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Magic Weapon");
+#endif
+				// solar: TODO implement this
+				const char *msg = "Magic Weapon is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_SingingSkill:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Singing Skill: %+i", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_HealRate:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Heal Effectiveness: %d%%", effect_value);
+#endif
+				// solar: TODO implement this
+				const char *msg = "Heal Effectiveness is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_Screech:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Screech: %d", effect_value);
+#endif
+				// solar: TODO figure out what this is
+				const char *msg = "Screech is not implemented.";
+				if(caster) caster->Message(13, msg);
+				break;
+			}
+
+			case SE_Reflect:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Reflect: %+i%%", effect_value);
+#endif
+				// solar: handled with bonuses
+				break;
+			}
+
+			case SE_StackingCommand_Block:
+			case SE_StackingCommand_Overwrite:
+			{
+				// solar: these are special effects used by the buff stuff
+				break;
+			}
+
+
+			case SE_TemporaryPets:         //Dook- swarms and wards:
+			{
+				if(IsClient())
+					CastToClient()->TemporaryPets(spell_id);
+				break;
+			}
+			
+			
+
+			case SE_MeleeMitigation:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Melee Mitigation: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_CriticalHitChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Critical Hit Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_CrippBlowChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Crippling Blow Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_AvoidMeleeChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Avoid Melee Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_RiposteChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Riposte Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_DodgeChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Dodge Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_ParryChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Parry Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_DualWeildChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Dual Weild Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_DoubleAttackChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Double Attack Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_MeleeLifetap:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Melee Lifetap Effect");
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_AllInstrunmentMod:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "All Instrunments Modifier: %+i", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_ResistSpellChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Resist Spell Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_ResistFearChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Resist Fear Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_HundredHands:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Hundred Hands Effect");
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_MeleeSkillCheck:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Melee Skill Check: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_HitChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Hit Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_DamageModifier:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Damage Modifier: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_MinDamageModifier:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Min Damage Modifier: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+
+
+			case SE_StunResist:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Stun Resist: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+			
+			
+			case SE_FadingMemories:		//Dook- escape etc
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Fading Memories");
+#endif
+				//bard mana check, doesnt use it, just checks it-
+				if((caster)&&(caster->IsClient())&&(caster->GetMana() <= 899)&&(caster->GetClass() == BARD)) {
+					caster->Message(13,"Insufficient Mana to cast this Spell.");
+					break;
+				}
+				entity_list.RemoveFromTargets(caster);
+				break;
+			}
+			
+
+			case SE_ProcChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Proc Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+			
+
+			case SE_RangedProc:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Ranged Proc: %+i", effect_value);
+#endif
+				caster->Message(13, "Ranged Procs are not implemented yet.");
+				break;
+			}
+
+			case SE_Rampage:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Rampage");
+#endif
+				entity_list.AEAttack(caster,30);
+				caster->Message(13, "Rampage Was Called");
+				break;
+			}
+
+			case SE_AETaunt://Dook- slapped it in the spell effect so client does the animations
+			{			// and incase there are similar spells we havent found yet
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "AE Taunt");
+#endif
+				if(caster->IsClient())
+					entity_list.AETaunt(caster->CastToClient());
+				break;
+			}
+			
+			case SE_ReduceSkillTimer:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Reduce Skill Timer: %+i", effect_value);
+#endif
+				caster->Message(13, "Reduce Skill Timer not implemented yet");
+			}
+
+
+			case SE_ExtraAttackChance:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Extra Attack Chance: +%+i%%", effect_value);
+#endif
+				// handled with bonuses
+				break;
+			}
+			
+			
+			case SE_WakeTheDead:		//Dook- Wake the Dead
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Wake The Dead");
+#endif
+				caster->Message(13, "Wake The Dead is not implemented yet.");
+				break;
+			}
+			
+			
+			case SE_Doppelganger:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Doppelganger");
+#endif
+				caster->Message(13, "Doppelganger is not implemented yet.");
+				break;
+			}
+			
+
+			case SE_DefensiveProc:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Defensive Proc: %+i", effect_value);
+#endif
+				caster->Message(13, "Defensive Procs are not implemented yet.");
+				break;
+			}
+			
+			//currently missing effects:
+			//SE_SummonItem2
+			//SE_ReduceSpellHate
+			//SE_NoCombatSkills
+			//SE_DeathSave
+			//SE_CriticalDamageMob
+			//SE_Cloak
+			//SE_BalanceHP
+			
+			default:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Unknown Effect ID %d", effect);
+#else
+				Message(0, "Unknown spell effect %d in spell %s (id %d)", effect, spell.name, spell_id);
+#endif
+			}
+		}
+#ifdef SPELL_EFFECT_SPAM
+		Message(0, ". . . Effect #%i: %s", i + 1, strlen(effect_desc) ? effect_desc : "Unknown");
+#endif
+	}
+
+	CalcBonuses();
+
+	return true;
+}
+
+int Mob::CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level)
+{
+	int formula, base, max;
+
+	if
+	(
+		!IsValidSpell(spell_id) ||
+		effect_id < 0 ||
+		effect_id >= EFFECT_COUNT
+	)
+		return 0;
+
+	formula = spells[spell_id].formula[effect_id];
+	base = spells[spell_id].base[effect_id];
+	max = spells[spell_id].max[effect_id];
+
+	if(IsBlankSpellEffect(spell_id, effect_id))
+		return 0;
+	
+	return CalcSpellEffectValue_formula(formula, base, max, caster_level, spell_id);
+}
+
+// solar: generic formula calculations
+int Mob::CalcSpellEffectValue_formula(int formula, int base, int max, int caster_level, int16 spell_id)
+{
+/*
+neotokyo: i need those formulas checked!!!!
+
+0 = base
+1 - 99 = base + level * formulaID
+100 = base
+101 = base + level / 2
+102 = base + level
+103 = base + level * 2
+104 = base + level * 3
+105 = base + level * 4
+106 ? base + level * 5
+107 ? min + level / 2
+108 = min + level / 3
+109 = min + level / 4
+110 = min + level / 5
+119 ? min + level / 8
+121 ? min + level / 4
+122 = splurt
+123 ?
+203 = stacking issues ? max
+205 = stacking issues ? 105
+
+
+  0x77 = min + level / 8
+*/
+	
+	int result = 0, updownsign = 1, ubase = abs(base);
+	
+	// solar: this updown thing might look messed up but if you look at the
+	// spells it actually looks like some have a positive base and max where
+	// the max is actually less than the base, hence they grow downward
+	if (max < base && max != 0)
+	{
+		// values are calculated down
+		updownsign = -1;
+	}
+	else
+	{
+		// values are calculated up
+		updownsign = 1;
+	}
+	
+	switch(formula)
+	{
+		case   0:
+		case 100:	// solar: confirmed 2/6/04
+			result = ubase; break;
+		case 101:	// solar: confirmed 2/6/04
+			result = ubase + updownsign * (caster_level / 2); break;
+		case 102:	// solar: confirmed 2/6/04
+			result = ubase + updownsign * caster_level; break;
+		case 103:	// solar: confirmed 2/6/04
+			result = ubase + updownsign * (caster_level * 2); break;
+		case 104:	// solar: confirmed 2/6/04
+			result = ubase + updownsign * (caster_level * 3); break;
+		case 105:	// solar: confirmed 2/6/04
+			result = ubase + updownsign * (caster_level * 4); break;
+
+		case 107:	// Shutting this thing up, this is wrong
+			result = ubase + updownsign * (caster_level * 4); break;
+
+		case 108:
+			result = ubase + updownsign * (caster_level / 3); break;
+		case 109:	// solar: confirmed 2/6/04
+			result = ubase + updownsign * (caster_level / 4); break;
+		case 110:	// solar: confirmed 2/6/04
+			result = ubase + (caster_level / 5); break;
+		case 111:	// solar: this doesn't look right
+            result = ubase + 5 * (caster_level - 16); break;
+		case 112:
+            result = ubase + 8 * (caster_level - 24); break;
+		case 113:
+            result = ubase + 12 * (caster_level - 34); break;
+		case 114:
+            result = ubase + 15 * (caster_level - 44); break;
+
+		//more bullshit to shut it up, this is prolly wrong
+		case 115:	// solar: this is only in symbol of transal
+			result = ubase + 15 * (caster_level - 54); break;
+
+		case 116:	// solar: this is only in symbol of ryltan
+		case 117:	// solar: this is only in symbol of pinzarn
+		case 118:	// solar: used in naltron and a few others
+		case 119:	// solar: confirmed 2/6/04
+			result = ubase + (caster_level / 8); break;
+		case 121:	// solar: corrected 2/6/04
+			result = ubase + (caster_level / 3); break;
+		case 122: {	// todo: we need the remaining tics here
+			uint8 b;
+            for (b = 0; b < BUFF_COUNT; b++) {
+				if (buffs[b].spellid == spell_id) {
+					int ticdif = spells[spell_id].buffduration - buffs[b].ticsremaining;
+					result = base + (max*ticdif);
+					break;
+				}
+			}
+			break;
+		}
+		case 123:	// solar: added 2/6/04
+			result = MakeRandomInt(ubase, abs(max));
+		default:
+			if (formula < 100)
+				result = ubase + (caster_level * formula);
+			else
+				LogFile->write(EQEMuLog::Debug, "Unknown spell effect value forumula %d", formula);
+	}
+	
+	// now check result against the allowed maximum
+	if (max != 0)
+	{
+		if (updownsign == 1)
+		{
+			if (result > max)
+				result = max;
+		}
+		else
+		{
+			if (result < max)
+				result = max;
+		}
+	}
+
+	// if base is less than zero, then the result need to be negative too
+	if (base < 0 && result > 0)
+		result *= -1;
+	return result;
+}
+
+void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob* caster)
+{
+	int effect, effect_value;
+	SPDat_Spell_Struct spell;
+
+	if(!IsValidSpell(spell_id))
+		return;
+
+
+	spell = spells[spell_id];
+
+	if (spell_id == SPELL_UNKNOWN)
+		return;
+	
+	for (int i=0; i < EFFECT_COUNT; i++)
+	{
+		if(IsBlankSpellEffect(spell_id, i))
+			continue;
+
+		effect = spell.effectid[i];
+		effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
+		
+		switch(effect)
+		{
+			case SE_CurrentHP:
+			{
+				if (invulnerable || /*effect_value > 0 ||*/ DivineAura())
+					break;
+				sint32 modifier = 100;
+				
+				//dont know what the signon this should be... - makes sense
+				if (caster && caster->IsClient() && 
+					spells[spell_id].SpellAffectIndex != 86 
+					&& /*!BeneficialSpell(spell_id)*/ effect_value < 0)
+					modifier += caster->CastToClient()->GetFocusEffect(focusImprovedDOT, spell_id);
+				
+				effect_value = effect_value * modifier / 100;
+				
+				
+				if (IsMezzed()) {
+					if (caster)
+						entity_list.MessageClose(this,true,100,MT_WornOff,"%s was awoken by %s.",GetName(),caster->GetName());
+					BuffFadeByEffect(SE_Mez);
+				}
+	
+				ChangeHP(caster ? caster : this, effect_value, spell_id, i, true);
+				break;
+			}
+			case SE_HealOverTime:
+			{
+				ChangeHP(caster ? caster : this, effect_value, spell_id, i, true);
+				break;
+			}
+
+			case SE_CurrentMana:
+			{
+				SetMana(GetMana() + effect_value);
+				break;
+			}
+
+       /* case SE_Charm: { //Do it once in Effect instead of every tic
+            bool bBreak = false;
+
+            // define spells with fixed duration
+            // this is handled by the server, and not by the spell database
+            switch(spell_id) {
+            case 3371://call of the banshee
+            case 1707://dictate
+                bBreak = true;
+            }
+			
+            if (!bBreak && caster) {
+                int cha = caster->GetCHA();
+                float r1 = (float)rand()/(float)RAND_MAX;
+                float r2 = (float)cha  + (caster->GetLevel()/3) / 255.0f;
+
+                if (r1 > r2) {
+                    BuffFadeByEffect(SE_Charm);
+                }
+            }
+            break;
+        }*/
+
+			// solar: TODO get this outta here
+			case SE_Root: {
+				float r1 = (float)rand()/RAND_MAX;
+				float r2 = (float)(GetMR() - caster_level)/512.0f;//Need to move to Effect and use partial when resists are updated
+				// cout<<"Root:"<<(float)r1<<":"<<r2<<endl;
+				if ( r1 < r2 )
+					BuffFadeByEffect(SE_Root);
+				break;
+			}
+			default: {
+				// do we need to do anyting here?
+			}
+		}
+	}
+}
+
+//given an item/spell's focus ID and the spell being cast, determine the focus ammount, if any
+//assumes that spell_id is not a bard spell and that both ids are valid spell ids
+sint16 Client::CalcFocusEffect(focusType type, int16 focus_id, int16 spell_id) {
+	
+	const SPDat_Spell_Struct &focus_spell = spells[focus_id];
+	const SPDat_Spell_Struct &spell = spells[spell_id];
+	
+	sint16 value = 0;
+	
+	for (int i = 0; i < EFFECT_COUNT; i++) {
+		switch (focus_spell.effectid[i]) {
+		case SE_Blank:
+			break;
+		
+		//check limits
+		
+		//missing limits:
+		//SE_LimitTarget
+		//SE_LimitResist
+		//SE_LimitInstant
+		
+		case SE_LimitMaxLevel:
+			if (spell.classes[(GetClass()%16) - 1] > focus_spell.base[i])
+				return(0);
+			break;
+			
+		case SE_LimitMinLevel:
+			if (spell.classes[(GetClass()%16) - 1] < focus_spell.base[i])
+				return(0);
+			break;
+			
+		case SE_LimitCastTime:
+			if (spells[spell_id].cast_time < (uint16)focus_spell.base[i])
+				return(0);
+			break;
+			
+		case SE_LimitSpell:
+			if(focus_spell.base[i] < 0) {	//exclude spell
+				if (spell_id == (focus_spell.base[i]*-1))
+					return(0);
+			} else {
+				//this makes the assumption that only one spell can be explicitly included...
+				if (spell_id != focus_spell.base[i])
+					return(0);
+			}
+			break;
+		
+		case SE_LimitMinDur:
+				if (focus_spell.base[i] > CalcBuffDuration_formula(GetLevel(), spell.buffdurationformula, spell.buffduration))
+					return(0);
+			break;
+		
+		case SE_LimitEffect:
+			switch( focus_spell.base[i] ) {
+				case -147:
+					if (IsPercentalHealSpell(spell_id))
+						return 0;
+					break;
+				case -101:
+					if (IsCHDurationSpell(spell_id))
+						return 0;
+					break;
+				case -40:
+					if (IsInvulnerabilitySpell(spell_id))
+						return 0;
+					break;
+				case -32:
+					if (IsSummonItemSpell(spell_id))
+						return 0;
+					break;
+				case 0:
+					if (!IsEffectHitpointsSpell(spell_id))
+						return 0;
+					break;
+				case 33:
+					if (!IsSummonPetSpell(spell_id))
+						return 0;
+					break;
+				case 36:
+					if (!IsPoisonCounterSpell(spell_id))
+						return 0;
+					break;
+				case 71:
+					if (!IsSummonSkeletonSpell(spell_id))
+						return 0;
+					break;
+				default:
+					LogFile->write(EQEMuLog::Normal, "CalcFocusEffect(%d):  unknown limit effect %d", focus_id, focus_spell.base[i]);
+			}
+			break;
+		
+		
+		case SE_LimitSpellType:
+			switch( focus_spell.base[i] )
+			{
+				case 0:
+					if (!IsDetrimentalSpell(spell_id))
+						return 0;
+					break;
+				case 1:
+					if (!IsBeneficialSpell(spell_id))
+						return 0;
+					break;
+				default:
+					LogFile->write(EQEMuLog::Normal, "CalcFocusEffect:  unknown limit spelltype %d", focus_spell.base[i]);
+			}
+			break;
+		
+		
+		
+		//handle effects
+		
+		case SE_ImprovedDamage:
+			switch (focus_spell.max[i])
+			{
+				case 0:
+					if (type == focusImprovedDamage && focus_spell.base[i] > value)
+					{
+						value = focus_spell.base[i];
+					}
+					break;
+				case 1:
+					if (type == focusImprovedCritical && focus_spell.base[i] > value)
+					{
+						value = focus_spell.base[i];
+					}
+					break;
+				case 2:
+					if (type == focusImprovedUndeadDamage && focus_spell.base[i] > value)
+					{
+						value = focus_spell.base[i];
+					}
+					break;
+				case 3:
+					if (type == 10 && focus_spell.base[i] > value)
+					{
+						value = focus_spell.base[i];
+					}
+					break;
+				default: //Resist stuff
+					if (type == (focusType)focus_spell.max[i] && focus_spell.base[i] > value)
+					{
+						value = focus_spell.base[i];
+					}
+					break;
+			}
+			break;
+		case SE_ImprovedHeal:
+			if (type == focusImprovedHeal && focus_spell.base[i] > value)
+			{
+				value = focus_spell.base[i];
+			}
+			break;
+		case SE_IncreaseSpellHaste:
+			if (type == focusSpellHaste && focus_spell.base[i] > value)
+			{
+				value = focus_spell.base[i];
+			}
+			break;
+		case SE_IncreaseSpellDuration:
+			if (type == focusSpellDuration && BeneficialSpell(spell_id) && focus_spell.base[i] > value)
+			{
+				value = focus_spell.base[i];
+			}
+			break;
+		case SE_IncreaseRange:
+			if (type == focusRange && focus_spell.base[i] > value)
+			{
+				value = focus_spell.base[i];
+			}
+			break;
+		case SE_ReduceReagentCost:
+			if (type == focusReagentCost && focus_spell.base[i] > value)
+			{
+				value = focus_spell.base[i];
+			}
+			break;
+		case SE_ReduceManaCost:
+			if (type == focusManaCost && focus_spell.base[i] > value)
+			{
+				value = focus_spell.base[i];
+			}
+			break;
+#if EQDEBUG >= 6
+		//this spits up a lot of garbage when calculating spell focuses
+		//since they have all kinds of extra effects on them.
+		default:
+			LogFile->write(EQEMuLog::Normal, "CalcFocusEffect:  unknown effectid %d", focus_spell.effectid[i]);
+#endif
+		}
+	}
+	return(value);
+}
+
+sint16 Client::GetFocusEffect(focusType type, int16 spell_id) {
+	if (IsBardSong(spell_id))
+		return 0;
+	const Item_Struct* TempItem = 0;
+	const Item_Struct* UsedItem = 0;
+	sint16 Total = 0;
+	sint16 realTotal = 0;
+	
+	//item focus
+	for(int x=0; x<=21; x++)
+	{
+		TempItem = NULL;
+		ItemInst* ins = GetInv().GetItem(x);
+		if (!ins)
+			continue;
+		TempItem = ins->GetItem();
+		if (TempItem && TempItem->Common.FocusId > 0 && TempItem->Common.FocusId != SPELL_UNKNOWN) {
+			Total = CalcFocusEffect(type, TempItem->Common.FocusId, spell_id);
+			if(Total > realTotal) {
+				realTotal = Total;
+				UsedItem = TempItem;
+			}
+		}
+	}
+
+	if (realTotal > 0 && UsedItem) {
+		Message_StringID(MT_Spells, BEGINS_TO_GLOW, UsedItem->Name);
+	}
+
+	//Spell Focus
+	sint16 Total2 = 0;
+	sint16 realTotal2 = 0;
+
+	for (int y = 0; y < BUFF_COUNT; y++) {
+		int16 focusspellid = buffs[y].spellid;
+		if (focusspellid == 0 || focusspellid >= SPDAT_RECORDS)
+			continue;
+
+		Total2 = CalcFocusEffect(type, focusspellid, spell_id);
+		if(Total2 > realTotal2) {
+			realTotal2 = Total2;
+		}
+	}
+
+	return realTotal + realTotal2;
+}

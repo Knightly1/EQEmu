@@ -1,0 +1,14 @@
+
+
+CREATE TABLE timers (
+	char_id INT(11) NOT NULL,
+	type MEDIUMINT UNSIGNED NOT NULL,
+	start INT UNSIGNED NOT NULL,
+	duration INT UNSIGNED NOT NULL,
+	enable TINYINT NOT NULL,
+	PRIMARY KEY(char_id, type)
+);
+
+
+
+
