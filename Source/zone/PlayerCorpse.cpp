@@ -718,7 +718,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 				d->gold			= 0;
 				d->platinum		= 0;
 				Group *cgroup = client->GetGroup();
-				cgroup->SplitMoney(GetCopper(), GetSilver(), GetGold(), GetPlatinum(), this);
+				cgroup->SplitMoney(GetCopper(), GetSilver(), GetGold(), GetPlatinum(), client);
 			} else {
 				d->copper		= this->GetCopper();
 				d->silver		= this->GetSilver();
