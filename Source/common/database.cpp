@@ -2418,12 +2418,33 @@ bool Database::GetCharacterInfoForLogin_result(MYSQL_RES* result, int32* charact
 			else if(lengths[1] == sizeof(Before_Aug13th_PlayerProfile_Struct)) {
 				LogFile->write(EQEMuLog::Status, "7. Player profile being converted from the Aug 13th patch now....");
 				Before_Aug13th_PlayerProfile_Struct* ops = (Before_Aug13th_PlayerProfile_Struct*)row[1];
-				uchar* ptr=(uchar*)pp;
+				uchar* newpps = new uchar[sizeof(Before_Sep14th_PlayerProfile_Struct)];
+				uchar* ptr_old=(uchar*)newpps;
 				uchar* c_ptr=(uchar*)ops;
-				memcpy(ptr,c_ptr,588);
+				memcpy(ptr_old,c_ptr,588);
 				c_ptr+=588;
-				ptr+=1304;
-				memcpy(ptr,c_ptr,4440);
+				ptr_old+=1304;
+				memcpy(ptr_old,c_ptr,4440);
+
+				uchar* ptr=(uchar*)pp;
+				uchar* s_ptr=(uchar*)newpps;
+				memcpy(ptr,s_ptr,124);
+				s_ptr+=140;
+				ptr+=220;
+				memcpy(ptr,s_ptr,88);
+				s_ptr+=88;
+				ptr+=92;
+				memcpy(ptr,s_ptr,1140);
+				s_ptr+=1140;
+				ptr+=1176;
+				memcpy(ptr,s_ptr,8);
+				s_ptr+=8;
+				ptr+=12;
+				memcpy(ptr,s_ptr,3700);
+				pp->bind_x[0]=((Before_Sep14th_PlayerProfile_Struct*)newpps)->bind_x;
+				pp->bind_y[0]=((Before_Sep14th_PlayerProfile_Struct*)newpps)->bind_y;
+				pp->bind_z[0]=((Before_Sep14th_PlayerProfile_Struct*)newpps)->bind_z;
+				safe_delete(newpps);
 			}
 			else if(lengths[1] == sizeof(Before_Sep14th_PlayerProfile_Struct)) {
 				LogFile->write(EQEMuLog::Status, "8. Player profile being converted from the Sep 14th patch now....");

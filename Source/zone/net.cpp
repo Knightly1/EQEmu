@@ -556,12 +556,13 @@ sint32 GetMaxSpellID() {
 	char seps[] = "^";
 	//ifstream in(SPELLS_FILE);
 	
-	struct stat s;
+	/*struct stat s;
 	if(stat(SPELLS_FILE, &s) != 0) {
 		LogFile->write(EQEMuLog::Error, "File '%s' not found (stat failed) in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
 		return(-1);
 	}
-	
+	*/
+
 	FILE *sf = fopen(SPELLS_FILE, "r");
 	
 	if(sf == NULL) {
@@ -660,7 +661,7 @@ bool FileLoadSPDat(SPDat_Spell_Struct* sp, sint32 iMaxSpellID) {
 	
 	if(sf == NULL) {
 		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
-		return -1;
+		return false;
 	}
 /*	ifstream in(SPELLS_FILE);
 	if(!in) {

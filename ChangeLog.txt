@@ -1,5 +1,9 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==10/09/2004
+LethalEncounter: Fix for #zcolor that was brought up by rmanders on the bug forum.
+LethalEncounter: Character conversions from 5.7 to 5.9 should be fixed now.
+LethalEncounter: Implicit length fix and mana struct fixed.
 
 ==10/05/2004
 FatherNitwit: Fix name generator opcode

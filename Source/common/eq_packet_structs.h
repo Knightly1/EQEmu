@@ -431,7 +431,7 @@ struct ManaChange_Struct
 	int32	new_mana;                  // New Mana AMount
 	int32	stamina;
 	int32	spell_id;
-
+	int32	unknown12;
 };
 
 struct SwapSpell_Struct 

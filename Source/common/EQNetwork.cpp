@@ -2260,7 +2260,7 @@ switch (opcode)
   case 0x003e:			// 63
     return 0x0c;		// 12
   case 0x00bf:			// 192
-    return 0x0c;		// 12
+    return 0x10;		// 16
   case 0x00e2:			// 228
     return 0x17;		// 23
   case 0x00f3:			// 245

@@ -1901,8 +1901,8 @@ void command_zcolor(Client *c, const Seperator *sep)
 	else {
 		for (int z=0; z<4; z++) {
 			zone->newzone_data.fog_red[z] = atoi(sep->arg[1]);
-			zone->newzone_data.fog_blue[z] = atoi(sep->arg[2]);
-			zone->newzone_data.fog_green[z] = atoi(sep->arg[3]);
+			zone->newzone_data.fog_green[z] = atoi(sep->arg[2]);
+			zone->newzone_data.fog_blue[z] = atoi(sep->arg[3]);
 		}
 		APPLAYER* outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
