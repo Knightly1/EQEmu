@@ -294,7 +294,7 @@ int Parser::GetItemCount(string itemid, int32 npcid)
 	return a;
 }
 
-bool Parser::HasQuestFile(int32 npcid)
+int Parser::HasQuestFile(int32 npcid)
 {
 	sint32 qstID = GetNPCqstID(npcid);
 	int success=1;

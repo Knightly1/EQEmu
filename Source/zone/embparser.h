@@ -50,7 +50,7 @@ public:
 	void SendCommands(const char * pkgprefix, const char *event, int32 npcid, Mob* other, Mob* mob);
 	void ReloadQuests();
 	
-	virtual bool	HasQuestFile(int32 npcid);
+	int	HasQuestFile(int32 npcid);
 	
 };
 

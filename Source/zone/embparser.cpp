@@ -511,7 +511,7 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 }
 
 //this function does NOT consider the default to be a quest 
-bool PerlembParser::HasQuestFile(int32 npcid) {
+int PerlembParser::HasQuestFile(int32 npcid) {
 	sint32 qstID = GetNPCqstID(npcid);
 	int success=1;
 	

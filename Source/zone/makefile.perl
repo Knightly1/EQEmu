@@ -7,7 +7,7 @@ SF=../common/EQNetwork.o \
    ../common/serverinfo.o ../common/moremath.o worldserver.o spells.o spawngroup.o loottables.o \
    faction.o Map.o PlayerCorpse.o petitions.o MobAI.o Object.o ../common/eqtime.o \
    groups.o ../common/classes.o ../common/races.o ../common/TCPConnection.o forage.o \
-   ../common/crc32.o ../common/guilds.o ../common/md5.o ../common/dbcore.o \
+   ../common/crc32.o ../common/md5.o ../common/dbcore.o \
    ../common/dbasync.o zonedbasync.o parser.o embperl.o embparser.o \
    ../common/EMuShareMem.o ../common/EQEMuError.o \
    .obj/debug.o .obj/database.o .obj/Item.o .obj/misc.o \
