@@ -556,23 +556,12 @@ bool EntityList::MakeDoorSpawnPacket(APPLAYER* app)
 			nd.zPos = door->GetZ();
 			nd.heading = door->GetHeading();
 			nd.incline = door->GetIncline();
-			nd.size = 100;	// 100 is normal size
+			nd.size = door->GetSize();
 			nd.doorId = door->GetDoorID();				
 			nd.opentype = door->GetOpenType();
 			nd.state_at_spawn = door->GetInvertState() ? !door->IsDoorOpen() : door->IsDoorOpen();
 			nd.invert_state = door->GetInvertState();
-
-			switch(door->GetOpenType())
-			{
-				case 0x3B:	// vertical movement
-					nd.door_param = door->GetLiftHeight();
-					break;
-				case 0x3A:	// the PoK books, maybe other zone point type things too
-					nd.door_param = 0; // solar TODO: zone point should go here
-					break;
-				default:
-					nd.door_param = 0xFFFFFFFF;
-			}
+			nd.door_param = door->GetDoorParam();
 			
 			// append it to the packet
 			memcpy(packet_buffer + length, &nd, sizeof(nd));

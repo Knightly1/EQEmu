@@ -232,6 +232,30 @@ void Database::HandleMysqlError(int32 errnum) {
 	}
 }
 #ifdef LECONVERT
+void Database::ConvertDoors(){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char *query = 0;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	NewZone_Struct* zone_data = NULL;
+	if (database.RunQuery(query, MakeAnyLenString(&query, "SELECT raw,zone from doors_raw"), errbuf, &result)) {
+		safe_delete_array(query);
+		while((row = mysql_fetch_row(result))) {
+			char *query2 = 0;
+			char errbuf2[MYSQL_ERRMSG_SIZE];
+			Door_Struct* d = (Door_Struct*)row[0];
+			char* zone = (char*)row[1];
+			if (!database.RunQuery(query2, MakeAnyLenString(&query2, "replace into doors (doorid,zone,name,pos_x,pos_y,pos_z,heading,incline,size,opentype,doorisopen,invert_state,door_param) values(%i,'%s','%s',%f,%f,%f,%f,%i,%i,%i,%i,%i,%i)",d->doorId,zone,d->name,d->xPos,d->yPos,d->zPos,d->heading,d->incline,d->size,d->opentype,d->state_at_spawn,d->invert_state,d->door_param), errbuf)) {
+				cerr << "Error in ConvertDoors: " << errbuf2 << endl;
+				return;
+			}
+		}
+		mysql_free_result(result);
+	}
+	else
+		LogFile->write(EQEMuLog::Error, "Error in ConvertRawZones query %s: %s", query, errbuf);
+	safe_delete_array(query);
+}
 void Database::ConvertRawZones(){
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
@@ -1241,19 +1265,6 @@ bool Database::DoorIsOpen(int8 door_id,const char* zone_name)
 void Database::SetDoorPlace(int8 value,int8 door_id,const char* zone_name)
 {
 	door_isopen_array[door_id] = value;
-/*	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-	int32 affected_rows = 0;
-	if(value == 99)
-	{
-	if (RunQuery(query, MakeAnyLenString(&query, "update doors set doorisopen=0 where zone='zone_name'",zone_name), errbuf, 0, &affected_rows))
-		safe_delete_array(query);
-	}
-	else
-	{
-	if (RunQuery(query, MakeAnyLenString(&query, "update doors set doorisopen=%i where zone='%s' AND doorid=%i",value,zone_name,door_id), errbuf, 0, &affected_rows))
-		safe_delete_array(query);
-	}*/
 }
 
 void Database::GetEventLogs(const char* name,char* target,int32 account_id,int8 eventid,char* detail,char* timestamp, CharacterEventLog_Struct* cel)
@@ -4623,7 +4634,7 @@ bool Database::DBLoadDoors(sint32 iDoorCount, int32 iMaxDoorID) {
 			max_door_type = atoi(row[0]);
 			mysql_free_result(result);
 			Door tmpDoor;
-			MakeAnyLenString(&query, "SELECT id,doorid,zone,name,pos_x,pos_y,pos_z,heading,opentype,guild,lockpick,keyitem,triggerdoor,triggertype,dest_zone,dest_x,dest_y,dest_z,dest_heading,liftheight,invert_state,incline from doors");//WHERE zone='%s'", zone_name
+			MakeAnyLenString(&query, "SELECT id,doorid,zone,name,pos_x,pos_y,pos_z,heading,opentype,guild,lockpick,keyitem,triggerdoor,triggertype,dest_zone,dest_x,dest_y,dest_z,dest_heading,door_param,invert_state,incline,size from doors");//WHERE zone='%s'", zone_name
 			if (RunQuery(query, strlen(query), errbuf, &result)) {
 				safe_delete_array(query);
 				while((row = mysql_fetch_row(result))) {
@@ -4647,9 +4658,10 @@ bool Database::DBLoadDoors(sint32 iDoorCount, int32 iMaxDoorID) {
                     tmpDoor.dest_y = (float) atof(row[16]);
                     tmpDoor.dest_z = (float) atof(row[17]);
                     tmpDoor.dest_heading = (float) atof(row[18]);
-					tmpDoor.liftheight=atoi(row[19]);
+					tmpDoor.door_param=atoi(row[19]);
 					tmpDoor.invert_state=atoi(row[20]);
 					tmpDoor.incline=atoi(row[21]);
+					tmpDoor.size=atoi(row[22]);
 					if (!EMuShareMemDLL.Doors.cbAddDoor(tmpDoor.db_id, &tmpDoor)) {
 						mysql_free_result(result);
 						return false;
@@ -4661,6 +4673,9 @@ bool Database::DBLoadDoors(sint32 iDoorCount, int32 iMaxDoorID) {
 			else
 			{
 				cerr << "Error in DBLoadDoors query '" << query << "' " << errbuf << endl;
+				cerr << "If you get an error about door_param and size, run the following queries:\n";
+				cerr << "ALTER TABLE `doors` CHANGE `liftheight` `door_param` INT(4)  DEFAULT \"0\" NOT NULL;\n";
+				cerr << "ALTER TABLE `doors` ADD `size` SMALLINT(5)  UNSIGNED DEFAULT \"100\" NOT NULL;\n";
 				safe_delete_array(query);
 				return false;
 			}
@@ -4727,7 +4742,7 @@ bool Database::LoadDoors()
             return false;
     }
 
-   MakeAnyLenString(&query, "SELECT id,doorid,zone,name,pos_x,pos_y,pos_z,heading,opentype,guild,lockpick,keyitem,triggerdoor,triggertype,liftheight from doors");//WHERE zone='%s'", zone_name
+   MakeAnyLenString(&query, "SELECT id,doorid,zone,name,pos_x,pos_y,pos_z,heading,opentype,guild,lockpick,keyitem,triggerdoor,triggertype,door_param from doors");//WHERE zone='%s'", zone_name
 	if (RunQuery(query, strlen(query), errbuf, &result))
 	{
 	    safe_delete_array(query);

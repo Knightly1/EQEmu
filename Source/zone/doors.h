@@ -20,7 +20,7 @@ public:
 	int32	GetGuildID() { return guildid; }
 	int8	GetOpenType() { return opentype; }
 	char*	GetDoorName() { return door_name; }
-	int16	GetLiftHeight() { return liftheight; }
+	int32	GetDoorParam() { return door_param; }
 	int GetInvertState() { return invert_state; }
 	float	GetX() { return pos_x; }
 	float	GetY() { return pos_y; }
@@ -36,7 +36,7 @@ public:
  
 	int16 GetKeyItem() {return keyitem;} 
 	int16 GetLockpick() {return lockpick;} 
- 
+	int16 GetSize() { return size; }
 	void	SetGuildID(int32 guild_id) { guildid = guild_id; }
 
 	int32	GetEntityID() { return entity_id; }
@@ -66,7 +66,8 @@ int16	lockpick;
 int16	keyitem;
 int8	trigger_door;
 int8	trigger_type;
-int16	liftheight;
+int32	door_param;
+int16	size;
 int invert_state;
 int32	entity_id;
 bool	isopen;

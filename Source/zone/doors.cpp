@@ -50,9 +50,10 @@ Doors::Doors(const Door* door)
     trigger_door = door->trigger_door;
     trigger_type = door->trigger_type;
 	triggered=false;
-    liftheight = door->liftheight;
+    door_param = door->door_param;
+	size = door->size;
     invert_state = door->invert_state;
-		SetOpenState(false);
+	SetOpenState(false);
 
     close_timer.Disable();
     
@@ -296,8 +297,8 @@ void Doors::DumpDoor(){
         "db_id:%i door_id:%i zone_name:%s door_name:%s pos_x:%f pos_y:%f pos_z:%f heading:%f",
         db_id, door_id, zone_name, door_name, pos_x, pos_y, pos_z, heading);
     LogFile->write(EQEMuLog::Debug,
-        "opentype:%i guildid:%i lockpick:%i keyitem:%i trigger_door:%i trigger_type:%i liftheight:%i open:%s",
-        opentype, guildid, lockpick, keyitem, trigger_door, trigger_type, liftheight, (isopen) ? "open":"closed");
+        "opentype:%i guildid:%i lockpick:%i keyitem:%i trigger_door:%i trigger_type:%i door_param:%i open:%s",
+        opentype, guildid, lockpick, keyitem, trigger_door, trigger_type, door_param, (isopen) ? "open":"closed");
     LogFile->write(EQEMuLog::Debug,
         "dest_zone:%s dest_x:%f dest_y:%f dest_z:%f dest_heading:%f",
         dest_zone, dest_x, dest_y, dest_z, dest_heading);

@@ -212,6 +212,7 @@ int Client::HandlePacket(const APPLAYER *app)
 					// Send Zone Doors
 					if (entity_list.MakeDoorSpawnPacket(outapp)) {
 						//outapp->Deflate();
+						//DumpPacket(outapp);
 						QueuePacket(outapp);
 					}
 					safe_delete(outapp);
@@ -2369,7 +2370,14 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 									InterruptSpell(castspell->spell_id);	//CHEATER!!
 									break;
 								}
-								DeleteItemInInventory(castspell->inventoryslot,1,true);
+								//delete a charge from the item
+								APPLAYER* outapp = new APPLAYER(OP_TraderDelItem,sizeof(TraderDelItem_Struct));
+								TraderDelItem_Struct* tdi = (TraderDelItem_Struct*)outapp->pBuffer;
+								tdi->quantity=0xFFFFFFFF;
+								tdi->unknown=0xFFFFFFFF;
+								tdi->slotid=castspell->slot;
+								QueuePacket(outapp);
+								safe_delete(outapp);
 								if ((item->Common.EffectType == 1) || (item->Common.EffectType == 3) || (item->Common.EffectType == 4) || (item->Common.EffectType == 5))
 								{
 									CastSpell(item->Common.SpellId, castspell->target_id, castspell->slot, item->Common.CastTime, 0, 0, castspell->inventoryslot);
@@ -6903,6 +6911,9 @@ void Client::OPCombatAbility(const APPLAYER *app) {
 	CombatAbility_Struct* ca_atk = (CombatAbility_Struct*) app->pBuffer;
 	if ((ca_atk->m_atk == 100) && (ca_atk->m_type==10)) {    // SLAM - Bash without a shield equipped
 		DoAnim(animTailRake);
+		printf("(level/10)  * 3: %i\n",(level/10)  * 3);
+		printf("(GetSkill(BASH) + GetSTR() + level): %i\n",(GetSkill(BASH) + GetSTR() + level));
+		printf("(700-GetSkill(BASH)): %i\n",(700-GetSkill(BASH)));
 		sint32 dmg=(sint32) ((level/10)  * 3  * (GetSkill(BASH) + GetSTR() + level) / (700-GetSkill(BASH)));
 		
 		Message(MT_Emote, "You Bash for a total of %d damage.",  dmg);

@@ -1265,8 +1265,8 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	}
 	
 	// now we apply the exp loss, unmem their spells, and make a corpse
-	// unless they're a GM
-	if(!GetGM())
+	// unless they're a GM (or less than lvl 10
+	if(!GetGM() && m_pp.level > 9)
 	{
 		if(exploss)
 			SetEXP(GetEXP() - exploss > 1 ? GetEXP() - exploss : 1, GetAAXP());
