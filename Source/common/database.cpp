@@ -7029,13 +7029,12 @@ bool Database::GetStartZone(PlayerProfile_Struct* in_pp, CharCreate_Struct* in_c
 		errbuf,
 		&result
 	);
-LogFile->write(EQEMuLog::Status, "Start zone query: %s\n", query);
+	LogFile->write(EQEMuLog::Status, "Start zone query: %s\n", query);
 	safe_delete_array(query); 
 	
 	if((rows = mysql_num_rows(result)) > 0)
 		row = mysql_fetch_row(result);
-	if(result) mysql_free_result(result);	
-
+	
 	if(row)
 	{         
 		LogFile->write(EQEMuLog::Status, "Found starting location in start_zones");
@@ -7142,7 +7141,8 @@ LogFile->write(EQEMuLog::Status, "Start zone query: %s\n", query);
 
 	if(in_pp->bind_x == 0 && in_pp->bind_y == 0 && in_pp->bind_z == 0)
 		database.GetSafePoints(in_pp->bind_zone_id, &in_pp->bind_x[0], &in_pp->bind_y[0], &in_pp->bind_z[0]);
-
+	if(result) 
+		mysql_free_result(result);	
 	return true;
 }
 

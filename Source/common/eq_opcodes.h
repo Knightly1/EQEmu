@@ -138,7 +138,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_BecomeTrader		0x01c5
 #define	OP_BazaarInspect	0x01f4
 #define OP_TraderItemUpdate	0x006e
-#define	OP_TraderDelItem	0x017b
+#define	OP_TraderDelItem	0x017c
 #define OP_TraderShop		0x01eb	// right-click on a trader in bazaar
 
 #define OP_TraderBuy		0x01ca	// buy from a trader in bazaar

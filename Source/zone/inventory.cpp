@@ -237,6 +237,7 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 		if (inst && inst->GetCharges()) {
 			APPLAYER* outapp = new APPLAYER(OP_TraderDelItem, sizeof(TraderDelItem_Struct));
 			TraderDelItem_Struct* delitem	= (TraderDelItem_Struct*)outapp->pBuffer;
+			delitem->quantity = slot_id;
 			delitem->slotid			= slot_id;
 			delitem->unknown			= 0xFFFFFFFF;
 //I think there is something wrong here, it is crashing my client...
@@ -245,7 +246,7 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 			//	delitem->quantity=0xFFFFFFFF; //fully delete item
 			//else
 //			delitem->quantity	= quantity; // @merth: check that this packet is constructed correctly..
-			delitem->quantity = 0xffffffff;
+			//delitem->quantity = 0xffffffff;
 			QueuePacket(outapp);
 			safe_delete(outapp);
 		}
