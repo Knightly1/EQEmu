@@ -154,6 +154,7 @@ bool LoginServer::Process() {
 		}
 		case ServerOP_LSFatalError: {
 			net.LoginServerInfo = false;
+			net.UpdateStats = false;
 			cout << "Login server responded with FatalError. Disabling reconnect." << endl;
 			if (pack->size > 1) {
 				cout << "Error message: '" << (char*) pack->pBuffer << "'" << endl;

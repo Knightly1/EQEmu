@@ -403,10 +403,27 @@ bool ZoneServer::Process() {
 		// disconnect, and their zone location will be saved when ~Client is
 		// called, so it will be available when they ask to zone.
 		//
+
+			
 			if(pack->size != sizeof(ZoneToZone_Struct))
 				break;
-
 			ZoneToZone_Struct* ztz = (ZoneToZone_Struct*) pack->pBuffer;
+
+			if(net.UpdateStats){
+				ClientListEntry* client = zoneserver_list.FindCharacter(ztz->name);
+				if(client){
+					ServerPacket* pack = new ServerPacket;
+					pack->opcode = ServerOP_LSPlayerZoneChange;
+					pack->size = sizeof(ServerLSPlayerZoneChange_Struct);
+					pack->pBuffer = new uchar[pack->size];
+					ServerLSPlayerZoneChange_Struct* zonechange =(ServerLSPlayerZoneChange_Struct*)pack->pBuffer;
+					zonechange->lsaccount_id = client->LSID();
+					zonechange->from = ztz->current_zone_id;
+					zonechange->to = ztz->requested_zone_id;
+					loginserver.SendPacket(pack);
+					safe_delete(pack);
+				}
+			}
 
 #if DEBUG >= 6
 			printf("World (from zone id %d) received ZTZ for %s current zone %d req zone %d\n",
@@ -1853,6 +1870,18 @@ void ZoneServer::TriggerBootup(int32 iZoneID, const char* adminname, bool iMakeS
 	s->makestatic = iMakeStatic;
 	SendPacket(pack);
 	delete pack;
+	if(net.UpdateStats){
+		ServerPacket* pack = new ServerPacket;
+		pack->opcode = ServerOP_LSZoneBoot;
+		pack->size = sizeof(ZoneBoot_Struct);
+		pack->pBuffer = new uchar[pack->size];
+		memset(pack->pBuffer,0,pack->size);
+		ZoneBoot_Struct* bootup =(ZoneBoot_Struct*)pack->pBuffer;
+		strcpy(bootup->compile_time,"Feb 12 1960 23:59:01"); //until we get real compile time
+		bootup->zone = zoneid;
+		loginserver.SendPacket(pack);
+		safe_delete(pack);
+	}
 }
 
 void ZoneServer::IncommingClient(Client* client) {
@@ -1946,8 +1975,9 @@ void ZSList::ClientUpdate(ZoneServer* zoneserver, ServerClientList_Struct* scl) 
 	while(iterator.MoreElements()) {
 		if (iterator.GetData()->GetID() == scl->wid) {
 			cle = iterator.GetData();
-			if (scl->remove == 2)
+			if (scl->remove == 2){
 				cle->LeavingZone(zoneserver, CLE_Status_Offline);
+			}
 			else if (scl->remove == 1)
 				cle->LeavingZone(zoneserver, CLE_Status_Zoning);
 			else
@@ -2110,13 +2140,29 @@ void ClientListEntry::SetOnline(sint8 iOnline) {
 	if (pOnline >= CLE_Status_Online)
 		stale = 0;
 }
-
+void ClientListEntry::LSUpdate(ZoneServer* iZS){
+	if(net.UpdateStats){
+		ServerPacket* pack = new ServerPacket;
+		pack->opcode = ServerOP_LSZoneInfo;
+		pack->size = sizeof(ZoneInfo_Struct);
+		pack->pBuffer = new uchar[pack->size];
+		ZoneInfo_Struct* zone =(ZoneInfo_Struct*)pack->pBuffer;
+		zone->count=iZS->NumPlayers();
+		zone->zone = iZS->GetZoneID();
+		loginserver.SendPacket(pack);
+		safe_delete(pack);
+	}
+}
 void ClientListEntry::Update(ZoneServer* iZS, ServerClientList_Struct* scl, sint8 iOnline) {
 	if (pzoneserver != iZS) {
-		if (pzoneserver)
+		if (pzoneserver){
 			pzoneserver->NumPlayers()--;
-		if (iZS)
+			LSUpdate(pzoneserver);
+		}
+		if (iZS){
 			iZS->NumPlayers()++;
+			LSUpdate(iZS);
+		}
 	}
 	pzoneserver = iZS;
 	pzone = scl->zone;
@@ -2150,8 +2196,10 @@ void ClientListEntry::LeavingZone(ZoneServer* iZS, sint8 iOnline) {
 		return;
 	SetOnline(iOnline);
 
-	if (pzoneserver)
+	if (pzoneserver){
 		pzoneserver->NumPlayers()--;
+		LSUpdate(pzoneserver);
+	}
 	pzoneserver = 0;
 	pzone = 0;
 }
@@ -2189,8 +2237,10 @@ void ClientListEntry::ClearVars(bool iAll) {
 void ClientListEntry::Camp(ZoneServer* iZS) {
 	if (iZS != 0 && iZS != pzoneserver)
 		return;
-	if (pzoneserver)
+	if (pzoneserver){
 		pzoneserver->NumPlayers()--;
+		LSUpdate(pzoneserver);
+	}
 
 	ClearVars();
 

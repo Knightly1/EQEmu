@@ -441,6 +441,7 @@ bool NetConnection::ReadLoginINI() {
 			}
 			if (!strncasecmp (type, "account", 7)) {
 				strncpy(worldaccount, buf, 30);
+				net.UpdateStats = true;
 			}
 			if (!strncasecmp (type, "password", 8)) {
 				strncpy (worldpassword, buf, 30);

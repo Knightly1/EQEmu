@@ -162,6 +162,7 @@ public:
 	~ClientListEntry();
 	bool	CheckStale();
 	void	Update(ZoneServer* zoneserver, ServerClientList_Struct* scl, sint8 iOnline = CLE_Status_InZone);
+	void	LSUpdate(ZoneServer* zoneserver);
 	bool	CheckAuth(int32 iLSID, const char* key);
 	bool	CheckAuth(const char* iName, MD5& iMD5Password);
 	bool	CheckAuth(int32 id, const char* key, int32 ip);

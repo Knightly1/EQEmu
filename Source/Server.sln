@@ -22,7 +22,6 @@ Global
 	EndGlobalSection
 	GlobalSection(ProjectConfiguration) = postSolution
 		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Debug.ActiveCfg = Debug|Win32
-		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Debug.Build.0 = Debug|Win32
 		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.GotFrags.ActiveCfg = GotFrags|Win32
 		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.GotFrags.Build.0 = GotFrags|Win32
 		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.GuildWars.ActiveCfg = GuildWars|Win32
@@ -61,7 +60,6 @@ Global
 		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Win9x.ActiveCfg = Profiling|Win32
 		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Win9x.Build.0 = Profiling|Win32
 		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Debug.ActiveCfg = Debug|Win32
-		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Debug.Build.0 = Debug|Win32
 		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.GotFrags.ActiveCfg = Release|Win32
 		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.GotFrags.Build.0 = Release|Win32
 		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.GuildWars.ActiveCfg = Release|Win32

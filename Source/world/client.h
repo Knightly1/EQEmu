@@ -50,6 +50,7 @@ public:
 	inline sint16		GetAdmin()			{ if (cle) { return cle->Admin(); } return 0; }
 	inline int32		GetAccountID()		{ if (cle) { return cle->AccountID(); } return 0; }
 	inline int32		GetWID()			{ if (cle) { return cle->GetID(); } return 0; }
+	inline int32		GetLSID()			{ if (cle) { return cle->LSID(); } return 0; }
 	inline const char*	GetLSKey()			{ if (cle) { return cle->GetLSKey(); } return 0; }
 	inline int32		GetCharID()			{ return charid; }
 	inline const char*	GetCharName()		{ return char_name; }
@@ -76,7 +77,6 @@ private:
 	bool firstlogin;
 	bool seencharsel;
 	bool realfirstlogin;
-
 	bool HandlePacket(const APPLAYER *app);
 	EQNetworkConnection* eqnc;
 };

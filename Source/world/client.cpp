@@ -223,10 +223,25 @@ bool Client::HandlePacket(const APPLAYER *app) {
 					cout << "Logged in: ";
 					if (firstlogin)
 						cout << "FirstLogin ";
-					if(minilogin)
+					if(minilogin){
+						net.UpdateStats = false;
 						cout << "Account #" << cle->AccountID() << ": " << cle->AccountName() << endl;
+					}
 					else
 						cout << "LS#" << cle->LSID() << ": " << cle->LSName() << endl;
+					if(net.UpdateStats){
+						ServerPacket* pack = new ServerPacket;
+						pack->opcode = ServerOP_LSPlayerJoinWorld;
+						pack->size = sizeof(ServerLSPlayerJoinWorld_Struct);
+						pack->pBuffer = new uchar[pack->size];
+						memset(pack->pBuffer,0,pack->size);
+						ServerLSPlayerJoinWorld_Struct* join =(ServerLSPlayerJoinWorld_Struct*)pack->pBuffer;
+						strcpy(join->key,GetLSKey());
+						join->lsaccount_id = GetLSID();
+						loginserver.SendPacket(pack);
+						safe_delete(pack);
+					}
+					
 					APPLAYER* outapp;
 					if(firstlogin)
 					{
@@ -441,7 +456,6 @@ bool Client::HandlePacket(const APPLAYER *app) {
 		}
 		case OP_EnterWorld: // Enter world
 		{
-		
 			if (GetAccountID() == 0) {
 				cerr << "Enter world with no logged in account" << endl;
 				eqnc->Close();
@@ -601,6 +615,18 @@ bool Client::Process() {
 	}    
 
 	if (!eqnc->CheckActive()) {
+		if(net.UpdateStats){
+			ServerPacket* pack = new ServerPacket;
+			pack->opcode = ServerOP_LSPlayerLeftWorld;
+			pack->size = sizeof(ServerLSPlayerLeftWorld_Struct);
+			pack->pBuffer = new uchar[pack->size];
+			memset(pack->pBuffer,0,pack->size);
+			ServerLSPlayerLeftWorld_Struct* logout =(ServerLSPlayerLeftWorld_Struct*)pack->pBuffer;
+			strcpy(logout->key,GetLSKey());
+			logout->lsaccount_id = GetLSID();
+			loginserver.SendPacket(pack);
+			safe_delete(pack);
+		}
 		cout << "Client disconnected" << endl;
 		return false;
 	}

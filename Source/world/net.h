@@ -53,11 +53,13 @@ public:
 		memset(chataddress, 0, sizeof(chataddress));
 		DEFAULTSTATUS=0;
 		LoginServerInfo = 0;//ReadLoginINI();
+		UpdateStats = false;
 	}
 	~NetConnection() { }
 
 	bool ReadLoginINI();
 	bool LoginServerInfo;
+	bool UpdateStats;
 	char* GetLoginInfo(int16* oPort);
 	inline char* GetLoginAddress(int8 i)	{ return loginaddress[i]; }
 	inline int16 GetLoginPort(int8 i)		{ return loginport[i]; }

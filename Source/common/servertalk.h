@@ -71,6 +71,14 @@
 #define ServerOP_ListWorlds			0x1006
 #define ServerOP_PeerConnect		0x1007
 
+#define ServerOP_LSZoneInfo			0x3001
+#define ServerOP_LSZoneBoot			0x3002
+#define ServerOP_LSZoneShutdown		0x3003
+#define ServerOP_LSZoneSleep		0x3004
+#define ServerOP_LSPlayerLeftWorld	0x3005
+#define ServerOP_LSPlayerJoinWorld	0x3006
+#define ServerOP_LSPlayerZoneChange	0x3007
+
 #define	ServerOP_UsertoWorldReq		0xAB00
 #define	ServerOP_UsertoWorldResp	0xAB01
 
@@ -309,7 +317,36 @@ struct ServerLSStatus_Struct {
 	sint32 num_players;
 	sint32 num_zones;
 };
+struct ZoneInfo_Struct {
+	uint32 zone;
+	uint16 count;
+};
+struct ZoneBoot_Struct {
+	uint32 zone;
+	char compile_time[25];
+};
+struct ZoneShutdown_Struct {
+	uint32 zone;
+};
+struct ServerLSZoneSleep_Struct {
+	uint32 zone;
+};
 
+struct ServerLSPlayerJoinWorld_Struct {
+	uint32 lsaccount_id;
+ 	char key[30];
+};
+
+struct ServerLSPlayerLeftWorld_Struct {
+	uint32 lsaccount_id;
+ 	char key[30];
+};
+
+struct ServerLSPlayerZoneChange_Struct {
+	uint32 lsaccount_id;
+	uint32 from; // 0 = world
+	uint32 to;  // 0 = world
+};
 struct ServerLSClientAuth {
 	int32	lsaccount_id;	// ID# in login server's db
 	char	name[30];		// username in login server's db
