@@ -3,6 +3,22 @@ EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 
 ==11/08/2004
 FatherNitwit: Fixed taunt crash.
+FatherNitwit: Initial tribute system. Dosent give benefits, or save state yet.
+FatherNitwit: Proximity quests: added quest::set_proximity, quest::clear_proximity
+FatherNitwit: Proximity quests: added events: EVENT_ENTER, EVENT_EXIT
+FatherNitwit: Added event queue for perl commands which cause perl events, like spawn and attack
+FatherNitwit: Added the ability to define in game commands in perl (EMBPERL_COMMANDS)
+FatherNitwit: Hopefully fixed multiple-death XP loss bug.
+FatherNitwit: Hopefully fixed mob chain-casting buffs when target is immune
+FatherNitwit: Reworked quest timers to not crash if the NPC depops/dies.
+FatherNitwit: Added simple code profiling capabilities (-DEQPROFILE + features.h)
+FatherNitwit: Rewrote command list to be map based instead of flat array
+FatherNitwit: Rewrote NPC assist to use AIYellForHelp at regular intervals instead of each scan tic
+FatherNitwit: Rewrote NPC assist code to use npc faction values to determine assist
+FatherNitwit: Rewrote NPC aggro code to be a ton more effecient (REVERSE_AGGRO)
+FatherNitwit: Rewrote NPC spell casting code to be a ton more effecient
+FatherNitwit: Run this query (value of 1 == NPC might aggro other NPCs):
+ALTER TABLE npc_types ADD npc_aggro TINYINT NOT NULL DEFAULT '0';
 
 ==11/07/2004
 LethalEncounter: Added in three variables per feature request.
