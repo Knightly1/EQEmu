@@ -812,12 +812,13 @@ struct PlayerProfile_Struct
 /*0232*/	uint32				lastlogin;			// last login or zone time
 /*0236*/	uint32				timeplayed;			// in minutes
 /*0240*/	uint8				pvp;			
-/*0241*/	uint8				fatigue;  // Sta bar % depleted (ie, 30 = 70% sta)
-/*0242*/	uint8				unknown162;
+/*0241*/	uint8				level2; //no idea why this is here, but thats how it is on live
+/*0242*/	uint8				pvpon;
 /*0243*/	uint8				gm;				// 1=gm, 0=not gm
 /*0244*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
-/*0245*/	uint8				guildrank;					
-/*0246*/	uint8				unknown0165[46];	//
+/*0245*/	uint8				guildrank;
+/*0246*/	uint8				fatigue;  // Sta bar % depleted (ie, 30 = 70% sta)
+/*0246*/	uint8				unknown0165[45];	//
 /*0292*/	uint8				haircolor;			// Player hair color
 /*0293*/	uint8				beardcolor;			// Player beard color
 /*0294*/	uint8				eyecolor1;			// Player left eye color
@@ -883,8 +884,10 @@ struct PlayerProfile_Struct
 /*4308*/	uint8				unknown3472[92];	//
 /*4400*/	uint32				perAA;				// % on the AA exp bar
 /*4404*/	uint8				unknown3564[12];	//28
-/*4416*/	uint8				pvp2;	//
-/*4417*/	uint8				unknown3591[15];	//
+/*4416*/	int32				pvp2;	//
+/*4420*/	int32				unknown4420;	//
+/*4424*/	int32				pvptype;	//
+/*4428*/	int32				unknown4428;	//
 /*4432*/	uint32				zone_change_count;	// Number of times user has zoned in their career (guessing)
 /*4436*/	uint8				unknown3596[20];	//
 /*4456*/	int32				ability_down;

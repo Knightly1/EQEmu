@@ -898,6 +898,7 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 		//Message(15, "[GM] You now have %d / %d EXP and %d / %d AA exp.", set_exp, GetEXPForLevel(GetLevel()+1), set_aaxp, max_AAXP);
 
 	}
+	SendAppearancePacket(AT_WhoLevel, GetLevel());
 }
 
 #ifndef GUILDWARS
