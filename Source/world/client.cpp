@@ -990,8 +990,8 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 		pp.buffs[i].spellid = 0xFFFF;
 
 
-	memset(pp.unknown2384, 0xff, 448);
-	memset(pp.unknown2864, 0xff, 32);
+	memset(pp.unknown3224, 0xff, 448);
+	memset(pp.unknown3704, 0xffffffff, 8);
 	
 	//If server is PVP by default, make all character set to it.
 	pp.pvp = database.GetServerType() == 1 ? 1 : 0;			
@@ -1020,9 +1020,9 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 	if(!pp.bind_zone_id)
 	{
 		pp.bind_zone_id = pp.zone_id;
-		pp.bind_x = pp.x;
-		pp.bind_y = pp.y;
-		pp.bind_z = pp.z;
+		pp.bind_x[0] = pp.x;
+		pp.bind_y[0] = pp.y;
+		pp.bind_z[0] = pp.z;
  	}
 		
 	printf("Current location: %s  %0.2f, %0.2f, %0.2f\n",

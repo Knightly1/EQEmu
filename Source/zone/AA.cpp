@@ -25,7 +25,6 @@ void Client::BuyAA(AA_Action* action){
 		m_pp.aapoints -= aa2->cost;
 		database.SetPlayerAlternateAdv(account_id, m_pp.name, &aa);
 		SendAA(aa2->id);
-		SendAATable();
 		char val1[20]={0};
 		char val2[20]={0};
 		char val3[20]={0};
@@ -45,7 +44,6 @@ void Client::BuyAA(AA_Action* action){
 			else
 				Message_StringID(15,AA_IMPROVE,ConvertArray(aa2->title_sid,val1),ConvertArray(cur_level,val2),ConvertArray(aa2->cost,val3),point2);
 		}
-		SendAAStats();
 	}
 }
 void Client::SendAATimer(UseAA_Struct *uaa){
@@ -75,6 +73,9 @@ void Client::ActivateAA(int activate){
 			CastToMob()->CastSpell(2765,this->GetID());
 			timermod=7;
 			break;
+		default:
+			Message(15,"AA Ability '%i' not added yet, please send a /bug request telling them this number and the name of the ability.",activate);
+			return;
 	}
 	time_t timestamp=time(NULL);
 	
@@ -114,11 +115,18 @@ void Client::SendAA(int32 id, int seq,bool update){
 	memcpy(saa,saa2,size);
 	if(saa->spellid==0)
 		saa->spellid=0xFFFFFFFF;
-	if((value=GetAA(saa->id))){
-		saa->id+=value;
+	value=GetAA(saa->id);
+	if(value){
+		if(value<saa->max_level){
+			saa->id+=value;
+			saa->next_id=saa->id+1;
+			value++;
+		}
+		else{
+			saa->id+=value-1;
+			saa->next_id=0xFFFFFFFF;
+		}
 		saa->last_id=saa->id-1;
-		saa->next_id=saa->id+1;
-		value++;
 		saa->current_level=value;
 		saa->cost2=value;
 		if(saa->type==1) //general ability

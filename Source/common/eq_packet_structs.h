@@ -786,7 +786,7 @@ struct PlayerProfile_Struct
 /*3808*/	sint32				platinum_shared;	// Platinum shared between characters
 /*3812*/	uint8				unknown2972[16];   	// @bp unknown skills?
 /*3832*/	uint32				skills[MAX_PP_SKILL];
-/*4132*/	uint32				unknown_skills[48];	// @bp unknown skills?
+/*4132*/	uint32				unknown_skills[43];	// @bp unknown skills?
 /*4308*/	uint8				unknown3472[92];	//
 /*4400*/	uint32				perAA;				// % on the AA exp bar
 /*4404*/	uint8				unknown3564[12];	//28

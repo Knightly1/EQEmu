@@ -1330,9 +1330,9 @@ other = tempkiller;
 	m_pp.zone_id = m_pp.bind_zone_id;
 	database.MoveCharacterToZone(this->CharacterID(), database.GetZoneName(m_pp.zone_id));
 
-	zonesummon_x = m_pp.bind_x;
-	zonesummon_y = m_pp.bind_y;
-	zonesummon_z = m_pp.bind_z;
+	zonesummon_x = m_pp.bind_x[0];
+	zonesummon_y = m_pp.bind_y[0];
+	zonesummon_z = m_pp.bind_z[0];
 	heading = 0;
 
 	Save();

@@ -114,7 +114,6 @@ int Client::HandlePacket(const APPLAYER *app)
 		case CLIENT_CONNECTING:
 		{
 			this->IsOnBoat=false;
-			
 			if (app->opcode == OP_SetDataRate)
 			{
 				// Set client datarate
@@ -136,6 +135,9 @@ int Client::HandlePacket(const APPLAYER *app)
 				tmpDR = 8.0f;
 #endif
 				eqnc->SetDataRate(tmpDR);
+			}
+			else if (app->opcode == OP_SendTributes){
+				//SendTribute();
 			}
 			else if (app->opcode == OP_ZoneEntry) {
 				// Quagmire - Antighost code
@@ -225,7 +227,6 @@ int Client::HandlePacket(const APPLAYER *app)
 				entity_list.SendZoneObjects(this);
 				
 				// Send Zone Points
-				// Hideously broken at the moment. Need to correct ZonePointEntry struct 1st - TC
 				if (zone->numzonepoints > 0) {
 					int32 zpsize = sizeof(ZonePoints) + ((zone->numzonepoints+1) * sizeof(ZonePoint_Entry));
 					APPLAYER* outapp = new APPLAYER(OP_SendZonepoints,zpsize);
@@ -293,15 +294,19 @@ int Client::HandlePacket(const APPLAYER *app)
 				safe_delete(outapp);
 
 				// solar: just a null byte, dunno what this op is but it does go here
-				outapp = new APPLAYER(0x010e, 1);
+				/*outapp = new APPLAYER(0x010e, 1);
 					outapp->priority = 6;
 				outapp->Deflate();
 
 				QueuePacket(outapp);
-				safe_delete(outapp);
+				safe_delete(outapp);*/
 			}
 			else if(app->opcode==OP_ZoneComplete)
 			{
+				APPLAYER* outapp = new APPLAYER(0x0347, 0);
+				QueuePacket(outapp);
+				safe_delete(outapp);
+				CompleteConnect();
 				break;
 			}
 			else if (app->opcode == OP_ReqNewZone) {
@@ -319,10 +324,11 @@ int Client::HandlePacket(const APPLAYER *app)
 			}
 			else if (app->opcode == OP_WearChange) {
 				// Last one recv'd for all clients, apparently
-				if (app->pBuffer[9] == 6)
+				break;
+				/*if (app->pBuffer[9] == 6)
 				{
 					CompleteConnect();
-				}
+				}*/
 			}
 			else if ((app->opcode == OP_ClientUpdate) || (app->opcode == OP_ClientReady)) {
 				CompleteConnect();
@@ -1504,9 +1510,9 @@ sa->parameter = 0;
 						if (database.GetZoneName(m_pp.bind_zone_id)){
 							//zoneing to bind point
 							strcpy(target_zone, database.GetZoneName(m_pp.bind_zone_id));
-							tarx = m_pp.bind_x;
-							tary = m_pp.bind_y;
-							tarz = m_pp.bind_z;
+							tarx = m_pp.bind_x[0];
+							tary = m_pp.bind_y[0];
+							tarz = m_pp.bind_z[0];
 							
 						} //else bind point isn't set and we will zone to the zone safe point
 
@@ -4185,101 +4191,22 @@ sa->parameter = 0;
 					break;
 				}
 				case OP_AAAction: {
-					DumpPacket(app);
+					//DumpPacket(app);
 					if(app->size!=sizeof(AA_Action)){
 						printf("Error! OP_AAAction size didnt match!\n");
 						break;
 					}
 					AA_Action* action=(AA_Action*)app->pBuffer;
-					if(action->action==3)//BUY
-						BuyAA(action);
-/*
-					if(app->size < 1) 
-						break;
-					if(strncmp((char *)app->pBuffer,"on ",3) == 0) {
-						// turn on percentage
-						m_pp.perAA = atoi((char *)&app->pBuffer[3]);
-						if (m_pp.perAA<0 || m_pp.perAA>100) m_pp.perAA=0;	// stop exploit with sanity check
-						// send an update
-						SendAAStats();
-						SendAATable();
-					} else if(strcmp((char *)app->pBuffer,"off") == 0) {
-						// set percentage to 0%
+					if(action->action==0)//AA Hotkey
+						ActivateAA(action->ability);
+					else if(action->action==1 && action->unknown08[1]>0 && action->unknown08[1]<=100) //Adjust exp ratio
+						m_pp.perAA = action->unknown08[1];
+					else if(action->action==2) //Turn Off AA Exp
 						m_pp.perAA = 0;
-						// send an update
-						SendAAStats();
-						SendAATable();
-						//	cout << "UpdateAA packet: OFF." << endl;
-					} else if(atoi((char *)&app->pBuffer[0])== 3) {
-						char item_name[128];
-						int buy_item = atoi((char *)&app->pBuffer[4]);
-						
-						int item_cost = 1;
-						int max_level = 1;
-						int bought = 0;
-						if(database.GetAASkillVars(buy_item)) {
-							uint8 *aa_item = &(((uint8 *)&aa)[buy_item]);
-							int32 cur_level = (*aa_item)+1;
-							int32 cost = buy_item <= 17 ? item_cost : item_cost * cur_level;
-							//Disabled for now due to problems... - NOT
-							if(m_pp.aapoints >= cost && cur_level <= (int32)max_level) {
-								*aa_item = cur_level;
-								m_pp.aapoints -= cost;
-								database.SetPlayerAlternateAdv(account_id, m_pp.name, &aa);
-								Message(15,"Skill \'%s\' (%d) purchased for the cost of %d ability point(s)",item_name,cur_level,cost);
-								bought = 1;
-							}
-							if(bought){
-								//aa_array[122]
-								int cur = 0;
-								for (cur = 0; cur <= 121; cur++){
-									if (m_pp.aa_array[cur].AA == 0 || m_pp.aa_array[cur].AA == buy_item ){
-										m_pp.aa_array[cur].AA = buy_item;
-										m_pp.aa_array[cur].value = cur_level*16;
-										break;
-									}
-								}
-								int counter = 0;
-								int counter2 = 0;
-								for (cur = 1;cur<=17;cur++){
-									if(GetAA(cur)!=0)
-										counter += GetAA(cur);
-								}
-								if (counter <= 6)
-									counter2 = 1;
-								counter = 0;
-								for (cur = 18;cur<=34;cur++){
-									if(GetAA(cur)!=0)
-										counter += GetAA(cur);
-								}
-								if (counter <= 12)
-									counter2 = 2;
-								counter = 0;
-								for (cur = 35;cur<=128;cur++){
-									if(GetAA(cur)!=0)
-										counter += GetAA(cur);
-								}
-								if (counter <= 24)
-									counter2 = 3;
-								ChangeAATitle((int8)counter2);
-							}
-							SendAATable();
-							SendAAStats();
-							cout << "UpdateAA packet: BUY. Item: " << buy_item << " Cost: " << item_cost;
-							cout << (bought ? " (bought)" : " (not enough points or max level)") << endl;
-						}
-					}
-					else if(strncmp((char *)app->pBuffer,"activate ",9) == 0) {
-						LogFile->write(EQEMuLog::Debug, "%s::ActivateAA(%i,%i)", GetName(), atoi((char *)app->pBuffer+9), atoi((char *)app->pBuffer+13));
-						int activate = atoi((char *)&app->pBuffer[9]);
-						ActivateAA(activate);
-					}
-					else {
-						cout << "Unknown command in UpdateAA opcode: 0x" << hex << setfill('0') << setw(4) << app->opcode << dec;
-						//cout << " size:" << app->size << endl;
-						//							DumpPacket(app->pBuffer, app->size);
-					}
-					*/
+					else if(action->action==3)//BUY
+						BuyAA(action);
+					SendAAStats();
+					SendAATable();
 					break;
 				}
 				case OP_TraderBuy:{
@@ -4699,7 +4626,6 @@ void Client::DBAWComplete(int8 workpt_b1, DBAsyncWork* dbaw) {
 }
 
 bool Client::FinishConnState2(DBAsyncWork* dbaw) {
-	int8 gmspeed = 0;
 	uint32 pplen = 0, aalen = 0;
 	memset(&m_pp, 0, sizeof(PlayerProfile_Struct));
 	DBAsyncQuery* dbaq = 0;
@@ -5138,8 +5064,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 #endif
 	memcpy(outapp->pBuffer,&m_pp,outapp->size);
 	outapp->Deflate();
-					outapp->priority = 6;
-
+	outapp->priority = 6;
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	
@@ -5150,73 +5075,11 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	// Server Zone Entry Packet
 	outapp = new APPLAYER(OP_ZoneEntry, sizeof(ServerZoneEntry_Struct));
 	ServerZoneEntry_Struct* sze = (ServerZoneEntry_Struct*)outapp->pBuffer;
-	
-	strcpy(sze->name, m_pp.name);
-	strcpy(sze->last_name, m_pp.last_name);
-	//sze->gm				= m_pp.gm;
-	sze->race			= m_pp.race;
-	sze->class_			= m_pp.class_;
-	sze->level			= m_pp.level;
-	sze->size			= size;
-	sze->deity			= m_pp.deity;
-	//sze->zone_id		= zone->GetZoneID();
-	sze->x				= FloatToEQ19(m_pp.x);
-	sze->y				= FloatToEQ19(m_pp.y);
-	sze->z				= FloatToEQ19(m_pp.z);
-	sze->heading		= FloatToEQ19(m_pp.heading);
-	sze->delta_x		= 0;
-	sze->delta_y		= 0;
-	sze->delta_z		= 0;
-	sze->delta_heading	= 0;
-	sze->gender			= m_pp.gender;
-	sze->anon			= m_pp.anon;
-	sze->pvp			= m_pp.pvp;
-	sze->lfg			= LFG;
-// vesuvias - luclin apperence
-	sze->beard	= m_pp.beard;
-	sze->beardcolor	= m_pp.beardcolor;	
-	sze->eyecolor1 = m_pp.eyecolor1;
-	sze->eyecolor2 = m_pp.eyecolor2;
-	sze->face = m_pp.face;
-	sze->hairstyle = m_pp.hairstyle;
-	sze->haircolor = m_pp.haircolor;
-
-	//sze->beardcolor		= m_pp.beardcolor;
-	//sze->beard			= m_pp.beard;
-	//sze->eyecolor1		= m_pp.eyecolor1;
-	//sze->eyecolor2		= m_pp.eyecolor2;
-	//sze->face			= m_pp.face;
-	//sze->haircolor		= m_pp.haircolor;
-	//sze->hairstyle		= m_pp.hairstyle;
-	//sze->linkdead		= 0;
-	sze->guild_id		= guildeqid;
-	//sze->walk_mode		= 0;
-	sze->size			= 0; // Changing size works, but then movement stops! (wth?)
-	sze->runspeed		= (gmspeed == 0) ? runspeed : 3.125f;
-	sze->walkspeed		= 0.46000001f;
-	
-	// @bp Movement settings dunno whats what but i can walk run and jump
-	//sze->unknown0340[0] = 3.0f;
-	//sze->unknown0340[1] = 2.5f;
-	//sze->unknown0352[0]	= 5.5f;
-	//sze->unknown0352[1]	= 3.125f;
-
-	// solar: this really doesn't matter but i guess it goes here
-	for(i = 0; i < 9; i++)
-	{
-		sze->equip[i] = GetEquipmentMaterial(i);
-		sze->colors[i].color = GetEquipmentColor(i);
-	}
-              
-	
-	// Send OP_ZoneEntry
-	//uint32 crc = 
-		CRC32::GenerateNoFlip((int8*)sze+4, sizeof(ServerZoneEntry_Struct)-4);
-	//memcpy(sze, &crc, 4);
-	//DumpPacket(outapp);
-	//outapp->Deflate();
-	outapp->priority = 6;
-
+	FillSpawnStruct(&sze->player,CastToMob());
+	sze->player.spawn.cur_hp=1;
+	sze->player.spawn.npc=0;
+	sze->player.spawn.unknown367[0]=0xFFFFFFFF;
+	sze->player.spawn.unknown367[1]=0xFFFFFFFF;
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	
@@ -5304,7 +5167,7 @@ void Client::CompleteConnect()
 
 	QueuePacket(outapp);
 	safe_delete(outapp);
-	SendAATable();
+	//SendAATable();
 	
 	/*for (int i=0; i<BUFF_COUNT; i++) {
 		if (buffs[i].spellid != 0xFFFF) {

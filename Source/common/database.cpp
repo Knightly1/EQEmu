@@ -1293,6 +1293,34 @@ void Database::GetCharSelectInfo(int32 account_id, CharacterSelect_Struct* cs) {
 
 			//Conversion process
 			}
+			else if(lengths[1] == sizeof(Before_Sep14th_PlayerProfile_Struct)){
+				Before_Sep14th_PlayerProfile_Struct* pp = (Before_Sep14th_PlayerProfile_Struct*)row[1];
+				strcpy(cs->name[char_num], row[0]);
+				// Character information
+				cs->level[char_num]				= pp->level;
+				cs->class_[char_num]			= pp->class_;
+				cs->race[char_num]				= pp->race;
+				cs->gender[char_num]			= pp->gender;
+				cs->deity[char_num]				= pp->deity;
+				cs->zone[char_num]				= GetZoneID(row[2]);
+				cs->face[char_num]				= pp->face;
+				cs->haircolor[char_num]		= pp->haircolor;
+				cs->beardcolor[char_num]	= pp->beardcolor;
+				cs->eyecolor2[char_num] 	= pp->eyecolor2;
+				cs->eyecolor1[char_num] 	= pp->eyecolor1;
+				cs->hair[char_num]				= pp->hairstyle;
+				cs->beard[char_num]				= pp->beard;
+				for (uint8 material = 0; material <= 8; material++){
+					cs->equip[char_num][material] = pp->item_material[material];
+					cs->cs_colors[char_num][material].color = pp->item_tint[material].color;
+					if ((material==MATERIAL_PRIMARY) || (material==MATERIAL_SECONDARY)) {
+						uint32 melee_idx = (material==MATERIAL_PRIMARY) ? 0 : 1;
+						cs->melee[melee_idx][char_num] = cs->equip[char_num][material];
+					}
+				}
+				if (++char_num > 10)
+					break;
+			}
 			else if(lengths[1] == sizeof(BeforeFeb18_PlayerProfile_Struct)){
 				BeforeFeb18_PlayerProfile_Struct* pp = (BeforeFeb18_PlayerProfile_Struct*)row[1];
 				strcpy(cs->name[char_num], row[0]);
@@ -1528,9 +1556,9 @@ void Database::GetCharSelectInfo(int32 account_id, CharacterSelect_Struct* cs) {
 			}
 			else
 			{
-				cout << "Got a bogus character (" << row[0] << "), deleting it." << endl;
+				cout << "Got a bogus character (" << row[0] << ") Ignoring!!!" << endl;
 				cout << "PP length ="<<lengths[1]<<endl;
-				DeleteCharacter(row[0]);
+				//DeleteCharacter(row[0]);
 			}
 		}
 		mysql_free_result(result);
@@ -2396,6 +2424,31 @@ bool Database::GetCharacterInfoForLogin_result(MYSQL_RES* result, int32* charact
 				c_ptr+=588;
 				ptr+=1304;
 				memcpy(ptr,c_ptr,4440);
+			}
+			else if(lengths[1] == sizeof(Before_Sep14th_PlayerProfile_Struct)) {
+				LogFile->write(EQEMuLog::Status, "8. Player profile being converted from the Sep 14th patch now....");
+				Before_Sep14th_PlayerProfile_Struct* oldpp =(Before_Sep14th_PlayerProfile_Struct*)row[1];
+				uchar* ptr=(uchar*)pp;
+				uchar* s_ptr=(uchar*)oldpp;
+				memcpy(ptr,s_ptr,124);
+				s_ptr+=140;
+				ptr+=220;
+				memcpy(ptr,s_ptr,88);
+				s_ptr+=88;
+				ptr+=92;
+				memcpy(ptr,s_ptr,1140);
+				s_ptr+=1140;
+				ptr+=1176;
+				memcpy(ptr,s_ptr,8);
+				s_ptr+=8;
+				ptr+=12;
+				memcpy(ptr,s_ptr,3700);
+				//s_ptr+=3020;
+				//ptr+=3024;
+				//memcpy(ptr,s_ptr,680);
+				pp->bind_x[0]=oldpp->bind_x;
+				pp->bind_y[0]=oldpp->bind_y;
+				pp->bind_z[0]=oldpp->bind_z;
 			}
 			else {
 				LogFile->write(EQEMuLog::Error, "Player profile length mismatch in GetCharacterInfo Expected: %i, Got: %i",
@@ -7168,7 +7221,7 @@ bool Database::GetStartZone(PlayerProfile_Struct* in_pp, CharCreate_Struct* in_c
 		return false;
 
 	in_pp->x = in_pp->y = in_pp->z = in_pp->zone_id = 0;
-	in_pp->bind_x = in_pp->bind_y = in_pp->bind_z = in_pp->bind_zone_id = 0;
+	in_pp->bind_x[0] = in_pp->bind_y[0] = in_pp->bind_z[0] = in_pp->bind_zone_id = 0;
 
 	RunQuery
 	(
@@ -7298,7 +7351,7 @@ bool Database::GetStartZone(PlayerProfile_Struct* in_pp, CharCreate_Struct* in_c
 		database.GetSafePoints(in_pp->zone_id, &in_pp->x, &in_pp->y, &in_pp->z);
 
 	if(in_pp->bind_x == 0 && in_pp->bind_y == 0 && in_pp->bind_z == 0)
-		database.GetSafePoints(in_pp->bind_zone_id, &in_pp->bind_x, &in_pp->bind_y, &in_pp->bind_z);
+		database.GetSafePoints(in_pp->bind_zone_id, &in_pp->bind_x[0], &in_pp->bind_y[0], &in_pp->bind_z[0]);
 
 	return true;
 }

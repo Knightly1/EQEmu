@@ -170,6 +170,7 @@ Client::Client(EQNetworkConnection* ieqnc)
 	cheatcount =0;
 	cheat_x=0;
 	cheat_y=0;
+	gmspeed = 0;
 	playeraction = 0;
 	target = 0;
 	auto_attack = false;
@@ -657,10 +658,16 @@ bool Client::Save(int8 iCommitNow) {
 	m_pp.z = z_pos;
 	m_pp.guildrank=guildrank;
 	m_pp.heading = heading;
+	int spentpoints=0;
 	for(int a=0;a<MAX_AAS;a++){
-		m_pp.aa_array[a].AA=aa.aa_list[a].aa_skill;
+		if(aa.aa_list[a].aa_value>1)
+			m_pp.aa_array[a].AA=aa.aa_list[a].aa_skill+aa.aa_list[a].aa_value-1;
+		else
+			m_pp.aa_array[a].AA=aa.aa_list[a].aa_skill;
 		m_pp.aa_array[a].value=aa.aa_list[a].aa_value;
+		spentpoints+=aa.aa_list[a].aa_value;
 	}
+	m_pp.aapoints_spent=spentpoints;
 	if (GetHP() <= 0) {
 		if (GetMaxHP() > 30000)
 			m_pp.cur_hp = 30000;
@@ -2345,7 +2352,10 @@ void Client::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 		else
 			ns->spawn.guild_rank = 0;
 	}
-	
+	ns->spawn.size			= 0; // Changing size works, but then movement stops! (wth?)
+	ns->spawn.runspeed		= (gmspeed == 0) ? runspeed : 3.125f;
+	ns->spawn.walkspeed		= 0.46000001f;
+
 	// @merth: these two may be related to ns->spawn.equip_chest2
 	/*
 	ns->spawn.npc_armor_graphic = texture;

@@ -49,7 +49,7 @@ struct SendAA_Struct {
 /*0068*/	int32 last_id;
 /*0072*/	int32 next_id;
 /*0076*/	int32 cost2;
-/*0080*/	int32 unknown80; //0s
+/*0080*/	int32 unknown80[2]; //0s
 /*0084*/	int32 total_abilities;
 /*0088*/	AA_Ability abilities[0];
 };

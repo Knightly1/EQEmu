@@ -478,6 +478,7 @@ private:
 	bool				AFK;
 	bool				auto_attack;
 	bool				attack_flag;
+	int8				gmspeed;
 	bool				medding;
 	bool				hasmount;
 	int16				horseId;

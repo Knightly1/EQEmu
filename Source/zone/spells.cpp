@@ -6309,28 +6309,28 @@ void Client::UnscribeSpellAll(bool update_client)
 void Client::SetBindPoint(int to_zone, float new_x, float new_y, float new_z) {
 	if (to_zone == -1) {
 		m_pp.bind_zone_id = zone->GetZoneID();
-		m_pp.bind_x = x_pos;
-		m_pp.bind_y = y_pos;
-		m_pp.bind_z = z_pos;
+		m_pp.bind_x[0] = x_pos;
+		m_pp.bind_y[0] = y_pos;
+		m_pp.bind_z[0] = z_pos;
 	}
 	else {
 		m_pp.bind_zone_id = to_zone;
-		m_pp.bind_x = new_x;
-		m_pp.bind_y = new_y;
-		m_pp.bind_z = new_z;
+		m_pp.bind_x[0] = new_x;
+		m_pp.bind_y[0] = new_y;
+		m_pp.bind_z[0] = new_z;
 	}
 }
 
 void Client::GoToBind() {
 	if (m_pp.bind_zone_id == zone->GetZoneID()) { //if same zone no reason to zone
-		GMMove(m_pp.bind_x,
-               m_pp.bind_y,
-               m_pp.bind_z);
+		GMMove(m_pp.bind_x[0],
+               m_pp.bind_y[0],
+               m_pp.bind_z[0]);
     } else {
 		MovePC(m_pp.bind_zone_id,
-               m_pp.bind_x,
-               m_pp.bind_y,
-               m_pp.bind_z, 1); //lets zone
+               m_pp.bind_x[0],
+               m_pp.bind_y[0],
+               m_pp.bind_z[0], 1); //lets zone
     }
 }
 

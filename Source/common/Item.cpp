@@ -820,7 +820,7 @@ string ItemInst::Serialize(sint16 slot_id) const
 	if(charges==255)
 		charges=-1;
 	sprintf(ch,
-		"%i|%i|%i|%i|%i|%i|%i|%i|\"%i|%s|%s|%s|%i|%i|%i|%i|%i|%i|%i|%i",
+		"%i|%i|%i|%i|%i|%i|%i|%i|%i|\"%i|%s|%s|%s|%i|%i|%i|%i|%i|%i|%i|%i",
 		charges,
 		m_item->Unknown002,
 		slot_id,
@@ -829,6 +829,7 @@ string ItemInst::Serialize(sint16 slot_id) const
 		unknown5,
 		m_item->Unknown007,
 		m_item->Unknown008,
+		m_item->Unknown009,
 		m_item->ItemClass,
 		m_item->Name,
 		m_item->LoreName,

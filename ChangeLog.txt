@@ -1,6 +1,15 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
-==09/26/2004
+==10/02/2004
+LethalEncounter: Updated to version 5.9-DR2 (EQLive Compatible).
+
+==10/02/2004
+LethalEncounter: Updated all the structs/opcodes necessary to login using the latest client.
+
+==10/02/2004
+LethalEncounter: Misc AA fixes.
+
+==09/29/2004
 LethalEncounter: Fixed AAs, you can now buy them correctly.  Big thanks to Xabob for PacketCollecting the information for me!!
 
 ==09/26/2004

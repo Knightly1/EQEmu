@@ -97,7 +97,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 /**/ #define OP_UpdateAA			0x0222
 #define OP_RespondAA		0x01ea // AA table
 #define OP_SendAAStats		0x01c9
-#define OP_SendAATable		0x0367
+#define OP_SendAATable		0x0366
 #define OP_AAAction         0x01e9 // Used for changing percent, buying? and activating skills
 #define OP_BoardBoat		0x00bb
 #define OP_LeaveBoat		0x00bc
@@ -376,7 +376,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_Tribute			0x02f6
 #define OP_SelectTribute	0x02f7
 #define OP_StartTribute		0x02f9
-
+#define OP_SendTributes		0x02f5
 //Father Nitwit OpCodes:
 //New Tradeskill Interface
 #define OP_RecipesFavorite	0x0322
