@@ -600,6 +600,34 @@ void Mob::CreateSpawnPacket(APPLAYER* app, NewSpawn_Struct* ns) {
 #else
 		strcpy(ns->spawn.last_name,"Adventure Merchant");
 #endif
+	else if (ns->spawn.class_==WARRIORGM)
+		strcpy(ns2->spawn.last_name, "GM Warrior");
+	else if (ns->spawn.class_==PALADINGM)
+		strcpy(ns2->spawn.last_name, "GM Paladin");
+	else if (ns->spawn.class_==RANGERGM)
+		strcpy(ns2->spawn.last_name, "GM Ranger");
+	else if (ns->spawn.class_==SHADOWKNIGHTGM)
+		strcpy(ns2->spawn.last_name, "GM ShadowKnight");
+	else if (ns->spawn.class_==DRUIDGM)
+		strcpy(ns2->spawn.last_name, "GM Druid");
+	else if (ns->spawn.class_==BARDGM)
+		strcpy(ns2->spawn.last_name, "GM Bard");
+	else if (ns->spawn.class_==ROGUEGM)
+		strcpy(ns2->spawn.last_name, "GM Rogue");
+	else if (ns->spawn.class_==SHAMANGM)
+		strcpy(ns2->spawn.last_name, "GM Shaman");
+	else if (ns->spawn.class_==NECROMANCERGM)
+		strcpy(ns2->spawn.last_name, "GM Necromancer");
+	else if (ns->spawn.class_==WIZARDGM)
+		strcpy(ns2->spawn.last_name, "GM Wizard");
+	else if (ns->spawn.class_==MAGICIANGM)
+		strcpy(ns2->spawn.last_name, "GM Magician");
+	else if (ns->spawn.class_==ENCHANTERGM)
+		strcpy(ns2->spawn.last_name, "GM Enchanter");
+	else if (ns->spawn.class_==BEASTLORDGM)
+		strcpy(ns2->spawn.last_name, "GM Beastlord");
+	else if (ns->spawn.class_==BERSERKERGM)
+		strcpy(ns2->spawn.last_name, "GM Berserker");
 	else
 		strcpy(ns2->spawn.last_name, ns->spawn.last_name);
 	memset(&app->pBuffer[sizeof(Spawn_Struct)-7],0xFF,7);
