@@ -1,3 +1,14 @@
+# MySQL-Front Dump 2.5
+#
+# Host: 192.168.0.9   Database: eqrc
+# --------------------------------------------------------
+# Server version 4.0.13-standard
+
+
+#
+# Table structure for table 'aa_levels'
+#
+
 DROP TABLE IF EXISTS aa_levels;
 CREATE TABLE aa_levels (
   id int(10) unsigned NOT NULL auto_increment,
@@ -144,3 +155,28 @@ INSERT INTO aa_levels VALUES("126", "1122", "308", "1", "1", "0");
 INSERT INTO aa_levels VALUES("127", "1129", "267", "1", "1", "19");
 INSERT INTO aa_levels VALUES("128", "1181", "305", "4294967276", "1", "0");
 INSERT INTO aa_levels VALUES("129", "2", "4", "2", "1", "0");
+INSERT INTO aa_levels VALUES("130", "83", "132", "2", "1", "2");
+INSERT INTO aa_levels VALUES("131", "98", "114", "4294967291", "1", "0");
+INSERT INTO aa_levels VALUES("132", "101", "265", "20", "1", "0");
+INSERT INTO aa_levels VALUES("133", "104", "127", "5", "1", "5");
+INSERT INTO aa_levels VALUES("134", "104", "138", "1", "2", "0");
+INSERT INTO aa_levels VALUES("135", "104", "140", "1", "3", "0");
+INSERT INTO aa_levels VALUES("136", "104", "143", "4000", "4", "0");
+INSERT INTO aa_levels VALUES("137", "137", "127", "10", "1", "10");
+INSERT INTO aa_levels VALUES("138", "137", "137", "88", "2", "0");
+INSERT INTO aa_levels VALUES("139", "141", "127", "2", "1", "2");
+INSERT INTO aa_levels VALUES("140", "141", "137", "0", "2", "0");
+INSERT INTO aa_levels VALUES("141", "141", "138", "0", "3", "0");
+INSERT INTO aa_levels VALUES("142", "141", "141", "1", "4", "0");
+INSERT INTO aa_levels VALUES("143", "141", "143", "4000", "5", "0");
+INSERT INTO aa_levels VALUES("144", "267", "294", "2", "1", "100");
+INSERT INTO aa_levels VALUES("145", "426", "262", "10", "1", "5");
+INSERT INTO aa_levels VALUES("146", "426", "262", "10", "2", "4");
+INSERT INTO aa_levels VALUES("147", "446", "265", "54", "1", "0");
+INSERT INTO aa_levels VALUES("148", "477", "264", "432", "1", "43");
+INSERT INTO aa_levels VALUES("149", "480", "264", "432", "1", "117");
+INSERT INTO aa_levels VALUES("150", "640", "294", "1", "1", "100");
+INSERT INTO aa_levels VALUES("151", "691", "248", "100", "1", "0");
+INSERT INTO aa_levels VALUES("152", "924", "294", "1", "1", "100");
+INSERT INTO aa_levels VALUES("153", "1089", "268", "10", "1", "58");
+INSERT INTO aa_levels VALUES("154", "1210", "294", "0", "1", "107");
