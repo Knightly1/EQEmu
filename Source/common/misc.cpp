@@ -8,10 +8,7 @@
 #include <iostream>
 #include <zlib.h>
 #include "misc.h"
-#ifdef PACKETCOLLECTOR
-#include "../PacketCollector/ItemFile.h"
-extern ItemFile* item_file;
-#endif
+#include "types.h"
 using namespace std;
 
 #define ENC(c) (((c) & 0x3f) + ' ')
@@ -36,12 +33,12 @@ void Protect(string &s, char what)
 			s.insert(i++,"\\");
 	}
 }
-#ifdef PACKETCOLLECTOR
+
 /*the map argument is:
 	item id -> fields_list
 		each fields_list is a map of field index -> value
 */
-bool ItemParse(const char *data, int length, map<int,map<int,string> > &items, int level)
+bool ItemParse(const char *data, int length, map<int,map<int,string> > &items, int id_pos, int name_pos, int max_field, int level)
 {
 int i;
 char *end,*ptr;
@@ -58,7 +55,7 @@ static int buffsize=0;
 
 	ptr=buffer;
 
-	for(i=0;i<item_file->GetNamePosition()-1;i++) {
+	for(i=0;i<name_pos-1;i++) {
 		end=ptr-1;
 		while((end=strchr(end+1,'|'))!=NULL) {
 			if (*(end-1)!='\\')
@@ -82,7 +79,7 @@ static int buffsize=0;
 	}
 	ptr++;
 
-	for(i=(item_file->GetNamePosition()-1);i<(item_file->GetMaxField()-1);i++) {
+	for(i=(name_pos-1);i<(max_field-1);i++) {
 		end=ptr-1;
 		while((end=strchr(end+1,'|'))!=NULL) {
 			if (*(end-1)!='\\')
@@ -117,7 +114,7 @@ static int buffsize=0;
 		return false;
 	}
 	ptr++;
-	int32 id = atoi(field[item_file->GetIDPosition()].c_str());
+	int32 id = atoi(field[id_pos].c_str());
 	items[id]=field;
 
 	for(i=0;i<10;i++) {
@@ -128,7 +125,7 @@ static int buffsize=0;
 				string sub;
 				sub.assign(ptr+1,end-ptr-1);
 				Unprotect(sub,'"');
-				if (!ItemParse(sub.c_str(),sub.length(),items,level+1)) {
+				if (!ItemParse(sub.c_str(),sub.length(),items,id_pos,name_pos,max_field,level+1)) {
 					return false;
 				}
 				ptr=end+1;
@@ -148,7 +145,7 @@ static int buffsize=0;
 
 	return true;
 }
-#endif
+
 int Tokenize(string s,map<int,string> & tokens, char delim)
 {
 int i,len;

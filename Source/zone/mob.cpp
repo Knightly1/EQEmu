@@ -820,7 +820,7 @@ void Mob::SendHPUpdate()
 	{
 		GetPet()->CastToClient()->QueuePacket(&hp_app, false);
 	}
-#endif	//PACKET_UPDATE_MANAGER
+#endif	//MANAGE_HP_PACKETS
 
 	// send to self - we need the actual hps here
 	if(IsClient())
@@ -903,7 +903,7 @@ void Mob::MakeSpawnUpdate(PlayerPositionUpdateServer_Struct* spu) {
 		spu->animation=animation;
 	else
 		spu->animation	= pRunAnimSpeed;//animation;
-	spu->delta_heading = delta_heading;
+	spu->delta_heading = FloatToEQ13(delta_heading);
 }
 
 void Mob::ShowStats(Client* client) {
@@ -995,6 +995,11 @@ void Mob::GMMove(float x, float y, float z, float heading) {
 		SaveGuardSpot(true);
 	SendAllPosition();
 	//SendPosUpdate(1);
+#ifdef PACKET_UPDATE_MANAGER
+	if(IsClient()) {
+		CastToClient()->GetUpdateManager()->FlushQueues();
+	}
+#endif
 }
 
 
@@ -2362,4 +2367,54 @@ int Mob::GetHaste() {
 	return(h); 
 }
 
+void Mob::InstillDoubt(Mob *who) {
+	//make sure we can use this skill
+	int skill = GetSkill(INTIMIDATION);
+	if(skill < 1 || skill > 252)
+		return;
+	
+	//make sure our target is an NPC
+	if(!who || !who->IsNPC())
+		return;
+	
+	//range check
+	if(!CombatRange(who))
+		return;
+	
+	if(IsClient()) {
+		//timer check...
+		if(!CastToClient()->GetPTimers().Expired(pTimerInstillDoubt, false)) {
+			Message(13,"Ability recovery time not yet met.");
+			return;
+		}
+		CastToClient()->GetPTimers().Start(pTimerInstillDoubt, InstillDoubtReuseTime-1);
+		
+		CastToClient()->CheckIncreaseSkill(INTIMIDATION);
+	}
+
+	//I think this formula needs work
+	int value = 0;
+	
+	//user's bonus
+	value += GetSkill(INTIMIDATION) + GetCHA()/4;
+	
+	//target's counters
+	value -= target->GetLevel()*4 + who->GetWIS()/4;
+	
+	if (MakeRandomInt(0,99) < value) {
+		//temporary hack...
+		//cast fear on them... should prolly be a different spell
+		//and should be un-resistable.
+		SpellOnTarget(229, who);
+		//is there a success message?
+	} else {
+		Message_StringID(4,NOT_SCARING);
+		//Idea from WR:
+		/* if (target->IsNPC() && MakeRandomInt(0,99) < 10 ) {
+			entity_list.MessageClose(target, false, 50, MT_Rampage, "%s lashes out in anger!",target->GetName());
+			//should we actually do this? and the range is completely made up, unconfirmed
+			entity_list.AEAttack(target, 50);
+		}*/
+	}
+}
 

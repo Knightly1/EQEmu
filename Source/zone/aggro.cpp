@@ -136,7 +136,7 @@ bool Mob::CheckWillAggro(Mob *mob) {
 		if(CheckLosFN(mob)) {
 
 		// Aggro
-		#if EQDEBUG>=5
+		#if EQDEBUG>=6
 			LogFile->write(EQEMuLog::Debug, "Check aggro for %s target %s.", GetName(), mob->GetName());
 		#endif
 		return(true);

@@ -92,6 +92,7 @@ enum {	//scribing argument to MemorizeSpell
 	memSpellSpellbar = 3
 };
 
+#define USE_ITEM_SPELL_SLOT 10
 #define DISCIPLINE_SPELL_SLOT 10
 #define ABILITY_SPELL_SLOT 9
 

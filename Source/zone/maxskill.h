@@ -1748,18 +1748,65 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
 //////////////////////////////////////////
 // Shared skill
       // Shared Rogue
-    case HIDE:
+    case HIDE:{
+      switch(class_){
+        // True class
+        case ROGUE: case ROGUEGM:{
+          r_value = ((level*5) + 5);
+          if(r_value > 200)
+            r_value = 200;
+          break;
+        }
+        // Hybrids
+        case RANGER: case RANGERGM:
+        case SHADOWKNIGHT: case SHADOWKNIGHTGM:{ //75 cap
+          if(level >= 35) {
+            r_value = (((level-35)*5) + 5);
+            if(r_value > 75)
+              r_value = 75;
+          }
+          break;
+        }
+        case BARD: case BARDGM:{ //40 cap
+          if(level > 44) {
+            r_value = (((level-44)*5) + 5);
+            if(r_value > 40)
+              r_value = 40;
+          }
+          break;
+        }
+        default:
+          r_value = 0;
+        break;
+      }// Class Switch
+    break;
+    }
+    
     case SNEAK:{
       switch(class_){
         // True class
         case ROGUE: case ROGUEGM:{
+          r_value = ((level*5) + 5);
+          if(r_value > 200)
+            r_value = 200;
           break;
         }
         // Hybrids
-        case MONK: case MONKGM:
+        case MONK: case MONKGM:{ //110 cap
+          if(level >= 28) {
+            r_value = (((level-28)*5) + 5);
+            if(r_value > 110)
+              r_value = 110;
+          }
+          break;
+        }
         case RANGER: case RANGERGM:
-        case SHADOWKNIGHT: case SHADOWKNIGHTGM:
-        case BARD: case BARDGM:{
+        case BARD: case BARDGM:{ //75 cap
+          if(level >= 35) {
+            r_value = (((level-35)*5) + 5);
+            if(r_value > 75)
+              r_value = 75;
+          }
           break;
         }
         default:
@@ -1776,10 +1823,18 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
       switch(class_){
         // True class
         case ROGUE: case ROGUEGM:{
+          r_value = ((level*5) + 5);
+          if(r_value > 200)
+            r_value = 200;
           break;
         }
         // Hybrids
-        case BARD: case BARDGM:{
+        case BARD: case BARDGM:{ //100 cap
+          if(level >= 30) {	//this is wrong I think...
+            r_value = (((level-30)*5) + 5);
+            if(r_value > 100)
+              r_value = 100;
+          }
           break;
         }
         default:
@@ -1795,6 +1850,9 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
         // Melee
         case MONK: case MONKGM:
         case ROGUE: case ROGUEGM:{
+          r_value = ((level*5) + 5);
+          if(r_value > 200)
+            r_value = 200;
           break;
         }
         default:
@@ -1813,6 +1871,7 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
             r_value = 200;
             break;
         }
+        case MONK: case MONKGM:
         case BARD: case BARDGM:
           r_value = 55;
         break;

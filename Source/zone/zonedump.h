@@ -98,6 +98,7 @@ struct NPCType
 	bool	see_invis_undead;   // Mongrel: See Invis vs. Undead flag added 
 	bool	qglobal;
 	bool	npc_aggro;
+	uint8	spawn_limit;	//only this many may be in zone at a time (0=no limit)
 };
 
 struct ZSDump_Spawn2 {

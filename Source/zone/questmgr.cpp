@@ -30,7 +30,10 @@ void QuestManager::joe(int arg) {
 	//... do something
 }
 
-3. ... perl parser.
+3. Copy one of the XS routines in perlparser.cpp, preferably
+ one with the same number of arguments as your routine. Rename
+ as needed.
+ Finally, add your routine to the list at the bottom of perlparser.cpp
 
 
 4.
@@ -379,6 +382,59 @@ void QuestManager::level(int newlevel) {
 void QuestManager::traindisc(int discipline_tome_item_id) {
 	if (initiator && initiator->IsClient())
 		initiator->TrainDiscipline(discipline_tome_item_id);
+}
+
+bool QuestManager::isdisctome(int item_id) {
+//get the item info
+	const Item_Struct *item = database.GetItem(item_id);
+	if(item == NULL) {
+		return(false);
+	}
+	
+	if(item->ItemClass != ItemTypeCommon || item->Common.ItemUse != ItemUseSpell) {
+		return(false);
+	}
+	
+	//Need a way to determine the difference between a spell and a tome
+	//so they cant turn in a spell and get it as a discipline
+	//this is kinda a hack:
+	if(!(
+		item->Name[0] == 'T' &&
+		item->Name[1] == 'o' &&
+		item->Name[2] == 'm' &&
+		item->Name[3] == 'e' &&
+		item->Name[4] == ' '
+		)) {
+		return(false);
+	}
+	
+	//we know for sure none of the int casters get disciplines
+	uint32 cbit = 0;
+	cbit |= 1 << (WIZARD-1);
+	cbit |= 1 << (ENCHANTER-1);
+	cbit |= 1 << (MAGICIAN-1);
+	cbit |= 1 << (NECROMANCER-1);
+	if(item->Common.Classes & cbit) {
+		return(false);
+	}
+	
+	int32 spell_id = item->Common.SpellId;
+	if(!IsValidSpell(spell_id)) {
+		return(false);
+	}
+	
+	//we know for sure none of the int casters get disciplines
+	const SPDat_Spell_Struct &spell = spells[spell_id];
+	if(
+		spell.classes[WIZARD - 1] != 255 &&
+		spell.classes[ENCHANTER - 1] != 255 &&
+		spell.classes[MAGICIAN - 1] != 255 &&
+		spell.classes[NECROMANCER - 1] != 255
+	) {
+		return(false);
+	}
+	
+	return(true);
 }
 
 void QuestManager::safemove() {

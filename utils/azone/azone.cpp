@@ -714,9 +714,52 @@ bool QTBuilder::FaceInNode(const QTNode *q, const FACE *f) {
 #ifdef COUNT_MACTHES
 	gHardMatches++;
 #endif
-	return(true);
+//	return(true);
 	
 	//harder: no points are in the cube
+	
+	//4 points of this node
+	GPoint	pt1(q->minx, q->miny, 0),
+			pt2(q->minx, q->maxy, 0),
+			pt3(q->maxx, q->miny, 0),
+			pt4(q->maxx, q->maxy, 0);
+	
+	/*
+	//box lines:
+	pt1, pt2
+	pt3, pt4
+	pt1, pt3
+	pt2, pt4
+	
+	//tri lines
+	v1, v2
+	v1, v3
+	v2, v3
+	*/
+	
+#define CheckIntersect(p1, p2, p3, p4) \
+(((p4->y - p3->y)*(p2.x - p1.x) - (p4->x - p3->x)*(p2.y - p1.y)) != 0)
+	
+	return(
+		   CheckIntersect(pt1, pt2, v1, v2)
+		|| CheckIntersect(pt1, pt2, v1, v3)
+		|| CheckIntersect(pt1, pt2, v2, v3)
+		|| CheckIntersect(pt3, pt4, v1, v2)
+		|| CheckIntersect(pt3, pt4, v1, v3)
+		|| CheckIntersect(pt3, pt4, v2, v3)
+		|| CheckIntersect(pt1, pt3, v1, v2)
+		|| CheckIntersect(pt1, pt3, v1, v3)
+		|| CheckIntersect(pt1, pt3, v2, v3)
+		|| CheckIntersect(pt2, pt4, v1, v2)
+		|| CheckIntersect(pt2, pt4, v1, v3)
+		|| CheckIntersect(pt2, pt4, v2, v3)
+	);
+	
+/*	
+	
+	
+	return(false);
+	
 	
 	POLYGON it;
 	it.c[0] = *v1;
@@ -765,6 +808,7 @@ bool QTBuilder::FaceInNode(const QTNode *q, const FACE *f) {
 	
 	//if we have anything left, it intersects us.
 	return(it.count > 1);
+*/
 }
 
 

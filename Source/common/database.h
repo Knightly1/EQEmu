@@ -269,7 +269,7 @@ public:
 	bool	SetServerFilters(char* name, ServerSideFilters_Struct *ssfs);
 	int32	GetServerFilters(char* name, ServerSideFilters_Struct *ssfs);
 	
-	int32	NPCSpawnDB(int8 command, const char* zone, NPC* spawn = 0, int32 extra = 0); // 0 = Create 1 = Add; 2 = Update; 3 = Remove; 4 = Delete
+	int32	NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn = 0, int32 extra = 0); // 0 = Create 1 = Add; 2 = Update; 3 = Remove; 4 = Delete
 	
     int32	CheckLogin(const char* name, const char* password, sint16* oStatus = 0);
 	sint16	CheckStatus(int32 account_id);

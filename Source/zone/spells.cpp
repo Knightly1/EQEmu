@@ -175,7 +175,7 @@ void NPC::SpellProcess()
 // but things like SpellFinished() can run concurrent with a triggered cast
 // to allow procs to work
 void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
-	sint32 cast_time, sint32 mana_cost, int32* oSpellWillFinish,int item_slot)
+	sint32 cast_time, sint32 mana_cost, int32* oSpellWillFinish, int32 item_slot)
 {
 	_ZP(Mob_CastSpell);
 	
@@ -251,7 +251,7 @@ void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 // to repeat a spell for bard songs
 //
 void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
-                    sint32 cast_time, sint32 mana_cost, int32* oSpellWillFinish, int item_slot)
+                    sint32 cast_time, sint32 mana_cost, int32* oSpellWillFinish, int32 item_slot)
 {
 	_ZP(Mob_DoCastSpell);
 	
@@ -762,7 +762,7 @@ void Mob::InterruptSpell(int16 message, int16 color, int16 spellid)
 // NOTE: do not put range checking, etc into this function.  this should
 // just check timed spell specific things before passing off to SpellFinished
 // which figures out proper targets etc
-void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_used, int inventory_slot)
+void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_used, int32 inventory_slot)
 {
 	_ZP(Mob_CastedSpellFinished);
 	
@@ -916,7 +916,8 @@ Message(13, "Spell Finished returned false, interrupting.");
 	//
 
 	// if this was cast from an inventory slot, check out the item that's there
-	if(IsClient() && slot == 10)	// 10 is an item
+	if(IsClient() && slot == USE_ITEM_SPELL_SLOT 
+		&& inventory_slot != 0xFFFFFFFF)	// 10 is an item
 	{
 		const ItemInst* inst = CastToClient()->GetInv()[inventory_slot];
 		if (inst && inst->IsType(ItemTypeCommon))
@@ -929,7 +930,9 @@ Message(13, "Spell Finished returned false, interrupting.");
 		else
 		{
 			Message(0, "Error: item not found for inventory slot #%i", inventory_slot);
-			InterruptSpell();
+			//We cannot interrupt the spell here... it has allready
+			//finished being cast... not sure what to do here...
+			//InterruptSpell();
 		}
 	}
 
@@ -1139,7 +1142,7 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 		
 		case ST_Summoned: {
 			spell_target = entity_list.GetMob(target_id);
-			int8 body_type = spell_target->GetBodyType();
+			int8 body_type = spell_target?spell_target->GetBodyType():0;
 			if(!spell_target || (body_type != BT_Summoned && body_type != BT_Summoned2 && body_type != BT_Summoned3))
 			{
 				//invalid target

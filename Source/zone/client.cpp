@@ -1191,6 +1191,9 @@ return;
 
 	QueuePacket(outapp);
 	safe_delete(outapp);
+#ifdef PACKET_UPDATE_MANAGER   
+	update_manager.FlushQueues();
+#endif
 }
 
 void Client::SetLevel(int8 set_level, bool command)
@@ -2217,6 +2220,10 @@ bool Client::BindWound(Mob* bindmob, bool start, bool fail){
 					CheckIncreaseSkill(BIND_WOUND);
 					
 					int max_percent = 50 + 10 * GetAA(aaFirstAid);
+					
+					if(GetClass() == MONK && GetSkill(BIND_WOUND) > 200) {
+						max_percent = 70 + 10 * GetAA(aaFirstAid);
+					}
 					
 					int max_hp = bindmob->GetMaxHP()*max_percent/100;
 					

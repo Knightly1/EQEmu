@@ -539,9 +539,9 @@ bool logpos;
 	bool UseBardSpellLogic(int16 spell_id = 0xffff, int slot = -1);
 	void InterruptSpell(int16 spellid = 0xFFFF);
 	void InterruptSpell(int16, int16, int16 spellid = 0xFFFF);
-	virtual void	CastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int item_slot = 0);
-	virtual void	DoCastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int item_slot = 0);
-	void	CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_used, int inventory_slot = 0);
+	virtual void	CastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0);
+	virtual void	DoCastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0);
+	void	CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_used, int32 inventory_slot = 0);
 	bool	SpellFinished(int16 spell_id, int32 target_id, int16 slot = 10, int16 mana_used = 0);
 	bool	SpellOnTarget(int16 spell_id, Mob* spelltar);
 //	int	CheckAddBuff(Mob* caster, const int16& spell_id, const int& caster_level, int* buffdur, int ticsremaining = -1);
@@ -602,7 +602,6 @@ bool logpos;
 	inline void	SetExtraHaste(int Haste) { ExtraHaste = Haste; }
 	virtual int GetHaste();
 
-	// Kaiyodo - new function prototypes for damage system
 	int		GetWeaponDamageBonus(const Item_Struct* Weapon);
 	int		GetMonkHandToHandDamage(void);
 	
@@ -728,6 +727,7 @@ bool logpos;
 	
 	bool CheckWillAggro(Mob *mob);
 	
+	void	InstillDoubt(Mob *who);
 	sint16	GetResist(int8 type);
 	void	StopSong();
 	Mob*	GetShieldTarget()			{ return shield_target; }
@@ -882,7 +882,7 @@ protected:
 	int16 casting_spell_targetid;
 	int16 casting_spell_slot;
 	int16 casting_spell_mana;
-	int casting_spell_inventory_slot;
+	int32 casting_spell_inventory_slot;
 	int8	haircolor;
 	int8	beardcolor;
 	int8	eyecolor1; // the eyecolors always seem to be the same, maybe left and right eye?

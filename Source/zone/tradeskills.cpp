@@ -694,7 +694,7 @@ bool Database::GetTradeRecipe(const ItemContainerInst* container, uint8 c_type, 
     MYSQL_RES *result;
     MYSQL_ROW row;
     char *query = 0;
-	char buf2[220];
+	char buf2[2048];
 	
 	uint32 sum = 0;
 	uint32 count = 0;
@@ -736,6 +736,7 @@ bool Database::GetTradeRecipe(const ItemContainerInst* container, uint8 c_type, 
 			}
 		}
 	}
+	*pos = '\0';
 	
 	if(count < 1) {
 		return(false);	//no items == no recipe
@@ -773,6 +774,9 @@ bool Database::GetTradeRecipe(const ItemContainerInst* container, uint8 c_type, 
 			} else {
 				pos += snprintf(pos, 19, ",%u", recipeid);
 			}
+			//length sanity check on buf2
+			if(pos > (buf2 + 2020))
+				break;
 		}
 		
 		qlen = MakeAnyLenString(&query, "SELECT tre.recipe_id"

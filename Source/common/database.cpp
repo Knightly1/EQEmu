@@ -4438,12 +4438,11 @@ const NPCType* Database::GetNPCType (uint32 id) {
    // Otherwise, get NPCs from database.
    else
    {
-   	char errbuf[MYSQL_ERRMSG_SIZE];
-	   char *query;
-	   MYSQL_RES *result;
-	   MYSQL_ROW row;
+		char errbuf[MYSQL_ERRMSG_SIZE];
+		char *query = 0;
+		MYSQL_RES *result;
+		MYSQL_ROW row;
 
-      query = new char[512];
 
       // If id is 0, load all npc_types for the current zone,
       // according to spawn2.
@@ -4462,7 +4461,8 @@ const NPCType* Database::GetNPCType (uint32 id) {
             "npc_types.aggroradius,npc_types.bodytype,"
             "npc_types.npc_faction_id,npc_types.face,"
             "npc_types.see_invis,npc_types.see_invis_undead,"
-            "npc_types.lastname,npc_types.qglobal,npc_types.AC,npc_types.npc_aggro"
+            "npc_types.lastname,npc_types.qglobal,npc_types.AC,"
+            "npc_types.npc_aggro,npc_types.spawn_limit"
             " FROM npc_types,spawn2 WHERE spawn2.zone='%s'"
             " AND npc_types.id=spawn2.id",
             zone->GetShortName());
@@ -4475,97 +4475,91 @@ const NPCType* Database::GetNPCType (uint32 id) {
             "d_meele_texture1,d_meele_texture2,walkspeed,"
             "runspeed,fixedz,hp_regen_rate,mana_regen_rate,"
             "aggroradius,bodytype,npc_faction_id,face,see_invis,"
-            "see_invis_undead,lastname,qglobal,AC,npc_aggro"
+            "see_invis_undead,lastname,qglobal,AC,npc_aggro,spawn_limit"
             " FROM npc_types WHERE id=%d", id);
 
-      if (RunQuery(query, strlen(query), errbuf, &result))
-	   {
+		if (RunQuery(query, strlen(query), errbuf, &result)) {
          // Process each row returned.
-		   while((row = mysql_fetch_row(result)))
-		   {
-      	   NPCType *tmpNPCType;
-            tmpNPCType = (NPCType *)malloc (sizeof *tmpNPCType);
+			while((row = mysql_fetch_row(result))) {
+				NPCType *tmpNPCType;
+				tmpNPCType = (NPCType *)malloc (sizeof *tmpNPCType);
 
-            memset (tmpNPCType, 0, sizeof *tmpNPCType);
-			   strncpy(tmpNPCType->name, row[1], 30);
+				memset (tmpNPCType, 0, sizeof *tmpNPCType);
+				strncpy(tmpNPCType->name, row[1], 30);
 
-            tmpNPCType->npc_id = atoi(row[0]); // rembrant, Dec. 2
-			   tmpNPCType->level = atoi(row[2]);
-			   tmpNPCType->race = atoi(row[3]);
-			   tmpNPCType->class_ = atoi(row[4]);
-			   tmpNPCType->cur_hp = atoi(row[5]);
-			   tmpNPCType->max_hp = atoi(row[5]);
-			   tmpNPCType->gender = atoi(row[6]);
-			   tmpNPCType->texture = atoi(row[7]);
-			   tmpNPCType->helmtexture = atoi(row[8]);
-			   tmpNPCType->size = atof(row[9]);
-			   tmpNPCType->loottable_id = atoi(row[10]);
-			   tmpNPCType->merchanttype = atoi(row[11]);
-			   tmpNPCType->STR = 75;
-			   tmpNPCType->STA = 75;
-			   tmpNPCType->DEX = 75;
-			   tmpNPCType->AGI = 75;
-			   tmpNPCType->WIS = 75;
-			   tmpNPCType->INT = 75;
-			   tmpNPCType->CHA = 75;
-			   tmpNPCType->banish = atoi(row[12]);
-			   tmpNPCType->min_dmg = atoi(row[13]);
-			   tmpNPCType->max_dmg = atoi(row[14]);
-			   strcpy(tmpNPCType->npc_attacks,row[15]);
-			   tmpNPCType->npc_spells_id = atoi(row[16]);
-			   tmpNPCType->d_meele_texture1= atoi(row[17]);
-			   tmpNPCType->d_meele_texture2= atoi(row[18]);
-			   tmpNPCType->walkspeed= atof(row[19]);
-			   tmpNPCType->runspeed= atof(row[20]);
-			   tmpNPCType->fixedZ = atof(row[21]);
-			   tmpNPCType->hp_regen = atoi(row[22]);
-			   tmpNPCType->mana_regen = atoi(row[23]);
-		           tmpNPCType->aggroradius = (sint32)atoi(row[24]);
+				tmpNPCType->npc_id = atoi(row[0]); // rembrant, Dec. 2
+				tmpNPCType->level = atoi(row[2]);
+				tmpNPCType->race = atoi(row[3]);
+				tmpNPCType->class_ = atoi(row[4]);
+				tmpNPCType->cur_hp = atoi(row[5]);
+				tmpNPCType->max_hp = atoi(row[5]);
+				tmpNPCType->gender = atoi(row[6]);
+				tmpNPCType->texture = atoi(row[7]);
+				tmpNPCType->helmtexture = atoi(row[8]);
+				tmpNPCType->size = atof(row[9]);
+				tmpNPCType->loottable_id = atoi(row[10]);
+				tmpNPCType->merchanttype = atoi(row[11]);
+				tmpNPCType->STR = 75;
+				tmpNPCType->STA = 75;
+				tmpNPCType->DEX = 75;
+				tmpNPCType->AGI = 75;
+				tmpNPCType->WIS = 75;
+				tmpNPCType->INT = 75;
+				tmpNPCType->CHA = 75;
+				tmpNPCType->banish = atoi(row[12]);
+				tmpNPCType->min_dmg = atoi(row[13]);
+				tmpNPCType->max_dmg = atoi(row[14]);
+				strcpy(tmpNPCType->npc_attacks,row[15]);
+				tmpNPCType->npc_spells_id = atoi(row[16]);
+				tmpNPCType->d_meele_texture1= atoi(row[17]);
+				tmpNPCType->d_meele_texture2= atoi(row[18]);
+				tmpNPCType->walkspeed= atof(row[19]);
+				tmpNPCType->runspeed= atof(row[20]);
+				tmpNPCType->fixedZ = atof(row[21]);
+				tmpNPCType->hp_regen = atoi(row[22]);
+				tmpNPCType->mana_regen = atoi(row[23]);
+				   tmpNPCType->aggroradius = (sint32)atoi(row[24]);
 
-            if (row[25] && strlen(row[25]))
-               tmpNPCType->bodytype = (int8)atoi(row[25]);
-            else
-               tmpNPCType->bodytype = 0;
-			tmpNPCType->npc_faction_id = atoi(row[26]);
-			tmpNPCType->luclinface = atoi(row[27]);
+				if (row[25] && strlen(row[25]))
+					tmpNPCType->bodytype = (int8)atoi(row[25]);
+				else
+					tmpNPCType->bodytype = 0;
+				tmpNPCType->npc_faction_id = atoi(row[26]);
+				tmpNPCType->luclinface = atoi(row[27]);
 
-            // set defaultvalue for aggroradius
-            if (tmpNPCType->aggroradius <= 0)
-               tmpNPCType->aggroradius = 70;
+				// set defaultvalue for aggroradius
+				if (tmpNPCType->aggroradius <= 0)
+					tmpNPCType->aggroradius = 70;
 
-			tmpNPCType->see_invis = atoi(row[28]);			// Mongrel: Set see_invis flag
-			tmpNPCType->see_invis_undead = atoi(row[29]);	// Mongrel: Set see_invis_undead flag
-            if (row[30] != NULL)
-				    	strncpy(tmpNPCType->lastname, row[30], 32);
-		    tmpNPCType->qglobal = atoi(row[31]);	// qglobal
-		    tmpNPCType->AC = atoi(row[32]);
-		    tmpNPCType->npc_aggro = atoi(row[33])==0?false:true;
+				tmpNPCType->see_invis = atoi(row[28]);			// Mongrel: Set see_invis flag
+				tmpNPCType->see_invis_undead = atoi(row[29]);	// Mongrel: Set see_invis_undead flag
+				if (row[30] != NULL)
+					strncpy(tmpNPCType->lastname, row[30], 32);
+				tmpNPCType->qglobal = atoi(row[31]);	// qglobal
+				tmpNPCType->AC = atoi(row[32]);
+				tmpNPCType->npc_aggro = atoi(row[33])==0?false:true;
+				tmpNPCType->spawn_limit = atoi(row[34]);
 
-            // If NPC with duplicate NPC id already in table,
-            // free item we attempted to add.
-	    	if (zone->npctable.find(tmpNPCType->npc_id) != zone->npctable.end())
-            {
-               cerr << "Error loading duplicate NPC "
-                    << tmpNPCType->npc_id << endl;
-               free (tmpNPCType);
-               npc = NULL;
-            }
-            else
-	    {
-	       zone->npctable[tmpNPCType->npc_id]=tmpNPCType;
-               npc = tmpNPCType;
-	    }
+				// If NPC with duplicate NPC id already in table,
+				// free item we attempted to add.
+				if (zone->npctable.find(tmpNPCType->npc_id) != zone->npctable.end())
+				{
+					cerr << "Error loading duplicate NPC " << tmpNPCType->npc_id << endl;
+					free (tmpNPCType);
+					npc = NULL;
+				} else {
+					zone->npctable[tmpNPCType->npc_id]=tmpNPCType;
+					npc = tmpNPCType;
+				}
 
-            Sleep(0);
-		   }
+				Sleep(0);
+			}
 
-	 if (result) {
-         	mysql_free_result(result);
-	}
-      }
-      else
-         cerr << "Error loading NPCs from database. Bad query: " << errbuf << endl;
-
+			if (result) {
+				mysql_free_result(result);
+			}
+		} else
+			cerr << "Error loading NPCs from database. Bad query: " << errbuf << endl;
       safe_delete_array(query);
    }
 

@@ -625,7 +625,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 			CheckIncreaseSkill(skillinuse, -10);
 			CheckIncreaseSkill(OFFENSE, -10);
 
-			if(skillinuse == 28) // weapon is hand-to-hand
+			if(skillinuse == 28 || !weapon) // weapon is hand-to-hand
 			{
 				//dont some weapons use the hand to hand skill?
 				if(GetClass() == MONK || GetClass() == BEASTLORD)
@@ -633,23 +633,16 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 				else
 					weapon_damage = 2; // This isn't quite right, something more like level/10 is more appropriate
 			}
-			else if (weapon)
+			else //not hand to hand and we have a weapon
 			{
 				if (weapon->IsWeapon()) {
 					weapon_damage = weapon->GetItem()->Common.Damage;
 					if (weapon_damage < 1)
 						weapon_damage = 1;
-					
-					// Elemental damage
-					if(weapon_item && weapon_item->Common.ElemDmg) {
-						float resist = other->ResistSpell(weapon_item->Common.ElemDmgType, 0, this);
-						if(resist > 0) {
-							weapon_damage += (int)( weapon_item->Common.ElemDmg * resist / 100.0f);
-						} //else: print message?
-					}
+				} else {
+					weapon_damage = 1;
 				}
 			}
-			
 			
 			/*#if 0 // Racial bane damage
 						if (weapon && weapon->Common.BaneDmgAmt && weapon->Common.BaneDmgRace && other && other->GetRace() == weapon->common.BaneDMGRace) {
@@ -677,8 +670,9 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 					weighted = (int)(0.9 * (weapon_damage+min_hit) + 0.1 * max_hit);
 				}
 			#endif // Weighted MDF type damage*/
+			
 			// Only apply the damage bonus to the main hand
-			if(weapon_item && (Hand==13))	// Kaiyodo - If we're not using the DWDA stuff, will always be the primary hand
+			if(Hand == 13)	// Kaiyodo - If we're not using the DWDA stuff, will always be the primary hand
 			{
 				int damage_bonus = GetWeaponDamageBonus(weapon_item);	// Can be NULL, will then assume fists
 				min_hit += damage_bonus;
@@ -691,6 +685,17 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 				damage = min_hit;
 			else
 				damage = (int32)min_hit + MakeRandomInt(0, max_hit - min_hit + 1);
+			
+			//this still isnt the right place for this...
+			//also, is this damage supposed to be seperate??
+			// Elemental damage
+			if(weapon_item && weapon_item->Common.ElemDmg) {
+				float resist = other->ResistSpell(weapon_item->Common.ElemDmgType, 0, this);
+				if(resist > 0) {
+					damage += (int)( weapon_item->Common.ElemDmg * resist / 100.0f);
+				} //else: print message?
+			}
+
 			/*#if 0 // Weighted MDF type damage
 				float hml = (float) ((float)rand()/(float)RAND_MAX);
 				if(GetLevel()>=25){

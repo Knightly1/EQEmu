@@ -406,8 +406,24 @@ bool Client::TrainDiscipline(int32 itemid) {
 		return(false);
 	}
 	
-	if(item->ItemClass != ItemTypeCommon) {
+	if(item->ItemClass != ItemTypeCommon || item->Common.ItemUse != ItemUseSpell) {
 		Message(13, "Invalid item type, you cannot learn from this item.");
+		//summon them the item back...
+		SummonItem(itemid);
+		return(false);
+	}
+	
+	//Need a way to determine the difference between a spell and a tome
+	//so they cant turn in a spell and get it as a discipline
+	//this is kinda a hack:
+	if(!(
+		item->Name[0] == 'T' &&
+		item->Name[1] == 'o' &&
+		item->Name[2] == 'm' &&
+		item->Name[3] == 'e' &&
+		item->Name[4] == ' '
+		)) {
+		Message(13, "This item is not a tome.");
 		//summon them the item back...
 		SummonItem(itemid);
 		return(false);
@@ -420,9 +436,6 @@ bool Client::TrainDiscipline(int32 itemid) {
 		SummonItem(itemid);
 		return(false);
 	}
-	
-	//Need a way to determine the difference between a spell and a tome
-	//so they cant turn in a spell and get it as a discipline
 	
 	//make sure we can train this...
 	//can we use the item?
@@ -451,7 +464,8 @@ bool Client::TrainDiscipline(int32 itemid) {
 	}
 	
 	if(level_to_use > GetLevel()) {
-		Message_StringID(13, DISC_LEVEL_ERROR, level_to_use);
+//		Message_StringID(13, DISC_LEVEL_ERROR, level_to_use);
+		Message(13, "You must be at least level %d to learn this discipline.", level_to_use);
 		//summon them the item back...
 		SummonItem(itemid);
 		return(false);
@@ -477,13 +491,16 @@ bool Client::TrainDiscipline(int32 itemid) {
 }
 
 void Client::SendDisciplineUpdate() {
-	//this dosent seem to work yet, should work with OOW client.
+	//this dosent seem to work right now
 	
 	APPLAYER app(OP_DisciplineUpdate, sizeof(Discipline_Struct));
 	Discipline_Struct *d = (Discipline_Struct*)app.pBuffer;
 	//dunno why I dont just send the one from m_pp
 	memcpy(d, &m_pp.disciplines, sizeof(m_pp.disciplines));
-	QueuePacket(&app);
+
+//this is crashing some people and it dosent work
+//anyways right now, so im just disabling it until its fixed.
+//	QueuePacket(&app);
 }
 
 bool Client::UseDiscipline(int32 spell_id, int32 target) {

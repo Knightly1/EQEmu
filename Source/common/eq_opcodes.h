@@ -133,7 +133,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_GuildDemote			0x0277
 #define OP_GuildInviteAccept 0x0131
 #define OP_GuildWar			0x00a4 // /guildwar
-		#define OP_GuildUpdate		0x7b41
+		#define OP_GuildUpdate		0x0b41
 #define OP_GuildDelete			0x0133
 #define OP_GuildManageRemove	0x0233
 #define OP_GuildManageAdd		0x022d
@@ -382,7 +382,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 	// OP_DeclineDuel	0x29c
 		#define OP_DuelResponse		0x4a5d
 #define OP_DuelResponse2	0x016e
-#define OP_InstillDoubt		0x0022
+#define OP_InstillDoubt		0x007c
 
 #define OP_SafeFallSuccess	0x00ac
 #define OP_DisciplineUpdate	0x02fb	
@@ -399,7 +399,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_SelectTribute	0x02f7
 #define OP_TributeTimer		0x02f8
 #define OP_StartTribute		0x02f9
-#define OP_TributeNPC		0x02fa		//no idea what this is
+#define OP_TributeNPC		0x02fa		//no idea what this is for
 #define OP_TributeMoney		0x02fe
 #define OP_TributeToggle	0x0364
 
@@ -410,7 +410,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_RecipeDetails	0x01fb
 #define OP_RecipeAutoCombine 0x01fc
 
-//for the 'find' command, still missing ones sent on zone-in
+//for the 'find' command
 	#define OP_FindPersonRequest	0x02db
 	#define OP_FindPersonReply	0x02dc
 

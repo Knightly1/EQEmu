@@ -359,6 +359,9 @@ void EntityList::BeaconProcess() {
 
 
 void EntityList::AddGroup(Group* group) {
+	if(group == NULL)	//this seems to be happening somehow...
+		return;
+	
 	int32 gid = worldserver.NextGroupID();
 	if(gid == 0) {
 		LogFile->write(EQEMuLog::Error, "Unable to get new group ID from world server. group is going to be broken.");
@@ -1634,6 +1637,7 @@ void EntityList::RemoveAllNPCs(){
 	iterator.Reset();
 	while(iterator.MoreElements())
 		iterator.RemoveCurrent(false);
+	npc_limit_list.clear();
 }
 void EntityList::RemoveAllGroups(){
 	LinkedListIterator<Group*> iterator(group_list);
@@ -1691,6 +1695,8 @@ bool EntityList::RemoveNPC(int16 delete_id){
 	{
 		if(iterator.GetData()->GetID()==delete_id){
 			iterator.RemoveCurrent(false);//Already Deleted
+			if(npc_limit_list.count(delete_id) == 1)
+				npc_limit_list.erase(delete_id);
 			return true;
 		}
 		iterator.Advance();
@@ -2744,6 +2750,105 @@ bool EntityList::IsMobInZone(Mob *who) {
 	}
 	return(false);
 }
+
+/*
+Code to limit the ammount of certain NPCs in a given zone.
+Primarily used to make a named mob unique within the zone, but written
+to be more generic allowing limits larger than 1.
+
+Maintain this stuff in a seperate list since the number
+of limited NPCs will most likely be much smaller than the number
+of NPCs in the entire zone.
+*/
+void EntityList::LimitAddNPC(NPC *npc) {
+	if(!npc)
+		return;
+	
+	SpawnLimitRecord r;
+	
+	int16 eid = npc->GetID();
+	r.spawngroup_id = npc->GetSp2();
+	r.npc_type = npc->GetNPCTypeID();
+	
+	npc_limit_list[eid] = r;
+}
+
+//check a limit over the entire zone.
+//returns true if the limit has not been reached
+bool EntityList::LimitCheckType(int32 npc_type, int count) {
+	if(count < 1)
+		return(true);
+	
+	map<int16, SpawnLimitRecord>::iterator cur,end;
+	cur = npc_limit_list.begin();
+	end = npc_limit_list.end();
+	
+	for(; cur != end; cur++) {
+		if(cur->second.npc_type == npc_type) {
+			count--;
+			if(count == 0) {
+				return(false);
+			}
+		}
+	}
+	return(true);
+}
+
+//check limits on an npc type in a given spawn group.
+//returns true if the limit has not been reached
+bool EntityList::LimitCheckGroup(int32 npc_type, int32 spawngroup_id, int count) {
+	if(count < 1)
+		return(true);
+	
+	map<int16, SpawnLimitRecord>::iterator cur,end;
+	cur = npc_limit_list.begin();
+	end = npc_limit_list.end();
+	
+	for(; cur != end; cur++) {
+		if(cur->second.spawngroup_id == spawngroup_id 
+		  && cur->second.npc_type == npc_type) {
+			count--;
+			if(count == 0) {
+				return(false);
+			}
+		}
+	}
+	return(true);
+}
+
+//check limits on an npc type in a given spawn group, and
+//checks limits on the entire zone in one pass.
+//returns true if neither limit has been reached
+bool EntityList::LimitCheckBoth(int32 npc_type, int32 spawngroup_id, int group_count, int type_count) {
+	if(group_count < 1 && type_count < 1)
+		return(true);
+	
+	map<int16, SpawnLimitRecord>::iterator cur,end;
+	cur = npc_limit_list.begin();
+	end = npc_limit_list.end();
+	
+	for(; cur != end; cur++) {
+		if(cur->second.npc_type == npc_type) {
+			type_count--;
+			if(type_count == 0) {
+				return(false);
+			}
+			if(cur->second.spawngroup_id == spawngroup_id) {
+				group_count--;
+				if(group_count == 0) {
+					return(false);
+				}
+			}
+		}
+	}
+	return(true);
+}
+
+
+
+
+
+
 
 
 

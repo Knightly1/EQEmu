@@ -253,6 +253,10 @@ public:
 	void    RemoveFromHateLists(Mob* mob, bool settoone = false);
 	void	MessageGroup(Mob* sender, bool skipclose, int32 type, const char* message, ...);
 	
+	void	LimitAddNPC(NPC *npc);
+	bool	LimitCheckType(int32 npc_type, int count);
+	bool	LimitCheckGroup(int32 npc_type, int32 spawngroup_id, int count);
+	bool	LimitCheckBoth(int32 npc_type, int32 spawngroup_id, int group_count, int type_count);
 
 	void	CheckClientAggro(Client *around);
 	Mob*	AICheckCloseAggro(Mob* sender, float iAggroRange, float iAssistRange);
@@ -265,7 +269,11 @@ private:
 	int16   GetFreeID();
 	void	AddToSpawnQueue(int16 entityid, NewSpawn_Struct** app);
 	void	CheckSpawnQueue();
-
+	
+	//used for limiting spawns
+	class SpawnLimitRecord { public: int32 spawngroup_id; int32 npc_type; };
+	map<int16, SpawnLimitRecord> npc_limit_list;		//entity id -> npc type
+	
 	int32	tsFirstSpawnOnQueue; // timestamp that the top spawn on the spawnqueue was added, should be 0xFFFFFFFF if queue is empty
 	int32	NumSpawnsOnQueue;
 	LinkedList<NewSpawn_Struct*> SpawnQueue;

@@ -4001,24 +4001,24 @@ void command_npcspawn(Client *c, const Seperator *sep)
 
 	if (target && target->IsNPC()) {
 		if (strcasecmp(sep->arg[1], "create") == 0) {
-			database.NPCSpawnDB(0, zone->GetShortName(), target->CastToNPC());
+			database.NPCSpawnDB(0, zone->GetShortName(), c, target->CastToNPC());
 			c->Message(0, "%s created successfully!", target->GetName());
 		}
 		else if (strcasecmp(sep->arg[1], "add") == 0) {
-			database.NPCSpawnDB(1, zone->GetShortName(), target->CastToNPC(), atoi(sep->arg[2]));
+			database.NPCSpawnDB(1, zone->GetShortName(), c, target->CastToNPC(), atoi(sep->arg[2]));
 			c->Message(0, "%s added successfully!", target->GetName());
 		}
 		else if (strcasecmp(sep->arg[1], "update") == 0) {
-			database.NPCSpawnDB(2, zone->GetShortName(), target->CastToNPC());
+			database.NPCSpawnDB(2, zone->GetShortName(), c, target->CastToNPC());
 			c->Message(0, "%s updated!", target->GetName());
 		}
 		else if (strcasecmp(sep->arg[1], "remove") == 0) {
-			database.NPCSpawnDB(3, zone->GetShortName(), target->CastToNPC());
+			database.NPCSpawnDB(3, zone->GetShortName(), c, target->CastToNPC());
 			c->Message(0, "%s removed successfully from database!", target->GetName());
 			target->Depop(false);
 		}
 		else if (strcasecmp(sep->arg[1], "delete") == 0) {
-			database.NPCSpawnDB(4, zone->GetShortName(), target->CastToNPC());
+			database.NPCSpawnDB(4, zone->GetShortName(), c, target->CastToNPC());
 			c->Message(0, "%s deleted from database!", target->GetName());
 			target->Depop(false);
 		}

@@ -66,6 +66,7 @@ public:
 	void exp(int amt);
 	void level(int newlevel);
 	void traindisc(int discipline_tome_item_id);
+	bool isdisctome(int item_id);
 	void safemove();
 	void rain(int weather);
 	void snow(int weather);
@@ -107,6 +108,7 @@ public:
 	void respawn(int npc_type, int grid);
 	void set_proximity(float minx, float maxx, float miny, float maxy, float minz=-999999, float maxz=999999);
 	void clear_proximity();
+	
 	//not in here because it retains perl types
 	//thing ChooseRandom(array_of_things)
 	

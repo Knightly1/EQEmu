@@ -28,10 +28,14 @@ using namespace std;
 class SpawnEntry
 {
 public:
-	SpawnEntry(uint32 in_NPCType, int in_chance );
+	SpawnEntry(uint32 in_NPCType, int in_chance, uint8 in_group_spawn_limit, uint8 in_npc_spawn_limit );
 	~SpawnEntry() { }
 	uint32 NPCType;
 	int chance;
+	uint8 group_spawn_limit; //max # of this entry which can be spawned by this group
+
+	//this is a cached value from npc_types, for speed
+	uint8 npc_spawn_limit; //max # of this entry which can be spawned in this zone
 };
 
 class SpawnGroup

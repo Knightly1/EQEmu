@@ -12,7 +12,7 @@ void Unprotect(string &s, char what);
 
 void Protect(string &s, char what);
 
-bool ItemParse(const char *data, int length, map<int,map<int,string> > &items, int level=0);
+bool ItemParse(const char *data, int length, map<int,map<int,string> > &items, int id_pos, int name_pos, int max_field, int level=0);
 
 int Tokenize(string s, map<int,string> & tokens, char delim='|');
 

@@ -700,8 +700,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Levitate");
 #endif
-				// solar: no need to send this, the client already knows to levitate
-				//SendAppearancePacket(AT_Levitate, 2);
+				//this sends the levitate packet to everybody else
+				//who does not otherwise receive the buff packet.
+				SendAppearancePacket(AT_Levitate, 2, true, true);
 				break;
 			}
 
@@ -938,7 +939,6 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Root: %+i", effect_value);
 #endif
-				BuffFadeByEffect(SE_MovementSpeed);
 				rooted = true;
 				break;
 			}
@@ -1919,6 +1919,12 @@ neotokyo: i need those formulas checked!!!!
 	// solar: this updown thing might look messed up but if you look at the
 	// spells it actually looks like some have a positive base and max where
 	// the max is actually less than the base, hence they grow downward
+/*
+This seems to mainly catch spells where both base and max are negative.
+Strangely, damage spells  have a negative base and positive max, but
+snare has both of them negative, yet their range should work the same:
+(meaning they both start at a negative value and the value gets lower)
+*/
 	if (max < base && max != 0)
 	{
 		// values are calculated down
@@ -1936,28 +1942,30 @@ neotokyo: i need those formulas checked!!!!
 		case 100:	// solar: confirmed 2/6/04
 			result = ubase; break;
 		case 101:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * (caster_level / 2); break;
+			result = updownsign * (ubase + (caster_level / 2)); break;
 		case 102:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * caster_level; break;
+			result = updownsign * (ubase + caster_level); break;
 		case 103:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * (caster_level * 2); break;
+			result = updownsign * (ubase + (caster_level * 2)); break;
 		case 104:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * (caster_level * 3); break;
+			result = updownsign * (ubase + (caster_level * 3)); break;
 		case 105:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * (caster_level * 4); break;
+			result = updownsign * (ubase + (caster_level * 4)); break;
 
 		case 107:	// Shutting this thing up, this is wrong
-			result = ubase + updownsign * (caster_level * 4); break;
+			//Used on Reckless Strength, I think it should decay over time
+			result = updownsign * (ubase + (caster_level * 4)); break;
 
 		case 108:
-			result = ubase + updownsign * (caster_level / 3); break;
+			result = updownsign * (ubase + (caster_level / 3)); break;
 		case 109:	// solar: confirmed 2/6/04
-			result = ubase + updownsign * (caster_level / 4); break;
+			result = updownsign * (ubase + (caster_level / 4)); break;
+
 		case 110:	// solar: confirmed 2/6/04
 			result = ubase + (caster_level / 5); break;
 		
-		case 111:	// solar: this doesn't look right
-            result = ubase + 5 * (caster_level - 16); break;
+		case 111:	
+            result = ubase + 7 * (caster_level - 16); break;
 		case 112:
             result = ubase + 8 * (caster_level - 24); break;
 		case 113:
@@ -1992,6 +2000,13 @@ neotokyo: i need those formulas checked!!!!
 		}
 		case 123:	// solar: added 2/6/04
 			result = MakeRandomInt(ubase, abs(max));
+			break;
+
+		//these are used in stacking effects... formula unknown
+		case 201:
+		case 203:
+			result = max;
+			break;
 		default:
 			if (formula < 100)
 				result = ubase + (caster_level * formula);

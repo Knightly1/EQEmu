@@ -18,6 +18,8 @@
 #ifndef LINKEDLIST_H
 #define LINKEDLIST_H
 
+#include "types.h"
+
 enum direction{FORWARD,BACKWARD};
 
 template<class TYPE> class LinkedListIterator;

@@ -91,7 +91,7 @@ bool Spawn2::Process() {
 		timer->Disable();
 		
 		SpawnGroup* sg = zone->spawn_group_list.GetSpawnGroup(spawngroup_id_);
-		if (sg == 0)
+		if (sg == NULL)
 			return false;
 		
 		int32 npcid = sg->GetNPCType();
@@ -133,5 +133,115 @@ void Spawn2::Repop(int32 delay) {
 		timer->Trigger();
 	else
 		timer->Start(delay);
+}
+
+bool Database::PopulateZoneSpawnList(const char* zone_name, LinkedList<Spawn2*> &spawn2_list, int32 repopdelay) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char* query = 0;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	
+	MakeAnyLenString(&query, "SELECT id, spawngroupID, x, y, z, heading, respawntime, variance, pathgrid, timeleft FROM spawn2 WHERE zone='%s'", zone_name);
+	
+	if (RunQuery(query, strlen(query), errbuf, &result))
+	{
+		safe_delete_array(query);
+		while((row = mysql_fetch_row(result)))
+		{
+			Spawn2* newSpawn = 0;
+						//if(GetInverseXY()==1) {
+						//	newSpawn = new Spawn2(atoi(row[0]), atoi(row[1]), atof(row[3]), atof(row[2]), atof(row[4]), atof(row[5]), atoi(row[6]), atoi(row[7]));
+						//}
+						//else {
+			newSpawn = new Spawn2(atoi(row[0]), atoi(row[1]), atof(row[2]), atof(row[3]), atof(row[4]), atof(row[5]), atoi(row[6]), atoi(row[7]), atoi(row[9]), atoi(row[8]));
+						//}
+			//newSpawn->Repop(repopdelay);
+			spawn2_list.Insert( newSpawn );
+		}
+		mysql_free_result(result);
+	}
+	else
+	{
+		LogFile->write(EQEMuLog::Error, "Error in PopulateZoneLists query '%s': %s", query, errbuf);
+		safe_delete_array(query);
+		return false;
+	}
+	
+	return true;
+}
+
+
+Spawn2* Database::LoadSpawn2(LinkedList<Spawn2*> &spawn2_list, int32 spawn2id, int32 timeleft) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char* query = 0;
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, spawngroupID, x, y, z, heading, respawntime, variance, pathgrid FROM spawn2 WHERE id=%i", spawn2id), errbuf, &result))
+	{
+		if (mysql_num_rows(result) == 1)
+		{
+			row = mysql_fetch_row(result);
+			Spawn2* newSpawn = new Spawn2(atoi(row[0]), atoi(row[1]), atof(row[2]), atof(row[3]), atof(row[4]), atof(row[5]), atoi(row[6]), atoi(row[7]), timeleft, atoi(row[8]));
+			spawn2_list.Insert( newSpawn );
+			mysql_free_result(result);
+			safe_delete_array(query);
+			return newSpawn;
+		}
+		mysql_free_result(result);
+	}
+
+	LogFile->write(EQEMuLog::Error, "Error in LoadSpawn2 query '%s': %s", query, errbuf);
+	safe_delete_array(query);
+	return 0;
+}
+
+
+int32 Zone::CountSpawn2() {
+	LinkedListIterator<Spawn2*> iterator(spawn2_list);
+	int32 count = 0;
+
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		count++;
+		iterator.Advance();
+	}
+	return count;
+}
+
+int32 Zone::DumpSpawn2(ZSDump_Spawn2* spawn2dump, int32* spawn2index, Spawn2* spawn2) {
+	if (spawn2 == 0)
+		return 0;
+	LinkedListIterator<Spawn2*> iterator(spawn2_list);
+	//	int32	index = 0;
+
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		if (iterator.GetData() == spawn2) {
+			spawn2dump[*spawn2index].spawn2_id = iterator.GetData()->spawn2_id;
+			spawn2dump[*spawn2index].time_left = iterator.GetData()->timer->GetRemainingTime();
+			iterator.RemoveCurrent();
+			return (*spawn2index)++;
+		}
+		iterator.Advance();
+	}
+	return 0xFFFFFFFF;
+}
+
+void Zone::DumpAllSpawn2(ZSDump_Spawn2* spawn2dump, int32* spawn2index) {
+	LinkedListIterator<Spawn2*> iterator(spawn2_list);
+	//	int32	index = 0;
+
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		spawn2dump[*spawn2index].spawn2_id = iterator.GetData()->spawn2_id;
+		spawn2dump[*spawn2index].time_left = iterator.GetData()->timer->GetRemainingTime();
+		(*spawn2index)++;
+		iterator.RemoveCurrent();
+
+	}
 }
 

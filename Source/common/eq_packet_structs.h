@@ -894,7 +894,7 @@ struct Death_Struct
 struct SpawnPositionUpdate_Struct
 {
 /*0000*/ uint16		spawn_id;
-/*0002*/ uint64		y:19, z:19, x:19, u3:7;
+/*0002*/ sint64		y:19, z:19, x:19, u3:7;
 /*0010*/ unsigned short	heading:12,unused2:4;
 /*0012*/
 };

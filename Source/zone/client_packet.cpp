@@ -2374,11 +2374,19 @@ ldon_avaliable_points needs to be rediscovered.
 						LogFile->write(EQEMuLog::Debug, "cs_unknown2: 16 %p %u %u", &castspell->cs_unknown, *(uint16*) castspell->cs_unknown, *(uint16*) castspell->cs_unknown+sizeof(uint16) );
 						LogFile->write(EQEMuLog::Debug, "cs_unknown2: 16 %p %i %i", &castspell->cs_unknown, *(int16*) castspell->cs_unknown, *(int16*) castspell->cs_unknown+sizeof(int16) );
 #endif
-LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", castspell->slot, castspell->spell_id, castspell->target_id);
+LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d, inv=%lx", castspell->slot, castspell->spell_id, castspell->target_id, castspell->inventoryslot);
 
-					if (castspell->slot == 10)	// this means item
+					if (castspell->slot == USE_ITEM_SPELL_SLOT)	// this means item
 					{
-						if (castspell->inventoryslot < 30)	// sanity check
+						//discipline, using the item spell slot
+						if(castspell->inventoryslot == 0xFFFFFFFF) {
+							if(!UseDiscipline(castspell->spell_id, castspell->target_id)) {
+								LogFile->write(EQEMuLog::Debug, "Unknown ability being used by %s, spell being cast is: %i\n",GetName(),castspell->spell_id);
+								InterruptSpell(castspell->spell_id);
+							}
+							break;
+						}
+						else if (castspell->inventoryslot < 30)	// sanity check
 						{
 							const ItemInst* inst = m_inv[castspell->inventoryslot]; //@merth: slot values are sint16, need to check packet on this field
 							//bool cancast = true;
@@ -2454,7 +2462,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 							AbilityTimer=true;
 						}
 						
-						//handle disciplines
+						//handle disciplines, OLD, they keep changing this
 						if(castspell->slot == DISCIPLINE_SPELL_SLOT) {
 							if(!UseDiscipline(castspell->spell_id, castspell->target_id)) {
 								printf("Unknown ability being used by %s, spell being cast is: %i\n",GetName(),castspell->spell_id);
@@ -2543,43 +2551,8 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					break;
 				}
 				case OP_InstillDoubt: {
-					//FIXME: Struct is wrong as of 2/25/04 --Shawn319
-					/*if(app->size != sizeof(Instill_Doubt_Struct))
-					{
-						cout << "Wrong size on OP_InstillDoubt. Got: " << app->size << ", Expected: " << sizeof(Instill_Doubt_Struct) << endl;
-						break;
-					}
-					//Fear Spell not yet implemented
-					Instill_Doubt_Struct* iatk = (Instill_Doubt_Struct*) app->pBuffer;
-					if (iatk->i_atk == 0x2E) {
-						Message_StringID(4,NOT_SCARING);
-						//Message(4, "You\'re not scaring anyone.");
-					}*/
-					
-					if (!target || !(target->IsNPC() || target->IsClient()) || !CombatRange(target))
-						break;
-					
-					if(!p_timers.Expired(pTimerInstillDoubt, false)) {
-								Message(13,"Ability recovery time not yet met.");
-								break;
-					}
-					p_timers.Start(pTimerInstillDoubt, InstillDoubtReuseTime-1);
-					CheckIncreaseSkill(INTIMIDATION);
-						break;
-					if ((rand()%100 + GetSkill(INTIMIDATION) + GetCHA()/2) >= (uint32)(target->GetLevel()*4 + target->GetWIS()/2)) {
-						//cast fear on them... should prolly be a different spell
-						//and should be un-resistable.
-						SpellOnTarget(229, target);
-						//is there a success message?
-					} else {
-						Message_StringID(4,NOT_SCARING);
-						//Idea from WR:
-						/* if (target->IsNPC() && MakeRandomInt(0,99) < 10 ) {
-							entity_list.MessageClose(target, false, 50, MT_Rampage, "%s lashes out in anger!",target->GetName());
-							//should we actually do this? and the range is completely made up, unconfirmed
-							entity_list.AEAttack(target, 50);
-						}*/
-					}
+					//packet is empty as of 12/14/04
+					InstillDoubt(target);
 					break;
 				}
 				case OP_RezzAnswer: {
@@ -3158,6 +3131,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						}
 					}
 					
+					mpo->price = (item->Cost*127/100)*mp->quantity;
 					if(freeslotid == SLOT_INVALID || !TakeMoneyFromPP(mpo->price))
 					{
 						safe_delete(outapp);
@@ -3171,7 +3145,6 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					else if(mp->quantity==1 && item->Common.MaxCharges>0 && item->Common.MaxCharges<255)
 						mp->quantity=item->Common.MaxCharges;
 					
-					mpo->price = (item->Cost*127/100)*mp->quantity;
 					if (!stacked && inst) {
 						PutItemInInventory(freeslotid, *inst);
 						SendItemPacket(freeslotid, inst, ItemPacketTrade);
