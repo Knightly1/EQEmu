@@ -5186,7 +5186,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	printf("Dumping inventory on load:\n");
 	m_inv.dumpInventory();
 #endif
-	
+	strcpy(m_pp.servername,"eqemulator");
 	
 	CRC32::SetEQChecksum((unsigned char*)&m_pp, sizeof(PlayerProfile_Struct)-4);
 	outapp = new APPLAYER(OP_PlayerProfile,sizeof(PlayerProfile_Struct));

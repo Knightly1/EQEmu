@@ -600,6 +600,7 @@ void Mob::CreateSpawnPacket(APPLAYER* app, NewSpawn_Struct* ns) {
 #endif
 	else
 		strcpy(ns2->spawn.last_name, ns->spawn.last_name);
+	memset(&app->pBuffer[sizeof(Spawn_Struct)-7],0xFF,7);
 }
 
 void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
