@@ -876,6 +876,7 @@ void Client::Handle_OP_Deny(const APPLAYER *app)
 
 void Client::Handle_OP_TargetMouse(const APPLAYER *app)
 {
+	Handle_OP_TargetCommand(app);
 }
 
 void Client::Handle_OP_TargetCommand(const APPLAYER *app)
@@ -2319,6 +2320,7 @@ void Client::Handle_OP_DeleteSpawn(const APPLAYER *app)
 
 void Client::Handle_OP_SaveOnZoneReq(const APPLAYER *app)
 {
+	Handle_OP_Save(app);
 }
 
 void Client::Handle_OP_Save(const APPLAYER *app)
@@ -2528,6 +2530,7 @@ void Client::Handle_OP_GuildPublicNote(const APPLAYER *app)
 
 void Client::Handle_OP_GetGuildMOTD(const APPLAYER *app)
 {
+	Handle_OP_GuildMOTD(app);
 }
 
 void Client::Handle_OP_GuildMOTD(const APPLAYER *app)
@@ -4095,6 +4098,7 @@ void Client::Handle_OP_FaceChange(const APPLAYER *app)
 
 void Client::Handle_OP_GroupInvite(const APPLAYER *app)
 {
+	Handle_OP_GroupInvite2(app);
 }
 
 void Client::Handle_OP_GroupInvite2(const APPLAYER *app)
@@ -4144,6 +4148,7 @@ void Client::Handle_OP_GroupCancelInvite(const APPLAYER *app)
 
 void Client::Handle_OP_GroupFollow(const APPLAYER *app)
 {
+	Handle_OP_GroupFollow2(app);
 }
 
 void Client::Handle_OP_GroupFollow2(const APPLAYER *app)
@@ -4387,6 +4392,7 @@ void Client::Handle_OP_PetitionCheckIn(const APPLAYER *app)
 
 void Client::Handle_OP_PetitionResolve(const APPLAYER *app)
 {
+	Handle_OP_PetitionResolve(app);
 }
 
 void Client::Handle_OP_PetitionDelete(const APPLAYER *app)
