@@ -699,6 +699,8 @@ int Client::HandlePacket(const APPLAYER *app)
 					break;
 
 				}
+				case OP_Consume: {
+					if (app->size != sizeof(Consume_Struct))
 					{
 						LogFile->write(EQEMuLog::Error, "OP size error: OP_Consume expected:%i got:%i", sizeof(Consume_Struct), app->size);
 						break;
@@ -1793,7 +1795,29 @@ int Client::HandlePacket(const APPLAYER *app)
 						RAZone = false;
 					}
 #endif
-					
+					if(GetAdventureID()>0){
+						AdventureInfo ai=database.GetAdventureInfo(GetAdventureID());
+						if(zc->zoneID != ai.zonedungeonid && database.GetLDoNDungeon(zc->zoneID) == true){
+							Message(0,"You are not allowed to enter this dungeon!");
+							strcpy(target_zone,zone->GetShortName());
+							tarx = GetX();
+							tary = GetY();
+							tarz = GetZ();
+							zonesummon_x = 0;
+							zonesummon_y = 0;
+							zonesummon_z = 0;
+						}
+					}
+					else if(database.GetLDoNDungeon(zc->zoneID) == true){
+							Message(0,"You are not allowed to enter this dungeon!");
+							strcpy(target_zone,zone->GetShortName());
+							tarx = GetX();
+							tary = GetY();
+							tarz = GetZ();
+							zonesummon_x = 0;
+							zonesummon_y = 0;
+							zonesummon_z = 0;
+					}
 					APPLAYER* outapp = NULL;
 					if (target_zone[0] != 0 && admin >= minstatus && GetLevel() >= minlevel && RAZone) {
 						LogFile->write(EQEMuLog::Status, "Zoning '%s' to: %s (%i) x=%f, y=%f, z=%f",
