@@ -64,6 +64,7 @@ public:
 	bool	IsLeader(Mob* leadertest) { return leadertest==leader; };
 	int8	GroupCount();
 	int32	GetHighestLevel();
+	int32	GetLowestLevel();
 	void	QueuePacket(const APPLAYER *app, bool ack_req = true);
 	void	TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z);
 	bool	LearnMembers();

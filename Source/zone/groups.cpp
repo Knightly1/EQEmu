@@ -793,6 +793,19 @@ int32 level = 0;
 	}
 	return level;
 }
+int32 Group::GetLowestLevel()
+{
+int32 level = 255;
+	for (int i = 0; i < MAX_GROUP_MEMBERS; i++)
+	 {
+		if (members[i])
+		  {
+			if(members[i]->GetLevel() < level)
+				level = members[i]->GetLevel();
+		  }
+	}
+	return level;
+}
 
 #ifdef ENABLE_GROUP_LINKING
 void Group::ClearLink(int32 clear_id, bool all)
