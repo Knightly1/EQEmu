@@ -1,5 +1,12 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+
+==10/19/2004
+FatherNitwit: Fixed Disciplines and Abilities (lay hands & harm touch)
+FatherNitwit: Added new server variable: DisableNoDrop (set to 1 takes nodrop off items when loaded)
+FatherNitwit: Fixed NPC buffing through walls
+FatherNitwit: Fixed symbol spell forumulas
+
 ==10/18/2004
 LethalEncounter: Fixed pet only spells.
 LethalEncounter: Fixed bug that wouldnt let you loot a corpse if someone got an error looting it. (such as a dupe lore error)

@@ -25,10 +25,6 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "../common/skills.h"
 #include "StringIDs.h"
 
-
-const int THREATENLY_ARRGO_CHANCE=32; // 32/128 (25%) chance that a mob will arrgo on con Threatenly
-
-
 Mob* EntityList::AICheckCloseArrgo(Mob* sender, float iArrgoRange, float iAssistRange) {
 	if (!sender || !sender->IsNPC())
 		return 0;

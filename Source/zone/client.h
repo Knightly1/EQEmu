@@ -91,7 +91,8 @@ enum {	//scribing argument to MemorizeSpell
 	memSpellSpellbar = 3
 };
 
-#define DISCIPLINE_SPELL_SLOT 9		//is 0x0A for OOW client
+#define DISCIPLINE_SPELL_SLOT 10
+#define ABILITY_SPELL_SLOT 9
 
 typedef enum {	//disciplines for disc_inuse
 	discNone			= 0,

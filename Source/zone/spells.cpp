@@ -3693,7 +3693,9 @@ void NPC::Gate()
 {
 	entity_list.MessageClose_StringID(this, true, 200, MT_Spells, GATES, GetCleanName());
 	Mob::Gate();
-}int Mob::GetCasterLevel(int16 spell_id) {
+}
+
+int Mob::GetCasterLevel(int16 spell_id) {
 	int level = GetLevel();
 	level += spellbonuses.effective_casting_level;
 	level += itembonuses.effective_casting_level;

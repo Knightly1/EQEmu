@@ -1899,7 +1899,9 @@ neotokyo: i need those formulas checked!!!!
   0x77 = min + level / 8
 */
 	
-	int result = 0, updownsign = 1, ubase = abs(base);
+	int result = 0, updownsign = 1, ubase = base;
+	if(ubase < 0)
+		ubase = 0 - ubase;
 	
 	// solar: this updown thing might look messed up but if you look at the
 	// spells it actually looks like some have a positive base and max where
@@ -1940,6 +1942,7 @@ neotokyo: i need those formulas checked!!!!
 			result = ubase + updownsign * (caster_level / 4); break;
 		case 110:	// solar: confirmed 2/6/04
 			result = ubase + (caster_level / 5); break;
+		
 		case 111:	// solar: this doesn't look right
             result = ubase + 5 * (caster_level - 16); break;
 		case 112:
@@ -1948,14 +1951,17 @@ neotokyo: i need those formulas checked!!!!
             result = ubase + 12 * (caster_level - 34); break;
 		case 114:
             result = ubase + 15 * (caster_level - 44); break;
-
-		//more bullshit to shut it up, this is prolly wrong
+        
+        //these formula were updated according to lucy 10/16/04
 		case 115:	// solar: this is only in symbol of transal
-			result = ubase + 15 * (caster_level - 54); break;
-
+			result = ubase + 5 * (caster_level - 14); break;
 		case 116:	// solar: this is only in symbol of ryltan
+            result = ubase + 8 * (caster_level - 24); break;
 		case 117:	// solar: this is only in symbol of pinzarn
+            result = ubase + 12 * (caster_level - 34); break;
 		case 118:	// solar: used in naltron and a few others
+            result = ubase + 17 * (caster_level - 44); break;
+        
 		case 119:	// solar: confirmed 2/6/04
 			result = ubase + (caster_level / 8); break;
 		case 121:	// solar: corrected 2/6/04

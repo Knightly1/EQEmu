@@ -724,6 +724,7 @@ void Mob::MakePet(int16 spell_id, int8 in_level, int8 in_class, int16 in_race,
 	npc_type->texture = in_texture;
 	npc_type->helmtexture = in_texture;
 	npc_type->runspeed = 1.25f;
+	//the proper type for necro pets is BT_SummonedUndead
 	npc_type->bodytype = BT_Summoned; /* pets are summoned */
 	npc_type->min_dmg = min_dmg;
 	npc_type->max_dmg = max_dmg;

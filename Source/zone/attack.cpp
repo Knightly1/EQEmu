@@ -16,59 +16,8 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-/*
-
-Intel gathered:
-
-With ~ 250 skill in weapons and offense, you will hit a mob approx 
-59.5% of the time regardless of it's level.
-
-
-
-agility info to add to acmod:
-Level ..... -- 40+:20-39:7-19:1-6 
---------------------------------- 
-[Snipped everything below 75 Agi]
-Agi 75..... -- 39 : 33 : 23 : 09 
-Agi 76-79.. -- 40 : 33 : 23 : 10 
-Agi 80..... -- 41 : 34 : 24 : 11 
-Agi 81-85.. -- 42 : 35 : 25 : 12 
-Agi 86-90.. -- 42 : 36 : 26 : 12 
-Agi 91-95.. -- 43 : 36 : 26 : 13 
-Agi 96-99.. -- 44 : 37 : 27 : 14 
-Agi 100.... -- 45 : 38 : 28 : 15 
-Agi 101-105 -- 45 : 39 : 29 : 15 
-Agi 106-110 -- 46 : 39 : 29 : 16 
-Agi 111-115 -- 47 : 40 : 30 : 17 
-Agi 116-119 -- 47 : 41 : 31 : 17 
-Agi 120.... -- 48 : 42 : 32 : 18 
-Agi 121-125 -- 49 : 42 : 32 : 19 
-Agi 126-130 -- 50 : 43 : 33 : 20 
-Agi 131-135 -- 50 : 44 : 34 : 20 
-Agi 136-139 -- 51 : 44 : 34 : 21 
-Agi 140.... -- 52 : 45 : 35 : 22 
-Agi 141-145 -- 53 : 46 : 36 : 23 
-Agi 146-150 -- 53 : 47 : 37 : 23 
-Agi 151-155 -- 54 : 47 : 37 : 24 
-Agi 156-159 -- 55 : 48 : 38 : 25 
-Agi 160.... -- 56 : 49 : 39 : 26 
-Agi 161-165 -- 56 : 50 : 40 : 26 
-Agi 166-170 -- 57 : 50 : 40 : 27 
-Agi 171-175 -- 58 : 51 : 41 : 28 
-Agi 176-179 -- 58 : 52 : 42 : 28 
-Agi 180.... -- 59 : 53 : 43 : 29 
-Agi 181-185 -- 60 : 53 : 43 : 30 
-Agi 186-190 -- 61 : 54 : 44 : 31 
-Agi 191-195 -- 61 : 55 : 45 : 31 
-Agi 196-199 -- 62 : 55 : 45 : 32 
-Agi 200-219 -- 63 : 56 : 46 : 33 
-Agi 220-239 -- 64 : 57 : 47 : 34 
-Agi 240-255 -- 65 : 58 : 48 : 35
-
-*/
-
 #if EQDEBUG >= 5
-#define ATTACK_DEBUG 20
+//#define ATTACK_DEBUG 20
 #endif
 
 #include "../common/debug.h"
@@ -112,8 +61,6 @@ extern EntityList entity_list;
 #include "RaidAddicts.h"
 extern RaidAddicts raidaddicts;
 #endif
-
-
 
 
 extern Zone* zone;
@@ -287,7 +234,7 @@ bool Mob::CheckHitChance(Mob* other, int8 attack_skill, int Hand, int16 skillinu
 #if ATTACK_DEBUG>=15
 		LogFile->write(EQEMuLog::Debug, "%s::AvoidDamage(%s) pre stats %f", GetName(), other->GetName(), chancetohit);
 #endif
-	int16 defender_agi = defender->GetAGI();
+	sint16 defender_agi = defender->GetAGI();
 	// skill points over 200 are 1/5 as effective
 	// at max stat of 252 this is a 10.52% bonus
 	defender_agi = (defender_agi <= 200) ? defender_agi : defender_agi + ((defender_agi-200)/10);
@@ -295,7 +242,7 @@ bool Mob::CheckHitChance(Mob* other, int8 attack_skill, int Hand, int16 skillinu
 	
 	// this comes out to about 1% for every 7 dex over 50
 	// so someone with 105 dex gets 8.25% added here
-	int16 attacker_dex = attacker->GetDEX();
+	sint16 attacker_dex = attacker->GetDEX();
 	attacker_dex = (attacker_dex <= 200) ? attacker_dex : attacker_dex + ((attacker_dex-200)/25);
 	attacker_dex -= 50;
 	chancetohit += (float) ((float)attacker_dex * 0.15f);

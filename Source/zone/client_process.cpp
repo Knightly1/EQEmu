@@ -2263,7 +2263,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						int16 spell_to_cast = 0;
 						
 						//current client seems to send LH in slot 8 now...
-						if(castspell->slot == 8 &&
+						if(castspell->slot == ABILITY_SPELL_SLOT &&
 							castspell->spell_id == SPELL_LAY_ON_HANDS && GetClass() == PALADIN) {
 							if(!p_timers.Expired(pTimerLayHands)) {
 								Message(13,"Ability recovery time not yet met.");
@@ -2274,7 +2274,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 							//database.UpdateAATimers(CharacterID(),LayOnHandsReuseTime,0, 87);//72 minutes
 							AbilityTimer=true;
 							
-						} else if(castspell->slot == 8 &&
+						} else if(castspell->slot == ABILITY_SPELL_SLOT &&
 							(castspell->spell_id == SPELL_HARM_TOUCH
 								|| castspell->spell_id == SPELL_HARM_TOUCH2
 							) && GetClass() == SHADOWKNIGHT) {
@@ -4113,6 +4113,9 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					EnvDamage2_Struct* ed = (EnvDamage2_Struct*)app->pBuffer;
 					if(admin>=100 && GetGM()){
 						Message(13, "Your GM status protects you from %i points of type %i environmental damage.", ed->damage, ed->dmgtype);
+						SetHP(GetHP()-1);//needed or else the client wont acknowledge
+					} else if(GetInvul()) {
+						Message(13, "Your invuln status protects you from %i points of type %i environmental damage.", ed->damage, ed->dmgtype);
 						SetHP(GetHP()-1);//needed or else the client wont acknowledge
 					}
 					

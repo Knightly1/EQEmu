@@ -150,5 +150,7 @@ enum {	//various hard caps
 //minimum level to do alchemy
 #define MIN_LEVEL_ALCHEMY 25
 
+#define THREATENLY_ARRGO_CHANCE 32 // 32/128 (25%) chance that a mob will arrgo on con Threatenly
+
 #endif
 

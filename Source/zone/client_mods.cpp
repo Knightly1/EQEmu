@@ -1230,6 +1230,10 @@ int16 Client::GetInstrumentMod(int16 spell_id) {
 				break;
 		}
 	}
+	
+	#if EQDEBUG >= 5
+		LogFile->write(EQEMuLog::Debug, "%s::GetInstrumentMod() spell=%d mod=%d\n", GetName(), spell_id, effectmod);
+	#endif
 	return(effectmod);
 }
 

@@ -274,9 +274,13 @@ bool EntityList::AICheckCloseSpells(Mob* caster, int8 iChance, float iRange, int
 			))
 			{
 			if (mob->DistNoRoot(*caster) <= iRange) {
-				// we have a winner!
-				if (caster->AICastSpell(mob, 100, iSpellTypes))
-					return true;
+				//they are in range, and we like them, now make sure
+				//that we can see them...
+				if(caster->CheckLosFN(mob)) {
+					// we have a winner!
+					if (caster->AICastSpell(mob, 100, iSpellTypes))
+						return true;
+				}
 			}
 		}
 		iterator.Advance();

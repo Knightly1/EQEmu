@@ -4082,6 +4082,14 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 		return ret;
 	}
 	
+	bool disableNoDrop = false;
+	char ndbuffer[4];
+	if(GetVariable("disablenodrop", ndbuffer, 4)) {
+		if(ndbuffer[0] == '1' && ndbuffer[1] == '\0') {
+			disableNoDrop = true;
+		}
+	}
+	
 	#ifdef FIELD_ITEMS
 		// Retrieve all items from database
 		
@@ -4110,7 +4118,7 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 		
 		if (RunQuery(query, sizeof(query), errbuf, &result)) {
 			while((row = mysql_fetch_row(result))) {
-#if EQDEBUG >= 5
+#if EQDEBUG >= 6
 					LogFile->write(EQEMuLog::Status, "Loading %s:%i:%i", row[15], atoi(row[5]),atoi(row[72]));
 #endif				
 				Item_Struct item;
@@ -4133,7 +4141,11 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 				item.ItemNumber					= (uint32)atoi(row[idx++]);
 				item.Weight						= (uint8)atoi(row[idx++]);
 				item.NoRent						= (uint8)atoi(row[idx++]);
-				item.NoDrop						= (uint8)atoi(row[idx++]);
+				if(disableNoDrop) {
+					item.NoDrop					= (uint8)-1;
+					idx++;
+				} else
+					item.NoDrop					= (uint8)atoi(row[idx++]);
 				item.Attuneable					= atoi(row[idx++])?1:0;
 				item.Size						= (int8)atoi(row[idx++]);
 				item.EquipSlots					= (uint32)atoi(row[idx++]);
