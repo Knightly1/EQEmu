@@ -1836,7 +1836,6 @@ ldon_avaliable_points needs to be rediscovered.
 							m_pp.name, target_zone, database.GetZoneID(target_zone),
 							tarx, tary, tarz);
 						
-						UpdateWho(1);
 						
 						x_pos = tarx; // Hmm, these coordinates will now be saved when ~client is called
 						y_pos = tary;

@@ -72,12 +72,13 @@
 #define ServerOP_PeerConnect		0x1007
 
 #define ServerOP_LSZoneInfo			0x3001
-#define ServerOP_LSZoneBoot			0x3002
-#define ServerOP_LSZoneShutdown		0x3003
-#define ServerOP_LSZoneSleep		0x3004
-#define ServerOP_LSPlayerLeftWorld	0x3005
-#define ServerOP_LSPlayerJoinWorld	0x3006
-#define ServerOP_LSPlayerZoneChange	0x3007
+#define ServerOP_LSZoneStart		0x3002
+#define ServerOP_LSZoneBoot			0x3003
+#define ServerOP_LSZoneShutdown		0x3004
+#define ServerOP_LSZoneSleep		0x3005
+#define ServerOP_LSPlayerLeftWorld	0x3006
+#define ServerOP_LSPlayerJoinWorld	0x3007
+#define ServerOP_LSPlayerZoneChange	0x3008
 
 #define	ServerOP_UsertoWorldReq		0xAB00
 #define	ServerOP_UsertoWorldResp	0xAB01
@@ -320,16 +321,20 @@ struct ServerLSStatus_Struct {
 struct ZoneInfo_Struct {
 	uint32 zone;
 	uint16 count;
+	uint32 zone_wid;
 };
 struct ZoneBoot_Struct {
 	uint32 zone;
 	char compile_time[25];
+	uint32 zone_wid;
 };
 struct ZoneShutdown_Struct {
 	uint32 zone;
+	uint32 zone_wid;
 };
 struct ServerLSZoneSleep_Struct {
 	uint32 zone;
+	uint32 zone_wid;
 };
 
 struct ServerLSPlayerJoinWorld_Struct {

@@ -54,10 +54,16 @@ public:
 	void		TriggerBootup(int32 iZoneID = 0, const char* iAdminName = 0, bool iMakeStatic = false);
 	void		Disconnect() { tcpc->Disconnect(); }
 	void		IncommingClient(Client* client);
+	void		LSBootUpdate(int32 zoneid, bool startup = false);
+	void		LSSleepUpdate(int32 zoneid);
+	void		LSShutDownUpdate(int32 zoneid);
+	int32		GetPrevZoneID() { return oldZoneID; }
 	void		ChangeWID(int32 iCharID, int32 iWID);
 	void		SendGroupIDs();
 
 	inline const char*	GetZoneName()	{ return zone_name; }
+	char*				GetCompileTime(){ return compiled; }
+	void				SetCompile(char* in_compile){ strcpy(compiled,in_compile); }
 	inline int32		GetZoneID()		{ return zoneID; }
 	inline int32		GetIP()			{ return tcpc->GetrIP(); }
 	inline int16		GetPort()		{ return tcpc->GetrPort(); }
@@ -77,9 +83,11 @@ private:
 	bool	staticzone;
 	bool	authenticated;
 	int32	pNumPlayers;
-	
+	char	compiled[25];
 	char	zone_name[16];
 	int32	zoneID;
+	int32	oldZoneID;
+	Timer	ls_zboot;
 };
 
 class ZSList
@@ -134,6 +142,7 @@ public:
 	Timer* shutdowntimer;
 	Timer* reminder;
 	void	NextGroupIDs(int32 &start, int32 &end);
+	void	SendLSZones();
 protected:
 	friend class ClientListEntry;
 	inline int32	GetNextCLEID() { return NextCLEID++; }
@@ -163,6 +172,7 @@ public:
 	bool	CheckStale();
 	void	Update(ZoneServer* zoneserver, ServerClientList_Struct* scl, sint8 iOnline = CLE_Status_InZone);
 	void	LSUpdate(ZoneServer* zoneserver);
+	void	LSZoneChange(ZoneToZone_Struct* ztz);
 	bool	CheckAuth(int32 iLSID, const char* key);
 	bool	CheckAuth(const char* iName, MD5& iMD5Password);
 	bool	CheckAuth(int32 id, const char* key, int32 ip);

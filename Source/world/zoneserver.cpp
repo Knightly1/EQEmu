@@ -83,10 +83,11 @@ extern bool holdzones;
 extern volatile bool RunLoops;
 Timer* spawntimeleft=new Timer(300000);
 
-ZoneServer::ZoneServer(TCPConnection* itcpc) : WorldTCPConnection() {
+ZoneServer::ZoneServer(TCPConnection* itcpc) : ls_zboot(5000),WorldTCPConnection() {
 	tcpc = itcpc;
 	ID = zoneserver_list.GetNextID();
 	memset(zone_name, 0, sizeof(zone_name));
+	memset(compiled, 0, sizeof(compiled));
 	zoneID = 0;
 
 	memset(clientaddress, 0, sizeof(clientaddress));
@@ -107,9 +108,12 @@ bool ZoneServer::SetZone(int32 iZoneID, bool iStaticZone) {
 	BootingUp = false;
 	
 	zoneID = iZoneID;
+	if(iZoneID!=0)
+		oldZoneID = iZoneID;
 	if (zoneID == 0) {
 		zoneserver_list.CLERemoveZSRef(this);
 		pNumPlayers = 0;
+		LSSleepUpdate(GetPrevZoneID());
 	}
 
 	const char* zn = database.GetZoneName(zoneID);
@@ -137,16 +141,68 @@ bool ZoneServer::SetConnectInfo(const char* in_address, int16 in_port) {
 	struct in_addr  in;
 	in.s_addr = GetIP();
 	cout << "Zoneserver SetConnectInfo: " << inet_ntoa(in) << ":" << GetPort() << ": " << clientaddress << ":" << clientport << endl;
-
+	ls_zboot.Start();
 	return true;
 }
-
+void ZoneServer::LSShutDownUpdate(int32 zoneid){
+	if(net.UpdateStats){
+		ServerPacket* pack = new ServerPacket;
+		pack->opcode = ServerOP_LSZoneShutdown;
+		pack->size = sizeof(ZoneShutdown_Struct);
+		pack->pBuffer = new uchar[pack->size];
+		memset(pack->pBuffer,0,pack->size);
+		ZoneShutdown_Struct* zsd =(ZoneShutdown_Struct*)pack->pBuffer;
+		if(zoneid==0)
+			zsd->zone = GetPrevZoneID();
+		else
+			zsd->zone = zoneid;
+		zsd->zone_wid = GetID();
+		loginserver.SendPacket(pack);
+		safe_delete(pack);
+	}
+}
+void ZoneServer::LSBootUpdate(int32 zoneid, bool startup){
+	if(net.UpdateStats){
+		ServerPacket* pack = new ServerPacket;
+		if(startup)
+			pack->opcode = ServerOP_LSZoneStart;
+		else
+			pack->opcode = ServerOP_LSZoneBoot;
+		pack->size = sizeof(ZoneBoot_Struct);
+		pack->pBuffer = new uchar[pack->size];
+		memset(pack->pBuffer,0,pack->size);
+		ZoneBoot_Struct* bootup =(ZoneBoot_Struct*)pack->pBuffer;
+		if(startup)
+			strcpy(bootup->compile_time,GetCompileTime());
+		bootup->zone = zoneid;
+		bootup->zone_wid = GetID();
+		loginserver.SendPacket(pack);
+		safe_delete(pack);
+	}
+}
+void ZoneServer::LSSleepUpdate(int32 zoneid){
+	if(net.UpdateStats){
+		ServerPacket* pack = new ServerPacket;
+		pack->opcode = ServerOP_LSZoneSleep;
+		pack->size = sizeof(ServerLSZoneSleep_Struct);
+		pack->pBuffer = new uchar[pack->size];
+		memset(pack->pBuffer,0,pack->size);
+		ServerLSZoneSleep_Struct* sleep =(ServerLSZoneSleep_Struct*)pack->pBuffer;
+		sleep->zone = zoneid;
+		sleep->zone_wid = GetID();
+		loginserver.SendPacket(pack);
+		safe_delete(pack);
+	}
+}
 bool ZoneServer::Process() {
 	if (!tcpc->Connected())
 		return false;
 	if(spawntimeleft->Check())
 		database.UpdateTimeleftWorld();
-	
+	if(ls_zboot.Check()){
+		LSBootUpdate(GetZoneID(), true);
+		ls_zboot.Disable();
+	}
 	ServerPacket *pack = 0;
 	while((pack = tcpc->PopPacket())) {
 		if (!authenticated) {
@@ -193,6 +249,13 @@ bool ZoneServer::Process() {
 			break;
 		}
 		case ServerOP_ZAAuth: {
+			break;
+		}
+		case ServerOP_LSZoneBoot:{
+			if(pack->size==sizeof(ZoneBoot_Struct)){
+				ZoneBoot_Struct* zbs= (ZoneBoot_Struct*)pack->pBuffer;
+				SetCompile(zbs->compile_time);
+			}
 			break;
 		}
 		/*
@@ -408,22 +471,9 @@ bool ZoneServer::Process() {
 			if(pack->size != sizeof(ZoneToZone_Struct))
 				break;
 			ZoneToZone_Struct* ztz = (ZoneToZone_Struct*) pack->pBuffer;
-
-			if(net.UpdateStats){
-				ClientListEntry* client = zoneserver_list.FindCharacter(ztz->name);
-				if(client){
-					ServerPacket* pack = new ServerPacket;
-					pack->opcode = ServerOP_LSPlayerZoneChange;
-					pack->size = sizeof(ServerLSPlayerZoneChange_Struct);
-					pack->pBuffer = new uchar[pack->size];
-					ServerLSPlayerZoneChange_Struct* zonechange =(ServerLSPlayerZoneChange_Struct*)pack->pBuffer;
-					zonechange->lsaccount_id = client->LSID();
-					zonechange->from = ztz->current_zone_id;
-					zonechange->to = ztz->requested_zone_id;
-					loginserver.SendPacket(pack);
-					safe_delete(pack);
-				}
-			}
+			ClientListEntry* client = NULL;
+			if(net.UpdateStats)
+				client = zoneserver_list.FindCharacter(ztz->name);
 
 #if DEBUG >= 6
 			printf("World (from zone id %d) received ZTZ for %s current zone %d req zone %d\n",
@@ -469,6 +519,8 @@ bool ZoneServer::Process() {
 						ztz->response = 0;
 					}
 				}
+				if(ztz->response!=0 && client)
+					client->LSZoneChange(ztz);
 				SendPacket(pack);	// send back to egress server
 				if(ingress_server)	// if we couldn't boot one, this is 0
 				{
@@ -819,15 +871,17 @@ void ZSList::Process()
 	iterator.Reset();
 	while(iterator.MoreElements()) {
 		if (!iterator.GetData()->Process()) {
+			ZoneServer* zs = iterator.GetData();
 			struct in_addr  in;
-			in.s_addr = iterator.GetData()->GetIP();
-			cout << "Removing zoneserver from ip:" << inet_ntoa(in) << " port:" << (int16)(iterator.GetData()->GetPort()) << " (" << iterator.GetData()->GetCAddress() << ":" << iterator.GetData()->GetCPort() << ")" << endl;
+			in.s_addr = zs->GetIP();
+			cout << "Removing zoneserver from ip:" << inet_ntoa(in) << " port:" << (int16)(zs->GetPort()) << " (" << zs->GetCAddress() << ":" << zs->GetCPort() << ")" << endl;
+			zs->LSShutDownUpdate(zs->GetZoneID());
 			if (holdzones){
 				cout << "Hold Zones mode is ON - rebooting lost zone" << endl;
-				if(!iterator.GetData()->IsStaticZone())
-					zoneserver_list.RebootZone(inet_ntoa(in),iterator.GetData()->GetCPort(),iterator.GetData()->GetCAddress(),iterator.GetData()->GetID());
+				if(!zs->IsStaticZone())
+					zoneserver_list.RebootZone(inet_ntoa(in),zs->GetCPort(),zs->GetCAddress(),zs->GetID());
 				else
-					zoneserver_list.RebootZone(inet_ntoa(in),iterator.GetData()->GetCPort(),iterator.GetData()->GetCAddress(),iterator.GetData()->GetID(),database.GetZoneID(iterator.GetData()->GetZoneName()));
+					zoneserver_list.RebootZone(inet_ntoa(in),zs->GetCPort(),zs->GetCAddress(),zs->GetID(),database.GetZoneID(zs->GetZoneName()));
 			}
 
 			iterator.RemoveCurrent();
@@ -1852,7 +1906,6 @@ int32 ZSList::TriggerBootup(int32 iZoneID) {
 	return ret;
 	*/
 }
-
 void ZoneServer::TriggerBootup(int32 iZoneID, const char* adminname, bool iMakeStatic) {
 	BootingUp = true;
 	ServerPacket* pack = new ServerPacket(ServerOP_ZoneBootup, sizeof(ServerZoneStateChange_struct));
@@ -1861,27 +1914,15 @@ void ZoneServer::TriggerBootup(int32 iZoneID, const char* adminname, bool iMakeS
 	if (adminname != 0)
 		strcpy(s->adminname, adminname);
 	
-	int32 zoneid = iZoneID;
+	if (iZoneID == 0)
+		s->zoneid = this->GetZoneID();
+	else
+		s->zoneid = iZoneID;
 
-	if (zoneid == 0)
-		zoneid = this->GetZoneID();
-
-	s->zoneid = zoneid;
 	s->makestatic = iMakeStatic;
 	SendPacket(pack);
 	delete pack;
-	if(net.UpdateStats){
-		ServerPacket* pack = new ServerPacket;
-		pack->opcode = ServerOP_LSZoneBoot;
-		pack->size = sizeof(ZoneBoot_Struct);
-		pack->pBuffer = new uchar[pack->size];
-		memset(pack->pBuffer,0,pack->size);
-		ZoneBoot_Struct* bootup =(ZoneBoot_Struct*)pack->pBuffer;
-		strcpy(bootup->compile_time,"Feb 12 1960 23:59:01"); //until we get real compile time
-		bootup->zone = zoneid;
-		loginserver.SendPacket(pack);
-		safe_delete(pack);
-	}
+	LSBootUpdate(iZoneID);
 }
 
 void ZoneServer::IncommingClient(Client* client) {
@@ -2149,6 +2190,21 @@ void ClientListEntry::LSUpdate(ZoneServer* iZS){
 		ZoneInfo_Struct* zone =(ZoneInfo_Struct*)pack->pBuffer;
 		zone->count=iZS->NumPlayers();
 		zone->zone = iZS->GetZoneID();
+		zone->zone_wid = iZS->GetID();
+		loginserver.SendPacket(pack);
+		safe_delete(pack);
+	}
+}
+void ClientListEntry::LSZoneChange(ZoneToZone_Struct* ztz){
+	if(net.UpdateStats){
+		ServerPacket* pack = new ServerPacket;
+		pack->opcode = ServerOP_LSPlayerZoneChange;
+		pack->size = sizeof(ServerLSPlayerZoneChange_Struct);
+		pack->pBuffer = new uchar[pack->size];
+		ServerLSPlayerZoneChange_Struct* zonechange =(ServerLSPlayerZoneChange_Struct*)pack->pBuffer;
+		zonechange->lsaccount_id = LSID();
+		zonechange->from = ztz->current_zone_id;
+		zonechange->to = ztz->requested_zone_id;
 		loginserver.SendPacket(pack);
 		safe_delete(pack);
 	}
@@ -2285,4 +2341,12 @@ bool ClientListEntry::CheckAuth(const char* iName, MD5& iMD5Password) {
 		return true;
 	return false;
 }
-
+void ZSList::SendLSZones(){
+	LinkedListIterator<ZoneServer*> iterator(list);
+	iterator.Reset();
+	while(iterator.MoreElements()) {
+		ZoneServer* zs = iterator.GetData();
+		zs->LSBootUpdate(zs->GetZoneID(),true);
+		iterator.Advance();
+	}
+}

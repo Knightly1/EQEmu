@@ -245,6 +245,7 @@ bool LoginServer::Connect(const char* iAddress, int16 iPort) {
 		cout << "Connected to LoginServer: " << iAddress << ":" << LoginServerPort << endl;
 		SendInfo();
 		SendStatus();
+		zoneserver_list.SendLSZones();
 		return true;
 	}
 	else {
@@ -252,7 +253,6 @@ bool LoginServer::Connect(const char* iAddress, int16 iPort) {
 		return false;
 	}
 }
-
 void LoginServer::SendInfo() {
 	ServerPacket* pack = new ServerPacket;
 	pack->opcode = ServerOP_LSInfo;

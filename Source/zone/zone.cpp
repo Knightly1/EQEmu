@@ -468,9 +468,6 @@ std::map<uint32,NPCType *>::iterator itr;
    }
 
 	LogFile->write(EQEMuLog::Status, "Zone Shutdown: %s (%i)", zone->GetShortName(), zone->GetZoneID());
-	if (worldserver.Connected()) {
-		worldserver.SetZone(0);
-	}
 	petition_list.ClearPetitions();
 	zone->GotCurTime(false);
 	if (!quite)

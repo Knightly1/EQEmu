@@ -140,6 +140,11 @@ void WorldServer::Process() {
 				entity_list.UpdateWho(true);
 				this->SendEmoteMessage(0, 0, 15, "Zone connect: %s", zone->GetLongName());
 			}
+			ServerPacket* pack = new ServerPacket(ServerOP_LSZoneBoot,sizeof(ZoneBoot_Struct));
+			ZoneBoot_Struct* zbs = (ZoneBoot_Struct*)pack->pBuffer;
+			strcpy(zbs->compile_time,LAST_MODIFIED);
+			SendPacket(pack);
+			safe_delete(pack);
 		}
 		else
 			return;
@@ -228,6 +233,7 @@ void WorldServer::Process() {
 					entity->CastToMob()->SetZone(ztz->current_zone_id);
 				}
 				else {
+					entity->CastToClient()->UpdateWho(1);
 					strncpy(zc2->char_name,entity->CastToMob()->GetName(),64);
 					zc2->zoneID=ztz->requested_zone_id;
 					zc2->success = 1;

@@ -21,6 +21,7 @@
 #include "types.h"
 #include <string.h>
 #include <time.h>
+#include "../common/version.h"
 
 #define BUFF_COUNT 20
 

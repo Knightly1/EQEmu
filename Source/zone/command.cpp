@@ -43,7 +43,6 @@ Copyright (C) 2001-2002	EQEMu Development Team (http://eqemu.org)
 
 #include "../common/debug.h"
 #include "../common/ptimer.h"
-#include "../common/version.h"
 #include "../common/packet_functions.h"
 #include "../common/packet_dump.h"
 #include "../common/serverinfo.h"

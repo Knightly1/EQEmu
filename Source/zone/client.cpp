@@ -46,7 +46,6 @@ using namespace std;
 extern volatile bool RunLoops;
 extern bool spells_loaded;
 
-#include "../common/version.h"
 #include "features.h"
 #include "masterentity.h"
 #include "worldserver.h"

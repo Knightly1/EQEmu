@@ -71,7 +71,6 @@ extern volatile bool ZoneLoaded;
 #include "../common/EQNetwork.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/Mutex.h"
-#include "../common/version.h"
 #include "../common/files.h"
 #include "../common/EQEMuError.h"
 #include "../common/packet_dump_file.h"
