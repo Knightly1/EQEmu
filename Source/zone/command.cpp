@@ -192,7 +192,7 @@ int command_init(void)
 		command_add("npcloot","[show/money/add/remove] [itemid/all/money: pp gp sp cp] - Manipulate the loot an NPC is carrying",80,command_npcloot) ||
 		command_add("log","- Search character event log",80,command_log) ||
 		command_add("gm","- Turn player target's or your GM flag on or off",80,command_gm) ||
-/*		command_add("summon","[charname] - Summons your player/npc/corpse target, or charname if specified",80,command_summon) || */
+		command_add("summon","[charname] - Summons your player/npc/corpse target, or charname if specified",80,command_summon) || 
 		command_add("zone","[zonename] [x] [y] [z] - Go to specified zone (coords optional)",50,command_zone) ||
 		command_add("showbuffs","- List buffs active on your target or you if no target",50,command_showbuffs) ||
 		command_add("movechar","[charname] [zonename] - Move charname to zonename",50,command_movechar) ||
@@ -1299,6 +1299,11 @@ void command_gm(Client *c, const Seperator *sep)
 // there's no need for this, as /summon already takes care of it
 // this command is here for reference but it is not added to the
 // list above
+
+//To whoever wrote the above: And what about /kill, /zone, /zoneserver, etc?
+//There is a reason for the # commands: so that admins can specifically enable certain
+//commands for their users.  Some might want users to #summon but not to /kill.  Cant do that if they are a GM
+//Added back - LE
 void command_summon(Client *c, const Seperator *sep)
 {
 	Mob *t;

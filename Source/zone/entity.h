@@ -25,8 +25,8 @@
 #include "zonedbasync.h"
 
 // max number of newspawns to send per bulk packet
-#define SPAWNS_PER_POINT_DATARATE 15
-#define MAX_SPAWNS_PER_PACKET	150
+#define SPAWNS_PER_POINT_DATARATE 10
+#define MAX_SPAWNS_PER_PACKET	100
 
 //#ifdef WIN32
 	class	APPLAYER;

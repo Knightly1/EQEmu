@@ -30,7 +30,6 @@ private:
   TYPE                data;
   ListElement<TYPE>*  next;
   ListElement<TYPE>*  prev;
-
 public:
   ListElement ();
   ListElement (const TYPE&);
@@ -69,7 +68,7 @@ template<class TYPE>
 class LinkedList
 {
 private:
-
+	int32				    count;
 	ListElement<TYPE>*		first;
 	bool					list_destructor_invoked;
 
@@ -85,7 +84,9 @@ public:
   TYPE Pop();
   TYPE PeekTop();
   void Clear();
-
+  void LCount() { count--; }
+  void ResetCount() { count=0; }
+  int32	Count() { return count; }
   friend class LinkedListIterator<TYPE>;
 };
 
@@ -261,6 +262,7 @@ void LinkedListIterator<TYPE>::RemoveCurrent(bool DeleteData)
 	  current_element->SetData(0);
   safe_delete(current_element);
   current_element = save;
+  list.LCount();
 }
 
 template<class TYPE>
@@ -356,6 +358,7 @@ LinkedList<TYPE>::LinkedList()
 {
 	list_destructor_invoked = false;
 	first = 0;
+	count = 0;
 }
 
 template<class TYPE>
@@ -374,6 +377,7 @@ void LinkedList<TYPE>::Clear() {
 		tmp->SetNext(0);
 		safe_delete(tmp);
 	}
+	ResetCount();
 }
 
 template<class TYPE>
@@ -390,6 +394,7 @@ void LinkedList<TYPE>::Append(const TYPE& data)
     new_element->SetPrev(first->GetLast());
     first->SetLastNext(new_element);
   }
+  count++;
 }
 
 template<class TYPE>
@@ -403,6 +408,7 @@ void LinkedList<TYPE>::Insert(const TYPE& data)
     first->SetPrev(new_element);
   }
   first = new_element;
+  count++;
 }
 
 template<class TYPE>
@@ -417,6 +423,7 @@ TYPE LinkedList<TYPE>::Pop() {
 		tmpdel->SetData(0);
 		tmpdel->SetNext(0);
 		safe_delete(tmpdel);
+		count--;
 	}
 	return ret;
 }

@@ -459,6 +459,9 @@ void EntityList::AddBeacon(Beacon *beacon)
 }
 
 void EntityList::AddToSpawnQueue(int16 entityid, NewSpawn_Struct** ns) {
+	int32 count;
+	if((count=(client_list.Count()))==0)
+		return;
 	SpawnQueue.Append(*ns);
 	NumSpawnsOnQueue++;
 	if (tsFirstSpawnOnQueue == 0xFFFFFFFF)
@@ -469,7 +472,7 @@ void EntityList::AddToSpawnQueue(int16 entityid, NewSpawn_Struct** ns) {
 void EntityList::CheckSpawnQueue() {
 	// Send the stuff if the oldest packet on the queue is older than 50ms -Quagmire
 	if (tsFirstSpawnOnQueue != 0xFFFFFFFF && (Timer::GetCurrentTime() - tsFirstSpawnOnQueue) > 50) {
-		if (NumSpawnsOnQueue <= 5) {
+		//if (NumSpawnsOnQueue <= 5) {
 			LinkedListIterator<NewSpawn_Struct*> iterator(SpawnQueue);
 			APPLAYER* outapp = 0;
 			
@@ -483,9 +486,14 @@ void EntityList::CheckSpawnQueue() {
 				safe_delete(outapp);
 				iterator.RemoveCurrent();
 			}
-		}
+			//sending Spawns like this after zone in causes the client to freeze...
+		/*}
 		else {
-			BulkZoneSpawnPacket* bzsp = new BulkZoneSpawnPacket(0, MAX_SPAWNS_PER_PACKET);
+			int32 spawns_per_pack = MAX_SPAWNS_PER_PACKET;
+			if(NumSpawnsOnQueue < spawns_per_pack)
+				spawns_per_pack = NumSpawnsOnQueue;
+
+			BulkZoneSpawnPacket* bzsp = new BulkZoneSpawnPacket(0, spawns_per_pack);
 			LinkedListIterator<NewSpawn_Struct*> iterator(SpawnQueue);
 			
 			iterator.Reset();
@@ -494,7 +502,7 @@ void EntityList::CheckSpawnQueue() {
 				iterator.RemoveCurrent();
 			}
 			safe_delete(bzsp);
-		}
+		}*/
 		
 		tsFirstSpawnOnQueue = 0xFFFFFFFF;
 		NumSpawnsOnQueue = 0;
@@ -523,32 +531,21 @@ Doors* EntityList::FindDoor(int8 door_id)
 
 bool EntityList::MakeDoorSpawnPacket(APPLAYER* app)
 {
-	uchar packet_buffer[32767];
-	int length, qty;
+	int32 count = door_list.Count();
+	if( !count || count>500)
+		return false;
+	int32 length = count * sizeof(Door_Struct);
+	uchar* packet_buffer = new uchar[length];
+	memset(packet_buffer,0,length);
+	uchar* ptr = packet_buffer;
 	Doors *door;
 	LinkedListIterator<Doors*> iterator(door_list);
 	Door_Struct nd;
-
-	for
-	(
-		iterator.Reset(), qty = length = 0;
-		iterator.MoreElements() && length + sizeof(nd) < 32767;
-		iterator.Advance()
-	)
-	{
+	iterator.Reset();
+	while(iterator.MoreElements()){
 		door = iterator.GetData();
-		if
-		(
-			door &&
-			door->GetDoorID() != 0 &&
-			!(
-				door->GetDoorID() == 0xCD &&	// what's this?
-				strlen(door->GetDoorName()) < 3
-			)
-		)
-		{
+		if(door && strlen(door->GetDoorName()) > 3){
 			memset(&nd, 0, sizeof(nd));
-
 			memcpy(nd.name, door->GetDoorName(), 16);
 			nd.xPos = door->GetX();
 			nd.yPos = door->GetY();
@@ -560,28 +557,19 @@ bool EntityList::MakeDoorSpawnPacket(APPLAYER* app)
 			nd.opentype = door->GetOpenType();
 			nd.state_at_spawn = door->GetInvertState() ? !door->IsDoorOpen() : door->IsDoorOpen();
 			nd.invert_state = door->GetInvertState();
-			nd.door_param = door->GetDoorParam();
-			
-			// append it to the packet
-			memcpy(packet_buffer + length, &nd, sizeof(nd));
-			qty++;
-			length += sizeof(nd);
+			nd.door_param = door->GetDoorParam();	
+			memcpy(ptr, &nd, sizeof(nd));
+			ptr+=sizeof(nd);
 		}
+		iterator.Advance();
 	}
 
 #if EQDEBUG >= 5
 	LogFile->write(EQEMuLog::Debug, "MakeDoorPacket() packet length:%i qty:%i", length, qty);
 #endif
-
-	if (qty == 0)
-		return false;
-
-	length = qty * sizeof(nd);
 	app->opcode = OP_SpawnDoor;
 	app->size = length;
-	app->pBuffer = new uchar[length];
-	memcpy(app->pBuffer, packet_buffer, length);
-
+	app->pBuffer = packet_buffer;
 	return true;	
 }
 Entity* EntityList::GetEntityMob(int16 id){
@@ -869,8 +857,10 @@ void EntityList::SendZoneSpawnsBulk(Client* client)
 
 	rate = rate > 1.0 ? (rate < 10.0 ? rate : 10.0) : 1.0;
 	maxspawns = (int32)rate * SPAWNS_PER_POINT_DATARATE; // FYI > 10240 entities will cause BulkZoneSpawnPacket to throw exception
+	if(maxspawns > mob_list.Count())
+		maxspawns = mob_list.Count();
 	BulkZoneSpawnPacket* bzsp = new BulkZoneSpawnPacket(client, maxspawns);
-	
+	int i=0;
 	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
 	{
 		spawn = iterator.GetData();
@@ -2230,7 +2220,7 @@ bool BulkZoneSpawnPacket::AddSpawn(NewSpawn_Struct* ns) {
 void BulkZoneSpawnPacket::SendBuffer() {
 	if (!data)
 		return;
-	int32 tmpBufSize = (sizeof(NewSpawn_Struct) * pMaxSpawnsPerPacket) + 50;
+	int32 tmpBufSize = (sizeof(NewSpawn_Struct) * pMaxSpawnsPerPacket);
 	APPLAYER* outapp = new APPLAYER(OP_ZoneSpawns, tmpBufSize);
 	outapp->size = DeflatePacket((int8*) data, index * sizeof(NewSpawn_Struct), outapp->pBuffer, tmpBufSize);
 	outapp->opcode |=FLAG_COMPRESSED;

@@ -1,5 +1,10 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==11/05/2004
+LethalEncounter: Client Freeze/Black Screen of Death bugs have been eliminated.
+LethalEncounter: Added a simple count to our linked list so we can process a few things faster and more efficiently.
+LethalEncounter: Fixed a small compile bug in regards to corpses.
+
 ==11/04/2004
 FatherNitwit: Fixed exploit with split that kathgar found.
 
