@@ -77,6 +77,7 @@ public:
 		compressed = appNormal;
 		if (size == 0) {
 			pBuffer = 0;
+
 		}
 		else {
 			pBuffer = new uchar[size];
@@ -94,7 +95,7 @@ public:
 		safe_delete_array(pBuffer);
 	}*/
 	APPLAYER* Copy() const {
-		if (this == 0) {
+		if (this == NULL) {
 			return 0;
 		}
 		APPLAYER* ret = new APPLAYER(this->opcode, this->size);

@@ -1,14 +1,17 @@
-<?xml version="1.0" encoding = "Windows-1252"?>
+<?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="7.00"
+	Version="8.00"
 	Name="Zone"
-	SccProjectName=""
-	SccLocalPath="">
+	ProjectGUID="{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}"
+	>
 	<Platforms>
 		<Platform
-			Name="Win32"/>
+			Name="Win32"
+		/>
 	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="GuildWars Debug|Win32"
@@ -17,7 +20,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\Zone___Win32_GuildWars_Debug/Zone.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="2"
@@ -32,9 +52,19 @@
 				ProgramDataBaseFileName=".\Zone___Win32_GuildWars_Debug/"
 				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"/>
+				DebugInformationFormat="3"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -47,24 +77,32 @@
 				ProgramDatabaseFile=".\Zone___Win32_GuildWars_Debug/Zone.pdb"
 				GenerateMapFile="TRUE"
 				MapFileName="../Build/Zone.map"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\Zone___Win32_GuildWars_Debug/Zone.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Profiling|Win32"
@@ -73,7 +111,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../build/Zone.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="2"
@@ -87,9 +142,19 @@
 				ObjectFile=".\../build/Zone/Profiling/"
 				ProgramDataBaseFileName=".\../build/Zone/Profiling/"
 				BrowseInformation="1"
-				SuppressStartupBanner="TRUE"/>
+				SuppressStartupBanner="TRUE"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -98,24 +163,32 @@
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				IgnoreDefaultLibraryNames="libc"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../build/Zone.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="GotFrags|Win32"
@@ -124,7 +197,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../Build/Zone.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
@@ -137,9 +227,19 @@
 				ObjectFile=".\../Build/Zone/GotFrags/"
 				ProgramDataBaseFileName=".\../Build/Zone/GotFrags/"
 				BrowseInformation="1"
-				SuppressStartupBanner="TRUE"/>
+				SuppressStartupBanner="TRUE"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -151,24 +251,32 @@
 				ProgramDatabaseFile=".\../Build/ZoneGF.pdb"
 				GenerateMapFile="TRUE"
 				MapFileName="../Build/ZoneGF.map"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../Build/Zone.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
@@ -177,7 +285,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../build/Zone.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
@@ -192,9 +317,19 @@
 				BrowseInformation="1"
 				WarningLevel="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="4"/>
+				DebugInformationFormat="4"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -205,24 +340,32 @@
 				IgnoreDefaultLibraryNames="LIBCMT,LIBC"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../build/ZoneDebug.pdb"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../build/Zone.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="GuildWars|Win32"
@@ -231,7 +374,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../Build/Zone.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="2"
@@ -246,9 +406,19 @@
 				ProgramDataBaseFileName=".\../Build/Zone/GuildWars/"
 				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"/>
+				DebugInformationFormat="3"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -261,24 +431,32 @@
 				ProgramDatabaseFile=".\../Build/Zone.pdb"
 				GenerateMapFile="TRUE"
 				MapFileName="../Build/Zone.map"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../Build/Zone.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Win9x|Win32"
@@ -287,7 +465,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../Build/Zone.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="2"
@@ -301,9 +496,19 @@
 				ObjectFile=".\../Build/Zone/Win9x/"
 				ProgramDataBaseFileName=".\../Build/Zone/Win9x/"
 				BrowseInformation="1"
-				SuppressStartupBanner="TRUE"/>
+				SuppressStartupBanner="TRUE"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -312,24 +517,32 @@
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				ProgramDatabaseFile=".\../Build/Zone9x.pdb"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../Build/Zone.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
@@ -338,7 +551,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../Build/Zone.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="2"
@@ -352,10 +582,21 @@
 				ObjectFile=".\../Build/Zone/Release/"
 				ProgramDataBaseFileName=".\../Build/Zone/Release/"
 				BrowseInformation="1"
+				WarningLevel="0"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="0"/>
+				DebugInformationFormat="0"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -368,24 +609,32 @@
 				ProgramDatabaseFile=".\../Build/Zone.pdb"
 				GenerateMapFile="FALSE"
 				MapFileName="../Build/Zone.map"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../Build/Zone.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Perl|Win32"
@@ -394,7 +643,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../Build/Zone.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="2"
@@ -412,9 +678,19 @@
 				SuppressStartupBanner="TRUE"
 				DebugInformationFormat="0"
 				CallingConvention="0"
-				CompileAs="2"/>
+				CompileAs="2"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -428,953 +704,1271 @@
 				ProgramDatabaseFile=".\../Build/ZonePerl.pdb"
 				GenerateMapFile="FALSE"
 				MapFileName="../Build/ZonePerl.map"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../Build/Zone.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 	</Configurations>
+	<References>
+	</References>
 	<Files>
 		<Filter
 			Name="Source Files"
-			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+			>
 			<File
-				RelativePath="AA.cpp">
+				RelativePath="AA.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EQEMuError.cpp">
+				RelativePath="aggro.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\Map.cpp">
+				RelativePath=".\attack.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\MobAI.cpp">
+				RelativePath="beacon.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\Object.cpp">
+				RelativePath="bonuses.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\PlayerCorpse.cpp">
+				RelativePath=".\client.cpp"
+				>
 			</File>
 			<File
-				RelativePath="aggro.cpp">
+				RelativePath="client_logs.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\attack.cpp">
+				RelativePath="client_mods.cpp"
+				>
 			</File>
 			<File
-				RelativePath="beacon.cpp">
+				RelativePath="client_packet.cpp"
+				>
 			</File>
 			<File
-				RelativePath="bonuses.cpp">
+				RelativePath=".\client_process.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\client.cpp">
+				RelativePath=".\command.cpp"
+				>
 			</File>
 			<File
-				RelativePath="client_logs.cpp">
+				RelativePath=".\doors.cpp"
+				>
 			</File>
 			<File
-				RelativePath="client_mods.cpp">
+				RelativePath="effects.cpp"
+				>
 			</File>
 			<File
-				RelativePath="client_packet.cpp">
+				RelativePath="embparser.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\client_process.cpp">
+				RelativePath="embperl.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\command.cpp">
+				RelativePath="embxs.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\doors.cpp">
+				RelativePath=".\entity.cpp"
+				>
 			</File>
 			<File
-				RelativePath="effects.cpp">
+				RelativePath="..\common\EQEMuError.cpp"
+				>
 			</File>
 			<File
-				RelativePath="embparser.cpp">
+				RelativePath="..\common\extprofile.cpp"
+				>
 			</File>
 			<File
-				RelativePath="embperl.cpp">
+				RelativePath=".\faction.cpp"
+				>
 			</File>
 			<File
-				RelativePath="embxs.cpp">
+				RelativePath=".\forage.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\entity.cpp">
+				RelativePath=".\groups.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\faction.cpp">
-			</File>
-			<File
-				RelativePath=".\forage.cpp">
-			</File>
-			<File
-				RelativePath=".\groups.cpp">
-			</File>
-			<File
-				RelativePath="guilds.cpp">
+				RelativePath="guilds.cpp"
+				>
 				<FileConfiguration
-					Name="GuildWars Debug|Win32">
+					Name="GuildWars Debug|Win32"
+					>
 					<Tool
 						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+						ObjectFile="$(IntDir)/$(InputName)1.obj"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Profiling|Win32">
+					Name="Profiling|Win32"
+					>
 					<Tool
 						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+						ObjectFile="$(IntDir)/$(InputName)1.obj"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="GotFrags|Win32">
+					Name="GotFrags|Win32"
+					>
 					<Tool
 						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+						ObjectFile="$(IntDir)/$(InputName)1.obj"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug|Win32">
+					Name="Debug|Win32"
+					>
 					<Tool
 						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+						ObjectFile="$(IntDir)/$(InputName)1.obj"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="GuildWars|Win32">
+					Name="GuildWars|Win32"
+					>
 					<Tool
 						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+						ObjectFile="$(IntDir)/$(InputName)1.obj"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Win9x|Win32">
+					Name="Win9x|Win32"
+					>
 					<Tool
 						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+						ObjectFile="$(IntDir)/$(InputName)1.obj"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32">
+					Name="Release|Win32"
+					>
 					<Tool
 						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+						ObjectFile="$(IntDir)/$(InputName)1.obj"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Perl|Win32">
+					Name="Perl|Win32"
+					>
 					<Tool
 						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+						ObjectFile="$(IntDir)/$(InputName)1.obj"
+					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\hate_list.cpp">
+				RelativePath=".\hate_list.cpp"
+				>
 			</File>
 			<File
-				RelativePath="inventory.cpp">
+				RelativePath="inventory.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\loottables.cpp">
+				RelativePath=".\loottables.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\mob.cpp">
+				RelativePath=".\Map.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\net.cpp">
+				RelativePath=".\mob.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\npc.cpp">
+				RelativePath=".\MobAI.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\parser.cpp">
+				RelativePath=".\net.cpp"
+				>
 			</File>
 			<File
-				RelativePath="perl_PlayerCorpse.cpp">
+				RelativePath=".\npc.cpp"
+				>
 			</File>
 			<File
-				RelativePath="perl_client.cpp">
+				RelativePath=".\Object.cpp"
+				>
 			</File>
 			<File
-				RelativePath="perl_entity.cpp">
+				RelativePath=".\parser.cpp"
+				>
 			</File>
 			<File
-				RelativePath="perl_groups.cpp">
+				RelativePath="perl_client.cpp"
+				>
 			</File>
 			<File
-				RelativePath="perl_mob.cpp">
+				RelativePath="perl_entity.cpp"
+				>
 			</File>
 			<File
-				RelativePath="perl_npc.cpp">
+				RelativePath="perl_groups.cpp"
+				>
 			</File>
 			<File
-				RelativePath="perlparser.cpp">
+				RelativePath="perl_mob.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\petitions.cpp">
+				RelativePath="perl_npc.cpp"
+				>
 			</File>
 			<File
-				RelativePath="pets.cpp">
+				RelativePath="perl_PlayerCorpse.cpp"
+				>
 			</File>
 			<File
-				RelativePath="questmgr.cpp">
+				RelativePath="perlparser.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\spawn2.cpp">
+				RelativePath=".\petitions.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\spawngroup.cpp">
+				RelativePath="pets.cpp"
+				>
 			</File>
 			<File
-				RelativePath="spdat.cpp">
+				RelativePath=".\PlayerCorpse.cpp"
+				>
 			</File>
 			<File
-				RelativePath="spell_effects.cpp">
+				RelativePath="questmgr.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\spells.cpp">
+				RelativePath=".\spawn2.cpp"
+				>
 			</File>
 			<File
-				RelativePath="tradeskills.cpp">
+				RelativePath=".\spawngroup.cpp"
+				>
 			</File>
 			<File
-				RelativePath="trading.cpp">
+				RelativePath="spdat.cpp"
+				>
 			</File>
 			<File
-				RelativePath="trap.cpp">
+				RelativePath="spell_effects.cpp"
+				>
 			</File>
 			<File
-				RelativePath="tribute.cpp">
+				RelativePath=".\spells.cpp"
+				>
 			</File>
 			<File
-				RelativePath="waypoints.cpp">
+				RelativePath="tradeskills.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\worldserver.cpp">
+				RelativePath="trading.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\zone.cpp">
+				RelativePath="trap.cpp"
+				>
 			</File>
 			<File
-				RelativePath="zone_profile.cpp">
+				RelativePath="tribute.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\zonedbasync.cpp">
+				RelativePath="waypoints.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\worldserver.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\zone.cpp"
+				>
+			</File>
+			<File
+				RelativePath="zone_profile.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\zonedbasync.cpp"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
-			Filter="h;hpp;hxx;hm;inl">
+			Filter="h;hpp;hxx;hm;inl"
+			>
 			<File
-				RelativePath="AA.h">
+				RelativePath="AA.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EQEMuError.h">
+				RelativePath="beacon.h"
+				>
 			</File>
 			<File
-				RelativePath=".\Forage.h">
+				RelativePath=".\client.h"
+				>
 			</File>
 			<File
-				RelativePath=".\NpcAI.h">
+				RelativePath="client_logs.h"
+				>
 			</File>
 			<File
-				RelativePath=".\PlayerCorpse.h">
+				RelativePath=".\command.h"
+				>
 			</File>
 			<File
-				RelativePath="StringIDs.h">
+				RelativePath=".\doors.h"
+				>
 			</File>
 			<File
-				RelativePath="beacon.h">
+				RelativePath="embparser.h"
+				>
 			</File>
 			<File
-				RelativePath=".\client.h">
+				RelativePath="embperl.h"
+				>
 			</File>
 			<File
-				RelativePath="client_logs.h">
+				RelativePath="embxs.h"
+				>
 			</File>
 			<File
-				RelativePath=".\command.h">
+				RelativePath=".\entity.h"
+				>
 			</File>
 			<File
-				RelativePath=".\doors.h">
+				RelativePath="..\common\EQEMuError.h"
+				>
 			</File>
 			<File
-				RelativePath="embparser.h">
+				RelativePath=".\event_codes.h"
+				>
 			</File>
 			<File
-				RelativePath="embperl.h">
+				RelativePath=".\faction.h"
+				>
 			</File>
 			<File
-				RelativePath="embxs.h">
+				RelativePath="features.h"
+				>
 			</File>
 			<File
-				RelativePath=".\entity.h">
+				RelativePath="..\common\files.h"
+				>
 			</File>
 			<File
-				RelativePath=".\event_codes.h">
+				RelativePath=".\Forage.h"
+				>
 			</File>
 			<File
-				RelativePath=".\faction.h">
+				RelativePath=".\groups.h"
+				>
 			</File>
 			<File
-				RelativePath="features.h">
+				RelativePath=".\hate_list.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\files.h">
+				RelativePath=".\loottable.h"
+				>
 			</File>
 			<File
-				RelativePath=".\groups.h">
+				RelativePath=".\map.h"
+				>
 			</File>
 			<File
-				RelativePath=".\hate_list.h">
+				RelativePath=".\mob.h"
+				>
 			</File>
 			<File
-				RelativePath=".\loottable.h">
+				RelativePath=".\net.h"
+				>
 			</File>
 			<File
-				RelativePath=".\map.h">
+				RelativePath=".\npc.h"
+				>
 			</File>
 			<File
-				RelativePath=".\mob.h">
+				RelativePath=".\NpcAI.h"
+				>
 			</File>
 			<File
-				RelativePath=".\net.h">
+				RelativePath=".\object.h"
+				>
 			</File>
 			<File
-				RelativePath=".\npc.h">
+				RelativePath=".\parser.h"
+				>
 			</File>
 			<File
-				RelativePath=".\object.h">
+				RelativePath="perlparser.h"
+				>
 			</File>
 			<File
-				RelativePath=".\parser.h">
+				RelativePath=".\petitions.h"
+				>
 			</File>
 			<File
-				RelativePath="perlparser.h">
+				RelativePath=".\PlayerCorpse.h"
+				>
 			</File>
 			<File
-				RelativePath=".\petitions.h">
+				RelativePath="questmgr.h"
+				>
 			</File>
 			<File
-				RelativePath="questmgr.h">
+				RelativePath=".\skills.h"
+				>
 			</File>
 			<File
-				RelativePath=".\skills.h">
+				RelativePath=".\spawn2.h"
+				>
 			</File>
 			<File
-				RelativePath=".\spawn2.h">
+				RelativePath=".\spawngroup.h"
+				>
 			</File>
 			<File
-				RelativePath=".\spawngroup.h">
+				RelativePath=".\spdat.h"
+				>
 			</File>
 			<File
-				RelativePath=".\spdat.h">
+				RelativePath="StringIDs.h"
+				>
 			</File>
 			<File
-				RelativePath="trap.h">
+				RelativePath="trap.h"
+				>
 			</File>
 			<File
-				RelativePath=".\worldserver.h">
+				RelativePath=".\worldserver.h"
+				>
 			</File>
 			<File
-				RelativePath=".\zone.h">
+				RelativePath=".\zone.h"
+				>
 			</File>
 			<File
-				RelativePath="zone_profile.h">
+				RelativePath="zone_profile.h"
+				>
 			</File>
 			<File
-				RelativePath=".\zonedbasync.h">
+				RelativePath=".\zonedbasync.h"
+				>
 			</File>
 			<File
-				RelativePath=".\zonedump.h">
+				RelativePath=".\zonedump.h"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Common Header Files"
-			Filter="">
+			>
 			<File
-				RelativePath="..\common\DBMemLeak.h">
+				RelativePath="..\common\classes.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EMuShareMem.h">
+				RelativePath="..\common\crc32.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EQCheckTable.h">
+				RelativePath="..\common\database.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EQNetwork.h">
+				RelativePath="..\common\dbasync.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EQOpcodes.h">
+				RelativePath="..\common\dbcore.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Guilds.h">
+				RelativePath="..\common\DBMemLeak.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Item.h">
+				RelativePath="..\common\debug.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Kaiyodo-LList.h">
+				RelativePath="..\common\deity.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\MiscFunctions.h">
+				RelativePath="..\common\EMuShareMem.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Mutex.h">
+				RelativePath="..\common\eq_opcodes.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Seperator.h">
+				RelativePath="..\common\eq_packet_structs.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\TCPConnection.h">
+				RelativePath="..\common\EQCheckTable.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\classes.h">
+				RelativePath="..\common\EQNetwork.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\crc32.h">
+				RelativePath="..\common\EQOpcodes.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\database.h">
+				RelativePath="..\common\eqtime.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\dbasync.h">
+				RelativePath="..\common\Guilds.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\dbcore.h">
+				RelativePath="..\common\Item.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\debug.h">
+				RelativePath="..\common\Kaiyodo-LList.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\deity.h">
+				RelativePath="..\common\linked_list.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\eq_opcodes.h">
+				RelativePath="..\common\md5.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\eq_packet_structs.h">
+				RelativePath="..\common\misc.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\eqtime.h">
+				RelativePath="..\common\MiscFunctions.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\linked_list.h">
+				RelativePath="..\common\moremath.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\md5.h">
+				RelativePath="..\common\Mutex.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\misc.h">
+				RelativePath="..\common\packet_dump.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\moremath.h">
+				RelativePath="..\common\packet_dump_file.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_dump.h">
+				RelativePath="..\common\packet_functions.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_dump_file.h">
+				RelativePath="..\common\ptimer.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_functions.h">
+				RelativePath="..\common\queue.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\ptimer.h">
+				RelativePath="..\common\races.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\queue.h">
+				RelativePath="..\common\Seperator.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\races.h">
+				RelativePath="..\common\serverinfo.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\serverinfo.h">
+				RelativePath="..\common\servertalk.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\servertalk.h">
+				RelativePath="..\common\TCPConnection.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\timer.h">
+				RelativePath="..\common\timer.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\types.h">
+				RelativePath="..\common\types.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\unix.h">
+				RelativePath="..\common\unix.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\version.h">
+				RelativePath="..\common\version.h"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Common Source Files"
-			Filter="">
+			>
 			<File
-				RelativePath="..\common\DBMemLeak.cpp">
+				RelativePath="..\common\classes.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EMuShareMem.cpp">
+				RelativePath="..\common\crc32.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EQNetwork.cpp">
+				RelativePath="..\common\database.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Item.cpp">
+				RelativePath="..\common\dbasync.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\MiscFunctions.cpp">
+				RelativePath="..\common\dbcore.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Mutex.cpp">
+				RelativePath="..\common\DBMemLeak.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\TCPConnection.cpp">
+				RelativePath="..\common\debug.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\classes.cpp">
+				RelativePath="..\common\EMuShareMem.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\crc32.cpp">
+				RelativePath="..\common\EQNetwork.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\database.cpp">
+				RelativePath="..\common\eqtime.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\dbasync.cpp">
+				RelativePath="..\common\guilds.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\dbcore.cpp">
+				RelativePath="..\common\Item.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\debug.cpp">
+				RelativePath="..\common\md5.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\eqtime.cpp">
+				RelativePath="..\common\misc.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\guilds.cpp">
+				RelativePath="..\common\MiscFunctions.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\md5.cpp">
+				RelativePath="..\common\moremath.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\misc.cpp">
+				RelativePath="..\common\Mutex.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\moremath.cpp">
+				RelativePath="..\common\packet_dump.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_dump.cpp">
+				RelativePath="..\common\packet_dump_file.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_dump_file.cpp">
+				RelativePath="..\common\packet_functions.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_functions.cpp">
+				RelativePath="..\common\ptimer.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\ptimer.cpp">
+				RelativePath="..\common\races.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\races.cpp">
+				RelativePath="..\common\serverinfo.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\serverinfo.cpp">
+				RelativePath="..\common\TCPConnection.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\timer.cpp">
+				RelativePath="..\common\timer.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\unix.cpp">
+				RelativePath="..\common\unix.cpp"
+				>
 				<FileConfiguration
 					Name="GuildWars Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Profiling|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="GotFrags|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="GuildWars|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Win9x|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Perl|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter
 			Name="Text Files"
-			Filter="">
+			>
 			<File
-				RelativePath="..\readme.txt">
+				RelativePath="..\readme.txt"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="GuildWars"
-			Filter="">
+			>
 			<File
-				RelativePath="GuildWars.cpp">
+				RelativePath="GuildWars.cpp"
+				>
 				<FileConfiguration
 					Name="GuildWars Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Profiling|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="GotFrags|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Win9x|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Perl|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="GuildWars.h">
+				RelativePath="GuildWars.h"
+				>
 				<FileConfiguration
 					Name="GuildWars Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCustomBuildTool"/>
+						Name="VCCustomBuildTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Profiling|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCustomBuildTool"/>
+						Name="VCCustomBuildTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="GotFrags|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCustomBuildTool"/>
+						Name="VCCustomBuildTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCustomBuildTool"/>
+						Name="VCCustomBuildTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="GuildWars|Win32">
+					Name="GuildWars|Win32"
+					>
 					<Tool
-						Name="VCCustomBuildTool"/>
+						Name="VCCustomBuildTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Win9x|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCustomBuildTool"/>
+						Name="VCCustomBuildTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCustomBuildTool"/>
+						Name="VCCustomBuildTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Perl|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCustomBuildTool"/>
+						Name="VCCustomBuildTool"
+					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\GuildWars\GuildWarsApproval.cpp">
+				RelativePath="..\GuildWars\GuildWarsApproval.cpp"
+				>
 				<FileConfiguration
 					Name="GuildWars Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Profiling|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="GotFrags|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Win9x|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Perl|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\GuildWars\GuildWarsFactions.cpp">
+				RelativePath="..\GuildWars\GuildWarsFactions.cpp"
+				>
 				<FileConfiguration
 					Name="GuildWars Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Profiling|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="GotFrags|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Win9x|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Perl|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\GuildWars\GuildWarsLocation.cpp">
+				RelativePath="..\GuildWars\GuildWarsLocation.cpp"
+				>
 				<FileConfiguration
 					Name="GuildWars Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Profiling|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="GotFrags|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Win9x|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Perl|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\GuildWars\GuildWarsLocationList.cpp">
+				RelativePath="..\GuildWars\GuildWarsLocationList.cpp"
+				>
 				<FileConfiguration
 					Name="GuildWars Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Profiling|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="GotFrags|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Win9x|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Perl|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\GuildWars\GuildWarsPointSystem.cpp">
+				RelativePath="..\GuildWars\GuildWarsPointSystem.cpp"
+				>
 				<FileConfiguration
 					Name="GuildWars Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Profiling|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="GotFrags|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Win9x|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Perl|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 			</File>
 		</Filter>

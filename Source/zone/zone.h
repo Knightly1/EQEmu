@@ -58,6 +58,8 @@ struct ZoneClientAuth_Struct {
 
 extern EntityList entity_list;
 
+class database;
+
 class Zone
 {
 public:

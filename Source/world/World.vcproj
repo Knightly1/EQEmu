@@ -1,14 +1,17 @@
-<?xml version="1.0" encoding = "Windows-1252"?>
+<?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="7.00"
+	Version="8.00"
 	Name="World"
-	SccProjectName=""
-	SccLocalPath="">
+	ProjectGUID="{4961B640-C99F-4A69-8BF2-4A40A13F919C}"
+	>
 	<Platforms>
 		<Platform
-			Name="Win32"/>
+			Name="Win32"
+		/>
 	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
@@ -17,7 +20,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../build/World.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
@@ -31,9 +51,19 @@
 				ProgramDataBaseFileName=".\../Build/World/Debug/"
 				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="4"/>
+				DebugInformationFormat="4"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -44,24 +74,32 @@
 				IgnoreDefaultLibraryNames="LIBCMT,LIBC"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../build/WorldDebug.pdb"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../build/World.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="GotFrags|Win32"
@@ -70,7 +108,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../build/World.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
@@ -83,9 +138,19 @@
 				ObjectFile=".\../Build/World/GotFrags/"
 				ProgramDataBaseFileName=".\../Build/World/GotFrags/"
 				BrowseInformation="1"
-				SuppressStartupBanner="TRUE"/>
+				SuppressStartupBanner="TRUE"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -97,24 +162,32 @@
 				ProgramDatabaseFile=".\../build/WorldGF.pdb"
 				GenerateMapFile="TRUE"
 				MapFileName="../Build/WorldGF.map"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../build/World.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
@@ -123,7 +196,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../build/World.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="2"
@@ -138,9 +228,19 @@
 				ProgramDataBaseFileName=".\../Build/World/Release/"
 				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="0"/>
+				DebugInformationFormat="0"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -153,24 +253,32 @@
 				ProgramDatabaseFile=".\../build/World.pdb"
 				GenerateMapFile="FALSE"
 				MapFileName="../Build/World.map"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../build/World.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Profiling|Win32"
@@ -179,7 +287,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../build/World.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="2"
@@ -193,9 +318,19 @@
 				ObjectFile=".\../build/world/Profiling/"
 				ProgramDataBaseFileName=".\../build/world/Profiling/"
 				BrowseInformation="1"
-				SuppressStartupBanner="TRUE"/>
+				SuppressStartupBanner="TRUE"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -204,24 +339,32 @@
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				IgnoreDefaultLibraryNames="libc"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../build/World.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="GuildWars|Win32"
@@ -230,7 +373,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../build/World.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="2"
@@ -245,9 +405,19 @@
 				ProgramDataBaseFileName=".\../Build/World/Release/"
 				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"/>
+				DebugInformationFormat="3"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -260,24 +430,32 @@
 				ProgramDatabaseFile=".\../build/World.pdb"
 				GenerateMapFile="TRUE"
 				MapFileName="../Build/World.map"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../build/World.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Perl|Win32"
@@ -286,7 +464,24 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../build/World.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="2"
@@ -301,9 +496,19 @@
 				ProgramDataBaseFileName=".\../Build/World/Release/"
 				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="0"/>
+				DebugInformationFormat="0"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
@@ -316,258 +521,344 @@
 				ProgramDatabaseFile=".\../build/World.pdb"
 				GenerateMapFile="FALSE"
 				MapFileName="../Build/World.map"
-				SubSystem="1"/>
+				SubSystem="1"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../build/World.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 	</Configurations>
+	<References>
+	</References>
 	<Files>
 		<Filter
 			Name="Source Files"
-			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+			>
 			<File
-				RelativePath=".\LoginServer.cpp">
+				RelativePath=".\client.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\client.cpp">
+				RelativePath=".\console.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\console.cpp">
+				RelativePath=".\LoginServer.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\net.cpp">
+				RelativePath=".\net.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\zoneserver.cpp">
+				RelativePath=".\zoneserver.cpp"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
-			Filter="h;hpp;hxx;hm;inl">
+			Filter="h;hpp;hxx;hm;inl"
+			>
 			<File
-				RelativePath=".\LoginServer.h">
+				RelativePath=".\client.h"
+				>
 			</File>
 			<File
-				RelativePath=".\WorldTCPConnection.h">
+				RelativePath=".\console.h"
+				>
 			</File>
 			<File
-				RelativePath=".\client.h">
+				RelativePath=".\LoginServer.h"
+				>
 			</File>
 			<File
-				RelativePath=".\console.h">
+				RelativePath=".\net.h"
+				>
 			</File>
 			<File
-				RelativePath=".\net.h">
+				RelativePath=".\WorldTCPConnection.h"
+				>
 			</File>
 			<File
-				RelativePath=".\zoneserver.h">
+				RelativePath=".\zoneserver.h"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Common Source Files"
-			Filter="*.cpp">
+			Filter="*.cpp"
+			>
 			<File
-				RelativePath="..\common\DBMemLeak.cpp">
+				RelativePath="..\common\classes.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EMuShareMem.cpp">
+				RelativePath="..\common\crc32.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EQEMuError.cpp">
+				RelativePath="..\common\database.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EQNetwork.cpp">
+				RelativePath="..\common\dbasync.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Item.cpp">
+				RelativePath="..\common\dbcore.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\MiscFunctions.cpp">
+				RelativePath="..\common\DBMemLeak.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Mutex.cpp">
+				RelativePath="..\common\debug.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\TCPConnection.cpp">
+				RelativePath="..\common\EMuShareMem.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\classes.cpp">
+				RelativePath="..\common\EQEMuError.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\crc32.cpp">
+				RelativePath="..\common\EQNetwork.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\database.cpp">
+				RelativePath="..\common\eqtime.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\dbasync.cpp">
+				RelativePath="..\common\guilds.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\dbcore.cpp">
+				RelativePath="..\common\Item.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\debug.cpp">
+				RelativePath="..\common\md5.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\eqtime.cpp">
+				RelativePath="..\common\misc.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\guilds.cpp">
+				RelativePath="..\common\MiscFunctions.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\md5.cpp">
+				RelativePath="..\common\moremath.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\misc.cpp">
+				RelativePath="..\common\Mutex.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\moremath.cpp">
+				RelativePath="..\common\packet_dump.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_dump.cpp">
+				RelativePath="..\common\packet_dump_file.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_dump_file.cpp">
+				RelativePath="..\common\packet_functions.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_functions.cpp">
+				RelativePath="..\common\races.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\races.cpp">
+				RelativePath="..\common\serverinfo.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\serverinfo.cpp">
+				RelativePath="..\common\TCPConnection.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\timer.cpp">
+				RelativePath="..\common\timer.cpp"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Common Header Files"
-			Filter="*.h">
+			Filter="*.h"
+			>
 			<File
-				RelativePath="..\common\DBMemLeak.h">
+				RelativePath="..\common\classes.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EMuShareMem.h">
+				RelativePath="..\common\crc32.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EQCheckTable.h">
+				RelativePath="..\common\database.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\EQNetwork.h">
+				RelativePath="..\common\dbasync.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Guilds.h">
+				RelativePath="..\common\dbcore.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Item.h">
+				RelativePath="..\common\DBMemLeak.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\MiscFunctions.h">
+				RelativePath="..\common\debug.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Mutex.h">
+				RelativePath="..\common\EMuShareMem.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Seperator.h">
+				RelativePath="..\common\eq_opcodes.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\TCPConnection.h">
+				RelativePath="..\common\eq_packet_structs.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\classes.h">
+				RelativePath="..\common\EQCheckTable.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\crc32.h">
+				RelativePath="..\common\EQNetwork.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\database.h">
+				RelativePath="..\Zone\faction.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\dbasync.h">
+				RelativePath="..\common\Guilds.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\dbcore.h">
+				RelativePath="..\common\Item.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\debug.h">
+				RelativePath="..\common\linked_list.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\eq_opcodes.h">
+				RelativePath="..\Zone\loottable.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\eq_packet_structs.h">
+				RelativePath="..\common\md5.h"
+				>
 			</File>
 			<File
-				RelativePath="..\Zone\faction.h">
+				RelativePath="..\common\misc.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\linked_list.h">
+				RelativePath="..\common\MiscFunctions.h"
+				>
 			</File>
 			<File
-				RelativePath="..\Zone\loottable.h">
+				RelativePath="..\common\moremath.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\md5.h">
+				RelativePath="..\common\Mutex.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\misc.h">
+				RelativePath="..\common\packet_dump.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\moremath.h">
+				RelativePath="..\common\packet_dump_file.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_dump.h">
+				RelativePath="..\common\packet_functions.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_dump_file.h">
+				RelativePath="..\common\queue.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\packet_functions.h">
+				RelativePath="..\common\races.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\queue.h">
+				RelativePath="..\common\Seperator.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\races.h">
+				RelativePath="..\common\serverinfo.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\serverinfo.h">
+				RelativePath="..\common\servertalk.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\servertalk.h">
+				RelativePath="..\common\TCPConnection.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\timer.h">
+				RelativePath="..\common\timer.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\types.h">
+				RelativePath="..\common\types.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\version.h">
+				RelativePath="..\common\version.h"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Text Files"
-			Filter="*.txt">
+			Filter="*.txt"
+			>
 			<File
-				RelativePath="..\readme.txt">
+				RelativePath="..\readme.txt"
+				>
 			</File>
 		</Filter>
 	</Files>

@@ -19,6 +19,11 @@
 #define __QUEST_MANAGER_H__
 
 #include "../common/Mutex.h"
+#include "../common/timer.h"
+
+#include <string>
+#include <list>
+using namespace std;
 
 class NPC;
 class Client;

@@ -1,14 +1,17 @@
-<?xml version="1.0" encoding = "Windows-1252"?>
+<?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="7.00"
+	Version="8.00"
 	Name="EMuShareMem"
-	SccProjectName=""
-	SccLocalPath="">
+	ProjectGUID="{76650C30-E6C6-4A21-AC4D-C7106D352FA9}"
+	>
 	<Platforms>
 		<Platform
-			Name="Win32"/>
+			Name="Win32"
+		/>
 	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
@@ -17,7 +20,28 @@
 			ConfigurationType="2"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName=".\../Build/EMuShareMem.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
@@ -30,9 +54,19 @@
 				ObjectFile=".\../Build/EMuShareMem/Debug/"
 				ProgramDataBaseFileName=".\../Build/EMuShareMem/Debug/"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="4"/>
+				DebugInformationFormat="4"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				IgnoreImportLibrary="TRUE"
@@ -43,28 +77,32 @@
 				SuppressStartupBanner="TRUE"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../Build/EMuShareMem.pdb"
-				ImportLibrary=".\../Build/EMuShareMem.lib"/>
+				ImportLibrary=".\../Build/EMuShareMem.lib"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="_DEBUG"
-				MkTypLibCompatible="TRUE"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\../Build/EMuShareMem.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
@@ -73,7 +111,28 @@
 			ConfigurationType="2"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName=".\../Build/EMuShareMem.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
@@ -87,9 +146,19 @@
 				ObjectFile=".\../Build/EMuShareMem/Release/"
 				ProgramDataBaseFileName=".\../Build/EMuShareMem/Release/"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="0"/>
+				DebugInformationFormat="0"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				IgnoreImportLibrary="TRUE"
@@ -102,28 +171,32 @@
 				ProgramDatabaseFile=".\../Build/EMuShareMem.pdb"
 				GenerateMapFile="FALSE"
 				MapFileName="../Build/EMuShareMem.map"
-				ImportLibrary=".\../Build/EMuShareMem.lib"/>
+				ImportLibrary=".\../Build/EMuShareMem.lib"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				MkTypLibCompatible="TRUE"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\../Build/EMuShareMem.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Perl|Win32"
@@ -132,7 +205,28 @@
 			ConfigurationType="2"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName=".\../Build/EMuShareMem.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
@@ -146,9 +240,19 @@
 				ObjectFile=".\../Build/EMuShareMem/Release/"
 				ProgramDataBaseFileName=".\../Build/EMuShareMem/Release/"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="0"/>
+				DebugInformationFormat="0"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				IgnoreImportLibrary="TRUE"
@@ -161,153 +265,197 @@
 				ProgramDatabaseFile=".\../Build/EMuShareMem.pdb"
 				GenerateMapFile="FALSE"
 				MapFileName="../Build/EMuShareMem.map"
-				ImportLibrary=".\../Build/EMuShareMem.lib"/>
+				ImportLibrary=".\../Build/EMuShareMem.lib"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				MkTypLibCompatible="TRUE"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\../Build/EMuShareMem.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 	</Configurations>
+	<References>
+	</References>
 	<Files>
 		<Filter
 			Name="Source Files"
-			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+			>
 			<File
-				RelativePath=".\DLLMain.cpp">
+				RelativePath=".\DLLMain.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\Doors.cpp">
+				RelativePath=".\Doors.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\Items.cpp">
+				RelativePath=".\Items.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\Loot.cpp">
+				RelativePath=".\Loot.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\MMF.cpp">
+				RelativePath=".\MMF.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\MMFMutex.cpp">
+				RelativePath=".\MMFMutex.cpp"
+				>
 				<FileConfiguration
 					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Perl|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\NPCFactionLists.cpp">
+				RelativePath=".\NPCFactionLists.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\NPCTypes.cpp">
+				RelativePath=".\NPCTypes.cpp"
+				>
 			</File>
 			<File
-				RelativePath=".\Spells.cpp">
+				RelativePath=".\Spells.cpp"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
-			Filter="h;hpp;hxx;hm;inl">
+			Filter="h;hpp;hxx;hm;inl"
+			>
 			<File
-				RelativePath=".\Doors.h">
+				RelativePath=".\Doors.h"
+				>
 			</File>
 			<File
-				RelativePath=".\Items.h">
+				RelativePath=".\Items.h"
+				>
 			</File>
 			<File
-				RelativePath=".\Loot.h">
+				RelativePath=".\Loot.h"
+				>
 			</File>
 			<File
-				RelativePath=".\MMF.h">
+				RelativePath=".\MMF.h"
+				>
 			</File>
 			<File
-				RelativePath=".\MMFMutex.h">
+				RelativePath=".\MMFMutex.h"
+				>
 			</File>
 			<File
-				RelativePath=".\NPCFactionLists.h">
+				RelativePath=".\NPCFactionLists.h"
+				>
 			</File>
 			<File
-				RelativePath=".\NPCTypes.h">
+				RelativePath=".\NPCTypes.h"
+				>
 			</File>
 			<File
-				RelativePath=".\Spells.h">
+				RelativePath=".\Spells.h"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Common Source Files"
-			Filter="">
+			>
 			<File
-				RelativePath="..\common\EMuShareMem.cpp">
+				RelativePath="..\common\debug.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\EMuShareMem.cpp"
+				>
 				<FileConfiguration
 					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Perl|Win32"
-					ExcludedFromBuild="TRUE">
+					ExcludedFromBuild="TRUE"
+					>
 					<Tool
-						Name="VCCLCompilerTool"/>
+						Name="VCCLCompilerTool"
+					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\common\Mutex.cpp">
+				RelativePath="..\common\Mutex.cpp"
+				>
 			</File>
 			<File
-				RelativePath="..\common\debug.cpp">
-			</File>
-			<File
-				RelativePath="..\common\timer.cpp">
+				RelativePath="..\common\timer.cpp"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Common Header Files"
-			Filter="">
+			>
 			<File
-				RelativePath="..\common\EMuShareMem.h">
+				RelativePath="..\common\debug.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\Mutex.h">
+				RelativePath="..\common\EMuShareMem.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\debug.h">
+				RelativePath="..\common\eq_packet_structs.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\eq_packet_structs.h">
+				RelativePath="..\common\Mutex.h"
+				>
 			</File>
 			<File
-				RelativePath="..\common\timer.h">
+				RelativePath="..\common\timer.h"
+				>
 			</File>
 		</Filter>
 	</Files>

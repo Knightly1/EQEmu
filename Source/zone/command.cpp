@@ -609,7 +609,7 @@ int command_realdispatch(Client *c, const char *message)
 		PerlembParser *embparse = (PerlembParser *) parse;
 		embparse->ExecCommand(c, &sep);
 #else
-		LogFile->write(EQEMuLog::Error, "Command '%s' has a null function, but perl commands are diabled!\n", cur->first.c_str())
+		LogFile->write(EQEMuLog::Error, "Command '%s' has a null function, but perl commands are diabled!\n", cstr.c_str());
 		return(-1);
 #endif
 	} else {
