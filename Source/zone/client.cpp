@@ -145,7 +145,7 @@ Client::Client(EQNetworkConnection* ieqnc)
 	process_timer(100),
 	disc_timer(60000),
 	disc_elapse(60000),
-	stamina_timer(46000),
+	stamina_timer(40000),
 	linkdead_timer(30000),
 	dead_timer(2000),
 	ooc_timer(1000),

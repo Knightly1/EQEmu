@@ -207,7 +207,12 @@ bool Client::HandlePacket(const APPLAYER *app) {
 				if ((minilogin && (cle = zoneserver_list.CheckAuth(id,password,ip))) || (cle = zoneserver_list.CheckAuth(id, password)))
 #endif
 				{
-					if (cle->AccountID() == 0) {
+					if (cle->AccountID() == 0 || (!minilogin && cle->LSID()==0)) {
+						cout << "ERROR! ID is 0!!!\nIs this server connected to minilogin?\n";
+						if(!minilogin)
+							cout << "If so you forget the minilogin variable...\n";
+						else
+							cout << "Could not find a minilogin account, verify ip address logging into minilogin is the same that is in your account table.\n";
 						ret = false;
 						break;
 					}

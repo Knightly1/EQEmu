@@ -2207,7 +2207,7 @@ bool ClientListEntry::CheckStale() {
 bool ClientListEntry::CheckAuth(int32 iLSID, const char* iKey) {
 //	if (LSID() == iLSID && strncmp(plskey, iKey,10) == 0) {
 	if (strncmp(plskey, iKey,10) == 0) {
-		if (paccountid == 0) {
+		if (paccountid == 0 && LSID()>0) {
 			sint16 tmpStatus = net.GetDefaultStatus();
 			paccountid = database.CreateAccount(plsname, 0, tmpStatus, LSID());
 			if (!paccountid) {

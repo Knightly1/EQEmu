@@ -58,7 +58,7 @@ public:
 private:
 	int32	ip;
 	int16	port;
-	int32	charid;
+	int32	charid; 
 	char	char_name[64];
 	int32	zoneID;
 	Timer*	autobootup_timeout;

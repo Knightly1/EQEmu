@@ -606,9 +606,7 @@ int Client::HandlePacket(const APPLAYER *app)
 #if EQDEBUG >= 1
 						LogFile->write(EQEMuLog::Debug, "Eating from slot:%i", (int)pcs->slot);
 #endif
-						// 6000 is the max. value
-						//m_pp.hunger_level += 1000;
-						m_pp.hunger_level += eat_item->Common.CastTime*100;
+						m_pp.hunger_level += eat_item->Common.CastTime*30; //roughly 1 item per 10 minutes
 						GetInv().DeleteItem(pcs->slot,1);
 					}
 					else if (pcs->type == 0x02) {
@@ -617,7 +615,7 @@ int Client::HandlePacket(const APPLAYER *app)
 #endif
 						// 6000 is the max. value
 						//m_pp.thirst_level += 1000;
-						m_pp.thirst_level += eat_item->Common.CastTime*100;
+						m_pp.thirst_level += eat_item->Common.CastTime*30; //roughly 1 item per 10 minutes
 						GetInv().DeleteItem(pcs->slot,1);
 					}
 					else {
@@ -634,7 +632,6 @@ int Client::HandlePacket(const APPLAYER *app)
 					sta->food = m_pp.hunger_level;
 					sta->water = m_pp.thirst_level;
 
-					//sta->fatigue = m_pp.fatigue;
 					QueuePacket(outapp);
 					safe_delete(outapp);
 					break;
@@ -5786,13 +5783,12 @@ bool Client::Process() {
 			TicProcess();
 			
 			if(stamina_timer.Check()){
-
 				APPLAYER* outapp = new APPLAYER(OP_Stamina, sizeof(Stamina_Struct));
 				Stamina_Struct* sta = (Stamina_Struct*)outapp->pBuffer;
 				if (m_pp.hunger_level > 0)
-					m_pp.hunger_level--;
+					m_pp.hunger_level-=32;
 				if (m_pp.thirst_level > 0)
-					m_pp.thirst_level--;
+					m_pp.thirst_level-=32;
 				sta->food = m_pp.hunger_level;
 				sta->water = m_pp.thirst_level;
 				QueuePacket(outapp);

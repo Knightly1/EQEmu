@@ -214,8 +214,10 @@ bool InitLoginServer() {
 
 bool LoginServer::Connect(const char* iAddress, int16 iPort) {
 	char tmp[25];
-	if(database.GetVariable("loginType",tmp,sizeof(tmp)) && strcasecmp(tmp,"MinILogin") == 0)
+	if(database.GetVariable("loginType",tmp,sizeof(tmp)) && strcasecmp(tmp,"MinILogin") == 0){
 		minilogin = true;
+		cout << "Setting World to MiniLogin Server type\n";
+	}
 	else
 		minilogin = false;
 
