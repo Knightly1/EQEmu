@@ -3365,7 +3365,8 @@ struct BookText_Struct {
 // This is just a "text file" on the server
 // or in our case, the 'name' column in our books table.
 struct BookRequest_Struct {
-	int16 unknown0;
+	uint8 unknown0; //always 0xFF
+	uint8 type;             //type: 0=scroll, 1=book.. prolly others.
 	char txtfile[20];
 };
 
