@@ -467,7 +467,8 @@ void Client::QueuePacket(const APPLAYER* app, bool ack_req, CLIENT_CONN_STATUS r
 			return;
 		}
 	}
-	
+	if(client_state != CLIENT_CONNECTED && required_state == CLIENT_CONNECTED)
+		return;
 	//#ifdef EQDEBUG >= 9
 		// This just here while figuring out new opcodes/packets
 		#ifdef MERTHALICIOUS

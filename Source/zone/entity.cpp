@@ -1053,7 +1053,7 @@ void EntityList::QueueCloseClients(Mob* sender, const APPLAYER* app, bool ignore
 					(filter2==99 && entity_list.GetGroupByClient(ent)!=0 && 
 					 entity_list.GetGroupByClient(ent)->IsGroupMember(sender))
 					 || (filter2==98 && ent==sender)))) {
-						ent->QueuePacket(app, ackreq);
+						ent->QueuePacket(app, ackreq, Client::CLIENT_CONNECTED);
 				}
 			}
 		iterator.Advance();

@@ -112,247 +112,261 @@ int Client::HandlePacket(const APPLAYER *app)
 		case CLIENT_CONNECTING:
 		{
 			this->IsOnBoat=false;
-			if (app->opcode == OP_SetDataRate)
-			{
-				// Set client datarate
-				if (app->size != sizeof(float)) {
-					LogFile->write(EQEMuLog::Error,"Wrong size on OP_SetDatarate. Got: %i, Expected: %i", app->size, sizeof(float));
+			switch(app->opcode){
+				case OP_SetDataRate:
+				{
+					// Set client datarate
+					if (app->size != sizeof(float)) {
+						LogFile->write(EQEMuLog::Error,"Wrong size on OP_SetDatarate. Got: %i, Expected: %i", app->size, sizeof(float));
+						break;
+					}
+					LogFile->write(EQEMuLog::Debug, "HandlePacket() OP_SetDataRate request : %f",  *(float*) app->pBuffer);
+					float tmpDR = *(float*) app->pBuffer;
+					if (tmpDR <= 0.0f) {
+						LogFile->write(EQEMuLog::Error,"HandlePacket() OP_SetDataRate INVALID request : %f <= 0", tmpDR);
+						LogFile->write(EQEMuLog::Normal,"WARNING: Setting datarate for client to 5.0 expect a client lock up =(");
+						tmpDR = 5.0f;
+					}
+					if (tmpDR > 25.0f)
+						tmpDR = 25.0f;
+					eqnc->SetDataRate(tmpDR);
 					break;
 				}
-				LogFile->write(EQEMuLog::Debug, "HandlePacket() OP_SetDataRate request : %f",  *(float*) app->pBuffer);
-				float tmpDR = *(float*) app->pBuffer;
-				if (tmpDR <= 0.0f) {
-					LogFile->write(EQEMuLog::Error,"HandlePacket() OP_SetDataRate INVALID request : %f <= 0", tmpDR);
-					LogFile->write(EQEMuLog::Normal,"WARNING: Setting datarate for client to 5.0 expect a client lock up =(");
-					tmpDR = 5.0f;
-				}
-				if (tmpDR > 25.0f)
-					tmpDR = 25.0f;
-#ifdef GUILDWARS
-				if(tmpDR > 8.0f)
-				tmpDR = 8.0f;
-#endif
-				eqnc->SetDataRate(tmpDR);
-			}
-			else if (app->opcode == OP_SendTributes){
-				//SendTribute();
-			}
-			else if (app->opcode == OP_ZoneEntry) {
-				// Quagmire - Antighost code
-				// tmp var is so the search doesnt find this object
-				char tmp[64] = {0};
-				snprintf(tmp, 64, "%s", (char*)&app->pBuffer[4]);
-				Client* client = entity_list.GetClientByName(tmp);
-				if (!zone->GetAuth(ip, tmp, &WID, &account_id, &character_id, &admin, lskey, &tellsoff)) {
-					LogFile->write(EQEMuLog::Error, "GetAuth() returned false kicking client");
-					if (client != 0)
-					{
+				case OP_SendTributes:
+					break;
+				case OP_ZoneEntry: {
+					// Quagmire - Antighost code
+					// tmp var is so the search doesnt find this object
+					char tmp[64] = {0};
+					snprintf(tmp, 64, "%s", (char*)&app->pBuffer[4]);
+					Client* client = entity_list.GetClientByName(tmp);
+					if (!zone->GetAuth(ip, tmp, &WID, &account_id, &character_id, &admin, lskey, &tellsoff)) {
+						LogFile->write(EQEMuLog::Error, "GetAuth() returned false kicking client");
+						if (client != 0)
+						{
+							client->Save();
+							client->Kick();
+						}
+						ret = false; // TODO: Can we tell the client to get lost in a good way
+						break;
+					}
+					
+					strcpy(name, tmp);
+					if (client != 0) {
+						struct in_addr ghost_addr;
+						ghost_addr.s_addr = eqnc->GetrIP();
+						
+						LogFile->write(EQEMuLog::Error,"Ghosting client: Account ID:%i Name:%s Character:%s IP:%s",
+											client->AccountID(), client->AccountName(), client->GetName(), inet_ntoa(ghost_addr));
 						client->Save();
-						client->Kick();
+						client->Disconnect();
 					}
-					ret = false; // TODO: Can we tell the client to get lost in a good way
+					
+					char* query = 0;
+					uint32_breakdown workpt;
+					workpt.b4() = DBA_b4_Entity;
+					workpt.w2_3() = GetID();
+					workpt.b1() = DBA_b1_Entity_Client_InfoForLogin;
+					DBAsyncWork* dbaw = new DBAsyncWork(MTdbafq, workpt, DBAsync::Read);
+					dbaw->AddQuery(1, &query, MakeAnyLenString(&query, "SELECT status,name,lsaccount_id,gmspeed,revoked FROM account WHERE id=%i", account_id));
+					dbaw->AddQuery(2, &query, MakeAnyLenString(&query, "SELECT id,profile,zonename,x,y,z,alt_adv,guild,guildrank FROM character_ WHERE id=%i", character_id));
+					dbaw->AddQuery(3, &query, MakeAnyLenString(&query, "SELECT faction_id,current_value FROM faction_values WHERE char_id = %i", character_id));
+					if (!(pDBAsyncWorkID = dbasync->AddWork(&dbaw))) {
+						safe_delete(dbaw);
+						LogFile->write(EQEMuLog::Error,"dbasync->AddWork() returned false, client crash");
+						ret = false;
+						break;
+					}
 					break;
 				}
-				
-				strcpy(name, tmp);
-				if (client != 0) {
-					struct in_addr ghost_addr;
-					ghost_addr.s_addr = eqnc->GetrIP();
-					
-					LogFile->write(EQEMuLog::Error,"Ghosting client: Account ID:%i Name:%s Character:%s IP:%s",
-										client->AccountID(), client->AccountName(), client->GetName(), inet_ntoa(ghost_addr));
-					client->Save();
-					client->Disconnect();
-				}
-				
-				char* query = 0;
-				uint32_breakdown workpt;
-				workpt.b4() = DBA_b4_Entity;
-				workpt.w2_3() = GetID();
-				workpt.b1() = DBA_b1_Entity_Client_InfoForLogin;
-				DBAsyncWork* dbaw = new DBAsyncWork(MTdbafq, workpt, DBAsync::Read);
-				dbaw->AddQuery(1, &query, MakeAnyLenString(&query, "SELECT status,name,lsaccount_id,gmspeed,revoked FROM account WHERE id=%i", account_id));
-				dbaw->AddQuery(2, &query, MakeAnyLenString(&query, "SELECT id,profile,zonename,x,y,z,alt_adv,guild,guildrank FROM character_ WHERE id=%i", character_id));
-				dbaw->AddQuery(3, &query, MakeAnyLenString(&query, "SELECT faction_id,current_value FROM faction_values WHERE char_id = %i", character_id));
-				if (!(pDBAsyncWorkID = dbasync->AddWork(&dbaw))) {
-					safe_delete(dbaw);
-					LogFile->write(EQEMuLog::Error,"dbasync->AddWork() returned false, client crash");
-					ret = false;
+				case OP_SetServerFilter: {
+					SetServerFilter_Struct* filter=(SetServerFilter_Struct*)app->pBuffer;
+					ServerFilter(filter);
 					break;
 				}
-				break;
-			}
-			else if (app->opcode == OP_SetServerFilter) {
-				SetServerFilter_Struct* filter=(SetServerFilter_Struct*)app->pBuffer;
-				ServerFilter(filter);
-			}
-			else if (app->opcode == OP_SendAATable) {
-				SendAAList();
-			}
-			else if (app->opcode == OP_ReqClientSpawn) {
-				
-				//////////////////////////////////////////////////////
-				// Spawn Appearance Packet
-				APPLAYER* outapp = new APPLAYER(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
-				SpawnAppearance_Struct* sa = (SpawnAppearance_Struct*)outapp->pBuffer;
-				sa->type = AT_SpawnID;			// Is 0x10 used to set the player id?
-				sa->parameter = GetID();	// Four bytes for this parameter...
-				outapp->priority = 6;
-				QueuePacket(outapp);
-				safe_delete(outapp);
-				
-				// Inform the world about the client
-				outapp = new APPLAYER();
-				
-				CreateSpawnPacket(outapp);
-				outapp->priority = 6;
-				entity_list.QueueClients(this, outapp, true);
-				safe_delete(outapp);
-				
-				//Send Tribute info
-				SendTribute();
-
-				outapp = new APPLAYER;
-				
-				// Send Zone Doors
-				if (entity_list.MakeDoorSpawnPacket(outapp)) {
-					//outapp->Deflate();
-					QueuePacket(outapp);
+				case OP_SendAATable: {
+					SendAAList();
+					break;
 				}
-				safe_delete(outapp);
-				
-				// Send Zone Objects
-				entity_list.SendZoneObjects(this);
-				
-				// Send Zone Points
-				if (zone->numzonepoints > 0) {
-					int32 zpsize = sizeof(ZonePoints) + ((zone->numzonepoints+1) * sizeof(ZonePoint_Entry));
-					APPLAYER* outapp = new APPLAYER(OP_SendZonepoints,zpsize);
-					ZonePoints* zp = (ZonePoints*)outapp->pBuffer;
-					memset(zp, 0, zpsize);
-					LinkedListIterator<ZonePoint*> iterator(zone->zone_point_list);
-					iterator.Reset();
-					zp->count = zone->numzonepoints;
-					int32 count = 0;
-					
-					while(iterator.MoreElements())
-					{
-						ZonePoint* data = iterator.GetData();
-						zp->zpe[count].iterator = data->number;
-						zp->zpe[count].x = data->target_y;
-						zp->zpe[count].y = data->target_x; //Backwards to convert to eqlives standard..
-						zp->zpe[count].z = data->target_z;
-						zp->zpe[count].heading=data->target_heading;
-						zp->zpe[count].zoneid = database.GetZoneID((const char*)data->target_zone);
-						iterator.Advance();
-						count++;
-					}
-					//outapp->Deflate();
+				case 0x037f:{
+					APPLAYER* outapp = new APPLAYER(0x0380, sizeof(int32));
 					QueuePacket(outapp);
 					safe_delete(outapp);
+					break;
 				}
-				
-				// Tell client they can continue we're done
-				outapp = new APPLAYER(OP_SendExpZonein, 0);
-				QueuePacket(outapp);
-				safe_delete(outapp);
+				case OP_ReqClientSpawn: {
+					
+					//Send Tribute info
+					//SendTribute();
 
-				if(strncasecmp(zone->GetShortName(),"bazaar",6)==0)
-					SendBazaarWelcome();
-			}
-			else if (app->opcode == OP_SendExpZonein) {
-				APPLAYER* outapp;
-				
-				// Send alt advance exp
-				SendAAStats();
-				
-				if(GetLevel() >= 51)
-					SendAATimers();
-					//database.GetAATimers(this->CharacterID());
-				
-				if(GuildDBID()!=0 && GuildDBID()!=0xFFFFFFFF)
-					SendGuildMembers(GuildDBID());
-				// Send exp packets
-				outapp = new APPLAYER(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
-				ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
-				int32 tmpxp1 = GetEXPForLevel(GetLevel()+1);
-				int32 tmpxp2 = GetEXPForLevel(GetLevel());
-				// Quag: crash bug fix... Divide by zero when tmpxp1 and 2 equalled each other, most likely the error case from GetEXPForLevel() (invalid class, etc)
-				if (tmpxp1 != tmpxp2 && tmpxp1 != 0xFFFFFFFF && tmpxp2 != 0xFFFFFFFF) {
-					double tmpxp = (double) ( (double) m_pp.exp-tmpxp2 ) / ( (double) tmpxp1-tmpxp2 );
-					eu->exp = (uint32)(330.0f * tmpxp);
+					APPLAYER* outapp = new APPLAYER;
+					
+					// Send Zone Doors
+					if (entity_list.MakeDoorSpawnPacket(outapp)) {
+						//outapp->Deflate();
+						QueuePacket(outapp);
+					}
+					safe_delete(outapp);
+					
+					// Send Zone Objects
+					entity_list.SendZoneObjects(this);
+					
+					// Send Zone Points
+					if (zone->numzonepoints > 0) {
+						int32 zpsize = sizeof(ZonePoints) + ((zone->numzonepoints+1) * sizeof(ZonePoint_Entry));
+						APPLAYER* outapp = new APPLAYER(OP_SendZonepoints,zpsize);
+						ZonePoints* zp = (ZonePoints*)outapp->pBuffer;
+						memset(zp, 0, zpsize);
+						LinkedListIterator<ZonePoint*> iterator(zone->zone_point_list);
+						iterator.Reset();
+						zp->count = zone->numzonepoints;
+						int32 count = 0;
+						
+						while(iterator.MoreElements())
+						{
+							ZonePoint* data = iterator.GetData();
+							zp->zpe[count].iterator = data->number;
+							zp->zpe[count].x = data->target_y;
+							zp->zpe[count].y = data->target_x; //Backwards to convert to eqlives standard..
+							zp->zpe[count].z = data->target_z;
+							zp->zpe[count].heading=data->target_heading;
+							zp->zpe[count].zoneid = database.GetZoneID((const char*)data->target_zone);
+							iterator.Advance();
+							count++;
+						}
+						//outapp->Deflate();
+						QueuePacket(outapp);
+						safe_delete(outapp);
+					}
+					
+					// Tell client they can continue we're done
+					outapp = new APPLAYER(OP_SendExpZonein, 0);
+					QueuePacket(outapp);
+					safe_delete(outapp);
+
+					if(strncasecmp(zone->GetShortName(),"bazaar",6)==0)
+						SendBazaarWelcome();
+					break;
+				}
+				case OP_SendExpZonein: {
+					//////////////////////////////////////////////////////
+					// Spawn Appearance Packet
+					APPLAYER* outapp = new APPLAYER(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+					SpawnAppearance_Struct* sa = (SpawnAppearance_Struct*)outapp->pBuffer;
+					sa->type = AT_SpawnID;			// Is 0x10 used to set the player id?
+					sa->parameter = GetID();	// Four bytes for this parameter...
 					outapp->priority = 6;
+					QueuePacket(outapp);
+					safe_delete(outapp);
+					
+					// Inform the world about the client
+					outapp = new APPLAYER();
+					
+					CreateSpawnPacket(outapp);
+					outapp->priority = 6;
+					entity_list.QueueClients(this, outapp, true);
+					safe_delete(outapp);
+					
+					// Send alt advance exp
+					SendAAStats();
+					
+					if(GuildDBID()!=0 && GuildDBID()!=0xFFFFFFFF)
+						SendGuildMembers(GuildDBID());
+					// Send exp packets
+					outapp = new APPLAYER(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
+					ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
+					int32 tmpxp1 = GetEXPForLevel(GetLevel()+1);
+					int32 tmpxp2 = GetEXPForLevel(GetLevel());
+
+					// Quag: crash bug fix... Divide by zero when tmpxp1 and 2 equalled each other, most likely the error case from GetEXPForLevel() (invalid class, etc)
+					if (tmpxp1 != tmpxp2 && tmpxp1 != 0xFFFFFFFF && tmpxp2 != 0xFFFFFFFF) {
+						double tmpxp = (double) ( (double) m_pp.exp-tmpxp2 ) / ( (double) tmpxp1-tmpxp2 );
+						eu->exp = (uint32)(330.0f * tmpxp);
+						outapp->priority = 6;
+						QueuePacket(outapp);
+					}
+					safe_delete(outapp);
+
+					if(GetLevel() >= 51)
+						SendAATimers();
+
+					outapp = new APPLAYER(OP_SendExpZonein, 0);
+					QueuePacket(outapp);
+					safe_delete(outapp);
+
+					outapp = new APPLAYER(OP_RaidInvite, sizeof(ZoneInSendName_Struct));
+					ZoneInSendName_Struct* zonesendname=(ZoneInSendName_Struct*)outapp->pBuffer;
+					strcpy(zonesendname->name,m_pp.name);
+					strcpy(zonesendname->name2,m_pp.name);
+					zonesendname->unknown0=0x0A;
 					outapp->Deflate();
 
 					QueuePacket(outapp);
+					safe_delete(outapp);
+					outapp = new APPLAYER(OP_ZoneInSendName2, sizeof(ZoneInSendName_Struct2));
+					ZoneInSendName_Struct2* zonesendname2=(ZoneInSendName_Struct2*)outapp->pBuffer;
+					strcpy(zonesendname2->name,m_pp.name);
+					outapp->Deflate();
+					QueuePacket(outapp);
+					safe_delete(outapp);
+					break;
 				}
-				safe_delete(outapp);
-
-				outapp = new APPLAYER(OP_SendExpZonein, 0);
-					outapp->priority = 6;
-				outapp->Deflate();
-				QueuePacket(outapp);
-				safe_delete(outapp);
-
-				// solar: just a null byte, dunno what this op is but it does go here
-				/*outapp = new APPLAYER(0x010e, 1);
-					outapp->priority = 6;
-				outapp->Deflate();
-
-				QueuePacket(outapp);
-				safe_delete(outapp);*/
-			}
-			else if(app->opcode==OP_ZoneComplete)
-			{
-				APPLAYER* outapp = new APPLAYER(0x0347, 0);
-				QueuePacket(outapp);
-				safe_delete(outapp);
-				CompleteConnect();
-				break;
-			}
-			else if (app->opcode == OP_ReqNewZone) {
-				APPLAYER* outapp;
-				
-				/////////////////////////////////////
-				// New Zone Packet
-				outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
-				NewZone_Struct* nz = (NewZone_Struct*)outapp->pBuffer;
-				memcpy(outapp->pBuffer, &zone->newzone_data, sizeof(NewZone_Struct));
-				strcpy(nz->char_name, m_pp.name);
-				//outapp->Deflate();
-				QueuePacket(outapp);
-				safe_delete(outapp);
-			}
-			else if (app->opcode == OP_WearChange) {
-				break;
-			}
-			else if (app->opcode == OP_SpawnAppearance) {
-				// Not sure if we should handle this
-			}
-			else if (app->opcode == OP_ClientError) {
-				// Client reporting error to server
-				ClientError_Struct* error = (ClientError_Struct*)app->pBuffer;
-				LogFile->write(EQEMuLog::Error, "Client error: %s", error->character_name);
-				LogFile->write(EQEMuLog::Error, "Error message: %s", error->message);
-				Message(13, error->message);
+				case OP_ZoneComplete: {
+					APPLAYER* outapp = new APPLAYER(0x0347, 0);
+					QueuePacket(outapp);
+					safe_delete(outapp);
+					CompleteConnect();
+					break;
+				}
+				case OP_ReqNewZone: {
+					APPLAYER* outapp;
+					
+					/////////////////////////////////////
+					// New Zone Packet
+					outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
+					NewZone_Struct* nz = (NewZone_Struct*)outapp->pBuffer;
+					memcpy(outapp->pBuffer, &zone->newzone_data, sizeof(NewZone_Struct));
+					strcpy(nz->char_name, m_pp.name);
+					//outapp->Deflate();
+					QueuePacket(outapp);
+					safe_delete(outapp);
+					break;
+				}
+				case OP_SpawnAppearance:
+					break;
+				case OP_WearChange: {
+					if(app->size==9 && app->pBuffer[8]==6)
+						SendHPUpdate();
+					break;
+				}
+				case OP_ClientError: {
+					// Client reporting error to server
+					ClientError_Struct* error = (ClientError_Struct*)app->pBuffer;
+					LogFile->write(EQEMuLog::Error, "Client error: %s", error->character_name);
+					LogFile->write(EQEMuLog::Error, "Error message: %s", error->message);
+					Message(13, error->message);
 #if (EQDEBUG>=5)
 				    DumpPacket(app);
 #endif
-			}
-			else if(app->opcode == OP_ApproveZone){
-				ApproveZone_Struct* azone =(ApproveZone_Struct*)app->pBuffer;
-				azone->approve=1;
-				QueuePacket(app);
-			}
-			else if(app->opcode == OP_TGB) {
-				OPTGB(app);
-			}
-			else {
+					break;
+				}
+				case OP_ApproveZone: {
+					ApproveZone_Struct* azone =(ApproveZone_Struct*)app->pBuffer;
+					azone->approve=1;
+					QueuePacket(app);
+					break;
+				}
+				case OP_TGB: {
+					OPTGB(app);
+					break;
+				}
+				default:{
 				LogFile->write(EQEMuLog::Error, "HandlePacket() Opcode error: Unexpected packet during CLIENT_CONNECTING: opcode: 0x%04x, size: %i", app->opcode, app->size);
 #if EQDEBUG >= 9
 					cout << "Unexpected packet during CLIENT_CONNECTING: OpCode: 0x" << hex << setw(4) << setfill('0') << app->opcode << dec << ", size: " << app->size << endl;
 					DumpPacket(app);
 #endif
+				}
 			}
 			break;
 		}
@@ -5218,8 +5232,13 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	
-	
-	
+	uchar blah[]={0x00,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF};
+	outapp = new APPLAYER(0x02f2,sizeof(blah));
+	memcpy(outapp->pBuffer,blah,sizeof(blah));
+	QueuePacket(outapp);
+	safe_delete(outapp);
 	
 	////////////////////////////////////////////////////////////
 	// Character Inventory Packet
@@ -5229,12 +5248,12 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	
 	//////////////////////////////////////
 	// Weather Packet
-	outapp = new APPLAYER(OP_Weather, 8);
+	outapp = new APPLAYER(OP_Weather, 12);
 	if (zone->zone_weather == 1)
-		outapp->pBuffer[6] = 0x31; // Rain
+		outapp->pBuffer[4] = 0x31; // Rain
 	if (zone->zone_weather == 2)
 	{
-		outapp->pBuffer[0] = 0x01;
+		outapp->pBuffer[8] = 0x01;
 		outapp->pBuffer[4] = 0x02;
 	}
 	outapp->priority = 6;
@@ -5248,47 +5267,6 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 void Client::CompleteConnect()
 {
 
-	APPLAYER* outapp;
-
-	outapp = new APPLAYER(OP_ZoneInSendName, sizeof(ZoneInSendName_Struct));
-	ZoneInSendName_Struct* zonesendname=(ZoneInSendName_Struct*)outapp->pBuffer;
-	strcpy(zonesendname->name,m_pp.name);
-	strcpy(zonesendname->name2,m_pp.name);
-	zonesendname->unknown0=0x0A;
-	//outapp->Deflate();
-	outapp->priority = 6;
-	outapp->Deflate();
-
-	QueuePacket(outapp);
-	safe_delete(outapp);
-	outapp = new APPLAYER(OP_ZoneInSendName2, sizeof(ZoneInSendName_Struct2));
-	ZoneInSendName_Struct2* zonesendname2=(ZoneInSendName_Struct2*)outapp->pBuffer;
-	strcpy(zonesendname2->name,m_pp.name);
-	//outapp->Deflate();
-	outapp->priority = 6;
-	outapp->Deflate();
-
-	QueuePacket(outapp);
-	safe_delete(outapp);
-	///////////////////////////////////////////////////////
-	// Stamina packet
-	/*outapp = new APPLAYER(OP_Stamina, sizeof(Stamina_Struct));
-	Stamina_Struct* sta = (Stamina_Struct*)outapp->pBuffer;
-	sta->food = m_pp.hunger_level;
-	sta->water = m_pp.thirst_level;
-	outapp->priority = 6;
-	outapp->Deflate();
-	
-	QueuePacket(outapp);
-	safe_delete(outapp);*/
-	//SendAATable();
-	
-	/*for (int i=0; i<BUFF_COUNT; i++) {
-		if (buffs[i].spellid != 0xFFFF) {
-			SpellEffect(NULL, buffs[i].spellid, buffs[i].casterlevel,i,buffs[i].ticsremaining);
-		}
-	}*/
-	
 	hpregen_timer.Start();
 	position_timer.Start();
 	SetDuelTarget(0);
