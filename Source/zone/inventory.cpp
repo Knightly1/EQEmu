@@ -47,8 +47,8 @@ uint32 Client::NukeItem(uint32 itemnum) {
 	if (itemnum == 0)
 		return 0;
 	uint32 x = 0;
-	/*
-	for (i=0; i<=29; i++) { // Equipped and personal inventory
+	
+	for (int i=0; i<=29; i++) { // Equipped and personal inventory
 		if (GetItemIDAt(i) == itemnum || (itemnum == 0xFFFE && GetItemIDAt(i) != INVALID_ID)) {
 			DeleteItemInInventory(i, 0, true);
 			x++;
@@ -84,7 +84,7 @@ uint32 Client::NukeItem(uint32 itemnum) {
 			x++;
 		}
 	}
-	*/
+	
 	return x;
 }
 
@@ -235,27 +235,23 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 		safe_delete(outapp);
 */
 		if (inst && inst->GetCharges()) {
-			APPLAYER* outapp = new APPLAYER(OP_TraderDelItem, sizeof(TraderDelItem_Struct));
-			TraderDelItem_Struct* delitem	= (TraderDelItem_Struct*)outapp->pBuffer;
-			delitem->quantity = slot_id;
-			delitem->slotid			= slot_id;
-			delitem->unknown			= 0xFFFFFFFF;
-//I think there is something wrong here, it is crashing my client...
-
-			//if(inst->GetCharges()<=quantity && (inst->GetItem()->Common.SpellId>=0xFFFF ||inst->GetItem()->Common.SpellId<=0))
-			//	delitem->quantity=0xFFFFFFFF; //fully delete item
-			//else
-//			delitem->quantity	= quantity; // @merth: check that this packet is constructed correctly..
-			//delitem->quantity = 0xffffffff;
-			QueuePacket(outapp);
+			APPLAYER* outapp = new APPLAYER(OP_ConsumeAmmo, sizeof(MoveItem_Struct));
+			MoveItem_Struct* delitem	= (MoveItem_Struct*)outapp->pBuffer;
+			delitem->from_slot			= slot_id;
+			delitem->to_slot			= 0xFFFFFFFF;
+			delitem->number_in_stack	= 0xFFFFFFFF;
+			DumpPacket(outapp);
+			for(int loop=0;loop<quantity;loop++)
+				QueuePacket(outapp);
 			safe_delete(outapp);
 		}
 		else {
-			APPLAYER* outapp = new APPLAYER(OP_TraderDelItem, sizeof(TraderDelItem_Struct));
-			TraderDelItem_Struct* delitem	= (TraderDelItem_Struct*)outapp->pBuffer;
-			delitem->slotid			= slot_id;
-			delitem->unknown			= 0xFFFFFFFF;
-			delitem->quantity	= 0xFFFFFFFF;
+			APPLAYER* outapp = new APPLAYER(OP_MoveItem, sizeof(MoveItem_Struct));
+			MoveItem_Struct* delitem	= (MoveItem_Struct*)outapp->pBuffer;
+			delitem->from_slot			= slot_id;
+			delitem->to_slot			= 0xFFFFFFFF;
+			delitem->number_in_stack	= 0xFFFFFFFF;
+			DumpPacket(outapp);
 			QueuePacket(outapp);
 			safe_delete(outapp);
 		}
