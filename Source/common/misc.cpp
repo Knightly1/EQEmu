@@ -4,6 +4,7 @@
 #endif
 #include <string>
 #include <stdio.h>
+#include <stdlib.h>
 #include <map>
 #include <iostream>
 #include <zlib.h>
@@ -15,6 +16,27 @@ using namespace std;
 #define DEC(c)	(((c) - ' ') & 0x3f)
 
 map<int,string> DBFieldNames;
+
+#ifndef WIN32
+#include <execinfo.h>
+int print_stacktrace()
+{
+  void *ba[20];
+  int n = backtrace (ba, 20);
+  if (n != 0)
+    {
+      char **names = backtrace_symbols (ba, n);
+      if (names != NULL)
+        {
+          int i;
+          cerr <<  "called from " << (char*)names[0] << endl;
+          for (i = 1; i < n; ++i)
+            cerr << "            " << (char*)names[i] << endl;
+          free (names);
+        }
+    }
+}
+#endif
 
 void Unprotect(string &s, char what)
 {

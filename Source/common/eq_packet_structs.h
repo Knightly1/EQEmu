@@ -2287,11 +2287,27 @@ struct sItem_PickPocket_Struct {
 	uint32 unknowns[2];
 };
 
+
 struct LogServer_Struct {
-// Size 252
-// Size 252
 // Op_Code OP_LOGSERVER
-    uint8   unknown252[256];
+// Size 264
+/*000*/	uint32	unknown000;
+/*004*/	uint32	unknown004;
+/*008*/	uint32	unknown008;
+/*012*/	uint32	unknown012;	// 1 on live
+/*016*/	uint32	unknown016;	// 1 on live
+/*020*/	uint8	unknown020[12];
+/*032*/	char	worldshortname[32];
+/*064*/	uint8	unknown064[32];
+/*096*/	char	unknown096[16];	// 'pacman' on live
+/*112*/	char	unknown112[16];	// '64.37,148,36' on live
+/*126*/	uint8	unknown128[48];
+/*176*/	uint32	unknown176;	// 0x2695 on live
+/*180*/	char	unknown180[80];	// 'eqdataexceptions@mail.station.sony.com' on live
+/*260*/	uint8	unknown260;	// 0x01 on live
+/*261*/	uint8	unknown261;	// 0x01 on live
+/*262*/	uint8	unknown262[2];
+/*264*/
 };
 
 struct ApproveWorld_Struct {
