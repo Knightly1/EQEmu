@@ -195,7 +195,7 @@ Mob* EntityList::GetTrapTrigger(Trap* trap) {
 		if ((xdiff*xdiff + ydiff*ydiff) <= maxdist
 			&& zdiff < trap->maxzdiff)
 		{
-			if (MakeRandomInt(0,100) < zdiff < trap->chance)
+			if (MakeRandomInt(0,100) < trap->chance)
 				return(cur);
 			else
 				savemob = cur;
