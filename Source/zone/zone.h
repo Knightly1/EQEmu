@@ -120,8 +120,14 @@ public:
 	inline bool	IsStaticZone()			{ return staticzone; }
 	inline void	GotCurTime(bool time)	{ gottime = time; }
 
-	map<uint32,NPCType *> npctable;
+	void	GetMerchantDataForZoneLoad();
+	void	LoadNewMerchantData(uint32 merchantid);
+	void	LoadTempMerchantData();
+	int		SaveTempItem(int32 merchantid, int32 npcid, int32 item, int32 charges);
 
+	map<uint32,NPCType *> npctable;
+	map<uint32,std::list<MerchantList> > merchanttable;
+	map<uint32,std::list<TempMerchantList> > tmpmerchanttable;
 	Map*	map;
 	NewZone_Struct	newzone_data;
 //	uchar	zone_header_data[142];

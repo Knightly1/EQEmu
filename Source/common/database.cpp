@@ -5747,74 +5747,15 @@ bool Database::CreateSpawn2(int32 spawngroup, const char* zone, float heading, f
 	
 	return false;
 }
-int	Database::GetMerchantSlot(int32 merchantid, int32 item)
-{
+void Database::SaveMerchantTemp(int32 npcid, int32 slot, int32 item, int32 charges){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slot FROM merchantlist WHERE merchantid=%d and item=%d", merchantid, item), errbuf, &result)) {
-		safe_delete_array(query);
-		if (mysql_num_rows(result) >= 1) {
-			row = mysql_fetch_row(result);
-			int tmp = atoi(row[0]);
-			mysql_free_result(result);
-			return tmp;
-		}
-		mysql_free_result(result);
-	}
-	else {
-		cerr << "Error in GetMerchantSlot query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-	}
-	
-	return 0;
-}
-int32	Database::GetMerchantData(int32 merchantid, int32 slot)
-{
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT item FROM merchantlist WHERE merchantid=%d and slot=%d", merchantid, slot), errbuf, &result)) {
-		safe_delete_array(query);
-		if (mysql_num_rows(result) == 1) {
-			row = mysql_fetch_row(result);
-			int32 tmp = atoi(row[0]);
-			mysql_free_result(result);
-			return tmp;
-		}
-		mysql_free_result(result);
-	}
-	else {
-		cerr << "Error in GetMerchantData query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-	}
-	
-	return 0;
-}
-int32	Database::GetMerchantListNumb(int32 merchantid)
-{
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT item FROM merchantlist WHERE merchantid=%d", merchantid), errbuf, &result)) {
-		safe_delete_array(query);
-		int32 tmp = mysql_num_rows(result);
-		mysql_free_result(result);
-		return tmp;
-	}
-	else {
-		cerr << "Error in GetMerchantListNumb query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-	}
-	
-	return 0;
-}
 
+	if (!RunQuery(query, MakeAnyLenString(&query, "replace into merchantlist_temp (npcid,slot,itemid,charges) values(%d,%d,%d,%d)", npcid, slot, item, charges), errbuf)) {
+		cerr << "Error in SaveMerchantTemp query '" << query << "' " << errbuf << endl;
+	}
+	safe_delete_array(query);	
+}
 bool Database::UpdateName(const char* oldname, const char* newname) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;

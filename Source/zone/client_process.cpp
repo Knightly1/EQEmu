@@ -760,21 +760,21 @@ int Client::HandlePacket(const APPLAYER *app)
 						merchantid=tmp->CastToNPC()->MerchantType;
 						tmp->CastToNPC()->FaceTarget(this->CastToMob());
 					}
-
 					else
 						break;
-					  const Item_Struct *item = 0;
-					  for (int32 i=0;i<80; i++) {
-					    item=database.GetItem(database.GetMerchantData(merchantid,i+1));
+
+					const Item_Struct *item = 0;
+					std::list<MerchantList> merlist = zone->merchanttable[merchantid];
+					std::list<MerchantList>::const_iterator itr;
+					for(itr = merlist.begin();itr != merlist.end() && count<80;itr++){
+						MerchantList ml = *itr;
+						item = database.GetItem(ml.item);
 						if(item)
 						{
-						sprintf(msg,"%s^%s,%i,%i,%i,0,1,32767,32767",msg,item->Name,item->ItemNumber,item->Common.ldonpointcost,item->Common.ldonpointtheme);
-						//printf("%s\n",msg);
-						count++;
+							sprintf(msg,"%s^%s,%i,%i,%i,0,1,32767,32767",msg,item->Name,item->ItemNumber,item->Common.ldonpointcost,item->Common.ldonpointtheme);
+							count++;
 						}
-						if(!item)
-							i=80;
-					  }
+					}
 					//Count
 					//^Item Name,Item ID,Cost in Points,Theme (0=none),0,1,32767,32767
 					APPLAYER* outapp = new APPLAYER(OP_AdventureMerchantResponse,strlen(msg)+2);
@@ -799,23 +799,22 @@ int Client::HandlePacket(const APPLAYER *app)
 					int32 merchantid = 0;
 					Mob* tmp = entity_list.GetMob(aps->npcid);
 					if (tmp != 0)
-						merchantid=tmp->CastToNPC()->MerchantType;
+						merchantid = tmp->CastToNPC()->MerchantType;
 					else
 						break;
 
 					const Item_Struct* item = 0;
+					std::list<MerchantList> merlist = zone->merchanttable[merchantid];
+					std::list<MerchantList>::const_iterator itr;
 
-					  for (int32 i=0;i<80; i++) {
-					    item=database.GetItem(database.GetMerchantData(merchantid,i+1));
+					for(itr = merlist.begin();itr != merlist.end();itr++){
+						MerchantList ml = *itr;
+					    item = database.GetItem(ml.item);
 						if(item && item->ItemNumber == aps->itemid) //This check to make sure that the item is actually on the NPC, people attempt to inject packets to get items summoned...
-						{
-						i=80;
-						}
+							break;
 						else if(item && item->ItemNumber != aps->itemid)
-						item = 0;
-						else if(!item)
-						i=80;
-					  }
+							item = 0;
+					}
 					if (!item) {
 						Message(13, "Error: The item you purchased does not exist!");
 						break;
@@ -3058,36 +3057,20 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						merchantid=tmp->CastToNPC()->MerchantType;
 					else
 						break;
-					uint32 item_id = database.GetMerchantData(merchantid, mp->itemslot-83);
-					const Item_Struct* item = NULL;
-					if (item_id == 0) { // Inventory item?
-						char mki[3] = "";
-						if (database.GetVariable("MerchantsKeepItems", mki, 3) && mki[0] == '1'  && tmp->CastToNPC()->CountLoot() != 0 ) {
-							int i_slot=database.GetMerchantSlot(merchantid,item_id);
-							int i_quan = tmp->CastToNPC()->GetItem(i_slot)->charges;
-							int i_num = tmp->CastToNPC()->GetItem(i_slot)->item_id;
-#if EQDEBUG>=5
-								int vlc = tmp->CastToNPC()->CountLoot();
-								LogFile->write(EQEMuLog::Debug,"MerchantsKeepItems: vlc:%i i_slot:%i i_quan:%i i_num:%i",vlc, i_slot, i_quan, i_num);
-#endif							
-							item = database.GetItem( i_num );
-							if (i_quan < mp->quantity) {
-								mp->quantity = (1 * tmp->CastToNPC()->GetItem(i_slot)->charges);
-							}
-							tmp->CastToNPC()->RemoveItem(i_num, mp->quantity,i_slot);
-						} else {
-							// MerchantsKeepItems off, not setup, or Vendor has no non-db items
-							APPLAYER* outapp = new APPLAYER(OP_ShopPlayerBuy, sizeof(Merchant_Sell_Struct));
-							Merchant_Sell_Struct* mpo=(Merchant_Sell_Struct*)outapp->pBuffer;
-							mpo->quantity = mp->quantity;
-							mpo->npcid = mp->npcid;
-							mpo->itemslot=0;
-							mpo->price=0;
-							QueuePacket(outapp);
-							safe_delete(outapp);
-							Message(0, "%s tells you, Sorry I seem to have misplaced that item try back later.", tmp->GetName());
+					uint32 item_id = 0;
+					std::list<MerchantList> merlist = zone->merchanttable[merchantid];
+					std::list<MerchantList>::const_iterator itr;
+					int findslot = mp->itemslot - 84;
+					for(itr = merlist.begin();itr != merlist.end();itr++){
+						MerchantList ml = *itr;
+						if(findslot == ml.slot){
+							item_id = ml.item;
 							break;
 						}
+					}
+					const Item_Struct* item = NULL;
+					if (item_id == 0) { // Inventory item?
+						//blah
 					} else {
 						item = database.GetItem(item_id);
 					}
@@ -3176,7 +3159,6 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 				case OP_ShopPlayerSell: {
 					Merchant_Purchase_Struct* mp=(Merchant_Purchase_Struct*)app->pBuffer;
 					Mob* vendor = entity_list.GetMob(mp->npcid);
-					//Item_Struct* item2 = NULL;
 					int32 price=0;
 					int32 itemid = GetItemIDAt(mp->itemslot);
 					if(itemid == 0)
@@ -3237,59 +3219,24 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					{
 						mp->quantity = 1;
 					}
-					
-					char mki[3] = "";
-					if (database.GetVariable("MerchantsKeepItems", mki, 3)) {
-#if EQDEBUG >= 11
-							cout<<"MerchantKeepItems: OP_ShopPlayerSell mki="<<mki<<endl;
-#endif
-						if ( mki[0] == '1' ) {
-							Mob* vendor = entity_list.GetMob(mp->npcid);
-							if (!vendor)
-								break; // DT who ever just killed the merchant and the player and 12 random people
-							int vlc = vendor->CastToNPC()->CountLoot();
-							int vdbc = database.GetMerchantListNumb(vendor->CastToNPC()->MerchantType);
-							int32 cur_inr = 0;
-							bool have_item = false;
-							cur_inr = GetItemIDAt(mp->itemslot);
-							int cur_i; // Give WIN32 a nice big hug
-							// Step thru Merchants inventory/loot
-							for (cur_i = 0; cur_i < vlc; cur_i++) {
-								ServerLootItem_Struct *myitem =
-									vendor->CastToNPC()->GetItem(cur_i);
-								if (myitem == NULL)
-									continue;
-								if (myitem->item_id == cur_inr) {
-									// If we find the item in the loottable
-									have_item = true; // Trip have_item flag
-									myitem->charges += mp->quantity; // And increase the number merchant has available
-									break; // Exit for loop
-								}
-							}
-							
-							// Now step thru the Merchants db items only if we don't already any of the item in the loottable
-							if (!have_item) {
-								for (cur_i = 0; cur_i < vdbc; cur_i++) {
-									const Item_Struct* tmpItem = database.GetItem(database.GetMerchantData(vendor->CastToNPC()->MerchantType,cur_i+1));
-									if ( tmpItem->ItemNumber == cur_inr) {
-										have_item = true; // Found the item in the Merchantlist trip the flag
-										break;
-									}
-								}
-							}
-							
-							if (!have_item) {
-								// Add Item to Merchants inventory
-								vendor->CastToNPC()->AddItem( cur_inr, 1*mp->quantity, vlc);
-							}
-						}
-					} else {
-						// Update zones copy of player inventory
-						cout<<"Deleting item..   MerchantsKeepItems not configured"<<endl;
-						//this->DeleteItemInInventory(mp->itemslot);
+					int freeslot = 0;
+					int charges = 0;
+					if(inst->IsStackable())
+						charges = mp->quantity;
+					else
+						charges = inst->GetCharges();
+					if((freeslot = zone->SaveTempItem(vendor->CastToNPC()->MerchantType, vendor->GetID(),itemid,charges)) > 0){
+						ItemInst* inst2 = inst->Clone();
+						inst2->SetPrice(item->Cost*127/100);
+						inst2->SetUnknown5(freeslot+84);
+						if(inst2->IsStackable())
+							inst2->SetCharges(mp->quantity);
+						SendItemPacket(freeslot-1, inst2, ItemPacketMerchant);
+						safe_delete(inst2);
 					}
+
 					// Now remove the item from the player, this happens irrguardless of outcome
-					if (!GetInv().GetItem(mp->itemslot)->IsStackable())
+					if (!inst->IsStackable())
 						this->DeleteItemInInventory(mp->itemslot,0,false);
 					else
 						this->DeleteItemInInventory(mp->itemslot,mp->quantity,false);
@@ -3302,10 +3249,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					mco->price=price;
 					QueuePacket(outapp);
 					safe_delete(outapp);
-					//BulkSendMerchantInventory(vendor->CastToNPC()->MerchantType,vendor->GetID());
-					// Just send it back to accept the deal
-					Save();
-					
+					Save();	
 					break;
 				}
 				case OP_ShopEnd: {
@@ -6252,40 +6196,73 @@ void Client::RemoveData() {
 
 void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 	const Item_Struct* handyitem = NULL;
-	int32 numItems=database.GetMerchantListNumb(merchant_id);
-  int32 numItemSlots=80;  //The max number of items passed in the transaction.   // We don't have 81 slots we have 80 it's misleading (BigPull)
-//  int32 cpisize = sizeof(MerchantItem_Struct) + (numItemSlots * sizeof(MerchantItemD_Struct));
-//  MerchantItem_Struct* cpi = (MerchantItem_Struct*) new uchar[cpisize];
-//  memset(cpi, 0, cpisize);
-  const Item_Struct *item;
-  for ( int32 i=0;i<numItems && i < numItemSlots; i++) {
-	  int8 handychance=0;
-	if(numItems>1)
-			handychance = MakeRandomInt(0, numItems-1);
-    item=database.GetItem(database.GetMerchantData(merchant_id,i+1));
-    if (item) {
-		//if(!cpi->count)
-		if(handychance==0)
-			handyitem=item;
-		else
-			handychance--;
-		int charges=1;
-		if(item->ItemClass==ItemTypeCommon)
-			charges=item->Common.MaxCharges;
-		ItemInst* inst = ItemInst::Create(item,charges);
-		if (inst) {
-			inst->SetPrice(item->Cost*127/100);
-			inst->SetUnknown5(i+84);
-			if(charges > 0)
-				inst->SetCharges(charges);
+	int32 numItemSlots=80;  //The max number of items passed in the transaction.
+	const Item_Struct *item;
+	std::list<MerchantList> merlist = zone->merchanttable[merchant_id];
+	std::list<MerchantList>::const_iterator itr;
+	if(merlist.size()==0){ //Attempt to load the data, it might have been missed if someone spawned the merchant after the zone was loaded
+		zone->LoadNewMerchantData(merchant_id);
+		merlist = zone->merchanttable[merchant_id];
+		if(merlist.size()==0)
+			return;
+	}
+	std::list<TempMerchantList> tmp_merlist = zone->tmpmerchanttable[npcid];
+	std::list<TempMerchantList>::const_iterator tmp_itr;
+
+	int i=0;
+	int8 handychance = 0;
+	for(itr = merlist.begin();itr != merlist.end() && i<numItemSlots;itr++){
+		MerchantList ml = *itr;
+		handychance = MakeRandomInt(0, merlist.size() + tmp_merlist.size() - 1 );
+		
+		item=database.GetItem(ml.item);
+		if (item) {
+			if(handychance==0)
+				handyitem=item;
 			else
-				inst->SetCharges(1);
-			SendItemPacket(i, inst, ItemPacketMerchant);
-			safe_delete(inst);
+				handychance--;
+			int charges=1;
+			if(item->ItemClass==ItemTypeCommon)
+				charges=item->Common.MaxCharges;
+			ItemInst* inst = ItemInst::Create(item,charges);
+			if (inst) {
+				inst->SetPrice(item->Cost*127/100);
+				inst->SetUnknown5(ml.slot+84);
+				if(charges > 0)
+					inst->SetCharges(charges);
+				else
+					inst->SetCharges(1);
+				SendItemPacket(ml.slot-1, inst, ItemPacketMerchant);
+				safe_delete(inst);
+			}
 		}
-    }
-  }
-	
+		i++;
+	}
+	for(tmp_itr = tmp_merlist.begin();tmp_itr != tmp_merlist.end() && i<numItemSlots;tmp_itr++){
+		TempMerchantList ml = *tmp_itr;
+		item=database.GetItem(ml.item);
+		if (item) {
+			if(handychance==0)
+				handyitem=item;
+			else
+				handychance--;
+			int charges=1;
+			if(item->ItemClass==ItemTypeCommon)
+				charges=item->Common.MaxCharges;
+			ItemInst* inst = ItemInst::Create(item,charges);
+			if (inst) {
+				inst->SetPrice(item->Cost*127/100);
+				inst->SetUnknown5(ml.slot+84);
+				if(charges > 0)
+					inst->SetCharges(charges);
+				else
+					inst->SetCharges(1);
+				SendItemPacket(ml.slot-1, inst, ItemPacketMerchant);
+				safe_delete(inst);
+			}
+		}
+		i++;
+	}
 	Mob* merch = entity_list.GetMob(npcid);
 	
 	if(merch != NULL && handyitem){

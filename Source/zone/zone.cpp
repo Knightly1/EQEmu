@@ -68,6 +68,7 @@ extern WorldServer worldserver;
 extern Zone* zone;
 extern int32 numclients;
 extern NetConnection net;
+extern int16 adverrornum;
 extern PetitionList petition_list;
 extern EQNetworkServer eqns;
 Mutex MZoneShutdown;
@@ -272,8 +273,13 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 			LogFile->write(EQEMuLog::Debug, "GroupEXPBonus set to:%i", zone->GroupEXPBonus);
 			LogFile->write(EQEMuLog::Debug, "AAEXPMod set to:%i", zone->AAXPMod);
 #endif
-	LogFile->write(EQEMuLog::Normal, "Loading AAs...");
+	adverrornum = 500;
 	zone->LoadAAs();
+	adverrornum = 501;
+	zone->GetMerchantDataForZoneLoad();
+	adverrornum = 502;
+	zone->LoadTempMerchantData();
+	adverrornum = 503;
 	//g_LogFile.write("AI LEVEL set to %d\n",iAILevel);
 	petition_list.ClearPetitions();
 	petition_list.ReadDatabase();
@@ -294,7 +300,147 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 	LogFile->write(EQEMuLog::Debug, "Default weather for zone is:%i", zone->weather_type);
 	return true;
 }
-
+int Zone::SaveTempItem(int32 merchantid, int32 npcid, int32 item, int32 charges){
+	int freeslot = 0;
+	
+	std::list<MerchantList> merlist = merchanttable[merchantid];
+	std::list<MerchantList>::const_iterator itr;
+	int i=1;
+	for(itr = merlist.begin();itr != merlist.end();itr++){
+		MerchantList ml = *itr;
+		if(ml.item == item)
+			return 0;
+		if(i<ml.slot)
+			freeslot=i;
+		else
+			i++;
+	}
+	std::list<TempMerchantList> tmp_merlist = tmpmerchanttable[npcid];
+	std::list<TempMerchantList>::const_iterator tmp_itr;
+	bool update_charges = false;
+	TempMerchantList ml;
+	for(tmp_itr = tmp_merlist.begin();tmp_itr != tmp_merlist.end();tmp_itr++){
+		ml = *tmp_itr;
+		if(ml.item == item){
+			update_charges = true;
+			freeslot = 0;
+			break;
+		}
+		if(i<ml.slot)
+			freeslot=i;
+		else
+			i++;
+	}
+	if(!update_charges && i<80)
+		freeslot = i;
+	else if(update_charges){
+		tmp_merlist.clear();
+		std::list<TempMerchantList> oldtmp_merlist = tmpmerchanttable[npcid];
+		for(tmp_itr = oldtmp_merlist.begin();tmp_itr != oldtmp_merlist.end();tmp_itr++){
+			TempMerchantList ml2 = *tmp_itr;
+			if(ml2.item != item)
+				tmp_merlist.push_back(ml2);
+		}
+		ml.charges = ml.charges + charges;
+		tmp_merlist.push_back(ml);
+		tmpmerchanttable[npcid] = tmp_merlist;
+		database.SaveMerchantTemp(npcid, ml.slot, item, ml.charges);
+	}
+	if(freeslot){
+		database.SaveMerchantTemp(npcid, freeslot, item, charges);
+		tmp_merlist = tmpmerchanttable[npcid];
+		TempMerchantList ml2;
+		ml2.charges = charges;
+		ml2.item = item;
+		ml2.npcid = npcid;
+		ml2.slot = freeslot;
+		tmp_merlist.push_back(ml2);
+		tmpmerchanttable[npcid] = tmp_merlist;
+	}
+	return freeslot;
+}
+void Zone::LoadTempMerchantData(){
+	LogFile->write(EQEMuLog::Status, "Loading Temporary Merchant Lists...");
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	std::list<TempMerchantList> merlist;
+	if (database.RunQuery(query, MakeAnyLenString(&query, "select ml.npcid,ml.slot,ml.itemid,ml.charges from merchantlist_temp ml, npc_types nt, spawnentry se, spawn2 s2 where nt.id=ml.npcid and nt.id=se.npcid and se.spawngroupid=s2.spawngroupid and s2.zone='%s' group by ml.npcid,slot order by npcid,slot asc", GetShortName()), errbuf, &result)) {
+		int32 npcid = 0;
+		while((row = mysql_fetch_row(result))) {
+			if(npcid != atoul(row[0])){		
+				if(npcid > 0)
+					tmpmerchanttable[npcid] = merlist;
+				npcid = atoul(row[0]);
+				merlist.clear();
+			}
+			TempMerchantList ml;
+			ml.npcid = npcid;
+			ml.slot = atoul(row[1]);
+			ml.item = atoul(row[2]);
+			ml.charges = atoul(row[3]);
+			merlist.push_back(ml);
+		}
+		if(npcid > 0)
+			tmpmerchanttable[npcid] = merlist;
+		mysql_free_result(result);
+	}
+	else
+		cerr << "Error in LoadTempMerchantData query '" << query << "' " << errbuf << endl;
+	safe_delete_array(query);
+}
+void Zone::LoadNewMerchantData(uint32 merchantid){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	std::list<MerchantList> merlist;
+	if (database.RunQuery(query, MakeAnyLenString(&query, "SELECT item, slot FROM merchantlist WHERE merchantid=%d", merchantid), errbuf, &result)) {
+		while((row = mysql_fetch_row(result))) {
+			MerchantList ml;
+			ml.id = merchantid;
+			ml.item = atoul(row[0]);
+			ml.slot = atoul(row[1]);
+			merlist.push_back(ml);
+		}
+		merchanttable[merchantid] = merlist;
+		mysql_free_result(result);
+	}
+	else
+		cerr << "Error in LoadNewMerchantData query '" << query << "' " << errbuf << endl;
+	safe_delete_array(query);
+}
+void Zone::GetMerchantDataForZoneLoad(){
+	LogFile->write(EQEMuLog::Status, "Loading Merchant Lists...");
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	std::list<MerchantList> merlist;
+	if (database.RunQuery(query, MakeAnyLenString(&query, "select ml.merchantid,ml.slot,ml.item from merchantlist ml, npc_types nt, spawnentry se, spawn2 s2 where nt.merchant_id=ml.merchantid and nt.id=se.npcid and se.spawngroupid=s2.spawngroupid and s2.zone='%s' group by ml.merchantid,slot order by merchantid,slot asc", GetShortName()), errbuf, &result)) {
+		int32 npcid = 0;
+		while((row = mysql_fetch_row(result))) {
+			if(npcid != atoul(row[0])){		
+				if(npcid > 0)
+					merchanttable[npcid] = merlist;
+				npcid = atoul(row[0]);
+				merlist.clear();
+			}
+			MerchantList ml;
+			ml.id = npcid;
+			ml.slot = atoul(row[1]);
+			ml.item = atoul(row[2]);
+			merlist.push_back(ml);
+		}
+		if(npcid > 0)
+			merchanttable[npcid] = merlist;
+		mysql_free_result(result);
+	}
+	else
+		cerr << "Error in GetMerchantDataForZoneLoad query '" << query << "' " << errbuf << endl;
+	safe_delete_array(query);
+}
 void Zone::Shutdown(bool quite) {
 std::map<uint32,NPCType *>::iterator itr;
 	if (!ZoneLoaded)
@@ -494,16 +640,6 @@ bool Zone::LoadZoneCFG(const char* filename, bool DontLoadDefault) {
 		return true;
 	}
 	cout << "Error while loading Zone Config!\n";
-	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
-	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
-	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
-	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
-	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
-	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
-	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
-	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
-	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
-	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
 	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
 	return false;
 }

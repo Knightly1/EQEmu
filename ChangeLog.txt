@@ -3,6 +3,8 @@ EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 ==10/30/2004
 LethalEncounter: Fixed a few issues with item charges.
 LethalEncounter: Fixed illusions.
+LethalEncounter: Rewrote the merchant code.  Its now much more efficient and instead of 81 database queries per shop request, a typical request doesnt pull anything from the db.  It loads the information at load time.
+LethalEncounter: Added in the beginning parts of temporary merchant items. (you can sell items to merchants and purchase them back) Download the merchantlist_temp table from: http://www.eqemulator.net/sql/merchantlist_temp.sql
 
 ==10/27/2004
 Cofruben: Added LDoN adventure system.Please,source the new sql file(thanks to skorch for testing).

@@ -176,7 +176,7 @@ public:
 	char	commands[200][200];
 	sint16	commandslevels[200];
 	int		maxcommandlevel;
-	int GetMerchantSlot(int32 merchantid, int32 item);
+
 #ifdef GUILDWARS
 	int32	InsertGuildEventLog(int8 type,char* logone,char* logtwo);
 	bool	SetupPointsTable(int32 specifiedid,int8 type,const char* name);
@@ -332,8 +332,7 @@ public:
 	bool	SetGuildLeader(int32 guilddbid, int32 leader);
 	bool	SetGuildMOTD(int32 guilddbid, const char* motd);
 	char*	GetGuildMOTD(int32 guilddbid);
-	int32	GetMerchantData(int32 merchantid, int32 slot);
-	int32	GetMerchantListNumb(int32 merchantid);
+	void	SaveMerchantTemp(int32 npcid, int32 slot, int32 item, int32 charges);
 	bool	GetSafePoints(const char* short_name, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, sint16* minstatus = 0, int8* minlevel = 0);
 	bool	GetSafePoints(int32 zoneID, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, sint16* minstatus = 0, int8* minlevel = 0) { return GetSafePoints(GetZoneName(zoneID), safe_x, safe_y, safe_z, minstatus, minlevel); }
 	

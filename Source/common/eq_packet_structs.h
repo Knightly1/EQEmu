@@ -4300,8 +4300,17 @@ struct LevelAppearance_Struct { //Sends a little graphic on level up
 	int32	value5a;
 	int32	value5b;
 };
-
-
+struct MerchantList{
+	uint32	id;
+	uint32	slot;
+	uint32	item;
+};
+struct TempMerchantList{
+	uint32	npcid;
+	uint32	slot;
+	uint32	item;
+	uint32	charges; //charges/quantity
+};
 // Restore structure packing to default
 #pragma pack()
 
