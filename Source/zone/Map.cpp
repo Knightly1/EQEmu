@@ -408,6 +408,8 @@ bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *resu
 	unsigned long *cfl = mFaceLists + _node->faces.offset;
 	
 	for(i = 0; i < _node->faces.count; i++) {
+		if(*cfl > m_Faces)
+			continue;	//watch for invalid lists, they seem to happen
 		cur = &mFinalFaces[ *cfl ];
 		if(LineIntersectsFace(cur,p1, p2, result)) {
 			if(on != NULL)
