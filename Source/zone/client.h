@@ -687,6 +687,7 @@ private:
 	Timer	disc_elapse;
 	Timer	stamina_timer;
 //	Timer	LDTimer;
+	Timer	zoneinpacket_timer;
 	Timer	linkdead_timer;
 	Timer	dead_timer;
 	Timer	ooc_timer;

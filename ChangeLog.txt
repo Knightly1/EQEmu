@@ -2,6 +2,9 @@ EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 ==10/31/2004
 LethalEncounter: Aside from a few tweeks, merchants are finished.  They will now keep your items after you sell them like live.
+LethalEncounter: Fixed bug that caused falling damage to be calculated twice.
+LethalEncounter: Changed Sense Heading to start at 200 for new characters.
+LethalEncounter: Black screen bug should be fixed now.
 
 ==10/30/2004
 LethalEncounter: Fixed a few issues with item charges.

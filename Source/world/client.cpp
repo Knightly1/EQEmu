@@ -1005,7 +1005,7 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 	SetRacialLanguages( &pp ); // bUsh
 	SetRaceStartingSkills( &pp ); // bUsh
 	SetClassStartingSkills( &pp ); // bUsh
-	
+	pp.skills[SENSE_HEADING + 1] = 200;
 	pp.unknown3596[28] = 15; // @bp: This is to enable disc usage
 	strcpy(pp.servername, "eqemu");
 			

@@ -332,7 +332,6 @@ int Client::HandlePacket(const APPLAYER *app)
 					APPLAYER* outapp = new APPLAYER(0x0347, 0);
 					QueuePacket(outapp);
 					safe_delete(outapp);
-					CompleteConnect();
 					break;
 				}
 				case OP_ReqNewZone: {
@@ -351,8 +350,10 @@ int Client::HandlePacket(const APPLAYER *app)
 				case OP_SpawnAppearance:
 					break;
 				case OP_WearChange: {
-					if(app->size==9 && app->pBuffer[8]==6)
+					if(app->size==9 && app->pBuffer[8]==6){
+						CompleteConnect();
 						SendHPUpdate();
+					}
 					break;
 				}
 				case OP_ClientError: {
@@ -4298,7 +4299,9 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 				}
 				case OP_Damage: {
 					// Broadcast to other clients
-					entity_list.QueueClients(this, app, false);
+					CombatDamage_Struct* damage = (CombatDamage_Struct*)app->pBuffer;
+					//dont send to originator of falling damage packets
+					entity_list.QueueClients(this, app, (damage->type==0xFC));
 					break;
 				}
 				case OP_AAAction: {
@@ -5519,6 +5522,7 @@ void Client::CompleteConnect()
 	client_data_loaded = true;
 	for(int x=0;x<8;x++)
 		SendWearChange(x);
+	zoneinpacket_timer.Start();
 }
 
 
@@ -5529,8 +5533,10 @@ bool Client::Process() {
 	if (Connected() || IsLD())
 	{
         // try to send all packets that weren't send before
-		if(!IsLD())
+		if(!IsLD() && zoneinpacket_timer.Check()){
+			zoneinpacket_timer.Disable();
 			SendAllPackets();
+		}
 		if(dead)
 			SetHP(-100);
 		if(dead && this->client_state == CLIENT_LINKDEAD) {

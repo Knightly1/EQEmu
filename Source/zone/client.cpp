@@ -150,7 +150,8 @@ Client::Client(EQNetworkConnection* ieqnc)
 	dead_timer(2000),
 	ooc_timer(1000),
 	shield_timer(500),
-	fishing_timer(8000)
+	fishing_timer(8000),
+	zoneinpacket_timer(3000)
 {
 	for(int cf=0;cf<21;cf++)
 		ClientFilters[cf]=0;
