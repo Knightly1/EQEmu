@@ -42,19 +42,6 @@ Core Zone features
 //when there are no players in it, mobs stop wandering, etc..
 #define IDLE_WHEN_EMPTY
 
-//Uncomment this line to enable named quest files:
-#define QUEST_SCRIPTS_BYNAME
-
-#ifdef QUEST_SCRIPTS_BYNAME
-//extends byname system to look in a templates directory
-//independant of zone name
-#define QUEST_TEMPLATES_BYNAME
-#define QUEST_TEMPLATES_DIRECTORY "templates"
-#endif
-
-//Uncomment to enable map based fear pathing
-//#define ENABLE_FEAR_PATHING 1
-
 /*
 
 Map Configuration
@@ -91,6 +78,19 @@ Zone extensions and features
 
 //Uncomment to make group buffs affect group pets
 #define GROUP_BUFF_PETS
+
+//Uncomment this line to enable named quest files:
+#define QUEST_SCRIPTS_BYNAME
+
+#ifdef QUEST_SCRIPTS_BYNAME
+//extends byname system to look in a templates directory
+//independant of zone name
+#define QUEST_TEMPLATES_BYNAME
+#define QUEST_TEMPLATES_DIRECTORY "templates"
+#endif
+
+//Uncomment to enable map based fear pathing
+//#define ENABLE_FEAR_PATHING 1
 
 /*
 

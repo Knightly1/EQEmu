@@ -1460,13 +1460,14 @@ bool Mob::CanThisClassDualWield(void) //Dual wield not Duel, busy someone else f
 		return (this->CastToClient()->GetSkill(DUAL_WIELD) != 0);	// No skill = no chance
 	}
 	else
-		return false;
+		return true;	//if we get here, we are the right class
+						//and are at the right level, and are NPC
 }
 
 bool Mob::CanThisClassDoubleAttack(void)
 {
     // All npcs over level 26 can double attack
-    if (this->IsNPC() && this->GetLevel() >= 26)
+    if (IsNPC() && GetLevel() >= 26)
         return true;
 	// Kaiyodo - Check the classes that can DA
 	switch(GetClass()) // Lets make sure they are the right level! -image
@@ -1498,10 +1499,11 @@ bool Mob::CanThisClassDoubleAttack(void)
 		}
 	}
 
-	if (this->IsClient())
-		return(this->CastToClient()->GetSkill(DOUBLE_ATTACK) != 0);	// No skill = no chance
+	if (IsClient())
+		return(CastToClient()->GetSkill(DOUBLE_ATTACK) != 0);	// No skill = no chance
 	else
-		return false;
+		return true;	//if we get here, we are the right class
+						//and are at the right level, and are NPC
 }
 
 bool Mob::IsWarriorClass(void)

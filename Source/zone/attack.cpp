@@ -2686,8 +2686,11 @@ void Client::RangedAttack(Mob* other) {
 		this->SetSkill(ARCHERY,GetRawSkill(ARCHERY)+1);*/
 	CheckIncreaseSkill(ARCHERY);
 	
-	if(!GetAA(aaEndlessQuiver))
-		DeleteItemInInventory(ammo_slot, 1, false);	//do we need the update, or is the client smart?
+	
+	//apparently we are supposed to trust the client to send
+	//us a delete request for the item instead...
+//	if(!GetAA(aaEndlessQuiver))
+//		DeleteItemInInventory(ammo_slot, 1, false);	//do we need the update, or is the client smart?
 	return;
 }
 
@@ -2758,7 +2761,10 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 	if (((55-(GetSkill(THROWING)/4))+wisebonus > MakeRandomInt(0, 100)) && GetSkill(THROWING) < (uint16)((GetLevel()*5)+5))
 		SetSkill(THROWING,GetRawSkill(THROWING)+1);*/
 	CheckIncreaseSkill(THROWING);
-	DeleteItemInInventory(SLOT_RANGE, 1, false);	//do we need the update, or is the client smart?
+	
+	//apparently we are supposed to trust the client to send
+	//us a delete request for the item instead...
+//	DeleteItemInInventory(SLOT_RANGE, 1, false);	//do we need the update, or is the client smart?
 	return;
 }
 

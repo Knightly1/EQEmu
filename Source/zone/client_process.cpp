@@ -169,7 +169,7 @@ int Client::HandlePacket(const APPLAYER *app)
 					workpt.b1() = DBA_b1_Entity_Client_InfoForLogin;
 					DBAsyncWork* dbaw = new DBAsyncWork(MTdbafq, workpt, DBAsync::Read);
 					dbaw->AddQuery(1, &query, MakeAnyLenString(&query, "SELECT status,name,lsaccount_id,gmspeed,revoked FROM account WHERE id=%i", account_id));
-					dbaw->AddQuery(2, &query, MakeAnyLenString(&query, "SELECT id,profile,zonename,x,y,z,alt_adv,guild,guildrank FROM character_ WHERE id=%i", character_id));
+					dbaw->AddQuery(2, &query, MakeAnyLenString(&query, "SELECT id,profile,zonename,x,y,z,guild,guildrank FROM character_ WHERE id=%i", character_id));
 					dbaw->AddQuery(3, &query, MakeAnyLenString(&query, "SELECT faction_id,current_value FROM faction_values WHERE char_id = %i", character_id));
 					if (!(pDBAsyncWorkID = dbasync->AddWork(&dbaw))) {
 						safe_delete(dbaw);
@@ -3114,9 +3114,9 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 						Message(0, "Error #1, item == 0");
 					
 	
-					if (item && GetInv().GetItem(mp->itemslot)->IsStackable())
+					if (item && inst->IsStackable())
 					{
-						unsigned int i_quan = GetInv().GetItem(mp->itemslot)->GetCharges();
+						unsigned int i_quan = inst->GetCharges();
 						if (mp->quantity > i_quan)
 							mp->quantity = i_quan;
 					}
@@ -3904,7 +3904,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 				}
 				case OP_ReadBook: {
 					BookRequest_Struct* book = (BookRequest_Struct*) app->pBuffer;
-					ReadBook(book->txtfile);
+					ReadBook(book);
 					break;
 				}
 				case OP_Emote: {

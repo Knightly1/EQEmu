@@ -702,7 +702,8 @@ void Mob::SendToFixZ(float new_x, float new_y, float new_z) {
 
 
 #ifdef ENABLE_FEAR_PATHING
-//#define FEAR_PATHING_DEBUG
+
+#define FEAR_PATHING_DEBUG
 void Mob::SetFeared(Mob *caster, int32 duration) {
 	if(zone->map == NULL) {
 		fear_state = fearStateStuck;
@@ -788,8 +789,8 @@ void Mob::CalculateFearPosition() {
 	
 	//first try our original fear vector again...
 	VERTEX start, end, hit, normalhit;
-	start.x = GetX();
-	start.y = GetY();
+	start.x = GetX() - fear_vector.x * 0.4;
+	start.y = GetY() - fear_vector.y * 0.4;
 	start.z = GetZ() + 6.0;	//raise up a little over small bumps
 	
 	end.x = start.x + fear_vector.x * 10;
@@ -831,6 +832,17 @@ void Mob::CalculateFearPosition() {
 		cur_wp_x = normalhit.x;
 		cur_wp_y = normalhit.y;
 		cur_wp_z = GetZ();
+		
+		//try and fix up the Z coord if possible
+		//not sure if this is worth it, since it prolly isnt up much
+		
+		NodeRef c = zone->map->SeekNode(zone->map->GetRoot(), end.x, end.y);
+		if(c != NODE_NONE) {
+			cur_wp_z = zone->map->FindBestZ(c, end, &hit, NULL);
+			if(cur_wp_z < start.z)
+				cur_wp_z = end.z;	//revert on error
+		}
+		
 		CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetRunspeed(), true); 
 		return;
 	}
@@ -843,10 +855,14 @@ void Mob::CalculateFearPosition() {
 	//if we get here, we cannot run along our normal vector...
 	//try up hill first
 	
+	/*
+	while this uphill stuff works great in outdoor zones,
+	it totally breaks dungeons...
 	
-	end.x = start.x + fear_vector.x * 2;
-	end.y = start.y + fear_vector.y * 2;
-	end.z = start.z + 4;
+	float speed = GetRunspeed();
+	end.x = start.x + fear_vector.x * speed;
+	end.y = start.y + fear_vector.y * speed;
+	end.z = start.z + speed + speed;
 	
 	if(!zone->map->LineIntersectsZone(start, end, 0.5, &hit, NULL)) {
 #ifdef FEAR_PATHING_DEBUG
@@ -854,8 +870,8 @@ void Mob::CalculateFearPosition() {
 			GetX(), GetY(), GetZ(), end.x, end.y, end.z);
 #endif
 		//we can run along this vector without hitting anything...
-		cur_wp_x = end.x;
-		cur_wp_y = end.y;
+		cur_wp_x = end.x - 0.4 * fear_vector.x;
+		cur_wp_y = end.y - 0.4 * fear_vector.y;
 		cur_wp_z = end.z;
 		
 		//try and fix up the Z coord if possible
@@ -872,7 +888,7 @@ void Mob::CalculateFearPosition() {
 		CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetRunspeed(), true); 
 		return;
 	}
-	
+	*/
 	
 	//cant run along our vector at all....
 	//one last ditch effort... try to move to the side a little
@@ -893,8 +909,8 @@ void Mob::CalculateFearPosition() {
 			GetX(), GetY(), GetZ(), end.x, end.y, end.z);
 #endif
 		//we can run along this vector without hitting anything...
-		cur_wp_x = end.x;
-		cur_wp_y = end.y;
+		cur_wp_x = end.x - 0.4 * fear_vector.x;
+		cur_wp_y = end.y - 0.4 * fear_vector.y;
 		cur_wp_z = end.z - 3;
 		CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetRunspeed(), true); 
 		return;
@@ -916,8 +932,8 @@ void Mob::CalculateFearPosition() {
 			GetX(), GetY(), GetZ(), end.x, end.y, end.z);
 #endif
 		//we can run along this vector without hitting anything...
-		cur_wp_x = end.x;
-		cur_wp_y = end.y;
+		cur_wp_x = end.x - 0.4 * fear_vector.x;
+		cur_wp_y = end.y - 0.4 * fear_vector.y;
 		cur_wp_z = end.z - 3;
 		CalculateNewPosition2(cur_wp_x, cur_wp_y, cur_wp_z, GetRunspeed(), true); 
 		return;

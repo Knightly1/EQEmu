@@ -407,7 +407,7 @@ public:
 	void	WhoAll(Who_All_Struct* whom);
 	
 	void	Stun(int duration);
-	void	ReadBook(char txtfile[20]);
+	void	ReadBook(BookRequest_Struct *book);
 	void	SendClientMoneyUpdate(int8 type,int32 amount);
 	bool	TakeMoneyFromPP(uint32 copper);
 	void	AddMoneyToPP(uint32 copper,bool updateclient);

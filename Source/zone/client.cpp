@@ -1663,35 +1663,30 @@ void Client::SetGM(bool toggle) {
 	UpdateWho();
 }
 
-void Client::ReadBook(char txtfile[20]) {
+void Client::ReadBook(BookRequest_Struct *book) {
+	char *txtfile = book->txtfile;
+	
 	if(txtfile[0] == '0' && txtfile[1] == '\0') {
 		//invalid book... coming up on non-book items.
 		return;
 	}
 	
-	string booktxt2=database.GetBook(txtfile);
-	int length=strlen(booktxt2.c_str())+3;
-	char booktxt[5000]={0};//booktxt2.c_str();
-	strcpy(booktxt,booktxt2.c_str());
-	if (booktxt[0] != '\0') {
-		//char *buffer=(char*)malloc(length);
-		//char *bufptr=buffer;
-		uchar *buffer=new uchar[length];
-		uchar *bufptr=buffer;
-		LogFile->write(EQEMuLog::Normal,"Client::ReadBook() textfile:%s Text:%s", txtfile, booktxt);
-		APPLAYER* outapp = new APPLAYER(OP_ReadBook,length);
-		int16 unknown0=0x00FF;
-		outapp->pBuffer=new uchar[(outapp->size)];
-		memset(buffer,0,length);
-		memcpy(bufptr,&unknown0, sizeof(int16));
-		bufptr+=sizeof(int16);
-		memcpy(bufptr,&booktxt,strlen(booktxt));
-		bufptr+=strlen(booktxt);
-		memcpy(outapp->pBuffer, buffer, outapp->size);
+	string booktxt2 = database.GetBook(txtfile);
+	int length = booktxt2.length();
+	
+	if (booktxt2[0] != '\0') {
+#if EQDEBUG >= 6
+		LogFile->write(EQEMuLog::Normal,"Client::ReadBook() textfile:%s Text:%s", txtfile, booktxt2.c_str());
+#endif
+		APPLAYER* outapp = new APPLAYER(OP_ReadBook, length + 3);
+		
+		BookRequest_Struct *out = (BookRequest_Struct *) outapp->pBuffer;
+		out->unknown0 = book->unknown0;
+		out->type = book->type;
+		memcpy(out->txtfile, booktxt2.c_str(), length);
+		
 		QueuePacket(outapp);
 		safe_delete(outapp);
-		//free(buffer);
-		safe_delete_array(outapp);
 	}
 }
 

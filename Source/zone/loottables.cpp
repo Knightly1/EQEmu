@@ -565,11 +565,6 @@ void Database::AddLootDropToNPC(NPC* npc,int32 lootdrop_id, ItemList* itemlist) 
 			const Item_Struct* dbitem = GetItem(itemid);
 			npc->AddLootDrop(dbitem, itemlist, lds->Entries[k].item_charges, lds->Entries[k].equip_item, false);
 			
-#if EQDEBUG>=11
-			else {					
-				LogFile->write(EQEMuLog::Debug, "Error in AddLootDropToNPC: dbitem==NULL, item#=%lu, lootdrop_id=%ld", itemid, lootdrop_id);
-			}
-#endif
 			break;
 			//continue;
 		}	//end if it will drop
@@ -635,7 +630,7 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 			eslot = MATERIAL_PRIMARY;
 		}
 		else if (item2->EquipSlots & (1 << SLOT_SECONDARY) && (equipment[MATERIAL_SECONDARY]==0) 
-			&& ((GetLevel() >= 13 && MakeRandomInt(0,99) < NPC_DW_CHANCE) || (item2->Common.Damage==0)))
+			&& (GetOwner() != NULL || (GetLevel() >= 13 && MakeRandomInt(0,99) < NPC_DW_CHANCE) || (item2->Common.Damage==0)))
 		{
 			d_meele_texture2 = atoi(newid);
 			if (item2->Common.SpellId!=0)
