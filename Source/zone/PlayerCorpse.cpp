@@ -107,9 +107,9 @@ Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname
 
 // To be used on NPC death and ZoneStateLoad
 // Mongrel: added see_invis and see_invis_undead
-Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, NPCType** in_npctypedata, int32 in_decaytime)
+Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, const NPCType** in_npctypedata, int32 in_decaytime)
 // vesuvias - appearence fix
- : Mob("Unnamed_Corpse","",0,0,in_npc->GetGender(),in_npc->GetRace(),in_npc->GetClass(),0//bodytype added
+ : Mob("Unnamed_Corpse","",0,0,in_npc->GetGender(),in_npc->GetRace(),in_npc->GetClass(),BT_Client//bodytype added
        ,in_npc->GetDeity(),in_npc->GetLevel(),in_npc->GetNPCTypeID(),0,in_npc->GetSize(),0,0,in_npc->GetHeading(),in_npc->GetX(),in_npc->GetY(),in_npc->GetZ(),0,0,in_npc->GetTexture(),in_npc->GetHelmTexture(),0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,1,0,0,0,0,0),
 	corpse_decay_timer(in_decaytime),
 	corpse_delay_timer(in_decaytime/2)
@@ -125,12 +125,12 @@ Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, NPCType**
 	}
 	AddCash(in_npc->GetCopper(), in_npc->GetSilver(), in_npc->GetGold(), in_npc->GetPlatinum());
 	
-	NPCTypedata = 0;
+//	NPCTypedata = 0;
 	npctype_id = in_npctypeid;
-	if (in_npctypedata) {
+/*	if (in_npctypedata) {
 		NPCTypedata = *in_npctypedata;
 		*in_npctypedata = 0;
-	}
+	}*/
 	SetPKItem(0);
 	charid = 0;
 	dbid = 0;
@@ -166,7 +166,7 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 	client->GetGender(),
 	client->GetRace(),
 	client->GetClass(), 
-	0, // bodytype added
+	BT_Client, // bodytype added
 	client->GetDeity(),
 	client->GetLevel(),
 	0,
@@ -218,7 +218,7 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 		looters[i] = 0;
 
 	pIsChanged		= true;
-	NPCTypedata		= 0;
+//	NPCTypedata		= 0;
 	rezzexp			= in_rezexp;
 	p_PlayerCorpse	= true;
 	pLocked			= false;
@@ -305,13 +305,13 @@ void Corpse::MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot)
 // Mongrel: added see_invis and see_invis_undead
 Corpse::Corpse(int32 in_dbid, int32 in_charid, char* in_charname, ItemList* in_itemlist, int32 in_copper, int32 in_silver, int32 in_gold, int32 in_plat, float in_x, float in_y, float in_z, float in_heading, float in_size, int8 in_gender, int16 in_race, int8 in_class, int8 in_deity, int8 in_level, int8 in_texture, int8 in_helmtexture,int32 in_rezexp)
 // vesuvias - appearence fix
- : Mob("Unnamed_Corpse","",0,0,in_gender, in_race, in_class, 0, in_deity, in_level,0,0, in_size, 0, 0, in_heading, in_x, in_y, in_z,0,0,in_texture,in_helmtexture,0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,1,0,0,0,0,0),
+ : Mob("Unnamed_Corpse","",0,0,in_gender, in_race, in_class, BT_Client, in_deity, in_level,0,0, in_size, 0, 0, in_heading, in_x, in_y, in_z,0,0,in_texture,in_helmtexture,0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,1,0,0,0,0,0),
 	corpse_decay_timer(1800000),
 	corpse_delay_timer(600000)
 {
 	memset(item_tint, 0, sizeof(item_tint));
 	pIsChanged = false;
-	NPCTypedata = 0;
+//	NPCTypedata = 0;
 	p_PlayerCorpse = true;
 	pLocked = false;
 	BeingLootedBy = 0xFFFFFFFF;
@@ -341,7 +341,7 @@ Corpse::~Corpse() {
 		else if (!IsEmpty() && !(p_depop && dbid == 0))
 			Save();
 	}
-	safe_delete(NPCTypedata);
+//	safe_delete(NPCTypedata);
 	
 	ItemList::iterator cur,end;
 	cur = itemlist.begin();

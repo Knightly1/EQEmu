@@ -1810,52 +1810,6 @@ XS(XS_Client_IsDueling)
 	XSRETURN(1);
 }
 
-XS(XS_Client_GetMount); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_GetMount)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Client::GetMount(THIS)");
-	{
-		Client *		THIS;
-		bool		RETVAL;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-
-		RETVAL = THIS->GetMount();
-		ST(0) = boolSV(RETVAL);
-		sv_2mortal(ST(0));
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Client_SetMount); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_SetMount)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Client::SetMount(THIS, mount)");
-	{
-		Client *		THIS;
-		bool		mount = (bool)SvTRUE(ST(1));
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-
-		THIS->SetMount(mount);
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_Client_SetDuelTarget); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_SetDuelTarget)
 {
@@ -2348,52 +2302,6 @@ XS(XS_Client_GetHorseId)
 
 		RETVAL = THIS->GetHorseId();
 		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Client_SetHasMount); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_SetHasMount)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Client::SetHasMount(THIS, hasmount_in)");
-	{
-		Client *		THIS;
-		bool		hasmount_in = (bool)SvTRUE(ST(1));
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-
-		THIS->SetHasMount(hasmount_in);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Client_GetHasMount); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_GetHasMount)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Client::GetHasMount(THIS)");
-	{
-		Client *		THIS;
-		bool		RETVAL;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-
-		RETVAL = THIS->GetHasMount();
-		ST(0) = boolSV(RETVAL);
-		sv_2mortal(ST(0));
 	}
 	XSRETURN(1);
 }
@@ -3187,8 +3095,6 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "IsMedding"), XS_Client_IsMedding, file, "$");
 		newXSproto(strcpy(buf, "GetDuelTarget"), XS_Client_GetDuelTarget, file, "$");
 		newXSproto(strcpy(buf, "IsDueling"), XS_Client_IsDueling, file, "$");
-		newXSproto(strcpy(buf, "GetMount"), XS_Client_GetMount, file, "$");
-		newXSproto(strcpy(buf, "SetMount"), XS_Client_SetMount, file, "$$");
 		newXSproto(strcpy(buf, "SetDuelTarget"), XS_Client_SetDuelTarget, file, "$$");
 		newXSproto(strcpy(buf, "SetDueling"), XS_Client_SetDueling, file, "$$");
 		newXSproto(strcpy(buf, "ResetAA"), XS_Client_ResetAA, file, "$");
@@ -3209,8 +3115,6 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "AutoSplitEnabled"), XS_Client_AutoSplitEnabled, file, "$");
 		newXSproto(strcpy(buf, "SetHorseId"), XS_Client_SetHorseId, file, "$$");
 		newXSproto(strcpy(buf, "GetHorseId"), XS_Client_GetHorseId, file, "$");
-		newXSproto(strcpy(buf, "SetHasMount"), XS_Client_SetHasMount, file, "$$");
-		newXSproto(strcpy(buf, "GetHasMount"), XS_Client_GetHasMount, file, "$");
 		newXSproto(strcpy(buf, "NukeItem"), XS_Client_NukeItem, file, "$$");
 		newXSproto(strcpy(buf, "SetTint"), XS_Client_SetTint, file, "$$$");
 		newXSproto(strcpy(buf, "SetMaterial"), XS_Client_SetMaterial, file, "$$$");

@@ -18,7 +18,9 @@
 #ifndef ZONE_PROFILE_H
 #define ZONE_PROFILE_H
 
+#ifdef ZONE	//only possibly profile if we are building zone
 #include "features.h"
+#endif
 
 #ifdef EQPROFILE
 	extern void DumpZoneProfile();
@@ -27,9 +29,9 @@
 		extern void ProfilerProcess();
 	#endif
 #else
-#ifdef ZONE_PROFILE	//no EQPROFILE == no zone profile
-#undef ZONE_PROFILE
-#endif
+	#ifdef ZONE_PROFILE	//no EQPROFILE == no zone profile
+	#undef ZONE_PROFILE
+	#endif
 #endif
 
 #ifdef ZONE_PROFILE
@@ -129,7 +131,6 @@ public:
 extern ZoneProfiler _zp;
 
 #define _ZP(name) _GP(_zp, ZoneProfiler, name)
-
 #else
 	//no zone profiling, dummy functions
 #define _ZP(name) ;

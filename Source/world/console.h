@@ -17,7 +17,18 @@
 */
 #ifndef CONSOLE_H
 #define CONSOLE_H
+
 #define CONSOLE_TIMEOUT 600000
+enum {
+	consoleLoginStatus = 50,	//ability to log in, basic commands.
+	consoleFlagStatus = 200,	//flag
+	consoleKickStatus = 150,	//kick
+	consoleLockStatus = 150,	//world lock/unlock
+	consoleZoneStatus = 150,	//zone up/down/lock
+	consolePassStatus = 200,	//change password
+	consoleWorldStatus = 200	//world shutdown
+};
+
 #define CONSOLE_STATE_USERNAME 0
 #define CONSOLE_STATE_PASSWORD 1
 #define CONSOLE_STATE_CONNECTED 2

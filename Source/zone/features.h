@@ -108,6 +108,9 @@ Zone extensions and features
 //Uncomment to enable map based fear pathing
 //#define ENABLE_FEAR_PATHING 1
 
+//give the player a heal when the gain a level
+//#define HEAL_ON_LEVEL
+
 //enable functionality to send log message to the client
 //it still needs to be enabled with the #logs command
 #define CLIENT_LOGS
@@ -229,12 +232,17 @@ enum {	//timer settings, all in milliseconds
 //The Level Cap:
 #define LEVEL_CAP 65
 
+//the formula for experience for killing a mob.
+//level is the only valid variable to use
+#define EXP_FORMULA level*level*75*35/10
+
 //Some hard coded statuses from commands and other places:
 enum {
 	minStatusToBeGM = 40,
 	minStatusToUseGMCommands = 80,
 	minStatusToKick = 150,
 	minStatusToAvoidFalling = 100,
+	minStatusToHaveInvalidSpells = 80,
 	commandMovecharSelfOnly = 80,	//below this == only self move allowed
 	commandMovecharToSpecials = 200,	//ability to send people to cshom/load zones
 	commandZoneToSpecials = 80,		//zone to cshome, out of load zones

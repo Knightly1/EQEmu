@@ -29,6 +29,7 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemu.org)
 #include "../common/classes.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/packet_dump.h"
+#include "../common/database.h"
 #include "StringIDs.h"
 #ifndef NEW_LoadSPDat
 	extern SPDat_Spell_Struct spells[SPDAT_RECORDS];
@@ -997,7 +998,7 @@ False will also be returned if there is a database error.
 	//if (strlen(name) > 15)
 	//	return false;
 	
-	/*for (int i=0; i< 'a' || name[i] > 'z') && 
+	for (int i=0; i< 'a' || name[i] > 'z') && 
 	(name[i] < 'A' || name[i] > 'Z') && 
 	(name[i] < '0' || name[i] > '9'))
 	return 0;

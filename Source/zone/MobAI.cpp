@@ -484,10 +484,13 @@ void Mob::AI_Process() {
 #ifdef ENABLE_FEAR_PATHING
 	if(fear_state != fearStateNotFeared) {
 		if(fear_state == fearStateStuck)
-			return;	//stuck in a corner, cant do anything
+			return;	//just be idle, we cant run anywhere.
 		
-		//otherwise assume state is fearStateRunning
+		//otherwise we should be in some sort of moving state
+		
+		//if we are rooted, dont even try to move.
 		if(IsRooted()) {
+			//make sure everybody knows were not moving, for appearance sake
 			if(IsMoving())
 			{
 				SetHeading(CalculateHeadingToTarget(target->GetX(), target->GetY()));
@@ -499,6 +502,7 @@ void Mob::AI_Process() {
 			return;
 		}
 		
+		//see if its time to think about where to go next.
 		if(AImovement_timer->Check()) {
 			CalculateFearPosition();
 		}

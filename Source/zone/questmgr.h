@@ -115,6 +115,7 @@ public:
 	void respawn(int npc_type, int grid);
 	void set_proximity(float minx, float maxx, float miny, float maxy, float minz=-999999, float maxz=999999);
 	void clear_proximity();
+	void setanim(int npc_type, int animnum);
 	
 	//not in here because it retains perl types
 	//thing ChooseRandom(array_of_things)

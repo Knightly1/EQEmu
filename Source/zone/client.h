@@ -254,8 +254,6 @@ public:
 	
 	bool	ChangeFirstName(const char* in_firstname,const char* gmname);
 	
-	void	MakeHorseSpawnPacket(int16 spell_id);
-	
 	void	Duck();
 	void	Stand();
 	
@@ -459,8 +457,6 @@ public:
 	inline bool	IsMedding()	{return medding;}
 	inline int16	GetDuelTarget() { return duel_target; }
 	inline bool	IsDueling() { return duelaccepted; }
-	inline bool	GetMount() { return hasmount; }
-	inline void	SetMount(bool mount) { hasmount = mount; }
 	inline void	SetDuelTarget(int16 set_id) { duel_target=set_id; }
 	inline void	SetDueling(bool duel) { duelaccepted = duel; }
 	void  SendAAList();
@@ -506,10 +502,11 @@ public:
     bool GetImprovedDamageItem(int16 &spell_id, char *itemname);
     sint32 GenericFocus(int16 spell_id, int16 modspellid);
 */
-	void SetHorseId(int16 horseid_in) { horseId = horseid_in; }
+	void SummonHorse(int16 spell_id);
+	void SetHorseId(int16 horseid_in);
 	int16 GetHorseId() { return horseId; }
-	void SetHasMount(bool hasmount_in) { hasmount = hasmount_in; }
-	bool GetHasMount() { return hasmount; }
+	
+	
 	// solar: for command_guild
 	bool GetIsSettingGuildDoor(void) { return IsSettingGuildDoor; }
 	void SetIsSettingGuildDoor(bool isgd) { IsSettingGuildDoor=isgd; }
@@ -678,7 +675,6 @@ private:
 	bool				attack_flag;
 	int8				gmspeed;
 	bool				medding;
-	bool				hasmount;
 	int16				horseId;
 	bool				revoked;
 	int32				pQueuedSaveWorkID;

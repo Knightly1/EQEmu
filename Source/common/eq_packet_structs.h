@@ -217,8 +217,9 @@ union {
 /*250*/ int8	unknown249[4]; 
 /*254*/ uint32	pet_owner_id; 
 /*258*/ int16	deity; 
-/*260*/ int8	unknown260[31]; 
-/*0291*/ int8	unknown291[80];
+/*260*/ int8	unknown260[31];
+/*291*/ char	title[64];	//not tested, just observed
+/*355*/ int8	unknown355[16];
 /*0367*/ int32	unknown367[2];
 };
 
@@ -279,21 +280,6 @@ struct NewZone_Struct {
 /*0520*/	int8	unknown_end[84];		// ***Placeholder
 /*0604*/	char	zone_short_name2[68];
 /*0672*/	char	unknown672[8];
-};
-
-struct Discipline_Struct {
-/*0000*/	int8 unknown0000[4];
-/*0004*/	char  charname[64];
-/*0068*/	char  charname2[64];
-/*0132*/	int32 unknown0132;
-};
-
-/*
- * OP_Discipline from client size = 4
- */
-struct ClientDiscipline_Struct {
-    uint8	disc_id;	// There are only a few discs < 60
-    uint8	unknown3[3];	// Which leaves room for ??
 };
 
 /*
@@ -604,8 +590,9 @@ struct PlayerProfile_Struct
 /*0340*/	uint8				unknown0256[48];
 /*0388*/	Color_Struct		item_tint[9];
 /*0424*/	AA_Array			aa_array[MAX_PP_AA_ARRAY];
-/*1384*/	uint8				unknown1388[4];
-/*1388*/	char				servername[100];		// length probably not right
+/*1384*/	uint8				unknown1388[8];
+/*1392*/	char				servername[32];
+/*1424*/	char				title[64];
 /*1488*/	uint32				guildid2;		//
 /*1492*/	uint32				exp;				// Current Experience
 /*1496*/	uint32				unknown1496;		

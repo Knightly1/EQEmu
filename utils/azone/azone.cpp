@@ -415,6 +415,7 @@ void QTNode::fillBlocks(nodeHeader *heads, unsigned long *flist, unsigned long &
 //		findex += head->faces.count;
 	} else {
 		//branch node.
+		head->flags = 0;
 		
 		if(node1 != NULL) {
 			head->nodes[0] = hindex;
@@ -667,6 +668,59 @@ static const unsigned short gIntFaces[6][4] =
 	{7, 4, 0, 3}
 };
 
+
+//stolen in haste from my fear pathing program, and untested in here...
+bool edges_cross(GPoint *pt1, GPoint *pt2, GPoint *pt3, GPoint *pt4) {
+//I love macros
+#define IntersectDenom(p1, p2, p3, p4) \
+((p4->y - p3->y)*(p2->x - p1->x) - (p4->x - p3->x)*(p2->y - p1->y))
+#define IntersectNumerX(p1, p2, p3, p4) \
+((p4->x - p3->x)*(p1->y - p3->y) - (p4->y - p3->y)*(p1->x - p3->x))
+#define IntersectNumerY(p1, p2, p3, p4) \
+((p2->x - p1->x)*(p1->y - p3->y) - (p2->y - p1->y)*(p1->x - p3->x))
+
+#define IntersectX(p1, p2, p3, p4, denom) \
+(p1->x + IntersectNumerX(p1, p2, p3, p4)*(p2->x - p1->x)/denom)
+#define IntersectY(p1, p2, p3, p4, denom) \
+(p1->y + IntersectNumerX(p1, p2, p3, p4)*(p2->y - p1->y)/denom)
+
+#define CheckEqualXY(p1, p2) \
+ (p1->x == p2->x && p1->y == p2->y)
+
+#define CoordOnLine(p1, p2, coord, dim) \
+ (p1->dim > p2->dim? (coord > p2->dim && coord < p1->dim) : (coord > p1->dim && coord < p2->dim))
+
+#define IntersectZfromX(p1, p2, inter) \
+ (p2->x > p1->x? \
+ (p1->z + ((inter - p1->x)/(p2->x - p1->x) * (p2->z - p1->z))) \
+ :(p2->z + ((inter - p2->x)/(p1->x - p2->x) * (p1->z - p2->z))))
+	
+ 	if(e1 == e2)
+ 		return(false);
+	
+	float denom = IntersectDenom(pt1, pt2, pt3, pt4);
+	if(denom != 0) {
+
+		//the lines intersect, check segments now
+		float xinter = IntersectX(pt1, pt2, pt3, pt4, denom);
+		float yinter = IntersectY(pt1, pt2, pt3, pt4, denom);
+
+		//now see if this point is on both segments
+		if(		CoordOnLine(pt1, pt2, xinter, x)
+			&&	CoordOnLine(pt1, pt2, yinter, y)
+			&&	CoordOnLine(pt3, pt4, xinter, x)
+			&&	CoordOnLine(pt3, pt4, yinter, y) ){
+//			printf("Line (%.3f,%.3f,%.3f) -> (%.3f,%.3f,%.3f) d=%.3f\n", pt1->x, pt1->y, pt1->z, pt2->x, pt2->y, pt2->z, pt1->Dist2(pt2));
+//			printf("Hits (%.3f,%.3f,%.3f) -> (%.3f,%.3f,%.3f) d=%.3f\n", pt3->x, pt3->y, pt3->z, pt4->x, pt4->y, pt4->z, pt3->Dist2(pt4));
+//			printf("At (%.3f, %.3f), which IS on both segments.\n", xinter, yinter);
+
+			return(true);
+		}
+//		printf("At (%.3f, %.3f), which is not on both segments.\n", xinter, yinter);
+	}
+	return(false);
+}
+
 //quick function which got too messy in the loop below.
 bool QTBuilder::FaceInNode(const QTNode *q, const FACE *f) {
 	const VERTEX *v1 = &f->a;
@@ -741,18 +795,18 @@ bool QTBuilder::FaceInNode(const QTNode *q, const FACE *f) {
 (((p4->y - p3->y)*(p2.x - p1.x) - (p4->x - p3->x)*(p2.y - p1.y)) != 0)
 	
 	return(
-		   CheckIntersect(pt1, pt2, v1, v2)
-		|| CheckIntersect(pt1, pt2, v1, v3)
-		|| CheckIntersect(pt1, pt2, v2, v3)
-		|| CheckIntersect(pt3, pt4, v1, v2)
-		|| CheckIntersect(pt3, pt4, v1, v3)
-		|| CheckIntersect(pt3, pt4, v2, v3)
-		|| CheckIntersect(pt1, pt3, v1, v2)
-		|| CheckIntersect(pt1, pt3, v1, v3)
-		|| CheckIntersect(pt1, pt3, v2, v3)
-		|| CheckIntersect(pt2, pt4, v1, v2)
-		|| CheckIntersect(pt2, pt4, v1, v3)
-		|| CheckIntersect(pt2, pt4, v2, v3)
+		   edges_cross(pt1, pt2, v1, v2)
+		|| edges_cross(pt1, pt2, v1, v3)
+		|| edges_cross(pt1, pt2, v2, v3)
+		|| edges_cross(pt3, pt4, v1, v2)
+		|| edges_cross(pt3, pt4, v1, v3)
+		|| edges_cross(pt3, pt4, v2, v3)
+		|| edges_cross(pt1, pt3, v1, v2)
+		|| edges_cross(pt1, pt3, v1, v3)
+		|| edges_cross(pt1, pt3, v2, v3)
+		|| edges_cross(pt2, pt4, v1, v2)
+		|| edges_cross(pt2, pt4, v1, v3)
+		|| edges_cross(pt2, pt4, v2, v3)
 	);
 	
 /*	

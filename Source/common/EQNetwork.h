@@ -29,6 +29,8 @@
 #include <string.h>
 #include <map>
 #include <list>
+#include <queue>
+#include <string>
 using namespace std;
 
 #include "../common/types.h"
@@ -157,6 +159,7 @@ public:
 	
 	#ifdef PACKETCOLLECTOR
 		uint32 from_ip,to_ip;
+		bool to_server;
 		sint64* encrypt_key;
 	#endif
 	
@@ -258,7 +261,6 @@ public:
 	void	KillAll();						// kills all clients
 	inline int16	GetPort()		{ return pPort; }
 
-	EQNetworkConnection* FindNetConnection(int32 in_ip,int16 in_port);
 	EQNetworkConnection* NewQueuePop();
 protected:
 #ifdef WIN32
@@ -283,10 +285,8 @@ private:
 	Mutex	MNewQueue;
 	Mutex	MOpen;
 
-	typedef pair <pair<uint32,uint16>,EQNetworkConnection*> ConnectionPair;
-	typedef pair <uint32,uint16> IPPortPair;
-	map<pair<uint32,uint16>,EQNetworkConnection*> connection_list;
-	MyQueue<EQNetworkConnection>		NewQueue;
+	map<string, EQNetworkConnection *> connection_list;
+	queue<EQNetworkConnection *>		NewQueue;
 };
 
 class EQNetworkFragmentGroupList {

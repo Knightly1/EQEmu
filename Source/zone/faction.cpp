@@ -683,7 +683,7 @@ char* BuildFactionMessage(sint32 tmpvalue, sint32 faction_id, sint32 totalvalue)
 //|        Returns false on failure.
 //o--------------------------------------------------------------
 bool Database::GetFactionName(sint32 faction_id, char* name, int32 buflen) {
-	if ((faction_id <= 0)||(faction_array[faction_id] == 0))
+	if ((faction_id <= 0) || faction_id > sint32(max_faction) ||(faction_array[faction_id] == 0))
 		return false;
 	if (faction_array[faction_id]->name[0] != 0) {
 		strncpy(name, faction_array[faction_id]->name, buflen - 1);

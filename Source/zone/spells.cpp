@@ -906,7 +906,6 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 	// we're done casting, now try to apply the spell
 	if( SpellFinished(spell_id, target_id, slot, mana_used) == false )
 	{
-Message(13, "Spell Finished returned false, interrupting.");
 		InterruptSpell();
 		return;
 	}
@@ -1943,6 +1942,11 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	if(spelltar->GetInvul() || spelltar->DivineAura())
 		return false;
 #endif
+	
+	//cannot hurt untargetable mobs
+	bodyType bt = spelltar->GetBodyType();
+	if(bt == BT_NoTarget || bt == BT_NoTarget2)
+		return(false);
 
 	if(!(IsClient() && CastToClient()->GetGM()))	// GMs can cast on anything
 	{
@@ -2200,9 +2204,10 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 			{
 				if(IsClient())
 				{
-					Mob* horse = entity_list.GetMob(this->CastToClient()->GetHorseId());
+					/*Mob* horse = entity_list.GetMob(this->CastToClient()->GetHorseId());
 					if (horse) horse->Depop();
-					CastToClient()->SetHasMount(false);
+					CastToClient()->SetHasMount(false);*/
+					CastToClient()->SetHorseId(0);
 				}
 				break;
 			}
@@ -2311,7 +2316,7 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 			case SE_Fear:
 			{
 #ifdef ENABLE_FEAR_PATHING
-				fear_state = fearStateNotFeared;
+				SetFeared(NULL, 0);
 #endif
 				break;
 			}
@@ -2859,288 +2864,6 @@ void Client::MakeBuffFadePacket(int16 spell_id, int slot_id, bool send_message)
 		memcpy(bufptr,fadetext,strlen(fadetext));
 		QueuePacket(outapp);
 		safe_delete(outapp);
-	}
-}
-
-void Client::MakeHorseSpawnPacket(int16 spell_id) {
-	if(!hasmount) {
-		// Spell: 2862 Tan Rope
-		// Spell: 2863 Tan Leather
-		// Spell: 2864 Tan Silken
-		// Spell: 2865 Brown Chain
-		// Spell: 2866 Tan Ornate Chain
-		// Spell: 2867 White Rope
-		// Spell: 2868 White Leather
-		// Spell: 2869 White Silken
-		// Spell: 2870 White Chain
-		// Spell: 2871 White Ornate Chain
-		// Spell: 2872 Black Rope
-		// Spell: 2919 Tan Rope
-		// Spell: 2918 Guide
-		// Spell: 2917 Black Chain,		
-		
-		// No Horse, lets get them one.
-	NPCType* npc_type = new NPCType;
-  		memset(npc_type, 0, sizeof(NPCType));
-  		char f_name[64];
- 		char mount_color=0;
-  		strcpy(f_name,this->GetCleanName());
-  		strcat(f_name,"`s_Mount");
-  		strcpy(npc_type->name,f_name);
-  		npc_type->cur_hp = 1; 
-  		npc_type->max_hp = 1; 
- 		npc_type->race = 216;
- 		npc_type->gender = (spell_id >= 3813 && spell_id <= 3832) ? 1 : 0; // Drogmor's are female horses. Yuck.
-  		npc_type->class_ = 1; 
-  		npc_type->deity= 1;
-  		npc_type->level = 1;
- 		npc_type->npc_id = 0;
- 		npc_type->loottable_id = 0;
- 
- 		switch(spell_id) {
- 			case 2862:
- 				mount_color=0;  // Brown horse
- 				npc_type->walkspeed=MOUNT_SLOW1_WALK;
- 				npc_type->runspeed=MOUNT_SLOW1_RUN;
- 				break;
- 			case 2863:
- 				mount_color=0;  // Brown horse
- 				npc_type->walkspeed=MOUNT_SLOW2_WALK;
- 				npc_type->runspeed=MOUNT_SLOW2_RUN;
- 				break;
- 			case 2864:
- 				mount_color=0;  // Brown horse
- 				npc_type->walkspeed=MOUNT_RUN1_WALK;
- 				npc_type->runspeed=MOUNT_RUN1_RUN;
- 				break;
- 			case 2865:
- 				mount_color=0;  // Brown horse
- 				npc_type->walkspeed=MOUNT_RUN2_WALK;
- 				npc_type->runspeed=MOUNT_RUN2_RUN;
- 				break;
- 			case 2866:
- 				mount_color=0;  // Brown horse
- 				npc_type->walkspeed=MOUNT_FAST_WALK;
- 				npc_type->runspeed=MOUNT_FAST_RUN;
- 				break;
- 			case 2867:
- 				mount_color=1;  // White horse
- 				npc_type->walkspeed=MOUNT_SLOW1_WALK;
- 				npc_type->runspeed=MOUNT_SLOW1_RUN;
- 				break;
- 			case 2868:
- 				mount_color=1;  // White horse
- 				npc_type->walkspeed=MOUNT_SLOW2_WALK;
- 				npc_type->runspeed=MOUNT_SLOW2_RUN;
- 				break;
- 			case 2869:
- 				mount_color=1;  // White horse
- 				npc_type->walkspeed=MOUNT_RUN1_WALK;
- 				npc_type->runspeed=MOUNT_RUN1_RUN;
- 				break;
- 			case 2870:
- 				mount_color=1;  // White horse
- 				npc_type->walkspeed=MOUNT_RUN2_WALK;
- 				npc_type->runspeed=MOUNT_RUN2_RUN;
- 				break;
- 			case 2871:
- 				mount_color=1;  // White horse
- 				npc_type->walkspeed=MOUNT_FAST_WALK;
- 				npc_type->runspeed=MOUNT_FAST_RUN;
- 				break;
- 			case 2872:
- 				mount_color=2;  // Black horse
- 				npc_type->walkspeed=MOUNT_SLOW1_WALK;
- 				npc_type->runspeed=MOUNT_SLOW1_RUN;
- 				break;
- 			case 2873:
- 				mount_color=2;  // Black horse
- 				npc_type->walkspeed=MOUNT_SLOW2_WALK;
- 				npc_type->runspeed=MOUNT_SLOW2_RUN;
- 				break;
- 			case 2916:
- 				mount_color=2;  // Black horse
- 				npc_type->walkspeed=MOUNT_RUN1_WALK;
- 				npc_type->runspeed=MOUNT_RUN1_RUN;
- 				break;
- 			case 2917:
- 				mount_color=2;  // Black horse
- 				npc_type->walkspeed=MOUNT_RUN2_WALK;
- 				npc_type->runspeed=MOUNT_RUN2_RUN;
- 				break;
- 			case 2918:
- 				mount_color=2;  // Black horse
- 				npc_type->walkspeed=MOUNT_FAST_WALK;
- 				npc_type->runspeed=MOUNT_FAST_RUN;
- 				break;
- 			case 2919:
- 				mount_color=3;  // Tan horse
- 				npc_type->walkspeed=MOUNT_SLOW1_WALK;
- 				npc_type->runspeed=MOUNT_SLOW1_RUN;
- 				break;
- 			case 2920:
- 				mount_color=3;  // Tan horse
- 				npc_type->walkspeed=MOUNT_SLOW2_WALK;
- 				npc_type->runspeed=MOUNT_SLOW2_RUN;
- 				break;
- 			case 2921:
- 				mount_color=3;  // Tan horse
- 				npc_type->walkspeed=MOUNT_RUN1_WALK;
- 				npc_type->runspeed=MOUNT_RUN1_RUN;
- 				break;
- 			case 2922:
- 				mount_color=3;  // Tan horse
- 				npc_type->walkspeed=MOUNT_RUN2_WALK;
- 				npc_type->runspeed=MOUNT_RUN2_RUN;
- 				break;
- 			case 2923:
- 				mount_color=3;  // Tan horse
- 				npc_type->walkspeed=MOUNT_FAST_WALK;
- 				npc_type->runspeed=MOUNT_FAST_RUN;
- 				break;
- 			case 3813:
- 				mount_color=0;  // White drogmor
- 				npc_type->walkspeed=MOUNT_SLOW1_WALK;
- 				npc_type->runspeed=MOUNT_SLOW1_RUN;
- 				break;
- 			case 3814:
- 				mount_color=0;  // White drogmor
- 				npc_type->walkspeed=MOUNT_SLOW2_WALK;
- 				npc_type->runspeed=MOUNT_SLOW2_RUN;
- 				break;
- 			case 3815:
- 				mount_color=0;  // White drogmor
- 				npc_type->walkspeed=MOUNT_RUN1_WALK;
- 				npc_type->runspeed=MOUNT_RUN1_RUN;
- 				break;
- 			case 3816:
- 				mount_color=0;  // White drogmor
- 				npc_type->walkspeed=MOUNT_RUN2_WALK;
- 				npc_type->runspeed=MOUNT_RUN2_RUN;
- 				break;
- 			case 3817:
- 				mount_color=0;  // White drogmor
- 				npc_type->walkspeed=MOUNT_FAST_WALK;
- 				npc_type->runspeed=MOUNT_FAST_RUN;
- 				break;
- 			case 3818:
- 				mount_color=1;  // Black drogmor
- 				npc_type->walkspeed=MOUNT_SLOW1_WALK;
- 				npc_type->runspeed=MOUNT_SLOW1_RUN;
- 				break;
- 			case 3819:
- 				mount_color=1;  // Black drogmor
- 				npc_type->walkspeed=MOUNT_SLOW2_WALK;
- 				npc_type->runspeed=MOUNT_SLOW2_RUN;
- 				break;
- 			case 3820:
- 				mount_color=1;  // Black drogmor
- 				npc_type->walkspeed=MOUNT_RUN1_WALK;
- 				npc_type->runspeed=MOUNT_RUN1_RUN;
- 				break;
- 			case 3821:
- 				mount_color=1;  // Black drogmor
- 				npc_type->walkspeed=MOUNT_RUN2_WALK;
- 				npc_type->runspeed=MOUNT_RUN2_RUN;
- 				break;
- 			case 3822:
- 				mount_color=1;  // Black drogmor
- 				npc_type->walkspeed=MOUNT_FAST_WALK;
- 				npc_type->runspeed=MOUNT_FAST_RUN;
- 				break;
- 			case 3823:
- 				mount_color=2;  // Green drogmor
- 				npc_type->walkspeed=MOUNT_SLOW1_WALK;
- 				npc_type->runspeed=MOUNT_SLOW1_RUN;
- 				break;
- 			case 3824:
- 				mount_color=2;  // Green drogmor
- 				npc_type->walkspeed=MOUNT_SLOW2_WALK;
- 				npc_type->runspeed=MOUNT_SLOW2_RUN;
- 				break;
- 			case 3825:
- 				mount_color=2;  // Green drogmor
- 				npc_type->walkspeed=MOUNT_RUN1_WALK;
- 				npc_type->runspeed=MOUNT_RUN1_RUN;
- 				break;
- 			case 3826:
- 				mount_color=2;  // Green drogmor
- 				npc_type->walkspeed=MOUNT_RUN2_WALK;
- 				npc_type->runspeed=MOUNT_RUN2_RUN;
- 				break;
- 			case 3827:
- 				mount_color=2;  // Green drogmor
- 				npc_type->walkspeed=MOUNT_FAST_WALK;
- 				npc_type->runspeed=MOUNT_FAST_RUN;
- 				break;
- 			case 3828:
- 				mount_color=3;  // Red drogmor
- 				npc_type->walkspeed=MOUNT_SLOW1_WALK;
- 				npc_type->runspeed=MOUNT_SLOW1_RUN;
- 				break;
- 			case 3829:
- 				mount_color=3;  // Red drogmor
- 				npc_type->walkspeed=MOUNT_SLOW2_WALK;
- 				npc_type->runspeed=MOUNT_SLOW2_RUN;
- 				break;
- 			case 3830:
- 				mount_color=3;  // Red drogmor
- 				npc_type->walkspeed=MOUNT_RUN1_WALK;
- 				npc_type->runspeed=MOUNT_RUN1_RUN;
- 				break;
- 			case 3831:
- 				mount_color=3;  // Red drogmor
- 				npc_type->walkspeed=MOUNT_RUN2_WALK;
- 				npc_type->runspeed=MOUNT_RUN2_RUN;
- 				break;
- 			case 3832:
- 				mount_color=3;  // Red drogmor
- 				npc_type->walkspeed=MOUNT_FAST_WALK;
- 				npc_type->runspeed=MOUNT_FAST_RUN;
- 				break;
- 			default:
- 				Message(13,"I dont know what mount spell this is! (%i)", spell_id);
- 				mount_color= 0;  // Brown horse
- 				npc_type->walkspeed=MOUNT_SLOW1_WALK;
- 				npc_type->runspeed=MOUNT_SLOW1_RUN;
- 				break;
- 		}
- 
-  		npc_type->light = 0;
-  		npc_type->fixedZ = 1;
-  		npc_type->STR = 75;
-		npc_type->STA = 75;
-		npc_type->DEX = 75;
-		npc_type->AGI = 75;
-		npc_type->INT = 75;
-		npc_type->WIS = 75;
-		npc_type->CHA = 75;
-
-		
-		NPC* horse = new NPC(npc_type, 0, GetX(), GetY(), GetZ(), GetHeading());
-		
-
-		entity_list.AddNPC(horse, false);
-		APPLAYER* outapp = new APPLAYER;
-		horse->CreateHorseSpawnPacket(outapp,this->GetName(), this->GetID());
-		// Doodman: Kludged in here instead of adding a field to PCType. FIXME!
-		NewSpawn_Struct* ns=(NewSpawn_Struct*)outapp->pBuffer;
-		ns->spawn.mount_color=mount_color;
-		ns->spawn.pet_owner_id=0;
-		ns->spawn.walkspeed=npc_type->walkspeed;
-		ns->spawn.runspeed=npc_type->runspeed;
-		entity_list.QueueClients(horse, outapp);
-		safe_delete(outapp);
-		safe_delete(npc_type);
-		// Okay, lets say he has a horse now.
-
-		hasmount = true;
-		int16 tmpID = horse->GetID();
-		SetHorseId(tmpID);
-    } else {
-		if (hasmount)
-			Message(13,"You already have a Horse.  Get off (or zone) Fatbutt!");
-
 	}
 }
 

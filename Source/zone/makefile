@@ -15,7 +15,7 @@ SF=../common/EQNetwork.o \
    inventory.o client_mods.o tradeskills.o waypoints.o pets.o \
    effects.o trap.o perl_client.o perl_entity.o perl_mob.o perl_npc.o \
    perl_PlayerCorpse.o perl_groups.o questmgr.o client_logs.o perlparser.o \
-   ../common/rdtsc.o ../common/extprofile.o
+   ../common/rdtsc.o ../common/extprofile.o horse.o exp.o fearpath.o
 
 
 CC=gcc
@@ -26,6 +26,8 @@ DFLAGS=-DEQDEBUG=5 -DNO_PIDLOG -DSHAREMEM -DSPELL_EFFECT_SPAM -DFIELD_ITEMS
 WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -Wno-deprecated  -Wcomment -Wcast-align
 COPTS=$(WFLAGS) -O2 -ggdb -pthread -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
 LINKOPTS=-rdynamic -L. -lstdc++ -ldl $(MYSQL_LIB)
+
+include .depend
 
 all: $(APP)
 
@@ -43,18 +45,10 @@ clean:
 %.o: %.cpp
 	$(CC) -c $(COPTS) $< -o $@
 
-.obj/debug.o: ../common/debug.cpp ../common/debug.h
+.obj/%.o: ../common/%.cpp ../common/%.h
 	mkdir -p .obj
-	$(CC) $(COPTS) -c ../common/debug.cpp -o .obj/debug.o
+	$(CC) $(COPTS) -c $< -o $@
 
-.obj/database.o: ../common/database.cpp ../common/database.h
-	mkdir -p .obj
-	$(CC) $(COPTS) -c ../common/database.cpp -o .obj/database.o
-
-.obj/Item.o: ../common/Item.cpp ../common/Item.h
-	mkdir -p .obj
-	$(CC) $(COPTS) -c ../common/Item.cpp -o .obj/Item.o
-
-.obj/misc.o: ../common/misc.cpp ../common/misc.h
-	mkdir -p .obj
-	$(CC) $(COPTS) -c ../common/misc.cpp -o .obj/misc.o
+.depend depend:
+	echo $(SF) "" | sed -e 's#.obj/#../common/#g' -e 's/\.o/.cpp/g' | \
+	xargs mkdep $(COPTS) `$(PERL_FLAGS)`

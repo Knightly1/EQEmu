@@ -93,7 +93,8 @@ EQNetworkServer::~EQNetworkServer() {
 	WSACleanup();
 #endif
 	connection_list.clear();
-	while (NewQueue.pop()); // they're deleted with the list, clear this queue so it doesnt try to delete them again
+	while (!NewQueue.empty())
+		NewQueue.pop(); // they're deleted with the list, clear this queue so it doesnt try to delete them again
 }
 
 bool EQNetworkServer::Open(int16 iPort) {
@@ -227,19 +228,19 @@ void EQNetworkServer::Process() {
 		}
 	}
 
-	map <pair<uint32,uint16>, EQNetworkConnection*>::iterator connection;
+	map <string, EQNetworkConnection*>::iterator connection;
 	for (connection = connection_list.begin( ); connection != connection_list.end( );)
 	{
 		if(!connection->second)
 		{
-			map <pair<uint32,uint16>, EQNetworkConnection*>::iterator tmp=connection;
+			map <string, EQNetworkConnection*>::iterator tmp=connection;
 			connection++;
 			connection_list.erase(tmp);
 			continue;
 		}
 		EQNetworkConnection* eqnc_data = connection->second; 
 		if (eqnc_data->IsFree() && (!eqnc_data->CheckNetActive())) { 
-			map <pair<uint32,uint16>, EQNetworkConnection*>::iterator tmp=connection;
+			map <string, EQNetworkConnection*>::iterator tmp=connection;
 			connection++;
 			safe_delete(eqnc_data);
 			connection_list.erase(tmp);
@@ -249,15 +250,6 @@ void EQNetworkServer::Process() {
 			connection++;
 		}
 	}
-}
-
-EQNetworkConnection* EQNetworkServer::FindNetConnection(int32 in_ip, int16 in_port)
-{
-			map <pair<uint32,uint16>, EQNetworkConnection*>::iterator connection;
-			if((connection = connection_list.find(IPPortPair(in_ip,in_port)))!=connection_list.end())
-			return connection->second;
-
-return 0;
 }
 
 void EQNetworkServer::RecvData(uchar* data, int32 size, int32 irIP, int16 irPort) {
@@ -279,24 +271,33 @@ void EQNetworkServer::RecvData(uchar* data, int32 size, int32 irIP, int16 irPort
 		return;
 	}
 
-			EQNetworkConnection* tmp = FindNetConnection(irIP,irPort);
-			if(tmp != 0 && tmp->GetrPort() == irPort)
-			{
-			tmp->RecvData(data, size);
-			return;
-			}
-			else if(tmp != 0 && tmp->GetrPort() != irPort)
-			{
-				printf("Conflicting IPs & Ports: IP %i and Port %i is conflicting with IP %i and Port %i\n",irIP,irPort,tmp->GetrIP(),tmp->GetrPort());
-				return;
-			}
+	char temp[25];
+	sprintf(temp,"%lu:%d",irIP,irPort);
+	EQNetworkConnection* tmp = NULL;
+	map <string, EQNetworkConnection*>::iterator connection;
+	if ((connection=connection_list.find(temp))!=connection_list.end())
+		tmp=connection->second;
+	if(tmp != NULL && tmp->GetrPort() == irPort)
+	{
+		tmp->RecvData(data, size);
+		return;
+	}
+	else if(tmp != NULL  && tmp->GetrPort() != irPort)
+	{
+		printf("Conflicting IPs & Ports: IP %i and Port %i is conflicting with IP %i and Port %i\n",irIP,irPort,tmp->GetrIP(),tmp->GetrPort());
+		return;
+	}
+
 	if (data[0] & 0x20) { // check for SEQStart
 #if EQN_DEBUG >= 4
 		cout << "New EQNetwork Connection." << endl;
 #endif
 		EQNetworkConnection* tmp = new EQNetworkConnection(irIP, irPort);
 		tmp->RecvData(data, size);
-		connection_list.insert(ConnectionPair(IPPortPair(irIP,irPort),tmp));
+		connection_list[temp]=tmp;
+		if (connection_list.find(temp)==connection_list.end()) {
+			cerr <<"Could not find new connection we just added!" << endl;
+		}
 		MNewQueue.lock();
 		NewQueue.push(tmp);
 		MNewQueue.unlock();
@@ -312,7 +313,10 @@ void EQNetworkServer::RecvData(uchar* data, int32 size, int32 irIP, int16 irPort
 EQNetworkConnection* EQNetworkServer::NewQueuePop() {
 	EQNetworkConnection* ret = 0;
 	MNewQueue.lock();
-	ret = NewQueue.pop();
+	if (!NewQueue.empty()) {
+		ret = NewQueue.front();
+		NewQueue.pop();
+	}
 	MNewQueue.unlock();
 	return ret;
 }
@@ -650,6 +654,7 @@ void EQNetworkConnection::FastQueuePacket(APPLAYER** app, bool ackreq) {
 		APPLAYER::PacketUsed(app);
 		return;
 	}
+
 	InQueue_Struct* iqs = new InQueue_Struct;
 	iqs->app = *app;
 	*app = 0;

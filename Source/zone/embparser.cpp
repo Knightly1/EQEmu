@@ -754,6 +754,7 @@ void PerlembParser::map_funs()
 "sub shout{push(@cmd_queue,{func=>'shout',args=>join(',',@_)});}"
 "sub spawn{push(@cmd_queue,{func=>'spawn',args=>join(',',@_)});}"
 "sub spawn2{push(@cmd_queue,{func=>'spawn2',args=>join(',',@_)});}"
+"sub unique_spawn{push(@cmd_queue,{func=>'unique_spawn',args=>join(',',@_)});}"
 "sub echo{push(@cmd_queue,{func=>'echo',args=>join(',',@_)});}"
 "sub summonitem{push(@cmd_queue,{func=>'summonitem',args=>join(',',@_)});}"
 "sub castspell{push(@cmd_queue,{func=>'castspell',args=>join(',',@_)});}"
@@ -826,6 +827,7 @@ void PerlembParser::map_funs()
 "sub traindisc{push(@cmd_queue,{func=>'traindisc',args=>join(',',@_)});}"
 "sub set_proximity{push(@cmd_queue,{func=>'set_proximity',args=>join(',',@_)});}"
 "sub clear_proximity{push(@cmd_queue,{func=>'clear_proximity',args=>join(',',@_)});}"
+"sub setanim{push(@cmd_queue,{func=>'warp',args=>join(',',@_)});}"
 "package main;"
 "}"
 );//eval

@@ -10,3 +10,4 @@
 #include "mob.h"
 #include "trap.h"
 #include "beacon.h"
+#include "horse.h"

@@ -360,7 +360,7 @@ void Console::ProcessCommand(const char* command) {
 			}
 			database.GetAccountName(paccountid, paccountname); // fixes case and stuff
 			admin = database.CheckStatus(paccountid);
-			if (!(admin >= 100)) {
+			if (!(admin >= consoleLoginStatus)) {
 				SendMessage(1, 0);
 				SendMessage(2, "Access denied.");
 				SendMessage(1, "Bye Bye.");
@@ -390,16 +390,20 @@ void Console::ProcessCommand(const char* command) {
 				SendMessage(1, "  broadcast [message]");
 				SendMessage(1, "  gmsay [message]");
 				SendMessage(1, "  ooc [message]");
-				if (admin >= 150) {
+				if (admin >= consoleKickStatus)
 					SendMessage(1, "  kick [charname]");
+				if (admin >= consoleLockStatus)
 					SendMessage(1, "  lock/unlock");
+				if (admin >= consoleZoneStatus) {
 					SendMessage(1, "  zoneshutdown [zonename or ZoneServerID]");
 					SendMessage(1, "  zonebootup [ZoneServerID] [zonename]");
+					SendMessage(1, "  zonelock [list|lock|unlock] [zonename]");
 				}
-				if (admin >= 200) {
-// SCORPIOUS2K - reversed parameter order for flag
+				if (admin >= consoleFlagStatus)
 					SendMessage(1, "  flag [status] [accountname]");
+				if (admin >= consolePassStatus)
 					SendMessage(1, "  setpass [accountname] [newpass]");
+				if (admin >= consoleWorldStatus) {
 					SendMessage(1, "  version");
 					SendMessage(1, "  worldshutdown");
 				}
@@ -410,7 +414,7 @@ void Console::ProcessCommand(const char* command) {
 			else if (strcasecmp(sep.arg[0], "ping") == 0) {
 				// do nothing
 			}
-			else if (strcasecmp(sep.arg[0], "setpass") == 0 && admin >= 200) {
+			else if (strcasecmp(sep.arg[0], "setpass") == 0 && admin >= consolePassStatus) {
 				if (sep.argnum != 2)
 					SendMessage(1, "Format: setpass accountname password");
 				else {
@@ -528,7 +532,7 @@ void Console::ProcessCommand(const char* command) {
 						SendMessage(1, "Character Does Not Exist");
 				}
 			}
-			else if (strcasecmp(sep.arg[0], "flag") == 0 && this->Admin() >= 200) {
+			else if (strcasecmp(sep.arg[0], "flag") == 0 && this->Admin() >= consoleFlagStatus) {
 // SCORPIOUS2K - reversed parameter order for flag
 				if(sep.arg[2][0]==0 || !sep.IsNumber(1))
 					SendMessage(1, "Usage: flag [status] [accountname]");
@@ -536,15 +540,15 @@ void Console::ProcessCommand(const char* command) {
 				{
 					if (atoi(sep.arg[1]) > this->Admin())
 						SendMessage(1, "You cannot set people's status to higher than your own");
-					else if (atoi(sep.arg[1]) < 0 && this->Admin() < 100)
-							SendMessage(1, "You have too low of status to suspend/ban");
+					else if (atoi(sep.arg[1]) < 0 && this->Admin() < consoleFlagStatus)
+							SendMessage(1, "You have too low of status to change flags");
 					else if (!database.SetGMFlag(sep.arg[2], atoi(sep.arg[1])))
 							SendMessage(1, "Unable to flag account!");
 					else
 							SendMessage(1, "Account Flaged");
 				}
 			}
-			else if (strcasecmp(sep.arg[0], "kick") == 0 && admin >= 150) {
+			else if (strcasecmp(sep.arg[0], "kick") == 0 && admin >= consoleKickStatus) {
 				char tmpname[64];
 				tmpname[0] = '*';
 				strcpy(&tmpname[1], paccountname);
@@ -594,7 +598,7 @@ void Console::ProcessCommand(const char* command) {
 				SendMessage(1, "Bye Bye.");
 				state = CONSOLE_STATE_CLOSED;
 			}
-			else if (strcasecmp(sep.arg[0], "zoneshutdown") == 0 && admin >= 150) {
+			else if (strcasecmp(sep.arg[0], "zoneshutdown") == 0 && admin >= consoleZoneStatus) {
 				if (sep.arg[1][0] == 0) {
 					SendMessage(1, "Usage: zoneshutdown zoneshortname");
 				} else {
@@ -630,7 +634,7 @@ void Console::ProcessCommand(const char* command) {
 					delete pack;
 				}
 			}
-			else if (strcasecmp(sep.arg[0], "zonebootup") == 0 && admin >= 150) {
+			else if (strcasecmp(sep.arg[0], "zonebootup") == 0 && admin >= consoleZoneStatus) {
 				if (sep.arg[2][0] == 0 || !sep.IsNumber(1)) {
 					SendMessage(1, "Usage: zonebootup ZoneServerID# zoneshortname");
 				} else {
@@ -642,14 +646,14 @@ void Console::ProcessCommand(const char* command) {
 					ZSList::SOPZoneBootup(tmpname, atoi(sep.arg[1]), sep.arg[2], (bool) (strcasecmp(sep.arg[3], "static") == 0));
 				}
 			}
-			else if (strcasecmp(sep.arg[0], "worldshutdown") == 0 && admin >= 200) {
+			else if (strcasecmp(sep.arg[0], "worldshutdown") == 0 && admin >= consoleWorldStatus) {
 				ServerPacket* pack = new ServerPacket(ServerOP_ShutdownAll);
 				zoneserver_list.SendPacket(pack);
 				delete pack;
 				SendMessage(1, "Sending shutdown packet... goodbye.");
 				CatchSignal(0);
 			}
-			else if (strcasecmp(sep.arg[0], "lock") == 0) {
+			else if (strcasecmp(sep.arg[0], "lock") == 0 && admin >= consoleLockStatus) {
 				net.world_locked = true;
 				if (loginserver.Connected()) {
 					loginserver.SendStatus();
@@ -659,7 +663,7 @@ void Console::ProcessCommand(const char* command) {
 					SendMessage(1, "World locked, but login server not connected.");
 				}
 			}
-			else if (strcasecmp(sep.arg[0], "unlock") == 0) {
+			else if (strcasecmp(sep.arg[0], "unlock") == 0 && admin >= consoleLockStatus) {
 				net.world_locked = false;
 				if (loginserver.Connected()) {
 					loginserver.SendStatus();
@@ -669,7 +673,7 @@ void Console::ProcessCommand(const char* command) {
 					SendMessage(1, "World unlocked, but login server not connected.");
 				}
 			}
-			else if (strcasecmp(sep.arg[0], "version") == 0 && admin >= 200) {
+			else if (strcasecmp(sep.arg[0], "version") == 0 && admin >= consoleWorldStatus) {
 				SendMessage(1, "Current version information.");
 				SendMessage(1, "  %s", CURRENT_WORLD_VERSION);
 				SendMessage(1, "  Compiled on: %s at %s", COMPILE_DATE, COMPILE_TIME);
@@ -700,7 +704,7 @@ void Console::ProcessCommand(const char* command) {
 			else if (strcasecmp(sep.arg[0], "IPLookup") == 0 && admin >= 201) {
 				zoneserver_list.SendCLEList(admin, 0, this, sep.argplus[1]);
 			}
-			else if (strcasecmp(sep.arg[0], "zonelock") == 0) {
+			else if (strcasecmp(sep.arg[0], "zonelock") == 0 && admin >= consoleZoneStatus) {
 				if (strcasecmp(sep.arg[1], "list") == 0) {
 					zoneserver_list.ListLockedZones(0, this);
 				}

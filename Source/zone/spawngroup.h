@@ -54,7 +54,7 @@ private:
 class SpawnGroupList
 {
 public:
-	SpawnGroupList() {printf("Creating an SGL\n");};
+	SpawnGroupList() { }
 	~SpawnGroupList();
 
 	void AddSpawnGroup(SpawnGroup* newGroup);

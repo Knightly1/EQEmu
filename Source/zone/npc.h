@@ -104,7 +104,7 @@ public:
 	bool	IsRanger() { return rangerstance; }
 
 	void    RemoveItem(uint16 item_id, int16 quantity = 0, int16 slot = 0);
-	bool	AddNPCSpells(int32 iDBSpellsID, AISpells_Struct* AIspells);
+//	bool	AddNPCSpells(int32 iDBSpellsID, AISpells_Struct* AIspells);
 //	void	RemoveItem(uint16 item_id);
 	void	ClearItemList();
 	ServerLootItem_Struct*	GetItem(int slot_id);
@@ -180,6 +180,8 @@ public:
 	
 	inline bool WillAggroNPCs() const { return(npc_aggro); }
 	
+	inline void GiveNPCTypeData(NPCType *ours) { NPCTypedata_ours = ours; }
+	
 	ItemList	itemlist; //kathgar - why is this public?  Doing other things or I would check the code
 	
 	NPCProximity* proximity;
@@ -188,6 +190,9 @@ public:
 
 	Spawn2*	respawn2;
 protected:
+	const NPCType*	NPCTypedata;
+	NPCType*	NPCTypedata_ours;	//special case for npcs with uniquely created data.
+
 	friend class EntityList;
 	list<struct NPCFaction*> faction_list;
 	Mob*	ignore_target;

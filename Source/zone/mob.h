@@ -45,17 +45,6 @@
 #define APPEAR_HEIGHT	0x001d
 #define	APPEAR_HP_TIC	0x0011
 
-#define MOUNT_SLOW1_WALK	0.40000004
-#define MOUNT_SLOW1_RUN		0.75
-#define MOUNT_SLOW2_WALK	0.53333337
-#define MOUNT_SLOW2_RUN		1
-#define MOUNT_RUN1_WALK		0.66666669
-#define MOUNT_RUN1_RUN		1.25
-#define MOUNT_RUN2_WALK		0.80000002
-#define MOUNT_RUN2_RUN		1.5
-#define MOUNT_FAST_WALK		0.93333334
-#define MOUNT_FAST_RUN		1.75
-
 #define CON_GREEN		2
 #define CON_LIGHTBLUE	18
 #define CON_BLUE		4
@@ -75,6 +64,7 @@
 #include "hate_list.h"
 #include "../common/Kaiyodo-LList.h"
 #include "../common/skills.h"
+#include "../common/bodytypes.h"
 #include "map.h"
 
 enum FindSpellType {
@@ -103,13 +93,13 @@ enum {
 				//X,Y,Z are old interactive NPC codes
 };
 
-enum {	//fear states
+typedef enum {	//fear states
 	fearStateNotFeared = 0,
-	fearStateRunning,
+	fearStateRunning,		//I am running, hoping to find a grid at my WP
 	fearStateRunningForever,	//can run straight until spell ends
-	fearStateRunningToStick,	//im stuck when i hit my waypoint
-	fearStateStuck
-};
+	fearStateGrid,			//I am allready on a fear grid
+	fearStateStuck			//I cannot move somehow...
+} FearState;
 
 struct TradeEntity;
 class Trade;
@@ -246,6 +236,7 @@ enum {	//type arguments to DoAnim
 };
 
 class EGNode;
+class MobFearState;
 
 #define MAX_AISPELLS 16
 class Mob : public Entity
@@ -303,7 +294,7 @@ bool logpos;
 	    int8    in_gender,
 	    uint16	in_race,
 	    int8    in_class,
-        int8    in_bodytype,
+        bodyType    in_bodytype,
 	    int8    in_deity,
 	    int8    in_level,
 		int32   in_npctype_id, // rembrant, Dec. 20, 2001
@@ -501,7 +492,6 @@ bool logpos;
 	void ShowStats(Client* client);
 	void ShowBuffs(Client* client);
 	int32 GetNPCTypeID()			{ return npctype_id; } // rembrant, Dec. 20, 2001
-	const NPCType* GetNPCTypeData()	{ return NPCTypedata; }
 	inline const int32& GetNPCSpellsID()	{ return npc_spells_id; }
 	
 	float Dist(const Mob &);
@@ -538,9 +528,9 @@ bool logpos;
 	bool UseBardSpellLogic(int16 spell_id = 0xffff, int slot = -1);
 	void InterruptSpell(int16 spellid = 0xFFFF);
 	void InterruptSpell(int16, int16, int16 spellid = 0xFFFF);
-	virtual void	CastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0);
-	virtual void	DoCastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0);
-	void	CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_used, int32 inventory_slot = 0);
+	virtual void	CastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0xFFFFFFFF);
+	virtual void	DoCastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0xFFFFFFFF);
+	void	CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_used, int32 inventory_slot = 0xFFFFFFFF);
 	bool	SpellFinished(int16 spell_id, int32 target_id, int16 slot = 10, int16 mana_used = 0);
 	bool	SpellOnTarget(int16 spell_id, Mob* spelltar);
 //	int	CheckAddBuff(Mob* caster, const int16& spell_id, const int& caster_level, int* buffdur, int ticsremaining = -1);
@@ -577,7 +567,7 @@ bool logpos;
 	inline const	int16&	GetOwnerID()					{ return ownerid; }
 	inline const	int16&	GetPetType()					{ return typeofpet; }
 	bool IsFamiliar() { return(typeofpet >= 1 && typeofpet <= 4); }
-    inline const	int8&	GetBodyType()					{ return bodytype; }
+    inline const	bodyType	GetBodyType() const	{ return bodytype; }
     int16   FindSpell(int16 classp, int16 level, int type, FindSpellType spelltype, float distance, sint32 mana_avail);
 	void	CheckBuffs();
 	bool	CheckSelfBuffs();
@@ -698,6 +688,9 @@ bool logpos;
 	
 	int					GetMaxWp(){ return max_wp; }
 	int					GetCurWp(){ return cur_wp; }
+#ifdef ENABLE_FEAR_PATHING
+	void SetFeared(Mob *caster, int32 duration);
+#endif
 	
 	inline bool			CheckAggro(Mob* other) {return hate_list.IsOnHateList(other);}
     sint8				CalculateHeadingToTarget(float in_x, float in_y);
@@ -808,7 +801,6 @@ protected:
 	Buffs_Struct	buffs[BUFF_COUNT];
 	StatBonuses		itembonuses;
 	StatBonuses		spellbonuses;
-	NPCType*		NPCTypedata;
 	int16			petid;
     int16           familiarid;
 	int16			ownerid;
@@ -824,7 +816,7 @@ protected:
 	int8	base_gender;
 	int16	base_race;
 	int8    class_;
-    int8    bodytype;
+	bodyType    bodytype;
 	int16	deity;
 	uint8    level;
 	int32   npctype_id; // rembrant, Dec. 20, 2001
@@ -936,10 +928,10 @@ protected:
 	
 	
 #ifdef ENABLE_FEAR_PATHING
-	void SetFeared(Mob *caster, int32 duration);
 	void CalculateFearPosition();
 	VERTEX fear_vector;
-	uint8 fear_state;
+	FearState fear_state;
+	MobFearState *fear_path_state;
 #endif
 	
 	bool	pAIControlled;

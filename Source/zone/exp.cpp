@@ -1,0 +1,430 @@
+/*  EQEMu:  Everquest Server Emulator
+	Copyright (C) 2001-2003  EQEMu Development Team (http://eqemulator.net)
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+  
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY except by those people which sell it, which
+	are required to give you total support for your newly bought product;
+	without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+	A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+	
+	  You should have received a copy of the GNU General Public License
+	  along with this program; if not, write to the Free Software
+	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+#include "../common/debug.h"
+#include "features.h"
+#include "masterentity.h"
+#include "StringIDs.h"
+
+//experience modifiers based on race and class
+//                            hum     bar     eru     elf     hie     def     hef     dwa     tro     ogr     hal    gno     iks,    vah     frog
+float  race_modifiers[15] = { 100.0f, 105.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 120.0f, 115.0f, 95.0f, 100.0f, 120.0f, 100.0f, 100.0f}; // Quagmire - Guessed on iks and vah
+
+//                            war   cle    pal    ran    shd    dru    mnk    brd    rog    shm    nec    wiz    mag    enc    bst    bes
+float class_modifiers[16] = { 9.0f, 10.0f, 14.0f, 14.0f, 14.0f, 10.0f, 12.0f, 14.0f, 9.05f, 10.0f, 11.0f, 11.0f, 11.0f, 11.0f, 10.0f, 10.0f};
+
+
+
+
+
+void Client::AddEXP(int32 add_exp, int8 conlevel, bool resexp) {
+#ifdef GUILDWARS
+	m_pp.perAA = 0;
+#endif
+	if (m_pp.perAA<0 || m_pp.perAA>100) m_pp.perAA=0;	// stop exploit with sanity check
+	int32 add_aaxp = add_exp * m_pp.perAA / 100;
+	add_exp -= add_aaxp;
+	
+	//int lvldiff = my_level - otherlevel;
+	
+	if (!resexp && zone->GetEXPMod() > 0) {
+		int32 factor = 100 * (int32) zone->GetEXPMod();
+		add_exp += (add_exp * factor / 10000);
+	}
+#ifdef CON_XP_SCALING
+	if (!resexp && conlevel != 0xFF) {
+		switch (conlevel)
+		{
+		case CON_GREEN:
+			//Message(15,"This creature is trivial to you and offers no experience.");
+			return;
+		case CON_LIGHTBLUE:
+				add_exp = add_exp * 2/10;
+			break;
+		case CON_BLUE:
+			//if (lvldiff >= 12)
+			//	add_exp = add_exp * 6/10;
+			//else if (lvldiff > 5)
+				add_exp = add_exp * 8/10;
+			//else if (lvldiff > 3)
+			//	add_exp = add_exp * 9/10;
+			break;
+		case CON_WHITE:
+				add_exp = add_exp * 125/100;
+			break;
+		case CON_YELLOW:
+				add_exp = add_exp * 150/100;
+			break;
+		case CON_RED:
+				add_exp = add_exp * 200/100;
+			break;
+		}
+		/*
+		if (otherlevel >= 65)
+		{
+			int add = add_exp*((otherlevel-49)*20/100);
+			add_exp += add_exp*((otherlevel-64))*2;
+			add_exp += add;
+		}
+		else if (otherlevel >= 50)
+		{
+			add_exp += add_exp*((otherlevel-49)*20/100);
+		}*/
+	}
+#endif
+	
+#ifdef FREEBSD
+	//Father Nitwit Debug:
+	Message(15, "Adding %i experience to your character.", add_exp);
+#endif
+
+	if (m_pp.perAA<0 || m_pp.perAA>100)
+		m_pp.perAA=0;	// stop exploit with sanity check
+
+	// Old function
+	//int32 exp = GetEXP() + (add_exp - add_aaxp);
+
+	// TC - Uses modifier now from variables table.
+	int32 exp = GetEXP() + add_exp;
+
+	//int32 aaexp = GetAAXP() + add_aaxp;
+	// TC - New function
+
+	int32 aaexp = (int32)((zone->GetAAXPMod()) * add_aaxp);
+	if(GetAAXP()<0xFFFFFFFF)
+		aaexp+=GetAAXP();
+	SetEXP(exp, aaexp, false);
+}
+
+void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
+	max_AAXP = GetEXPForLevel(52) - GetEXPForLevel(51);
+	if (max_AAXP == 0 || GetEXPForLevel(GetLevel()) == 0xFFFFFFFF) {
+		Message(13, "Error in Client::SetEXP. EXP not set.");
+		return; // Must be invalid class/race
+	}
+	if ((set_exp + set_aaxp) > m_pp.exp) {
+		if (isrezzexp)
+			this->Message_StringID(15,REZ_REGAIN);
+		else{
+			if(this->IsGrouped())
+				this->Message_StringID(15,GAIN_GROUPXP);
+			else
+				this->Message_StringID(15,GAIN_XP);
+		}
+	}
+	else
+		Message(15, "You have lost experience.");
+
+#ifdef FREEBSD
+//Father Nitwit Debug:
+Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
+#endif
+	
+	int16 check_level = GetLevel()+1;
+	while (set_exp >= GetEXPForLevel(check_level)) {
+		check_level++;
+		if (check_level > 100) { // Quagmire - this was happening because GetEXPForLevel returned 0 on unknown race/class combo, Changed it to return 0xFFFFFFFF on error
+			check_level = GetLevel()+1;
+			break;
+		}
+	}
+	while (set_exp < GetEXPForLevel(check_level-1)) {
+		check_level--;
+		if (check_level < 2) {
+			check_level = 2;
+			break;
+		}
+	}
+	
+	if (set_aaxp >= max_AAXP) {
+		int last_unspentAA = m_pp.aapoints;
+		m_pp.aapoints = set_aaxp / max_AAXP;
+		set_aaxp = set_aaxp - (max_AAXP * m_pp.aapoints);
+		if(set_aaxp <=0) {
+			set_aaxp = 0;
+		}
+		m_pp.expAA = set_aaxp;
+		m_pp.aapoints += last_unspentAA;
+		set_aaxp = m_pp.expAA % max_AAXP;
+		
+		//Message(15, "You have gained %d skill points!!", m_pp.aapoints - last_unspentAA);
+		char val1[20]={0};
+		Message_StringID(15,GAIN_ABILITY_POINT,ConvertArray(m_pp.aapoints,val1),"(s)");
+		//Message(15, "You now have %d skill points available to spend.", m_pp.aapoints);
+	}
+	
+	m_pp.expAA = set_aaxp;
+
+	int8 maxlevel = LEVEL_CAP + 1;
+
+#ifdef RAIDADDICTS
+	maxlevel = raidaddicts.GetZoneLevel();
+#endif
+
+	#ifdef GUILDWARS
+		if(GuildDBID() == 0)
+			maxlevel = NOGUILDCAPLEVEL;
+		else
+			maxlevel = GAINLEVEL;
+	#endif
+	if ((GetLevel() != check_level-1) && !(check_level-1 >= maxlevel)) {
+		char val1[20]={0};
+		if (GetLevel() == check_level-2){
+			Message_StringID(15,GAIN_LEVEL,ConvertArray(check_level-1,val1));
+			SendLevelAppearance();
+			//Message(15, "You have gained a level! Welcome to level %i!", check_level-1);
+		}
+		if (GetLevel() == check_level){
+			Message_StringID(15,LOSE_LEVEL,ConvertArray(check_level-1,val1));
+			//Message(15, "You lost a level! You are now level %i!", check_level-1);
+		}
+		else
+			Message(15, "Welcome to level %i!", check_level-1);
+		m_pp.exp = set_exp;
+		SetLevel(check_level-1);
+	}
+
+	//send the expdata in any case so the xp bar isnt stuck after leveling
+	APPLAYER* outapp = new APPLAYER(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
+	ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
+	int32 tmpxp1 = GetEXPForLevel(GetLevel()+1);
+	int32 tmpxp2 = GetEXPForLevel(GetLevel());
+	// Quag: crash bug fix... Divide by zero when tmpxp1 and 2 equalled each other, most likely the error case from GetEXPForLevel() (invalid class, etc)
+	if (tmpxp1 != tmpxp2 && tmpxp1 != 0xFFFFFFFF && tmpxp2 != 0xFFFFFFFF) {
+		double tmpxp = (double) ( (double) set_exp-tmpxp2 ) / ( (double) tmpxp1-tmpxp2 );
+		eu->exp = (uint32)(330.0f * tmpxp);
+		QueuePacket(outapp);
+	}
+	safe_delete(outapp);
+	m_pp.exp = set_exp;
+
+	if (level<51) m_pp.perAA=0;	// turn off aa exp if they drop below 51
+
+	SendAAStats();
+	if (admin>=100 && GetGM()) {
+		char val1[20]={0};
+		char val2[20]={0};
+		char val3[20]={0};
+		Message_StringID(15,GM_GAINXP,ConvertArray(set_aaxp,val1),ConvertArray(set_exp,val2),ConvertArray(GetEXPForLevel(GetLevel()+1),val3));
+		//Message(15, "[GM] You now have %d / %d EXP and %d / %d AA exp.", set_exp, GetEXPForLevel(GetLevel()+1), set_aaxp, max_AAXP);
+
+	}
+	SendAppearancePacket(AT_WhoLevel, GetLevel());
+}
+
+void Client::SetLevel(int8 set_level, bool command)
+{
+	#ifdef GUILDWARS
+		if(set_level > SETLEVEL) {
+			Message(0,"You cannot exceed level %i on a GuildWars Server.",SETLEVEL);
+			return;
+		}
+	#endif
+
+	if (GetEXPForLevel(set_level) == 0xFFFFFFFF) {
+		LogFile->write(EQEMuLog::Error,"Client::SetLevel() GetEXPForLevel(%i) = 0xFFFFFFFF", set_level);
+		return;
+	}
+
+	APPLAYER* outapp = new APPLAYER(OP_LevelUpdate, sizeof(LevelUpdate_Struct));
+	LevelUpdate_Struct* lu = (LevelUpdate_Struct*)outapp->pBuffer;
+	lu->level = set_level;
+	lu->level_old = level;
+	level = set_level;
+
+	if(set_level > m_pp.level) { // Yes I am aware that you could delevel yourself and relevel this is just to test!
+		m_pp.points += 5 * (set_level - m_pp.level);
+	}
+
+	m_pp.level = set_level;
+	if (command){
+		m_pp.exp = GetEXPForLevel(set_level);
+		Message(15, "Welcome to level %i!", set_level);
+		lu->exp = 0;
+	}
+	else {
+		double tmpxp = (double) ( (double) m_pp.exp - GetEXPForLevel( GetLevel() )) /
+						( (double) GetEXPForLevel(GetLevel()+1) - GetEXPForLevel(GetLevel()));
+		lu->exp =  (int32)(330.0f * tmpxp);
+    }
+	QueuePacket(outapp);
+	safe_delete(outapp);
+	this->SendAppearancePacket(AT_WhoLevel, set_level); // who level change
+
+    LogFile->write(EQEMuLog::Normal,"Setting Level for %s to %i", GetName(), set_level);
+
+	CalcBonuses();
+#ifndef HEAL_ON_LEVEL
+	int mhp = CalcMaxHP();
+	if(GetHP() > mhp)
+		SetHP(mhp);
+#else
+	SetHP(CalcMaxHP());		// Why not, lets give them a free heal
+#endif
+
+	SendHPUpdate();
+	SetMana(CalcMaxMana());
+	UpdateWho();
+	Save();
+}
+
+// Note: The client calculates exp separately, we cant change this function
+// Add: You can set the values you want now, client will be always sync :) - Merkur
+uint32 Client::GetEXPForLevel(int16 check_level)
+{
+	int16 tmprace = GetBaseRace();
+	if (tmprace == IKSAR) // Quagmire, set these up so they read from array right
+		tmprace = 12;
+	else if (tmprace == VAHSHIR)
+		tmprace = 13;
+	else if ((tmprace == FROGLOK) || (tmprace == FROGLOK2))
+		tmprace = 14;
+	else
+		tmprace--;
+
+	if (tmprace >= sizeof(race_modifiers) || GetClass() < 1 || GetClass() - 1 >= PLAYER_CLASS_COUNT)
+		return 0xFFFFFFFF;
+
+	int16 check_levelm1 = check_level-1;
+	if (check_level < 31)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]);
+	else if (check_level < 36)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.1);
+	else if (check_level < 41)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.2);
+	else if (check_level < 46)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.3);
+	else if (check_level < 52)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.4);
+	else if (check_level < 53)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.5);
+	else if (check_level < 54)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.6);
+	else if (check_level < 55)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.7);
+	else if (check_level < 56)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.9);
+	else if (check_level < 57)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.1);
+	else if (check_level < 58)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.3);
+	else if (check_level < 59)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.5);
+	else if (check_level < 60)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.7);
+	else if (check_level < 61)
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*3.0);
+	else
+		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*3.1);
+}
+
+void Group::SplitExp(uint32 exp, Mob* other) {
+	if( other->CastToNPC()->MerchantType != 0 ) // Ensure NPC isn't a merchant
+	  return;
+	
+	int i; 
+	uint32 groupexp = exp; 
+	int8 membercount = 0; 
+	int8 maxlevel = 1;
+	
+	for (i = 0; i < MAX_GROUP_MEMBERS; i++) { 
+	  if (members[i] != NULL) { 
+		  if(members[i]->GetLevel() > maxlevel) 
+			  maxlevel = members[i]->GetLevel(); 
+		  //groupexp += exp/10; 
+		  groupexp += (uint32)(exp * zone->GetGroupEXPBonus()); 
+
+		  membercount++; 
+	  } 
+	}
+	
+	int conlevel = Mob::GetLevelCon(maxlevel, other->GetLevel());
+	if(conlevel == CON_GREEN)
+		return;	//no exp for greenies...
+	
+#ifdef ENABLE_GROUP_LINKING
+	//links
+	Group* lnkgrp = NULL;
+	for (i = 0; i < MAX_GROUP_LINKS; i++) {
+		if (link[i] == 0)
+			continue;
+		lnkgrp = entity_list.GetGroupByID(link[i]);
+		if(lnkgrp == NULL)
+			continue;
+		for (i = 0; i < MAX_GROUP_MEMBERS; i++) 
+		{ 
+		  if (lnkgrp->members[i] != NULL) 
+		  { 
+			  if(lnkgrp->members[i]->GetLevel() > maxlevel) 
+				  maxlevel = lnkgrp->members[i]->GetLevel(); 
+			  //groupexp += exp/10; 
+			  groupexp += (uint32)(exp * zone->GetGroupEXPBonus()); 
+
+			  membercount++; 
+		  } 
+		}
+	}
+#endif
+
+	if (membercount == 0) 
+		return; 
+
+	for (i = 0; i < MAX_GROUP_MEMBERS; i++)  {
+		if (members[i] != NULL && members[i]->IsClient()) // If Group Member is Client
+		{
+			Client *cmember = members[i]->CastToClient();
+//			if( cmember->GetLevelCon( other->GetLevel() ) != CON_GREEN ) // If Mob doesn't con green
+//			{ 
+				// add exp + exp cap 
+				sint16 diff = cmember->GetLevel() - maxlevel; 
+				if (diff >= -8) { /*Instead of person who killed the mob, the person who has the highest level in the group*/ 
+					uint32 tmp = (cmember->GetLevel()+3) * (cmember->GetLevel()+3) * 75 * 35 / 10;
+					uint32 tmp2 = groupexp / membercount;
+					cmember->AddEXP( tmp < tmp2 ? tmp : tmp2, conlevel ); 
+				} 
+//			} 
+		} 
+	}
+	
+#ifdef ENABLE_GROUP_LINKING
+	for (i = 0; i < MAX_GROUP_LINKS; i++) {
+		if (link[i] == 0)
+			continue;
+		lnkgrp = entity_list.GetGroupByID(link[i]);
+		if(lnkgrp == NULL)
+			continue;
+		for (i = 0; i < MAX_GROUP_MEMBERS; i++)  {
+			if (lnkgrp->members[i] != NULL && lnkgrp->members[i]->IsClient()) // If Group Member is Client
+			{
+				Client *cmember = lnkgrp->members[i]->CastToClient();
+//				if( cmember->GetLevelCon( other->GetLevel() ) != CON_GREEN ) // If Mob doesn't con green
+//				{ 
+					// add exp + exp cap 
+					sint16 diff = cmember->GetLevel() - maxlevel; 
+					if (diff >= -8) { /*Instead of person who killed the mob, the person who has the highest level in the group*/ 
+						uint32 tmp = (cmember->GetLevel()+3) * (cmember->GetLevel()+3) * 75 * 35 / 10;
+						uint32 tmp2 = groupexp / membercount;
+						cmember->AddEXP( tmp < tmp2 ? tmp : tmp2, conlevel ); 
+					} 
+//				} 
+			} 
+		}
+	}
+#endif
+}
+
+

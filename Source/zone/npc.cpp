@@ -64,7 +64,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	  d->gender,
 	  d->race,
 	  d->class_,
-      d->bodytype,
+      (bodyType)d->bodytype,
 	  d->deity,
 	  d->level,
 	  d->npc_id, // rembrant, Dec. 20, 2001
@@ -123,9 +123,10 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 
 	int moblevel=GetLevel();
 	
-	
-	NPCTypedata = new NPCType;
-	memcpy(NPCTypedata, d, sizeof(NPCType));
+	NPCTypedata = d;
+	NPCTypedata_ours = NULL;
+//	NPCTypedata = new NPCType;
+//	memcpy(NPCTypedata, d, sizeof(NPCType));
 	respawn2 = in_respawn;
 	swarm_timer.Disable();
 
@@ -280,7 +281,8 @@ NPC::~NPC()
 		entity_list.RemoveProximity(GetID());
 		safe_delete(proximity);
 	}
-	safe_delete(NPCTypedata);
+//	safe_delete(NPCTypedata);
+	safe_delete(NPCTypedata_ours);
  #ifdef IPC	  
 	if(IsInteractive())
 	{
@@ -449,7 +451,7 @@ bool NPC::Process()
         {
         	if(GetBodyType() != BT_SwarmPet)
 	            owner->SetPetID(0);
-			this->ownerid = 0;
+		this->ownerid = 0;
             this->petid = 0;
         }
         return false;
@@ -1144,7 +1146,8 @@ NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z,
 		npc_type->CHA = 150;
 		
 		NPC* npc = new NPC(npc_type, 0, in_x, in_y, in_z, in_heading/8);
-		safe_delete(npc_type);
+		npc->GiveNPCTypeData(npc_type);
+		//safe_delete(npc_type);
 		
 		entity_list.AddNPC(npc);
 		return npc;

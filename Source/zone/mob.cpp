@@ -16,10 +16,12 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 #include "../common/debug.h"
+#include "features.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include "masterentity.h"
+#include "fearpath.h"
 #include "zone.h"
 #include "spdat.h"
 #include "../common/skills.h"
@@ -55,7 +57,7 @@ Mob::Mob(const char*   in_name,
          int8    in_gender,
          uint16    in_race,
          int8    in_class,
-         int8    in_bodytype,   // neotokyo targettype support 17-Nov-02
+         bodyType in_bodytype,   // neotokyo targettype support 17-Nov-02
          int8    in_deity,
          int8    in_level,
          int32	 in_npctype_id, // rembrant, Dec. 20, 2001
@@ -194,8 +196,7 @@ logpos = false;
 	WIS		= in_wis;
 	CHA		= in_cha;
 	MR = CR = FR = DR = PR = 0;
-
-	NPCTypedata = 0;
+	
 	ExtraHaste = 0;
 	bEnraged = false;
 
@@ -317,6 +318,7 @@ logpos = false;
 	follow=0;
 #ifdef ENABLE_FEAR_PATHING
 	fear_state = fearStateNotFeared;
+	fear_path_state = NULL;
 #endif
 	permarooted = ( walkspeed == 0 ) && ( runspeed == 0 );
 
@@ -370,6 +372,9 @@ Mob::~Mob()
 	entity_list.RemoveFromTargets(this);
 	
 	safe_delete(trade);
+#ifdef ENABLE_FEAR_PATHING
+	safe_delete(fear_path_state);
+#endif
 }
 
 int32 Mob::GetAppearanceValue(int8 iAppearance) {
@@ -565,19 +570,6 @@ void Mob::CreateSpawnPacket(APPLAYER* app, Mob* ForWho) {
 	memset(app->pBuffer, 0, app->size);	
 	NewSpawn_Struct* ns = (NewSpawn_Struct*)app->pBuffer;
 	FillSpawnStruct(ns, ForWho);
-}
-
-void Mob::CreateHorseSpawnPacket(APPLAYER* app, const char* ownername, uint16 ownerid, Mob* ForWho) {
-	app->opcode = OP_NewSpawn;
-	app->pBuffer = new uchar[sizeof(NewSpawn_Struct)];
-	app->size = sizeof(NewSpawn_Struct);
-	memset(app->pBuffer, 0, sizeof(NewSpawn_Struct));
-	NewSpawn_Struct* ns = (NewSpawn_Struct*)app->pBuffer;
-	FillSpawnStruct(ns, ForWho);
-#if (EQDEBUG >= 11)
-	printf("Horse Spawn Packet - Owner: %s\n", ownername);
-	DumpPacket(app);
-#endif
 }
 
 

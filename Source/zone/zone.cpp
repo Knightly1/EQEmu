@@ -48,6 +48,7 @@ using namespace std;
 #include "map.h"
 #include "object.h"
 #include "petitions.h"
+#include "fearpath.h"
 #include "../common/files.h"
 #include "parser.h"
 #include "event_codes.h"
@@ -95,7 +96,6 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 	
 	numclients = 0;
 	zone = new Zone(iZoneID, zonename, net.GetZoneAddress(), net.GetZonePort());
-
    // Load all NPCs in for the current zone.
    database.GetNPCType (0);
 
@@ -667,7 +667,12 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, i
 {
 	zoneid = in_zoneid;
 	zone_weather = 0;
-	map  = Map::LoadMapfile(in_short_name);
+	map = Map::LoadMapfile(in_short_name);
+#ifdef ENABLE_FEAR_PATHING
+	fear = FearPathManager::LoadPathFile(in_short_name);
+#else
+	fear = NULL;
+#endif
 	short_name = strcpy(new char[strlen(in_short_name)+1], in_short_name);
 	strlwr(short_name);
 	memset(file_name, 0, sizeof(file_name));
@@ -768,6 +773,7 @@ Zone::~Zone()
 		dbasync->CancelWork(pQueuedMerchantsWorkID);
 	spawn2_list.Clear();
 	safe_delete(map);
+	safe_delete(fear);
 	if (worldserver.Connected()) {
 		worldserver.SetZone(0);
 	}

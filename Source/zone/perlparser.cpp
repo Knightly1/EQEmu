@@ -190,7 +190,7 @@ XS(XS_EntityList_new)
 	XSRETURN(1);
 }
 
-#endif
+#endif //EMBPERL_XS_CLASSES
 
 
 XS(XS__echo); // prototype to pass -Wmissing-prototypes
@@ -1300,6 +1300,17 @@ XS(XS__clear_proximity)
 	XSRETURN_EMPTY;
 }
 
+XS(XS__setanim);
+XS(XS__setanim) //Cisyouc: mob->setappearance() addition
+{
+	dXSARGS;
+	if(items != 2)
+		Perl_croak(aTHX_ "Usage: quest::setanim(npc_type, animnum);");
+	
+	quest_manager.setanim(SvUV(ST(0)), SvUV(ST(1)));
+
+	XSRETURN_EMPTY;
+}
 
 /*
 
@@ -1329,6 +1340,7 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "write"), XS__write, file);
 		newXS(strcpy(buf, "spawn"), XS__spawn, file);
 		newXS(strcpy(buf, "spawn2"), XS__spawn2, file);
+		newXS(strcpy(buf, "unique_spawn"), XS__unique_spawn, file);
 		newXS(strcpy(buf, "setstat"), XS__setstat, file);
 		newXS(strcpy(buf, "castspell"), XS__castspell, file);
 		newXS(strcpy(buf, "selfcast"), XS__selfcast, file);
@@ -1394,6 +1406,7 @@ EXTERN_C XS(boot_quest)
         newXS(strcpy(buf, "ChooseRandom"), XS__ChooseRandom, file);
         newXS(strcpy(buf, "set_proximity"), XS__set_proximity, file);
         newXS(strcpy(buf, "clear_proximity"), XS__clear_proximity, file);
+        newXS(strcpy(buf, "setanim"), XS__setanim, file);
 	XSRETURN_YES;
 }
 

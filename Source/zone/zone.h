@@ -23,12 +23,11 @@
 #include "../common/Mutex.h"
 #include "../common/linked_list.h"
 #include "../common/types.h"
-#include "../common/database.h"
 #include "../common/eqtime.h"
 #include "../common/servertalk.h"
+#include "features.h"
 #include "spawngroup.h"
 #include "mob.h"
-#include "features.h"
 #include "zonedump.h"
 
 class Map;
@@ -57,6 +56,8 @@ struct ZoneClientAuth_Struct {
 };
 
 extern EntityList entity_list;
+class database;
+class FearPathManager;
 
 class database;
 
@@ -129,11 +130,12 @@ public:
 	void	LoadTempMerchantData_result(MYSQL_RES* result);
 	void	LoadMerchantData_result(MYSQL_RES* result);
 	int		SaveTempItem(int32 merchantid, int32 npcid, int32 item, sint32 charges, bool sold=false);
-
+	
 	map<uint32,NPCType *> npctable;
 	map<uint32,std::list<MerchantList> > merchanttable;
 	map<uint32,std::list<TempMerchantList> > tmpmerchanttable;
 	Map*	map;
+	FearPathManager *fear;
 	NewZone_Struct	newzone_data;
 //	uchar	zone_header_data[142];
 	int8	zone_weather;
@@ -165,7 +167,7 @@ public:
 	LinkedList<Object*> object_list;
 	int32	numzonepoints;
 protected:
-	friend class database;
+	//friend class database;
 #ifndef GUILDWARS
 	LinkedList<Spawn2*> spawn2_list; // CODER new spawn list
 #endif

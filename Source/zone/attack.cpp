@@ -1153,6 +1153,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 
 	InterruptSpell();
 	SetPet(0);
+	SetHorseId(0);
 	dead = true;
 	dead_timer.Start(5000, true);
 
@@ -1897,28 +1898,25 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	if(give_exp && give_exp->GetOwner() != 0)
 		give_exp = give_exp->GetOwner();
 	
+	Client *give_exp_client = give_exp?give_exp->CastToClient():NULL;
 #ifndef RAIDADDICTS // If we aren't Raid Addicts
-#ifdef IPC
-	if (give_exp && (give_exp->IsClient() || give_exp->CastToNPC()->IsInteractive()) && !IsCorpse() )
-#else
-    if (give_exp && (give_exp->IsClient() && !IsCorpse() ) && MerchantType == 0)
-#endif
+    if (give_exp_client && !IsCorpse() && MerchantType == 0)
 	{
-		Group *kg = entity_list.GetGroupByClient(give_exp->CastToClient());
-		if (give_exp->CastToClient()->isgrouped && kg != NULL)
+		Group *kg = entity_list.GetGroupByClient(give_exp_client);
+		if (give_exp_client->isgrouped && kg != NULL)
 		{
 #ifdef GUILDWARS
 			level = kg->GetHighestLevel();
 			kg->SplitExp(guildwars.CalculateEXPEarning(level, GetLevel(), true), this);
 #else
-			if(give_exp->CastToClient()->GetAdventureID()>0){
-				AdventureInfo AF=database.GetAdventureInfo(give_exp->CastToClient()->GetAdventureID());
+			if(give_exp_client->GetAdventureID()>0){
+				AdventureInfo AF = database.GetAdventureInfo(give_exp_client->GetAdventureID());
 				if(zone->GetZoneID() == AF.zonedungeonid && AF.type==ADVENTURE_MASSKILL)
-					give_exp->CastToClient()->SendAdventureUpdate();
+					give_exp_client->SendAdventureUpdate();
 				else if(zone->GetZoneID() == AF.zonedungeonid && AF.type==ADVENTURE_NAMED && (AF.Objetive==GetNPCTypeID() || AF.ObjetiveValue==GetNPCTypeID()))
-					give_exp->CastToClient()->SendAdventureFinish(1,AF.points,true);
+					give_exp_client->SendAdventureFinish(1, AF.points,true);
 			}
-			kg->SplitExp((level*level*75*35/10), this);
+			kg->SplitExp((EXP_FORMULA), this);
 #endif
 		}
 		else
@@ -1927,14 +1925,16 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
             if (conlevel != CON_GREEN)
             {
 #ifdef GUILDWARS
-			    give_exp->CastToClient()->AddEXP(guildwars.CalculateEXPEarning(give_exp->GetLevel(),GetLevel())); // Pyro: Comment this if NPC death crashes zone
+			    give_exp_client->AddEXP(guildwars.CalculateEXPEarning(give_exp->GetLevel(),GetLevel())); // Pyro: Comment this if NPC death crashes zone
 #else
-			    give_exp->CastToClient()->AddEXP((level*level*75*35/10), conlevel); // Pyro: Comment this if NPC death crashes zone
+			    give_exp_client->AddEXP((EXP_FORMULA), conlevel); // Pyro: Comment this if NPC death crashes zone
 #endif
             }
 		}
-		hate_list.DoFactionHits(GetNPCFactionID());
 	}
+	//do faction hits even if we are a merchant, so long as a player killed us
+	if(give_exp_client)
+		hate_list.DoFactionHits(GetNPCFactionID());
 
 #else // IF We are Raid Addicts
 	hate_list.DoFactionHits(GetNPCFactionID());

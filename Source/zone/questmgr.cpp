@@ -832,7 +832,8 @@ void QuestManager::setglobal(const char *varname, const char *newvalue, int opti
 	//MYSQL_ROW row;
 	int qgZoneid=zone->GetZoneID();
 	int qgCharid=0;
-	int qgNpcid = npc->GetID();	//this might be the wrong method...
+	int qgNpcid = npc->GetNPCTypeID();
+	
 	/*	options value determines the availability of global variables to NPCs when a quest begins
 	------------------------------------------------------------------
 	  value		   npcid	  player		zone
@@ -934,7 +935,6 @@ void QuestManager::delglobal(const char *varname) {
 	// delglobal(varname)
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
-	MYSQL_RES *result;
 	//MYSQL_ROW row;
 	int qgZoneid=zone->GetZoneID();
 	int qgCharid=0;
@@ -950,16 +950,11 @@ void QuestManager::delglobal(const char *varname) {
 	}
 	if (!database.RunQuery(query, 
 	  MakeAnyLenString(&query, "DELETE FROM quest_globals WHERE name='%s' && (npcid=0 || charid=0 || zoneid=0 ||(npcid=%i && charid=%i && zoneid=%i))",
-	  varname,qgNpcid,qgCharid,qgZoneid),errbuf, &result)) 
+	  varname,qgNpcid,qgCharid,qgZoneid),errbuf)) 
 	{
 		cerr << "delglobal error deleting " << varname << " : " << errbuf << endl;
 	}
-	if (query)
-	{
-		safe_delete_array(query);
-		query=0;
-	}
-	mysql_free_result(result);
+	safe_delete_array(query);
 }
 
 // SCORPIOUS2K - convert duration value to expdate
@@ -971,7 +966,7 @@ int32 QuestManager::QGexpdate(const char * name, const char * options)
 
 	if (tval < 2 || (tval>1 && !isdigit(options[1])))
 	{
-		cerr << "Invalid duration for " << name << " using default" << endl;
+		cerr << "Invalid duration '" << options <<"' for " << name << " using default" << endl;
 		tval=1000000;		// default=1 day
 	}
 	else
@@ -1024,10 +1019,11 @@ int32 QuestManager::QGexpdate(const char * name, const char * options)
 			{
 				tval=235959;
 			}
-		}		
-		else if (toupper(options[0])!='C')
+		}
+		//if (toupper(options[0])!='C')
+		else 
 		{	// calender time as YYYMMDD
-			cerr << "Invalid duration for " << name << " using default" << endl;
+			cerr << "Invalid duration '" << options <<"' for " << name << " using default" << endl;
 			tval=1000000;		// default=1 day
 		}
 	}
@@ -1121,7 +1117,11 @@ void QuestManager::clear_proximity() {
 	entity_list.RemoveProximity(npc->GetID());
 }
 
-
+void QuestManager::setanim(int npc_type, int animnum) {
+	//Cisyouc: adds appearance changes
+	Mob* thenpc = entity_list.GetMobByNpcTypeID(npc_type);
+	thenpc->SetAppearance(animnum);
+}
 
 
 

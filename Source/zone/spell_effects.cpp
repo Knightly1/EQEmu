@@ -953,7 +953,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 #endif
 				if(IsClient())	// NPCs can't ride
 				{
-					CastToClient()->MakeHorseSpawnPacket(spell_id);
+					CastToClient()->SummonHorse(spell_id);
 				}
 				break;
 			}

@@ -574,7 +574,12 @@ bool Mob::IsAttackAllowed(Mob *target)
 		return false;
 	else if(GetOwner() && GetOwner() == target)
 		return false;
-
+	
+	//cannot hurt untargetable mobs
+	bodyType bt = target->GetBodyType();
+	if(bt == BT_NoTarget || bt == BT_NoTarget2)
+		return(false);
+	
 #ifdef SHAWN319
 	if
 	(

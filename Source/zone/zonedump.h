@@ -99,6 +99,8 @@ struct NPCType
 	bool	qglobal;
 	bool	npc_aggro;
 	uint8	spawn_limit;	//only this many may be in zone at a time (0=no limit)
+	int8	mount_color;	//only used by horse class
+	
 };
 
 struct ZSDump_Spawn2 {

@@ -493,14 +493,12 @@ bool Client::TrainDiscipline(int32 itemid) {
 void Client::SendDisciplineUpdate() {
 	//this dosent seem to work right now
 	
-	APPLAYER app(OP_DisciplineUpdate, sizeof(Discipline_Struct));
-	Discipline_Struct *d = (Discipline_Struct*)app.pBuffer;
+	APPLAYER app(OP_DisciplineUpdate, sizeof(Disciplines_Struct));
+	Disciplines_Struct *d = (Disciplines_Struct*)app.pBuffer;
 	//dunno why I dont just send the one from m_pp
 	memcpy(d, &m_pp.disciplines, sizeof(m_pp.disciplines));
 
-//this is crashing some people and it dosent work
-//anyways right now, so im just disabling it until its fixed.
-//	QueuePacket(&app);
+	QueuePacket(&app);
 }
 
 bool Client::UseDiscipline(int32 spell_id, int32 target) {

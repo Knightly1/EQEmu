@@ -21,6 +21,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include <string.h>
 
 #include "../common/files.h"
+#include "zone_profile.h"
 #include "map.h"
 #ifdef WIN32
 #define snprintf	_snprintf
@@ -31,6 +32,8 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 //#define TRUST_MAPFILE_NORMALS
 
 //#define OPTIMIZE_QT_LOOKUPS
+
+#define EPS 0.002f	//acceptable error
 
 //#define DEBUG_SEEK 1
 //#define DEBUG_BEST_Z 1
@@ -46,7 +49,6 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 //quick functions to clean up vertex code.
 #define Vmin3(o, a, b, c) ((a.o<b.o)? (a.o<c.o?a.o:c.o) : (b.o<c.o?b.o:c.o))
 #define Vmax3(o, a, b, c) ((a.o>b.o)? (a.o>c.o?a.o:c.o) : (b.o>c.o?b.o:c.o))
-
 
 Map* Map::LoadMapfile(const char* in_zonename) {
 	FILE *fp;
@@ -78,12 +80,12 @@ Map* Map::LoadMapfile(const char* in_zonename) {
 }
 
 Map::Map() {
-	_minz = 999999;
-	_maxz = -999999;
-	_minx = 999999;
-	_miny = 999999;
-	_maxx = -999999;
-	_maxy = -999999;
+	_minz = 999999e111;
+	_minx = 999999e111;
+	_miny = 999999e111;
+	_maxz = -999999e111;
+	_maxx = -999999e111;
+	_maxy = -999999e111;
 	
 	m_Faces = 0;
 	m_Nodes = 0;
@@ -423,20 +425,23 @@ bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *resu
 
 float Map::FindBestZ( NodeRef node_r, VERTEX p1, VERTEX *result, FACE **on) {
 	_ZP(Map_FindBestZ);
+	if(node_r == GetRoot()) {
+		node_r = SeekNode(node_r, p1.x, p1.y);
+	}
 	if( node_r == NODE_NONE || node_r >= m_Nodes) {
-		return(-999999);
+		return(BEST_Z_INVALID);
 	}
 	PNODE _node = &mNodes[node_r];
 	if(!(_node->flags & nodeFinal)) {
-		return(-999999);   //not a final node... could find the proper node...
+		return(BEST_Z_INVALID);   //not a final node... could find the proper node...
 	}
 	
 	p1.z -= 1;
 	
 	VERTEX p2(p1);
-	p2.z = -999999;
+	p2.z = BEST_Z_INVALID;
 	
-	float best_z = -999999;
+	float best_z = BEST_Z_INVALID;
 
 	unsigned long i;
 
@@ -481,7 +486,6 @@ bool Map::LineIntersectsFace( PFACE cface, VERTEX p1, VERTEX p2, VERTEX *result)
 	}
 
 #define ABS(x) ((x)<0?-(x):(x))
-#define EPS 0.002f	//acceptable error
 	
 	const VERTEX &pa = cface->a;
 	const VERTEX &pb = cface->b;
@@ -515,9 +519,8 @@ bool Map::LineIntersectsFace( PFACE cface, VERTEX p1, VERTEX p2, VERTEX *result)
 //#define RTOD 57.2957795 	//radians to degrees constant.
 
 	float d;
-	float a1,a2,a3;
-	float total,denom,mu;
-	VERTEX n,pa1,pa2,pa3, intersect;
+	float denom,mu;
+	VERTEX n, intersect;
 	
 //	FACE *thisface = &mFinalFaces[ _node->pfaces[ i ] ];
 	
@@ -535,10 +538,10 @@ bool Map::LineIntersectsFace( PFACE cface, VERTEX p1, VERTEX p2, VERTEX *result)
 	d = - n.x * pa.x - n.y * pa.y - n.z * pa.z;
 #else
 	//use precaled data from .map file
-	n.x = thisface->nx;
-	n.y = thisface->ny;
-	n.z = thisface->nz;
-	d = thisface->nd;
+	n.x = cface->nx;
+	n.y = cface->ny;
+	n.z = cface->nz;
+	d = cface->nd;
 #endif
 	
 	//try inverting the normals...
@@ -553,13 +556,19 @@ bool Map::LineIntersectsFace( PFACE cface, VERTEX p1, VERTEX p2, VERTEX *result)
 	if (ABS(denom) < EPS)         // Line and plane don't intersect
 	  return(false);
 	mu = - (d + n.x * p1.x + n.y * p1.y + n.z * p1.z) / denom;
+	if (mu < 0 || mu > 1)   // Intersection not along line segment
+	  return(false);
 	p->x = p1.x + mu * (p2.x - p1.x);
 	p->y = p1.y + mu * (p2.y - p1.y);
 	p->z = p1.z + mu * (p2.z - p1.z);
-	if (mu < 0 || mu > 1)   // Intersection not along line segment
-	  return(false);
 
-	// Determine whether or not the intersection point is bounded by pa,pb,pc
+
+/*	//old method, slow as hell due to acos(), but it works well
+
+	float a1,a2,a3;
+	float total;
+	VERTEX pa1,pa2,pa3;
+
 	pa1.x = pa.x - p->x;
 	pa1.y = pa.y - p->y;
 	pa1.z = pa.z - p->z;
@@ -576,12 +585,202 @@ bool Map::LineIntersectsFace( PFACE cface, VERTEX p1, VERTEX p2, VERTEX *result)
 	a2 = pa2.x*pa3.x + pa2.y*pa3.y + pa2.z*pa3.z;
 	a3 = pa3.x*pa1.x + pa3.y*pa1.y + pa3.z*pa1.z;
 	
+//holy hell these 3 acos are slow, we need to rewrite this...
 //	total = (acos(a1) + acos(a2) + acos(a3));
 //	if (ABS(total - 2*M_PI) > EPS)
 	total = (acos(a1) + acos(a2) + acos(a3)) * 57.2957795;
 	if (ABS(total - 360) > EPS)
 	  return(false);
 
+	return(true);
+*/
+
+/*	
+	//yet another failed method, project triangle and point into
+	//2 space based on largest component of the normal
+	//and check the triangle there.
+	float tx, ty, tz;
+	if(n.x < 0)
+		tx = -n.x;
+	else
+		tx = n.x;
+	if(n.y < 0)
+		ty = -n.y;
+	else
+		ty = n.y;
+	if(n.z < 0)
+		tz = -n.z;
+	else
+		tz = n.z;
+	
+	VERTEX pa2, pb2, pc2;
+	if(tx < ty) {
+		//keep x
+		if(tz < ty) {
+			//keep z, drop y
+			pa2.x = pa.x; pa2.y = pa.z;
+			pb2.x = pb.x; pb2.y = pb.z;
+			pc2.x = pc.x; pc2.y = pc.z;
+		} else {
+			//keep y, drop z...
+			pa2.x = pa.x; pa2.y = pa.y;
+			pb2.x = pb.x; pb2.y = pb.y;
+			pc2.x = pc.x; pc2.y = pc.y;
+		}
+	} else {
+		//keep y
+		if(tz < tx) {
+			//keep z, drop x
+			pa2.x = pa.x; pa2.y = pa.z;
+			pb2.x = pb.x; pb2.y = pb.z;
+			pc2.x = pc.x; pc2.y = pc.z;
+		} else {
+			//keep y, drop z...
+			pa2.x = pa.x; pa2.y = pa.y;
+			pb2.x = pb.x; pb2.y = pb.y;
+			pc2.x = pc.x; pc2.y = pc.y;
+		}
+	}
+	
+	// Determine whether or not the intersection point is bounded by pa,pb,pc
+#define Sign(p1, p2, p3) \
+	((p1->x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1->y - p3.y))
+  bool b1, b2, b3;
+
+  b1 = Sign(p, pa2, pb2) < 0.0f;
+  b2 = Sign(p, pb2, pc2) < 0.0f;
+  b3 = Sign(p, pc2, pa2) < 0.0f;
+
+  return ((b1 == b2) && (b2 == b3));
+*/
+	
+/*	//not working well, seems to block LOS a lot
+
+	//a new check based on barycentric coordinates, stolen from 
+	//http://www.flipcode.com/cgi-bin/fcmsg.cgi?thread_show=7766
+	float xcp, ycp, xab, yab, xac, yac;
+	float divb;
+	VERTEX barycoords;
+
+	xcp = p->x - pc.x;
+	ycp = p->z - pc.z;
+	if( xcp == 0.f && ycp == 0.f )
+		return(true);
+
+	xab = pb.x - pa.x;
+	yab = pb.z - pa.z;
+	divb = xab * ycp - yab * xcp;
+	if( divb == 0.f )
+		return(false);
+
+	xac = pc.x - pa.x;
+	yac = pc.z - pa.z;
+
+	barycoords.y = ( -yac * xcp + xac * ycp ) / divb;
+	if( barycoords.y < -EPS || barycoords.y > (1+EPS) )
+		return(false); // small error tolerance
+	if( barycoords.y < 0.f )
+		barycoords.y = 0.f;
+	if( barycoords.y > 1.f )
+		barycoords.y = 1.f;
+
+//	barycoords.x = 1.f - barycoords.y;
+
+	if( xcp != 0.f ) {
+		float div = -xac + barycoords.y * xab;
+		if( div == 0.f )
+			return(false); // flat triangle
+		barycoords.z = 1.f - xcp / div ;
+	} else {
+		float div = -yac + barycoords.y * yab;
+		if( div == 0.f )
+			return(false); // flat triangle
+		barycoords.z = 1.f - ycp / div ;
+	}
+
+	if( barycoords.z < -EPS || barycoords.z > (1+EPS) )
+		return(false);
+//	if( barycoords.z < 0.f )
+//		barycoords.z = 0.f;
+//	if( barycoords.z > 1.f )
+//		barycoords.z = 1.f;
+
+//	barycoords.x *= 1.f - barycoords.z;
+//	barycoords.y *= 1.f - barycoords.z;
+
+	return(true);
+*/
+	
+/*
+	Yet another method adapted from this code:
+  Vec3 pa1 = pa - p;
+  Vec3 pa2 = pb - p;
+  float d = pa1.cross(pa2).dot(n);
+  if (d < 0) return false;
+  Vec3 pa3 = pb - p;
+  d = pa2.cross(pa3).dot(n);
+  if (d < 0) return false;
+  d = pa3.cross(pa1).dot(n);
+  if (d < 0) return false;
+  return true;
+*/
+	
+	//in practice, this seems to actually take longer
+	//than the arc cosine method above...
+	n.x = -n.x;
+	n.y = -n.y;
+	n.z = -n.z;
+	VERTEX pa1,pa2,pa3, tmp;
+	float t;
+	
+	//pa1 = pa - p
+	pa1.x = pa.x - p->x;
+	pa1.y = pa.y - p->y;
+	pa1.z = pa.z - p->z;
+	
+	//pa2 = pb - p
+	pa2.x = pb.x - p->x;
+	pa2.y = pb.y - p->y;
+	pa2.z = pb.z - p->z;
+	
+	//tmp = pa1 cross pa2
+	tmp.x = pa1.y * pa2.z - pa1.z * pa2.y;
+	tmp.y = pa1.z * pa2.x - pa1.x * pa2.z;
+	tmp.z = pa1.x * pa2.y - pa1.y * pa2.x;
+	
+	//t = tmp dot n
+	t = tmp.x * n.x + tmp.y * n.y + tmp.z * n.z;
+	if(t < 0)
+		return(false);
+//printf("t = %f\n", t);
+	
+	//pa3 = pb - p
+	pa3.x = pc.x - p->x;
+	pa3.y = pc.y - p->y;
+	pa3.z = pc.z - p->z;
+	
+	//tmp = pa2 cross pa3
+	tmp.x = pa2.y * pa3.z - pa2.z * pa3.y;
+	tmp.y = pa2.z * pa3.x - pa2.x * pa3.z;
+	tmp.z = pa2.x * pa3.y - pa2.y * pa3.x;
+	
+	//t = tmp dot n
+	t = tmp.x * n.x + tmp.y * n.y + tmp.z * n.z;
+	if(t < 0)
+		return(false);
+//printf("t = %f\n", t);
+	
+	//tmp = pa3 cross pa1
+	tmp.x = pa3.y * pa1.z - pa3.z * pa1.y;
+	tmp.y = pa3.z * pa1.x - pa3.x * pa1.z;
+	tmp.z = pa3.x * pa1.y - pa3.y * pa1.x;
+	
+	//t = tmp dot n
+	t = tmp.x * n.x + tmp.y * n.y + tmp.z * n.z;
+	if(t < 0)
+		return(false);
+//printf("t = %f\n", t);
+	
 	return(true);
 }
 
@@ -591,4 +790,7 @@ void Map::Normalize(VERTEX *p) {
 	p->y /= len;
 	p->z /= len;
 }
+
+
+
 

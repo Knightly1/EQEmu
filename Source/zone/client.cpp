@@ -97,7 +97,7 @@ Client::Client(EQNetworkConnection* ieqnc)
 	0,	// gender
 	0,	// race
 	0,	// class
-	0,	// bodytype
+	BT_Client,	// bodytype
 	0,	// deity
 	0,	// level
 	0,	// npctypeid
@@ -231,7 +231,6 @@ Client::Client(EQNetworkConnection* ieqnc)
 	numclients++;
 	// emuerror;
 	UpdateWindowTitle();
-	hasmount = false;
 	horseId = 0;
 	tgb = false;
 	AbilityTimer=false;
@@ -752,201 +751,6 @@ void Client::SetMaxHP() {
 	Save();
 }
 
-void Client::AddEXP(int32 add_exp, int8 conlevel, bool resexp) {
-#ifdef GUILDWARS
-	m_pp.perAA = 0;
-#endif
-	if (m_pp.perAA<0 || m_pp.perAA>100) m_pp.perAA=0;	// stop exploit with sanity check
-	int32 add_aaxp = add_exp * m_pp.perAA / 100;
-	add_exp -= add_aaxp;
-	
-	//int lvldiff = my_level - otherlevel;
-	
-	if (!resexp && zone->GetEXPMod() > 0) {
-		int32 factor = 100 * (int32) zone->GetEXPMod();
-		add_exp += (add_exp * factor / 10000);
-	}
-#ifdef CON_XP_SCALING
-	if (!resexp && conlevel != 0xFF) {
-		switch (conlevel)
-		{
-		case CON_GREEN:
-			//Message(15,"This creature is trivial to you and offers no experience.");
-			return;
-		case CON_LIGHTBLUE:
-				add_exp = add_exp * 2/10;
-			break;
-		case CON_BLUE:
-			//if (lvldiff >= 12)
-			//	add_exp = add_exp * 6/10;
-			//else if (lvldiff > 5)
-				add_exp = add_exp * 8/10;
-			//else if (lvldiff > 3)
-			//	add_exp = add_exp * 9/10;
-			break;
-		case CON_WHITE:
-				add_exp = add_exp * 125/100;
-			break;
-		case CON_YELLOW:
-				add_exp = add_exp * 150/100;
-			break;
-		case CON_RED:
-				add_exp = add_exp * 200/100;
-			break;
-		}
-		/*
-		if (otherlevel >= 65)
-		{
-			int add = add_exp*((otherlevel-49)*20/100);
-			add_exp += add_exp*((otherlevel-64))*2;
-			add_exp += add;
-		}
-		else if (otherlevel >= 50)
-		{
-			add_exp += add_exp*((otherlevel-49)*20/100);
-		}*/
-	}
-#endif
-	
-#ifdef FREEBSD
-	//Father Nitwit Debug:
-	Message(15, "Adding %i experience to your character.", add_exp);
-#endif
-
-	if (m_pp.perAA<0 || m_pp.perAA>100)
-		m_pp.perAA=0;	// stop exploit with sanity check
-
-	// Old function
-	//int32 exp = GetEXP() + (add_exp - add_aaxp);
-
-	// TC - Uses modifier now from variables table.
-	int32 exp = GetEXP() + add_exp;
-
-	//int32 aaexp = GetAAXP() + add_aaxp;
-	// TC - New function
-
-	int32 aaexp = (int32)((zone->GetAAXPMod()) * add_aaxp);
-	if(GetAAXP()<0xFFFFFFFF)
-		aaexp+=GetAAXP();
-	SetEXP(exp, aaexp, false);
-}
-
-void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
-	max_AAXP = GetEXPForLevel(52) - GetEXPForLevel(51);
-	if (max_AAXP == 0 || GetEXPForLevel(GetLevel()) == 0xFFFFFFFF) {
-		Message(13, "Error in Client::SetEXP. EXP not set.");
-		return; // Must be invalid class/race
-	}
-	if ((set_exp + set_aaxp) > m_pp.exp) {
-		if (isrezzexp)
-			this->Message_StringID(15,REZ_REGAIN);
-		else{
-			if(this->IsGrouped())
-				this->Message_StringID(15,GAIN_GROUPXP);
-			else
-				this->Message_StringID(15,GAIN_XP);
-		}
-	}
-	else
-		Message(15, "You have lost experience.");
-
-#ifdef FREEBSD
-//Father Nitwit Debug:
-Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
-#endif
-	
-	int16 check_level = GetLevel()+1;
-	while (set_exp >= GetEXPForLevel(check_level)) {
-		check_level++;
-		if (check_level > 100) { // Quagmire - this was happening because GetEXPForLevel returned 0 on unknown race/class combo, Changed it to return 0xFFFFFFFF on error
-			check_level = GetLevel()+1;
-			break;
-		}
-	}
-	while (set_exp < GetEXPForLevel(check_level-1)) {
-		check_level--;
-		if (check_level < 2) {
-			check_level = 2;
-			break;
-		}
-	}
-	
-	if (set_aaxp >= max_AAXP) {
-		int last_unspentAA = m_pp.aapoints;
-		m_pp.aapoints = set_aaxp / max_AAXP;
-		set_aaxp = set_aaxp - (max_AAXP * m_pp.aapoints);
-		if(set_aaxp <=0) {
-			set_aaxp = 0;
-		}
-		m_pp.expAA = set_aaxp;
-		m_pp.aapoints += last_unspentAA;
-		set_aaxp = m_pp.expAA % max_AAXP;
-		
-		//Message(15, "You have gained %d skill points!!", m_pp.aapoints - last_unspentAA);
-		char val1[20]={0};
-		Message_StringID(15,GAIN_ABILITY_POINT,ConvertArray(m_pp.aapoints,val1),"(s)");
-		//Message(15, "You now have %d skill points available to spend.", m_pp.aapoints);
-	}
-	
-	m_pp.expAA = set_aaxp;
-
-	int8 maxlevel = LEVEL_CAP + 1;
-
-#ifdef RAIDADDICTS
-	maxlevel = raidaddicts.GetZoneLevel();
-#endif
-
-	#ifdef GUILDWARS
-		if(GuildDBID() == 0)
-			maxlevel = NOGUILDCAPLEVEL;
-		else
-			maxlevel = GAINLEVEL;
-	#endif
-	if ((GetLevel() != check_level-1) && !(check_level-1 >= maxlevel)) {
-		char val1[20]={0};
-		if (GetLevel() == check_level-2){
-			Message_StringID(15,GAIN_LEVEL,ConvertArray(check_level-1,val1));
-			SendLevelAppearance();
-			//Message(15, "You have gained a level! Welcome to level %i!", check_level-1);
-		}
-		if (GetLevel() == check_level){
-			Message_StringID(15,LOSE_LEVEL,ConvertArray(check_level-1,val1));
-			//Message(15, "You lost a level! You are now level %i!", check_level-1);
-		}
-		else
-			Message(15, "Welcome to level %i!", check_level-1);
-		m_pp.exp = set_exp;
-		SetLevel(check_level-1);
-	}
-
-	//send the expdata in any case so the xp bar isnt stuck after leveling
-	APPLAYER* outapp = new APPLAYER(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
-	ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
-	int32 tmpxp1 = GetEXPForLevel(GetLevel()+1);
-	int32 tmpxp2 = GetEXPForLevel(GetLevel());
-	// Quag: crash bug fix... Divide by zero when tmpxp1 and 2 equalled each other, most likely the error case from GetEXPForLevel() (invalid class, etc)
-	if (tmpxp1 != tmpxp2 && tmpxp1 != 0xFFFFFFFF && tmpxp2 != 0xFFFFFFFF) {
-		double tmpxp = (double) ( (double) set_exp-tmpxp2 ) / ( (double) tmpxp1-tmpxp2 );
-		eu->exp = (uint32)(330.0f * tmpxp);
-		QueuePacket(outapp);
-	}
-	safe_delete(outapp);
-	m_pp.exp = set_exp;
-
-	if (level<51) m_pp.perAA=0;	// turn off aa exp if they drop below 51
-
-	SendAAStats();
-	if (admin>=100 && GetGM()) {
-		char val1[20]={0};
-		char val2[20]={0};
-		char val3[20]={0};
-		Message_StringID(15,GM_GAINXP,ConvertArray(set_aaxp,val1),ConvertArray(set_exp,val2),ConvertArray(GetEXPForLevel(GetLevel()+1),val3));
-		//Message(15, "[GM] You now have %d / %d EXP and %d / %d AA exp.", set_exp, GetEXPForLevel(GetLevel()+1), set_aaxp, max_AAXP);
-
-	}
-	SendAppearancePacket(AT_WhoLevel, GetLevel());
-}
-
 #ifndef GUILDWARS
 
 bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
@@ -1194,112 +998,6 @@ return;
 #ifdef PACKET_UPDATE_MANAGER   
 	update_manager.FlushQueues();
 #endif
-}
-
-void Client::SetLevel(int8 set_level, bool command)
-{
-	#ifdef GUILDWARS
-		if(set_level > SETLEVEL) {
-			Message(0,"You cannot exceed level %i on a GuildWars Server.",SETLEVEL);
-			return;
-		}
-	#endif
-
-	if (GetEXPForLevel(set_level) == 0xFFFFFFFF) {
-		LogFile->write(EQEMuLog::Error,"Client::SetLevel() GetEXPForLevel(%i) = 0xFFFFFFFF", set_level);
-		return;
-	}
-
-	APPLAYER* outapp = new APPLAYER(OP_LevelUpdate, sizeof(LevelUpdate_Struct));
-	LevelUpdate_Struct* lu = (LevelUpdate_Struct*)outapp->pBuffer;
-	lu->level = set_level;
-	lu->level_old = level;
-	level = set_level;
-
-	if(set_level > m_pp.level) { // Yes I am aware that you could delevel yourself and relevel this is just to test!
-		m_pp.points += 5 * (set_level - m_pp.level);
-	}
-
-	m_pp.level = set_level;
-	if (command){
-		m_pp.exp = GetEXPForLevel(set_level);
-		Message(15, "Welcome to level %i!", set_level);
-		lu->exp = 0;
-	}
-	else {
-		double tmpxp = (double) ( (double) m_pp.exp - GetEXPForLevel( GetLevel() )) /
-						( (double) GetEXPForLevel(GetLevel()+1) - GetEXPForLevel(GetLevel()));
-		lu->exp =  (int32)(330.0f * tmpxp);
-    }
-	QueuePacket(outapp);
-	safe_delete(outapp);
-	this->SendAppearancePacket(AT_WhoLevel, set_level); // who level change
-
-    LogFile->write(EQEMuLog::Normal,"Setting Level for %s to %i", GetName(), set_level);
-
-	CalcBonuses();
-	SetHP(CalcMaxHP());		// Why not, lets give them a free heal
-	SendHPUpdate();
-	SetMana(CalcMaxMana());
-	UpdateWho();
-	Save();
-}
-
-//                            hum     bar     eru     elf     hie     def     hef     dwa     tro     ogr     hal    gno     iks,    vah     frog
-float  race_modifiers[15] = { 100.0f, 105.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 120.0f, 115.0f, 95.0f, 100.0f, 120.0f, 100.0f, 100.0f}; // Quagmire - Guessed on iks and vah
-//                            war   cle    pal    ran    shd    dru    mnk    brd    rog    shm    nec    wiz    mag    enc    bst    bes
-
-float class_modifiers[16] = { 9.0f, 10.0f, 14.0f, 14.0f, 14.0f, 10.0f, 12.0f, 14.0f, 9.05f, 10.0f, 11.0f, 11.0f, 11.0f, 11.0f, 10.0f, 10.0f};
-
-
-// Note: The client calculates exp separately, we cant change this function
-// Add: You can set the values you want now, client will be always sync :) - Merkur
-uint32 Client::GetEXPForLevel(int16 check_level)
-{
-	int16 tmprace = GetBaseRace();
-	if (tmprace == IKSAR) // Quagmire, set these up so they read from array right
-		tmprace = 12;
-	else if (tmprace == VAHSHIR)
-		tmprace = 13;
-	else if ((tmprace == FROGLOK) || (tmprace == FROGLOK2))
-		tmprace = 14;
-	else
-		tmprace--;
-
-	if (tmprace >= sizeof(race_modifiers) || GetClass() < 1 || GetClass() - 1 >= PLAYER_CLASS_COUNT)
-		return 0xFFFFFFFF;
-
-	int16 check_levelm1 = check_level-1;
-	if (check_level < 31)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]);
-	else if (check_level < 36)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.1);
-	else if (check_level < 41)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.2);
-	else if (check_level < 46)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.3);
-	else if (check_level < 52)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.4);
-	else if (check_level < 53)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.5);
-	else if (check_level < 54)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.6);
-	else if (check_level < 55)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.7);
-	else if (check_level < 56)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.9);
-	else if (check_level < 57)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.1);
-	else if (check_level < 58)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.3);
-	else if (check_level < 59)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.5);
-	else if (check_level < 60)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.7);
-	else if (check_level < 61)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*3.0);
-	else
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*3.1);
 }
 
 void Client::SetSkill(int skillid, int8 value) {
@@ -1560,6 +1258,8 @@ void Client::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 	ns->spawn.linkdead	= IsLD() ? 1 : 0;
 	ns->spawn.aa_title	= aa_title;
 	ns->spawn.pvp		= GetPVP() ? 1 : 0;
+	
+	strncpy(ns->spawn.title, m_pp.title, 64);
 	
 	if (IsBecomeNPC() == true)
 		ns->spawn.npc = true;
@@ -2037,6 +1737,7 @@ void Client::SetFeigned(bool in_feigned) {
 	if (in_feigned)
 	{
 		SetPet(0);
+		SetHorseId(0);
 		entity_list.ClearFeignAggro(this);
 	}
 	feigned=in_feigned;

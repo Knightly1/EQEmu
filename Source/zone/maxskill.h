@@ -1748,152 +1748,205 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
 //////////////////////////////////////////
 // Shared skill
       // Shared Rogue
-    case HIDE:{
-      switch(class_){
-        // True class
-        case ROGUE: case ROGUEGM:{
-          r_value = ((level*5) + 5);
-          if(r_value > 200)
-            r_value = 200;
-          break;
-        }
-        // Hybrids
-        case RANGER: case RANGERGM:
-        case SHADOWKNIGHT: case SHADOWKNIGHTGM:{ //75 cap
-          if(level >= 35) {
-            r_value = (((level-35)*5) + 5);
-            if(r_value > 75)
-              r_value = 75;
-          }
-          break;
-        }
-        case BARD: case BARDGM:{ //40 cap
-          if(level > 44) {
-            r_value = (((level-44)*5) + 5);
-            if(r_value > 40)
-              r_value = 40;
-          }
-          break;
-        }
-        default:
-          r_value = 0;
-        break;
-      }// Class Switch
-    break;
-    }
-    
-    case SNEAK:{
-      switch(class_){
-        // True class
-        case ROGUE: case ROGUEGM:{
-          r_value = ((level*5) + 5);
-          if(r_value > 200)
-            r_value = 200;
-          break;
-        }
-        // Hybrids
-        case MONK: case MONKGM:{ //110 cap
-          if(level >= 28) {
-            r_value = (((level-28)*5) + 5);
-            if(r_value > 110)
-              r_value = 110;
-          }
-          break;
-        }
-        case RANGER: case RANGERGM:
-        case BARD: case BARDGM:{ //75 cap
-          if(level >= 35) {
-            r_value = (((level-35)*5) + 5);
-            if(r_value > 75)
-              r_value = 75;
-          }
-          break;
-        }
-        default:
-          r_value = 0;
-        break;
-      }// Class Switch
-    break;
-    }
-
-
-    case SENSE_TRAPS:
-    case PICK_LOCK:
-    case DISARM_TRAPS:{
-      switch(class_){
-        // True class
-        case ROGUE: case ROGUEGM:{
-          r_value = ((level*5) + 5);
-          if(r_value > 200)
-            r_value = 200;
-          break;
-        }
-        // Hybrids
-        case BARD: case BARDGM:{ //100 cap
-          if(level >= 30) {	//this is wrong I think...
-            r_value = (((level-30)*5) + 5);
-            if(r_value > 100)
-              r_value = 100;
-          }
-          break;
-        }
-        default:
-          r_value = 0;
-        break;
-      }// Class Switch
-    break;
-    }
-
-    case SAFE_FALL:
-    case INTIMIDATION:{
-      switch(class_){
-        // Melee
-        case MONK: case MONKGM:
-        case ROGUE: case ROGUEGM:{
-          r_value = ((level*5) + 5);
-          if(r_value > 200)
-            r_value = 200;
-          break;
-        }
-        default:
-          r_value = 0;
-        break;
-
-      }// Class Switch
-    break;
-    }
-      // Druid/Ranger/Bard
-    case FORAGE:{
-      switch(class_) {
-        case DRUID: case DRUIDGM:
-        case RANGER: case RANGERGM:{
-          if (r_value > 200)
-            r_value = 200;
-            break;
-        }
-        case MONK: case MONKGM:
-        case BARD: case BARDGM:
-          r_value = 55;
-        break;
-        default:
-          r_value = 50;
-        break;
-      }
-      break;
-    }
-    case TRACKING:{
-      switch(class_){
-        case RANGER: case RANGERGM:
-        case BARD: case BARDGM:
-        case DRUID: case DRUIDGM:
+	case HIDE:{
+	 switch(class_){
+		// True class
+		case ROGUE: case ROGUEGM:{
+		 r_value = ((level*5) + 5);
+		 if(r_value > 200)
+			r_value = 200;
+		 break;
+		}
+		// Hybrids
+		case RANGER: case RANGERGM:
+		case SHADOWKNIGHT: case SHADOWKNIGHTGM:{ //75 cap
+		 if(level >= 35) {
+			r_value = (((level-35)*5) + 5);
+			if(r_value > 75)
+			 r_value = 75;
+		 }
+		 break;
+		}
+		case BARD: case BARDGM:{ //40 cap
+		 if(level > 25) {
+			r_value = (((level-25)*5) + 5);
+			if(r_value > 40)
+			 r_value = 40;
+		 }
+		 break;
+		}
+		default:
+		 r_value = 0;
+		break;
+	 }// Class Switch
+	break;
+	}
+ 
+	case SNEAK:{
+	 switch(class_){
+		// True class
+		case ROGUE: case ROGUEGM:{
+		 r_value = ((level*5) + 5);
+		 if(r_value > 200)
+			r_value = 200;
+		 break;
+		}
+		// Hybrids
+		case MONK: case MONKGM:{ //113 cap
+		 if(level >= 8) {
+			r_value = (((level-8)*5) + 5);
+			if(r_value > 113)
+			 r_value = 113;
+		 }
+		 break;
+		}
+		case RANGER: case RANGERGM:{ //75 cap
+		 if(level >= 10) {
+			r_value = (((level-10)*5) + 5);
+			if(r_value > 75)
+			 r_value = 75;
+		 }
+		 break;
+		}
+		case BARD: case BARDGM:{ //75 cap
+		 if(level >= 17) {
+			r_value = (((level-17)*5) + 5);
+			if(r_value > 75)
+			 r_value = 75;
+		 }
+		 break;
+		}
+		default:
+		 r_value = 0;
+		break;
+	 }// Class Switch
+	break;
+	}
+ 
+	case SENSE_TRAPS:
+	case PICK_LOCK:
+	case DISARM_TRAPS:{
+	 switch(class_){
+		// True class
+		case ROGUE: case ROGUEGM:{
+		 r_value = ((level*5) + 5);
+		 if(r_value > 200)
+			r_value = 200;
+		 break;
+		}
+		// Hybrids
+		case BARD: case BARDGM:{ //100 cap
+		 if(level >= 30) { //this is wrong I think...
+			r_value = (((level-30)*5) + 5);
+			if(r_value > 100)
+			 r_value = 100;
+		 }
+		 break;
+		}
+		default:
+		 r_value = 0;
+		break;
+	 }// Class Switch
+	break;
+	}
+	case SAFE_FALL:{
+	 switch(class_){
+		// Hybrids
+		case BARD: case BARDGM:{ //40 cap
+		 if(level >= 24) {
+			r_value = (((level-24)*5) + 5);
+			if(r_value > 40)
+			 r_value = 40;
+		 }
+		 break;
+		}
+		// Melee
+		case MONK: case MONKGM:{
+		 if(level >= 3) {
+			r_value = (((level-3)*5) + 5);
+			if(r_value > 200)
+			 r_value = 200;
+		 }
+		 break;
+		}
+		case ROGUE: case ROGUEGM:{ //100 cap
+		 if(level >= 12) {
+			r_value = (((level-12)*5) + 5);
+			if(r_value > 100)
+			 r_value = 100;
+		 }
+		 break;
+		}
+		default:
+		 r_value = 0;
+		break;
+	 }// Class Switch
+	break;
+	}
+	case INTIMIDATION:{
+	 switch(class_){
+		case BARD: case BARDGM:{ //100 cap
+		 if(level >= 26) {
+			r_value = (((level-26)*5) + 5);
+			if(r_value > 100)
+			 r_value = 100;
+		 }
+		 break;
+		}
+		// Melee
+		case MONK: case MONKGM:{
+		 if(level >= 18) {
+			r_value = (((level-18)*5) + 5);
+			if(r_value > 200)
+			 r_value = 200;
+		 }
+		 break;
+		}
+		case ROGUE: case ROGUEGM:{
+		 if(level >= 22) {
+			r_value = (((level-22)*5) + 5);
+			if(r_value > 200)
+			 r_value = 200;
+		 }
+		 break;
+		}
+		default:
+		 r_value = 0;
+		break;
+	 }// Class Switch
+	}
+	 // Druid/Ranger/Bard
+	case FORAGE:{
+	 switch(class_) {
+		case DRUID: case DRUIDGM:
+		case RANGER: case RANGERGM:{
+		 if (r_value > 200)
+			r_value = 200;
+			break;
+		}
+		case MONK: case MONKGM:
+		case BARD: case BARDGM:
+		 r_value = 55;
+		break;
+		default:
+		 r_value = 50;
+		break;
+	 }// Class Switch
+	 break;
+	}
+	case TRACKING:{
+	 switch(class_){
+		case RANGER: case RANGERGM:
+		case BARD: case BARDGM:
+		case DRUID: case DRUIDGM:
 			r_value=200;
 			break;
-        default:
-          r_value = 0;
-        break;
-      }// Class Switch
-    break;
-    }
+		default:
+		 r_value = 0;
+		break;
+	 }// Class Switch
+	break;
+	}
 ////////////////////////////////////////////////////////
     default:
 #if EQDEBUG

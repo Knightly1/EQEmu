@@ -19,6 +19,7 @@
 #define BODYTYPES_H
 
 typedef enum {
+	BT_Client			= 0,
 	BT_Humanoid			= 1,
 	BT_Lycanthrope		= 2,
 	BT_Undead			= 3,

@@ -1066,7 +1066,6 @@ sint16 Inventory::_PutItem(sint16 slot_id, ItemInst* inst)
 		PopItem(slot_id);
 		return slot_id;
 	}
-printf("Putting item 0x%lx into slot %u\n", inst, slot_id);
 	
 	sint16 result = SLOT_INVALID;
 	

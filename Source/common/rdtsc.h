@@ -16,6 +16,8 @@
 	All calculations are carried out in 64 bit integers.
 */
 
+#include "types.h"
+
 class RDTSC_Timer {
 public:
 	RDTSC_Timer();
@@ -26,19 +28,19 @@ public:
 	double getDuration();	//returns the number of miliseconds elapsed
 	
 	//access functions
-	unsigned long long getTicks() { return(_end - _start); }
-	static unsigned long long ticksPerMS() { return(_ticsperms); }
+	uint64 getTicks() { return(_end - _start); }
+	static uint64 ticksPerMS() { return(_ticsperms); }
 	
 protected:
-	static unsigned long long rdtsc();
+	static uint64 rdtsc();
 	
-	unsigned long long _start;
-	unsigned long long _end;
+	uint64 _start;
+	uint64 _end;
 
 protected:
 	static void init();
 	static bool _inited;
-	static unsigned long long _ticsperms;
+	static uint64 _ticsperms;
 };
 
 //this is a timer which can be started and stoped many times.
@@ -56,12 +58,12 @@ public:
 	double getTotalDuration();	//returns the number of miliseconds elapsed
 	double getAverage();
 	
-	unsigned long long getTotalTicks() { return(_sum); }
-	unsigned long long getCount() { return(_count); }
+	uint64 getTotalTicks() { return(_sum); }
+	uint64 getCount() { return(_count); }
 	
 protected:
-	unsigned long long _sum;
-	unsigned long long _count;
+	uint64 _sum;
+	uint64 _count;
 };
 
 

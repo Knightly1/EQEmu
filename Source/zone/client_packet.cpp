@@ -957,18 +957,18 @@ void Client::Handle_OP_Shielding(const APPLAYER *app)
 					{
 						case 1:
 							shieldbonus = shieldbonus * 115 / 100;
-							return;
+							break;
 						case 2:
 							shieldbonus = shieldbonus * 125 / 100;
-							return;
+							break;
 						case 3:
 							shieldbonus = shieldbonus * 150 / 100;
-							return;
+							break;
 					}
 					shield_target->shielder[x].shielder_bonus = shieldbonus;
 					shield_timer.Start();
 					ack = true;
-					return;
+					break;
 				}
 			}
 		}
@@ -1162,7 +1162,7 @@ void Client::Handle_OP_AdventureMerchantPurchase(const APPLAYER *app)
 		MerchantList ml = *itr;
 	    item = database.GetItem(ml.item);
 		if(item && item->ItemNumber == aps->itemid) //This check to make sure that the item is actually on the NPC, people attempt to inject packets to get items summoned...
-			return;
+			break;
 		else if(item && item->ItemNumber != aps->itemid)
 			item = 0;
 	}
@@ -1375,7 +1375,7 @@ void Client::Handle_OP_Surname(const APPLAYER *app)
 		if(!isalpha(*c))
 		{
 			found_bad_char = 1;
-			return;
+			break;
 		}
 		if(c == surname->lastname)	// first letter
 			*c = toupper(*c);
@@ -2857,7 +2857,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d, inv
 			}
 			else
 			{
-				Message(0, "Error: item not found for inventory slot #%i", castspell->inventoryslot);
+				Message(0, "Error: item not found in inventory slot #%i", castspell->inventoryslot);
 				InterruptSpell(castspell->spell_id);
 			}
 		}
@@ -3558,7 +3558,7 @@ void Client::Handle_OP_ShopPlayerBuy(const APPLAYER *app)
 		MerchantList ml = *itr;
 		if(mp->itemslot == ml.slot){
 			item_id = ml.item;
-			return;
+			break;
 		}
 	}
 	const Item_Struct* item = NULL;
@@ -3573,7 +3573,7 @@ void Client::Handle_OP_ShopPlayerBuy(const APPLAYER *app)
 				item_id = ml.item;
 				tmpmer_used = true;
 				prevcharges = ml.charges;
-				return;
+				break;
 			}
 		}
 	} 
@@ -3865,7 +3865,7 @@ char *query = 0;
 	//Assumes item IDs are <10 characters long
 	for(r = 0; r < 100; r++) {
 		if(tsf->favorite_recipes[r] == 0)
-			return;	//assume the first 0 is the end...
+			break;	//assume the first 0 is the end...
 		
 		if(first) {
 			pos += snprintf(pos, 10, "%lu", tsf->favorite_recipes[r]);
@@ -4392,7 +4392,7 @@ void Client::Handle_OP_PetitionCheckIn(const APPLAYER *app)
 
 void Client::Handle_OP_PetitionResolve(const APPLAYER *app)
 {
-	Handle_OP_PetitionResolve(app);
+	Handle_OP_PetitionDelete(app);
 }
 
 void Client::Handle_OP_PetitionDelete(const APPLAYER *app)
@@ -5900,7 +5900,6 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 				for (int x1=0; x1 < EFFECT_COUNT; x1++) {
 					switch (spells[buffs[j1].spellid].effectid[x1]) {
 						case SE_Charm:
-						case SE_Rune:
 						case SE_Illusion:
 							buffs[j1].spellid = SPELL_UNKNOWN;
 							m_pp.buffs[j1].spellid = SPELLBOOK_UNKNOWN;
@@ -5917,15 +5916,20 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 		}
 		
 		//Validity check for memorized
-		for (int mem = 0; mem < 8; mem++)
-		{
-			if (m_pp.mem_spells[mem] < 1 || m_pp.mem_spells[mem] >= (unsigned int)SPDAT_RECORDS || spells[m_pp.mem_spells[mem]].classes[GetClass()-1] < 1 || spells[m_pp.mem_spells[mem]].classes[GetClass()-1] > GetLevel())
-				m_pp.mem_spells[mem] = SPELLBOOK_UNKNOWN;
-		}
-		for (int bk = 0; bk < MAX_PP_SPELLBOOK; bk++)
-		{
-			if (m_pp.spell_book[bk] < 1 || m_pp.spell_book[bk] >= (unsigned int)SPDAT_RECORDS || spells[m_pp.spell_book[bk]].classes[GetClass()-1] < 1 || spells[m_pp.spell_book[bk]].classes[GetClass()-1] > 65)
-				m_pp.spell_book[bk] = SPELLBOOK_UNKNOWN;
+		if(Admin() < minStatusToHaveInvalidSpells) {
+			for (int mem = 0; mem < 8; mem++)
+			{
+				if (m_pp.mem_spells[mem] < 1 || m_pp.mem_spells[mem] >= (unsigned int)SPDAT_RECORDS || spells[m_pp.mem_spells[mem]].classes[GetClass()-1] < 1 || spells[m_pp.mem_spells[mem]].classes[GetClass()-1] > GetLevel())
+					m_pp.mem_spells[mem] = SPELLBOOK_UNKNOWN;
+			}
+			for (int bk = 0; bk < MAX_PP_SPELLBOOK; bk++)
+			{
+				if (m_pp.spell_book[bk] < 1 
+					|| m_pp.spell_book[bk] >= (unsigned int)SPDAT_RECORDS 
+					|| spells[m_pp.spell_book[bk]].classes[GetClass()-1] < 1 
+					|| spells[m_pp.spell_book[bk]].classes[GetClass()-1] > LEVEL_CAP)
+					m_pp.spell_book[bk] = SPELLBOOK_UNKNOWN;
+			}
 		}
 	}
 	
@@ -6053,10 +6057,8 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	//Remake pet
 	if (m_epp.pet_id > 1 && !GetPet() && m_epp.pet_id <= SPDAT_RECORDS)
 	{
-	printf("Remaking pet %d\b", m_epp.pet_id);
 		MakePet(m_epp.pet_id, spells[m_epp.pet_id].teleport_zone, m_epp.pet_name);
 		if (GetPet() && GetPet()->IsNPC()) {
-	printf("I have a pet!\n");
 			NPC *pet = GetPet()->CastToNPC();
 			pet->SetHP(m_epp.pet_hp);
 			pet->SetMana(m_epp.pet_mana);
@@ -6219,14 +6221,15 @@ void Client::CompleteConnect()
 					break;
 				}
 				case SE_SummonHorse: {
-					hasmount = true;	//this was false, is that the correct thing?
+					SummonHorse(buffs[j1].spellid);
+					//hasmount = true;	//this was false, is that the correct thing?
 					break;
 				}
 				case SE_Rune: {
 					BuffFadeBySpellID(buffs[j1].spellid);
 					//SetRune(buffs[j1].durationformula);
 					//Somehow we need to toss the remaining rune value over..
-							  }
+				}
 				case SE_DivineAura:
 					{
 					invulnerable = true;

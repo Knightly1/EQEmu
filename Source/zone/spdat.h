@@ -55,18 +55,6 @@ enum RESISTTYPE
 	RESIST_PHYSICAL = 8	// see Muscle Shock, Back Swing
 };
 
-//This stuff is outdated and already in bodytypes.h
-
-/*enum {	//body types
-	bodyTypePerson = 1,	//dont know the right name for this...
-	bodyTypeUndead = 3,
-	bodyTypeSummoned = 8,	//this might be wrong... this is an older value
-	bodyTypeAnimal = 21,
-	bodyTypeFramiliar = 24,	//an NPC's framiliar had this type, dunno exact
-	bodyTypeSwarmPet = 63
-};
-*/
-
 //Target Type IDs
 #define ST_TargetOptional	0x01 // Target is used if present, but not required. ex: Flare, Fireworks
 #define ST_AECaster			0x04 // ae centered around caster
@@ -264,6 +252,7 @@ enum RESISTTYPE
 #define SE_ExtraAttackChance		266 //not implemented
 #define SE_CriticalDoTChance		273	//not implemented
 #define SE_CriticalSpellChance		295 //not implemented
+#define SE_ChangeHeight				298	//not implemented
 #define SE_WakeTheDead				299
 #define SE_Doppelganger				300
 #define SE_NoCombatSkills			311

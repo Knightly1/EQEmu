@@ -780,6 +780,14 @@ void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid
 		quest_manager.spawn2(atoi(arglist[0]), atoi(arglist[1]), 0,
 			atof(arglist[3]), atof(arglist[4]), atof(arglist[5]), hdng);
 	}
+	else if (!strcmp(command,"unique_spawn")) 
+	{
+		
+		float hdng;
+		hdng=mob->CastToClient()->GetHeading();
+		quest_manager.unique_spawn(atoi(arglist[0]), atoi(arglist[1]), 0,
+			atof(arglist[3]), atof(arglist[4]), atof(arglist[5]), hdng);
+	}
 	else if (!strcmp(command,"echo")) {
 		quest_manager.echo(parms.c_str());
 	}
@@ -788,6 +796,9 @@ void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid
 	}
 	else if (!strcmp(command,"setstat")) {
 		quest_manager.setstat(atoi(arglist[0]), atoi(arglist[1]));
+	}
+	else if (!strcmp(command,"setanim")) {
+		quest_manager.setanim(atoi(arglist[0]), atoi(arglist[1]));
 	}
 	else if (!strcmp(command,"castspell")) {
 		quest_manager.castspell(atoi(arglist[1]), atoi(arglist[0]));

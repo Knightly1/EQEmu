@@ -982,7 +982,9 @@ void Mob::MakePet(int16 spell_id, int8 in_level, int8 in_class, int16 in_race,
 	NPC* npc = new NPC(npc_type, 0,
                        this->GetX()+10, this->GetY()+10,
                        this->GetZ(), this->GetHeading());
-	safe_delete(npc_type);
+	//safe_delete(npc_type);
+	npc->GiveNPCTypeData(npc_type);
+	
 	npc->SetPetType(in_pettype);
 	npc->SetOwnerID(this->GetID());
 	entity_list.AddNPC(npc);

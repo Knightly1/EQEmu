@@ -15,8 +15,8 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-#ifndef DATABASE_H
-#define DATABASE_H
+#ifndef EQEMU_DATABASE_H
+#define EQEMU_DATABASE_H
 
 #define AUTHENTICATION_TIMEOUT	60
 #define INVALID_ID				0xFFFFFFFF
@@ -105,6 +105,15 @@ struct VarCache_Struct {
 	char value[0];
 };
 
+struct wplist {
+	int   index;
+	float x;
+	float y;
+	float z;
+	int	  pause;
+};
+
+#pragma pack(1)
 struct DBnpcspells_entries_Struct {
 	sint16	spellid;
 	uint16	type;
@@ -114,13 +123,7 @@ struct DBnpcspells_entries_Struct {
 	sint32	recast_delay;
 	sint16	priority;
 };
-struct wplist {
-	int   index;
-	float x;
-	float y;
-	float z;
-	int	  pause;
-};
+#pragma pack()
 struct DBnpcspells_Struct {
 	int32	parent_list;
 	sint16	attack_proc;

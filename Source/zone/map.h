@@ -18,9 +18,12 @@
 #ifndef MAP_H
 #define MAP_H
 
+#include <stdio.h>
 
 //this is the current version number to expect from the map header
 #define MAP_VERSION 0x01000000
+
+#define BEST_Z_INVALID -999999
 
 #pragma pack(1)
 
@@ -141,6 +144,8 @@ public:
 	inline float GetMaxX() const { return(_maxx); }
 	inline float GetMinY() const { return(_miny); }
 	inline float GetMaxY() const { return(_maxy); }
+	inline float GetMinZ() const { return(_minz); }
+	inline float GetMaxZ() const { return(_maxz); }
 private:
 //	unsigned long m_Vertex;
 	unsigned long m_Faces;
@@ -162,5 +167,6 @@ private:
 //	void	RecLoadNode( PNODE	_node, FILE *l_f );
 //	void	RecFreeNode( PNODE	_node );
 };
+
 #endif
 
