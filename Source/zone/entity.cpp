@@ -2466,16 +2466,17 @@ void EntityList::ClearFeignAggro(Mob* targ)
 
 
 // Signal Quest command function
-void EntityList::SignalMobsByNPCID(int32 snpc)
+void EntityList::SignalMobsByNPCID(int32 snpc, int signal_id)
 {
 	LinkedListIterator<Mob*> iterator(mob_list);
 
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
-		if (iterator.GetData()->GetNPCTypeID() == snpc)
+		Mob *it = iterator.GetData();
+		if (it->GetNPCTypeID() == snpc)
 		{
-			iterator.GetData()->signaled=true;
+			it->SignalNPC(signal_id);
 		}
 		iterator.Advance();
 	}

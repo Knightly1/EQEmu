@@ -133,6 +133,7 @@ struct DBTradeskillRecipe_Struct {
 	sint16 skill_needed;
 	uint16 trivial;
 	bool nofail;
+	bool replace_container;
 	vector< pair<uint32,uint8> > onsuccess;
 	vector< pair<uint32,uint8> > onfail;
 };

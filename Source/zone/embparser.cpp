@@ -382,12 +382,15 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 			ExportVar(packagename.c_str(), "timer", data);
 			break;
 		}
+		case EVENT_SIGNAL: {
+			ExportVar(packagename.c_str(), "signal", data);
+			break;
+		}
 		//nothing special about these events
 		case EVENT_DEATH:
 		case EVENT_SPAWN:
 		case EVENT_ATTACK:
 		case EVENT_SLAY:
-		case EVENT_SIGNAL:
 		case EVENT_AGGRO:
 		case EVENT_ENTER:
 		case EVENT_EXIT:

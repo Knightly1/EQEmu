@@ -369,6 +369,10 @@ void Parser::Event(QuestEventID event, int32 npcid, const char * data, NPC* npcm
 	{
 		AddVar("timername.g",data);
 	}
+	if (event == EVENT_SIGNAL)
+	{
+		AddVar("signal.g",data);
+	}
 	int8 fac = 0;
 	if (mob && mob->IsClient()) {		
 		AddVar("uguildid.g", itoa(mob->CastToClient()->GuildDBID()));

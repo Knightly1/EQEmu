@@ -41,6 +41,8 @@ extern GuildWars guildwars;
 extern RaidAddicts raidaddicts;
 #endif
 
+extern Database database;
+
 // @merth: this needs to be touched up
 uint32 Client::NukeItem(uint32 itemnum) {
 	if (itemnum == 0)

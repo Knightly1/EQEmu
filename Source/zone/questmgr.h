@@ -43,6 +43,7 @@ public:
 	//getZoneID(const char *short_name)
 	void write(const char *file, const char *str);
 	int16 spawn2(int npc_type, int grid, int unused, float x, float y, float z, float heading);
+	int16 unique_spawn(int npc_type, int grid, int unused, float x, float y, float z, float heading = 0);
 	void setstat(int stat, int value);
 	void castspell(int spell_id, int target_id);
 	void selfcast(int spell_id);
@@ -92,7 +93,8 @@ public:
 	void setguild(int32 new_guild_id, int8 new_rank);
 	void settime(int8 new_hour, int8 new_min);
 	void itemlink(int item_id);
-	void signal(int npc_id);
+	void signal(int npc_id, int wait_ms = 0);
+	void signalwith(int npc_id, int signal_id, int wait_ms = 0);
 	void setglobal(const char *varname, const char *newvalue, int options, const char *duration);
 	void targlobal(const char *varname, const char *value, const char *duration, int npcid, int charid, int zoneid);
 	void delglobal(const char *varname);
@@ -132,7 +134,15 @@ protected:
 		string name;
 		Timer Timer_;
 	};
-	list<QuestTimer> TimerList;
+	class SignalTimer {
+	public:
+		inline SignalTimer(int duration, int _npc_id, int _signal_id) : npc_id(_npc_id), signal_id(_signal_id), Timer_(duration) { Timer_.Start(duration, false); }
+		int npc_id;
+		int signal_id;
+		Timer Timer_;
+	};
+	list<QuestTimer>	QTimerList;
+	list<SignalTimer>	STimerList;
 
 };
 

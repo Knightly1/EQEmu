@@ -222,8 +222,7 @@ public:
 	void	SendPositionUpdates(Client* client, int32 cLastUpdate = 0, float range = 0, Entity* alwayssend = 0, bool iSendEvenIfNotChanged = false);
 	char*	MakeNameUnique(char* name);
 	static char*	RemoveNumbers(char* name);
-// signal quest command support
-	void	SignalMobsByNPCID(int32 snpc);
+	void	SignalMobsByNPCID(int32 npc_type, int signal_id);
 	void	CountNPC(int32* NPCCount, int32* NPCLootCount, int32* gmspawntype_count);
 	void	DoZoneDump(ZSDump_Spawn2* spawn2dump, ZSDump_NPC* npcdump, ZSDump_NPC_Loot* npclootdump, NPCType* gmspawntype_dump);
 	void    RemoveEntity(int16 id);

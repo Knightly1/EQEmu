@@ -274,7 +274,6 @@ bool logpos;
 	float	tar_vy;
 	float	tar_vz;
 	float	test_vector;
-	bool	signaled;	// used by quest signal() command
 
 	int32	GetPRange(float x, float y, float z);
 	static	int32	RandomTimer(int min, int max);
@@ -748,6 +747,7 @@ bool logpos;
 	inline EGNode *GetEGNode() { return(_egnode); }
 	inline void SetEGNode(EGNode *s) { _egnode = s; }
 	
+	inline void SignalNPC(int _signal_id) { signaled = true; signal_id = _signal_id; }
 	
 	bool	isgrouped; //These meant to be private?
 	bool	pendinggroup;
@@ -815,6 +815,9 @@ protected:
 	int16			typeofpet; // 0xFF = charmed
 	
 	int32			follow;
+	
+	int		signal_id;
+	bool	signaled;	// used by quest signal() command
 	
 	int8    gender;
 	int16	race;

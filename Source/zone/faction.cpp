@@ -518,6 +518,12 @@ void  Client::SetFactionLevel2(int32 char_id, sint32 faction_id, int8 char_class
 		current_value = GetCharacterFactionLevel(faction_id) + value;
 		if(!(database.SetCharacterFactionLevel(char_id, faction_id, current_value,&factionvalue_list)))
 			return;
+		
+		char* msg = BuildFactionMessage(value, faction_id, current_value);
+		if (msg != 0)
+			Message(0, msg);
+		safe_delete(msg);
+
 	}
 	return;
 }
@@ -639,6 +645,7 @@ bool Database::LoadFactionValues_result(MYSQL_RES* result, LinkedList<FactionVal
 //o--------------------------------------------------------------
 char* BuildFactionMessage(sint32 tmpvalue, sint32 faction_id, sint32 totalvalue)
 {
+	//tmpvalue is the change as best I can tell.
 	char *faction_message = 0;
 
 	char name[50];

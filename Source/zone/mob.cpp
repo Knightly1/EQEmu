@@ -123,7 +123,9 @@ logpos = false;
 	SetMoving(false);
 	moved=false;
 // for quest signal() command
-	signaled=false;
+	signaled = false;
+	signal_id = 0;
+
 	_egnode = NULL;
 	adverrorinfo = 0;
 	name[0]=0;

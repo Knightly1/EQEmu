@@ -303,6 +303,32 @@ XS(XS__spawn2)
 	XSRETURN(1);
 }
 
+XS(XS__unique_spawn);
+XS(XS__unique_spawn)
+{
+	dXSARGS;
+	if (items != 6 && items != 7)
+		Perl_croak(aTHX_ "Usage: unique_spawn(npc_type, grid, unused, x, y, z[, heading])");
+	
+	int16		RETVAL;
+	dXSTARG;
+	
+	int	npc_type = (int)SvIV(ST(0));
+	int	grid = (int)SvIV(ST(1));
+	int	unused = (int)SvIV(ST(2));
+	float	x = (float)SvNV(ST(3));
+	float	y = (float)SvNV(ST(4));
+	float	z = (float)SvNV(ST(5));
+	float	heading = 0;
+	if(items == 7)
+		heading = (float)SvNV(ST(6));
+
+	RETVAL = quest_manager.unique_spawn(npc_type, grid, unused, x, y, z, heading);
+	XSprePUSH; PUSHu((UV)RETVAL);
+	
+	XSRETURN(1);
+}
+
 XS(XS__setstat);
 XS(XS__setstat)
 {
@@ -989,16 +1015,42 @@ XS(XS__itemlink)
 	XSRETURN_EMPTY;
 }
 
+XS(XS__signalwith);
+XS(XS__signalwith)
+{
+	dXSARGS;
+	
+	if (items == 2) {
+		int	npc_id = (int)SvIV(ST(0));
+		int	signal_id = (int)SvIV(ST(1));
+		quest_manager.signalwith(npc_id, signal_id);
+	} else if(items == 3) {
+		int	npc_id = (int)SvIV(ST(0));
+		int	signal_id = (int)SvIV(ST(1));
+		int	wait = (int)SvIV(ST(2));
+		quest_manager.signalwith(npc_id, signal_id, wait);
+	} else {
+		Perl_croak(aTHX_ "Usage: signalwith(npc_id,signal_id[,wait_ms])");
+	}
+
+	XSRETURN_EMPTY;
+}
+
 XS(XS__signal);
 XS(XS__signal)
 {
 	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: signal(npc_id)");
-
-	int	npc_id = (int)SvIV(ST(0));
-
-	quest_manager.signal(npc_id);
+	
+	if (items == 1) {
+		int	npc_id = (int)SvIV(ST(0));
+		quest_manager.signal(npc_id);
+	} else if(items == 2) {
+		int	npc_id = (int)SvIV(ST(0));
+		int	wait = (int)SvIV(ST(1));
+		quest_manager.signal(npc_id, wait);
+	} else {
+		Perl_croak(aTHX_ "Usage: signal(npc_id[,wait_ms])");
+	}
 
 	XSRETURN_EMPTY;
 }
@@ -1323,6 +1375,7 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "settime"), XS__settime, file);
 		newXS(strcpy(buf, "itemlink"), XS__itemlink, file);
 		newXS(strcpy(buf, "signal"), XS__signal, file);
+		newXS(strcpy(buf, "signalwith"), XS__signalwith, file);
 		newXS(strcpy(buf, "setglobal"), XS__setglobal, file);
 		newXS(strcpy(buf, "targlobal"), XS__targlobal, file);
 		newXS(strcpy(buf, "delglobal"), XS__delglobal, file);

@@ -218,12 +218,14 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	}
 	
 	//do the check and send results...
-	user->TradeskillExecute(&spec, tradeskill);
+	bool success = user->TradeskillExecute(&spec, tradeskill);
 	
 	// Send acknowledgement packets to client
 	APPLAYER* outapp = new APPLAYER(OP_TradeSkillCombine, 0);
 	user->QueuePacket(outapp);
 	safe_delete(outapp);
+	
+	//now clean out the containers.
 	if(worldcontainer){
 		container->Clear();
 		outapp = new APPLAYER(OP_ClearObject,0);
@@ -238,6 +240,9 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 			}
 		}
 		container->Clear();
+		if(success && spec.replace_container) {
+			user->DeleteItemInInventory(in_combine->container_slot);
+		}
 	}
 }
 
@@ -375,7 +380,13 @@ void Object::HandleAutoCombine(Client* user, const RecipeAutoCombine_Struct* rac
 	
 	//now actually try to make something...
 	
-	user->TradeskillExecute(&spec, tskill);
+	bool success = user->TradeskillExecute(&spec, tskill);
+	
+	//TODO: find in-pack containers in inventory, make sure they are really
+	//there, and then use that slot to handle replace_container too.
+	if(success && spec.replace_container) {
+//		user->DeleteItemInInventory(in_combine->container_slot);
+	}
 	
 }
 
@@ -623,9 +634,10 @@ void Client::SendTradeskillDetails(unsigned long recipe_id) {
 	safe_delete(outapp);
 }
 
-void Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskill) {
+//returns true on success
+bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskill) {
 	if(spec == NULL || tradeskill == 0)
-		return;
+		return(false);
 	
 	sint16 user_skill = (sint16) GetSkill(tradeskill);
 	float chance = 0;
@@ -673,6 +685,7 @@ void Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskil
 			SummonItem(itr->first, itr->second);
 			itr++;
 		}
+		return(true);
 	} else {
 		Message_StringID(4,TRADESKILL_FAILED);
 		
@@ -683,6 +696,7 @@ void Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskil
 			itr++;
 		}
 	}
+	return(false);
 }
 
 
@@ -823,7 +837,7 @@ bool Database::GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint8 tradeskill,
 	uint32 qcount = 0;
 	uint32 qlen;
 	
-	qlen = MakeAnyLenString(&query, "SELECT tr.skillneeded, tr.trivial, tr.nofail"
+	qlen = MakeAnyLenString(&query, "SELECT tr.skillneeded, tr.trivial, tr.nofail, tr.replace_container"
 	" FROM tradeskill_recipe AS tr"
 	" WHERE tr.id = %lu AND tr.tradeskill = %u", recipe_id, tradeskill);
 		
@@ -842,9 +856,10 @@ bool Database::GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint8 tradeskill,
 	}
 	
 	row = mysql_fetch_row(result);
-	spec->skill_needed	= (sint16)atoi(row[0]);
-	spec->trivial		= (uint16)atoi(row[1]);
-	spec->nofail		= atoi(row[2]) ? true : false;
+	spec->skill_needed		= (sint16)atoi(row[0]);
+	spec->trivial			= (uint16)atoi(row[1]);
+	spec->nofail			= atoi(row[2]) ? true : false;
+	spec->replace_container	= atoi(row[3]) ? true : false;
 	mysql_free_result(result);
 	
 	//Pull the on-success items...

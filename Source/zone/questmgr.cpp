@@ -92,9 +92,9 @@ QuestManager::~QuestManager() {
 }
 
 void QuestManager::Process() {
-	list<QuestTimer>::iterator cur = TimerList.begin(), end, tmp;
+	list<QuestTimer>::iterator cur = QTimerList.begin(), end, tmp;
 	
-	end = TimerList.end();
+	end = QTimerList.end();
 	while (cur != end) {
 		if (cur->Timer_.Enabled() && cur->Timer_.Check()) {
 			//make sure the mob is still in zone.
@@ -102,16 +102,35 @@ void QuestManager::Process() {
 				parse->Event(EVENT_TIMER, cur->mob->GetNPCTypeID(), cur->name.c_str(), cur->mob, NULL);
 				//we MUST reset our iterator since the quest could have removed/added any
 				//number of timers... worst case we have to check a bunch of timers twice
-				cur = TimerList.begin();
-				end = TimerList.end();	//dunno if this is needed, cant hurt...
+				cur = QTimerList.begin();
+				end = QTimerList.end();	//dunno if this is needed, cant hurt...
 			} else {
 				tmp = cur;
 				tmp++;
-				TimerList.erase(cur);
+				QTimerList.erase(cur);
 				cur = tmp;
 			}
 		} else
 			cur++;
+	}
+	
+	
+	list<SignalTimer>::iterator curS = STimerList.begin(), endS, tmpS;
+	
+	endS = STimerList.end();
+	while (curS != endS) {
+		if (curS->Timer_.Enabled() && curS->Timer_.Check()) {
+			
+			//signal the event...
+			entity_list.SignalMobsByNPCID(curS->npc_id, curS->signal_id);
+			
+			//remove the timer
+			tmpS = curS;
+			tmpS++;
+			STimerList.erase(curS);
+			curS = tmpS;
+		} else
+			curS++;
 	}
 }
 
@@ -126,14 +145,14 @@ void QuestManager::EndQuest() {
 	quest_mutex.unlock();
 	if(depop_npc) {
 		//clear out any timers for them...
-		list<QuestTimer>::iterator cur = TimerList.begin(), end, tmp;
+		list<QuestTimer>::iterator cur = QTimerList.begin(), end, tmp;
 		
-		end = TimerList.end();
+		end = QTimerList.end();
 		while (cur != end) {
 			if(cur->mob == npc) {
 				tmp = cur;
 				tmp++;
-				TimerList.erase(cur);
+				QTimerList.erase(cur);
 				cur = tmp;
 			} else {
 				cur++;
@@ -203,6 +222,39 @@ int16 QuestManager::spawn2(int npc_type, int grid, int unused, float x, float y,
 	return(0);
 }
 
+int16 QuestManager::unique_spawn(int npc_type, int grid, int unused, float x, float y, float z, float heading) {
+	Mob *other = entity_list.GetMobByNpcTypeID(npc_type);
+	if(other != NULL) {
+		return(other->GetID());
+	}
+	
+	
+	const NPCType* tmp = 0;
+	//int8 guildwarset = atoi(arglist[2]);
+	if ((tmp = database.GetNPCType(npc_type))) 
+	{
+
+		NPC* npc = new NPC(tmp, 0, x, y, z, heading);
+
+
+		npc->AddLootTable();
+		entity_list.AddNPC(npc,true,true);
+		// Quag: Sleep in main thread? ICK!
+		// Sleep(200);
+		// Quag: check is irrelevent, it's impossible for npc to be 0 here
+		// (we're in main thread, nothing else can possibly modify it)
+//		if(npc != 0) {
+			if(grid > 0)
+			{
+				npc->AssignWaypoints(grid);
+			}
+			npc->SendPosUpdate();
+//		}
+		return(npc->GetID());
+	}
+	return(0);
+}
+
 void QuestManager::setstat(int stat, int value) {
 	if (initiator) 
 		initiator->SetStats(stat, value);
@@ -241,9 +293,9 @@ void QuestManager::Zone(const char *zone_name) {
 }
 
 void QuestManager::settimer(const char *timer_name, int seconds) {
-	list<QuestTimer>::iterator cur = TimerList.begin(), end;
+	list<QuestTimer>::iterator cur = QTimerList.begin(), end;
 	
-	end = TimerList.end();
+	end = QTimerList.end();
 	while (cur != end)
 	{
 		if (cur->name == timer_name) {
@@ -262,20 +314,20 @@ void QuestManager::settimer(const char *timer_name, int seconds) {
 	tmp->Timer_->Start(seconds * 1000,false);
 	tmp->name = timer_name;
 	printf("Adding: %s for %d seconds\n", tmp->name.c_str(), seconds);
-	TimerList.push_back(tmp);*/
-	TimerList.push_back(QuestTimer(seconds * 1000, npc, timer_name));
+	QTimerList.push_back(tmp);*/
+	QTimerList.push_back(QuestTimer(seconds * 1000, npc, timer_name));
 }
 
 void QuestManager::stoptimer(const char *timer_name) {
 printf("Stop timer called on '%s'!\n", timer_name);
-	list<QuestTimer>::iterator cur = TimerList.begin(), end;
+	list<QuestTimer>::iterator cur = QTimerList.begin(), end;
 	
-	end = TimerList.end();
+	end = QTimerList.end();
 	while (cur != end)
 	{
 		if(cur->name == timer_name)
 		{
-			TimerList.erase(cur);
+			QTimerList.erase(cur);
 			return;
 		}
 		cur++;
@@ -666,10 +718,7 @@ void QuestManager::faction(int faction_id, int faction_value) {
 				initiator->GetRace(), 
 				initiator->GetDeity(), 
 				faction_value); 
-
 			
-	//		if (initiator) initiator->SetFactionLevel2(initiator->GetID(), faction_id, initiator->GetClass(), initiator->GetRace(), initiator->GetDeity(), faction_value);
-	//		// FIXME add a faction message?
 		}
 	}
 }
@@ -751,9 +800,14 @@ sprintf(hashstr, "%d%s%d%d", id, name, weight, booktype);
 	initiator->Message(0, "%s tells you, '%c00%i %s%c",npc->GetName(),0x12, item->ItemNumber, item->Name, 0x12);
 }
 
-void QuestManager::signal(int npc_id) {
+void QuestManager::signalwith(int npc_id, int signal_id, int wait_ms) {
 // SCORPIOUS2K - signal command
 	// signal(npcid) - generates EVENT_SIGNAL on specified npc
+	if(wait_ms > 0) {
+		STimerList.push_back(SignalTimer(wait_ms, npc_id, signal_id));
+		return;
+	}
+	
 	if (npc_id<1)
 	{
 		printf("signal() bad npcid=%i\n",npc_id);
@@ -761,8 +815,12 @@ void QuestManager::signal(int npc_id) {
 	else
 	{
 		//initiator* signalnpc=0;
-		entity_list.SignalMobsByNPCID(npc_id);
+		entity_list.SignalMobsByNPCID(npc_id, signal_id);
 	}
+}
+
+void QuestManager::signal(int npc_id, int wait_ms) {
+	signalwith(npc_id, 0, wait_ms);
 }
 
 void QuestManager::setglobal(const char *varname, const char *newvalue, int options, const char *duration) {

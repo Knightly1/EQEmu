@@ -96,6 +96,8 @@ enum {	//scribing argument to MemorizeSpell
 #define DISCIPLINE_SPELL_SLOT 10
 #define ABILITY_SPELL_SLOT 9
 
+// this enum and discipline system is obsolete,
+//all this stuff should be handled by spells/bonuses now.
 typedef enum {	//disciplines for disc_inuse
 	discNone			= 0,
 	//general
@@ -449,7 +451,7 @@ public:
 	//Father Nitwit's Tradeskill Rework:
 	void TradeskillSearchResults(const char *query, unsigned long qlen, unsigned long objtype, unsigned long someid);
 	void SendTradeskillDetails(unsigned long  recipe_id);
-	void TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskill);
+	bool TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskill);
 	
 	void	SetZoneSummonCoords(float x, float y, float z) {zonesummon_x = x; zonesummon_y = y; zonesummon_z = z;}
 	int32	pendingrezzexp;

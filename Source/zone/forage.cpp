@@ -102,6 +102,7 @@ int32 Database::GetZoneForage(int32 ZoneID, int8 skill) {
 		while ((row = mysql_fetch_row(result)) && (index < FORAGE_ITEM_LIMIT)) 	{
 			item[index] = atoi(row[0]);
 			chance[index] = atoi(row[1]);
+LogFile->write(EQEMuLog::Error, "Possible Forage: %d with a %d chance", item[index], chance[index]);
 			csum += chance[index];
 			index++;
 		}
@@ -109,22 +110,24 @@ int32 Database::GetZoneForage(int32 ZoneID, int8 skill) {
 		mysql_free_result(result);
 	}
 	else {
-		cerr << "Error in Forage query '" << query << "' " << errbuf << endl;
+		LogFile->write(EQEMuLog::Error, "Error in Forage query '%s': %s", query, errbuf);
 		safe_delete_array(query);
 		return 0;
 	}
 	
-	if (index > 0 && csum > 0) {
-		ret = 0;
-		
-		while(ret == 0) {
-			rindex = MakeRandomInt(0, index-1);
+	if(csum == 0 || index < 1)
+		return(0);
+	
+	if(index == 1) {
+		return(item[0]);
+	}
+	
+	ret = 0;
+	
+	while(ret == 0) {
+		rindex = MakeRandomInt(0, index-1);
+		if(MakeRandomInt(0, 100) < chance[rindex])
 			ret = item[rindex];
-			if(MakeRandomInt(0, 100) >= chance[rindex])
-				ret = 0;
-		}
-	} else {
-		ret = 0;
 	}
 	
 	return ret;
@@ -359,10 +362,11 @@ void Client::ForageItem() {
 		uint32 foragedfood = 0;
 		int32 stringid = FORAGE_NOEAT;
 		
-        if (rand()%100 >= 75) {
+        if (MakeRandomInt(0,99) <= 25) {
 			foragedfood = database.GetZoneForage(m_pp.zone_id, skill_level);
 		}
 		
+		//not an else in case theres no DB food
 		if(foragedfood == 0) {
 			int8 index = 0;
 			index = rand()%MAX_COMMON_FOOD_IDS;
@@ -379,15 +383,18 @@ void Client::ForageItem() {
 					stringid=FORAGE_FOOD;
 					break;
 			}
+		}
+		
+		//could maybe be more intelligent about whats foraged up
+		//using the item use of the object.
 			
-			const Item_Struct* food_item = database.GetItem(foragedfood);
-			
-			Message_StringID(MT_Skills, stringid);
-			const ItemInst* inst = ItemInst::Create(food_item, 1);
-			if(inst != NULL) {
-				PutItemInInventory(SLOT_CURSOR,*inst);
-				SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
-			}
+		const Item_Struct* food_item = database.GetItem(foragedfood);
+		
+		Message_StringID(MT_Skills, stringid);
+		const ItemInst* inst = ItemInst::Create(food_item, 1);
+		if(inst != NULL) {
+			PutItemInInventory(SLOT_CURSOR,*inst);
+			SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
 		}
 		
 	} else {

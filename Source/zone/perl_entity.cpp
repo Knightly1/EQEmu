@@ -1116,11 +1116,15 @@ XS(XS_EntityList_SignalMobsByNPCID); /* prototype to pass -Wmissing-prototypes *
 XS(XS_EntityList_SignalMobsByNPCID)
 {
 	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: EntityList::SignalMobsByNPCID(THIS, snpc)");
+	if (items != 2 && items != 3)
+		Perl_croak(aTHX_ "Usage: EntityList::SignalMobsByNPCID(THIS, npc_type[, signal_id])");
+
 	{
 		EntityList *		THIS;
 		int32		snpc = (int32)SvUV(ST(1));
+		int32		signal_id = 0;
+		if(items == 3)
+			signal_id = (int32)SvUV(ST(2));
 
 		if (sv_derived_from(ST(0), "EntityList")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -1129,7 +1133,7 @@ XS(XS_EntityList_SignalMobsByNPCID)
 		else
 			Perl_croak(aTHX_ "THIS is not of type EntityList");
 
-		THIS->SignalMobsByNPCID(snpc);
+		THIS->SignalMobsByNPCID(snpc, signal_id);
 	}
 	XSRETURN_EMPTY;
 }

@@ -688,8 +688,12 @@ void Mob::AI_Process() {
 		if (signaled==true)
 		{
 //			printf("Signal received\n");
-			if(IsNPC())
-				parse->Event(EVENT_SIGNAL, this->GetNPCTypeID(), "", CastToNPC(), NULL);
+			if(IsNPC()) {
+				char buf[32];
+				snprintf(buf, 31, "%d", signal_id);
+				buf[31] = '\0';
+				parse->Event(EVENT_SIGNAL, GetNPCTypeID(), buf, CastToNPC(), NULL);
+			}
 			signaled=false;
 		}
 		if (AIautocastspell_timer->Check()) 
