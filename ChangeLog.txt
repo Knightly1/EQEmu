@@ -1,6 +1,7 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 ==10/09/2004
+LethalEncounter: Fixed spell scribing and meming.
 LethalEncounter: Merged in Xabob's expansion fixes (except regen which FNW is working on).
 LethalEncounter: Merged in RangerDown's fixed version of #spawnfix.
 LethalEncounter: Fix for #zcolor that was brought up by rmanders on the bug forum.

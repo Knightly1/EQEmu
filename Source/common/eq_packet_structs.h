@@ -360,8 +360,8 @@ struct ClientDiscipline_Struct {
 struct MemorizeSpell_Struct { 
 int32 slot;     // Spot in the spell book/memorized slot 
 int32 spell_id; // Spell id (200 or c8 is minor healing, etc) 
-int32 scribing; // 1 if memorizing a spell, set to 0 if scribing to book 
-		// 2 if un-memming
+int32 scribing; // 1 if memorizing a spell, set to 0 if scribing to book, 2 if un-memming
+int32 unknown12;
 }; 
 
 /*

@@ -6496,6 +6496,7 @@ void Client::OPMemorizeSpell(const APPLAYER* app)
 	if(app->size != sizeof(MemorizeSpell_Struct))
 	{
 		LogFile->write(EQEMuLog::Error,"Wrong size on OP_MemorizeSpell. Got: %i, Expected: %i", app->size, sizeof(MemorizeSpell_Struct));
+		DumpPacket(app);
 		return;
 	}
 	

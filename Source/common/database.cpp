@@ -6067,7 +6067,7 @@ int32 Database::CountAAs(){
     MYSQL_RES *result;
     MYSQL_ROW row;
 	int count=0;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(skill_id) from altadv_vars"), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(title_sid) from altadv_vars"), errbuf, &result)) {
 		if((row = mysql_fetch_row(result))!=NULL)
 			count = atoi(row[0]);
 	}
@@ -6082,15 +6082,19 @@ int32 Database::CountAALevels(){
     MYSQL_ROW row;
 	int count=0;
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(id) from aa_levels"), errbuf, &result)) {
-		if((row = mysql_fetch_row(result))!=NULL)
+		if((row = mysql_fetch_row(result))!=NULL){
 			count = atoi(row[0]);
+			mysql_free_result(result);
+		}
 	}
 	safe_delete_array(query);
-	mysql_free_result(result);
 	return count;
 }
 int32 Database::GetSizeAA(){
-	return (CountAAs()*sizeof(SendAA_Struct))+(CountAALevels()*sizeof(AA_Ability));
+	int size=CountAAs()*sizeof(SendAA_Struct);
+	if(size>0)
+		size+=CountAALevels()*sizeof(AA_Ability);
+	return size;
 }
 void Database::LoadAAs(AA_List* load){
 	if(!load)
