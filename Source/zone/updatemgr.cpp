@@ -49,7 +49,7 @@ const int32 UpdateManager::level_timers[UPDATE_LEVELS+1]
 */
 
 //build a unique ID based on opcode and mob id..
-#define MakeUpdateID(mob, app) (((mob->GetID())<<12) | (app->opcode&0xFFF))
+#define MakeUpdateID(mob, app) (((mob->GetID())<<12) | (app->GetOpcode()&0xFFF))
 
 UpdateManager::UpdateManager(EQNetworkConnection *c)
  : limiter(UPDATE_RESOLUTION)   
@@ -93,7 +93,7 @@ void UpdateManager::QueuePacket(APPLAYER *app, bool ack_req, Mob *from, float ra
 		uint32 id = MakeUpdateID(from, app);
 //		if(r < 2)
 //			net->QueuePacket(app, ack_req);
-//LogFile->write(EQEMuLog::Debug, "Queueing packet from %s (0x%.4x) id=0x%x at level %d\n", from->GetName(), app->opcode, id, r);
+//LogFile->write(EQEMuLog::Debug, "Queueing packet from %s (0x%.4x) id=0x%x at level %d\n", from->GetName(), app->GetOpcode(), id, r);
 		app->PacketReferenced();
 		//reference decrementing is taken care of my UMType destructor
 		//if anything is overwritten

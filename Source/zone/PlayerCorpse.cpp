@@ -944,7 +944,7 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 
 void Corpse::EndLoot(Client* client, const APPLAYER* app) {
 	APPLAYER* outapp = new APPLAYER;
-	outapp->opcode = OP_LootComplete;
+	outapp->SetOpcode(OP_LootComplete);
 	outapp->size = 0;
 	client->QueuePacket(outapp);
 	safe_delete(outapp);

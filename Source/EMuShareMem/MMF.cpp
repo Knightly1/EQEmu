@@ -51,6 +51,7 @@ bool MMF::Open(const char* iName, int32 iSize) {
 	memset(MMFname, 0, sizeof(MMFname));
 	snprintf(MMFname, sizeof(MMFname), "memfilemap_%s", iName);
 	int32 tmpSize = sizeof(MMF_Struct) + iSize;
+	
 #ifdef WIN32
 	char MMFMutexName[200];
 	memset(MMFMutexName, 0, sizeof(MMFMutexName));
@@ -141,7 +142,7 @@ bool MMF::Open(const char* iName, int32 iSize) {
 	CloseHandle(hMutex);
 
 	return true;
-#else
+#else //else, NOT WINDOWS
 	int load_share;
 	int max_share = 7;
 	key_t share_key;
@@ -153,9 +154,10 @@ bool MMF::Open(const char* iName, int32 iSize) {
 		case 'F': load_share = 4;  break;
 		case 'L': load_share = 5;  break;
 		case 'M': load_share = 6;  break;
+		case 'O': load_share = 7;  break;
 #ifdef CATCH_CRASH
 		default:
-		    cerr<<"Failed to load shared memory segment="<<MMFname<<endl;
+		    cerr<<"Failed to load shared memory segment="<<MMFname<<" ("<<MMFname[16]<<")"<<endl;
 		    // malloc some memory here or something fancy
 		    return false; // and make this return true
 		break;
@@ -174,8 +176,12 @@ bool MMF::Open(const char* iName, int32 iSize) {
 		case 3: share_key = ftok(".", 'S'); break;
 		// Faction
 		case 4: share_key = ftok(".", 'F'); break;
+		// Loot
 		case 5: share_key = ftok(".", 'L'); break;
+		// ??
 		case 6: share_key = ftok(".", 'M'); break;
+		// Opcodes
+		case 7: share_key = ftok(".", 'O'); break;
 		// ERROR Fatal
 		default: cerr<<"Opps!"<<endl; share_key = 0xFF; break;
 	}
@@ -300,7 +306,7 @@ bool MMF::Open(const char* iName, int32 iSize) {
 	delete pMMFMutex;
 	return true;
 
-#endif
+#endif //end NOT WINDOWS
 }
 
 void MMF::Close() {

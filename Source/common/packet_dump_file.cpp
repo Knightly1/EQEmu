@@ -149,7 +149,7 @@ void FileDumpPacket(const char* filename, const uchar* buf, int32 size)
 
 void FileDumpPacket(const char* filename, const APPLAYER* app)
 {
-	FilePrintLine(filename, true, "Size: %5i, OPCode: 0x%04x", app->size, app->opcode);
+	FilePrintLine(filename, true, "Size: %5i, OPCode: 0x%04x", app->size, app->GetOpcode());
 	FileDumpPacketHex(filename, app->pBuffer, app->size);
 //	FileDumpPacketAscii(filename, app->pBuffer, app->size);
 }

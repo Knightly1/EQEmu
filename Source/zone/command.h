@@ -249,6 +249,7 @@ void command_qglobal(Client *c, const Seperator *sep);
 void command_fear(Client *c, const Seperator *sep);
 void command_path(Client *c, const Seperator *sep);
 void command_ginfo(Client *c, const Seperator *sep);
+void command_reloadops(Client *c, const Seperator *sep);
 
 #ifdef GUILDWARS
 void command_zonelocations(Client *c, const Seperator *sep);

@@ -503,7 +503,7 @@ void Client::QueuePacket(const APPLAYER* app, bool ack_req, CLIENT_CONN_STATUS r
 	}
 	if (app != 0) {
 		if (app->size >= 31500) {
-			cout << "WARNING: abnormal packet size. n='" << this->GetName() << "', o=0x" << hex << app->opcode << dec << ", s=" << app->size << endl;
+			cout << "WARNING: abnormal packet size. n='" << this->GetName() << "', o=0x" << hex << app->GetOpcode() << dec << ", s=" << app->size << endl;
 			return;
 		}
 	}
@@ -515,7 +515,7 @@ void Client::QueuePacket(const APPLAYER* app, bool ack_req, CLIENT_CONN_STATUS r
 		// This just here while figuring out new opcodes/packets
 		#ifdef MERTHALICIOUS
 			//@merth: this just here temporarily for my debugging
-			cout << "Sending: 0x" << hex << setw(4) << setfill('0') << app->opcode << dec << ", size=" << app->size << endl;
+			cout << "Sending: 0x" << hex << setw(4) << setfill('0') << app->GetOpcode() << dec << ", size=" << app->size << endl;
 		#endif
 	//#endif
 	
@@ -524,7 +524,7 @@ void Client::QueuePacket(const APPLAYER* app, bool ack_req, CLIENT_CONN_STATUS r
     {
         // todo: save packets for later use
         AddPacket(app, ack_req);
-//        LogFile->write(EQEMuLog::Normal, "Adding Packet to list (%d) (%d)", app->opcode, (int)required_state);
+//        LogFile->write(EQEMuLog::Normal, "Adding Packet to list (%d) (%d)", app->GetOpcode(), (int)required_state);
     }
     else
 	    if(eqnc)
@@ -534,18 +534,18 @@ void Client::QueuePacket(const APPLAYER* app, bool ack_req, CLIENT_CONN_STATUS r
 void Client::FastQueuePacket(APPLAYER** app, bool ack_req, CLIENT_CONN_STATUS required_state) {
 	if (app != 0 && (*app) != 0) {
 		if ((*app)->size >= 31500) {
-			cout << "WARNING: abnormal packet size. n='" << this->GetName() << "', o=0x" << hex << (*app)->opcode << dec << ", s=" << (*app)->size << endl;
+			cout << "WARNING: abnormal packet size. n='" << this->GetName() << "', o=0x" << hex << (*app)->GetOpcode() << dec << ", s=" << (*app)->size << endl;
 			return;
 		}
 	}
 	
-	//cout << "Sending: 0x" << hex << setw(4) << setfill('0') << (*app)->opcode << dec << ", size=" << (*app)->size << endl;
+	//cout << "Sending: 0x" << hex << setw(4) << setfill('0') << (*app)->GetOpcode() << dec << ", size=" << (*app)->size << endl;
 	
 	// if the program doesnt care about the status or if the status isnt what we requested
     if (required_state != CLIENT_CONNECTINGALL && client_state != required_state) {
         // todo: save packets for later use
         AddPacket(app, ack_req);
-//        LogFile->write(EQEMuLog::Normal, "Adding Packet to list (%d) (%d)", (*app)->opcode, (int)required_state);
+//        LogFile->write(EQEMuLog::Normal, "Adding Packet to list (%d) (%d)", (*app)->GetOpcode(), (int)required_state);
 		return;
     }
     else {
@@ -941,7 +941,7 @@ return;
 		strcpy(gms->charname, this->GetName());
 		strcpy(gms->gmname, this->GetName());
 
-		outapp->opcode = OP_GMSummon;
+		outapp->SetOpcode(OP_GMSummon);
 		gms->x = (sint32) x;
 		gms->y = (sint32) y;
 		gms->z = (sint32) z;
@@ -969,7 +969,7 @@ return;
 		strcpy(gmg->charname, this->GetName());
 		strcpy(gmg->gmname, this->GetName());
 
-		outapp->opcode = OP_GMGoto;
+		outapp->SetOpcode(OP_GMGoto);
 		gmg->x = (sint32) x;
 		gmg->y = (sint32) y;
 		gmg->z = (sint32) z;
@@ -1028,7 +1028,7 @@ void Client::AddSkill(int skillid, int8 value) {
 }
 
 void Client::SendSound(){//-Cofruben:Makes a sound.
-	APPLAYER* outapp = new APPLAYER(0x01a6, 68);
+	APPLAYER* outapp = new APPLAYER(OP_0x01a6, 68);
 	unsigned char x[68];
 	memset(x, 0, 68);
 	x[0]=0x22;
@@ -2291,7 +2291,7 @@ void Client::Escape()
 {
 	invisible = true;
 	entity_list.ClearFeignAggro(this);
-	APPLAYER* outapp = new APPLAYER(0x0202,12);
+	APPLAYER* outapp = new APPLAYER(OP_0x0202,12);
 	uint8 rawData0[12] = { 0x5A, 0x01, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 	memcpy(outapp->pBuffer,rawData0,12);
 	QueuePacket(outapp);

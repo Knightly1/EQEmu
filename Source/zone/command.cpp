@@ -46,6 +46,8 @@ Copyright (C) 2001-2002	EQEMu Development Team (http://eqemu.org)
 #include "../common/packet_functions.h"
 #include "../common/packet_dump.h"
 #include "../common/serverinfo.h"
+#include "../common/files.h"
+#include "../common/opcodemgr.h"
 //#include "../common/servertalk.h" // for oocmute and revoke
 #include "worldserver.h"
 #include "masterentity.h"
@@ -379,6 +381,7 @@ int command_init(void)
 		command_add("reloadpl","- Reload perl quest for target",80,command_reloadpl) || 
 #endif
 
+		command_add("reloadops","- Reload opcodes for this zone",250,command_reloadops) || 
 		command_add("logs","[status|normal|error|debug|quest|all] - Subscribe to a log type",250,command_logs) ||
 		command_add("nologs","[status|normal|error|debug|quest|all] - Unsubscribe to a log type",250,command_nologs) ||
 		command_add("datarate","[rate] - Query/set datarate",100,command_datarate) ||
@@ -789,7 +792,7 @@ void command_sendop(Client *c,const Seperator *sep){
 
 	*/
 	if(sep->arg[1][0] && sep->arg[2][0]){
-		APPLAYER* outapp = new APPLAYER(atoi(sep->arg[1]),sizeof(GMName_Struct));
+		APPLAYER* outapp = new APPLAYER((EmuOpcode)atoi(sep->arg[1]),sizeof(GMName_Struct));
 		GMName_Struct* gms=(GMName_Struct*)outapp->pBuffer;
 		memset(outapp->pBuffer,0,outapp->size);
 		strcpy(gms->gmname,c->GetName());
@@ -3083,7 +3086,7 @@ void command_kick(Client *c, const Seperator *sep)
 		if (client != 0) {
 			if (client->Admin() <= c->Admin()) {
 				client->Message(0, "You have been kicked by %s",c->GetName());
-				APPLAYER* outapp = new APPLAYER(0x0068,0);
+				APPLAYER* outapp = new APPLAYER(OP_GMKick,0);
 				client->QueuePacket(outapp);
 				client->Kick();
 				c->Message(0, "Kick: local: kicking %s", sep->arg[1]);
@@ -3453,15 +3456,23 @@ void command_title(Client *c, const Seperator *sep)
 		}
 		Client *t = target_mob->CastToClient();
 		
-		if(!strcasecmp(sep->arg[1], "remove"))
+		bool removed = false;
+		if(!strcasecmp(sep->arg[1], "remove")) {
 			t->SetAATitle("");
-		else
+			removed = true;
+		} else
 			t->SetAATitle(sep->arg[1]);
 		t->Save();
 		
-		c->Message(13, "%s's title has been changed to '%s'. They must zone for it to take effect.", t->GetName(), sep->arg[1]);
-		if(t != c)
-			t->Message(13, "Your title has been changed to '%s'. You must zone for it to take effect.", sep->arg[1]);
+		if(removed) {
+			c->Message(13, "%s's title has been removed. They must zone for it to take effect.", t->GetName(), sep->arg[1]);
+			if(t != c)
+				t->Message(13, "Your title has been removed. You must zone for it to take effect.", sep->arg[1]);
+		} else {
+			c->Message(13, "%s's title has been changed to '%s'. They must zone for it to take effect.", t->GetName(), sep->arg[1]);
+			if(t != c)
+				t->Message(13, "Your title has been changed to '%s'. You must zone for it to take effect.", sep->arg[1]);
+		}
 	}
 }
 
@@ -5096,8 +5107,7 @@ void command_interrupt(Client *c, const Seperator *sep)
 
 void command_d1(Client *c, const Seperator *sep)
 {
-	APPLAYER app;
-	app.opcode = OP_Action;
+	APPLAYER app(OP_Action);
 	app.size = sizeof(Action_Struct);
 	app.pBuffer = new uchar[app.size];
 	memset(app.pBuffer, 0, app.size);
@@ -5923,6 +5933,15 @@ void command_profilereset(Client *c, const Seperator *sep) {
 	ResetZoneProfile();
 }
 #endif
+
+void command_reloadops(Client *c, const Seperator *sep) {
+	if(EQNetworkOpcodeManager == NULL) {
+		c->Message(13, "It seems that the server is not using an opcode translator.");
+		return;
+	}
+	EQNetworkOpcodeManager->ReloadOpcodes(OPCODES_FILE);
+	c->Message(0, "Opcodes have been reloaded");
+}
 
 void command_logsql(Client *c, const Seperator *sep) {
 	if(!strcasecmp( sep->arg[1], "off" )) {

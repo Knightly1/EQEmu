@@ -91,7 +91,7 @@ typedef void (Client::*ClientPacketProc)(const APPLAYER *app);
 //Use a map for connecting opcodes since it dosent get used a lot and is sparse
 map<uint16, ClientPacketProc> ConnectingOpcodes;
 //Use a static array for connected, for speed
-ClientPacketProc ConnectedOpcodes[0x0FFF];
+ClientPacketProc ConnectedOpcodes[_maxEmuOpcode];
 
 void MapOpcodes() {
 	ConnectingOpcodes.clear();
@@ -103,7 +103,7 @@ void MapOpcodes() {
 	ConnectingOpcodes[OP_ZoneEntry] = &Client::Handle_Connect_OP_ZoneEntry;
 	ConnectingOpcodes[OP_SetServerFilter] = &Client::Handle_Connect_OP_SetServerFilter;
 	ConnectingOpcodes[OP_SendAATable] = &Client::Handle_Connect_OP_SendAATable;
-	ConnectingOpcodes[0x037f] = &Client::Handle_Connect_0x037f;
+	ConnectingOpcodes[OP_0x037f] = &Client::Handle_Connect_0x037f;
 	ConnectingOpcodes[OP_ReqClientSpawn] = &Client::Handle_Connect_OP_ReqClientSpawn;
 	ConnectingOpcodes[OP_SendExpZonein] = &Client::Handle_Connect_OP_SendExpZonein;
 	ConnectingOpcodes[OP_ZoneComplete] = &Client::Handle_Connect_OP_ZoneComplete;
@@ -272,8 +272,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_TrackTarget] = &Client::Handle_OP_TrackTarget;
 	ConnectedOpcodes[OP_Track] = &Client::Handle_OP_Track;
 	ConnectedOpcodes[OP_TrackUnknown] = &Client::Handle_OP_TrackUnknown;
-	ConnectedOpcodes[0x0193] = &Client::Handle_0x0193;
-//	ConnectedOpcodes[0x01e7] = &Client::Handle_0x01e7;
+	ConnectedOpcodes[OP_0x0193] = &Client::Handle_0x0193;
 	ConnectedOpcodes[OP_ClientError] = &Client::Handle_OP_ClientError;
 	ConnectedOpcodes[OP_ReloadUI] = &Client::Handle_OP_ReloadUI;
 	ConnectedOpcodes[OP_TGB] = &Client::Handle_OP_TGB;
@@ -302,36 +301,37 @@ int Client::HandlePacket(const APPLAYER *app)
 {
 	_ZP(Client_HandlePacket);
 	
-	if (app->opcode == OP_AckPacket) {
+	EmuOpcode opcode = app->GetOpcode();
+	if (opcode == OP_AckPacket) {
     	return true;
 	}
 	
 	#if EQDEBUG >= 9
-		cout << "Received 0x" << hex << setw(4) << setfill('0') << app->opcode << ", size=" << dec << app->size << endl;
+		cout << "Received 0x" << hex << setw(4) << setfill('0') << opcode << ", size=" << dec << app->size << endl;
 	#endif
 	
 	#ifdef SOLAR
-		if(0 && app->opcode != OP_ClientUpdate)
+		if(0 && opcode != OP_ClientUpdate)
 		{
 			LogFile->write(EQEMuLog::Debug,"HandlePacket() OPCODE debug enabled client %s", GetName());
-			cerr << "OPCODE: " << hex << setw(4) << setfill('0') << app->opcode << dec << ", size: " << app->size << endl;
+			cerr << "OPCODE: " << hex << setw(4) << setfill('0') << opcode << dec << ", size: " << app->size << endl;
 			DumpPacket(app);
 		}
 	#endif
 
 	switch(client_state) {
 	case CLIENT_CONNECTING: {
-		if(ConnectingOpcodes.count(app->opcode) != 1) {
-			LogFile->write(EQEMuLog::Error, "HandlePacket() Opcode error: Unexpected packet during CLIENT_CONNECTING: opcode: 0x%04x, size: %i", app->opcode, app->size);
+		if(ConnectingOpcodes.count(opcode) != 1) {
+			LogFile->write(EQEMuLog::Error, "HandlePacket() Opcode error: Unexpected packet during CLIENT_CONNECTING: opcode: %s (0x%04x), size: %i", OpcodeNames[opcode], opcode, app->size);
 #if EQDEBUG >= 9
-			cout << "Unexpected packet during CLIENT_CONNECTING: OpCode: 0x" << hex << setw(4) << setfill('0') << app->opcode << dec << ", size: " << app->size << endl;
+			cout << "Unexpected packet during CLIENT_CONNECTING: OpCode: 0x" << hex << setw(4) << setfill('0') << opcode << dec << ", size: " << app->size << endl;
 			DumpPacket(app);
 #endif
 			break;
 		}
 		
 		ClientPacketProc p;
-		p = ConnectingOpcodes[app->opcode];
+		p = ConnectingOpcodes[opcode];
 		
 		//call the processing routine
 		(this->*p)(app);
@@ -345,10 +345,9 @@ int Client::HandlePacket(const APPLAYER *app)
 	}
 	case CLIENT_CONNECTED: {
 		ClientPacketProc p;
-		p = ConnectedOpcodes[app->opcode & 0x0FFF];		//mask just in case..?
+		p = ConnectedOpcodes[opcode & 0x0FFF];		//mask just in case..?
 		if(p == NULL) {
-			cout << "Unknown opcode: 0x" << hex << setfill('0') << setw(4) << app->opcode << dec
-				<< " size:" << app->size << " Client:" << GetName() << endl;
+			LogFile->write(EQEMuLog::Error, "Unknown opcode: %s (0x%04x), size: %i, Client: %s", OpcodeNames[opcode], opcode, app->size, GetName());
 			if(app->size<1000)
 				DumpPacket(app->pBuffer, app->size);
 			else{
@@ -467,7 +466,7 @@ void Client::Handle_Connect_OP_SendAATable(const APPLAYER *app)
 
 void Client::Handle_Connect_0x037f(const APPLAYER *app)
 {
-	APPLAYER* outapp = new APPLAYER(0x0380, sizeof(int32));
+	APPLAYER* outapp = new APPLAYER(OP_0x0380, sizeof(int32));
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	return;
@@ -633,7 +632,7 @@ void Client::Handle_Connect_OP_SendExpZonein(const APPLAYER *app)
 
 void Client::Handle_Connect_OP_ZoneComplete(const APPLAYER *app)
 {
-	APPLAYER* outapp = new APPLAYER(0x0347, 0);
+	APPLAYER* outapp = new APPLAYER(OP_0x0347, 0);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	return;
@@ -896,15 +895,14 @@ void Client::Handle_OP_TargetCommand(const APPLAYER *app)
 		target = entity_list.GetMob(ct->new_target);
 	
 	// For /target, send reject or success packet
-	if (app->opcode == OP_TargetCommand) {
+	if (app->GetOpcode() == OP_TargetCommand) {
 		if (target && !target->CastToMob()->IsInvisible(this) && Dist(*target) <= TARGETING_RANGE) {
 			QueuePacket(app);
 			APPLAYER hp_app;
 			target->IsTargeted(true);
 			target->CreateHPPacket(&hp_app);
 			QueuePacket(&hp_app, false);
-		}
-		else {
+		} else {
 			APPLAYER* outapp = new APPLAYER(OP_TargetReject, sizeof(TargetReject_Struct));
 			outapp->pBuffer[0] = 0x2f;
 			outapp->pBuffer[1] = 0x01;
@@ -1033,14 +1031,14 @@ void Client::Handle_OP_LDoNButton(const APPLAYER *app)
 void Client::Handle_OP_LeaveAdventure(const APPLAYER *app)
 {
 	uchar lol[4]={0x3F,0x2A,0x00,0x00};
-	APPLAYER* outapp=new APPLAYER(0x02e4,4);
+	APPLAYER* outapp=new APPLAYER(OP_0x02e4,4);
 	uchar* x=(uchar*)outapp->pBuffer;
 	memcpy(x,lol,4);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	//Cofruben: lol2 for message,lol for leave confirmation.
 	uchar lol2[12]={0x0F,0x14,0x00,0x00,0x0D,0x00,0x00,0x00,0x01,0x00,0x00,0x00};
-	APPLAYER* outapp2=new APPLAYER(0x01d7,12);
+	APPLAYER* outapp2=new APPLAYER(OP_0x01d7,12);
 	uchar* xx=(uchar*) outapp2->pBuffer;
 	memcpy(xx,lol2,12);
 	QueuePacket(outapp2);
@@ -1528,7 +1526,7 @@ void Client::Handle_OP_DuelResponse2(const APPLAYER *app)
 		ds2->duel_target = entity->GetID();
 		initiator->CastToClient()->QueuePacket(outapp);
 		
-		outapp->opcode = OP_DuelResponse2;
+		outapp->SetOpcode(OP_DuelResponse2);
 		ds2->duel_initiator = initiator->GetID();
 
 		initiator->CastToClient()->QueuePacket(outapp);
@@ -1915,14 +1913,14 @@ void Client::Handle_OP_Sneak(const APPLAYER *app)
 	safe_delete(outapp);
 	if(GetClass() == ROGUE){
 		if (sneaking){
-			outapp = new APPLAYER(0x0202,12);
+			outapp = new APPLAYER(OP_0x0202,12);
 			uint8 rawData0[12] = { 0x5B, 0x01, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 			memcpy(outapp->pBuffer,rawData0,12);
 			QueuePacket(outapp);
 			safe_delete(outapp)
 		}
 		else {
-			outapp = new APPLAYER(0x0202,12);
+			outapp = new APPLAYER(OP_0x0202,12);
 			uint8 rawData0[12] = { 0x5C, 0x01, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 			memcpy(outapp->pBuffer,rawData0,12);
 			QueuePacket(outapp);
@@ -1969,14 +1967,14 @@ void Client::Handle_OP_Hide(const APPLAYER *app)
 			}
 		}
 		if (invisible){
-			APPLAYER* outapp = new APPLAYER(0x0202,12);
+			APPLAYER* outapp = new APPLAYER(OP_0x0202,12);
 			uint8 rawData0[12] = { 0x5A, 0x01, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 			memcpy(outapp->pBuffer,rawData0,12);
 			QueuePacket(outapp);
 			safe_delete(outapp)
 		}
 		else {
-			APPLAYER* outapp = new APPLAYER(0x0202,12);
+			APPLAYER* outapp = new APPLAYER(OP_0x0202,12);
 			uint8 rawData0[12] = { 0x59, 0x01, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 			memcpy(outapp->pBuffer,rawData0,12);
 			QueuePacket(outapp);
@@ -1991,7 +1989,7 @@ void Client::Handle_OP_ChannelMessage(const APPLAYER *app)
 	ChannelMessage_Struct* cm=(ChannelMessage_Struct*)app->pBuffer;
 	
 	if (app->size < sizeof(ChannelMessage_Struct)) {
-		cout << "Wrong size " << app->size << ", should be " << sizeof(ChannelMessage_Struct) << "+ on 0x" << hex << setfill('0') << setw(4) << app->opcode << dec << endl;
+		cout << "Wrong size " << app->size << ", should be " << sizeof(ChannelMessage_Struct) << "+ on 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec << endl;
 		return;
 	}
 	if (IsAIControlled()) {
@@ -2030,19 +2028,20 @@ void Client::Handle_OP_ZoneChange(const APPLAYER *app)
 		return;
 	}
 	
-	entity_list.ClearFeignAggro(this);
-	
 #if EQDEBUG >= 5
 	LogFile->write(EQEMuLog::Debug, "Zone request from %s", GetName());
 	DumpPacket(app);
 #endif
 	ZoneChange_Struct* zc=(ZoneChange_Struct*)app->pBuffer;
+	
+	
 #ifdef GUILDWARS
 	if(zc->zoneID == 186)	// hateplaneb
 		zc->zoneID = 76;		// hateplane
 	if(Admin() == 0 && (zone->GetZoneID() == 183 || zone->GetZoneID() == 184))
 		return;
 #endif
+	
 	strcpy(zc->char_name, GetName()); // Stops packets from being inserted to make other clients zone					
 	
 	float tarx = -1, tary = -1, tarz = -1,tarheading=999;
@@ -2050,9 +2049,11 @@ void Client::Handle_OP_ZoneChange(const APPLAYER *app)
 	int8 minlevel = 0;
 	sint8 myerror=ZONE_ERROR_NOTREADY;
 	char target_zone[32] = {0};
+	
+	
+#ifdef GUILDWARS
 	if (zc->zoneID != 0 && dead)
 	{
-#ifdef GUILDWARS
 	if(animation > 65 && admin<80 && CheckCheat()){
 		if(cheater || cheatcount>0){
 			Message(15,"Cheater log updated...yup your busted,its not nice to cheat.");
@@ -2068,8 +2069,8 @@ void Client::Handle_OP_ZoneChange(const APPLAYER *app)
 		else
 			cheatcount++;
 	}
-#endif
 	}
+#endif
 
 	if (zc->zoneID == 0)
 	{
@@ -2106,11 +2107,10 @@ void Client::Handle_OP_ZoneChange(const APPLAYER *app)
 	tarx=zonesummon_x;
 	tary=zonesummon_y;
 	tarz=zonesummon_z;
-	if(zp && zc->zoneID==0)
-	{
-	strcpy(target_zone,zp->target_zone);
-	zc->zoneID = database.GetZoneID(target_zone);
-	tarheading = zp->target_heading;
+	if(zp && zc->zoneID==0) {
+		strcpy(target_zone,zp->target_zone);
+		zc->zoneID = database.GetZoneID(target_zone);
+		tarheading = zp->target_heading;
 	}
 	
 	// -1, -1, -1 = code for zone safe point
@@ -2185,18 +2185,19 @@ void Client::Handle_OP_ZoneChange(const APPLAYER *app)
 // image/solar: GW hack to forze dead clients into nexus on death
 	if(dead && !IsBecomeNPC() && Admin() == 0)
 	{
-	printf("player %s appears to be dead, zoning to nexus\n", GetName());
-	m_pp.zone_id = 152;
-	database.MoveCharacterToZone(CharacterID(),database.GetZoneName(m_pp.zone_id));
-	tarx = 10;
-	tary = 10;
-	tarz = -30;
-	zonesummon_x = -2;
-	zonesummon_y = -2;
-	zonesummon_z = -2;
-	strcpy(target_zone,"nexus");
+		printf("player %s appears to be dead, zoning to nexus\n", GetName());
+		m_pp.zone_id = 152;
+		database.MoveCharacterToZone(CharacterID(),database.GetZoneName(m_pp.zone_id));
+		tarx = 10;
+		tary = 10;
+		tarz = -30;
+		zonesummon_x = -2;
+		zonesummon_y = -2;
+		zonesummon_z = -2;
+		strcpy(target_zone,"nexus");
 	}
 #endif
+	
 	if (admin < minstatus || GetLevel() < minlevel)
 		myerror = ZONE_ERROR_NOEXPERIENCE;
 
@@ -2232,6 +2233,9 @@ void Client::Handle_OP_ZoneChange(const APPLAYER *app)
 	}
 	APPLAYER* outapp = NULL;
 	if (target_zone[0] != 0 && admin >= minstatus && GetLevel() >= minlevel && RAZone) {
+		//dont clear aggro until the zone is successful
+		entity_list.ClearFeignAggro(this);
+		
 		LogFile->write(EQEMuLog::Status, "Zoning '%s' to: %s (%i) x=%f, y=%f, z=%f",
 			m_pp.name, target_zone, database.GetZoneID(target_zone),
 			tarx, tary, tarz);
@@ -2244,6 +2248,7 @@ void Client::Handle_OP_ZoneChange(const APPLAYER *app)
 			m_pp.heading=tarheading;
 		else
 			m_pp.heading=heading;
+		
 		m_pp.zone_id = database.GetZoneID(target_zone);
 		
 		Save();
@@ -2290,13 +2295,16 @@ void Client::Handle_OP_ZoneChange(const APPLAYER *app)
 		outapp->priority = 6;
 		QueuePacket(outapp);
 		safe_delete(outapp);
-		
-		int8 stuffdata[16] = {0xE6, 0x02, 0x10, 0x00, 0x00, 0x00, 0x68, 0x42, 0x00, 0x00, 0xDB, 0xC3, 0xFA, 0xFE, 0x00, 0xC2};
-		outapp = new APPLAYER(0x2120, sizeof(stuffdata));
+
+//this is a combined packet, and is malformed, so until somebody figures out
+//what it really is, it gets to be commented out.		
+ /*		int8 stuffdata[16] = {0xE6, 0x02, 0x10, 0x00, 0x00, 0x00, 0x68, 0x42, 0x00, 0x00, 0xDB, 0xC3, 0xFA, 0xFE, 0x00, 0xC2};
+		outapp = new APPLAYER(OP_0x0120|FLAG_COMBINED, sizeof(stuffdata));
 		memcpy(outapp->pBuffer, stuffdata, sizeof(stuffdata));
 		outapp->priority = 6;
 		QueuePacket(outapp);
 		safe_delete(outapp);
+*/
 	}
 	return;
 }
@@ -2847,7 +2855,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d, inv
 				tdi->slotid=castspell->slot;
 				QueuePacket(outapp);
 				safe_delete(outapp);
-				if ((item->Common.EffectType == 1) || (item->Common.EffectType == 3) || (item->Common.EffectType == 4) || (item->Common.EffectType == 5))
+				if ((item->Common.EffectType == ET_ClickEffect) || (item->Common.EffectType == ET_Expendable) || (item->Common.EffectType == ET_EquipClick) || (item->Common.EffectType == ET_ClickEffect2))
 				{
 					CastSpell(item->Common.SpellId, castspell->target_id, castspell->slot, item->Common.CastTime, 0, 0, castspell->inventoryslot);
 				}
@@ -6140,7 +6148,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	uchar blah[]={0x00,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
 	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF};
-	outapp = new APPLAYER(0x02f2,sizeof(blah));
+	outapp = new APPLAYER(OP_0x02f2,sizeof(blah));
 	memcpy(outapp->pBuffer,blah,sizeof(blah));
 	QueuePacket(outapp);
 	safe_delete(outapp);

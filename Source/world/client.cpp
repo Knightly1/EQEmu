@@ -140,7 +140,7 @@ void Client::SendCharInfo() {
 
 bool Client::HandlePacket(const APPLAYER *app) {
 	#if DEBUG == 9
-		cout << "Received 0x" << hex << setfill('0') << setw(4) << app->opcode << dec << endl;
+		cout << "Received 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec << endl;
 		DumpPacket(app);
 	#endif
 	
@@ -151,21 +151,21 @@ bool Client::HandlePacket(const APPLAYER *app) {
 		return false;
 	}
 	
-	if (GetAccountID() == 0 && app->opcode != OP_SendLoginInfo) {
+	if (GetAccountID() == 0 && app->GetOpcode() != OP_SendLoginInfo) {
 		// Got a packet other than OP_SendLoginInfo when not logged in
-		LogFile->write(EQEMuLog::Error, "Expecting OP_SendLoginInfo, got %x", app->opcode);
+		LogFile->write(EQEMuLog::Error, "Expecting OP_SendLoginInfo, got %x", app->GetOpcode());
 		return false;
 	}
-	else if (app->opcode == OP_AckPacket) {
+	else if (app->GetOpcode() == OP_AckPacket) {
 		return true;
 	}
 	
 	#ifdef MERTHALICIOUS
 		//@merth: this just here temporarily for my debugging
-		cout << "Received 0x" << hex << setw(4) << setfill('0') << app->opcode << ", size=" << dec << app->size << endl;
+		cout << "Received 0x" << hex << setw(4) << setfill('0') << app->GetOpcode() << ", size=" << dec << app->size << endl;
 	#endif
 	
-	switch(app->opcode)
+	switch(app->GetOpcode())
 	{
 		case OP_CrashDump:
 			break;
@@ -324,7 +324,7 @@ bool Client::HandlePacket(const APPLAYER *app) {
 
 			APPLAYER *outapp;
 			outapp = new APPLAYER;
-			outapp->opcode = OP_ApproveName;
+			outapp->SetOpcode(OP_ApproveName);
 		   	outapp->pBuffer = new uchar[1];
 		   	outapp->size = 1;
 			if (database.CheckNameFilter(name)) {
@@ -570,7 +570,7 @@ bool Client::HandlePacket(const APPLAYER *app) {
 			break;
 		}
 		default: {
-			cout << "Received unknown opcode: 0x" << hex << setfill('0') << setw(4) << app->opcode << dec;
+			cout << "Received unknown opcode: 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec;
 			cout << " size:" << app->size << " bytes" << endl;
 #if DEBUG >= 5
 			DumpPacket(app);
@@ -731,7 +731,7 @@ void Client::Clearance(sint8 response)
 	// @bp This is the chat server
 	/*
 	char packetData[] = "64.37.148.34.9876,MyServer,Testchar,23cd2c95";
-	outapp = new APPLAYER(0x0282, sizeof(packetData));
+	outapp = new APPLAYER(OP_0x0282, sizeof(packetData));
 	strcpy((char*)outapp->pBuffer, packetData);
 	QueuePacket(outapp);
 	delete outapp;
@@ -774,7 +774,7 @@ bool Client::GenPassKey(char* key) {
 void Client::QueuePacket(const APPLAYER* app, bool ack_req) {
 	//#if DEBUG == 9
 		#ifdef MERTHALICIOUS // just temporary
-			cout << "Sending: 0x" << hex << setfill('0') << setw(4) << app->opcode << dec << endl;
+			cout << "Sending: 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec << endl;
 			//DumpPacket(app);
 		#endif
 	//#endif
@@ -782,7 +782,7 @@ void Client::QueuePacket(const APPLAYER* app, bool ack_req) {
 	ack_req = true;	// It's broke right now, dont delete this line till fix it. =P
 	if (app != 0) {
 		if (app->size > 49156) {
-			cout << "WARNING: abnormal packet size. o=0x" << hex << app->opcode << dec << ", s=" << app->size << endl;
+			cout << "WARNING: abnormal packet size. o=0x" << hex << app->GetOpcode() << dec << ", s=" << app->size << endl;
 		}
 	}
 	eqnc->QueuePacket(app, ack_req);

@@ -17,7 +17,7 @@ int main(int argc, char* argv) {
 	print = true;
     }
     
-    for ( int i = 0; i < 7; i++) {
+    for ( int i = 0; i < 8; i++) {
 	memuser_ds->shm_nattch = 0;
 	switch (i) {
 	    case 0: shm_key = ftok(".", 'I'); break;
@@ -27,6 +27,7 @@ int main(int argc, char* argv) {
 	    case 4: shm_key = ftok(".", 'F'); break;
 	    case 5: shm_key = ftok(".", 'L'); break;
 	    case 6: shm_key = ftok(".", 'M'); break;
+	    case 7: shm_key = ftok(".", 'O'); break;
 	    default: break;
 	}
 	int semid = semget(shm_key, 1, 0);

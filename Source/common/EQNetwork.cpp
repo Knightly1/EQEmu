@@ -51,6 +51,10 @@
 #include "../common/MiscFunctions.h"
 #include "../common/crc32.h"
 #include "../common/eq_packet_structs.h"
+#include "opcodemgr.h"
+
+//an opcode manager must be assigned to this variable for any network stuff to work
+OpcodeManager *EQNetworkOpcodeManager = NULL;
 
 using namespace std;
 
@@ -652,6 +656,10 @@ APPLAYER* EQNetworkConnection::PopPacket() {
 	MOutQueueLock.lock();
 	ret = OutQueue.pop();
 	MOutQueueLock.unlock();
+//if(ret) {
+//printf("Queueing packet %s (0x%.4x) to server:\n", EQNetworkOpcodeManager->EQToName(ret->opcode), ret->opcode);
+//DumpPacket(ret);
+//}
 	return ret;
 }
 
@@ -673,18 +681,34 @@ void EQNetworkConnection::FastQueuePacket(APPLAYER** app, bool ackreq) {
 	if (!(*app)) {
 		ThrowError("EQNetworkConnection::FastQueuePacket(): *app = 0!");
 	}
-	if (!CheckActive()) {
+//if(print_eqn_shit) {
+//printf("Queueing %s (0x%.4x) to client:\n", EQNetworkOpcodeManager->EQToName((*app)->opcode), (*app)->opcode);
+//DumpPacket(*app);
+//}
+	if (!CheckActive() || EQNetworkOpcodeManager == NULL) {
 //		safe_delete(*app);
 		APPLAYER::PacketUsed(app);
 		return;
 	}
 	
-	if(((*app)->opcode & FLAG_COMPRESSED) == 0 && (*app)->size > NET_COMPRESS_SIZE) {
-		(*app)->Deflate();
+	APPLAYER* thisapp = *app;
+	
+#if EQDEBUG >= 5
+	if(StripFlags(thisapp->opcode) == 0) {
+		printf("Packet with unresolvable opcode queued. size=%d\n", thisapp->size);
+		APPLAYER::PacketUsed(app);
+		return;
+	}
+#endif
+//printf("Queueing packet %s (0x%.4x) to client:\n", EQNetworkOpcodeManager->EQToName(thisapp->opcode), thisapp->opcode);
+//DumpPacket(thisapp);
+	
+	if((thisapp->opcode & FLAG_COMPRESSED) == 0 && (*app)->size > NET_COMPRESS_SIZE) {
+		thisapp->Deflate();
 	}
 	
 	InQueue_Struct* iqs = new InQueue_Struct;
-	iqs->app = *app;
+	iqs->app = thisapp;
 	*app = 0;
 	iqs->ackreq = ackreq;
 	MInQueueLock.lock();
@@ -1688,7 +1712,7 @@ void EQNetworkConnection::MakeEQPacket(APPLAYER* app, bool ackreq) {
 //Father Nitwit's combine code.
 
 
-void APPLAYER::combine_add(int16 in_opcode, int32 in_size, uchar *data) {
+void CombinedAPPLAYER::combine_add(int16 in_opcode, int32 in_size, uchar *data) {
 	if(combined_size == 0) {
 		//first packet, the regular EQ protocol stuff will add the 
 		//opcode to this part.
@@ -1784,7 +1808,7 @@ void APPLAYER::combine_add(int16 in_opcode, int32 in_size, uchar *data) {
 
 
 //used by implicit length and crc stuff.
-void APPLAYER::combine_append(int32 add_size, uchar *data, bool implicit) {
+void CombinedAPPLAYER::combine_append(int32 add_size, uchar *data, bool implicit) {
 	if(combined_size == 0)
 		return;	//invalid
 	
@@ -1867,7 +1891,7 @@ bool EQNetworkConnection::AddToCombined(APPLAYER* app) {
 
 		//make sure we have a combined packet
 		if(ImplicitCombinedPacket == NULL) {
-			ImplicitCombinedPacket = new APPLAYER(0, 0);
+			ImplicitCombinedPacket = new CombinedAPPLAYER();
 			ImplicitCombinedPacket->priority = 6;
 			implicit_counter_offset = 0;
 			last_opcode = 0;
@@ -1876,7 +1900,7 @@ bool EQNetworkConnection::AddToCombined(APPLAYER* app) {
 			//to piss the EQ client off if an implicit/combined packet gets
 			//fragmented.
 			SendACombinedPacket(ImplicitCombinedPacket);
-			ImplicitCombinedPacket = new APPLAYER(0, 0);
+			ImplicitCombinedPacket = new CombinedAPPLAYER();
 			ImplicitCombinedPacket->priority = 6;
 			implicit_counter_offset = 0;
 			last_opcode = 0;
@@ -1922,7 +1946,7 @@ bool EQNetworkConnection::AddToCombined(APPLAYER* app) {
 		
 		//make sure we have a combined packet
 		if(CombinedPacket == NULL) {
-			CombinedPacket = new APPLAYER(0, 0);
+			CombinedPacket = new CombinedAPPLAYER();
 			CombinedPacket->priority = 6;
 		}
 		//Unlike implicit packets, this seems to work without this:
@@ -1951,8 +1975,8 @@ void EQNetworkConnection::SendCombinedPackets() {
 	if(CombinedPacket == NULL && ImplicitCombinedPacket == NULL)
 		return;
 	
-	APPLAYER *app = CombinedPacket;
-	APPLAYER *appi = ImplicitCombinedPacket;
+	CombinedAPPLAYER *app = CombinedPacket;
+	CombinedAPPLAYER *appi = ImplicitCombinedPacket;
 	//clear all our packet state
 	CombinedPacket = NULL;
 	ImplicitCombinedPacket = NULL;
@@ -1967,7 +1991,7 @@ void EQNetworkConnection::SendCombinedPackets() {
 		SendACombinedPacket(appi);
 }
 
-void EQNetworkConnection::SendACombinedPacket(APPLAYER* app) {
+void EQNetworkConnection::SendACombinedPacket(CombinedAPPLAYER* app) {
 	//one last step, we gotta append part of the CRC... I dunno why...
 	//some code from image's old combine stuff
 	
@@ -1994,7 +2018,7 @@ void EQNetworkConnection::SendACombinedPacket(APPLAYER* app) {
 			app->Deflate();
 		
 		MakeEQPacket(app);
-		APPLAYER::PacketUsed(&app);
+		CombinedAPPLAYER::PacketUsed(&app);
 	} else {
 //printf("Sending combined but alone packet of length %d\n", app->size);
 		//we only got one packet, send it as non-combined.
@@ -2002,7 +2026,7 @@ void EQNetworkConnection::SendACombinedPacket(APPLAYER* app) {
 		int32 imp = EQDataPacket::implicitlen(app->opcode);
 		if(imp > 0) {
 			MakeEQPacket(app); // No changes to make
-			APPLAYER::PacketUsed(&app);
+			CombinedAPPLAYER::PacketUsed(&app);
 		} else {
 			//we want to skip the length pieces we added
 			uchar *orig = app->pBuffer;
@@ -2014,7 +2038,7 @@ void EQNetworkConnection::SendACombinedPacket(APPLAYER* app) {
 			MakeEQPacket(app); // No changes to make
 			app->pBuffer = NULL;
 			safe_delete(orig);
-			APPLAYER::PacketUsed(&app);
+			CombinedAPPLAYER::PacketUsed(&app);
 		}
 	}
 }
@@ -2492,7 +2516,8 @@ bool EQDataPacket::Decode(sint64* key, int8* buf, sint32 buflen) {
 		return false;
 	
 	if (buflen == 2) {
-		APPLAYER* app = new APPLAYER((*((int16*) buf)) &~0xF000);
+		APPLAYER* app = new APPLAYER();
+		app->SetRealOpcode((*((int16*) buf)) &~0xF000); //avoid translation
 		OutQueue.push(app);
 		return true;
 	}
@@ -2640,7 +2665,8 @@ bool EQDataPacket::Decode(sint64* key, int16 opCode, int8* buf, sint32 buflen) {
 					return false;
 				}
 				
-				APPLAYER* app = new APPLAYER(opCode, size);
+				APPLAYER* app = new APPLAYER(OP_Unknown, size);
+				app->SetRealOpcode(opCode);	//avoid translation
 				memcpy(app->pBuffer, dptr, size);
 				OutQueue.push(app);
 				
@@ -2670,20 +2696,12 @@ bool EQDataPacket::Decode(sint64* key, int16 opCode, int8* buf, sint32 buflen) {
 			break;
 		}
 	}
-	APPLAYER* app = new APPLAYER(opCode, buflen);
+	APPLAYER* app = new APPLAYER(OP_Unknown, buflen);
+	app->SetRealOpcode(opCode);	//avoid translation
 	memcpy(app->pBuffer, buf, buflen);
 	OutQueue.push(app);
 	return true;
 }
-
-APPLAYER::~APPLAYER() {
-#if EQDEBUG >= 4
-		if(refCount > 1) {
-			LogFile->write(EQEMuLog::Debug, "Error: Packet with opcode 0x%.4x deleted with a refcount of %d", opcode, refCount);
-		}
-#endif
-		safe_delete_array(pBuffer);
-	}
 
 // Determine the length of a type of eq message
 // Taken from ShowEQ (Thanks guys!)

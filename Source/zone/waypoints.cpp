@@ -125,7 +125,7 @@ void Mob::PauseWandering(int pausetime)
 
 void Mob::MoveTo(float mtx, float mty, float mtz)
 {	// makes mob walk to specified location
-	if (this->CastToNPC()->GetGrid() != 0)
+	if (IsNPC() && CastToNPC()->GetGrid() != 0)
 	{	// he is on a grid
 		if (this->CastToNPC()->GetGrid() < 0)
 		{	// currently stopped by a quest command
@@ -558,9 +558,6 @@ void Mob::AssignWaypoints(int16 grid)
 
 
 	Waypoints.ClearListAndData();
-#ifdef _EQDEBUG
-	cout<<"Assigning waypoints for grid "<<grid<<" to "<<name<<"...\n";
-#endif
 
 	// Retrieve the wander and pause types for this grid
 	if(database.RunQuery(query,MakeAnyLenString(&query,"SELECT `type`,`type2` FROM `grid` WHERE `id`=%i AND `zoneid`=%i",grid,zone->GetZoneID()),errbuf, &result))
@@ -619,11 +616,7 @@ void Mob::AssignWaypoints(int16 grid)
 	    }
 	    safe_delete_array(query);
 	} // end if (!GridErr)
-
-
-#ifdef _EQDEBUG
-	cout<<" done."<<endl;
-#endif
+	
 	if(!GridErr && !WPErr)
 	{   UpdateWaypoint(0);
 	    SetWaypointPause();

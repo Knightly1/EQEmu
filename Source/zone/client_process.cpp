@@ -170,45 +170,12 @@ bool Client::Process() {
 		}
 		
 		if(this->client_state == CLIENT_LINKDEAD)
-			this->CastToMob()->AI_Process();
-		/*if(opcodetimer->Check()){
-			time_t rawtime;
-			struct tm* gmt_t;
-			time(&rawtime);
-			gmt_t = gmtime(&rawtime);
-			cout << "Opcode: " << opcode2 << " " << (gmt_t->tm_year + 1900) << "/" << setw(2) << setfill('0') << (gmt_t->tm_mon + 1) << "/" << setw(2) << setfill('0') << gmt_t->tm_mday << " " << setw(2) << setfill('0') << gmt_t->tm_hour << ":" << setw(2) << setfill('0') << gmt_t->tm_min << ":" << setw(2) << setfill('0') << gmt_t->tm_sec << " GMT\n";
-            
-            Client* client = entity_list.GetClientByName("Lethal");
-            if(client){
-                    //client->Message(0,"Trying Opcode: %i",opcode2);
-					char blah2[20];
-					sprintf(blah2,"%i",opcode2);
-					char* blah=blah2;
-					APPLAYER* app = new APPLAYER(opcode2);
-					app->size = 4+strlen(blah)+1;
-					app->pBuffer = new uchar[app->size];
-					SpecialMesg_Struct* sm=(SpecialMesg_Struct*)app->pBuffer;
-					sm->msg_type = 0;
-					client->Message(0,"%i (dec) sent now!",opcode2);
-					strcpy(sm->message, blah);
-					//if(opcode2<1000){
-						app->Deflate();
-						app->opcode |= FLAG_COMPRESSED;
-					//}
-					QueuePacket(app);
-					delete app;
-                    opcode2++;
-            }
-            else{
-                    opcodetimer->Disable();
-                    cout << "Stopped at: " << opcode2 << endl;
-            }
-            if(opcode2>=0xFFFF)
-                    opcodetimer->Disable();
-        }*/
+			AI_Process();
+		
 		if (bindwound_timer.Check() && bindwound_target != 0) {
 		    BindWound(bindwound_target, false);
 		}
+		
 		if (auto_attack && !IsAIControlled() && !(spellend_timer.Enabled() && (spells[casting_spell_id].classes[7] < 1 && spells[casting_spell_id].classes[7] > 65)) && target != 0 && attack_timer.Check() && !IsStunned() && !IsMezzed() && dead == 0) {
 			if (!CombatRange(target)) {
 				//Message(0,"Target's Name: %s",target->GetName());
@@ -859,7 +826,7 @@ void Client::OPRezzAnswer(const APPLAYER* app) {
 		SetMana(0);
 		SetHP(GetMaxHP()/5);
 		APPLAYER* outapp = app->Copy();
-		outapp->opcode = OP_RezzComplete;
+		outapp->SetOpcode(OP_RezzComplete);
 		worldserver.RezzPlayer(outapp,0,OP_RezzComplete);
 		cout << "pe: " << pendingrezzexp << endl;
 		SetEXP(((int)(GetEXP()+((float)((pendingrezzexp/100)*spells[ra->spellid].base[0])))),GetAAXP(),true);

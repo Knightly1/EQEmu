@@ -37,6 +37,11 @@ struct NPCTypesDLLFunc_Struct {
 	DLLFUNC_AddNPCType cbAddNPCType;
 };
 */
+
+
+////////////
+// Doors ///
+////////////
 typedef bool(*CALLBACK_DBLoadDoors)(sint32, int32);
 
 typedef bool(*DLLFUNC_DLLLoadDoors)(const CALLBACK_DBLoadDoors, int32, sint32*, int32*);
@@ -48,12 +53,19 @@ struct DoorsDLLFunc_Struct {
 	DLLFUNC_AddDoor cbAddDoor;
 };
 
+////////////
+// Spells //
+////////////
 typedef bool(*CALLBACK_FileLoadSPDat)(void*, sint32);
 
 typedef bool(*DLLFUNC_DLLLoadSPDat)(const CALLBACK_FileLoadSPDat, const void**, sint32*, int32);
 struct SpellsDLLFunc_Struct {
 	DLLFUNC_DLLLoadSPDat DLLLoadSPDat;
 };
+
+//////////////
+// Factions //
+//////////////
 
 typedef bool(*CALLBACK_DBLoadNPCFactionLists)(sint32, int32);
 
@@ -67,6 +79,10 @@ struct NPCFactionListDLLFunc_Struct {
 	DLLFUNC_AddNPCFactionList cbAddNPCFactionList;
 	DLLFUNC_SetFaction cbSetFaction;
 };
+
+////////////
+// Loot   //
+///////////
 
 typedef bool(*CALLBACK_DBLoadLoot)();
 
@@ -83,6 +99,27 @@ struct LootDLLFunc_Struct {
 	DLLFUNC_GetLootDrop GetLootDrop;
 };
 
+/////////////
+// Opcodes //
+/////////////
+
+typedef bool(*CALLBACK_DBLoadOpcodes)(const char *filename);
+
+typedef bool(*DLLFUNC_DLLLoadOpcodes)(const CALLBACK_DBLoadOpcodes, int32 opsize, int32 eq_count, int32 emu_count, const char *filename);
+typedef uint16 (*DLLFUNC_GetEQOpcode)(uint16 emu_op);
+typedef uint16 (*DLLFUNC_GetEmuOpcode)(uint16 eq_op);
+typedef void (*DLLFUNC_ClearEQOpcodes)();
+typedef bool(*DLLFUNC_SetOpcodePair)(uint16 emu_op, uint16 eq_op);
+struct OpcodeDLLFunc_Struct {
+	DLLFUNC_DLLLoadOpcodes DLLLoadOpcodes;
+	DLLFUNC_GetEQOpcode GetEQOpcode;
+	DLLFUNC_GetEmuOpcode GetEmuOpcode;
+	DLLFUNC_SetOpcodePair SetOpcodePair;
+	DLLFUNC_ClearEQOpcodes ClearEQOpcodes;
+};
+
+
+
 class LoadEMuShareMemDLL {
 public:
 	LoadEMuShareMemDLL();
@@ -98,6 +135,7 @@ public:
 	SpellsDLLFunc_Struct			Spells;
 	NPCFactionListDLLFunc_Struct	NPCFactionList;
 	LootDLLFunc_Struct				Loot;
+	OpcodeDLLFunc_Struct			Opcodes;
 private:
 	void ClearFunc();
 

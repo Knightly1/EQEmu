@@ -673,8 +673,7 @@ void WorldServer::Process() {
 				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s has another pending guild invite.", client->GetName());
 			else {
 				client->PendingGuildInvite = sgc->guilddbid;
-				APPLAYER* outapp = new APPLAYER;
-				outapp->opcode = OP_GuildInvite;
+				APPLAYER* outapp = new APPLAYER(OP_GuildInvite);
 				outapp->size = sizeof(GuildCommand_Struct);
 				outapp->pBuffer = new uchar[outapp->size];
 				memset(outapp->pBuffer, 0, outapp->size);
@@ -976,8 +975,7 @@ void WorldServer::Process() {
 				cout << "Received Message SyncWorldTime" << endl;
 				eqTimeOfDay* newtime = (eqTimeOfDay*) pack->pBuffer;
 				zone->zone_time.setEQTimeOfDay(newtime->start_eqtime, newtime->start_realtime);
-				APPLAYER* outapp = new APPLAYER;
-				outapp->opcode = OP_TimeOfDay;
+				APPLAYER* outapp = new APPLAYER(OP_TimeOfDay);
 				outapp->size = sizeof(TimeOfDay_Struct);
 				outapp->pBuffer = new uchar[outapp->size];
 				memset(outapp->pBuffer, 0, outapp->size);

@@ -61,15 +61,17 @@ bool LoadEMuShareMemDLL::Load() {
 #ifdef WIN32
 	if(!hDLL) {
 		load_error = GetLastError();
-#else
-	if(!hDLL || ((load_error = GetLastError()) != NULL) ) {
-#endif
 		LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to load library '%s'.  Error=%i", EmuLibName, load_error);
 	    return false;
 	}
-#ifdef WIN32
     else { SetLastError(0); } // Clear the win9x error
+#else
+	if(!hDLL || ((load_error = GetLastError()) != NULL) ) {
+		LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to load library '%s'.  Error=%s", EmuLibName, load_error?load_error:"Null Return, no error");
+	    return false;
+	}
 #endif
+	
 	if (Loaded()) {
 		Items.GetItem = (DLLFUNC_GetItem) GetProcAddress(hDLL, "GetItem");
 		Items.IterateItems = (DLLFUNC_IterateItems) GetProcAddress(hDLL, "IterateItems");
@@ -88,11 +90,16 @@ bool LoadEMuShareMemDLL::Load() {
 		Loot.cbAddLootDrop = (DLLFUNC_AddLootDrop) GetProcAddress(hDLL, "AddLootDrop");
 		Loot.GetLootTable = (DLLFUNC_GetLootTable) GetProcAddress(hDLL, "GetLootTable");
 		Loot.GetLootDrop = (DLLFUNC_GetLootDrop) GetProcAddress(hDLL, "GetLootDrop");
+		Opcodes.GetEQOpcode = (DLLFUNC_GetEQOpcode) GetProcAddress(hDLL, "GetEQOpcode");
+		Opcodes.GetEmuOpcode = (DLLFUNC_GetEmuOpcode) GetProcAddress(hDLL, "GetEmuOpcode");
+		Opcodes.SetOpcodePair = (DLLFUNC_SetOpcodePair) GetProcAddress(hDLL, "SetOpcodePair");
+		Opcodes.DLLLoadOpcodes = (DLLFUNC_DLLLoadOpcodes) GetProcAddress(hDLL, "DLLLoadOpcodes");
+		Opcodes.ClearEQOpcodes = (DLLFUNC_ClearEQOpcodes) GetProcAddress(hDLL, "ClearEQOpcodes");
 		if ((!Items.GetItem)
 			|| (!Items.IterateItems)
 			|| (!Items.cbAddItem)
 			|| (!Items.DLLLoadItems)
-         || (!Doors.GetDoor)
+			|| (!Doors.GetDoor)
 			|| (!Doors.cbAddDoor)
 			|| (!Doors.DLLLoadDoors)
 			|| (!Spells.DLLLoadSPDat)
@@ -105,6 +112,11 @@ bool LoadEMuShareMemDLL::Load() {
 			|| (!Loot.cbAddLootDrop)
 			|| (!Loot.GetLootTable)
 			|| (!Loot.GetLootDrop)
+			|| (!Opcodes.GetEQOpcode)
+			|| (!Opcodes.GetEmuOpcode)
+			|| (!Opcodes.SetOpcodePair)
+			|| (!Opcodes.DLLLoadOpcodes)
+			|| (!Opcodes.ClearEQOpcodes)
 #ifndef WIN32
 			|| ((load_error = GetLastError()) != NULL)
 #else
@@ -165,4 +177,9 @@ void LoadEMuShareMemDLL::ClearFunc() {
 	Loot.cbAddLootDrop = 0;
 	Loot.GetLootTable = 0;
 	Loot.GetLootDrop = 0;
+	Opcodes.GetEQOpcode = NULL;
+	Opcodes.GetEmuOpcode = NULL;
+	Opcodes.SetOpcodePair = NULL;
+	Opcodes.DLLLoadOpcodes = NULL;
+	Opcodes.ClearEQOpcodes = NULL;
 }

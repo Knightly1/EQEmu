@@ -266,7 +266,7 @@ ItemInst* Object::PopItem(uint8 index)
 
 void Object::CreateSpawnPacket(APPLAYER* app)
 {
-	app->opcode = OP_CreateObject;
+	app->SetOpcode(OP_CreateObject);
 	app->pBuffer = new uchar[sizeof(Object_Struct)];
 	app->size = sizeof(Object_Struct);
 	memcpy(app->pBuffer, &m_data, sizeof(Object_Struct));
@@ -274,7 +274,7 @@ void Object::CreateSpawnPacket(APPLAYER* app)
 
 void Object::CreateDeSpawnPacket(APPLAYER* app)
 {
-	app->opcode = OP_ClickObject;
+	app->SetOpcode(OP_ClickObject);
 	app->pBuffer = new uchar[sizeof(ClickObject_Struct)];
 	app->size = sizeof(ClickObject_Struct);
 	ClickObject_Struct* co = (ClickObject_Struct*) app->pBuffer;

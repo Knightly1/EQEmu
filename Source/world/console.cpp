@@ -34,6 +34,7 @@ using namespace std;
 #include "LoginServer.h"
 #include "../common/serverinfo.h"
 #include "../common/md5.h"
+#include "../common/files.h"
 
 #ifdef WIN32
 	#define snprintf	_snprintf
@@ -392,6 +393,8 @@ void Console::ProcessCommand(const char* command) {
 				SendMessage(1, "  ooc [message]");
 				if (admin >= consoleKickStatus)
 					SendMessage(1, "  kick [charname]");
+				if (admin >= consoleOpcodesStatus)
+					SendMessage(1, "  reloadops");
 				if (admin >= consoleLockStatus)
 					SendMessage(1, "  lock/unlock");
 				if (admin >= consoleZoneStatus) {
@@ -652,6 +655,14 @@ void Console::ProcessCommand(const char* command) {
 				delete pack;
 				SendMessage(1, "Sending shutdown packet... goodbye.");
 				CatchSignal(0);
+			}
+			else if (strcasecmp(sep.arg[0], "reloadops") == 0 && admin >= consoleOpcodesStatus) {
+				if(EQNetworkOpcodeManager == NULL) {
+					SendMessage(1, "It seems that the server is not using an opcode translator.");
+				} else {
+					EQNetworkOpcodeManager->ReloadOpcodes(OPCODES_FILE);
+					SendMessage(1, "Opcodes reloaded.");
+				}
 			}
 			else if (strcasecmp(sep.arg[0], "lock") == 0 && admin >= consoleLockStatus) {
 				net.world_locked = true;

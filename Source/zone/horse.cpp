@@ -392,7 +392,7 @@ void Client::SetHorseId(int16 horseid_in) {
 }
 
 void Mob::CreateHorseSpawnPacket(APPLAYER* app, const char* ownername, uint16 ownerid, Mob* ForWho) {
-	app->opcode = OP_NewSpawn;
+	app->SetOpcode(OP_NewSpawn);
 	app->pBuffer = new uchar[sizeof(NewSpawn_Struct)];
 	app->size = sizeof(NewSpawn_Struct);
 	memset(app->pBuffer, 0, sizeof(NewSpawn_Struct));

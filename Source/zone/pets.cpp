@@ -716,9 +716,12 @@ void Mob::MakePet(int16 spell_id, int8 in_level, int8 in_class, int16 in_race,
 		strcpy(npc_type->name, this->GetName());
 		npc_type->name[19] = '\0';
 		strcat(npc_type->name, "`s_familiar");
-	} else if (this->IsClient())
+	} else if (this->IsClient()) {
+		//clients get a random pet name
 		strcpy(npc_type->name, GetRandPetName());
-	else {
+		//client pets do not flee.
+		strcpy(npc_type->npc_attacks, "f");
+	} else {
 		strcpy(npc_type->name, this->GetCleanName());
 		npc_type->name[25] = '\0';
 		strcat(npc_type->name, "'s_pet");

@@ -193,21 +193,20 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 		NPC* mob = iterator.GetData();
 		float r = mob->GetAssistRange();
 		r = r * r;
-		float mobDistance= mob->DistNoRoot(*sender);
 
 		if (
 			mob != sender
 			&& mob != attacker
 //			&& !mob->IsCorpse()
 //			&& mob->IsAIControlled()
-			&& mobDistance <= r
+			&& mob->GetPrimaryFaction() != 0
+			&& mob->DistNoRoot(*sender) <= r
 			&& !mob->IsEngaged()
 			)
 		{
 			//if they are in range, make sure we are not green...
 			//then jump in if they are our friend
 			if(attacker->GetLevelCon(mob->GetLevel()) != CON_GREEN
-			    && mob->GetPrimaryFaction() != 0	//PF==0 means I have no friends
 				&& (
 					mob->GetPrimaryFaction() == sender->CastToNPC()->GetPrimaryFaction() ||
 					//see what mob thinks about the sender (its backwards)
@@ -217,7 +216,7 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 				
 #if (EQDEBUG>=5) 
 				LogFile->write(EQEMuLog::Debug, "AIYellForHelp(\"%s\",\"%s\") %s attacking %s Dist %f Z %f", 
-					sender->GetName(), attacker->GetName(), mob->GetName(), attacker->GetName(), mobDistance, fabs(sender->GetZ()+mob->GetZ()));
+					sender->GetName(), attacker->GetName(), mob->GetName(), attacker->GetName(), mob->DistNoRoot(*sender), fabs(sender->GetZ()+mob->GetZ()));
 #endif
 				//Father Nitwit:  make sure we can see them.
 				if(mob->CheckLosFN(attacker)) {

@@ -365,7 +365,7 @@ void Client::CheckQuests(const char* zonename, const char * message, int32 npc_i
 			zone->zone_weather = atoi(sep.arg[1]);
 			APPLAYER* outapp = new APPLAYER;
 			outapp = new APPLAYER;
-			outapp->opcode = OP_Weather;
+			outapp->SetOpcode(OP_Weather);
 			outapp->pBuffer = new uchar[8];
 			memset(outapp->pBuffer, 0, 8);
 			outapp->size = 8;
@@ -378,7 +378,7 @@ void Client::CheckQuests(const char* zonename, const char * message, int32 npc_i
 			zone->zone_weather = atoi(sep.arg[1]) + 1;
 			APPLAYER* outapp = new APPLAYER;
 			outapp = new APPLAYER;
-			outapp->opcode = OP_Weather;
+			outapp->SetOpcode(OP_Weather);
 			outapp->pBuffer = new uchar[8];
 			memset(outapp->pBuffer, 0, 8);
 			outapp->size = 8;

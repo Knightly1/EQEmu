@@ -179,7 +179,7 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 	}
 	
 	//FatherNitwit: New style haste, shields, and regens
-	if(common.EffectType == 2) {
+	if(common.EffectType == ET_WornEffect) {
 		if(newbon->haste < (sint8)item->hastepercent)
 			newbon->haste = item->hastepercent;
 	}
@@ -214,11 +214,11 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 		newbon->ProcChance += common.CombatEffects;
 	}
 	
-	if ((common.SpellId == 998) && (common.EffectType == 2)) { // item haste
+	if ((common.SpellId == 998) && (common.EffectType == ET_WornEffect)) { // item haste
 		if (newbon->haste < common.ProcLevel)
 			newbon->haste = common.ProcLevel;
 	}
-	else if ((common.SpellId != 0xFFFF) && (common.EffectType == 2)) { // latent effects
+	else if ((common.SpellId != 0xFFFF) && (common.EffectType == ET_WornEffect)) { // latent effects
 		ApplySpellsBonuses(common.SpellId, common.ProcLevel, newbon);
 	}
 	switch(common.BardSkillType)

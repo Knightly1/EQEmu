@@ -23,6 +23,7 @@ map<int,string> DBFieldNames;
 int print_stacktrace()
 {
 	printf("Insert stack trace here...\n");
+	return(0);
 }
 #else //!WIN32 && !FREEBSD == linux
 #include <execinfo.h>
@@ -42,6 +43,7 @@ int print_stacktrace()
           free (names);
         }
     }
+	return(0);
 }
 #endif //!FREEBSD
 #endif //!WIN32

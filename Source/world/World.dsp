@@ -172,6 +172,10 @@ SOURCE=..\common\classes.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\Condition.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\crc32.cpp
 # End Source File
 # Begin Source File
@@ -220,6 +224,10 @@ SOURCE=..\common\EQNetwork.cpp
 # Begin Source File
 
 SOURCE=..\common\eqtime.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\extprofile.cpp
 # End Source File
 # Begin Source File
 
@@ -272,6 +280,10 @@ SOURCE=..\common\serverinfo.cpp
 # Begin Source File
 
 SOURCE=..\common\TCPConnection.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\timeoutmgr.cpp
 # End Source File
 # Begin Source File
 

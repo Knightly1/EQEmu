@@ -1,6 +1,9 @@
 #ifndef APATHING_H
 #define APATHING_H
 
+#include <mysql.h>
+#include <gd.h>
+
 #define DB_HOST "10.1.1.1"
 #define DB_LOGIN "eqserver"
 #define DB_PASSWORD "pw4eqserver"
@@ -238,6 +241,8 @@ extern int los_cache_hits;
 #include <algorithm>
 using namespace std;
 
+class QTNode;
+
 //ye-olde prototypes
 bool load_paths_from_db(MYSQL *m, Map *map, const char *zone, list<PathGraph*> &db_paths, list<PathNode*> &end_points);
 bool load_spawns_from_db(MYSQL *m, const char *zone, list<PathNode*> &db_spawns);
@@ -267,7 +272,7 @@ bool load_eq_map(const char *zone, PathGraph *eqmap);
 void write_eq_map(list<PathEdge *> &edges, const char *fname);
 //void edge_stats(list<PathEdge*> &edges, const char *s);
 void choose_biggest_graph(PathGraph *big, vector<int> &counts, vector<int> &first_node);
-void find_path_info(Map *map, MyGraph &vg, vector< vector<PathEdge *> > &path_finding, PathGraph *big);
+void find_path_info(Map *map, PathGraph *big, vector< vector<PathEdge *> > &path_finding);
 void find_node_edges(PathGraph *big, std::map<PathNode*, vector<PathEdge*> > &node_edges);
 
 void DrawGradientLine(gdImagePtr im, GPoint *first, GPoint *second, vector<ColorRecord> &colors);

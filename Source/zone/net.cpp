@@ -75,6 +75,7 @@ extern volatile bool ZoneLoaded;
 #include "../common/files.h"
 #include "../common/EQEMuError.h"
 #include "../common/packet_dump_file.h"
+#include "../common/opcodemgr.h"
 
 #include "masterentity.h"
 #include "worldserver.h"
@@ -196,6 +197,17 @@ int main(int argc, char** argv) {
 	}
 #endif
 	net.SaveInfo(address, port, worldaddress,filename);
+	
+	LogFile->write(EQEMuLog::Status, "Loading opcodes..");
+#ifdef DONT_SHARED_OPCODES
+	EQNetworkOpcodeManager = new RegularOpcodeManager();
+#else
+	EQNetworkOpcodeManager = new SharedOpcodeManager();
+#endif
+	if(!EQNetworkOpcodeManager->LoadOpcodes(OPCODES_FILE)) {
+		LogFile->write(EQEMuLog::Error, "Loading opcodes failed. I cant live like this!");
+		return(1);
+	}
 	
 	LogFile->write(EQEMuLog::Status, "Mapping Opcodes");
 	MapOpcodes();

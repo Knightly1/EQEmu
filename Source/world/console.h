@@ -26,7 +26,8 @@ enum {
 	consoleLockStatus = 150,	//world lock/unlock
 	consoleZoneStatus = 150,	//zone up/down/lock
 	consolePassStatus = 200,	//change password
-	consoleWorldStatus = 200	//world shutdown
+	consoleWorldStatus = 200,	//world shutdown
+	consoleOpcodesStatus = 250
 };
 
 #define CONSOLE_STATE_USERNAME 0

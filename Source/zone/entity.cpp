@@ -581,7 +581,7 @@ bool EntityList::MakeDoorSpawnPacket(APPLAYER* app)
 #if EQDEBUG >= 5
 //	LogFile->write(EQEMuLog::Debug, "MakeDoorPacket() packet length:%i qty:%i ", length, qty);
 #endif
-	app->opcode = OP_SpawnDoor;
+	app->SetOpcode(OP_SpawnDoor);
 	app->size = length;
 	app->pBuffer = packet_buffer;
 	return true;	
@@ -2413,17 +2413,21 @@ bool BulkZoneSpawnPacket::AddSpawn(NewSpawn_Struct* ns) {
 void BulkZoneSpawnPacket::SendBuffer() {
 	if (!data)
 		return;
-	int32 tmpBufSize = (sizeof(NewSpawn_Struct) * pMaxSpawnsPerPacket);
-	APPLAYER* outapp = new APPLAYER(OP_ZoneSpawns, tmpBufSize);
-	outapp->size = DeflatePacket((int8*) data, index * sizeof(NewSpawn_Struct), outapp->pBuffer, tmpBufSize);
-	outapp->opcode |=FLAG_COMPRESSED;
+	int32 tmpBufSize = (index * sizeof(NewSpawn_Struct));
+	APPLAYER* outapp = new APPLAYER(OP_ZoneSpawns, (unsigned char *)data, tmpBufSize);
+	
+	//shrink it down
+	outapp->Deflate();
+	
 	//EncryptZoneSpawnPacket(outapp);
 	//DumpPacket(outapp);
-	if (pSendTo)
-		pSendTo->QueuePacket(outapp);
-	else
+	
+	if (pSendTo) {
+		pSendTo->FastQueuePacket(&outapp);
+	} else {
 		entity_list.QueueClients(0, outapp);
-	safe_delete(outapp);
+		safe_delete(outapp);
+	}
 	memset(data, 0, sizeof(NewSpawn_Struct) * pMaxSpawnsPerPacket);
 	index = 0;
 }

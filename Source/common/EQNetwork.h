@@ -39,6 +39,7 @@ using namespace std;
 #include "../common/queue.h"
 #include "../common/Mutex.h"
 #include "../common/packet_functions.h"
+#include "../common/opcodemgr.h"
 #ifdef PACKET_PROFILER
 #include "../common/rdtsc.h"
 #endif
@@ -63,6 +64,9 @@ typedef EQNetworkPacket				EQNPacket;
 typedef EQNetworkFragmentGroupList	EQNFragmentGroupList;
 typedef EQNetworkFragmentGroup		EQNFragmentGroup;
 
+class OpcodeManager;
+extern OpcodeManager *EQNetworkOpcodeManager;
+
 #define	FLAG_COMPRESSED 0x1000
 #define	FLAG_COMBINED	0x2000
 #define	FLAG_ENCRYPTED	0x4000
@@ -75,14 +79,18 @@ typedef EQNetworkFragmentGroup		EQNFragmentGroup;
 
 enum eappCompressed { appNormal, appInflated, appDeflated };
 class APPLAYER {
+//I use friend to ensure these are the only people who know anything
+//about real opcodes, without any doubt.
+friend class EQNetworkConnection;
+friend class EQDataPacket;
 public:
-	APPLAYER(int16 in_opcode = 0, int32 in_size = 0) {
+	APPLAYER(EmuOpcode in_opcode = OP_Unknown, int32 in_size = 0) {
 		size = in_size;
-		opcode = in_opcode;
+		if(in_opcode != 0)
+			SetOpcode(in_opcode);
+		else
+			opcode = OP_Unknown;
 		priority = 0;
-#ifdef COMBINED
-		combined_size = 0;
-#endif
 		compressed = appNormal;
 		if (size == 0) {
 			pBuffer = NULL;
@@ -94,34 +102,23 @@ public:
 		}
 		refCount = 1;
 	}
-	~APPLAYER();
-/*	~APPLAYER() {
+	virtual ~APPLAYER() {
 #if EQDEBUG >= 4
 		if(refCount > 1) {
 			LogFile->write(EQEMuLog::Debug, "Error: Packet with opcode 0x%.4x deleted with a refcount of %d", opcode, refCount);
 		}
 #endif
 		safe_delete_array(pBuffer);
-	}*/
-	APPLAYER* Copy() const {
+	}
+	virtual APPLAYER* Copy() const {
 		if (this == NULL) {
 			return 0;
 		}
 		APPLAYER* ret;
-#ifdef COMBINED
-		if(combined_size > 0) {	//we are a combined packet
-			ret = new APPLAYER(this->opcode, 0);
-			ret->pBuffer = new uchar[this->combined_size];
-			memcpy(ret->pBuffer, this->pBuffer, this->combined_size);
-			ret->combined_size = this->combined_size;
-		} else {	//not combined
-#endif
-			ret = new APPLAYER(this->opcode, this->size);
-			if (this->size)
-				memcpy(ret->pBuffer, this->pBuffer, this->size);
-#ifdef COMBINED
-		}
-#endif
+		ret = new APPLAYER(OP_Unknown, this->size);
+		ret->opcode = opcode;	//dont use set, or it will translate
+		if (this->size)
+			memcpy(ret->pBuffer, this->pBuffer, this->size);
 		ret->priority = this->priority;
 		ret->compressed = this->compressed;
 		return ret;
@@ -170,8 +167,11 @@ public:
 		return true;
 	}
 	
+protected:
+	inline void SetRealOpcode(uint16 eq_op) { opcode = eq_op; }
+	uint16  opcode;
+public:
 	int32  size;
-	int16  opcode;
 	uchar* pBuffer;
 	int8 priority;
 	eappCompressed compressed;
@@ -182,22 +182,35 @@ public:
 		sint64* encrypt_key;
 	#endif
 	
-#ifdef COMBINED
-	//all the combined code should leave the size of the FIRST packet
-	//in the combined packet in the size field, and store the total
-	//length of the packet in combined_size
-	int32  combined_size;
-	//this is the offset into the buffer where the last opcode
-	//was put, so we can flag it combined if another comes in.
-	int32  opcode_offset;
 	
-	//this is used for implicit length stuff, simple resize
-	void combine_append(int32 add_size, uchar *data, bool implicit);
-	
-	//this handles initial packet conditions as well as
-	//manages the lengths and flags embedded in the combined packet.
-	void combine_add(int16 in_opcode, int32 in_size, uchar *data);
+	//these routines take and return emu opcodes, they should never
+	//be used by somebody who knows or wants real EQ opcodes
+	inline void SetOpcode(EmuOpcode emu_op) {
+		
+		//preserve flags on set... kill this when flags disappear
+		
+		uint16 flags = emu_op & FLAG_ALL;
+		opcode = EQNetworkOpcodeManager->EmuToEQ((EmuOpcode)(StripFlags(emu_op)));
+		
+#if EQDEBUG >= 4
+		if(opcode == OP_Unknown) {
+			LogFile->write(EQEMuLog::Debug, "Unable to convert Emu opcode %s (%d) into an EQ opcode.", OpcodeNames[emu_op], emu_op);
+		}
 #endif
+		
+		opcode |= flags;
+	}
+	
+	inline const EmuOpcode GetOpcode() const {
+		EmuOpcode emu_op;
+		emu_op = EQNetworkOpcodeManager->EQToEmu(StripFlags(opcode));
+#if EQDEBUG >= 4
+		if(emu_op == OP_Unknown) {
+			LogFile->write(EQEMuLog::Debug, "Unable to convert EQ opcode 0x%.4x to an emu opcode.", opcode);
+		}
+#endif
+		return(emu_op);
+	}
 	
 	void PacketReferenced() {
 		refCount++;
@@ -221,6 +234,63 @@ public:
 protected:
 	sint32 refCount;	//number of references to this packet.
 };
+
+#ifdef COMBINED
+class CombinedAPPLAYER : public APPLAYER {
+public:
+	
+	CombinedAPPLAYER(EmuOpcode in_opcode = OP_Unknown, int32 in_size = 0) : APPLAYER(in_opcode, in_size) {
+		combined_size = 0;
+	}
+	
+	virtual APPLAYER* Copy() const {
+		if (this == NULL) {
+			return 0;
+		}
+		CombinedAPPLAYER* ret;
+		if(combined_size > 0) {	//we are a combined packet
+			ret = new CombinedAPPLAYER(OP_Unknown, 0);
+			ret->opcode = opcode;	//dont use set, or it will translate
+			ret->pBuffer = new uchar[this->combined_size];
+			memcpy(ret->pBuffer, this->pBuffer, this->combined_size);
+			ret->combined_size = this->combined_size;
+		} else {	//not combined... yet
+			ret = new CombinedAPPLAYER(OP_Unknown, this->size);
+			ret->opcode = opcode;	//dont use set, or it will translate
+			if (this->size)
+				memcpy(ret->pBuffer, this->pBuffer, this->size);
+		}
+		ret->priority = this->priority;
+		ret->compressed = this->compressed;
+		return ret;
+	}
+	
+	//quick wrapper cause c++ dosent like to cast this
+	static void PacketUsed(CombinedAPPLAYER **it_p) {
+		APPLAYER *app = *it_p;
+		APPLAYER::PacketUsed(&app);
+		if(app == NULL)
+			*it_p = NULL;
+	}
+	
+	
+	
+	//all the combined code should leave the size of the FIRST packet
+	//in the combined packet in the size field, and store the total
+	//length of the packet in combined_size
+	int32  combined_size;
+	//this is the offset into the buffer where the last opcode
+	//was put, so we can flag it combined if another comes in.
+	int32  opcode_offset;
+	
+	//this is used for implicit length stuff, simple resize
+	void combine_append(int32 add_size, uchar *data, bool implicit);
+	
+	//this handles initial packet conditions as well as
+	//manages the lengths and flags embedded in the combined packet.
+	void combine_add(int16 in_opcode, int32 in_size, uchar *data);
+};
+#endif
 
     /************ Contain ack stuff ************/
 struct ACK_INFO {
@@ -451,9 +521,9 @@ private:
 #ifdef COMBINED
 	bool AddToCombined(APPLAYER* app);
 	void SendCombinedPackets();
-	void SendACombinedPacket(APPLAYER* app);
-	APPLAYER *CombinedPacket;
-	APPLAYER *ImplicitCombinedPacket;
+	void SendACombinedPacket(CombinedAPPLAYER* app);
+	CombinedAPPLAYER *CombinedPacket;
+	CombinedAPPLAYER *ImplicitCombinedPacket;
 	uint32 implicit_counter_offset;
 	uint16 last_opcode;
 	Timer combined_timer;

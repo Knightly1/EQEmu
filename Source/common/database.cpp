@@ -985,7 +985,7 @@ int32 Database::CheckLogin(const char* name, const char* password, sint16* oStat
 	DoEscapeString(tmpUN, name, strlen(name));
 	DoEscapeString(tmpPW, password, strlen(password));
 	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, status FROM account WHERE name='%s' AND (password='%s' or password=MD5('%s'))", tmpUN, tmpPW, tmpPW), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, status FROM account WHERE name='%s' AND password is not null and length(password) > 0 and (password='%s' or password=MD5('%s'))", tmpUN, tmpPW, tmpPW), errbuf, &result)) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1)
 		{

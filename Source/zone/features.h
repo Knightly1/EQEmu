@@ -116,7 +116,7 @@ Zone extensions and features
 //both of these require fear pathing enabled.
 //the HP ratio, below which mobs walk away from their attacker
 //comment this out to disable it.
-#define FLEE_HP_RATIO 25
+//#define FLEE_HP_RATIO 25
 //the min ratio at which a mob's speed is reduced
 #define FLEE_HP_MINSPEED 10
 //number of tics to try to run straight away before looking again

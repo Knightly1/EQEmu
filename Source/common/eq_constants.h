@@ -92,21 +92,41 @@ enum ItemUses
 	ItemUseBrassInstr	= 25,
 	ItemUseDrumInstr	= 26,
 	ItemUseArrow		= 27,
+	ItemUseStackable2	= 28,
 	ItemUseJewlery		= 29,
+	ItemUseSkull		= 30,
+	ItemUseTome			= 31,
+	ItemUseNote			= 32,
 	ItemUseKey			= 33,
 	ItemUse2HPierce		= 35,
+	ItemUseCoin			= 34,
 	ItemUseFishingPole	= 36,
 	ItemUseFishingBait	= 37,
 	ItemUseAlcohol		= 38,
 	ItemUseCompass		= 40,
 	ItemUsePoison		= 42,	//might be wrong, but includes poisons
 	ItemUseHand2Hand	= 45,
+	ItemUseAllInstruments=51,
+	ItemUseSinging		= 50,
 	ItemUseCharm		= 52,
 	ItemUseAugment		= 54,
 	ItemUseAugmentSolvent=55,
 	ItemUseAugmentDistill=56
 };
 
+/*
+** Item Effect Types
+**
+*/
+enum {
+	ET_CombatProc = 0,
+	ET_ClickEffect = 1,
+	ET_WornEffect = 2,
+	ET_Expendable = 3,
+	ET_EquipClick = 4,
+	ET_ClickEffect2 = 5,	//name unknown
+	ET_Focus = 6
+};
 
 #define AT_Die				0	// this causes the client to keel over and zone to bind point
 #define AT_WhoLevel		1	// the level that shows up on /who

@@ -1057,7 +1057,7 @@ void Client::SendItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType
 	// Serialize item into |-delimited string
 	string packet = inst->Serialize(slot_id);
 	
-	uint16 opcode = 0;
+	EmuOpcode opcode = OP_Unknown;
 	APPLAYER* outapp = NULL;
 	ItemPacket_Struct* itempacket = NULL;
 	
@@ -1087,7 +1087,7 @@ APPLAYER* Client::ReturnItemPacket(sint16 slot_id, const ItemInst* inst, ItemPac
 	// Serialize item into |-delimited string
 	string packet = inst->Serialize(slot_id);
 	
-	uint16 opcode = 0;
+	EmuOpcode opcode = OP_Unknown;
 	APPLAYER* outapp = NULL;
 	BulkItemPacket_Struct* itempacket = NULL;
 	

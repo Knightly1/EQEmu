@@ -16,6 +16,10 @@
   #define ADDON_INI_FILE	BASEDIR "addon.ini"
 #endif
 
+#ifndef OPCODES_FILE
+  #define OPCODES_FILE	BASEDIR "opcodes.conf"
+#endif
+
 #ifndef CFG_DIR
   #define CFG_DIR		BASEDIR "cfg"
   #define CFG_DIR_NAME		CFG_DIR

@@ -108,7 +108,7 @@ void DumpPacket(const uchar* buf, int32 size)
 
 void DumpPacket(const APPLAYER* app, bool iShowInfo) {
 	if (iShowInfo) {
-		cout << "Dumping Applayer: 0x" << hex << setfill('0') << setw(4) << app->opcode << dec;
+		cout << "Dumping Applayer: 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec;
 		cout << " size:" << app->size << endl;
 	}
 	DumpPacketHex(app->pBuffer, app->size);

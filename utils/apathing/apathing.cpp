@@ -411,13 +411,13 @@ int main(int argc, char *argv[]) {
 	
 	//now we have our final node and edge set.
 	//build a graph of all final nodes to find pathing info
-	MyGraph final(big->nodes.size());
-	property_map<MyGraph, edge_weight_t>::type weightlist_final;
-	std::map<PathEdge *, EdgeDesc> edgemap_final;
-	build_boost_graph(final, weightlist_final, edgemap_final, big, true);
+//	MyGraph final(big->nodes.size());
+//	property_map<MyGraph, edge_weight_t>::type weightlist_final;
+//	std::map<PathEdge *, EdgeDesc> edgemap_final;
+//	build_boost_graph(final, weightlist_final, edgemap_final, big, true);
 	
 	vector< vector<PathEdge*> > path_finding;
-	find_path_info(map, final, path_finding, big);
+	find_path_info(map, big, path_finding);
 	printf("Calculated pathing information...\n");
 	
 	//write out a nice image of our MST
@@ -694,7 +694,7 @@ bool load_hints_from_db(MYSQL *m, const char *zone, list<PathNode*> &db_spawns) 
 	char query[512];
 	
 	sprintf(query, 
-		"SELECT x,y,z,force,disjoint FROM fear_hints "
+		"SELECT x,y,z,forced,disjoint FROM fear_hints "
 		"WHERE  zone='%s'", zone);
 	if(mysql_query(m, query) != 0) {
 		printf("Unable to query: %s\n", mysql_error(m));

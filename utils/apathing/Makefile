@@ -8,7 +8,7 @@ DFLAGS=-DINVERSEXY
 CFLAGS=$(DFLAGS) -pipe -I.. -march=pentium4 -O2 -Wall -g -I/usr/home/jonesa/eqemu/src/boost_1_32_0 $(MYSQL_FLAGS) -I/usr/local/include
 LDFLAGS=-g -lz -L/usr/home/jonesa/eqemu/src/boost_1_32_0/stage/lib $(MYSQL_LIB) -L/usr/local/lib -lgd -lpng -ljpeg -lfreetype -lm
 
-OBJS=apathing.o gpoint.o .obj/Map.zo .obj/unix.o actions.o quadtree.o .obj/rdtsc.o
+OBJS=apathing.o gpoint.o .obj/Map.zo .obj/unix.o actions.o quadtree.o .obj/rdtsc.o pathfinding.o
 
 all: apath
 

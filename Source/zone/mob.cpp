@@ -573,7 +573,7 @@ char Mob::GetCasterClass() {
 }
 
 void Mob::CreateSpawnPacket(APPLAYER* app, Mob* ForWho) {
-	app->opcode = OP_NewSpawn;
+	app->SetOpcode(OP_NewSpawn);
 	app->size = sizeof(NewSpawn_Struct);
 	app->pBuffer = new uchar[app->size];
 	memset(app->pBuffer, 0, app->size);	
@@ -583,7 +583,7 @@ void Mob::CreateSpawnPacket(APPLAYER* app, Mob* ForWho) {
 
 
 void Mob::CreateSpawnPacket(APPLAYER* app, NewSpawn_Struct* ns) {
-	app->opcode = OP_NewSpawn;
+	app->SetOpcode(OP_NewSpawn);
 	app->size = sizeof(NewSpawn_Struct);
 	
 	app->pBuffer = new uchar[sizeof(NewSpawn_Struct)];
@@ -732,7 +732,7 @@ void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 
 void Mob::CreateDespawnPacket(APPLAYER* app)
 {
-	app->opcode = OP_DeleteSpawn;
+	app->SetOpcode(OP_DeleteSpawn);
 	app->size = sizeof(DeleteSpawn_Struct);
 	app->pBuffer = new uchar[app->size];
 	memset(app->pBuffer, 0, app->size);
@@ -743,7 +743,7 @@ void Mob::CreateDespawnPacket(APPLAYER* app)
 void Mob::CreateHPPacket(APPLAYER* app)
 { 
 	this->IsFullHP=(cur_hp>=max_hp); 
-	app->opcode = OP_SendHPTarget; 
+	app->SetOpcode(OP_SendHPTarget); 
 	app->size = sizeof(SpawnHPUpdate_Struct2); 
 	app->pBuffer = new uchar[app->size]; 
 	memset(app->pBuffer, 0, sizeof(SpawnHPUpdate_Struct2)); 
@@ -1862,11 +1862,16 @@ bool Mob::HateSummon() {
     target = GetHateTop();
     if( target)
     {
-        if (target->IsClient())
-	        target->CastToClient()->Message(15,"You have been summoned!");
+		if (target->IsClient())
+			target->CastToClient()->Message(15,"You have been summoned!");
 		entity_list.MessageClose(this, true, 500, 10, "%s says,'You will not evade me, %s!' ", GetName(), GetHateTop()->GetName() );
-		GetHateTop()->GMMove(x_pos, y_pos, z_pos, target->GetHeading());
-		return true;
+
+		// RangerDown - GMMove doesn't seem to be working well with players, so use MovePC for them, GMMove for NPC's
+		if (target->IsClient())
+			target->CastToClient()->MovePC(zone->GetZoneID(),x_pos,y_pos,z_pos,0,true);
+		else
+			GetHateTop()->GMMove(x_pos, y_pos, z_pos, target->GetHeading());
+        return true;
 	}
 	return false;
 }
@@ -2284,7 +2289,7 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 	
 	//give weapon a chance to proc first.
 	if(weapon != NULL) {
-		if (usedspellID == SPELL_UNKNOWN && IsValidSpell(weapon->Common.SpellId) && (weapon->Common.EffectType == 0)) {
+		if (usedspellID == SPELL_UNKNOWN && IsValidSpell(weapon->Common.SpellId) && (weapon->Common.EffectType == ET_CombatProc)) {
 			float ProcChance = (float) mydex / 3020.0f;
 			if(IsClient()) {
 				//increases based off 1 guys observed results.
