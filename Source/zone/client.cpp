@@ -278,15 +278,12 @@ Client::~Client() {
 sint16 Client::GetMaxStat() {
 	int level = GetLevel();
 	
-	if (level < 61) {
+	if (level < 61)
 		return 255;
-	}
-	else if (level < 66) {
+	else if (level < 71)
 		return 255 + 5 * (level - 60);
-	}
-	else {
-		return 280;
-	}	
+	else
+		return 280;	
 }
 
 sint16 Client::GetMaxSTR() {
@@ -1295,7 +1292,7 @@ void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
 	
 	m_pp.expAA = set_aaxp;
 
-	int8 maxlevel = 66;
+	int8 maxlevel = 71;
 
 #ifdef RAIDADDICTS
 	maxlevel = raidaddicts.GetZoneLevel();

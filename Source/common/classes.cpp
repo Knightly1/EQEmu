@@ -21,7 +21,9 @@
 const char* GetEQClassName(int8 class_, int8 level) {
 	switch(class_) {
       case WARRIOR: 
-         if (level >= 65) 
+		 if (level >= 70) 
+			return "Vanquisher"; 
+         else if (level >= 65) 
             return "Overlord";   //Baron-Sprite: LEAVE MY CLASSES ALONE.
          else if (level >= 60) 
             return "Warlord"; 
@@ -31,8 +33,10 @@ const char* GetEQClassName(int8 class_, int8 level) {
             return "Champion"; 
          else 
             return "Warrior"; 
-      case CLERIC: 
-         if (level >= 65) 
+      case CLERIC:
+		 if (level >= 70) 
+			return "Prelate"; 
+         else if (level >= 65) 
             return "Archon"; 
          else if (level >= 60) 
             return "High Priest"; 
@@ -43,7 +47,9 @@ const char* GetEQClassName(int8 class_, int8 level) {
          else 
             return "Cleric"; 
       case PALADIN: 
-         if (level >= 65) 
+		 if (level >= 70) 
+			return "Lord"; 
+         else if (level >= 65) 
             return "Lord Protector"; 
          else if (level >= 60) 
             return "Crusader"; 
@@ -53,8 +59,10 @@ const char* GetEQClassName(int8 class_, int8 level) {
             return "Cavalier"; 
          else 
             return "Paladin"; 
-      case RANGER: 
-         if (level >= 65) 
+      case RANGER:
+		 if (level >= 70) 
+			return "Plainswalker"; 
+         else if (level >= 65) 
             return "Forest Stalker"; 
          else if (level >= 60) 
             return "Warder"; 
@@ -64,8 +72,10 @@ const char* GetEQClassName(int8 class_, int8 level) {
             return "Pathfinder"; 
          else 
             return "Ranger"; 
-      case SHADOWKNIGHT: 
-         if (level >= 65) 
+      case SHADOWKNIGHT:
+		 if (level >= 70) 
+			return "Scourge Knight"; 
+         else if (level >= 65) 
             return "Dread Lord"; 
          else if (level >= 60) 
             return "Grave Lord"; 
@@ -75,8 +85,10 @@ const char* GetEQClassName(int8 class_, int8 level) {
             return "Reaver"; 
          else 
             return "Shadowknight"; 
-      case DRUID: 
-         if (level >= 65) 
+      case DRUID:
+		 if (level >= 70) 
+			return "Natureguard"; 
+         else if (level >= 65) 
             return "Storm Warden"; 
          else if (level >= 60) 
             return "Hierophant"; 
@@ -86,8 +98,10 @@ const char* GetEQClassName(int8 class_, int8 level) {
             return "Wanderer"; 
          else 
             return "Druid"; 
-      case MONK: 
-         if (level >= 65) 
+      case MONK:
+		 if (level >= 70) 
+			return "Stone Fist"; 
+         else if (level >= 65) 
             return "Transcendent"; 
          else if (level >= 60) 
             return "Grandmaster"; 
@@ -98,7 +112,9 @@ const char* GetEQClassName(int8 class_, int8 level) {
          else 
             return "Monk"; 
       case BARD: 
-         if (level >= 65) 
+	     if (level >= 70) 
+			return "Performer";
+         else if (level >= 65) 
             return "Maestro"; 
          else if (level >= 60) 
             return "Virtuoso"; 
@@ -109,7 +125,9 @@ const char* GetEQClassName(int8 class_, int8 level) {
          else 
             return "Bard"; 
       case ROGUE: 
-         if (level >= 65) 
+		 if (level >= 70) 
+			return "Nemesis"; 
+         else if (level >= 65) 
             return "Deceiver"; 
          else if (level >= 60) 
             return "Assassin"; 
@@ -120,7 +138,9 @@ const char* GetEQClassName(int8 class_, int8 level) {
          else 
             return "Rogue"; 
       case SHAMAN: 
-         if (level >= 65) 
+		 if (level >= 70) 
+			return "Soothsayer";
+         else if (level >= 65) 
             return "Prophet"; 
          else if (level >= 60) 
             return "Oracle"; 
@@ -131,7 +151,9 @@ const char* GetEQClassName(int8 class_, int8 level) {
          else 
             return "Shaman"; 
       case NECROMANCER: 
-         if (level >= 65) 
+	     if (level >= 70) 
+			return "Wraith"; 
+         else if (level >= 65) 
             return "Arch Lich"; 
          else if (level >= 60) 
             return "Warlock"; 
@@ -142,7 +164,9 @@ const char* GetEQClassName(int8 class_, int8 level) {
          else 
             return "Necromancer"; 
       case WIZARD: 
-         if (level >= 65) 
+	     if (level >= 70) 
+			return "Grand Arcanist"; 
+         else if (level >= 65) 
             return "Arcanist"; 
          else if (level >= 60) 
             return "Sorcerer"; 
@@ -153,7 +177,9 @@ const char* GetEQClassName(int8 class_, int8 level) {
          else 
             return "Wizard"; 
       case MAGICIAN: 
-         if (level >= 65) 
+		 if (level >= 70) 
+			return "Arch Magus"; 
+         else if (level >= 65) 
             return "Arch Convoker"; 
          else if (level >= 60) 
             return "Arch Mage"; 
@@ -164,7 +190,9 @@ const char* GetEQClassName(int8 class_, int8 level) {
          else 
             return "Magician"; 
       case ENCHANTER: 
-         if (level >= 65) 
+		 if (level >= 70) 
+			return "Bedazzler"; 
+         else if (level >= 65) 
             return "Coercer"; 
          else if (level >= 60) 
             return "Phantasmist"; 
@@ -175,7 +203,9 @@ const char* GetEQClassName(int8 class_, int8 level) {
          else 
             return "Enchanter"; 
       case BEASTLORD: 
-         if (level >= 65) 
+		 if (level >= 70) 
+			return "Wildblood"; 
+         else if (level >= 65) 
             return "Feral Lord"; 
          else if (level >= 60) 
             return "Savage Lord"; 
@@ -185,8 +215,10 @@ const char* GetEQClassName(int8 class_, int8 level) {
             return "Primalist"; 
          else 
             return "Beastlord"; 
-	 case BERSERKER: 
-         if (level >= 65) 
+	  case BERSERKER: 
+		 if (level >= 70) 
+			return "Ravager"; 
+         else if (level >= 65) 
             return "Fury"; 
          else if (level >= 60) 
             return "Rager"; 
@@ -196,8 +228,10 @@ const char* GetEQClassName(int8 class_, int8 level) {
             return "Brawler"; 
          else 
             return "Berserker"; 
-      case BANKER: 
-         if (level >= 65) 
+	  case BANKER: 
+		 if (level >= 70) 
+			return "Master Banker"; 
+         else if (level >= 65) 
             return "Elder Banker"; 
          else if (level >= 60) 
             return "Oldest Banker"; 
@@ -207,41 +241,41 @@ const char* GetEQClassName(int8 class_, int8 level) {
             return "Old Banker"; 
          else 
             return "Banker";
-		case WARRIORGM:
+	  case WARRIORGM:
 			return "Warrior Guildmaster";
-		case CLERICGM:
+	  case CLERICGM:
 			return "Cleric Guildmaster";
-		case PALADINGM:
+	  case PALADINGM:
 			return "Paladin Guildmaster";
-		case RANGERGM:
+	  case RANGERGM:
 			return "Ranger Guildmaster";
-		case SHADOWKNIGHTGM:
+	  case SHADOWKNIGHTGM:
 			return "Shadowknight Guildmaster";
-		case DRUIDGM:
-			return "Druid Guildmaster";
-		case MONKGM:
+	  case DRUIDGM:
+	  		return "Druid Guildmaster";
+	  case MONKGM:
 			return "Monk Guildmaster";
-		case BARDGM:
+	  case BARDGM:
 			return "Bard Guildmaster";
-		case ROGUEGM:
+	  case ROGUEGM:
 			return "Rogue Guildmaster";
-		case SHAMANGM:
+	  case SHAMANGM:
 			return "Shaman Guildmaster";
-		case NECROMANCERGM:
+	  case NECROMANCERGM:
 			return "Necromancer Guildmaster";
-		case WIZARDGM:
+	  case WIZARDGM:
 			return "Wizard Guildmaster";
-		case MAGICIANGM:
+	  case MAGICIANGM:
 			return "Magician Guildmaster";
-		case ENCHANTERGM:
+	  case ENCHANTERGM:
 			return "Enchanter Guildmaster";
-		case BEASTLORDGM:
+	  case BEASTLORDGM:
 			return "Beastlord Guildmaster";
-		case BERSERKERGM:
+	  case BERSERKERGM:
 			return "Berserker Guildmaster";
-		case MERCHANT:
+	  case MERCHANT:
 			return "Merchant";
-		default:
+	  default:
 			return "Unknown";
 	}
 }

@@ -2512,14 +2512,14 @@ void command_makepet(Client *c, const Seperator *sep)
 void command_level(Client *c, const Seperator *sep)
 {
 	int16 level = atoi(sep->arg[1]);
-	if ((level <= 0) || ((level > 65) && (c->Admin() < 100)) )
+	if ((level <= 0) || ((level > 70) && (c->Admin() < 100)) )
 		c->Message(0, "Error: #Level: Invalid Level");
 	else if (c->Admin() < 100)
 		c->SetLevel(level, true);
 	else if (!c->GetTarget())
 		c->Message(0, "Error: #Level: No target");
 	else
-		if (!c->GetTarget()->IsNPC() && ((c->Admin() < 200) && (level > 65)))
+		if (!c->GetTarget()->IsNPC() && ((c->Admin() < 200) && (level > 70)))
 			c->Message(0, "Error: #Level: Invalid Level");
 		else
 			c->GetTarget()->SetLevel(level, true);
@@ -4878,9 +4878,9 @@ void command_scribespells(Client *c, const Seperator *sep)
 
 	level = atoi(sep->arg[1]);
 
-	if(level < 1 || level > 65)
+	if(level < 1 || level > 70)
 	{
-		c->Message(0, "ERROR: Enter a level between 1 and 65 inclusive.");
+		c->Message(0, "ERROR: Enter a level between 1 and 70 inclusive.");
 		return;
 	}
 

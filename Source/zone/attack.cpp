@@ -1439,7 +1439,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 //			max_dmg = (int16)(((220*level_mod)*(mylevel-64))/4.0f);
 			// 66 = 495, 67 = 742, 68 = 990, 69 = 1237, 70 = 1485
 		}
-		if (mylevel >= 60 && mylevel <= 65){
+		else if (mylevel >= 60 && mylevel <= 65){
 		    level_mod = 4.25f;
 		    if(min_dmg==0)
 		    min_dmg = (mylevel+(mylevel/3));
@@ -1448,7 +1448,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 //		    max_dmg = (mylevel*3);
 		    // 60 = 180, 65 = 195
 		}
-		if (mylevel >= 51 && mylevel <= 59){
+		else if (mylevel >= 51 && mylevel <= 59){
 		    level_mod = 3.75f;
 		    if(min_dmg==0)
 		    min_dmg = (mylevel+(mylevel/3));
@@ -1458,7 +1458,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 //		    max_dmg = (mylevel*3);
 		    // 51 = 153, 59 = 177
 		}
-		if (mylevel >= 40 && mylevel <= 50) {
+		else if (mylevel >= 40 && mylevel <= 50) {
 			if (min_dmg==0)
 				min_dmg = mylevel;
 			if(max_dmg==0)
@@ -1466,14 +1466,14 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 //				max_dmg = (mylevel*3);
 		    // 40 = 120 , 50 = 150
 		}
-		if (mylevel >= 28 && mylevel <= 39) {
+		else if (mylevel >= 28 && mylevel <= 39) {
 		    if (min_dmg==0)
 			min_dmg = mylevel / 2; // 14-17
 		    if (max_dmg==0)
 			max_dmg = ((mylevel*2)+2)*AC_adjust/10;
 		    // 28 = 58, 39 = 80
 		}
-		if (mylevel <= 27) {
+		else if (mylevel <= 27) {
 		    if (min_dmg==0)
 			min_dmg=1;
 		    if (max_dmg==0)

@@ -724,17 +724,16 @@ struct PlayerProfile_Struct
 /*0244*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
 /*0245*/	uint8				guildrank;					
 /*0246*/	uint8				unknown0165[46];	//
-/*0292*/	uint8				ability_time_seconds;
-/*0293*/	uint8				ability_number; //ability used
-/*0294*/	uint8				ability_time_minutes;
-/*0295*/	uint8				ability_time_hours;//place holder
-/*0296*/	uint8				haircolor;			// Player hair color
-/*0297*/	uint8				beardcolor;			// Player beard color
-/*0298*/	uint8				eyecolor1;			// Player left eye color
-/*0299*/	uint8				eyecolor2;			// Player right eye color
-/*0300*/	uint8				hairstyle;			// Player hair style
-/*0301*/	uint8				beard;				// Beard type
-
+/*0292*/	uint8				haircolor;			// Player hair color
+/*0293*/	uint8				beardcolor;			// Player beard color
+/*0294*/	uint8				eyecolor1;			// Player left eye color
+/*0295*/	uint8				eyecolor2;			// Player right eye color
+/*0296*/	uint8				hairstyle;			// Player hair style
+/*0297*/	uint8				beard;				// Beard type
+/*0298*/	uint8				ability_time_seconds; //The following four spots are unknown right now.....
+/*0299*/	uint8				ability_number; //ability used
+/*0300*/	uint8				ability_time_minutes;
+/*0301*/	uint8				ability_time_hours;//place holder
 /*0302*/	uint8				unknown0218[2];		// @bp Spacer/Flag?
 /*0304*/	uint32				item_material[9];	// Item texture/material of worn/held items
 /*0340*/	uint8				unknown0256[48];
