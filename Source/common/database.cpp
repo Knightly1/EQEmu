@@ -4208,7 +4208,7 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 	MYSQL_ROW row;
 	bool ret = false;
 	
-	LogFile->write(EQEMuLog::Status, "Loading items from database: count=%i, max id=%i", iItemCount, iMaxItemID);
+	LogFile->write(EQEMuLog::Status, "Loading items from database: count=%i", iItemCount);
 	
 	// Make sure enough memory was alloc'd in cache
 	sint32 item_count = GetItemsCount(&max_item);
