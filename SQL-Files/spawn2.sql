@@ -21,6 +21,8 @@ CREATE TABLE spawn2 (
   variance smallint(4) NOT NULL default '0',
   pathgrid int(10) NOT NULL default '0',
   timeleft bigint(16) NOT NULL default '0',
+  condition MEDIUMINT UNSIGNED NOT NULL DEFAULT '0',
+  cond_value MEDIUMINT NOT NULL DEFAULT '1',
   PRIMARY KEY  (id)
 ) TYPE=MyISAM;
 
