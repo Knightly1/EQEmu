@@ -810,9 +810,10 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 		client->Message(13, "Error: Corpse locked by GM.");
 		return;
 	}
-	if(IsPlayerCorpse() && CanMobLoot(client->CharacterID()) && GetPKItem()==0){
+	if(IsPlayerCorpse() && (charid != client->CharacterID()) && CanMobLoot(client->CharacterID()) && GetPKItem()==0){
 		client->Message(13, "Error: You cannot loot any more items from this corpse.");
 		SendEndLootErrorPacket(client);
+		BeingLootedBy = 0xFFFFFFFF;
 		return;
 	}
 	const Item_Struct* item = 0;
