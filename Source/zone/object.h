@@ -53,6 +53,7 @@
 #define OT_STORMGUARDF	0x22
 #define OT_TACKLEBOX	0x2e	//Father Nitwit
 #define OT_FIERDALF		0x30
+#define OT_AUGMENT		0x35
 
 // Icon values:
 //0x0453 a pie
