@@ -557,7 +557,7 @@ bool EntityList::MakeDoorSpawnPacket(APPLAYER* app)
 			nd.heading = door->GetHeading();
 			nd.incline = door->GetIncline();
 			nd.size = 100;	// 100 is normal size
-			nd.doorId = door->GetGuildID() ? door->GetGuildID() : door->GetDoorID();				
+			nd.doorId = door->GetDoorID();				
 			nd.opentype = door->GetOpenType();
 			nd.state_at_spawn = door->GetInvertState() ? !door->IsDoorOpen() : door->IsDoorOpen();
 			nd.invert_state = door->GetInvertState();
