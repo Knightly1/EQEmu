@@ -157,6 +157,91 @@ struct CharacterSelect_Struct {
 };
 
 /*
+** Generic Spawn Struct
+** Length: 257 Bytes
+** Fields from old struct not yet found:
+**	float	size;
+**	float	walkspeed;	// probably one of the ff 33 33 33 3f
+**	float	runspeed;	// probably one of the ff 33 33 33 3f
+**	int8	traptype;	// 65 is disarmable trap, 66 and 67 are invis triggers/traps
+**	int8	npc_armor_graphic;	// 0xFF=Player, 0=none, 1=leather, 2=chain, 3=steelplate
+**	int8	npc_helm_graphic;	// 0xFF=Player, 0=none, 1=leather, 2=chain, 3=steelplate
+**
+*/
+struct Spawn_Struct
+{
+/*000*/	int8	npc;	// 0=player,1=npc,2=pc corpse,3=npc corpse,4=???,5=unknown spawn,10=self
+/*001*/	int8	beard;			// vesuvias - appearance fix
+/*002*/	int8	beardcolor;			// Player right eye color
+/*003*/	int8	aa_title; // 0=none, 1=general, 2=archtype, 3=class
+/*004*/	int8	unknown04[3];	// aa_title is probably an int32
+/*007*/	Color_Struct	dye_rgb[9]; 			// armor dye colors
+/*043*/ int8	class_; //class
+/*044*/ int8	unknown044[2]; // *** Placeholder 
+/*046*/ int8	cur_hp; //current hp
+/*047*/	int8	afk; // 0=not afk, 1=afk
+union {
+/*048*/	int8	equip_chest2;// Second place in packet for chest texture (usually 0xFF in live packets)
+// Not sure why there are 2 of them, but it effects chest texture!
+/*048*/	int8	mount_color;// drogmor: 0=white, 1=black, 2=green, 3=red
+// horse: 0=brown, 1=white, 2=black, 3=tan
+};
+/*049*/ int32	race; // race 
+/*053*/ int8	eyecolor1;	// vesuvias
+/*054*/ char	name[64]; // name 
+/*118*/ int8	eyecolor2;	// vesuvias
+/*119*/ int8	face;
+/*120*/ int8	invis; // 0=visible,1=invisible 
+/*121*/ int8	max_hp; // max hp 
+/*122*/ int8	pvp; // 0=Not pvp,1=pvp  solar: this is wrong
+/*123*/ int8	level; 
+/*124*/ int8	lfg; // 0=Not lfg,1=lfg 
+/*125*/ int32	heading:12; // spawn heading 
+/*****/ int32	delta_heading:10; // change in heading 
+/*****/ int32	animation:10; // animation id 
+/*129*/ sint32	deltaX:13; 
+/*****/ sint32	x:19; 
+/*133*/ sint32	y:19; 
+/*****/ sint32	deltaZ:13; 
+/*137*/ sint32	deltaY:13; 
+/*****/ sint32	z:19; 
+/*141*/ int8	hairstyle;	// vesuvias
+/*142*/ int8	haircolor;
+/*143*/ int8	unknown143[8]; 
+/*151*/ float	size; // Size 
+/*155*/ int8	helm; 
+/*156*/ float	runspeed; // 
+/*160*/ int8	gm; // 0=not GM,1=GM 
+/*161*/ float	walkspeed; // 
+/*165*/ int32	guild_id; // GuildID 
+/*169*/ int8	anon; // 0=normal,1=anon,2=roleplaying 
+/*170*/ int8	gender; // 0=male,1=female,2=other 
+/*171*/ int16	spawn_id; // Id of spawn 
+/*173*/ int8	unknown173[3]; 
+/*176*/ char	last_name[32]; // lastname 
+/*208*/ int32	equipment[9]; 
+/*244*/ int8	linkdead; // 0=Not LD, 1=LD 
+/*245*/ uint32	bodytype; // Bodytype 
+/*249*/	int8	guild_rank;
+/*250*/ int8	unknown249[4]; 
+/*254*/ uint32	pet_owner_id; 
+/*258*/ int16	deity; 
+/*260*/ int8	unknown260[31]; 
+/*0291*/ int8	unknown291[76];
+/*0367*/ int32	unknown367[2];
+};
+
+/*
+** New Spawn
+** Length: 176 Bytes
+** OpCode: 4921
+*/
+struct NewSpawn_Struct
+{
+	struct Spawn_Struct spawn;	// Spawn Information
+};
+
+/*
 ** Server Zone Entry Struct
 ** Length: 452 Bytes
 ** OPCodes: OP_ServerZoneEntry
@@ -172,81 +257,7 @@ struct CharacterSelect_Struct {
 */
 struct ServerZoneEntry_Struct
 {
-// vesuvias - aqppearence fix
-	/*0000*/ int8 unknown0;
-	/*0001*/ int8 beard;
-	/*0002*/ int8 beardcolor;
-	/*0003*/ int8 aa_title;//I strongly suspect this is aa_title; confirmed
-	/*0004*/ int8 unknown4[3];
-
-	union {
-		struct {
-		/*0007*/ Color_Struct color_helmet;		// Color of helmet item
-		/*0011*/ Color_Struct color_chest;		// Color of chest item
-		/*0015*/ Color_Struct color_arms;		// Color of arms item
-		/*0019*/ Color_Struct color_bracers;		// Color of bracers item
-		/*0023*/ Color_Struct color_hands;		// Color of hands item
-		/*0027*/ Color_Struct color_legs;		// Color of legs item
-		/*0031*/ Color_Struct color_feet;		// Color of feet item
-		/*0035*/ Color_Struct color_primary;		// Color of primary item
-		/*0039*/ Color_Struct color_secondary;	// Color of secondary item
-		} equipment_colors;
-		/*0007*/ Color_Struct colors[9];				// Array elements correspond to struct equipment_colors above
-	};
-	/*0043*/ uint8  class_;          // Player's Class
-	/*0044*/ int8	unknown44[5];
-	/*0049*/ uint32 race;            // Player's Race
-	/*0053*/ int8	eyecolor1;
-	/*0054*/ char	name[64];      // Player name
-	/*0118*/ int8	eyecolor2;
-	/*0119*/ int8	face;
-	/*0120*/ int8	unknown120;
-	/*0121*/ int8	hp;
-	/*0122*/ int8	unknown122;
-	/*0123*/ int8	level;           // Player's Level
-	/*0124*/ int8	lfg;
-	/*0125*/ int16	heading;
-	/*0127*/ int8	delta_heading;
-	/*0128*/ int8	animation;
-	/*0129*/ signed delta_x:13;
-	/******/ signed	x:19;
-	/*0133*/ signed	y:19;
-	/******/ signed delta_z:13;
-	/*0137*/ signed delta_y:13;
-	/******/ signed z:19;
-	/*0141*/ int8	hairstyle;
-	/*0142*/ int8	haircolor;
-	/*0143*/ int8 invis;
-	/*0144*/ int8 unknown144[5];
-	/*0149*/ int16 pvp;				// solar: confirmed 2/11/04
-	/*0151*/ float size;
-	/*0155*/ int8	helm;
-	/*0156*/ float	runspeed;          // Speed when running
-	/*0160*/ int8	unknown160;
-	/*0161*/ float	walkspeed;       // Speed when walking
-	/*0165*/ uint32 guild_id;         // Current guild
-	/*0169*/ int8 anon;	// 0=normal,1=anon,2=roleplaying
-	/*0170*/ int8 gender;	// 0=male,1=female,2=other
-	/*0171*/ int8	unknown171[5];
-	/*0176*/ char   last_name[32]; 
-	/*0208*/ 
-	union {
-		struct {
-		/*0208*/ uint32	equip_helmet;		// Equipment: Helmet Visual
-		/*0212*/ uint32	equip_chest;		// Equipment: Chest Visual
-		/*0216*/ uint32	equip_arms;			// Equipment: Arms Visual
-		/*0220*/ uint32	equip_bracers;		// Equipment: Bracers Visual
-		/*0224*/ uint32	equip_hands;		// Equipment: Hands Visual
-		/*0228*/ uint32	equip_legs;			// Equipment: Legs Visual
-		/*0232*/ uint32	equip_feet;			// Equipment: Feet Visual
-		/*0236*/ uint32	equip_primary;		// Equipment: Primary Visual
-		/*0240*/ uint32	equip_secondary;	// Equipment: Secondary Visual
-		} equipment;
-		/*0208*/ uint32	equip[9];			// Array elements correspond to struct equipment above
-	};
-	/*0244*/ int8	unknown244[14];
-	/*0258*/ int16	deity;
-	/*0260*/ int8	unknown262[31];
+	struct NewSpawn_Struct player;
 };
 
 struct NewZone_Struct {
@@ -275,7 +286,7 @@ struct NewZone_Struct {
 	// Minimum View Distance
 /*0516*/	float	maxclip;				// Maximum View DIstance
 /*0520*/	int8	unknown_end[84];		// ***Placeholder
-/*0604*/	char	zone_short_name2[68];
+/*0604*/	char	zone_short_name2[72];
 /*0672*/
 };
 
@@ -692,6 +703,139 @@ struct PlayerProfile_Struct
 /*0112*/	uint32				unknown0112;		//
 /*0116*/	uint32				level;				// Level of player (might be one byte)
 /*0120*/	uint32				bind_zone_id;		// Zone player is bound in
+/*0124*/	uint32				unknown0124[4];
+/*0140*/	float				bind_x[4];				// Bind loc x coord
+/*0156*/	float				zone_safe_x;
+/*0160*/	float				bind_y[4];				// Bind loc y coord
+/*0176*/	float				zone_safe_y;
+/*0180*/	float				bind_z[4];				// Bind loc z coord
+/*0196*/	float				zone_safe_z;
+/*0200*/	float				bind_heading[4];		//
+/*0216*/	float				zone_safe_heading;
+/*0220*/	uint32				deity;				// deity
+/*0224*/	uint32				guildid;				
+/*0228*/	uint32				birthday;			// characters bday
+/*0232*/	uint32				lastlogin;			// last login or zone time
+/*0236*/	uint32				timeplayed;			// in minutes
+/*0240*/	uint8				fatigue;			// Sta bar % depleted (ie, 30 = 70% sta)
+/*0241*/	uint8				pvp;
+/*0242*/	uint8				unknown162;
+/*0243*/	uint8				gm;				// 1=gm, 0=not gm
+/*0244*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
+/*0245*/	uint8				guildrank;					
+/*0246*/	uint8				unknown0165[46];	//
+/*0292*/	uint8				ability_time_seconds;
+/*0293*/	uint8				ability_number; //ability used
+/*0294*/	uint8				ability_time_minutes;
+/*0295*/	uint8				ability_time_hours;//place holder
+/*0296*/	uint8				haircolor;			// Player hair color
+/*0297*/	uint8				beardcolor;			// Player beard color
+/*0298*/	uint8				eyecolor1;			// Player left eye color
+/*0299*/	uint8				eyecolor2;			// Player right eye color
+/*0300*/	uint8				hairstyle;			// Player hair style
+/*0301*/	uint8				beard;				// Beard type
+
+/*0302*/	uint8				unknown0218[2];		// @bp Spacer/Flag?
+/*0304*/	uint32				item_material[9];	// Item texture/material of worn/held items
+/*0340*/	uint8				unknown0256[48];
+/*0388*/	Color_Struct		item_tint[9];
+/*0424*/	AA_Array			aa_array[120];
+/*1384*/	uint8				unknown1388[4];
+/*1388*/	char				servername[100];		// length probably not right
+/*1488*/	uint32				guildid2;		//
+/*1492*/	uint32				exp;				// Current Experience
+/*1496*/	uint32				unknown1496;		
+/*1500*/	uint32				points;				// Unspent Practice points
+/*1504*/	uint32				mana;				// current mana
+/*1508*/	uint32				cur_hp;				// current hp
+/*1512*/	uint32				unknown1512;		// 0x05
+/*1516*/	uint32				STR;				// Strength
+/*1520*/	uint32				STA;				// Stamina
+/*1524*/	uint32				CHA;				// Charisma
+/*1528*/	uint32				DEX;				// Dexterity
+/*1532*/	uint32				INT;				// Intelligence
+/*1536*/	uint32				AGI;				// Agility
+/*1540*/	uint32				WIS;				// Wisdom
+/*1544*/	uint8				face;				// Player face
+/*1545*/	uint8				unknown1545[11];	// ?
+/*1556*/	int32				unknown1556[9];
+/*1592*/	uint8				languages[MAX_PP_LANGUAGE];
+/*1620*/	uint32				unknown1620;
+/*1624*/	int32				spell_book[MAX_PP_SPELLBOOK];
+/*3224*/	uint8				unknown3224[448];	// all 0xff   
+/*3672*/	int32				mem_spells[MAX_PP_MEMSPELL];
+/*3704*/	int32				unknown3704[8];	//
+/*3736*/	int32				unknown3736;		//
+/*3740*/	float				y;					// Player y position
+/*3744*/	float				x;					// Player x position
+/*3748*/	float				z;					// Player z position
+/*3752*/	float				heading;			// Direction player is facing
+/*3756*/	uint32				unknown3756;		//
+/*3760*/	sint32				platinum;			// Platinum Pieces on player
+/*3764*/	sint32				gold;				// Gold Pieces on player
+/*3768*/	sint32				silver;				// Silver Pieces on player
+/*3772*/	sint32				copper;				// Copper Pieces on player
+/*3776*/	sint32				platinum_bank;		// Platinum Pieces in Bank
+/*3780*/	sint32				gold_bank;			// Gold Pieces in Bank
+/*3784*/	sint32				silver_bank;		// Silver Pieces in Bank
+/*3788*/	sint32				copper_bank;		// Copper Pieces in Bank
+/*3792*/	sint32				platinum_cursor;	// Platinum on cursor
+/*3796*/	sint32				gold_cursor;		// Gold on cursor
+/*3800*/	sint32				silver_cursor;		// Silver on cursor
+/*3804*/	sint32				copper_cursor;		// Copper on cursor
+/*3808*/	sint32				platinum_shared;	// Platinum shared between characters
+/*3812*/	uint8				unknown2972[16];   	// @bp unknown skills?
+/*3832*/	uint32				skills[MAX_PP_SKILL];
+/*4132*/	uint32				unknown_skills[48];	// @bp unknown skills?
+/*4308*/	uint8				unknown3472[92];	//
+/*4400*/	uint32				perAA;				// % on the AA exp bar
+/*4404*/	uint8				unknown3564[12];	//28
+/*4416*/	uint8				pvp2;	//
+/*4417*/	uint8				unknown3591[15];	//
+/*4432*/	uint32				zone_change_count;	// Number of times user has zoned in their career (guessing)
+/*4436*/	uint8				unknown3596[20];	//
+/*4456*/	int32				ability_down;
+/*4460*/	uint8				unknown3620[20];	//
+/*4480*/	int32				expAA;
+/*4484*/	int32				unknown3644;
+/*4488*/	int32				expansion;		// expansion setting
+/*4492*/	sint32				unknown3648;
+/*4496*/	char				unknown3656[16];	//
+/*4512*/	sint32				hunger_level;
+/*4516*/	sint32				thirst_level;
+/*4520*/	int32				ability_up;
+/*4524*/	char				unknown3688[16];				
+/*4540*/	uint32				zone_id;			// Current zone of the player
+/*4544*/	SpellBuff_Struct	buffs[BUFF_COUNT];			// Buffs currently on the player
+/*4784*/	char 				groupMembers[6][64];		//
+/*5168*/	uint8				unknown4328[4]; 		//
+/*5172*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
+/*5176*/	uint32				ldon_mirugal_points;		// Earned Mirugal' Mebagerie points - Verified by Doodman
+/*5180*/	uint32				ldon_mistmoore_points;		// Earned Mismoore Catacombs Points - Verified by Doodman
+/*5184*/	uint32				ldon_rujarkian_points;		// Earned Rujarkian Hills points - Verified by Doodman
+/*5188*/	uint32				ldon_takish_points;		// Earned Takish points - Doodman: guessing based on others that were known
+/*5192*/	uint8				unknown4352[24]; 		//
+/*5216*/	uint32				ldon_available_points;		// Earned Rujarkian Hills points - Verified
+/*5220*/	uint32				unknown4380[20];
+/*5300*/	uint32				unknown4460[166];
+/*5964*/	uint32				unknown5760; //0xFF FF FF FF
+/*5968*/	uint32				unknown5764[1349]; //added in last patch, crazy bastards
+/*11364*/	uint32				aapoints_spent;
+/*11368*/	uint32				unknown11368;
+/*11372*/	uint32				aapoints;
+/*11376*/	uint32				unknown11376[10];
+};
+struct Before_Sep14th_PlayerProfile_Struct
+{
+/*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
+/*0004*/	char				name[64];			// Name of player sizes not right
+/*0068*/	char				last_name[32];		// Last name of player sizes not right
+/*0100*/	uint32				gender;				// Player Gender - 0 Male, 1 Female
+/*0104*/	uint32				race;				// Player race
+/*0108*/	uint32				class_;				// Player class
+/*0112*/	uint32				unknown0112;		//
+/*0116*/	uint32				level;				// Level of player (might be one byte)
+/*0120*/	uint32				bind_zone_id;		// Zone player is bound in
 /*0124*/	float				bind_x;				// Bind loc x coord
 /*0128*/	float				bind_y;				// Bind loc y coord
 /*0132*/	float				bind_z;				// Bind loc z coord
@@ -804,7 +948,6 @@ struct PlayerProfile_Struct
 /*5760*/	uint32				unknown5760; //0xFF FF FF FF
 /*5764*/	uint32				unknown5764[1339]; //added in last patch, crazy bastards
 };
-
 struct Before_Aug13th_PlayerProfile_Struct
 {
 /*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
@@ -847,7 +990,7 @@ struct Before_Aug13th_PlayerProfile_Struct
 /*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
 /*0256*/	uint8				unknown0256[52];
 /*0308*/	Color_Struct		item_tint[9];
-/*0344*/	AA_Array			aa_array[122];		// Length may not be right but i assume no class has more than this
+/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
 
 
 /*0588*/	char				servername[64];		// length probably not right
@@ -974,7 +1117,7 @@ struct PlayerProfile_Struct_Before_May26th
 /*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
 /*0256*/	uint8				unknown0256[52];
 /*0308*/	Color_Struct		item_tint[9];
-/*0344*/	AA_Array			aa_array[122];		// Length may not be right but i assume no class has more than this
+/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
 
 /*0588*/	char				servername[64];		// length probably not right
 /*0652*/	uint32				guildid2;		//
@@ -1100,7 +1243,7 @@ struct BeforeMay5th_PlayerProfile_Struct
 /*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
 /*0256*/	uint8				unknown0256[52];
 /*0308*/	Color_Struct		item_tint[9];
-/*0344*/	AA_Array			aa_array[122];		// Length may not be right but i assume no class has more than this
+/*0344*/	int16			aa_array[122];		// Length may not be right but i assume no class has more than this
 
 /*0588*/	char				servername[64];		// length probably not right
 /*0652*/	uint32				guildid2;		//
@@ -1226,7 +1369,7 @@ struct BeforeApr21st_PlayerProfile_Struct
 /*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
 /*0256*/	uint8				unknown0256[52];
 /*0308*/	Color_Struct		item_tint[9];
-/*0344*/	AA_Array			aa_array[122];		// Length may not be right but i assume no class has more than this
+/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
 
 /*0588*/	char				servername[64];		// length probably not right
 /*0652*/	uint32				guildid2;		//
@@ -1351,7 +1494,7 @@ struct BeforeApril14th_PlayerProfile_Struct
 /*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
 /*0256*/	uint8				unknown0256[52];
 /*0308*/	Color_Struct		item_tint[9];
-/*0344*/	AA_Array			aa_array[122];		// Length may not be right but i assume no class has more than this
+/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
 
 /*0588*/	char				servername[64];		// length probably not right
 /*0652*/	uint32				guildid2;		//
@@ -1435,10 +1578,6 @@ struct BeforeApril14th_PlayerProfile_Struct
 /*5496*/	uint32				unknown4644[46];
 };
 
-#define OLD_MAX_PP_LANGUAGE		28
-#define OLD_MAX_PP_SPELLBOOK	400
-#define OLD_MAX_PP_MEMSPELL		8
-#define OLD_MAX_PP_SKILL		75
 struct BeforeFeb18_PlayerProfile_Struct
 {
 /*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum
@@ -1481,7 +1620,7 @@ struct BeforeFeb18_PlayerProfile_Struct
 /*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
 /*0256*/	uint8				unknown0256[52];
 /*0308*/	Color_Struct		item_tint[9];
-/*0344*/	AA_Array			aa_array[122];		// Length may not be right but i assume no class has more than this
+/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
 
 /*0588*/	char				servername[64];		// length probably not right
 /*0652*/	uint32				guildid2;		//
@@ -1606,7 +1745,7 @@ struct OldPlayerProfile_Struct
 /*0220*/	uint32				item_material[9];	// Item texture/material of worn/held items
 /*0256*/	uint8				unknown0256[52];
 /*0308*/	Color_Struct		item_tint[9];
-/*0344*/	AA_Array			aa_array[122];		// Length may not be right but i assume no class has more than this
+/*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
 
 /*0588*/	char				servername[64];		// length probably not right
 /*0652*/	uint32				guildid2;		//
@@ -1625,11 +1764,11 @@ struct OldPlayerProfile_Struct
 /*0704*/	uint8				face;				// Player face
 /*0705*/	uint8				unknown0705[11];	// ?
 /*0716*/	int32				unknown712[9];		// RR GG BB 00
-/*0752*/	uint8				languages[OLD_MAX_PP_LANGUAGE];
+/*0752*/	uint8				languages[MAX_PP_LANGUAGE];
 /*0780*/	uint8				unknown0780[4];		// All 0x00
-/*0784*/	int32				spell_book[OLD_MAX_PP_SPELLBOOK];
+/*0784*/	int32				spell_book[MAX_PP_SPELLBOOK];
 /*2384*/	uint8				unknown2384[448];	// all 0xff   
-/*2832*/	int32				mem_spells[OLD_MAX_PP_MEMSPELL];
+/*2832*/	int32				mem_spells[MAX_PP_MEMSPELL];
 /*2864*/	uint8				unknown2864[32];	//
 /*2896*/	uint32				unknown2896;		//
 /*2900*/	float				y;					// Player y position
@@ -1651,7 +1790,7 @@ struct OldPlayerProfile_Struct
 /*2964*/	uint32				copper_cursor;		// Copper on cursor
 /*2968*/	uint32				platinum_shared;	// Platinum shared between characters
 /*2972*/	uint8				unknown2972[16];   	// @bp unknown skills?
-/*2992*/	uint32				skills[OLD_MAX_PP_SKILL];
+/*2992*/	uint32				skills[MAX_PP_SKILL];
 /*3288*/	uint32				unknown_skills[46];	// @bp unknown skills?
 /*3472*/	uint8				unknown3472[88];	//
 /*3560*/	uint32				perAA;				// % on the AA exp bar
@@ -1710,89 +1849,6 @@ struct TargetReject_Struct {
 struct PetCommand_Struct {
 /*000*/ int8	command;
 /*000*/ int8	unknownpcs000[7];
-};
-
-/*
-** Generic Spawn Struct
-** Length: 257 Bytes
-** Fields from old struct not yet found:
-**	float	size;
-**	float	walkspeed;	// probably one of the ff 33 33 33 3f
-**	float	runspeed;	// probably one of the ff 33 33 33 3f
-**	int8	traptype;	// 65 is disarmable trap, 66 and 67 are invis triggers/traps
-**	int8	npc_armor_graphic;	// 0xFF=Player, 0=none, 1=leather, 2=chain, 3=steelplate
-**	int8	npc_helm_graphic;	// 0xFF=Player, 0=none, 1=leather, 2=chain, 3=steelplate
-**
-*/
-struct Spawn_Struct
-{
-/*000*/	int8	npc;	// 0=player,1=npc,2=pc corpse,3=npc corpse,4=???,5=unknown spawn,10=self
-/*001*/	int8	beard;			// vesuvias - appearance fix
-/*002*/	int8	beardcolor;			// Player right eye color
-/*003*/	int8	aa_title; // 0=none, 1=general, 2=archtype, 3=class
-/*004*/	int8	unknown04[3];	// aa_title is probably an int32
-/*007*/	Color_Struct	dye_rgb[9]; 			// armor dye colors
-/*043*/ int8	class_; //class
-/*044*/ int8	unknown044[2]; // *** Placeholder 
-/*046*/ int8	cur_hp; //current hp
-/*047*/	int8	afk; // 0=not afk, 1=afk
-union {
-/*048*/	int8	equip_chest2;// Second place in packet for chest texture (usually 0xFF in live packets)
-// Not sure why there are 2 of them, but it effects chest texture!
-/*048*/	int8	mount_color;// drogmor: 0=white, 1=black, 2=green, 3=red
-// horse: 0=brown, 1=white, 2=black, 3=tan
-};
-/*049*/ int32	race; // race 
-/*053*/ int8	eyecolor1;	// vesuvias
-/*054*/ char	name[64]; // name 
-/*118*/ int8	eyecolor2;	// vesuvias
-/*119*/ int8	face;
-/*120*/ int8	invis; // 0=visible,1=invisible 
-/*121*/ int8	max_hp; // max hp 
-/*122*/ int8	pvp; // 0=Not pvp,1=pvp  solar: this is wrong
-/*123*/ int8	level; 
-/*124*/ int8	lfg; // 0=Not lfg,1=lfg 
-/*125*/ int32	heading:12; // spawn heading 
-/*****/ int32	delta_heading:10; // change in heading 
-/*****/ int32	animation:10; // animation id 
-/*129*/ sint32	deltaX:13; 
-/*****/ sint32	x:19; 
-/*133*/ sint32	y:19; 
-/*****/ sint32	deltaZ:13; 
-/*137*/ sint32	deltaY:13; 
-/*****/ sint32	z:19; 
-/*141*/ int8	hairstyle;	// vesuvias
-/*142*/ int8	haircolor;
-/*143*/ int8	unknown143[8]; 
-/*151*/ float	size; // Size 
-/*155*/ int8	helm; 
-/*156*/ float	runspeed; // 
-/*160*/ int8	gm; // 0=not GM,1=GM 
-/*161*/ float	walkspeed; // 
-/*165*/ int32	guild_id; // GuildID 
-/*169*/ int8	anon; // 0=normal,1=anon,2=roleplaying 
-/*170*/ int8	gender; // 0=male,1=female,2=other 
-/*171*/ int16	spawn_id; // Id of spawn 
-/*173*/ int8	unknown173[3]; 
-/*176*/ char	last_name[32]; // lastname 
-/*208*/ int32	equipment[9]; 
-/*244*/ int8	linkdead; // 0=Not LD, 1=LD 
-/*245*/ uint32	bodytype; // Bodytype 
-/*249*/	int8	guild_rank;
-/*250*/ int8	unknown249[4]; 
-/*254*/ uint32	pet_owner_id; 
-/*258*/ int16	deity; 
-/*260*/ int8	unknown260[31]; 
-};
-
-/*
-** New Spawn
-** Length: 176 Bytes
-** OpCode: 4921
-*/
-struct NewSpawn_Struct
-{
-	struct Spawn_Struct spawn;	// Spawn Information
 };
 
 /*
@@ -2287,6 +2343,7 @@ struct Item_Struct {
 /*006*/	uint32	Unknown006;
 /*007*/	uint32	Unknown007;
 /*008*/	uint32	Unknown008;		 //added in patch 
+/*008*/	uint32	Unknown009;		 //added in patch 
 /*008*/	uint8	ItemClass;				// Item Type: 0=common, 1=container, 2=book (quote precedes field - dunno why)
 /*009*/	char	Name[64];			// Name
 /*010*/	char	LoreName[80];		// Lore Name: *=lore, &=summoned, #=artifact, ~=pending lore
