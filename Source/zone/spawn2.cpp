@@ -55,6 +55,7 @@ Spawn2::Spawn2(int32 in_spawn2_id, int32 spawngroup_id, float in_x, float in_y, 
 	else {
 		timer->Start(0);
 	}
+	gridtimer = new Timer(10000);
 }
 
 Spawn2::~Spawn2()
@@ -98,17 +99,21 @@ bool Spawn2::Process() {
 			if (tmp) {
 				currentnpcid = npcid;
 				NPC* npc = new NPC(tmp, this, x, y, z, heading);
+				npcthis = npc;
 				npc->AddLootTable();
 				npc->SetGrid(grid_);
 				npc->SetSp2(spawngroup_id_);
 				entity_list.AddNPC(npc);
-				if (grid_ > 0)
-					npc->AssignWaypoints(grid_);
 			}
 		}
 		else {
 			Reset();
 		} 
+	}
+	if(gridtimer->Check() && npcthis){
+		gridtimer->Disable();
+		if (grid_ > 0)
+			npcthis->AssignWaypoints(grid_);
 	}
 	return true;
 }

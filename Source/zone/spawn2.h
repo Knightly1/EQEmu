@@ -19,6 +19,7 @@
 #define SPAWN2_H
 
 #include "../common/timer.h"
+#include "npc.h"
 class Spawn2
 {
 public:
@@ -44,11 +45,13 @@ public:
 protected:
 	friend class Zone;
 	Timer*	timer;
+	Timer*	gridtimer;
 private:
 	int32	resetTimer();
 
 	int32	spawngroup_id_;
 	int32	currentnpcid;
+	NPC*	npcthis;
 	float	x;
 	float	y;
 	float	z;

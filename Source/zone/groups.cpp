@@ -895,16 +895,45 @@ sint32 points = guildwars.PlayerPointsEarned(members[i]->CastToClient(),killed);
 #endif
 
 #ifdef RAIDADDICTS
-void Group::RASplitPoints(sint32 npcid)
+void Group::RASplitPointsAndEXP(uint32 exp, Mob* other)
 {
+	/* 3.0 Code
 	int i;
 	for (i = 0; i < MAX_GROUP_MEMBERS; i++)
 	{
 		if (members[i] != NULL && members[i]->IsClient())
-	 		{
+    		{
 				raidaddicts.NPCDeathProcess(npcid, members[i]);
 		}
-	}	
+	} */
+
+	int i; 
+	uint32 groupexp = exp; 
+	int8 membercount = 0; 
+	int8 maxlevel = 1; 
+	for (i = 0; i < MAX_GROUP_MEMBERS; i++) { 
+		if (members[i] != NULL) { 
+			if(members[i]->GetLevel() > maxlevel) maxlevel = members[i]->GetLevel();
+			membercount++;
+		}
+	}
+
+	if (membercount == 0) 
+		return; 
+
+	for (i = 0; i < MAX_GROUP_MEMBERS; i++) { 
+		if (members[i] != NULL && members[i]->IsClient()) { // If Group Member is Client
+			if(members[i]->GetLevelCon(other->GetLevel()) != CON_GREEN) {// If Mob doesn't con green
+				sint16 diff = members[i]->GetLevel() - maxlevel; 
+				if (diff >= -8){
+					if (!raidaddicts.NPCDeathProcess(other->GetNPCTypeID(), members[i], ((members[i]->GetLevel()+3) * (members[i]->GetLevel()+3) * 75*3.5f < groupexp/membercount ) ? (int32)(members[i]->GetLevel() * members[i]->GetLevel() * 75*3.5f):(int32)(groupexp/membercount))) {
+						members[i]->CastToClient()->AddEXP(((members[i]->GetLevel()+3) * (members[i]->GetLevel()+3) * 75*3.5f < groupexp/membercount ) ? (int32)(members[i]->GetLevel() * members[i]->GetLevel() * 75*3.5f):(int32)(groupexp/membercount) ); 
+						members[i]->CastToClient()->Message(15, "You did not recieve any points from this creature.");
+					}
+				} 
+			} 
+		}
+	} 
 }
 #endif
 

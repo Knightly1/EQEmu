@@ -91,7 +91,7 @@ public:
 #endif
 
 #ifdef RAIDADDICTS
-	void	RASplitPoints(sint32 npcid);
+	void	RASplitPointsAndEXP(uint32 exp, Mob* other);
 #endif
 
 private:

@@ -378,8 +378,8 @@ bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_curs
 	// #2: Stackable item?
 	if (inst.IsStackable())
 	{
-		TryStacking(&inst, ItemPacketTrade, try_worn, try_cursor);
-		return true;
+		if(TryStacking(&inst, ItemPacketTrade, try_worn, try_cursor))
+			return true;
 	}
 
 	// #3: put it in inventory

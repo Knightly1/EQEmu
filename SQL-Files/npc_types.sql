@@ -45,6 +45,7 @@ CREATE TABLE npc_types (
   runspeed float NOT NULL default '0',
   npc_spells_id int(11) unsigned NOT NULL default '0',
   npc_faction_id int(11) NOT NULL default '0',
+  npc_aggro TINYINT NOT NULL DEFAULT '0',
   PRIMARY KEY  (id)
 ) TYPE=MyISAM;
 

@@ -1944,6 +1944,7 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	if(give_exp && give_exp->GetOwner() != 0)
 		give_exp = give_exp->GetOwner();
 	
+#ifndef RAIDADDICTS // If we aren't Raid Addicts
 #ifdef IPC
 	if (give_exp && (give_exp->IsClient() || give_exp->CastToNPC()->IsInteractive()) && !IsCorpse() )
 #else
@@ -1982,7 +1983,11 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 		hate_list.DoFactionHits(GetNPCFactionID());
 	}
 
-#ifdef RAIDADDICTS
+#else // IF We are Raid Addicts
+	hate_list.DoFactionHits(GetNPCFactionID());
+	raidaddicts.NPCDeath(this, give_exp);
+
+	/* Old 3.0 Raid Addicts Code
 	if (give_exp->GetLevelCon(GetLevel()) != CON_GREEN && MerchantType == 0) { // Check if Mob is not Green
 		if (give_exp->CastToClient()->isgrouped && entity_list.GetGroupByClient(give_exp->CastToClient()) != 0) { // Check if Player is Grouped.
 			entity_list.GetGroupByClient(give_exp->CastToClient())->RASplitPoints(GetNPCTypeID());
@@ -1992,7 +1997,8 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 			}
 		}
 	} else { give_exp->CastToClient()->Message(15,"You do not recieve points from a Green Creature."); }
-#endif
+	*/
+#endif // End Raid Addicts
 	
 	if (respawn2 != 0) {
 		respawn2->Reset();

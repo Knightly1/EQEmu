@@ -140,7 +140,15 @@ SOURCE=.\client.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\client_logs.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\client_mods.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\client_packet.cpp
 # End Source File
 # Begin Source File
 
@@ -240,6 +248,10 @@ SOURCE=..\common\ptimer.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\questmgr.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\spawn2.cpp
 # End Source File
 # Begin Source File
@@ -269,6 +281,10 @@ SOURCE=.\trading.cpp
 # Begin Source File
 
 SOURCE=.\trap.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\tribute.cpp
 # End Source File
 # Begin Source File
 
