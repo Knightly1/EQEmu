@@ -1103,7 +1103,8 @@ string ItemCommonInst::Serialize(sint16 slot_id) const
 		"%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|"	// ended with Color
 		"%i|%i|%i|%i|%i|%i|%i|%6.6f|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|"	// ended with SpellShield
 		"%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%s|%i|%i|%i|%i|%i|%i|%i|%i|%i|"	// ended with Unknown100
-		"0|0|0|0|0|0||%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|0|-1\"",										// bag/books stuff
+		"0|0|0|0|0|0||%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|" //-1
+		"%i|%i|%i|%i|%i|0\"",										// bag/books stuff
 		ItemInst::Serialize(slot_id).c_str(),
 		common->Unknown018,
 		common->Unknown019,
@@ -1201,7 +1202,14 @@ string ItemCommonInst::Serialize(sint16 slot_id) const
 		item->hpregen,
 		item->manaregen,
 		item->hastepercent,
-		item->damageshield
+		item->damageshield,
+		item->unknown122,
+		-1,//item->unknown123,
+		item->unknown126,
+		item->unknown127,
+		-1,//item->unknown128,
+		item->unknown129,
+		item->unknown130
 		);
 	serialized=ch;
 	

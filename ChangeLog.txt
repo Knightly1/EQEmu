@@ -2,6 +2,7 @@ EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 ==11/01/2004
 LethalEncounter: Inventory items on zone in are now sent in one packet like live instead of individual packets.  This will save on bandwidth and processing time.
+Cofruben: Added support for /makeleader command.
 
 ==10/31/2004
 LethalEncounter: Aside from a few tweeks, merchants are finished.  They will now keep your items after you sell them like live.
