@@ -3633,6 +3633,25 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					}
 					break;
 				}
+				case OP_GroupUpdate: {
+					GroupUpdate2_Struct* gu=(GroupUpdate2_Struct*)app->pBuffer;
+					if(gu->action == 8){//Cofruben: should we care only about the action 8?
+						APPLAYER* outapp=new APPLAYER(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+						Client* client=entity_list.GetClientByName(gu->yourname);
+						Client* client2=entity_list.GetClientByName(gu->membername[0]);
+						Group* g=entity_list.GetGroupByClient(client);
+						if(!g->IsLeader(client->CastToMob()))break;
+						for(int z=0;z<6;z++)
+							if(g && g->members[z]!= NULL && g->members[z]->IsClient())
+								g->members[z]->CastToClient()->QueuePacket(app);
+						g->SetLeader(client2->CastToMob());
+					}
+					else {
+						printf("Unknown action in OP_GroupUpdate:\n");
+						DumpPacket(app);
+					}
+					break;
+				}
 				case OP_GroupDisband: {
 					printf("Member Disband Request\n");
 					
@@ -6085,7 +6104,7 @@ void Client::BulkSendInventoryItems()
 			ptr+=length+1;
 		}
 	}
-	DumpPacket(outapp);
+	//DumpPacket(outapp);
 	outapp->Deflate();
 	QueuePacket(outapp);
 	safe_delete(outapp);
