@@ -1,5 +1,8 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==11/07/2004
+LethalEncounter: Added in three variables per feature request.
+
 ==11/06/2004
 LethalEncounter: Fixed Merchant bug that wouldnt let you buy anything.
 LethalEncounter: Fixed stack bug that wouldnt automatically stack any items you bought.
