@@ -1343,7 +1343,6 @@ AdventureInfo Database::GetAdventureInfo(int32 questid,int32 mobid,int8 advtype)
 				rvalue.status=atoi(row[13]);
 				rvalue.QuestID=atoi(row[14]);
 				mysql_free_result(result);
-				return rvalue;
 			}
 		}
 		else
@@ -1369,19 +1368,17 @@ AdventureInfo Database::GetAdventureInfo(int32 questid,int32 mobid,int8 advtype)
 				rvalue.status=atoi(row[13]);
 				rvalue.QuestID=atoi(row[14]);
 				safe_delete_array(query);
-				return rvalue;
 			}
 			else {
 				memset(&rvalue,0,sizeof(rvalue));
 				rvalue.in_use=true;
-				return rvalue;
 			}
 		}
 		else
 			printf("etAdvInfo error: %s\n",errbuf);
 	}
 	safe_delete_array(query);
-
+	return rvalue;
 }
 void Database::SetAdventureInfo(int32 questid,bool inuse,int32 status){
 	char errbuf[MYSQL_ERRMSG_SIZE];
