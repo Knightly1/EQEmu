@@ -319,6 +319,10 @@ SOURCE=.\PlayerCorpse.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\ptimer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\spawn2.cpp
 # End Source File
 # Begin Source File
@@ -878,4 +882,3 @@ SOURCE=..\readme.txt
 # End Group
 # End Target
 # End Project
-
