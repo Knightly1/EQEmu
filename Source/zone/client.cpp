@@ -188,7 +188,8 @@ Client::Client(EQNetworkConnection* ieqnc)
 	stamina_timer = new Timer(46000);
 	position_timer = new Timer(250);
 	position_timer->Disable();
-	hpregen_timer = new Timer(1800);
+	hpregen_timer = new Timer(6000);
+	hpupdate_timer = new Timer(15000);
 	position_timer_counter = 0;
 	camp_timer = new Timer(29000);
 	ooc_timer = new Timer(1000);
@@ -257,6 +258,7 @@ Client::~Client() {
 	Save(2); // This fails when database destructor is called first on shutdown	
 	safe_delete(position_timer);
 	safe_delete(hpregen_timer);
+	safe_delete(hpupdate_timer);
 	safe_delete(camp_timer);
 	safe_delete(process_timer);
 	safe_delete(disc_timer);
@@ -774,7 +776,21 @@ bool Client::AddPacket(APPLAYER** pApp, bool bAckreq) {
     return true;
 }
 
-
+void Client::HPTick(){
+	if(GetHP()<GetMaxHP()){
+		sint32 normal_regen = LevelRegen();
+		sint32 item_regen = itembonuses->HPRegen;
+		sint32 spell_regen = CastToMob()->GetSpellHPRegen();
+		sint32 total_regen = normal_regen + item_regen + spell_regen;
+		sint32 newhp = GetHP() + total_regen;
+		if(newhp > GetMaxHP())
+			SetHP(GetMaxHP());
+		else
+			SetHP(newhp);
+	}
+	if(hpupdate_timer->Check())
+		SendHPUpdate();
+}
 sint32 Client::LevelRegen()
 {
 	sint32 hp = 0;
@@ -2035,11 +2051,23 @@ sint32 Client::CalcMaxMana()
 	switch(GetCasterClass())
 	{
 		case 'I': {
-			max_mana = (int32)(((GetINT()/5)+2) * GetLevel()) +spellbonuses->Mana + itembonuses->Mana;
+			float mana_calc = GetINT();
+			mana_calc /= 5;
+			mana_calc += 2;
+			mana_calc *= GetLevel();
+			max_mana = mana_calc + spellbonuses->Mana + itembonuses->Mana;
+			if(GetLevel() > 2)
+				max_mana += (GetLevel()/2)-1;
 			break;
 				  }
 		case 'W': {
-			max_mana = (((GetWIS()/5)+2) * GetLevel()) + spellbonuses->Mana + itembonuses->Mana;
+			float mana_calc = GetWIS();
+			mana_calc /= 5;
+			mana_calc += 2;
+			mana_calc *= GetLevel();
+			max_mana = mana_calc + spellbonuses->Mana + itembonuses->Mana;
+			if(GetLevel() > 2)
+				max_mana += (GetLevel()/2)-1;
 			break;
 				  }
 		case 'N': {

@@ -323,15 +323,7 @@ int Client::HandlePacket(const APPLAYER *app)
 				safe_delete(outapp);
 			}
 			else if (app->opcode == OP_WearChange) {
-				// Last one recv'd for all clients, apparently
 				break;
-				/*if (app->pBuffer[9] == 6)
-				{
-					CompleteConnect();
-				}*/
-			}
-			else if ((app->opcode == OP_ClientUpdate) || (app->opcode == OP_ClientReady)) {
-				CompleteConnect();
 			}
 			else if (app->opcode == OP_SpawnAppearance) {
 				// Not sure if we should handle this
@@ -1098,48 +1090,7 @@ sa->parameter = 0;
 						UpdateWho();
 					}
 					else if ((sa->type == AT_HP) && (dead == 0)) {
-						// this is the client notifing the server of a hp regen tic
-						sint32 normal_regen = LevelRegen();
-						sint32 item_regen = itembonuses->HPRegen;
-						sint32 spell_regen = CastToMob()->GetSpellHPRegen();
-						sint32 total_regen = normal_regen + item_regen + spell_regen;
-						sint32 sa_hp = (sint32)sa->parameter;
-#ifdef SOLAR
-/*
-						static sint32 last_time = Timer::GetCurrentTime();
-						LogFile->write(EQEMuLog::Debug, "%d Regen tick: for %s - server hp: %d requested hp: %d normal regen: %i item regen: %i spell regen: %i  total = %i", Timer::GetCurrentTime()-last_time, GetName(), GetHP(), sa->parameter, normal_regen, item_regen, spell_regen, total_regen);
-						last_time = Timer::GetCurrentTime();
-*/
-#endif						
-						if(GetHP() != sa_hp)	// client echos it back after we update
-						{
-							if(hpregen_timer->Check())
-							{
-								attack_flag = false;
-#if EQDEBUG >= 5
-								if
-								(
-									sa_hp > GetHP() &&
-									sa_hp - GetHP() != total_regen
-								)
-								{
-									LogFile->write(
-										EQEMuLog::Debug, 
-										"HP Regen calculation problem: client %s  our regen: %d  from client: %d",
-										GetName(), total_regen, sa_hp - GetHP()
-									);
-								}
-#endif
-								SetHP(GetHP() + total_regen);
-							}
-							else
-							{
-#if EQDEBUG >= 5
-								LogFile->write(EQEMuLog::Debug, "Client %s sent a regen tick but the timer is not up.", GetName());
-#endif
-							}
-						}
-						SendHPUpdate();
+						break;
 					}
 					else if (sa->type == AT_AFK) {
 						this->AFK = (sa->parameter == 1);
@@ -5082,9 +5033,9 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	sze->player.spawn.npc=0;
 	sze->player.spawn.unknown367[0]=0xFFFFFFFF;
 	sze->player.spawn.unknown367[1]=0xFFFFFFFF;
+	sze->player.spawn.z*=10.5;
 	QueuePacket(outapp);
 	safe_delete(outapp);
-	
 	
 	
 	
@@ -5157,18 +5108,17 @@ void Client::CompleteConnect()
 
 	QueuePacket(outapp);
 	safe_delete(outapp);
-	
 	///////////////////////////////////////////////////////
 	// Stamina packet
-	outapp = new APPLAYER(OP_Stamina, sizeof(Stamina_Struct));
+	/*outapp = new APPLAYER(OP_Stamina, sizeof(Stamina_Struct));
 	Stamina_Struct* sta = (Stamina_Struct*)outapp->pBuffer;
 	sta->food = 6000;
 	sta->water = 6000;
 	outapp->priority = 6;
 	outapp->Deflate();
-
+	
 	QueuePacket(outapp);
-	safe_delete(outapp);
+	safe_delete(outapp);*/
 	//SendAATable();
 	
 	/*for (int i=0; i<BUFF_COUNT; i++) {
@@ -5177,16 +5127,14 @@ void Client::CompleteConnect()
 		}
 	}*/
 	
-	
-	position_timer->Start();
 	hpregen_timer->Start();
+	position_timer->Start();
 	SetDuelTarget(0);
 	SetDueling(false);
 		
 	UpdateWho();
 	database.UpdateTimersClientConnected(CharacterID());
 	client_state = CLIENT_CONNECTED;
-	SendManaUpdatePacket();
 	if(!m_inv[SLOT_CURSOR]){
 		for(int ndx=0;ndx<10;ndx++){
 			if(m_inv[8000+ndx]){
@@ -5291,7 +5239,10 @@ bool Client::Process() {
 			return false;
 		if(dead && dead_timer->Check())
 			return false;
-
+		if(hpregen_timer->Check()){
+			HPTick();
+			SendManaUpdatePacket();
+		}
 		if(LDTimer->Check()){
 			Save();
 			return false; //delete client
