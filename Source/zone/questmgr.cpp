@@ -133,6 +133,8 @@ void QuestManager::EndQuest() {
 				tmp++;
 				TimerList.erase(cur);
 				cur = tmp;
+			} else {
+				cur++;
 			}
 		}
 		
