@@ -2346,91 +2346,87 @@ struct ExpUpdate_Struct
 */
 struct ItemCommon_Struct {
 /*index*/
-/*018*/	sint32	Unknown018;
-/*019*/	uint32	Unknown019;
-/*020*/	uint32	Unknown020;
-/*021*/	bool	Tradeskills;		// Is this a tradeskill item?
-/*022*/	sint8	SvCold;				// Save vs Cold
-/*023*/	sint8	SvDisease;			// Save vs Disease
-/*024*/	sint8	SvPoison;			// Save vs Poison
-/*025*/	sint8	SvMagic;			// Save vs Magic
-/*026*/	sint8	SvFire;				// Save vs Fire
-/*027*/	sint8	STR;				// Strength
-/*028*/	sint8	STA;				// Stamina
-/*029*/	sint8	AGI;				// Agility
-/*030*/	sint8	DEX;				// Dexterity
-/*031*/	sint8	CHA;				// Charisma
-/*032*/	sint8	INT;				// Intelligence
-/*033*/	sint8	WIS;				// Wisdom
-/*034*/	sint32	HP;					// HP
-/*035*/	sint32	Mana;				// Mana
-/*036*/	sint32	AC;					// AC
-/*037*/	uint32	Deity;				// Bitmask of Deities that can equip this item
-/*038*/	sint32	SkillModValue;		// % Mod to skill specified in SkillModType
-/*039*/	uint32	SkillModType;		// Type of skill for SkillModValue to apply to
-/*040*/	uint32	BaneDmgRace;		// Bane Damage Race
-/*041*/	sint8	BaneDmg;			// Bane Damage
-/*042*/	uint32	BaneDmgBody;		// Bane Damage Body
-/*043*/	bool	Magic;				// True=Magic Item, False=not
-/*044*/	sint32	casttime2;
-/*045*/	uint8	ProcLevel;			// Proc lvl
-/*046*/	uint8	RequiredLevel;		// Required Level to use item
-/*047*/	uint32	BardSkillType;		// Bard Skill Type
-/*048*/	sint32	BardSkillAmt;		// Bard Skill Amount
-/*049*/	sint8	Light;				// Light
-/*050*/	uint8	Delay;				// Delay * 10
-/*051*/	uint8	RecommendedLevel;	// Recommended level to use item
-/*052*/	uint8	RecommendedSkill;	// Recommended skill to use item (refers to primary skill of item)
-/*053*/	uint8	ElemDmgType;		// Elemental Damage Type (1=magic, 2=fire)
-/*054*/	uint8	ElemDmg;			// Elemental Damage
-/*055*/	uint8	EffectType;			// Effect Type: 0=combat proc, 1=clicky, 2=worn, 3=expendable charges, 4=must equip clicky, 5=clicky (again?)
-/*056*/	uint8	Range;				// Range of item
-/*057*/	uint8	Damage;				// Delay between item usage (in 0.1 sec increments)
-/*058*/	uint32	Color;				// RR GG BB 00 <-- as it appears in pc
-/*059*/	uint32	Classes;			// Bitfield of classes that can equip item (1 << class#)
-/*060*/	uint32	Races;				// Bitfield of races that can equip item (1 << race#)
-/*061*/	uint32	Unknown061;
-/*062*/	sint32	SpellId;			// Spell Id of effect, if item has one
-/*063*/	sint16	MaxCharges;			// Maximum charges items can hold: -1 if not a chargeable item
-/*064*/	uint8	ItemUse;			// Item Type/Skill (itemClass* from above)
-/*065*/	uint8	Material;			// Item material type
-/*066*/	float	SellRate;			// Sell rate
-/*067*/	uint32	Unknown067;
-	union {
-/*068*/	uint32	Fulfilment;			// Food fulfilment (How long it lasts)
-/*068*/	sint16	CastTime;			// Cast Time for clicky effects, in milliseconds
-	};
-/*069*/	uint32	Unknown069;
-/*070*/	uint32	ProcRateMod;
-/*071*/	sint32	FocusId;			// Focus Effect Id
-/*072*/	sint8	CombatEffects;		// PoP: Combat Effects +
-/*073*/	sint8	Shielding;			// PoP: Shielding %
-/*074*/	sint8	StunResist;			// PoP: Stun Resist %
-/*075*/	sint8	StrikeThrough;		// PoP: Strike Through %
-/*076*/	uint32	CombatSkill;
-/*077*/	uint32	CombatSkillDmg;
-/*078*/	sint8	SpellShield;		// PoP: Spell Shield %
-/*079*/	sint8	Avoidance;			// PoP: Avoidance +
-/*080*/	sint8	Accuracy;			// PoP: Accuracy +
-/*081*/	uint32	Unknown081;
-/*081*/	sint32	FactionMod1;		// Faction Mod 1
-/*082*/	sint32	FactionMod2;		// Faction Mod 2
-/*083*/	sint32	FactionMod3;		// Faction Mod 3
-/*084*/	sint32	FactionMod4;		// Faction Mod 4
-/*085*/	sint32	FactionAmt1;		// Faction Amt 1
-/*086*/	sint32	FactionAmt2;		// Faction Amt 2
-/*087*/	sint32	FactionAmt3;		// Faction Amt 3
-/*088*/	sint32	FactionAmt4;		// Faction Amt 4
-/*090*/	char	CharmFile[32];		// ?
-/*091*/	uint32	augtype;
-/*092*/	uint8	AugSlot1Type;		// LDoN: Augment Slot 1 Type
-/*093*/	uint8	AugSlot2Type;		// LDoN: Augment Slot 2 Type
-/*094*/	uint8	AugSlot3Type;		// LDoN: Augment Slot 3 Type
-/*095*/	uint8	AugSlot4Type;		// LDoN: Augment Slot 4 Type
-/*096*/	uint8	AugSlot5Type;		// LDoN: Augment Slot 5 Type
-/*097*/	uint32	ldonpointtheme;
-/*098*/	uint32	ldonpointcost;
-/*099*/	uint32	ldonsold;
+/* 021 */	sint32	Unknown021;
+/* 022 */	uint32	Unknown022;
+/* 023 */	uint32	Unknown023;
+/* 024 */	bool	Tradeskills;		// Is this a tradeskill item?
+/* 025 */	sint8	SvCold;				// Save vs Cold
+/* 026 */	sint8	SvDisease;			// Save vs Disease
+/* 027 */	sint8	SvPoison;			// Save vs Poison
+/* 028 */	sint8	SvMagic;			// Save vs Magic
+/* 029 */	sint8	SvFire;				// Save vs Fire
+/* 030 */	sint8	STR;				// Strength
+/* 031 */	sint8	STA;				// Stamina
+/* 032 */	sint8	AGI;				// Agility
+/* 033 */	sint8	DEX;				// Dexterity
+/* 034 */	sint8	CHA;				// Charisma
+/* 035 */	sint8	INT;				// Intelligence
+/* 036 */	sint8	WIS;				// Wisdom
+/* 037 */	sint32	HP;					// HP
+/* 038 */	sint32	Mana;				// Mana
+/* 039 */	sint32	AC;					// AC
+/* 040 */	uint32	Deity;				// Bitmask of Deities that can equip this item
+/* 041 */	sint32	SkillModValue;		// % Mod to skill specified in SkillModType
+/* 042 */	uint32	SkillModType;		// Type of skill for SkillModValue to apply to
+/* 043 */	uint32	BaneDmgRace;		// Bane Damage Race
+/* 044 */	sint8	BaneDmg;			// Bane Damage
+/* 045 */	uint32	BaneDmgBody;		// Bane Damage Body
+/* 046 */	bool	Magic;				// True=Magic Item, False=not
+/* 047 */	sint32	casttime2;
+/* 048 */	uint8	ProcLevel;			// Proc lvl
+/* 049 */	uint8	RequiredLevel;		// Required Level to use item
+/* 050 */	uint32	BardSkillType;		// Bard Skill Type
+/* 051 */	sint32	BardSkillAmt;		// Bard Skill Amount
+/* 052 */	sint8	Light;				// Light
+/* 053 */	uint8	Delay;				// Delay * 10
+/* 054 */	uint8	RecommendedLevel;	// Recommended level to use item
+/* 055 */	uint8	RecommendedSkill;	// Recommended skill to use item (refers to primary skill of item)
+/* 056 */	uint8	ElemDmgType;		// Elemental Damage Type (1=magic, 2=fire)
+/* 057 */	uint8	ElemDmg;			// Elemental Damage
+/* 058 */	uint8	EffectType;			// Effect Type: 0=combat proc, 1=clicky, 2=worn, 3=expendable charges, 4=must equip clicky, 5=clicky (again?)
+/* 059 */	uint8	Range;				// Range of item
+/* 060 */	uint8	Damage;				// Delay between item usage (in 0.1 sec increments)
+/* 061 */	uint32	Color;				// RR GG BB 00 <-- as it appears in pc
+/* 062 */	uint32	Classes;			// Bitfield of classes that can equip item (1 << class#)
+/* 063 */	uint32	Races;				// Bitfield of races that can equip item (1 << race#)
+/* 064 */	uint32	Unknown064;
+/* 065 */	sint32	SpellId;			// Spell Id of effect, if item has one
+/* 066 */	sint16	MaxCharges;			// Maximum charges items can hold: -1 if not a chargeable item
+/* 067 */	uint8	ItemUse;			// Item Type/Skill (itemClass* from above)
+/* 068 */	uint8	Material;			// Item material type
+/* 069 */	float	SellRate;			// Sell rate
+/* 070 */	uint32	Unknown070;
+/* 071 */	union {
+			uint32  Fulfilment;                     // Food fulfilment (How long it lasts)
+			sint16  CastTime;                       // Cast Time for clicky effects, in milliseconds
+		};
+/* 072 */	uint32	Unknown072;
+/* 073 */	uint32	ProcRateMod;
+/* 074 */	sint32	FocusId;			// Focus Effect Id
+/* 075 */	sint8	CombatEffects;		// PoP: Combat Effects +
+/* 076 */	sint8	Shielding;			// PoP: Shielding %
+/* 077 */	sint8	StunResist;			// PoP: Stun Resist %
+/* 078 */	sint8	StrikeThrough;		// PoP: Strike Through %
+/* 079 */	uint32	CombatSkill;
+/* 080 */	uint32	CombatSkillDmg;
+/* 081 */	sint8	SpellShield;		// PoP: Spell Shield %
+/* 082 */	sint8	Avoidance;			// PoP: Avoidance +
+/* 083 */	sint8	Accuracy;			// PoP: Accuracy +
+/* 084 */	uint32	CharmFormula;
+/* 085 */	sint32	FactionMod1;		// Faction Mod 1
+/* 086 */	sint32	FactionMod2;		// Faction Mod 2
+/* 087 */	sint32	FactionMod3;		// Faction Mod 3
+/* 088 */	sint32	FactionMod4;		// Faction Mod 4
+/* 089 */	sint32	FactionAmt1;		// Faction Amt 1
+/* 090 */	sint32	FactionAmt2;		// Faction Amt 2
+/* 091 */	sint32	FactionAmt3;		// Faction Amt 3
+/* 092 */	sint32	FactionAmt4;		// Faction Amt 4
+/* 093 */	char	CharmFile[32];		// ?
+/* 094 */	uint32	augtype;
+/* 095-099 */	uint8	AugSlotType[5];		// LDoN: Augment Slot 1-5 Type
+/* 100 */	uint32	ldonpointtheme;
+/* 101 */	uint32	ldonpointcost;
+/* 102 */	uint32	ldonsold;
 };
 
 /*
@@ -2440,9 +2436,9 @@ struct ItemCommon_Struct {
 */
 struct ItemBook_Struct {
 /*index*/
-/*104*/	uint8	BookType;			// 0=rolled up note, 1=book
-/*105*/	uint32	Unknown105;
-/*106*/	char	File[15];			// ?
+/* 107 */	uint8	BookType;			// 0=rolled up note, 1=book
+/* 108 */	uint32	Unknown108;
+/* 109 */	char	File[15];			// ?
 };
 
 /*
@@ -2452,10 +2448,10 @@ struct ItemBook_Struct {
 */
 struct ItemContainer_Struct { 
 /*index*/
-/*100*/	uint8	PackType;			// 0:Small Bag, 1:Large Bag, 2:Quiver, 3:Belt Pouch ... there are 50 types
-/*101*/	uint8	Slots;				// Number of slots: can only be 2, 4, 6, 8, or 10
-/*102*/	uint8	SizeCapacity;		// 0:TINY, 1:SMALL, 2:MEDIUM, 3:LARGE, 4:GIANT 
-/*103*/	uint8	WeightReduction;	// 0->100
+/* 103 */	uint8	PackType;			// 0:Small Bag, 1:Large Bag, 2:Quiver, 3:Belt Pouch ... there are 50 types
+/* 104 */	uint8	Slots;				// Number of slots: can only be 2, 4, 6, 8, or 10
+/* 105 */	uint8	SizeCapacity;		// 0:TINY, 1:SMALL, 2:MEDIUM, 3:LARGE, 4:GIANT 
+/* 106 */	uint8	WeightReduction;	// 0->100
 
 // @merth: From old struct, we still haven't located these values:
 // Open		// ?
@@ -2494,61 +2490,58 @@ struct Item_Struct {
 
 	// Packet based fields
 /*index*/
-/*001*/	sint16	Charges;			// Instance data (just here as FYI)
-/*002*/	uint32	Unknown002;
-/*003*/	sint16	CurrentEquipSlot;	// Instance data (just here as FYI)
-/*004*/	uint32	MerchantPrice;	// Instance data (just here as FYI)
-/*005*/	uint32	Unknown005;
-/*006*/	uint32	Unknown006;
-/*007*/	uint32	Unknown007;
-/*008*/	uint32	SpellCharges;		 //added in patch 
-/*008*/	uint32	Attuneable;		 //new attuneable flag 0=not attune, 1=attune
-/*008*/	uint8	ItemClass;				// Item Type: 0=common, 1=container, 2=book (quote precedes field - dunno why)
-/*009*/	char	Name[64];			// Name
-/*010*/	char	LoreName[80];		// Lore Name: *=lore, &=summoned, #=artifact, ~=pending lore
-/*011*/	char	IDFile[30];			// Visible model
-/*012*/	uint32	ItemNumber;			// Unique ID (also PK for DB)
-/*013*/	uint8	Weight;				// Item weight * 10
-/*014*/	uint8	NoRent;				// No Rent: 0=norent, 255=not norent
-/*015*/	uint8	NoDrop;				// No Drop: 0=nodrop, 255=not nodrop
-/*016*/	uint8	Size;				// Size: 0=tiny, 1=small, 2=medium, 3=large, 4=giant
-/*017*/	uint32	EquipSlots;			// Bitfield for which slots this item can be used in
-/*018*/	uint32	Cost;				// Item cost (?)
-/*019*/	uint32	IconNumber;			// Icon Number
+/* 000 */	sint16	Charges;			// Instance data (just here as FYI)
+/* 001 */	uint32	Unknown001;
+/* 002 */	sint16	CurrentEquipSlot;	// Instance data (just here as FYI)
+/* 003 */	uint32	MerchantPrice;	// Instance data (just here as FYI)
+/* 004 */	uint32	Unknown004;
+/* 005 */	uint32	Unknown005;
+/* 006 */	uint32	Unknown006;
+/* 007 */	uint32	SpellCharges;		 //added in patch 
+/* 008 */	uint32	Attuneable;		 //new attuneable flag 0=not attune, 1=attune
+/* 009 */	uint8	ItemClass;				// Item Type: 0=common, 1=container, 2=book (quote precedes field - dunno why)
+/* 010 */	char	Name[64];			// Name
+/* 011 */	char	LoreName[80];		// Lore Name: *=lore, &=summoned, #=artifact, ~=pending lore
+/* 012 */	char	IDFile[30];			// Visible model
+/* 013 */	uint32	ItemNumber;			// Unique ID (also PK for DB)
+/* 014 */	uint8	Weight;				// Item weight * 10
+/* 015 */	uint8	NoRent;				// No Rent: 0=norent, 255=not norent
+/* 016 */	uint8	NoDrop;				// No Drop: 0=nodrop, 255=not nodrop
+/* 017 */	uint8	Size;				// Size: 0=tiny, 1=small, 2=medium, 3=large, 4=giant
+/* 018 */	uint32	EquipSlots;			// Bitfield for which slots this item can be used in
+/* 019 */	uint32	Cost;				// Item cost (?)
+/* 020 */	uint32	IconNumber;			// Icon Number
 
 			union   {
-/*020->100*/	ItemCommon_Struct		Common;
-/*101->104*/	ItemContainer_Struct	Container;
-/*105->107*/	ItemBook_Struct			Book;
+/* 021->102 */	ItemCommon_Struct		Common;
+/* 103->106 */	ItemContainer_Struct	Container;
+/* 107->109 */	ItemBook_Struct			Book;
             };
 
-/*107*/	uint32	banedmgamt2;
-/*108*/	uint32	augmentrestriction;
-/*109*/	bool	loreflag;
-/*110*/	bool	pendingloreflag;
-/*111*/	bool	artifactflag;
-/*112*/	bool	summonedflag;
-/*113*/	uint32	tribute;
-/*114*/ bool	gm;
-/*115*/	uint32	endur;
-/*116*/	uint32	dotshielding;
-/*117*/	uint32	attackbonus;
-/*118*/	uint32	hpregen;
-/*119*/	uint32	manaregen;
-/*120*/	uint32	hastepercent;
-/*121*/	uint32	damageshield;
-/*122*/	uint32	unknown122;		//prolly recastdelay, per lucy
-/*123*/	uint32	unknown123;		//prolly recasttype
-/*124*/	uint32	unknown124;
-/*125*/	uint32	unknown125;
-/*126*/	uint32	unknown126;
-/*127*/	uint32	unknown127;
-/*128*/	uint32	unknown128;
-/*129*/	uint32	unknown129;
-/*130*/	uint32	unknown130;
-/*131*/	uint32	unknown131;
-/*132*/	uint32	unknown132;
-/*133*/	uint32	unknown133;
+/* 110 */	uint32  banedmgamt2;
+/* 111 */	uint32	augmentrestriction;
+/* 112 */	bool	loreflag;
+/* 113 */	bool	pendingloreflag;
+/* 114 */	bool	artifactflag;
+/* 115 */	bool	summonedflag;
+/* 116 */	uint32	tribute;
+/* 117 */	bool    gm;
+/* 118 */	uint32	endur;
+/* 119 */	uint32	dotshielding;
+/* 120 */	uint32	attackbonus;
+/* 121 */	uint32	hpregen;
+/* 122 */	uint32	manaregen;
+/* 123 */	uint32	hastepercent;
+/* 124 */	uint32	damageshield;
+/* 125 */	uint32	unknown125;		//prolly recastdelay, per lucy
+/* 126 */	uint32	unknown126;		//prolly recasttype
+/* 127 */	uint32	unknown127;
+/* 128 */	uint32  distiller;
+/* 129 */	uint32	unknown129;
+/* 130 */	uint32	unknown130;
+/* 131 */	uint32	unknown131;
+/* 132 */	uint32	unknown132;
+/* 133 */	uint32	unknown133;
 };
 
 /*
@@ -3198,6 +3191,13 @@ struct NewCombine_Struct {
 /*04*/
 };
 
+struct AugmentItem_Struct { 
+/*00*/	sint16	container_slot;
+/*02*/	char	unknown02[2];
+/*04*/	sint32	augment_slot;
+/*08*/
+};
+
 // OP_Emote
 struct Emote_Struct {
 /*0000*/	int32 unknown01;
@@ -3434,7 +3434,8 @@ struct ClickObjectAck_Struct {
 /*12*/	uint32	type;		// See object.h, "Object Types"
 /*16*/	uint32	unknown16;	//
 /*20*/	uint32	icon;		// Icon to display for tradeskill containers
-/*24*/
+/*24*/	uint32	unknown24;	//
+/*28*/	char	object_name[32]; // Object name to display
 };
 
 /*

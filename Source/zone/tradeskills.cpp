@@ -29,6 +29,66 @@
 #include "../common/packet_dump.h"
 #include "StringIDs.h"
 
+void Object::HandleAugmentation(Client* user, const AugmentItem_Struct* in_augment, Object *worldo)
+{
+	if (!user || !in_augment) {
+		LogFile->write(EQEMuLog::Error, "Client or AugmentItem_Struct not set in Object::HandleCombine");
+		return;
+	}
+	
+	ItemCommonInst *tobe_auged, *auged_with = NULL;
+	sint8 slot=-1;
+	ItemContainerInst* container = (ItemContainerInst *)worldo->m_inst;
+
+	if (!(tobe_auged = (ItemCommonInst *)container->GetItem(0))) {
+		user->Message(13, "Error: No item in slot 0 of sealer");
+		return;
+	}
+	if (tobe_auged->IsAugmentable()) {
+		if (!(auged_with=(ItemCommonInst *)container->GetItem(1))) {;
+			user->Message(13, "Error: No item in slot 1 of sealer");
+			return;
+		}
+	} else {
+		auged_with=tobe_auged;
+		if (!(tobe_auged=(ItemCommonInst *)container->GetItem(1))) {
+			user->Message(13, "Error: No item in slot 1 of sealer");
+			return;
+		}
+	}
+
+	// Adding augment
+	if (in_augment->augment_slot == -1) {
+		if ((slot=tobe_auged->AvailableAugmentSlot(auged_with->GetAugmentType()))!=-1) {
+			tobe_auged->PutAugment(slot,*auged_with);
+			user->PushItemOnCursor(*tobe_auged,true);
+			container->Clear();
+			APPLAYER* outapp = new APPLAYER(OP_ClearObject,0);
+			user->QueuePacket(outapp);
+			safe_delete(outapp);
+			database.DeleteWorldContainer(worldo->m_id, zone->GetZoneID());
+		} else {
+			user->Message(13, "Error: No available slot for augment");
+		}
+	} else {
+		ItemCommonInst *old_aug=NULL;
+		const uint32 id=auged_with->GetID();
+		if (id==40408 || id==40409 || id==40410)
+			tobe_auged->DeleteAugment(in_augment->augment_slot);
+		else
+			old_aug=tobe_auged->RemoveAugment(in_augment->augment_slot);
+
+		user->PushItemOnCursor(*tobe_auged,true);
+		if (old_aug)
+			user->PushItemOnCursor(*old_aug,true);
+		container->Clear();
+		APPLAYER* outapp = new APPLAYER(OP_ClearObject,0);
+		user->QueuePacket(outapp);
+		safe_delete(outapp);
+		database.DeleteWorldContainer(worldo->m_id, zone->GetZoneID());
+	}
+}
+
 // Perform tradeskill combine
 // complete tradeskill rewrite by father nitwit, 8/2004
 void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Object *worldo)

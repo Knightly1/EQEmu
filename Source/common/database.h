@@ -211,6 +211,8 @@ public:
 #endif
 	NewZone_Struct* GetZoneCFG(int32 zoneid);
 	bool	SaveZoneCFG(int32 zoneid,NewZone_Struct* zd);
+
+	bool	SaveCursor(int32 char_id, list<ItemInst*>::const_iterator &start, list<ItemInst*>::const_iterator &end);
 	bool	SaveInventory(uint32 char_id, const ItemInst* inst, sint16 slot_id);
 	bool    logevents(char* accountname,int32 accountid,int8 status,const char* charname,const char* target, const char* descriptiontype, const char* description,int event_nid);
 	bool	MoveCharacterToZone(const char* charname, const char* zonename);
@@ -472,7 +474,6 @@ public:
 	
 	int8	GetZoneW(int32 zoneid);
 	bool	SetZoneW(int32 zoneid, int8 w);
-	bool	InjectToRaw();
 	void	UpdateTimeleftWorld();
 	void	UpdateTimeleft(int32 id,int32 timeleft);
 	void	HandleMysqlError(int32 errnum);

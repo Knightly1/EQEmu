@@ -182,8 +182,10 @@ public:
 	inline iter_queue end()		{ return m_list.end(); }
 	
 	void push(ItemInst* inst);
+	void push_front(ItemInst* inst);
 	ItemInst* pop();
 	ItemInst* peek_front() const;
+	inline int size() 		{ return m_list.size(); }
 	
 protected:
 	/////////////////////////
@@ -209,12 +211,18 @@ public:
 	// Retrieve a writeable item at specified slot
 	ItemInst* GetItem(sint16 slot_id) const;
 	ItemInst* GetItem(sint16 slot_id, uint8 bagidx) const;
+
+	inline iter_queue cursor_begin()	{ return m_cursor.begin(); }
+	inline iter_queue cursor_end()		{ return m_cursor.end(); }
 	
 	// Retrieve a read-only item from inventory
 	inline const ItemInst* operator[](sint16 slot_id) const { return GetItem(slot_id); }
 	
 	// Add item to inventory
 	sint16 PutItem(sint16 slot_id, const ItemInst& inst);
+
+	// Add item to cursor queue
+	sint16 PushCursor(const ItemInst& inst);
 	
 	// Swap items in inventory
 	void SwapItem(sint16 slot_a, sint16 slot_b);
@@ -296,7 +304,7 @@ public:
 		m_item = item;
 		m_charges = charges;
 		m_price = 0;
-		m_unknown005 = 0;
+		m_merchantslot = 0;
 		if(m_item &&m_item->ItemClass == ItemTypeCommon)
 			m_color = m_item->Common.Color;
 		else
@@ -308,7 +316,7 @@ public:
 		m_item = database.GetItem(item_id);
 		m_charges = charges;
 		m_price = 0;
-		m_unknown005 = 0;
+		m_merchantslot = 0;
 		if(m_item && m_item->ItemClass == ItemTypeCommon)
 			m_color = m_item->Common.Color;
 		else
@@ -320,7 +328,7 @@ public:
 		m_item = NULL;
 		m_charges = 0;
 		m_price = 0;
-		m_unknown005 = 0;
+		m_merchantslot = 0;
 		m_color = 0;
 	}
 	
@@ -341,11 +349,15 @@ public:
 	
 	// Has attack/delay?
 	virtual bool IsWeapon() const;
+
+	//  Virtual function, so anyone can call it
+	virtual uint32 GetAugmentItemID(uint8 slot) const { return 0; }
 	
 	// Serialize into a pipe-delimited string for packet
 	virtual string Serialize(sint16 slot_id) const;
 	
 	// Accessors
+	const uint32 GetID() const { return m_item->ItemNumber; }
 	const Item_Struct* GetItem() const		{ return m_item; }
 	void SetItem(const Item_Struct* item)	{ m_item = item; }
 	
@@ -358,11 +370,12 @@ public:
 	void SetColor(uint32 color)				{ m_color = color; }
 	uint32 GetColor() const					{ return m_color; }
 
-	uint32 GetUnknown5() const				{ return m_unknown005; }
-	void SetUnknown5(uint32 unknown5)		{ m_unknown005 = unknown5; }
-	
+	uint32 GetMerchantSlot() const				{ return m_merchantslot; }
+	void SetMerchantSlot(uint32 slot)		{ m_merchantslot = slot; }
+
 	sint16 GetCurrentSlot() const			{ return m_currentslot; }
 	void SetCurrentSlot(sint16 curr_slot)   { m_currentslot = curr_slot; }
+
 	// Allows treatment of this object as though it were a pointer to m_item
 	operator bool() const { return (m_item != NULL); }
 	
@@ -374,8 +387,8 @@ public:
 	virtual ItemInst* Clone() const = 0;
 	
 	// Create appropriate ItemInst class
-	static ItemInst* Create(uint32 item_id, sint16 charges=0);
-	static ItemInst* Create(const Item_Struct* item, sint16 charges=0);
+	static ItemInst* Create(uint32 item_id, sint16 charges=0, uint32 aug1=0, uint32 aug2=0, uint32 aug3=0, uint32 aug4=0, uint32 aug5=0);
+	static ItemInst* Create(const Item_Struct* item, sint16 charges=0, uint32 aug1=0, uint32 aug2=0, uint32 aug3=0, uint32 aug4=0, uint32 aug5=0);
 	
 	
 protected:
@@ -388,7 +401,7 @@ protected:
 	sint16				m_charges;	// # of charges for chargeable items
 	uint32				m_price;	// Bazaar /trader price
 	uint32				m_color;
-	uint32				m_unknown005;
+	uint32				m_merchantslot;
 	sint16				m_currentslot;
 };
 
@@ -406,8 +419,8 @@ public:
 	/////////////////////////
 	
 	// Constructors/Destructor
-	ItemCommonInst(const Item_Struct* item = NULL, sint16 charges = 0) : ItemInst(item, charges) {}
-	ItemCommonInst(uint32 item_id, sint16 charges = 0) : ItemInst(item_id, charges) {}
+	ItemCommonInst(const Item_Struct* item = NULL, sint16 charges = 0, uint32 aug1 = 0, uint32 aug2 = 0, uint32 aug3 = 0, uint32 aug4 = 0, uint32 aug5 = 0);
+	ItemCommonInst(uint32 item_id, sint16 charges = 0, uint32 aug1 = 0, uint32 aug2 = 0, uint32 aug3 = 0, uint32 aug4 = 0, uint32 aug5 = 0);
 	ItemCommonInst(const ItemCommonInst& copy);
 	virtual ~ItemCommonInst();
 	
@@ -417,21 +430,33 @@ public:
 	// Can item be equipped by/at?
 	virtual bool IsEquipable(int16 race, int16 class_) const;
 	virtual bool IsEquipable(sint16 slot_id) const;
+
+	// Augements
+	inline bool IsAugmentable() const { return m_item->Common.AugSlotType[0]!=0; }
+	sint8 AvailableAugmentSlot(sint32 augtype) const;
+	inline sint32 GetAugmentType() const { return m_item->Common.augtype; }
 	
 	// Has attack/delay?
 	virtual bool IsWeapon() const;
 	
 	// Retrieve a writeable augment from item
 	ItemCommonInst* GetAugment(uint8 slot) const;
+
+	// Retrieve an augments itemid;
+	uint32 GetAugmentItemID(uint8 slot) const;
 	
 	// Retrieve a read-only augment from item
 	inline const ItemCommonInst* operator[](uint8 slot) const { return GetAugment(slot); }
 	
 	// Add an augment to the item
 	void PutAugment(uint8 slot, const ItemCommonInst& augment);
+	void PutAugment(uint8 slot, uint32 item_id);
 	
-	// Remove augment from item
+	// Remove augment from item and destroy it
 	void DeleteAugment(uint8 slot);
+
+	// Remove augment from item and return it
+	ItemCommonInst* ItemCommonInst::RemoveAugment(uint8 index);
 	
 	// Serialize into a pipe-delimited string for packet
 	virtual string Serialize(sint16 slot_id) const;

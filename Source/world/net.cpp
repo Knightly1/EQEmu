@@ -127,16 +127,6 @@ int main(int argc, char** argv) {
 			cout << "-holdzones    - reboots lost zones" << endl;
 			return 0;
 		}
-		else if(strcasecmp(argv[1], "-fixitems") == 0) {
-			if (!database.InjectToRaw()){
-				cout<<"Failed!"<<endl;
-				return 1;
-			}
-			else {
-				cout<<"Success!"<<endl;
-				return 0;
-			}
-		}
 		else if (strcasecmp(argv[1], "-holdzones") == 0) {
 			cout << "Reboot Zones mode ON" << endl;
 			holdzones = true;

@@ -1515,14 +1515,20 @@ const sint32& Client::SetMana(sint32 amount) {
 void Client::SendManaUpdatePacket() {
 	if (!Connected() || IsCasting())
 		return;
-	APPLAYER* outapp = new APPLAYER(OP_ManaChange, sizeof(ManaChange_Struct));
-	ManaChange_Struct* manachange = (ManaChange_Struct*)outapp->pBuffer;
-	manachange->new_mana = cur_mana;
-	manachange->stamina = 6000;
-	manachange->spell_id = casting_spell_id;
-	outapp->priority = 6;
-	QueuePacket(outapp);
-	safe_delete(outapp);
+	//cout << "Sending mana update: " << (cur_mana - last_reported_mana) << endl;
+	if (last_reported_mana != cur_mana) {
+		
+		APPLAYER* outapp = new APPLAYER(OP_ManaChange, sizeof(ManaChange_Struct));
+		ManaChange_Struct* manachange = (ManaChange_Struct*)outapp->pBuffer;
+		manachange->new_mana = cur_mana;
+		manachange->stamina = 6000;
+		manachange->spell_id = casting_spell_id;
+		outapp->priority = 6;
+		QueuePacket(outapp);
+		safe_delete(outapp);
+
+		last_reported_mana=cur_mana;
+	}
 }
 
 void Client::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)

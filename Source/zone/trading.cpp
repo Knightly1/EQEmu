@@ -543,7 +543,7 @@ void Client::BulkSendTraderInventory(int32 char_id) {
 			ItemInst* inst = ItemInst::Create(item);
 			if (inst) {
 				inst->SetPrice(outints2->itemcost[i]);
-				inst->SetUnknown5(outints2->itemid[i]);
+				//inst->SetUnknown5(outints2->itemid[i]);
 				SendItemPacket(30, inst, ItemPacketMerchant);
 				safe_delete(inst);
 			}

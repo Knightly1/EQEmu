@@ -538,7 +538,7 @@ bool Client::HandlePacket(const APPLAYER *app) {
 			outapp2->pBuffer = new uchar[outapp2->size];
 			memcpy(outapp2->pBuffer,buffer,outapp2->size);
 			QueuePacket(outapp2);
-			DumpPacket(outapp2);
+			//DumpPacket(outapp2);
 			
 			firstlogin = false;
 			EnterWorld();

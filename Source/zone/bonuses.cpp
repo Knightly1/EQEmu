@@ -272,6 +272,11 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 		if (newbon->skillmod[common.SkillModType] < common.SkillModValue)
 			newbon->skillmod[common.SkillModType] = (sint8)common.SkillModValue;
 	}
+
+	const ItemCommonInst *ci=(const ItemCommonInst *)inst;
+	for(int i=0;i<5;i++) {
+		AddItemBonuses(ci->GetAugment(i),newbon);
+	}
 }
 
 void Client::CalcEdibleBonuses(StatBonuses* newbon) {

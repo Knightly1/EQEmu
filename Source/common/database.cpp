@@ -49,10 +49,8 @@ using namespace std;
 #include "../common/EQEMuError.h"
 #include "../common/Item.h"
 #include "../common/packet_dump.h"
-#ifdef SHAREMEM
 #include "../common/EMuShareMem.h"
 extern LoadEMuShareMemDLL EMuShareMemDLL;
-#endif
 #ifdef ZONE
 #include <math.h>
 #include "../zone/entity.h"
@@ -470,15 +468,6 @@ void Database::UpdateTimeleft(int32 id, int32 timeleft)
 }
 
 void Database::InitVars() {
-#ifndef SHAREMEM
-	item_array = 0;
-	npc_type_array = 0;
-    door_array = 0;
-	loottable_array = 0;
-	loottable_inmem = 0;
-	lootdrop_array = 0;
-	lootdrop_inmem = 0;
-#endif
 	memset(item_minstatus, 0, sizeof(item_minstatus));
 	memset(door_isopen_array, 0, sizeof(door_isopen_array));
 	max_item = 0;
@@ -594,44 +583,6 @@ Close the connection to the database
 Database::~Database()
 {
 	unsigned int x;
-#ifndef SHAREMEM
-	if (item_array != 0) {
-		for (x=0; x <= max_item; x++) {
-			if (item_array[x] != 0)
-				safe_delete(item_array[x]);
-		}
-		safe_delete_array(item_array);
-	}
-	if (npc_type_array != 0) {
-		for (x=0; x <= max_npc_type; x++) {
-			if (npc_type_array[x] != 0)
-				safe_delete(npc_type_array[x]);
-		}
-		safe_delete_array(npc_type_array); // neotokyo: fix
-	}
-	if (door_array != 0) {
-		for (x=0; x <= max_door_type; x++) {
-			if (door_array[x] != 0)
-				safe_delete(door_array[x]);
-		}
-		safe_delete_array(door_array);
-	}
-	if (loottable_array) {
-		for (x=0; x<=loottable_max; x++) {
-			safe_delete(loottable_array[x]);
-		}
-		safe_delete_array(loottable_array);
-	}
-	
-	safe_delete(loottable_inmem);
-	if (lootdrop_array) {
-		for (x=0; x<=lootdrop_max; x++) {
-			safe_delete(lootdrop_array[x]);
-		}
-		safe_delete_array(lootdrop_array);
-	}
-	safe_delete_array(lootdrop_inmem);
-#endif
 	if (faction_array != 0) {
 		for (x=0; x <= max_faction; x++) {
 			if (faction_array[x] != 0)
@@ -1551,7 +1502,7 @@ AdventureInfo Database::GetAdventureInfo(int32 questid,int32 mobid,int8 advtype)
 	AdventureInfo rvalue;
 	if(questid>0){
 		if (RunQuery(query, MakeAnyLenString(&query, "Select NPCID,Type,Objetive,ObjetiveValue,Text,Minutes,Points,x,y,in_use,ShowCompass,zonedungeonid,zoneid,status,QuestID from adventures where QuestID=%i", questid), errbuf, &result)) {
-			if (row = mysql_fetch_row(result)) {
+			if ((row = mysql_fetch_row(result))) {
 				safe_delete_array(query);
 				rvalue.NPCID=atoi(row[0]);
 				rvalue.type=atoi(row[1]);
@@ -1576,7 +1527,7 @@ AdventureInfo Database::GetAdventureInfo(int32 questid,int32 mobid,int8 advtype)
 	}
 	else {
 		if (RunQuery(query, MakeAnyLenString(&query, "Select NPCID,Type,Objetive,ObjetiveValue,Text,Minutes,Points,x,y,in_use,ShowCompass,zonedungeonid,zoneid,status,QuestID from adventures where NPCID=%i and type=%i", mobid,advtype), errbuf, &result)) {
-			if (row = mysql_fetch_row(result)) {
+			if ((row = mysql_fetch_row(result))) {
 				mysql_free_result(result);
 				rvalue.NPCID=atoi(row[0]);
 				rvalue.type=atoi(row[1]);
@@ -1640,7 +1591,6 @@ int32 Database::GetAdventureChar(int32 n,int32 questid){
 	return 0;
 }
 char* Database::GetAdventureNPCText(uint32 NPCID){
-	char buf[20];
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	MYSQL_RES *result;
@@ -1993,6 +1943,70 @@ void Database::GetCharSelectInfo(int32 account_id, CharacterSelect_Struct* cs) {
 				if (++char_num > 10)
 					break;
 			}
+////////////
+////////////	This is the current one, the other are for converting
+////////////
+			else if ((lengths[1] == sizeof(PlayerProfile_Struct))) {
+				strcpy(cs->name[char_num], row[0]);
+				PlayerProfile_Struct* pp = (PlayerProfile_Struct*)row[1];
+				
+				// Character information
+				cs->level[char_num]				= pp->level;
+				cs->class_[char_num]			= pp->class_;
+				cs->race[char_num]				= pp->race;
+				cs->gender[char_num]			= pp->gender;
+				cs->deity[char_num]				= pp->deity;
+				cs->zone[char_num]				= GetZoneID(row[2]);
+				cs->face[char_num]				= pp->face;
+				cs->haircolor[char_num]		= pp->haircolor;
+				cs->beardcolor[char_num]	= pp->beardcolor;
+				cs->eyecolor2[char_num] 	= pp->eyecolor2;
+				cs->eyecolor1[char_num] 	= pp->eyecolor1;
+				cs->hair[char_num]				= pp->hairstyle;
+				cs->beard[char_num]				= pp->beard;
+				
+				// Character's equipped items
+				// @merth: Haven't done bracer01/bracer02 yet.
+				// Also: this needs a second look after items are a little more solid
+				// NOTE: items don't have a color, players MAY have a tint, if the
+				// use_tint part is set.  otherwise use the regular color
+				inv = new Inventory;
+				if(GetInventory(account_id, cs->name[char_num], inv))
+				{
+					for (uint8 material = 0; material <= 8; material++)
+					{
+						uint32 color;
+						ItemInst *item = inv->GetItem(Inventory::CalcSlotFromMaterial(material));
+						if(item == 0)
+							continue;
+
+						cs->equip[char_num][material] = item->GetItem()->Common.Material;
+
+						if(pp->item_tint[material].rgb.use_tint)	// they have a tint (LoY dye)
+							color = pp->item_tint[material].color;
+						else	// no tint, use regular item color
+							color = item->GetItem()->Common.Color;
+
+						cs->cs_colors[char_num][material].color = color;
+
+						// the weapons are kept elsewhere
+						if ((material==MATERIAL_PRIMARY) || (material==MATERIAL_SECONDARY))
+						{
+							uint32 melee_idx = (material==MATERIAL_PRIMARY) ? 0 : 1;
+							if(strlen(item->GetItem()->IDFile) > 2)
+								cs->melee[melee_idx][char_num] = atoi(&item->GetItem()->IDFile[2]);
+						}
+					}
+				}
+				else
+				{
+					printf("Error loading inventory for %s\n", cs->name[char_num]);
+				}
+				safe_delete(inv);
+				
+				if (++char_num > 10)
+					break;
+			}
 			else
 			{
 				cout << "Got a bogus character (" << row[0] << ") Ignoring!!!" << endl;
@@ -2028,16 +2042,34 @@ void Database::LoadWorldContainer(uint32 parentid, ItemContainerInst* container)
 	//ItemInst* inst = NULL;
 	
 	uint32 len_query =  MakeAnyLenString(&query, "select "
-		"bagidx,itemid,charges from object_contents where parentid=%i", parentid);
+		"bagidx,itemid,charges,augslot1,augslot2,augslot4,augslot4,augslot5 from object_contents where parentid=%i", parentid);
 	
 	if (database.RunQuery(query, len_query, errbuf, &result)) {
 		while ((row = mysql_fetch_row(result))) {
 			uint8 index = (uint8)atoi(row[0]);
 			uint32 item_id = (uint32)atoi(row[1]);
 			sint8 charges = (sint8)atoi(row[2]);
+			uint32 aug[5];
+			aug[0]	= (uint32)atoi(row[3]);
+			aug[1]	= (uint32)atoi(row[4]);
+			aug[2]	= (uint32)atoi(row[5]);
+			aug[3]	= (uint32)atoi(row[6]);
+			aug[4]	= (uint32)atoi(row[7]);
 			
 			ItemInst* inst = ItemInst::Create(item_id, charges);
 			if (inst) {
+				if (inst->GetItem()->ItemClass == ItemTypeCommon) {
+					ItemCommonInst *ci=(ItemCommonInst *)inst;
+					for(int i=0;i<5;i++) {
+						if (aug[i]) {
+							ItemCommonInst augment(aug[i]);
+							if (augment.GetItem()) {
+								ci->PutAugment(i,augment);
+							} else
+								cout << "NULL item!" << endl;
+						}
+					}
+				}
 				// Put item inside world container
 				container->PutItem(index, *inst);
 				safe_delete(inst);
@@ -2047,6 +2079,7 @@ void Database::LoadWorldContainer(uint32 parentid, ItemContainerInst* container)
 	}
 	else {
 		LogFile->write(EQEMuLog::Error, "Error in DB::LoadWorldContainer: %s", errbuf);
+		LogFile->write(EQEMuLog::Error, "If you got an error related to the 'augslot1','augslot2'.'augslot3'.'augslot4'.'augslot5' fields, run the following SQL Queries:\nalter table object_contents add augslot1 mediumint(7) unsigned default 0 not null;\nalter table object_contents add augslot2 mediumint(7) unsigned default 0 not null;\nalter table object_contents add augslot3 mediumint(7) unsigned default 0 not null;\nalter table object_contents add augslot4 mediumint(7) unsigned default 0 not null;\nalter table object_contents add augslot5 mediumint(7) unsigned default 0 not null;\n");
 	}
 	
 	safe_delete_array(query);
@@ -2072,9 +2105,18 @@ void Database::SaveWorldContainer(uint32 zone_id, uint32 parent_id, const ItemCo
 		ItemInst* inst = container->GetItem(index);
 		if (inst && (int32)inst->GetItem()!=0xFEEEFEEE) {
 			uint32 item_id = inst->GetItem()->ItemNumber;
+			uint32 augslot[5] = { 0, 0, 0, 0, 0 };
+			if (inst->IsType(ItemTypeCommon)) {
+				ItemCommonInst *ic=(ItemCommonInst *)inst;
+				for(int i=0;i<5;i++) {
+					ItemCommonInst *auginst=ic->GetAugment(i);
+					augslot[i]=(auginst && auginst->GetItem()) ? auginst->GetItem()->ItemNumber : 0;
+				}
+			}
 			uint32 len_query = MakeAnyLenString(&query,
-				"replace into object_contents values(%i,%i,%i,%i,%i,now())",
-				zone_id, parent_id, index, item_id, inst->GetCharges());
+
+				"replace into object_contents (zoneid,parentid,bagidx,itemid,charges,augslot1,augslot2,augslot3,augslot4,augslot5,droptime) values (%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,now())",
+				zone_id, parent_id, index, item_id, inst->GetCharges(),augslot[0],augslot[1],augslot[2],augslot[3],augslot[4]);
 			
 			if (!RunQuery(query, len_query, errbuf)) {
 				LogFile->write(EQEMuLog::Error, "Error in Database::SaveWorldContainer: %s", errbuf);
@@ -2288,15 +2330,46 @@ void Database::DeleteTraderItem(uint32 char_id,int16 slot_id){
 		printf("Failed to delete trader item data for char_id: %i, the error was: %s\n",char_id,errbuf);
 	safe_delete_array(query);
 }
+
+bool Database::SaveCursor(uint32 char_id, list<ItemInst*>::const_iterator &start, list<ItemInst*>::const_iterator &end)
+{
+iter_queue it;
+int i;
+bool ret=true;
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    	char* query = 0;
+	// Delete cursor items
+	if ((ret = RunQuery(query, MakeAnyLenString(&query, "DELETE FROM inventory WHERE charid=%i AND slotid >=8000 and slotid<=8999", char_id), errbuf))) {
+		for(it=start,i=8000;it!=end;it++,i++) {
+			if (!(ret=SaveInventory(char_id,*it,i)))
+				break;
+		}
+	} else {
+		cout << "Clearing cursor failed: " << errbuf << endl;
+	}
+	safe_delete_array(query);
+
+	return ret;
+}
+
 bool Database::SaveInventory(uint32 char_id, const ItemInst* inst, sint16 slot_id) {
 	_CP(Database_SaveInventory);
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char* query = 0;
 	bool ret = false;
-	
+	uint32 augslot[5] = { 0, 0, 0, 0, 0 };
+
 	//never save tribute slots:
 	if(slot_id >= 400 && slot_id <= 404)
 		return(true);
+	
+	if (inst && inst->IsType(ItemTypeCommon)) {
+		const ItemCommonInst *ic=(const ItemCommonInst *)inst;
+		for(int i=0;i<5;i++) {
+			ItemCommonInst *auginst=ic->GetAugment(i);
+			augslot[i]=(auginst && auginst->GetItem()) ? auginst->GetItem()->ItemNumber : 0;
+		}
+	}
 	
 	if (slot_id>=2500 && slot_id<=2600) { // Shared bank inventory
 		if (!inst) {
@@ -2325,8 +2398,10 @@ bool Database::SaveInventory(uint32 char_id, const ItemInst* inst, sint16 slot_i
 				charges = inst->GetCharges();
 			else
 				charges = 255;
-			uint32 len_query =  MakeAnyLenString(&query, "REPLACE INTO sharedbank VALUES(%i,%i,%i,%i)",
-				account_id, slot_id, inst->GetItem()->ItemNumber, charges);
+
+			uint32 len_query =  MakeAnyLenString(&query, "REPLACE INTO sharedbank (acctid,slotid,itemid,charges,augslot1,augslot2,augslot3,augslot4,augslot5) VALUES(%i,%i,%i,%i,%i,%i,%i,%i,%i)",
+				account_id, slot_id, inst->GetItem()->ItemNumber, charges ,augslot[0],augslot[1],augslot[2],augslot[3],augslot[4]);
+
 			
 			ret = RunQuery(query, len_query, errbuf);
 		}
@@ -2354,8 +2429,8 @@ bool Database::SaveInventory(uint32 char_id, const ItemInst* inst, sint16 slot_i
 			else
 				charges = 255;
 			// Update/Insert item
-			uint32 len_query = MakeAnyLenString(&query, "REPLACE INTO inventory (charid,slotid,itemid,charges,color) VALUES(%i,%i,%i,%i,%i)",
-				char_id, slot_id, inst->GetItem()->ItemNumber, charges, inst->GetColor() );
+			uint32 len_query = MakeAnyLenString(&query, "REPLACE INTO inventory (charid,slotid,itemid,charges,color,augslot1,augslot2,augslot3,augslot4,augslot5) VALUES(%i,%i,%i,%i,%i,%i,%i,%i,%i,%i)",
+				char_id, slot_id, inst->GetItem()->ItemNumber, charges, inst->GetColor(),augslot[0],augslot[1],augslot[2],augslot[3],augslot[4],augslot[5] );
 			
 			ret = RunQuery(query, len_query, errbuf);
 		}
@@ -2527,7 +2602,6 @@ bool Database::StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inven
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char query[256+sizeof(PlayerProfile_Struct)*2+sizeof(PlayerAA_Struct)*2+5];
 	char* end = query;
-	PlayerAA_Struct playeraa[3];	//*3 > *2+1
 	int32 affected_rows = 0;
 	int i;
 	int32 charid = 0;
@@ -2929,13 +3003,13 @@ bool Database::GetSharedBank(uint32 id, Inventory* inv, bool is_charid) {
 	
 	if (is_charid) {
 		len_query = MakeAnyLenString(&query,
-			"SELECT sb.slotid,sb.itemid,sb.charges from sharedbank sb "
+			"SELECT sb.slotid,sb.itemid,sb.charges,sb.augslot1,sb.augslot2,sb.augslot3,sb.augslot4,sb.augslot5 from sharedbank sb "
 			"INNER JOIN character_ ch ON ch.account_id=sb.acctid "
 			"WHERE ch.id=%i", id);
 	}
 	else {
 		len_query = MakeAnyLenString(&query,
-			"SELECT slotid,itemid,charges from sharedbank WHERE acctid=%i", id);
+			"SELECT slotid,itemid,charges,augslot1,augslot2,augslot3,augslot4,augslot5 from sharedbank WHERE acctid=%i", id);
 	}
 	
 	if (RunQuery(query, len_query, errbuf, &result)) {
@@ -2943,6 +3017,12 @@ bool Database::GetSharedBank(uint32 id, Inventory* inv, bool is_charid) {
 			sint16 slot_id	= (sint16)atoi(row[0]);
 			uint32 item_id	= (uint32)atoi(row[1]);
 			sint8 charges	= (sint8)atoi(row[2]);
+			uint32 aug[5];
+			aug[0]	= (uint32)atoi(row[3]);
+			aug[1]	= (uint32)atoi(row[4]);
+			aug[2]	= (uint32)atoi(row[5]);
+			aug[3]	= (uint32)atoi(row[6]);
+			aug[4]	= (uint32)atoi(row[7]);
 			const Item_Struct* item = GetItem(item_id);
 			
 			if (item) {
@@ -2950,6 +3030,15 @@ bool Database::GetSharedBank(uint32 id, Inventory* inv, bool is_charid) {
 				
 				if (item->ItemClass == ItemTypeCommon) {
 					ItemCommonInst common(item, charges);
+					for(int i=0;i<5;i++) {
+						if (aug[i]) {
+							ItemCommonInst augment(aug[i]);
+							if (augment.GetItem()) {
+								common.PutAugment(i,augment);
+							} else
+								cout << "NULL item!" << endl;
+						}
+					}
 					put_slot_id = inv->PutItem(slot_id, (ItemInst&)common);
 				}
 				else if (item->ItemClass == ItemTypeContainer) {
@@ -2978,8 +3067,10 @@ bool Database::GetSharedBank(uint32 id, Inventory* inv, bool is_charid) {
 		mysql_free_result(result);
 		ret = true;
 	}
-	else
+	else {
 		LogFile->write(EQEMuLog::Error, "Database::GetSharedBank(int32 account_id): %s", errbuf);
+		LogFile->write(EQEMuLog::Error, "If you got an error related to the 'augslot1','augslot2','augslot3','augslot4','augslot5' fields, run the following SQL Queries:\nalter table sharedbank add augslot1 mediumint(7) unsigned default 0 not null;\nalter table sharedbank add augslot2 mediumint(7) unsigned default 0 not null;\nalter table sharedbank add augslot3 mediumint(7) unsigned default 0 not null;\nalter table sharedbank add augslot4 mediumint(7) unsigned default 0 not null;\nalter table sharedbank add augslot5 mediumint(7) unsigned default 0 not null;\n");
+	}
 	
 	safe_delete_array(query);
 	return ret;
@@ -3043,13 +3134,20 @@ bool Database::GetInventory(uint32 char_id, Inventory* inv) {
 	bool ret = false;
 	
 	// Retrieve character inventory
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges,color FROM inventory WHERE charid=%i ORDER BY slotid", char_id), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges,color,augslot1,augslot2,augslot3,augslot4,augslot5 FROM inventory WHERE charid=%i ORDER BY slotid", char_id), errbuf, &result)) {
 
 		while ((row = mysql_fetch_row(result))) {	
 			sint16 slot_id	= (sint16)atoi(row[0]);
 			uint32 item_id	= (uint32)atoi(row[1]);
 			int16 charges	= (int16)atoi(row[2]);
 			uint32 color		= (uint32)atoi(row[3]);
+			uint32 aug[5];
+			aug[0]	= (uint32)atoul(row[4]);
+			aug[1]	= (uint32)atoul(row[5]);
+			aug[2]	= (uint32)atoul(row[6]);
+			aug[3]	= (uint32)atoul(row[7]);
+			aug[4]	= (uint32)atoul(row[8]);
+
 			const Item_Struct* item = GetItem(item_id);
 			
 			if (item) {
@@ -3063,15 +3161,35 @@ bool Database::GetInventory(uint32 char_id, Inventory* inv) {
 						common.SetCharges(-1);
 					else
 						common.SetCharges(charges);
-					put_slot_id = inv->PutItem(slot_id, (ItemInst&)common);
+
+					for(int i=0;i<5;i++) {
+						if (aug[i]) {
+							ItemCommonInst augment(aug[i]);
+							if (augment.GetItem()) {
+								common.PutAugment(i,augment);
+							} else
+								cout << "NULL item!" << endl;
+						}
+					}
+
+					if (slot_id>=8000 && slot_id <= 8999)
+						put_slot_id = inv->PushCursor((ItemInst&)common);
+					else 
+						put_slot_id = inv->PutItem(slot_id, (ItemInst&)common);
 				}
 				else if (item->ItemClass == ItemTypeContainer) {
 					ItemContainerInst bag(item, charges);
-					put_slot_id = inv->PutItem(slot_id, (ItemInst&)bag);
+					if (slot_id!=SLOT_CURSOR)
+						put_slot_id = inv->PutItem(slot_id, (ItemInst&)bag);
+					else 
+						put_slot_id = inv->PushCursor((ItemInst&)bag);
 				}
 				else if (item->ItemClass == ItemTypeBook) {
 					ItemBookInst book(item, charges);
-					put_slot_id = inv->PutItem(slot_id, (ItemInst&)book);
+					if (slot_id!=SLOT_CURSOR)
+						put_slot_id = inv->PutItem(slot_id, (ItemInst&)book);
+					else 
+						put_slot_id = inv->PushCursor((ItemInst&)book);
 				}
 				
 				// Save ptr to item in inventory
@@ -3092,8 +3210,11 @@ bool Database::GetInventory(uint32 char_id, Inventory* inv) {
 		// Retrieve shared inventory
 		ret = GetSharedBank(char_id, inv, true);
 	}
-	else
+	else {
 		LogFile->write(EQEMuLog::Error, "GetInventory query '%s' %s", query, errbuf);
+		LogFile->write(EQEMuLog::Error, "If you got an error related to the 'augslot1','augslot2','augslot3','augslot4','augslot5' fields, run the following SQL Queries:\nalter table inventory add augslot1 mediumint(7) unsigned default 0 not null;\nalter table inventory add augslot2 mediumint(7) unsigned default 0 not null;\nalter table inventory add augslot3 mediumint(7) unsigned default 0 not null;\nalter table inventory add augslot4 mediumint(7) unsigned default 0 not null;\nalter table inventory add augslot5 mediumint(7) unsigned default 0 not null;\n");
+
+	}
 	
 	safe_delete_array(query);
 	return ret;
@@ -3112,7 +3233,7 @@ bool Database::GetInventory(uint32 account_id, char* name, Inventory* inv) {
 #ifdef WORLD
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges,color FROM inventory INNER JOIN character_ ch ON ch.id=charid WHERE ch.name='%s' AND ch.account_id=%i AND slotid<22 ORDER BY slotid", name, account_id), errbuf, &result))
 #else
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges,color FROM inventory INNER JOIN character_ ch ON ch.id=charid WHERE ch.name='%s' AND ch.account_id=%i ORDER BY slotid", name, account_id), errbuf, &result))
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges,color,augslot1,augslot2,augslot3,augslot4,augslot5 FROM inventory INNER JOIN character_ ch ON ch.id=charid WHERE ch.name='%s' AND ch.account_id=%i ORDER BY slotid", name, account_id), errbuf, &result))
 #endif
 	{
 		while ((row = mysql_fetch_row(result))) {
@@ -3120,7 +3241,14 @@ bool Database::GetInventory(uint32 account_id, char* name, Inventory* inv) {
 			uint32 item_id	= (uint32)atoi(row[1]);
 			sint8 charges	= (sint8)atoi(row[2]);
 			uint32 color		= (uint32)atoi(row[3]);
-			
+#ifndef WORLD
+			uint32 aug[5];
+			aug[0]	= (uint32)atoi(row[4]);
+			aug[1]	= (uint32)atoi(row[5]);
+			aug[2]	= (uint32)atoi(row[6]);
+			aug[3]	= (uint32)atoi(row[7]);
+			aug[4]	= (uint32)atoi(row[8]);
+#endif
 			const Item_Struct* item = GetItem(item_id);
 			sint16 put_slot_id = SLOT_INVALID;
 			if(!item)
@@ -3130,15 +3258,32 @@ bool Database::GetInventory(uint32 account_id, char* name, Inventory* inv) {
 				if (color > 0)
 					common.SetColor(color);
 				common.SetCharges(charges);
-				put_slot_id = inv->PutItem(slot_id, (ItemInst&)common);
+#ifndef WORLD
+				for(int i=0;i<5;i++) {
+					if (aug[i]) {
+						ItemCommonInst aug(aug[i]);
+						common.PutAugment(aug,i);
+					}
+				}
+#endif
+				if (slot_id!=SLOT_CURSOR)
+					put_slot_id = inv->PutItem(slot_id, (ItemInst&)common);
+				else 
+					put_slot_id = inv->PushCursor((ItemInst&)common);
 			}
 			else if (item->ItemClass == ItemTypeContainer) {
 				ItemContainerInst bag(item, charges);
-				put_slot_id = inv->PutItem(slot_id, (ItemInst&)bag);
+				if (slot_id!=SLOT_CURSOR)
+					put_slot_id = inv->PutItem(slot_id, (ItemInst&)bag);
+				else 
+					put_slot_id = inv->PushCursor((ItemInst&)bag);
 			}
 			else if (item->ItemClass == ItemTypeBook) {
 				ItemBookInst book(item, charges);
-				put_slot_id = inv->PutItem(slot_id, (ItemInst&)book);
+				if (slot_id!=SLOT_CURSOR)
+					put_slot_id = inv->PutItem(slot_id, (ItemInst&)book);
+				else 
+					put_slot_id = inv->PushCursor((ItemInst&)book);
 			}
 			
 			// Save ptr to item in inventory
@@ -3153,8 +3298,10 @@ bool Database::GetInventory(uint32 account_id, char* name, Inventory* inv) {
 		// Retrieve shared inventory
 		ret = GetSharedBank(account_id, inv, false);
 	}
-	else
+	else {
 		LogFile->write(EQEMuLog::Error, "GetInventory query '%s' %s", query, errbuf);
+		LogFile->write(EQEMuLog::Error, "If you got an error related to the 'augslot1','augslot2'.'augslot3'.'augslot4'.'augslot5' fields, run the following SQL Queries:\nalter table inventory add augslot1 mediumint(7) unsigned default 0 not null;\nalter table inventory add augslot2 mediumint(7) unsigned default 0 not null;\nalter table inventory add augslot3 mediumint(7) unsigned default 0 not null;\nalter table inventory add augslot4 mediumint(7) unsigned default 0 not null;\nalter table inventory add augslot5 mediumint(7) unsigned default 0 not null;\n");
+	}
 	
 	safe_delete_array(query);
 	return ret;
@@ -3830,7 +3977,6 @@ bool Database::DBSetItemStatus(int32 id, int8 status) {
 	return (bool) (affected_rows == 1);
 }
 
-#ifdef SHAREMEM
 extern "C" bool extDBLoadItems(sint32 iItemCount, int32 iMaxItemID) { return database.DBLoadItems(iItemCount, iMaxItemID); }
 bool Database::LoadItems() {
 	if (!EMuShareMemDLL.Load())
@@ -3878,265 +4024,305 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 		}
 	}
 	
-	#ifdef FIELD_ITEMS
-		// Retrieve all items from database
+	// Retrieve all items from database
+	char query[] =
+		"select "
+		"charges,"		// Item Field # 0
+		"unknown001,"		// Item Field # 1
+		"collected_slot_id,"	// Item Field # 2
+		"merchantprice,"	// Item Field # 3
+		"unknown004,"		// Item Field # 4
+		"collected_inst_id,"	// Item Field # 5
+		"unknown006,"		// Item Field # 6
+		"spellcharges,"		// Item Field # 7
+		"attuneable,"		// Item Field # 8
+		"itemclass,"		// Item Field # 9
+		"name,"			// Item Field # 10
+		"lore,"			// Item Field # 11
+		"idfile,"		// Item Field # 12
+		"id,"			// Item Field # 13
+		"weight,"		// Item Field # 14
+		"norent,"		// Item Field # 15
+		"nodrop,"		// Item Field # 16
+		"size,"			// Item Field # 17
+		"slots,"		// Item Field # 18
+		"cost,"			// Item Field # 19
+		"icon,"			// Item Field # 20
+		"unknown021,"		// Item Field # 21
+		"unknown022,"		// Item Field # 22
+		"unknown023,"		// Item Field # 23
+		"tradeskills,"		// Item Field # 24
+		"cr,"			// Item Field # 25
+		"dr,"			// Item Field # 26
+		"pr,"			// Item Field # 27
+		"mr,"			// Item Field # 28
+		"fr,"			// Item Field # 29
+		"astr,"			// Item Field # 30
+		"asta,"			// Item Field # 31
+		"aagi,"			// Item Field # 32
+		"adex,"			// Item Field # 33
+		"acha,"			// Item Field # 34
+		"aint,"			// Item Field # 35
+		"awis,"			// Item Field # 36
+		"hp,"			// Item Field # 37
+		"mana,"			// Item Field # 38
+		"ac,"			// Item Field # 39
+		"deity,"		// Item Field # 40
+		"skillmodvalue,"	// Item Field # 41
+		"skillmodtype,"		// Item Field # 42
+		"banedmgrace,"		// Item Field # 43
+		"banedmgamt,"		// Item Field # 44
+		"banedmgbody,"		// Item Field # 45
+		"magic,"		// Item Field # 46
+		"casttime2,"		// Item Field # 47
+		"hasteproclvl,"		// Item Field # 48
+		"reqlevel,"		// Item Field # 49
+		"bardtype,"		// Item Field # 50
+		"bardvalue,"		// Item Field # 51
+		"light,"		// Item Field # 52
+		"delay,"		// Item Field # 53
+		"reclevel,"		// Item Field # 54
+		"recskill,"		// Item Field # 55
+		"elemdmgtype,"		// Item Field # 56
+		"elemdmgamt,"		// Item Field # 57
+		"effecttype,"		// Item Field # 58
+		"range,"		// Item Field # 59
+		"damage,"		// Item Field # 60
+		"color,"		// Item Field # 61
+		"classes,"		// Item Field # 62
+		"races,"		// Item Field # 63
+		"unknown064,"		// Item Field # 64
+		"spellid,"		// Item Field # 65
+		"maxcharges,"		// Item Field # 66
+		"itemtype,"		// Item Field # 67
+		"material,"		// Item Field # 68
+		"sellrate,"		// Item Field # 69
+		"unknown070,"		// Item Field # 70
+		"casttime,"		// Item Field # 71
+		"unknown072,"		// Item Field # 72
+		"proc_rate_mod,"	// Item Field # 73
+		"focusid,"		// Item Field # 74
+		"combateffects,"	// Item Field # 75
+		"shielding,"		// Item Field # 76
+		"stunresist,"		// Item Field # 77
+		"strikethrough,"	// Item Field # 78
+		"combatskill,"		// Item Field # 79
+		"combatskilldmg,"	// Item Field # 80
+		"spellshield,"		// Item Field # 81
+		"avoidance,"		// Item Field # 82
+		"accuracy,"		// Item Field # 83
+		"charmformula,"		// Item Field # 84
+		"factionmod1,"		// Item Field # 85
+		"factionmod2,"		// Item Field # 86
+		"factionmod3,"		// Item Field # 87
+		"factionmod4,"		// Item Field # 88
+		"factionamt1,"		// Item Field # 89
+		"factionamt2,"		// Item Field # 90
+		"factionamt3,"		// Item Field # 91
+		"factionamt4,"		// Item Field # 92
+		"charmfile,"		// Item Field # 93
+		"augtype,"		// Item Field # 94
+		"augslot1type,"		// Item Field # 95
+		"augslot2type,"		// Item Field # 96
+		"augslot3type,"		// Item Field # 97
+		"augslot4type,"		// Item Field # 98
+		"augslot5type,"		// Item Field # 99
+		"ldonpointtheme,"	// Item Field # 100
+		"ldonpointcost,"	// Item Field # 101
+		"ldonsold,"		// Item Field # 102
+		"bagtype,"		// Item Field # 103
+		"bagslots,"		// Item Field # 104
+		"bagsize,"		// Item Field # 105
+		"bagwr,"		// Item Field # 106
+		"booktype,"		// Item Field # 107
+		"unknown108,"		// Item Field # 108
+		"filename,"		// Item Field # 109
+		"banedmgamt2,"		// Item Field # 110
+		"augmentrestriction,"	// Item Field # 111
+		"loreflag,"		// Item Field # 112
+		"pendingloreflag,"	// Item Field # 113
+		"artifactflag,"		// Item Field # 114
+		"summonedflag,"		// Item Field # 115
+		"tribute,"		// Item Field # 116
+		"gmflag,"		// Item Field # 117
+		"endur,"		// Item Field # 118
+		"dotshielding,"		// Item Field # 119
+		"attackbonus,"		// Item Field # 120
+		"hpregen,"		// Item Field # 121
+		"manaregen,"		// Item Field # 122
+		"hastepercent,"		// Item Field # 123
+		"damageshield,"		// Item Field # 124
+		"unknown125,"		// Item Field # 125
+		"unknown126,"		// Item Field # 126
+		"unknown127,"		// Item Field # 127
+		"distiller,"		// Item Field # 128
+		"unknown129,"		// Item Field # 129
+		"unknown130,"		// Item Field # 130
+		"unknown131,"		// Item Field # 131
+		"unknown132"		// Item Field # 132
+		" from items order by id";
 		
-		//IF YOU CHANGE THIS QUERY, YOU MUST UPDATE THE RESULT OFFSETS
-		//IN THE CODE BELOW (for books and containers)!!!
-		char query[] =
-			"SELECT charges,unknown002,unknown003,merchantprice,unknown005,"
-			"unknown006,unknown007,SpellCharges,itemclass,name,lore,idfile,id,weight,norent,"
-			"nodrop,attuneable,size,slots,cost,icon,unknown018,unknown019,unknown020,"
-			"tradeskills,cr,dr,pr,mr,fr,astr,asta,aagi,adex,acha,aint,awis,hp,"
-			"mana,ac,deity,skillmodvalue,skillmodtype,banedmgrace,banedmgamt,"
-			"banedmgbody,magic,casttime2,hasteproclvl,reqlevel,bardtype,bardvalue,"
-			"light,delay,reclevel,recskill,elemdmgtype,elemdmgamt,effecttype,"
-			"range,damage,color,classes,races,unknown061,spellid,maxcharges,"
-			"itemtype,material,sellrate,unknown067,casttime,unknown069,proc_rate_mod,"
-			"focusid,combateffects,shielding,stunresist,strikethrough,combatskill,"
-			"combatskilldmg,spellshield,avoidance,accuracy,unknown081,factionmod1,"
-			"factionmod2,factionmod3,factionmod4,factionamt1,factionamt2,factionamt3,"
-			"factionamt4,charmfile,augtype,augslot1type,augslot2type,augslot3type,"
-			"augslot4type,augslot5type,ldonpointtheme,ldonpointcost,ldonsold,bagtype,"
-			"bagslots,bagsize,bagwr,unknown105,booktype,filename,banedmgamt2,"
-			"augmentrestriction,loreflag,pendingloreflag,artifactflag,summonedflag,"
-			"tribute,gmflag,endur,dotshielding,attackbonus,hpregen,manaregen,"
-			"hastepercent,damageshield,minstatus "
-			"FROM items ORDER BY id";
-		
-		if (RunQuery(query, sizeof(query), errbuf, &result)) {
-			while((row = mysql_fetch_row(result))) {
+	if (RunQuery(query, sizeof(query), errbuf, &result)) {
+		while((row = mysql_fetch_row(result))) {
 #if EQDEBUG >= 6
-					LogFile->write(EQEMuLog::Status, "Loading %s:%i:%i", row[15], atoi(row[5]),atoi(row[72]));
+				LogFile->write(EQEMuLog::Status, "Loading %s:%i:%i", row[15], atoi(row[5]),atoi(row[72]));
 #endif				
-				Item_Struct item;
-				memset(&item, 0, sizeof(Item_Struct));
-				uint32 idx = 0;
-				
-				// Base Item_Struct members 
-				item.Charges					= (uint8)atoi(row[idx++]);
-				item.Unknown002					= (uint32)atoi(row[idx++]);
-				item.CurrentEquipSlot			= (sint16)atoi(row[idx++]);
-				item.MerchantPrice				= (uint32)atoi(row[idx++]);
-				item.Unknown005					= (uint32)atoi(row[idx++]);
-				item.Unknown006					= (uint32)atoi(row[idx++]);
-				item.Unknown007					= (uint32)atoi(row[idx++]);
-				item.SpellCharges				= (uint32)atoi(row[idx++]);
-				item.ItemClass					= (uint8)atoi(row[idx++]);
-				strcpy(item.Name, row[idx++]);
-				strcpy(item.LoreName,row[idx++]);
-				strcpy(item.IDFile,row[idx++]);
-				item.ItemNumber					= (uint32)atoi(row[idx++]);
-				item.Weight						= (uint8)atoi(row[idx++]);
-				item.NoRent						= (uint8)atoi(row[idx++]);
-				if(disableNoDrop) {
-					item.NoDrop					= (uint8)-1;
-					idx++;
-				} else
-					item.NoDrop					= (uint8)atoi(row[idx++]);
-				item.Attuneable					= atoi(row[idx++])?1:0;
-				item.Size						= (int8)atoi(row[idx++]);
-				item.EquipSlots					= (uint32)atoi(row[idx++]);
-				item.Cost						= atoi(row[idx++]);
-				item.IconNumber					= atoi(row[idx++]);
-				if (item.ItemClass == ItemTypeBook) { // Books
-					idx = 107;
-					item.Book.Unknown105			= (uint32)atoi(row[idx++]);
-					item.Book.BookType				= (uint8)atoi(row[idx++]);
-					strcpy(item.Book.File, row[idx++]);
-				}
-				else if (item.ItemClass == ItemTypeContainer) { // Containers
-					idx = 103;
-					item.Container.PackType			= (int8)atoi(row[idx++]);
-					item.Container.Slots			= (int8)atoi(row[idx++]);
-					item.Container.SizeCapacity		= (int8)atoi(row[idx++]);
-					item.Container.WeightReduction	= (int8)atoi(row[idx++]);
-				}
-				else if (item.ItemClass == ItemTypeCommon) { // Common
-					item.Common.Unknown018			= (uint32)atoi(row[idx++]);
-					item.Common.Unknown019			= (uint32)atoi(row[idx++]);
-					item.Common.Unknown020			= (uint32)atoi(row[idx++]);
-					item.Common.Tradeskills			= (atoi(row[idx++])==0) ? false : true;
-					item.Common.SvCold				= (sint8)atoi(row[idx++]);
-					item.Common.SvDisease			= (sint8)atoi(row[idx++]);
-					item.Common.SvPoison			= (sint8)atoi(row[idx++]);
-					item.Common.SvMagic				= (sint8)atoi(row[idx++]);
-					item.Common.SvFire				= (sint8)atoi(row[idx++]);
-					item.Common.STR					= (sint8)atoi(row[idx++]);
-					item.Common.STA					= (sint8)atoi(row[idx++]);
-					item.Common.AGI					= (sint8)atoi(row[idx++]);
-					item.Common.DEX					= (sint8)atoi(row[idx++]);
-					item.Common.CHA					= (sint8)atoi(row[idx++]);
-					item.Common.INT					= (sint8)atoi(row[idx++]);
-					item.Common.WIS					= (sint8)atoi(row[idx++]);
-					item.Common.HP					= atoi(row[idx++]);
-					item.Common.Mana				= atoi(row[idx++]);
-					item.Common.AC					= atoi(row[idx++]);
-					item.Common.Deity				= (uint32)atoi(row[idx++]);
-					item.Common.SkillModValue		= atoi(row[idx++]);
-					item.Common.SkillModType		= (uint32)atoi(row[idx++]);
-					item.Common.BaneDmgRace			= (uint32)atoi(row[idx++]);
-					item.Common.BaneDmg				= (sint8)atoi(row[idx++]);
-					item.Common.BaneDmgBody			= (sint8)atoi(row[idx++]);
-					item.Common.Magic				= (atoi(row[idx++])==0) ? false : true;
-					item.Common.casttime2			= (uint32)atoi(row[idx++]);
-					item.Common.ProcLevel			= (uint8)atoi(row[idx++]);
-					item.Common.RequiredLevel		= atoi(row[idx++]);
-					item.Common.BardSkillType		= (uint32)atoi(row[idx++]);
-					item.Common.BardSkillAmt		= atoi(row[idx++]);
-					item.Common.Light				= (uint8)atoi(row[idx++]);
-					item.Common.Delay				= (uint8)atoi(row[idx++]);
-					item.Common.RecommendedLevel	= (uint8)atoi(row[idx++]);
-					item.Common.RecommendedSkill	= (uint8)atoi(row[idx++]);
-					item.Common.ElemDmgType			= (uint8)atoi(row[idx++]);
-					item.Common.ElemDmg				= (uint8)atoi(row[idx++]);
-					item.Common.EffectType			= (uint8)atoi(row[idx++]);
-					item.Common.Range				= (uint8)atoi(row[idx++]);
-					item.Common.Damage				= (uint8)atoi(row[idx++]);
-					item.Common.Color				= (uint32)atoi(row[idx++]);
-					item.Common.Classes				= (uint32)atoi(row[idx++]);
-					item.Common.Races				= (uint32)atoi(row[idx++]);
-					item.Common.Unknown061			= (uint32)atoi(row[idx++]);
-					item.Common.SpellId				= (sint16)atoi(row[idx++]);
-					item.Common.MaxCharges			= (sint8)atoi(row[idx++]);
-					item.Common.ItemUse				= (uint8)atoi(row[idx++]);
-					item.Common.Material			= (uint8)atoi(row[idx++]);
-					item.Common.SellRate			= (float)atof(row[idx++]);
-					item.Common.Unknown067			= (uint32)atoi(row[idx++]);
-					item.Common.CastTime			= (uint32)atoi(row[idx++]);
-					item.Common.Unknown069			= (uint32)atoi(row[idx++]);
-					item.Common.ProcRateMod			= (uint32)atoi(row[idx++]);
-					item.Common.FocusId				= atoi(row[idx++]);
-					item.Common.CombatEffects		= (sint8)atoi(row[idx++]);
-					item.Common.Shielding			= (sint8)atoi(row[idx++]);
-					item.Common.StunResist			= (sint8)atoi(row[idx++]);
-					item.Common.StrikeThrough		= (sint8)atoi(row[idx++]);
-					item.Common.CombatSkill			= (uint32)atoi(row[idx++]);
-					item.Common.CombatSkillDmg		= (uint32)atoi(row[idx++]);
-					item.Common.SpellShield			= (sint8)atoi(row[idx++]);
-					item.Common.Avoidance			= (sint8)atoi(row[idx++]);
-					item.Common.Accuracy			= (sint8)atoi(row[idx++]);
-					item.Common.Unknown081			= (uint32)atoi(row[idx++]);
-					item.Common.FactionMod1			= atoi(row[idx++]);
-					item.Common.FactionMod2			= atoi(row[idx++]);
-					item.Common.FactionMod3			= atoi(row[idx++]);
-					item.Common.FactionMod4			= atoi(row[idx++]);
-					item.Common.FactionAmt1			= atoi(row[idx++]);
-					item.Common.FactionAmt2			= atoi(row[idx++]);
-					item.Common.FactionAmt3			= atoi(row[idx++]);
-					item.Common.FactionAmt4			= atoi(row[idx++]);
-					strcpy(item.Common.CharmFile, row[idx++]);
-					item.Common.augtype				= (int8)atoi(row[idx++]);
-					item.Common.AugSlot1Type		= (int8)atoi(row[idx++]);
-					item.Common.AugSlot2Type		= (int8)atoi(row[idx++]);
-					item.Common.AugSlot3Type		= (int8)atoi(row[idx++]);
-					item.Common.AugSlot4Type		= (int8)atoi(row[idx++]);
-					item.Common.AugSlot5Type		= (int8)atoi(row[idx++]);
-					item.Common.ldonpointtheme		= (uint32)atoi(row[idx++]);
-					item.Common.ldonpointcost		= (uint32)atoi(row[idx++]);
-					item.Common.ldonsold			= (uint32)atoi(row[idx++]);
-					idx+=7;
-					item.banedmgamt2				= (uint32)atoi(row[idx++]);
-					item.augmentrestriction			= (uint32)atoi(row[idx++]);
-					item.loreflag					= (atoi(row[idx++])==0) ? false : true;
-					item.pendingloreflag			= (atoi(row[idx++])==0) ? false : true;
-					item.artifactflag				= (atoi(row[idx++])==0) ? false : true;
-					item.summonedflag				= (atoi(row[idx++])==0) ? false : true;
-					item.tribute					= (uint32)atoi(row[idx++]);
-					item.gm							= (atoi(row[idx++])==0) ? false : true;
-					item.endur						= (uint32)atoi(row[idx++]);
-					item.dotshielding				= (uint32)atoi(row[idx++]);
-					item.attackbonus				= (uint32)atoi(row[idx++]);
-					item.hpregen					= (uint32)atoi(row[idx++]);
-					item.manaregen					= (uint32)atoi(row[idx++]);
-					item.hastepercent				= (uint32)atoi(row[idx++]);
-					item.damageshield				= (uint32)atoi(row[idx++]);
-					item.minstatus					= (int8)atoi(row[idx++]);
-				}
-				// Set cached item properties, then cache the item itself
-				item.SetCache();
-				if (!EMuShareMemDLL.Items.cbAddItem(item.ItemNumber, &item)) {
-					LogFile->write(EQEMuLog::Error, "Database::DBLoadItems: Failure reported from EMuShareMemDLL.Items.cbAddItem(%i)", item.ItemNumber);
-					break;
-				}
+			Item_Struct item;
+			memset(&item, 0, sizeof(Item_Struct));
+
+			item.Charges = (sint16)atoi(row[0]);
+			item.Unknown001 = (uint32)atoul(row[1]);
+			item.CurrentEquipSlot = (sint16)atoi(row[2]);
+			item.MerchantPrice = (uint32)atoul(row[3]);
+			item.Unknown004 = (uint32)atoul(row[4]);
+			item.Unknown005 = (uint32)atoul(row[5]);
+			item.Unknown006 = (uint32)atoul(row[6]);
+			item.SpellCharges = (uint32)atoul(row[7]);
+			item.Attuneable = (uint32)atoul(row[8]);
+			item.ItemClass = (uint8)atoi(row[9]);
+			strcpy(item.Name,row[10]);
+			strcpy(item.LoreName,row[11]);
+			strcpy(item.IDFile,row[12]);
+			item.ItemNumber = (uint32)atoul(row[13]);
+			item.Weight = (uint8)atoi(row[14]);
+			item.NoRent = (uint8)atoi(row[15]);
+			item.NoDrop = (uint8)atoi(row[16]);
+			item.Size = (uint8)atoi(row[17]);
+			item.EquipSlots = (uint32)atoul(row[18]);
+			item.Cost = (uint32)atoul(row[19]);
+			item.IconNumber = (uint32)atoul(row[20]);
+			if (item.ItemClass == ItemTypeCommon) { // Common
+				item.Common.Unknown021 = (sint32)atoul(row[21]);
+				item.Common.Unknown022 = (uint32)atoul(row[22]);
+				item.Common.Unknown023 = (uint32)atoul(row[23]);
+				item.Common.Tradeskills = (atoi(row[24])==0) ? false : true;
+				item.Common.SvCold = (sint8)atoi(row[25]);
+				item.Common.SvDisease = (sint8)atoi(row[26]);
+				item.Common.SvPoison = (sint8)atoi(row[27]);
+				item.Common.SvMagic = (sint8)atoi(row[28]);
+				item.Common.SvFire = (sint8)atoi(row[29]);
+				item.Common.STR = (sint8)atoi(row[30]);
+				item.Common.STA = (sint8)atoi(row[31]);
+				item.Common.AGI = (sint8)atoi(row[32]);
+				item.Common.DEX = (sint8)atoi(row[33]);
+				item.Common.CHA = (sint8)atoi(row[34]);
+				item.Common.INT = (sint8)atoi(row[35]);
+				item.Common.WIS = (sint8)atoi(row[36]);
+				item.Common.HP = (sint32)atoul(row[37]);
+				item.Common.Mana = (sint32)atoul(row[38]);
+				item.Common.AC = (sint32)atoul(row[39]);
+				item.Common.Deity = (uint32)atoul(row[40]);
+				item.Common.SkillModValue = (sint32)atoul(row[41]);
+				item.Common.SkillModType = (uint32)atoul(row[42]);
+				item.Common.BaneDmgRace = (uint32)atoul(row[43]);
+				item.Common.BaneDmg = (sint8)atoi(row[44]);
+				item.Common.BaneDmgBody = (uint32)atoul(row[45]);
+				item.Common.Magic = (atoi(row[46])==0) ? false : true;
+				item.Common.casttime2 = (sint32)atoul(row[47]);
+				item.Common.ProcLevel = (uint8)atoi(row[48]);
+				item.Common.RequiredLevel = (uint8)atoi(row[49]);
+				item.Common.BardSkillType = (uint32)atoul(row[50]);
+				item.Common.BardSkillAmt = (sint32)atoul(row[51]);
+				item.Common.Light = (sint8)atoi(row[52]);
+				item.Common.Delay = (uint8)atoi(row[53]);
+				item.Common.RecommendedLevel = (uint8)atoi(row[54]);
+				item.Common.RecommendedSkill = (uint8)atoi(row[55]);
+				item.Common.ElemDmgType = (uint8)atoi(row[56]);
+				item.Common.ElemDmg = (uint8)atoi(row[57]);
+				item.Common.EffectType = (uint8)atoi(row[58]);
+				item.Common.Range = (uint8)atoi(row[59]);
+				item.Common.Damage = (uint8)atoi(row[60]);
+				item.Common.Color = (uint32)atoul(row[61]);
+				item.Common.Classes = (uint32)atoul(row[62]);
+				item.Common.Races = (uint32)atoul(row[63]);
+				item.Common.Unknown064 = (uint32)atoul(row[64]);
+				item.Common.SpellId = (sint32)atoul(row[65]);
+				item.Common.MaxCharges = (sint16)atoi(row[66]);
+				item.Common.ItemUse = (uint8)atoi(row[67]);
+				item.Common.Material = (uint8)atoi(row[68]);
+				item.Common.SellRate = (float)atof(row[69]);
+				item.Common.Unknown070 = (uint32)atoul(row[70]);
+				item.Common.Fulfilment = (uint32)atoul(row[71]);
+				item.Common.Unknown072 = (uint32)atoul(row[72]);
+				item.Common.ProcRateMod = (uint32)atoul(row[73]);
+				item.Common.FocusId = (sint32)atoul(row[74]);
+				item.Common.CombatEffects = (sint8)atoi(row[75]);
+				item.Common.Shielding = (sint8)atoi(row[76]);
+				item.Common.StunResist = (sint8)atoi(row[77]);
+				item.Common.StrikeThrough = (sint8)atoi(row[78]);
+				item.Common.CombatSkill = (uint32)atoul(row[79]);
+				item.Common.CombatSkillDmg = (uint32)atoul(row[80]);
+				item.Common.SpellShield = (sint8)atoi(row[81]);
+				item.Common.Avoidance = (sint8)atoi(row[82]);
+				item.Common.Accuracy = (sint8)atoi(row[83]);
+				item.Common.CharmFormula = (uint32)atoul(row[84]);
+				item.Common.FactionMod1 = (sint32)atoul(row[85]);
+				item.Common.FactionMod2 = (sint32)atoul(row[86]);
+				item.Common.FactionMod3 = (sint32)atoul(row[87]);
+				item.Common.FactionMod4 = (sint32)atoul(row[88]);
+				item.Common.FactionAmt1 = (sint32)atoul(row[89]);
+				item.Common.FactionAmt2 = (sint32)atoul(row[90]);
+				item.Common.FactionAmt3 = (sint32)atoul(row[91]);
+				item.Common.FactionAmt4 = (sint32)atoul(row[92]);
+				strcpy(item.Common.CharmFile,row[93]);
+				item.Common.augtype = (uint32)atoul(row[94]);
+				item.Common.AugSlotType[0] = (uint8)atoi(row[95]);
+				item.Common.AugSlotType[1] = (uint8)atoi(row[96]);
+				item.Common.AugSlotType[2] = (uint8)atoi(row[97]);
+				item.Common.AugSlotType[3] = (uint8)atoi(row[98]);
+				item.Common.AugSlotType[4] = (uint8)atoi(row[99]);
+				item.Common.ldonpointtheme = (uint32)atoul(row[100]);
+				item.Common.ldonpointcost = (uint32)atoul(row[101]);
+				item.Common.ldonsold = (uint32)atoul(row[102]);
+			} else if (item.ItemClass == ItemTypeContainer) { // Containers
+				item.Container.PackType = (uint8)atoi(row[103]);
+				item.Container.Slots = (uint8)atoi(row[104]);
+				item.Container.SizeCapacity = (uint8)atoi(row[105]);
+				item.Container.WeightReduction = (uint8)atoi(row[106]);
+			} else if (item.ItemClass == ItemTypeBook) { // Books
+				item.Book.BookType = (uint8)atoi(row[107]);
+				item.Book.Unknown108 = (uint32)atoul(row[108]);
+				strcpy(item.Book.File,row[109]);
 			}
-			
-			mysql_free_result(result);
-			ret = true;
-		}
-		else {
-			LogFile->write(EQEMuLog::Error, "DBLoadItems query '%s', %s", query, errbuf);
-			LogFile->write(EQEMuLog::Error, "If you got an error related to the 'SpellCharges' field, run the following SQL Query: ALTER TABLE `items` CHANGE `unknown008` `SpellCharges` INT(11)  DEFAULT \"0\" NOT NULL;");
-		}
-	#else
-		
-		// Using blob fields
-		char* query = new char[256];
-		strcpy(query, "SELECT MAX(id), count(*) FROM items");
-		
-		if (RunQuery(query, strlen(query), errbuf, &result)) {
-			safe_delete_array(query);
-			row = mysql_fetch_row(result);
-			if (row != 0 && row[0] > 0) {
-				if (row[0])
-					max_item = atoi(row[0]);
-				else
-					max_item = 0;
-				if (atoi(row[1]) != iItemCount) {
-					cout << "Error: Insufficient shared memory to load items." << endl;
-					cout << "Count(id): " << atoi(row[1]) << ", iItemCount: " << iItemCount << endl;
-					return false;
-				}
-				if ((int32)atoi(row[0]) != iMaxItemID) {
-					cout << "Error: Insufficient shared memory to load items." << endl;
-					cout << "Max(id): " << atoi(row[0]) << ", iMaxItemID: " << iMaxItemID << endl;
-					cout << "Fix this by increasing the MMF_EQMAX_ITEMS define statement" << endl;
-					return false;
-				}
-				mysql_free_result(result);
-				
-				MakeAnyLenString(&query, "SELECT id,raw_data FROM items");
-				
-				if (RunQuery(query, strlen(query), errbuf, &result)) {
-					safe_delete_array(query);
-					while((row = mysql_fetch_row(result))) {
-						unsigned long* lengths;
-						lengths = mysql_fetch_lengths(result);
-						if (lengths[1] == sizeof(Item_Struct)) {
-							// neotokyo: dirty fix for recommended skill 255
-							//if (((Item_Struct*)(row[1]))->Common.RecSkill > 252)
-							//	((Item_Struct*)(row[1]))->Common.RecSkill = 252;
-							
-							if (!EMuShareMemDLL.Items.cbAddItem(atoi(row[0]), (Item_Struct*) row[1])) {
-								mysql_free_result(result);
-								cout << "Error: Database::DBLoadItems: !EMuShareMemDLL.Items.cbAddItem(" << atoi(row[0]) << ")" << endl;
-								return false;
-							}
-						}
-						else {
-							// TODO: Invalid item length in database
-							printf("Lengths: %ld - sizeof(): %d\n", lengths[1], sizeof(Item_Struct));
-						}
-						Sleep(0);
-					}
-					mysql_free_result(result);
-				}
-				else {
-					cerr << "Error in DBLoadItems query '" << query << "' " << errbuf << endl;
-					safe_delete_array(query);
-					return false;
-				}
-			}
-			else {
-				mysql_free_result(result);
+			item.banedmgamt2 = (uint32)atoul(row[110]);
+			item.augmentrestriction = (uint32)atoul(row[111]);
+			item.loreflag = (atoi(row[112])==0) ? false : true;
+			item.pendingloreflag = (atoi(row[113])==0) ? false : true;
+			item.artifactflag = (atoi(row[114])==0) ? false : true;
+			item.summonedflag = (atoi(row[115])==0) ? false : true;
+			item.tribute = (uint32)atoul(row[116]);
+			item.gm = (atoi(row[117])==0) ? false : true;
+			item.endur = (uint32)atoul(row[118]);
+			item.dotshielding = (uint32)atoul(row[119]);
+			item.attackbonus = (uint32)atoul(row[120]);
+			item.hpregen = (uint32)atoul(row[121]);
+			item.manaregen = (uint32)atoul(row[122]);
+			item.hastepercent = (uint32)atoul(row[123]);
+			item.damageshield = (uint32)atoul(row[124]);
+			item.unknown125 = (uint32)atoul(row[125]);
+			item.unknown126 = (uint32)atoul(row[126]);
+			item.unknown127 = (uint32)atoul(row[127]);
+			item.distiller = (uint32)atoul(row[128]);
+			item.unknown129 = (uint32)atoul(row[129]);
+			item.unknown130 = (uint32)atoul(row[130]);
+			item.unknown131 = (uint32)atoul(row[131]);
+			item.unknown132 = (uint32)atoul(row[132]);
+
+			// Set cached item properties, then cache the item itself
+			item.SetCache();
+			if (!EMuShareMemDLL.Items.cbAddItem(item.ItemNumber, &item)) {
+				LogFile->write(EQEMuLog::Error, "Database::DBLoadItems: Failure reported from EMuShareMemDLL.Items.cbAddItem(%i)", item.ItemNumber);
+				break;
 			}
 		}
-		else {
-			cerr << "Error in DBLoadItems query '" << query << "' " << errbuf << endl;
-		}
 		
-	#endif
-	
+		mysql_free_result(result);
+		ret = true;
+	}
+	else {
+		LogFile->write(EQEMuLog::Error, "DBLoadItems query '%s', %s", query, errbuf);
+		LogFile->write(EQEMuLog::Error, "If you got an error related to the 'charmformula' field, run the following SQL Query: ALTER TABLE `items` CHANGE `unknown084` `charmformula` INT(11)  DEFAULT \"0\" NOT NULL;");
+	}
 	return ret;
 }
 
@@ -4147,83 +4333,7 @@ const Item_Struct* Database::GetItem(uint32 id) {
 const Item_Struct* Database::IterateItems(uint32* NextIndex) {
 	return EMuShareMemDLL.Items.IterateItems(NextIndex);
 }
-#else
-// @merth: This function is way out of date
-bool Database::LoadItems()
-{
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	query = new char[256];
-	strcpy(query, "SELECT MAX(id) FROM items");
-	
-	
-	if (RunQuery(query, strlen(query), errbuf, &result)) {
-		safe_delete_array(query);
-		row = mysql_fetch_row(result);
-		if (row && row[0]) { 
-			max_item = atoi(row[0]);
-			item_array = new Item_Struct*[max_item+1];
-			for(unsigned int i=0; i<max_item; i++)
-			{
 
-				item_array[i] = 0;
-			}
-			mysql_free_result(result);
-			
-			MakeAnyLenString(&query, "SELECT id,raw_data FROM items");
-			
-			if (RunQuery(query, strlen(query), errbuf, &result))
-			{
-				safe_delete_array(query);
-				while((row = mysql_fetch_row(result)))
-				{
-					unsigned long* lengths;
-					lengths = mysql_fetch_lengths(result);
-					if (lengths[1] == sizeof(Item_Struct))
-					{
-						item_array[atoi(row[0])] = new Item_Struct;
-						memcpy(item_array[atoi(row[0])], row[1], sizeof(Item_Struct));
-                        // neotokyo: dirty fix for recommended skill 255
-                        if (item_array[atoi(row[0])]->Common.RecSkill > 252)
-                            item_array[atoi(row[0])]->Common.RecSkill = 252;
-					}
-					else
-					{
-						// TODO: Invalid item length in database
-					}
-					Sleep(0);
-				}
-				mysql_free_result(result);
-			}
-			else {
-				cerr << "Error in LoadItems query '" << query << "' " << errbuf << endl;
-				safe_delete_array(query);
-				return false;
-			}
-		}
-		else {
-			mysql_free_result(result);
-		}
-	}
-	else {
-		cerr << "Error in LoadItems query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return false;
-	}
-	return true;
-}
-
-const Item_Struct* Database::GetItem(uint32 id) {
-	if (item_array && id <= max_item)
-		return item_array[id];
-	else
-		return 0;
-}
-#endif
-
-#ifdef SHAREMEM
 extern "C" bool extDBLoadDoors(sint32 iDoorCount, int32 iMaxDoorID) { return database.DBLoadDoors(iDoorCount, iMaxDoorID); }
 const Door* Database::GetDoor(int8 door_id, const char* zone_name) {
 	for(uint32 i=0; i!=max_door_type;i++)
@@ -4338,106 +4448,6 @@ bool Database::DBLoadDoors(sint32 iDoorCount, int32 iMaxDoorID) {
 
 	return true;
 }
-#else
-const Door* Database::GetDoor(int8 door_id, const char* zone_name)
-{
-	for(uint32 i=0; i!=max_door_type;i++)
-	{
-        const Door* door;
-        door = GetDoorDBID(i);
-        if (!door)
-            continue;
-	    if(door->door_id == door_id && strcasecmp(door->zone_name, zone_name) == 0)
-	        return door;
-	}
-    return 0;
-}
-
-const Door* Database::GetDoorDBID(uint32 db_id)
-{
-	return door_array[db_id];
-}
-
-bool Database::LoadDoors()
-{
-	cout << "(NOMEMSHARE) Loading Doors from database..." << endl;
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	query = new char[256];
-    Door tmpDoor;
-
-    if (door_array == 0)
-    {
-        int32 count;
-        
-        if (!GetDoorsCount(&count))
-            return false;
-
-        max_door_type = count;
-
-        door_array = new Door*[count+1];
-        memset(door_array, 0, sizeof(door_array)*(count+1));
-        if (!door_array)
-            return false;
-    }
-    else
-    {
-        int32 count;
-        
-        if (!GetDoorsCount(&count))
-            return false;
-        if (count != max_door_type) // what happened here? do we need to reallocate?
-            return false;
-    }
-
-   MakeAnyLenString(&query, "SELECT id,doorid,zone,name,pos_x,pos_y,pos_z,heading,opentype,guild,lockpick,keyitem,triggerdoor,triggertype,door_param from doors");//WHERE zone='%s'", zone_name
-	if (RunQuery(query, strlen(query), errbuf, &result))
-	{
-	    safe_delete_array(query);
-		while((row = mysql_fetch_row(result)))
-        {
-		    memset(&tmpDoor, 0, sizeof(Door));
-			memset(&door_array[tmpDoor.db_id],0,sizeof(Door));
-			tmpDoor.db_id = atoi(row[0]);
-			tmpDoor.door_id = atoi(row[1]);
-			strncpy(tmpDoor.zone_name,row[2],16);
-            strncpy(tmpDoor.door_name,row[3],10);
-			tmpDoor.pos_x = (float)atof(row[4]);
-			tmpDoor.pos_y = (float)atof(row[5]);
-			tmpDoor.pos_z = (float)atof(row[6]);
-			tmpDoor.heading = atoi(row[7]);
-			tmpDoor.opentype = atoi(row[8]);
-			tmpDoor.guildid = atoi(row[9]);
-			tmpDoor.lockpick = atoi(row[10]);
-			tmpDoor.keyitem = atoi(row[11]);
-			tmpDoor.trigger_door = atoi(row[12]);
-			tmpDoor.trigger_type = atoi(row[13]);
-			tmpDoor.liftheight= atoi(row[14]);
-            if (door_array[tmpDoor.db_id] == NULL)
-                door_array[tmpDoor.db_id] = new Door;
-
-            else
-            {
-                cerr << "Double DB_Id " << tmpDoor.door_id << " while loading doors" << endl;
-            }
-            memcpy(door_array[tmpDoor.db_id], &tmpDoor, sizeof(Door));
-
-            Sleep(0);
-		}
-		mysql_free_result(result);
-	}
-	else
-	{
-		cerr << "Error in LoadDoors query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return false;
-	}
-	return true;
-}
-#endif
-
 
 #ifdef ZONE
 /* Searches npctable for matchind id, and returns the item if found,
@@ -4580,7 +4590,7 @@ const NPCType* Database::GetNPCType (uint32 id) {
 	}
       }
       else
-         cerr << "Error loading NPCs from database. Bad query.\n";
+         cerr << "Error loading NPCs from database. Bad query: " << errbuf << endl;
 
       safe_delete_array(query);
    }
@@ -4608,76 +4618,6 @@ bool Database::LoadNPCTypes() {
 //   loadZoneNPCs ();
    return true;
 }
-
-#ifndef SHAREMEM
-void Database::LoadAnItem(uint16 item_id, unsigned int* texture, unsigned int* color)
-{
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	query = new char[256];
-	Item_Struct tempitem;
-	MakeAnyLenString(&query, "SELECT raw_data FROM items where id=%d",item_id);
-	if (RunQuery(query, strlen(query), errbuf, &result))
-	{
-		safe_delete_array(query);
-		while((row = mysql_fetch_row(result)))
-		{
-			unsigned long* lengths;
-			lengths = mysql_fetch_lengths(result);
-			if (lengths[0] == sizeof(Item_Struct))
-			{
-				//tempitem=row[0];
-				memcpy(&tempitem, row[0], sizeof(Item_Struct));
-				*texture=tempitem.Common.Material;
-				*color=tempitem.Common.Color;
-			}
-			else
-			{
-				// TODO: Invalid item length in database
-			}
-			Sleep(0);
-		}
-		mysql_free_result(result);
-	}
-	else {
-		cerr << "Error in LoadAnItem query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		//return false;
-	}
-	
-	//return tempitemptr;
-}
-#endif
-
-#ifndef SHAREMEM
-bool Database::SaveItemToDatabase(Item_Struct* ItemToSave)
-{
-	// Insert the modified item back into the database
-	char Query[sizeof(Item_Struct)*2+1 + 64];
-	char EscapedText[sizeof(Item_Struct)*2+1];
-	
-	char errbuf[MYSQL_ERRMSG_SIZE];
-	//	long AffectedRows;
-	
-	if(DoEscapeString(EscapedText, (const char *)ItemToSave, sizeof(Item_Struct))) {
-		sprintf(Query, "UPDATE items SET raw_data = '%s' WHERE id = %d\n", EscapedText, ItemToSave->ItemNumber);
-		
-		if(RunQuery(Query, strlen(Query), errbuf))
-		{
-			//			dpf("Affected rows = %d", AffectedRows);
-			return(true);
-		}
-		else {
-			cout<<"Save failed::"<<Query<<endl;
-		}
-	}
-	
-	//dpf("Update failed");
-	return(false);
-}
-#endif
 
 bool Database::LoadZoneNames() {
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -4726,185 +4666,6 @@ bool Database::LoadZoneNames() {
 	}
 	return true;
 }
-
-#ifndef SHAREMEM
-bool Database::SetItemAtt(char* att, char * value, unsigned int ItemIndex) {
-	if (att && value && ItemIndex) {
-		//item info
-		if (strstr(att,"name")) {
-			strcpy(item_array[ItemIndex]->Name,value);
-		}
-		else if (strstr(att, "lore")) {
- 			strcpy(item_array[ItemIndex]->LoreName,value);
-  		}
-  		else if (strstr(att,"idfile")) {
- 			strcpy(item_array[ItemIndex]->IDFile,value);
-  		}
- 		//else if (strstr(att, "flag")) {
- 		//	item_array[ItemIndex]-> = atoi(value);
- 		//}
-  		else if (strstr(att, "weight")) {
- 			item_array[ItemIndex]->Weight = atoi(value);
-  		}
-  		else if (strstr(att, "nosave")) {
- 			item_array[ItemIndex]->NoDrop = atoi(value);
-  		}
-  		else if (strstr(att, "nodrop")) {
- 			item_array[ItemIndex]->NoRent = atoi(value);
-  		}
-		else if (strstr(att, "size")) {
- 			item_array[ItemIndex]->Size = atoi(value);
-  		}
-  		else if (strstr(att, "type")) {
- 			item_array[ItemIndex]->Type = atoi(value);
-  		}
-  		else if (strstr(att, "icon")) {
- 			item_array[ItemIndex]->IconNumber = atoi(value);
-  		}
-  		else if (strstr(att, "equipableSlots")) {
- 			item_array[ItemIndex]->EquipSlots = atoi(value);
-  		}
-  		//item stats
-		else if (strstr(att, "str")) {
-			item_array[ItemIndex]->Common.STR = atoi(value);
-		}
-		else if (strstr(att, "sta")) {
-			item_array[ItemIndex]->Common.STA = atoi(value);
-		}
-		else if (strstr(att, "cha")) {
-			item_array[ItemIndex]->Common.CHA = atoi(value);
-		}
-		else if (strstr(att, "dex")) {
-			item_array[ItemIndex]->Common.DEX = atoi(value);
-		}
-		else if (strstr(att, "int")) {
-			item_array[ItemIndex]->Common.INT = atoi(value);
-		}
-		else if (strstr(att, "agi")) {
-			item_array[ItemIndex]->Common.AGI = atoi(value);
-		}
-		else if (strstr(att, "wis")) {
-			item_array[ItemIndex]->Common.WIS = atoi(value);
-		}
-		else if (strstr(att, "mr")) {
-			item_array[ItemIndex]->Common.SvMagic = atoi(value);
-		}
-		else if (strstr(att, "fr")) {
-			item_array[ItemIndex]->Common.SvFire = atoi(value);
-		}
-		else if (strstr(att, "cr")) {
-			item_array[ItemIndex]->Common.SvCold = atoi(value);
-		}
-		else if (strstr(att, "dr")) {
-			item_array[ItemIndex]->Common.SvDisease = atoi(value);
-		}
-		else if (strstr(att, "pr")) {
-			item_array[ItemIndex]->Common.SvPoison = atoi(value);
-		}
-		else if (strstr(att, "hp")) {
-			item_array[ItemIndex]->Common.HP = atoi(value);
-		}
-		else if (strstr(att, "mana")) {
-			item_array[ItemIndex]->Common.Mana = atoi(value);
-		}
-		else if (strstr(att, "ac")) {
-			item_array[ItemIndex]->Common.AC = atoi(value);
-		}
-		else if (strstr(att, "material")) {
-			item_array[ItemIndex]->Common.Material = atoi(value);
-		}
-		else if (strstr(att, "damage")) {
-			item_array[ItemIndex]->Common.Damage = atoi(value);
-		}
-		else if (strstr(att, "delay")) {
-			item_array[ItemIndex]->Common.Delay = atoi(value);
-		}
-		else if (strstr(att, "effect")) {
-			item_array[ItemIndex]->Common.EffectType = atoi(value);
-		}
-		else if (strstr(att,"spellID")) {
-			item_array[ItemIndex]->Common.SpellId = atoi(value);
-		}
-		else if (strstr(att,"color")) {
-			item_array[ItemIndex]->Common.Color = atoi(value);
-		}
-		else if (strstr(att,"classes")) {
-			uint16 tv = 0;
-			if (strstr(value,"warrior"))
-				tv += warrior_1;
-			if (strstr(value,"paladin"))
-				tv += paladin_1;
-			if (strstr(value,"shadow"))
-				tv += shadow_1;
-			if (strstr(value,"ranger"))
-				tv += ranger_1;
-			if (strstr(value,"rogue"))
-				tv += rogue_1;
-			if (strstr(value,"monk"))
-				tv += monk_1;
-			if (strstr(value,"beastlord"))
-				tv += beastlord_1;
-			if (strstr(value,"wizard"))
-				tv += wizard_1;
-			if (strstr(value,"enchanter"))
-				tv += enchanter_1;
-			if (strstr(value,"mage"))
-				tv += mage_1;
-			if (strstr(value,"necromancer"))
-				tv += necromancer_1;
-			if (strstr(value,"shaman"))
-				tv += shaman_1;
-			if (strstr(value,"cleric"))
-				tv += cleric_1;
-			if (strstr(value,"bard"))
-				tv += bard_1;
-			if (strstr(value,"druid"))
-				tv += druid_1;
-			if (strstr(value,"all"))
-				tv += call_1;
-			item_array[ItemIndex]->Common.Classes = tv;
-		}
-		else if (strstr(att,"races")) {
-			uint16 tv = 0;
-			if (strstr(value,"human"))
-				tv += human_1;
-			if (strstr(value,"barbarian"))
-				tv += barbarian_1;
-			if (strstr(value,"erudite"))
-				tv += erudite_1;
-			if (strstr(value,"woodelf"))
-				tv += woodelf_1;
-			if (strstr(value,"highelf"))
-				tv += highelf_1;
-			if (strstr(value,"darkelf"))
-				tv += darkelf_1;
-			if (strstr(value,"halfelf"))
-				tv += halfelf_1;
-			if (strstr(value,"dwarf"))
-				tv += dwarf_1;
-			if (strstr(value,"troll"))
-				tv += troll_1;
-			if (strstr(value,"ogre"))
-				tv += ogre_1;
-			if (strstr(value,"halfling"))
-				tv += halfling_1;
-			if (strstr(value,"gnome"))
-				tv += gnome_1;
-			if (strstr(value,"iksar"))
-				tv += iksar_1;
-			if (strstr(value,"vahshir"))
-				tv += vahshir_1;
-			if (strstr(value,"all"))
-				tv += rall_1;			
-			item_array[ItemIndex]->Common.Races = tv;
-		}
-		SaveItemToDatabase(item_array[ItemIndex]);
-		return true;
-	}
-	return false;
-	return false;
-}
-#endif
 
 int32 Database::GetZoneID(const char* zonename) {
 	if (zonename_array == 0)
@@ -6048,7 +5809,6 @@ sint32 Database::GetNPCFactionListsCount(int32* oMaxID) {
 	return -1;
 }
 
-#ifdef SHAREMEM
 extern "C" bool extDBLoadNPCFactionLists(sint32 iNPCFactionListCount, int32 iMaxNPCFactionListID) { return database.DBLoadNPCFactionLists(iNPCFactionListCount, iMaxNPCFactionListID); }
 const NPCFactionList* Database::GetNPCFactionList(uint32 id) {
 	return EMuShareMemDLL.NPCFactionList.GetNPCFactionList(id);
@@ -6180,90 +5940,6 @@ bool Database::DBLoadNPCFactionLists(sint32 iNPCFactionListCount, int32 iMaxNPCF
 	}
 	return true;
 }
-#else
-const NPCFactionList* Database::GetNPCFactionList(uint32 id) {
-	if (id <= npcfactionlist_max && npcfactionlist_array)
-		return npcfactionlist_array[id];
-	return 0;
-}
-
-bool Database::LoadNPCFactionLists() {
-	LogFile->write(EQEMuLog::Status, "Loading NPC Faction Lists from database...");
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	int i;
-	query = new char[256];
-	strcpy(query, "SELECT MAX(id), Count(*) FROM npc_faction");
-	if (RunQuery(query, strlen(query), errbuf, &result)) {
-		safe_delete_array(query);
-		row = mysql_fetch_row(result);
-		if (row && row[0]) {
-			npcfactionlist_max = atoi(row[0]);
-			mysql_free_result(result);
-			npcfactionlist_array = new NPCFactionList*[npcfactionlist_max+1];
-			for (i=0; i<=npcfactionlist_max; i++)
-				npcfactionlist_array[i] = 0;
-			if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, primaryfaction from npc_faction"), errbuf, &result)) {
-				safe_delete_array(query);
-				while((row = mysql_fetch_row(result))) {
-					i = atoi(row[0]);
-					npcfactionlist_array[i] = new NPCFactionList;
-					memset(npcfactionlist_array[i], 0, sizeof(NPCFactionList));
-					npcfactionlist_array[i]->id = atoi(row[0]);
-					npcfactionlist_array[i]->primaryfaction = atoi(row[1]);
-					Sleep(0);
-				}
-				mysql_free_result(result);
-			}
-			else {
-				cerr << "Error in LoadNPCFactionLists query2 '" << query << "' " << errbuf << endl;
-				safe_delete_array(query);
-				return false;
-			}
-			if (RunQuery(query, MakeAnyLenString(&query, "SELECT npc_faction_id, faction_id, value, npc_value FROM npc_faction_entries order by npc_faction_id"), errbuf, &result)) {
-				safe_delete_array(query);
-				int32 curflid = 0;
-				int32 tmpflid = 0;
-				while((row = mysql_fetch_row(result))) {
-					tmpflid = atoi(row[0]);
-					if (curflid != tmpflid && curflid != 0) {
-						i = 0;
-					}
-					curflid = tmpflid;
-					if (npcfactionlist_array[tmpflid]) {
-						npcfactionlist_array[tmpflid]->factionid[i] = atoi(row[1]);
-						npcfactionlist_array[tmpflid]->factionvalue[i] = atoi(row[2]);
-						npcfactionlist_array[tmpflid]->factionnpcvalue[i] = atoi(row[3]);
-					}
-					i++;
-					if (i >= MAX_NPC_FACTIONS) {
-						cerr << "Error in DBLoadNPCFactionLists: More than MAX_NPC_FACTIONS factions returned, flid=" << tmpflid << endl;
-						i--;
-					}
-					Sleep(0);
-				}
-				mysql_free_result(result);
-			}			else {
-				cerr << "Error in LoadNPCFactionLists query3 '" << query << "' " << errbuf << endl;
-				safe_delete_array(query);
-				return false;
-			}
-		}
-		else {
-			mysql_free_result(result);
-			return false;
-		}
-	}
-	else {
-		cerr << "Error in LoadNPCFactionLists query1 '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return false;
-	}
-	return true;
-}
-#endif
 
 //Functions for weather
 int8 Database::GetZoneW(int32 zoneid) {
@@ -6356,229 +6032,6 @@ int16 Database::GetTrainlevel(int16 eqclass, int8 skill_id) {
 	}
 	return 66; // Aka never
 }
-
-bool Database::InjectToRaw(){
-#ifndef SHAREMEM
-	cout<<"Starting"<<endl;
-//
-    if (1){
-	char errbuf[MYSQL_ERRMSG_SIZE];
-	char *query = 0;
-	MYSQL_RES *result;
-	MYSQL_ROW row;
-	query = new char[256];
-	strcpy(query, "SELECT MAX(id) FROM items");
-	
-	
-	if (RunQuery(query, strlen(query), errbuf, &result)) {
-		safe_delete_array(query);
-		row = mysql_fetch_row(result);
-		if (row && row[0]) { 
-			max_item = atoi(row[0]);
-			item_array = new Item_Struct*[max_item+1];
-			for(unsigned int i=0; i<max_item; i++)
-			{
-
-				item_array[i] = 0;
-			}
-			mysql_free_result(result);
-			
-			MakeAnyLenString(&query, "SELECT id,raw_data_last FROM items");
-			
-			if (RunQuery(query, strlen(query), errbuf, &result))
-			{
-				safe_delete_array(query);
-				while((row = mysql_fetch_row(result)))
-				{
-					unsigned long* lengths;
-					lengths = mysql_fetch_lengths(result);
-					if (lengths[1] == sizeof(OLDItem_Struct))
-					{
-						//item_array[atoi(row[0])] = new OLDItem_Struct;
-						//memcpy(item_array[atoi(row[0])], row[1], sizeof(OLDItem_Struct));
-					}
-					else
-					{
-					    //cout<<"Fuck:"<<lengths[1]<<":"<<sizeof(OLDItem_Struct)<<endl;
-						// TODO: Invalid item length in database
-						item_array[atoi(row[0])] = new Item_Struct;
-						memset(item_array, 0x0, sizeof(Item_Struct));
-						item_array[atoi(row[0])]->ItemNumber = atoi(row[0]);
-				
-					}
-					Sleep(0);
-				}
-				mysql_free_result(result);
-			}
-			else {
-				cerr << "Error in LoadItems query '" << query << "' " << errbuf << endl;
-				safe_delete_array(query);
-				return false;
-			}
-		}
-		else {
-			mysql_free_result(result);
-		}
-	}
-	else {
-		cerr << "Error in LoadItems query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return false;
-	}
-    }
-	
-	uint32 max_item = 0;
-	GetItemsCount(&max_item);
-	//Item_Struct* u_item_array[max_item+1];
-	for (uint32 i = 0; i < max_item; i++){
-		//(const Item_Struct*) u_item_array[i] = GetItem(i);
-	}
-	
-	char errbuf[MYSQL_ERRMSG_SIZE];
-	char *query = 0;
-	MYSQL_RES *result;
-	MYSQL_ROW row;
-	query = new char[256];
-// Inject Field data
-	cout<<"Done filling memmory: x=0 max_item="<<max_item<<endl;
-	int count = 0;
-	for (unsigned int x = 0; x < max_item; x++){
-			if(!item_array[x]) {
-			    continue;
-			}
-			count++;
-			// Retrieve field data for current item
-#if 0
-MakeAnyLenString(&query, "SELECT RecLevel,ReqLevel,SkillModId,SkillModPercent,ElemDmgType,ElemDmg,BaneDMGBody,BaneDMGRace,BaneDMG FROM items WHERE ID=%i", item_array[x]->ItemNumber);
-			if (RunQuery(query, strlen(query), errbuf, &result))
-			{
-				safe_delete_array(query);
-				while((row = mysql_fetch_row(result)))
-				{
-				    item_array[x]->common.RecLevel = atoi(row[0]);
-				    item_array[x]->common.ReqLevel = atoi(row[1]);
-				    item_array[x]->Common.SkillModId = atoi(row[2]);
-				    item_array[x]->Common.SkillModPercent = atoi(row[3]);
-				    item_array[x]->common.ElemDmgType = atoi(row[4]);
-				    item_array[x]->common.ElemDmg = atoi(row[5]);
-				    item_array[x]->common.BaneDMGBody = atoi(row[6]);
-				    item_array[x]->common.BaneDMGRace = atoi(row[7]);
-				    item_array[x]->common.BaneDMG = atoi(row[8]);
-				    for (int cur = 0; cur < 10; cur++){
-					item_array[x]->common.unknown0282[cur] = 0;
-				    }
-				    for (int cur = 0; cur < 16; cur++){
-					item_array[x]->common.unknown0296[cur] = 0;
-				    }
-				    for (int cur = 0; cur < 3; cur++){
-					item_array[x]->common.unknown0316[cur] = 0;
-				    }
-				    
-				    for (int cur = 0; cur < 2; cur++){
-					item_array[x]->common.unknown0325[cur] = 0;
-				    }
-				    for (int cur = 0; cur < 22; cur++){
-					item_array[x]->common.unknown0330[cur] = 0;
-				    }
-				    for (int cur = 0; cur < 5; cur++){
-					item_array[x]->common.unknown0352[cur] = 0;
-				    }
-#endif
-			// Retrieve field data for current item
-			MakeAnyLenString(&query, "SELECT * FROM items WHERE ID=%i", item_array[x]->ItemNumber);
-			if (RunQuery(query, strlen(query), errbuf, &result))
-			{
-				safe_delete_array(query);
-				while((row = mysql_fetch_row(result)))
-  				{
-  					// Normal
-  					strncpy(item_array[x]->Name, row[2], sizeof(item_array)-1);
- 					// if ((atoi(row[4])) != 0){
- 					//item_array[x]->LoreName = "*";
-  					//strncpy(item_array[x]->lore[1], row[?], sizeof(item_array)-1);
- 					//}
-  					//sprintf(item_array[x]->idfile, "IT%s", row[?]);
-  					//item_array[x]->flag = atoi(row[?]);
- 					item_array[x]->Weight = atoi(row[44]);
-  					//item_array[x]->nosave = atoi(row[?]);
-  					if ((atoi(row[8])) != 0){
- 					item_array[x]->NoDrop = 0;
-  					}
-  					else
- 					item_array[x]->NoDrop = -1;
- 					item_array[x]->Size = atoi(row[46]);
- 					//item_array[x]->type = atoi(row[?]);
-  					item_array[x]->ItemNumber = atoi(row[0]);
- 					item_array[x]->IconNumber = atoi(row[50]);
- 					item_array[x]->EquipSlots = atoi(row[9]);
- 					if (item_array[x]->Cost == 0)
- 					item_array[x]->Cost = 100000000;
-  					// .common
-	  				
-  					//
- 					item_array[x]->Common.EffectType = atoi(row[40]);
- 					item_array[x]->Common.SpellId = atoi(row[41]);
- 					item_array[x]->Common.CastTime = atoi(row[43]);
- 					item_array[x]->Common.ModSkill = atoi(row[16]);
- 					item_array[x]->Common.SkillModValue = atoi(row[17]);
- 					item_array[x]->Common.BaneDmgRace = atoi(row[21]);
- 					//item_array[x]->Common.BaneDmgBody = atoi(row[20]);
- 					item_array[x]->Common.BaneDmgAmt = atoi(row[22]);
- 					item_array[x]->Common.RecommendedLevel = atoi(row[37]);
- 					//item_array[x]->Common.RecSkill = atoi(row[38]);
- 					//item_array[x]->Common.ElemDmgType = atoi(row[18]);
- 					//item_array[x]->Common.ElemDmg = atoi(row[19]);
- 					item_array[x]->Common.RequiredLevel = atoi(row[39]);
- 					item_array[x]->Common.FocusId = atoi(row[42]);
-	 				
-  					// Zero unknowns in items we could just mem set ect
-  					for (int cur = 0; cur < 10; cur++){
- 					//item_array[x]->Common.unknown0282[cur] = 0;
-  					}
-  					for (int cur = 0; cur < 16; cur++){
- 					//item_array[x]->Common.unknown0296[cur] = 0;
-  					}
-  					for (int cur = 0; cur < 3; cur++){
- 					//item_array[x]->Common.unknown0316[cur] = 0;
-					}
-	  				
-  					for (int cur = 0; cur < 2; cur++){
- 					//item_array[x]->Common.unknown0325[cur] = 0;
-  					}
-  					for (int cur = 0; cur < 22; cur++){
- 					//item_array[x]->Common.unknown0330[cur] = 0;
-  					}
-  					for (int cur = 0; cur < 5; cur++){
- 					//item_array[x]->Common.unknown0352[cur] = 0;
-  					}
-				}
-  				mysql_free_result(result);
-				// Put Items back into the DB
-				// Insert the modified item back into the database
-				char tQuery[sizeof(Item_Struct)*2+1 + 64];
-				char tEscapedText[sizeof(Item_Struct)*2+1];
-				//	long AffectedRows;
-				
-				if(DoEscapeString(tEscapedText, (const char *)item_array[x], sizeof(Item_Struct))) {
-					sprintf(tQuery, "UPDATE items SET raw_data = '%s' WHERE ID=%d\n", tEscapedText, item_array[x]->ItemNumber);
-					if(RunQuery(tQuery, strlen(tQuery), errbuf))
-					{
-					}
-					else {
-						cout<<"Save failed::"<<tQuery<<endl;
-					}
-				}
-				else{
-					cout<<"Escapestrign failed"<<endl;
-				}
-			}
-			else {
-				cout<<"Query failed on saveing"<<endl;
-			}
-	}
-	cout<<"Loaded "<<count<<endl;
-#endif // Sharemem
-return true;}
 
 bool Database::GetStartZone(PlayerProfile_Struct* in_pp, CharCreate_Struct* in_cc)
 {
@@ -6998,7 +6451,7 @@ void Database::UpdateDoorGuildID(int doorid, int guildid)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
-	int32	affected_rows = 0, totalsales=0;
+	int32	affected_rows = 0;
 
 	RunQuery(query, MakeAnyLenString(&query, 
 		"UPDATE doors SET guild=%i WHERE id=%i;",guildid,doorid),

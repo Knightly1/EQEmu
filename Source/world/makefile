@@ -9,8 +9,8 @@ SF=../common/EQNetwork.o \
 
 CC=gcc
 LINKER=gcc
-DFLAGS=-DDEBUG=5 -DSHAREMEM -DCATCH_CRASH -DNO_PIDLOG -DFIELD_ITEMS
-WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -Wcomment -Wcast-align -Winline -Wno-deprecated
+DFLAGS=-DDEBUG=5 -DSHAREMEM -DCATCH_CRASH -DNO_PIDLOG -DFIELD_ITEMS -DIRC
+WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -Wcomment -Wcast-align -Wno-deprecated
 COPTS=$(WFLAGS) -g -march=i686 -O -pthread -pipe -DFX -D_GNU_SOURCE -DINVERSEXY -DWORLD $(DFLAGS) -I/usr/include/mysql -I/usr/mysql/include
 LINKOPTS=-rdynamic -L. -lstdc++ -lm -lz -L/usr/lib/mysql -L/usr/mysql/lib -lmysqlclient -ldl
 all: $(APP)

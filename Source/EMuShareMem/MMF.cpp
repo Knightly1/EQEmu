@@ -183,117 +183,119 @@ bool MMF::Open(const char* iName, int32 iSize) {
 	if (!pMMFMutex){
 		assert(false);
 	}
-	int share_id = shmget(share_key, tmpSize, IPC_CREAT|IPC_EXCL|SHM_R|SHM_W);
-	if ( share_id <= 0) {
-		share_id = shmget(share_key, tmpSize, 0400);
-		if (share_id <= 0) {
-		    shmid_ds mem_size;
-		    share_id = shmget(share_key, 0, 0400);
-		    lpvMem = shmat(share_id, NULL,SHM_RDONLY);
-		    if( (shmctl(share_id, IPC_STAT, &mem_size)) == 0){
-		          if (mem_size.shm_segsz != tmpSize){
-                        	cout<<"[Warning] requested shared memory of size:"<<tmpSize<<" but that Key is already in use with size:"<< mem_size.shm_segsz<<endl;
-                        	shmid_ds mem_users;
-                        	if( (shmctl(share_id, IPC_STAT, &mem_users)) == 0 && mem_users.shm_nattch == 1){
-                                    cout<<"[Warning] Attempting resize"<<endl;
-                                    shmctl(share_id, IPC_RMID, 0);
-                                    shmdt(lpvMem);
-                                    if ((share_id = shmget(share_key, tmpSize, IPC_CREAT|IPC_EXCL|SHM_R|SHM_W)) <= 0) {
-                                    	// Failed proceed on malloc
-                                    }
-                                    else{
-                                    	// Success
-                                    	lpvMem = shmat(share_id, NULL, SHM_R|SHM_W);
-                                    	memset(lpvMem, 0, sizeof(MMF_Struct));
-                                    	pCanWrite = true;
-                                    	SharedMemory = (MMF_Struct*) lpvMem;
-                                    	SharedMemory->Loaded = false;
-                                    	SharedMemory->datasize = iSize;
-                                    	pMMFMutex->Release(this);
-                                    	delete pMMFMutex;
-                                    	return true;
-                                    }
-                        	}
-                        	else{
-                                    cout<<"[Warning] Resize not possible"<<endl;
-                        	}
-		          }
-		    }
-		    // Can not attatch to shared memory we'll malloc it here
-			if (!lpvMem && (lpvMem = malloc(tmpSize))) {
-				cout<<"[Warning] Could not attach to shared memory proceeding on isolated memory (share_id <= 0)"<<endl;
-				// Success!
-				m_alloc = true;
-				memset(lpvMem, 0, sizeof(MMF_Struct));
-				pCanWrite = true;
+	//if (!tmpSize) {
+		int share_id = shmget(share_key, tmpSize, IPC_CREAT|IPC_EXCL|SHM_R|SHM_W);
+		if ( share_id <= 0) {
+			share_id = shmget(share_key, tmpSize, 0400);
+			if (share_id <= 0) {
+			    shmid_ds mem_size;
+			    share_id = shmget(share_key, 0, 0400);
+			    lpvMem = shmat(share_id, NULL,SHM_RDONLY);
+			    if( (shmctl(share_id, IPC_STAT, &mem_size)) == 0){
+				  if (mem_size.shm_segsz != tmpSize){
+					cout<<"[Warning] requested shared memory of size:"<<tmpSize<<" but that Key is already in use with size:"<< mem_size.shm_segsz<<endl;
+					shmid_ds mem_users;
+					if( (shmctl(share_id, IPC_STAT, &mem_users)) == 0 && mem_users.shm_nattch == 1){
+					    cout<<"[Warning] Attempting resize"<<endl;
+					    shmctl(share_id, IPC_RMID, 0);
+					    shmdt(lpvMem);
+					    if ((share_id = shmget(share_key, tmpSize, IPC_CREAT|IPC_EXCL|SHM_R|SHM_W)) <= 0) {
+						// Failed proceed on malloc
+					    }
+					    else{
+						// Success
+						lpvMem = shmat(share_id, NULL, SHM_R|SHM_W);
+						memset(lpvMem, 0, sizeof(MMF_Struct));
+						pCanWrite = true;
+						SharedMemory = (MMF_Struct*) lpvMem;
+						SharedMemory->Loaded = false;
+						SharedMemory->datasize = iSize;
+						pMMFMutex->Release(this);
+						delete pMMFMutex;
+						return true;
+					    }
+					}
+					else{
+					    cout<<"[Warning] Resize not possible"<<endl;
+					}
+				  }
+			    }
+			    // Can not attatch to shared memory we'll malloc it here
+				if (!lpvMem && (lpvMem = malloc(tmpSize))) {
+					cout<<"[Warning] Could not attach to shared memory proceeding on isolated memory (share_id <= 0)"<<endl;
+					// Success!
+					m_alloc = true;
+					memset(lpvMem, 0, sizeof(MMF_Struct));
+					pCanWrite = true;
+					SharedMemory = (MMF_Struct*) lpvMem;
+					SharedMemory->datasize = iSize;
+					SharedMemory->Loaded = false;
+					pMMFMutex->Release(this);
+					delete pMMFMutex;
+					return true;
+				}  else if (!lpvMem){
+					//LogFile->write(EQEMuLog::Error, "Could not connect to shared memory and allocation of isolated memory failed.");
+					cout<<"Could not connect to shared memory and allocation of isolated memory failed."<<endl;
+					pMMFMutex->Release(this);
+					delete pMMFMutex;
+					exit(1);
+				}
+				pCanWrite = false;
 				SharedMemory = (MMF_Struct*) lpvMem;
-				SharedMemory->datasize = iSize;
-				SharedMemory->Loaded = false;
+				if (SharedMemory->datasize != iSize) {
+					cerr<<"SharedMemory->datasize != iSize, We can rebuild him faster better STRONGER!"<<endl;
+					cerr<<"Or not.. restart all servers on this machine"<<endl;
+					shmctl(share_id, IPC_RMID, 0);
+					pMMFMutex->Release(this);
+					exit(1);
+				}
 				pMMFMutex->Release(this);
 				delete pMMFMutex;
 				return true;
-			}  else if (!lpvMem){
-				//LogFile->write(EQEMuLog::Error, "Could not connect to shared memory and allocation of isolated memory failed.");
-				cout<<"Could not connect to shared memory and allocation of isolated memory failed."<<endl;
-				pMMFMutex->Release(this);
-				delete pMMFMutex;
-				exit(1);
 			}
+			shmid_ds mem_users;
+			if ((shmctl(share_id, IPC_STAT, &mem_users)) != 0) {
+				if ((lpvMem = malloc(tmpSize))) {
+					// Success!
+					cout<<"[Warning] Could not attach to shared memory proceeding on isolated memory"<<endl;
+					m_alloc = true;
+					memset(lpvMem, 0, sizeof(MMF_Struct));
+					pCanWrite = true;
+					SharedMemory = (MMF_Struct*) lpvMem;
+					SharedMemory->datasize = iSize;
+					SharedMemory->Loaded = false;
+					pMMFMutex->Release(this);
+					delete pMMFMutex;
+					return true;
+				}  else {
+					//LogFile->write(EQEMuLog::Error, "Could not connect to shared memory and allocation of isolated memory failed.");
+					cout<<"Could not connect to shared memory and allocation of isolated memory failed."<<endl;
+					pMMFMutex->Release(this);
+					delete pMMFMutex;
+					exit(1);
+				}
+			}
+			lpvMem = shmat(share_id, NULL,SHM_RDONLY);
 			pCanWrite = false;
 			SharedMemory = (MMF_Struct*) lpvMem;
 			if (SharedMemory->datasize != iSize) {
-	    	    		cerr<<"SharedMemory->datasize != iSize, We can rebuild him faster better STRONGER!"<<endl;
-		    		cerr<<"Or not.. restart all servers on this machine"<<endl;
-		    		shmctl(share_id, IPC_RMID, 0);
-		    		pMMFMutex->Release(this);
-		    		exit(1);
+			    cerr<<"SharedMemory->datasize != iSize, We can rebuild him faster better STRONGER!"<<endl;
+			    cerr<<"Or not.. restart all servers on this machine"<<endl;
+			    shmctl(share_id, IPC_RMID, 0);
+			    pMMFMutex->Release(this);
+			    exit(1);
 			}
 			pMMFMutex->Release(this);
 			delete pMMFMutex;
 			return true;
 		}
-		shmid_ds mem_users;
-		if ((shmctl(share_id, IPC_STAT, &mem_users)) != 0) {
-			if ((lpvMem = malloc(tmpSize))) {
-				// Success!
-				cout<<"[Warning] Could not attach to shared memory proceeding on isolated memory"<<endl;
-				m_alloc = true;
-				memset(lpvMem, 0, sizeof(MMF_Struct));
-				pCanWrite = true;
-				SharedMemory = (MMF_Struct*) lpvMem;
-				SharedMemory->datasize = iSize;
-				SharedMemory->Loaded = false;
-				pMMFMutex->Release(this);
-				delete pMMFMutex;
-				return true;
-			}  else {
-				//LogFile->write(EQEMuLog::Error, "Could not connect to shared memory and allocation of isolated memory failed.");
-				cout<<"Could not connect to shared memory and allocation of isolated memory failed."<<endl;
-				pMMFMutex->Release(this);
-				delete pMMFMutex;
-				exit(1);
-			}
-		}
-		lpvMem = shmat(share_id, NULL,SHM_RDONLY);
-		pCanWrite = false;
+		lpvMem = shmat(share_id, NULL, SHM_R|SHM_W);
+		memset(lpvMem, 0, sizeof(MMF_Struct));
+		pCanWrite = true;
 		SharedMemory = (MMF_Struct*) lpvMem;
-		if (SharedMemory->datasize != iSize) {
-	    	    cerr<<"SharedMemory->datasize != iSize, We can rebuild him faster better STRONGER!"<<endl;
-		    cerr<<"Or not.. restart all servers on this machine"<<endl;
-		    shmctl(share_id, IPC_RMID, 0);
-		    pMMFMutex->Release(this);
-		    exit(1);
-		}
-		pMMFMutex->Release(this);
-		delete pMMFMutex;
-		return true;
-	}
-	lpvMem = shmat(share_id, NULL, SHM_R|SHM_W);
-	memset(lpvMem, 0, sizeof(MMF_Struct));
-	pCanWrite = true;
-	SharedMemory = (MMF_Struct*) lpvMem;
-	SharedMemory->Loaded = false;
-	SharedMemory->datasize = iSize;
+		SharedMemory->Loaded = false;
+		SharedMemory->datasize = iSize;
+	//}
 	pMMFMutex->Release(this);
 	delete pMMFMutex;
 	return true;
@@ -319,21 +321,10 @@ void MMF::Close() {
 		if (lpvMem) {
 			if (m_alloc == true)
 				free(lpvMem);
-	#ifndef FREEBSD  // for freeBSD
-			else
-				shmdt(lpvMem);
-			if (lpvMem) {
-				//LogFile->write(EQEMuLog::Error, "Warning something odd happened freeing shared memory");
-				cout<<"Warning something odd happened freeing shared memory"<<endl;
-			}
-// start freeBSD
-	#else
 			else
 				if (shmdt(lpvMem) == -1)
 					//LogFile->write(EQEMuLog::Error, "Warning something odd happened freeing shared memory");
 					cout<<"Warning something odd happened freeing shared memory"<<endl;
-	#endif
-// end freeBSD
 			lpvMem = 0;
 		}
 #endif

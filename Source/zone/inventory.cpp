@@ -98,19 +98,7 @@ bool Client::CheckLoreConflict(const Item_Struct* item) {
 	return (m_inv.HasItem(item->ItemNumber) != SLOT_INVALID);
 }
 
-void Client::SummonItem(uint32 item_id, sint8 charges) {
-	// For now, we're not allowing summon when an item is already on cursor
-	int16 slot=SLOT_CURSOR;
- 	if (m_inv[SLOT_CURSOR]) {
-		for(int i=0;i<10;i++){
-			if(!m_inv[8000+i]){
-				slot=(8000+i);
-				break;
-			}
-		}
- 		//Message(13, "Error: Item already on cursor! (%s)", m_inv[SLOT_CURSOR]->GetItem()->Name);
- 		//return;
- 	}
+void Client::SummonItem(uint32 item_id, sint8 charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5) {
 	const Item_Struct* item = database.GetItem(item_id);
 	
 	if (item == NULL) {
@@ -129,8 +117,28 @@ void Client::SummonItem(uint32 item_id, sint8 charges) {
 			// Custom logic for SummonItem
 			if ((inst->GetCharges()==0))// && inst->IsStackable())
 				inst->SetCharges(1);
+			if (aug1) {
+				ItemCommonInst aug(aug1);
+				((ItemCommonInst *)inst)->PutAugment(1,aug1);
+			}
+			if (aug2) {
+				ItemCommonInst aug(aug2);
+				((ItemCommonInst *)inst)->PutAugment(2,aug2);
+			}
+			if (aug3) {
+				ItemCommonInst aug(aug3);
+				((ItemCommonInst *)inst)->PutAugment(3,aug3);
+			}
+			if (aug4) {
+				ItemCommonInst aug(aug4);
+				((ItemCommonInst *)inst)->PutAugment(4,aug4);
+			}
+			if (aug5) {
+				ItemCommonInst aug(aug5);
+				((ItemCommonInst *)inst)->PutAugment(5,aug5);
+			}
 			//inst->SetCharges(
-			PutItemInInventory(slot, *inst);
+			PushItemOnCursor(*inst);
 			// Send item packet to user
 			SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
 			safe_delete(inst);
@@ -159,7 +167,11 @@ void Client::DropItem(sint16 slot_id)
 	}
 	
 	// Save client inventory change to database
-	database.SaveInventory(CharacterID(), NULL, slot_id);
+	if (slot_id==SLOT_CURSOR) {
+		list<ItemInst*>::const_iterator s=m_inv.cursor_begin(),e=m_inv.cursor_end();
+		database.SaveCursor(CharacterID(), s, e);
+	} else
+		database.SaveInventory(CharacterID(), NULL, slot_id);
 	if (inst->GetItem()->NoDrop == 0)
 	{
 		Message(0, "You can't drop a no drop item.");
@@ -216,12 +228,15 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 	// Nuke from inventory
 	m_inv.DeleteItem(slot_id, quantity);
 	
-	// Save change to database
-	const ItemInst* inst = m_inv[slot_id];
-	if(inst)//quantity 0 is delete
+	const ItemInst* inst=NULL;
+	if (slot_id==SLOT_CURSOR) {
+		list<ItemInst*>::const_iterator s=m_inv.cursor_begin(),e=m_inv.cursor_end();
+		database.SaveCursor(character_id, s, e);
+	} else {
+		// Save change to database
+		inst = m_inv[slot_id];
 		database.SaveInventory(character_id, inst, slot_id);
-	else
-		database.SaveInventory(character_id, 0, slot_id);
+	}
 	if(client_update)
 	{
 /*
@@ -259,6 +274,18 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 // Any items already there will be removed from user's inventory
 // (Also saves changes back to the database: this may be optimized in the future)
 // client_update: Sends packet to client
+bool Client::PushItemOnCursor(const ItemInst& inst, bool client_update)
+{
+	m_inv.PushCursor(inst);
+	
+	if (client_update && inst) {
+		SendItemPacket(SLOT_CURSOR, &inst, ItemPacketSummonItem);
+	}
+	
+	list<ItemInst*>::const_iterator s=m_inv.cursor_begin(),e=m_inv.cursor_end();
+	return database.SaveCursor(CharacterID(), s, e);
+}
+
 bool Client::PutItemInInventory(sint16 slot_id, const ItemInst& inst, bool client_update)
 {
 	m_inv.PutItem(slot_id, inst);
@@ -267,14 +294,22 @@ bool Client::PutItemInInventory(sint16 slot_id, const ItemInst& inst, bool clien
 		SendItemPacket(slot_id, &inst, ItemPacketSummonItem);
 	}
 	
-	return database.SaveInventory(this->CharacterID(), &inst, slot_id);
+	if (slot_id==SLOT_CURSOR) {
+		list<ItemInst*>::const_iterator s=m_inv.cursor_begin(),e=m_inv.cursor_end();
+		return database.SaveCursor(this->CharacterID(), s, e);
+	} else
+		return database.SaveInventory(this->CharacterID(), &inst, slot_id);
 }
 
 void Client::PutLootInInventory(sint16 slot_id, const ItemInst &inst, ServerLootItem_Struct** bag_item_data)
 {
 	m_inv.PutItem(slot_id, inst);
 	SendLootItemInPacket(&inst, slot_id);
-	database.SaveInventory(this->CharacterID(), &inst, slot_id);
+	if (slot_id==SLOT_CURSOR) {
+		list<ItemInst*>::const_iterator s=m_inv.cursor_begin(),e=m_inv.cursor_end();
+		database.SaveCursor(this->CharacterID(), s, e);
+	} else
+		database.SaveInventory(this->CharacterID(), &inst, slot_id);
 
 	if(bag_item_data)	// bag contents
 	{
@@ -411,7 +446,11 @@ void Client::MoveItemCharges(ItemInst &from, sint16 to_slot, int8 type)
 		tmp_inst->SetCharges(tmp_inst->GetCharges() + charges_to_move);
 		from.SetCharges(from.GetCharges() - charges_to_move);
 		SendLootItemInPacket(tmp_inst, to_slot);
-		database.SaveInventory(this->CharacterID(), tmp_inst, to_slot);
+		if (to_slot==SLOT_CURSOR){
+			list<ItemInst*>::const_iterator s=m_inv.cursor_begin(),e=m_inv.cursor_end();
+			database.SaveCursor(this->CharacterID(), s, e);
+		} else
+			database.SaveInventory(this->CharacterID(), tmp_inst, to_slot);
 	}
 }
 
@@ -426,7 +465,15 @@ void Client::SendItemLink(const ItemInst* inst, bool send_to_all)
 	APPLAYER* outapp = new APPLAYER(OP_ItemLinkText,strlen(name2)+68);
 	char buffer2[135] = {0};
 	char itemlink[135] = {0};
-	sprintf(itemlink,"%c%07u%s%s%c",0x12,item->ItemNumber,"-00001-00001-00001-00001-0000000000000",name2,0x12);
+	sprintf(itemlink,"%c0%06u0%05u-%05u-%05u-%05u-%05u00000000%c",
+		0x12,
+		item->ItemNumber,
+		inst->GetAugmentItemID(0),
+		inst->GetAugmentItemID(1),
+		inst->GetAugmentItemID(2),
+		inst->GetAugmentItemID(3),
+		inst->GetAugmentItemID(4),
+		0x12);
 	sprintf(buffer2,"%c%c%c%c%c%c%c%c%c%c%c%c%s",0x00,0x00,0x00,0x00,0xD3,0x01,0x00,0x00,0x1E,0x01,0x00,0x00,itemlink);
 	memcpy(outapp->pBuffer,buffer2,outapp->size);
 	QueuePacket(outapp);
@@ -448,7 +495,6 @@ void Client::SendLootItemInPacket(const ItemInst* inst, sint16 slot_id)
 	SendItemPacket(slot_id,inst, ItemPacketTrade);
 }
 
-
 // Moves items around both internally and in the database
 // In the future, this can be optimized by pushing all changes through one database REPLACE call
 bool Client::SwapItem(MoveItem_Struct* move_in) {
@@ -457,22 +503,6 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	
 	if (move_in->to_slot == (uint32)SLOT_INVALID) {
 		DeleteItemInInventory(move_in->from_slot);
-		if(move_in->from_slot==SLOT_CURSOR){
-			for(int ndx=0;ndx<10;ndx++){
-				if(m_inv[8000+ndx]){
-					if(!m_inv[SLOT_CURSOR]){//no item has been put on the cursor from the que
-						m_inv.SwapItem(8000+ndx,SLOT_CURSOR);//put the next item in line onto the cursor
-						DeleteItemInInventory(8000+ndx);//delete the source item
-					}
-					else{//item is on cursor now
-						DeleteItemInInventory(8000+ndx-1);//delete from destination
-						m_inv.SwapItem(8000+ndx,8000+ndx-1);//move items ahead in the que
-					}
-				}
-			}
-		}
-		database.SaveInventory(character_id, m_inv[move_in->to_slot], move_in->to_slot);
-		database.SaveInventory(character_id, m_inv[move_in->from_slot], move_in->from_slot);
 		return true; // Item deletetion
 	}
 	if(auto_attack && (move_in->from_slot == SLOT_PRIMARY || move_in->from_slot == SLOT_SECONDARY))
@@ -510,8 +540,9 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 			return false;
 		}
 	}
-	if (dst_inst)
+	if (dst_inst) {
 		dstitemid = dst_inst->GetItem()->ItemNumber;
+	}
 	if (Trader && srcitemid>0){
 		ItemInst* srcbag;
 		uint32 srcbagid =0;
@@ -599,7 +630,11 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 			}
 			
 			safe_delete(world_inst);
-			database.SaveInventory(character_id, m_inv[src_slot_id], src_slot_id);
+			if (src_slot_id==SLOT_CURSOR) {
+				list<ItemInst*>::const_iterator s=m_inv.cursor_begin(),e=m_inv.cursor_end();
+				database.SaveCursor(character_id, s, e);
+			} else
+				database.SaveInventory(character_id, m_inv[src_slot_id], src_slot_id);
 			return true;
 		}
 	}
@@ -664,19 +699,6 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 			SetMaterial(dst_slot_id,src_inst->GetItem()->ItemNumber);
 		m_inv.SwapItem(src_slot_id, dst_slot_id);
 	}
-	if(move_in->from_slot ==SLOT_CURSOR){
-		if(!m_inv[SLOT_CURSOR]){//item on cursor is deleted, see if there is something in the cursor que
-			for(int ndx=0;ndx<10;ndx++){
-				if(m_inv[8000+ndx]){
-					if(!m_inv[SLOT_CURSOR])//no item has been put on the cursor from the que
-						m_inv.SwapItem(8000+ndx,SLOT_CURSOR);//put the next item in line onto the cursor
-					else//item is on cursor now
-						m_inv.SwapItem(8000+ndx,8000+ndx-1);//move items ahead in the que
-					DeleteItemInInventory(8000+ndx);//delete the source item
-				}
-			}
-		}
-	}
 	
 	int matslot = SlotConvert2(dst_slot_id);
 	if (dst_slot_id<22 && matslot != 0) {
@@ -684,8 +706,16 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	}
 	
 	// Step 7: Save change to the database
-	database.SaveInventory(character_id, m_inv[src_slot_id], src_slot_id);
-	database.SaveInventory(character_id, m_inv[dst_slot_id], dst_slot_id);
+	if (src_slot_id==SLOT_CURSOR){ 
+		list<ItemInst*>::const_iterator s=m_inv.cursor_begin(),e=m_inv.cursor_end();
+		database.SaveCursor(character_id, s, e);
+	} else
+		database.SaveInventory(character_id, m_inv.GetItem(src_slot_id), src_slot_id);
+	if (dst_slot_id==SLOT_CURSOR) {
+		list<ItemInst*>::const_iterator s=m_inv.cursor_begin(),e=m_inv.cursor_end();
+		database.SaveCursor(character_id, s, e);
+	} else
+		database.SaveInventory(character_id, m_inv.GetItem(dst_slot_id), dst_slot_id);
 	
 	// Step 8: Re-calc stats
 	CalcBonuses();

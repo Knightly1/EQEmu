@@ -161,6 +161,7 @@ int command_init(void)
 	if
 	(
 		command_add("resetaa","Resets a Player's AA in their profile.",200,command_resetaa) ||
+		command_add("bind","Sets your targets bind spot to their current location",200,command_bind) ||
 		command_add("ppoint","[add or connect] Set P Points",200,command_ppoint) ||
 		command_add("setpr","[number (1-4)] Set P_Range point",200,command_pr) ||
 		command_add("setrange","Set range after selecting all four points",200,command_range) ||
@@ -2783,31 +2784,39 @@ void command_peekinv(Client *c, const Seperator *sep)
 			c->Message((item==0), "InvSlot: %i, Item: %i (%s)", i,
 			((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
 			
-			for (uint8 j=0; j<10; j++) {
-				const ItemInst* instbag = client->GetInv().GetItem(i, j);
-				item = (instbag) ? instbag->GetItem() : NULL;
-				c->Message((item==0), "   InvBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
-					Inventory::CalcSlotId(i, j),
-					i, j, ((item==0)?0:item->ItemNumber),
-					((item==0)?"null":item->Name));
+			if (inst && inst->IsType(ItemTypeContainer)) {
+				for (uint8 j=0; j<10; j++) {
+					const ItemInst* instbag = client->GetInv().GetItem(i, j);
+					item = (instbag) ? instbag->GetItem() : NULL;
+					c->Message((item==0), "   InvBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
+						Inventory::CalcSlotId(i, j),
+						i, j, ((item==0)?0:item->ItemNumber),
+						((item==0)?"null":item->Name));
+				}
 			}
 		}
 	}
 	if (bAll || (strcasecmp(sep->arg[1], "cursor")==0)) {
 		// Personal inventory items
 		bFound = true;
-		const ItemInst* inst = client->GetInv().GetItem(SLOT_CURSOR);
-		item = (inst) ? inst->GetItem() : NULL;
-		c->Message((item==0), "CursorSlot: %i, Item: %i (%s)", SLOT_CURSOR,
-			((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
-		
-		for (uint8 j=0; j<10; j++) {
-			const ItemInst* instbag = client->GetInv().GetItem(SLOT_CURSOR, j);
-			item = (instbag) ? instbag->GetItem() : NULL;
-			c->Message((item==0), "   CursorBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
-				Inventory::CalcSlotId(SLOT_CURSOR, j),
-				SLOT_CURSOR, j, ((item==0)?0:item->ItemNumber),
-				((item==0)?"null":item->Name));
+		iter_queue it;
+		int i=0;
+		for(it=client->GetInv().cursor_begin();it!=client->GetInv().cursor_end();it++,i++) {
+			const ItemInst* inst = *it;
+			item = (inst) ? inst->GetItem() : NULL;
+			c->Message((item==0), "CursorSlot: %i, Depth: %i, Item: %i (%s)", SLOT_CURSOR,i,
+				((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
+			
+			if (inst && inst->IsType(ItemTypeContainer)) {
+				for (uint8 j=0; j<10; j++) {
+					const ItemInst* instbag = client->GetInv().GetItem(SLOT_CURSOR, j);
+					item = (instbag) ? instbag->GetItem() : NULL;
+					c->Message((item==0), "   CursorBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
+						Inventory::CalcSlotId(SLOT_CURSOR, j),
+						SLOT_CURSOR, j, ((item==0)?0:item->ItemNumber),
+						((item==0)?"null":item->Name));
+				}
+			}
 		}
 	}
 	if (bAll || (strcasecmp(sep->arg[1], "bank")==0)) {
@@ -2820,13 +2829,15 @@ void command_peekinv(Client *c, const Seperator *sep)
 			c->Message((item==0), "BankSlot: %i, Item: %i (%s)", i,
 				((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
 				
-			for (uint8 j=0; j<10; j++) {
-				const ItemInst* instbag = client->GetInv().GetItem(i, j);
-				item = (instbag) ? instbag->GetItem() : NULL;
-				c->Message((item==0), "   BankBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
-					Inventory::CalcSlotId(i, j),
-					i, j, ((item==0)?0:item->ItemNumber),
-					((item==0)?"null":item->Name));
+			if (inst && inst->IsType(ItemTypeContainer)) {
+				for (uint8 j=0; j<10; j++) {
+					const ItemInst* instbag = client->GetInv().GetItem(i, j);
+					item = (instbag) ? instbag->GetItem() : NULL;
+					c->Message((item==0), "   BankBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
+						Inventory::CalcSlotId(i, j),
+						i, j, ((item==0)?0:item->ItemNumber),
+						((item==0)?"null":item->Name));
+				}
 			}
 		}
 		for (i=2500; i<=2501; i++) {
@@ -2835,13 +2846,15 @@ void command_peekinv(Client *c, const Seperator *sep)
 			c->Message((item==0), "ShBankSlot: %i, Item: %i (%s)", i,
 				((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
 			
-			for (uint8 j=0; j<10; j++) {
-				const ItemInst* instbag = client->GetInv().GetItem(i, j);
-				item = (instbag) ? instbag->GetItem() : NULL;
-				c->Message((item==0), "   ShBankBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
-					Inventory::CalcSlotId(i, j),
-					i, j, ((item==0)?0:item->ItemNumber),
-					((item==0)?"null":item->Name));
+			if (inst && inst->IsType(ItemTypeContainer)) {
+				for (uint8 j=0; j<10; j++) {
+					const ItemInst* instbag = client->GetInv().GetItem(i, j);
+					item = (instbag) ? instbag->GetItem() : NULL;
+					c->Message((item==0), "   ShBankBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
+						Inventory::CalcSlotId(i, j),
+						i, j, ((item==0)?0:item->ItemNumber),
+						((item==0)?"null":item->Name));
+				}
 			}
 		}
 	}
@@ -2854,13 +2867,16 @@ void command_peekinv(Client *c, const Seperator *sep)
 			c->Message((item==0), "TradeSlot: %i, Item: %i (%s)", i,
 				((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
 			
-			for (uint8 j=0; j<10; j++) {
-				const ItemInst* instbag = client->GetInv().GetItem(i, j);
-				item = (instbag) ? instbag->GetItem() : NULL;
-				c->Message((item==0), "   TradeBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
-					Inventory::CalcSlotId(i, j),
-					i, j, ((item==0)?0:item->ItemNumber),
-					((item==0)?"null":item->Name));
+			if (inst && inst->IsType(ItemTypeContainer)) {
+				for (uint8 j=0; j<10; j++) {
+					const ItemInst* instbag = client->GetInv().GetItem(i, j);
+					item = (instbag) ? instbag->GetItem() : NULL;
+					c->Message((item==0), "   TradeBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
+						Inventory::CalcSlotId(i, j),
+						i, j, ((item==0)?0:item->ItemNumber),
+						((item==0)?"null":item->Name));
+				
+				}
 			}
 		}
 	}
@@ -3127,7 +3143,7 @@ void command_equipitem(Client *c, const Seperator *sep)
 {
 	uint32 slot_id = atoi(sep->arg[1]);
 	if (sep->IsNumber(1) && (slot_id>=0) && (slot_id<=21)) {
-		const ItemInst* inst = c->GetInv()[SLOT_CURSOR];
+		const ItemInst* inst = c->GetInv().GetItem(SLOT_CURSOR);
 		if (inst && inst->IsType(ItemTypeCommon)) {
 			APPLAYER* outapp = new APPLAYER(OP_MoveItem, sizeof(MoveItem_Struct));
 			MoveItem_Struct* mi	= (MoveItem_Struct*)outapp->pBuffer;
@@ -3545,6 +3561,17 @@ void command_showstats(Client *c, const Seperator *sep)
 		c->GetTarget()->ShowStats(c);
 	else
 		c->ShowStats(c);
+}
+
+void command_bind(Client *c, const Seperator *sep)
+{
+	if (c->GetTarget() != 0 ) {
+		if (c->GetTarget()->IsClient())
+			c->GetTarget()->CastToClient()->SetBindPoint();
+		else
+			c->Message(0, "Error: target not a Player");
+	 } else
+		c->SetBindPoint();
 }
 
 void command_depop(Client *c, const Seperator *sep)
@@ -5062,10 +5089,21 @@ void command_summonitem(Client *c, const Seperator *sep)
 		int32 itemid = atoi(sep->arg[1]);
 		if (database.GetItemStatus(itemid) > c->Admin())
 			c->Message(13, "Error: Insufficient status to summon this item.");
-		else if (sep->IsNumber(2))
-			c->SummonItem(itemid, atoi(sep->arg[2]));
-		else
+		else if (sep->argnum==2 && sep->IsNumber(2)) {
+			c->SummonItem(itemid, atoi(sep->arg[2]) );
+		} else if (sep->argnum==3) {
+			c->SummonItem(itemid, atoi(sep->arg[2]), atoi(sep->arg[3]) );
+		} else if (sep->argnum==4)
+			c->SummonItem(itemid, atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]) );
+		else if (sep->argnum==5)
+			c->SummonItem(itemid, atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), atoi(sep->arg[5]) );
+		else if (sep->argnum==6)
+			c->SummonItem(itemid, atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), atoi(sep->arg[5]), atoi(sep->arg[6]) );
+		else if (sep->argnum==7)
+			c->SummonItem(itemid, atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), atoi(sep->arg[5]), atoi(sep->arg[6]), atoi(sep->arg[7]) );
+		else {
 			c->SummonItem(itemid);
+		}
 	}
 }
 

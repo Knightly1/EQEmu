@@ -27,6 +27,7 @@
 	#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
 #endif
 #include <sstream>
+#include <iostream>
 #include "../common/Item.h"
 #include "../common/misc.h"
 #include "../common/races.h"
@@ -34,15 +35,15 @@ using namespace std;
 
 // Create appropriate ItemInst class
 #ifndef PACKETCOLLECTOR
-ItemInst* ItemInst::Create(uint32 item_id, sint16 charges)
+ItemInst* ItemInst::Create(uint32 item_id, sint16 charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5)
 {
 	const Item_Struct* item = NULL;
 	item = database.GetItem(item_id);
-	return ItemInst::Create(item, charges);
+	return ItemInst::Create(item, charges, aug1, aug2, aug3, aug4, aug5);
 }
 #endif
 // Create appropriate ItemInst class
-ItemInst* ItemInst::Create(const Item_Struct* item, sint16 charges)
+ItemInst* ItemInst::Create(const Item_Struct* item, sint16 charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5)
 {
 	ItemInst* inst = NULL;
 	if (item) {
@@ -50,7 +51,7 @@ ItemInst* ItemInst::Create(const Item_Struct* item, sint16 charges)
 			charges = item->Common.MaxCharges;
 		switch (item->ItemClass) {
 		case ItemTypeCommon:
-			inst = new ItemCommonInst(item, charges);
+			inst = new ItemCommonInst(item, charges, aug1, aug2, aug3, aug4, aug5);
 			break;
 		case ItemTypeContainer:
 			inst = new ItemContainerInst(item, charges);
@@ -65,6 +66,24 @@ ItemInst* ItemInst::Create(const Item_Struct* item, sint16 charges)
 	return inst;
 }
 
+ItemCommonInst::ItemCommonInst(const Item_Struct* item , sint16 charges , uint32 aug1 , uint32 aug2 , uint32 aug3 , uint32 aug4 , uint32 aug5 ) : ItemInst(item, charges)
+{
+	PutAugment(0,aug1);
+	PutAugment(1,aug2);
+	PutAugment(2,aug3);
+	PutAugment(3,aug4);
+	PutAugment(4,aug5);
+}
+
+ItemCommonInst::ItemCommonInst(uint32 item_id, sint16 charges , uint32 aug1 , uint32 aug2 , uint32 aug3 , uint32 aug4 , uint32 aug5 ) : ItemInst(item_id, charges) 
+{
+	PutAugment(0,aug1);
+	PutAugment(1,aug2);
+	PutAugment(2,aug3);
+	PutAugment(3,aug4);
+	PutAugment(4,aug5);
+}
+		 
 // Make a copy of an ItemCommonInst object
 ItemCommonInst::ItemCommonInst(const ItemCommonInst& copy) : ItemInst((ItemInst&)copy)
 {
@@ -267,6 +286,33 @@ bool ItemCommonInst::IsEquipable(sint16 slot_id) const
 	return false;
 }
 
+sint8 ItemCommonInst::AvailableAugmentSlot(sint32 augtype) const
+{
+	if (!m_item)
+		return -1;
+
+	int i;
+	for (i=0;i<5;i++) {
+		if (!GetAugment(i)) {
+			if (augtype==-1 || (m_item->Common.AugSlotType[i] && (1<<(m_item->Common.AugSlotType[i]-1) & augtype)))
+				break;
+		}
+
+	}
+
+	return (i<5) ? i : -1;
+}
+uint32 ItemCommonInst::GetAugmentItemID(uint8 slot) const
+{
+const ItemCommonInst *aug;
+uint32 id=0;
+	if ((aug=GetAugment(slot))!=NULL)
+		id= aug->GetItem()->ItemNumber;
+
+	return id;
+}
+
+
 // Has attack/delay?
 bool ItemCommonInst::IsWeapon() const
 {
@@ -289,7 +335,7 @@ ItemCommonInst* ItemCommonInst::GetAugment(uint8 slot) const
 	return NULL;
 }
 
-// Remove augment from item
+// Remove augment from item and destroy it
 void ItemCommonInst::DeleteAugment(uint8 index)
 {
 	iter_augment it = m_augments.find(index);
@@ -298,6 +344,19 @@ void ItemCommonInst::DeleteAugment(uint8 index)
 		m_augments.erase(index);
 		safe_delete(augment);
 	}
+}
+
+// Remove augment from item and return it
+ItemCommonInst* ItemCommonInst::RemoveAugment(uint8 index)
+{
+	iter_augment it = m_augments.find(index);
+	if (it != m_augments.end()) {
+		ItemCommonInst* augment = it->second;
+		m_augments.erase(index);
+		return augment;
+	}
+
+	return NULL;
 }
 
 // Add an augment to the item
@@ -309,6 +368,14 @@ void ItemCommonInst::PutAugment(uint8 slot, const ItemCommonInst& augment)
 	
 	// Replace ptr in map held by former augment with ours
 	_PutAugment(slot, (ItemCommonInst*)augment.Clone());
+}
+
+void ItemCommonInst::PutAugment(uint8 slot, uint32 item_id)
+{
+	if (item_id!=0) {
+	        const ItemCommonInst aug(item_id);
+		PutAugment(slot,aug);
+	}
 }
 
 // Retrieve item inside container
@@ -385,6 +452,12 @@ void ItemInstQueue::push(ItemInst* inst)
 	m_list.push_back(inst);
 }
 
+// Put item onto front of queue
+void ItemInstQueue::push_front(ItemInst* inst)
+{
+	m_list.push_front(inst);
+}
+
 // Remove item from front of queue
 ItemInst* ItemInstQueue::pop()
 {
@@ -427,7 +500,7 @@ ItemInst* Inventory::GetItem(sint16 slot_id) const
 		// Bank slots
 		result = _GetItem(m_bank, slot_id);
 	}
-	else if ((slot_id>=22 && slot_id<=29) || (slot_id>=8000 && slot_id<=8010)) {
+	else if ((slot_id>=22 && slot_id<=29)) {
 		// Personal inventory slots
 		result = _GetItem(m_inv, slot_id);
 	}
@@ -487,7 +560,13 @@ ItemInst* Inventory::GetItem(sint16 slot_id, uint8 bagidx) const
 	return GetItem(Inventory::CalcSlotId(slot_id, bagidx));
 }
 
-// Put an item into specified slot
+sint16 Inventory::PushCursor(const ItemInst& inst)
+{
+	m_cursor.push(inst.Clone());
+	return SLOT_CURSOR;
+}
+
+// Put an item snto specified slot
 sint16 Inventory::PutItem(sint16 slot_id, const ItemInst& inst)
 {
 	// Clean up item already in slot (if exists)
@@ -655,7 +734,7 @@ ItemInst* Inventory::PopItem(sint16 slot_id)
 		p = m_worn[slot_id];
 		m_worn.erase(slot_id);
 	}
-	else if ((slot_id>=22 && slot_id<=29) || (slot_id>=8000 && slot_id<=8010)) { // Inventory slots
+	else if ((slot_id>=22 && slot_id<=29)) {
 		p = m_inv[slot_id];
 		m_inv.erase(slot_id);
 	}
@@ -855,14 +934,14 @@ sint16 Inventory::_PutItem(sint16 slot_id, ItemInst* inst)
 	if (slot_id==SLOT_CURSOR) { // Cursor
 		// Replace current item on cursor, if exists
 		m_cursor.pop(); // no memory delete, clients of this function know what they are doing
-		m_cursor.push(inst);
+		m_cursor.push_front(inst);
 		result = slot_id;
 	}
 	else if ((slot_id>=0 && slot_id<=21) || (slot_id >= 400 && slot_id<=404)) { // Worn slots
 		m_worn[slot_id] = inst;
 		result = slot_id;
 	}
-	else if ((slot_id>=22 && slot_id<=29) || (slot_id>=8000 && slot_id<=8010)) { // Inventory slots 8000+ is the temp slot fo cursor overflow
+	else if ((slot_id>=22 && slot_id<=29)) {
 		m_inv[slot_id] = inst;
 		result = slot_id;
 	}
@@ -1047,11 +1126,11 @@ string ItemInst::Serialize(sint16 slot_id) const
 	
 	char ch[250] = {0}; // Estimate on largest possible
 	
-	uint32 unknown5=0;
-	if (m_unknown005!=0xFFFFFFFF && m_unknown005!=0)// && m_unknown005!=0xFFFFFFFFCCCCCCCC)
-		unknown5 = m_unknown005;
+	uint32 mslot=0;
+	if (m_merchantslot!=0xFFFFFFFF && m_merchantslot!=0)// && merchant_slot!=0xFFFFFFFFCCCCCCCC)
+		mslot = m_merchantslot;
 	else
-		unknown5 = m_item->Unknown005;
+		mslot = m_item->Unknown004;
 	
 	// Format pipe-delimited string for packet
 	int charges=m_charges;
@@ -1063,13 +1142,14 @@ string ItemInst::Serialize(sint16 slot_id) const
 	if(charges==-1)
 		spellcharges = charges;
 	sprintf(ch,
-		"%i|%i|%i|%i|0|%i|%i|%i|%i|\"%i|%s|%s|%s|%i|%i|%i|%i|%i|%i|%i|%i",
+		"%i|%i|%i|%i|%i|%i|%i|%i|%i|\"%i|%s|%s|%s|%i|%i|%i|%i|%i|%i|%i|%i",
 		charges,
-		m_item->Unknown002,
+		m_item->Unknown001,
 		slot_id,
 		m_price,
-		unknown5,
-		m_item->Unknown007,
+		mslot,
+		m_item->Unknown005,
+		m_item->Unknown006,
 		spellcharges,
 		m_item->Attuneable,
 		m_item->ItemClass,
@@ -1105,12 +1185,12 @@ string ItemCommonInst::Serialize(sint16 slot_id) const
 		"%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|"	// ended with Color
 		"%i|%i|%i|%i|%i|%i|%i|%6.6f|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|"	// ended with SpellShield
 		"%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%s|%i|%i|%i|%i|%i|%i|%i|%i|%i|"	// ended with Unknown100
-		"0|0|0|0|0|0||%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|" //-1
-		"%i|%i|%i|%i|%i|0\"",										// bag/books stuff
+		"%i|%i|%i|%i|%i|%i|%s|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|"       //
+		"%i|%i|%i|%i|%i|%i|%i|%i|%i\"",						// bag/books stuff
 		ItemInst::Serialize(slot_id).c_str(),
-		common->Unknown018,
-		common->Unknown019,
-		common->Unknown020,
+		common->Unknown021,
+		common->Unknown022,
+		common->Unknown023,
 		common->Tradeskills,
 		common->SvCold,
 		common->SvDisease,
@@ -1128,6 +1208,7 @@ string ItemCommonInst::Serialize(sint16 slot_id) const
 		common->Mana,
 		common->AC,
 		common->Deity,
+		// End of first row
 		common->SkillModValue,
 		common->SkillModType,
 		common->BaneDmgRace,
@@ -1148,18 +1229,19 @@ string ItemCommonInst::Serialize(sint16 slot_id) const
 		common->EffectType,
 		common->Range,
 		common->Damage,
-		/*common->Color*/ m_color,
+		m_color,
+		// End of second row
 		common->Classes,
 		common->Races,
-		common->Unknown061,
+		common->Unknown064,
 		common->SpellId,
 		common->MaxCharges,
 		common->ItemUse,
 		common->Material,
 		common->SellRate,
-		common->Unknown067,
+		common->Unknown070,
 		common->CastTime,
-		common->Unknown069,
+		common->Unknown072,
 		common->ProcRateMod,
 		common->FocusId,
 		common->CombatEffects,
@@ -1169,9 +1251,10 @@ string ItemCommonInst::Serialize(sint16 slot_id) const
 		common->CombatSkill,
 		common->CombatSkillDmg,
 		common->SpellShield,
+		// End of third row
 		common->Avoidance,
 		common->Accuracy,
-		common->Unknown081,
+		common->CharmFormula,
 		common->FactionMod1,
 		common->FactionMod2,
 		common->FactionMod3,
@@ -1182,14 +1265,22 @@ string ItemCommonInst::Serialize(sint16 slot_id) const
 		common->FactionAmt4,
 		common->CharmFile,
 		common->augtype,
-		common->AugSlot1Type,
-		common->AugSlot2Type,
-		common->AugSlot3Type,
-		common->AugSlot4Type,
-		common->AugSlot5Type,
+		common->AugSlotType[0],
+		common->AugSlotType[1],
+		common->AugSlotType[2],
+		common->AugSlotType[3],
+		common->AugSlotType[4],
 		common->ldonpointtheme,
 		common->ldonpointcost,
 		common->ldonsold,
+		//End of fourth row
+		0,	// bagtype
+		0,	// bagslots
+		0,	// bagsize
+		0,	// bagwr
+		0,	// booktype
+		0,	// unknown108
+		"",	// filename
 		item->banedmgamt2,
 		item->augmentrestriction,
 		item->loreflag,
@@ -1204,14 +1295,16 @@ string ItemCommonInst::Serialize(sint16 slot_id) const
 		item->hpregen,
 		item->manaregen,
 		item->hastepercent,
+		// End of fifth row
 		item->damageshield,
-		item->unknown122,
-		-1,//item->unknown123,
+		item->unknown125,
 		item->unknown126,
 		item->unknown127,
-		-1,//item->unknown128,
+		item->distiller,
 		item->unknown129,
-		item->unknown130
+		item->unknown130,
+		item->unknown131,
+		item->unknown132
 		);
 	serialized=ch;
 	
@@ -1299,7 +1392,7 @@ string ItemBookInst::Serialize(sint16 slot_id) const
 		"0|0|0|0|%i|%i|%s|0|0|0|0|0|0|\"||||||||||",			// bag/books stuff
 		ItemInst::Serialize(slot_id).c_str(),
 		book->BookType,
-		book->Unknown105,
+		book->Unknown108,
 		book->File);
 	
 	return ch;

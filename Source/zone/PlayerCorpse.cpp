@@ -257,9 +257,9 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 		}
 	}
 	// cursor queue
-	for(i = 8000; i <= 8010; i++)
-	{
-		item = client->GetInv().GetItem(i);
+	iter_queue it;
+	for(it=client->GetInv().cursor_begin(),i=8000; it!=client->GetInv().cursor_end(); it++,i++) {
+		item = *it;
 		if((item && (!client->IsBecomeNPC())) || (item && client->IsBecomeNPC() && !item->GetItem()->NoRent))
 		{
 			MoveItemToCorpse(client, item, i);
@@ -288,7 +288,7 @@ void Corpse::MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot)
 	sint16 interior_slot;
 	ItemInst *interior_item;
 
-	AddItem(item->GetItem()->ItemNumber, item->GetCharges(),  equipslot);
+	AddItem(item->GetItem()->ItemNumber, item->GetCharges(),  equipslot, item->GetAugmentItemID(0), item->GetAugmentItemID(1), item->GetAugmentItemID(2), item->GetAugmentItemID(3), item->GetAugmentItemID(4));
 	if(item->IsType(ItemTypeContainer))
 	{
 		for(bagindex = 0; bagindex <= 10; bagindex++)
@@ -297,7 +297,7 @@ void Corpse::MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot)
 			interior_item = client->GetInv().GetItem(interior_slot);
 			if(interior_item)
 			{
-				AddItem(interior_item->GetItem()->ItemNumber, interior_item->GetCharges(), interior_slot);
+				AddItem(interior_item->GetItem()->ItemNumber, interior_item->GetCharges(), interior_slot, interior_item->GetAugmentItemID(0), interior_item->GetAugmentItemID(1), interior_item->GetAugmentItemID(2), interior_item->GetAugmentItemID(3), interior_item->GetAugmentItemID(4));
 				client->DeleteItemInInventory(interior_slot, interior_item->GetCharges(), false);
 			}
 		}
@@ -448,7 +448,7 @@ int32 Corpse::CountItems() {
 	return itemlist->Count();
 }
 
-void Corpse::AddItem(uint32 itemnum, int8 charges, sint16 slot) {
+void Corpse::AddItem(uint32 itemnum, int8 charges, sint16 slot, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5) {
 	if (!database.GetItem(itemnum))
 		return;
 	pIsChanged = true;
@@ -457,6 +457,11 @@ void Corpse::AddItem(uint32 itemnum, int8 charges, sint16 slot) {
 	item->item_id = itemnum;
 	item->charges = charges;
 	item->equipSlot = slot;
+	item->aug1=aug1;
+	item->aug2=aug2;
+	item->aug3=aug3;
+	item->aug4=aug4;
+	item->aug5=aug5;
 	(*itemlist).Append(item);
 }
 
@@ -773,7 +778,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 					item = database.GetItem(item_data->item_id);
 					if (client && item)
 					{
-						ItemInst* inst = ItemInst::Create(item, item_data->charges);
+						ItemInst* inst = ItemInst::Create(item, item_data->charges, item_data->aug1, item_data->aug2, item_data->aug3, item_data->aug4, item_data->aug5);
 						if (inst)
 						{
 							client->SendItemPacket(i + 22, inst, ItemPacketLoot);
@@ -834,7 +839,7 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 	
 	if (item != 0)
 	{
-		inst = ItemInst::Create(item, item_data->charges);
+		inst = ItemInst::Create(item, item_data->charges, item_data->aug1, item_data->aug2, item_data->aug3, item_data->aug4, item_data->aug5);
 	}
 
 	if (client && inst)
@@ -918,14 +923,12 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 		return;
 	}
 
-	safe_delete(inst);
-
-	ItemCommonInst inst2(item);
-
 	if (IsPlayerCorpse())
-		client->SendItemLink(&inst2);
+		client->SendItemLink(inst);
 	else
-		client->SendItemLink(&inst2, true);
+		client->SendItemLink(inst, true);
+
+	safe_delete(inst);
 	
 	client->QueuePacket(app);
 }

@@ -143,6 +143,11 @@ struct ServerLootItem_Struct {
 	sint16	equipSlot;
 	int8	charges;
 	int16	lootslot;
+	uint32 aug1;
+	uint32 aug2;
+	uint32 aug3;
+	uint32 aug4;
+	uint32 aug5;
 };
 
 struct DBPlayerCorpse_Struct {

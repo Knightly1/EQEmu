@@ -3288,7 +3288,7 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					if((freeslot = zone->SaveTempItem(vendor->CastToNPC()->MerchantType, vendor->GetNPCTypeID(),itemid,charges,true)) > 0){
 						ItemInst* inst2 = inst->Clone();
 						inst2->SetPrice(item->Cost*127/100);
-						inst2->SetUnknown5(freeslot+84);
+						//inst2->SetUnknown5(freeslot+84);
 						if(inst2->IsStackable())
 							inst2->SetCharges(mp->quantity);
 						SendItemPacket(freeslot-1, inst2, ItemPacketMerchant);
@@ -3490,7 +3490,24 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d", ca
 					Object::HandleCombine(this, in_combine, m_tradeskill_object);
 					break;
 				}
-				
+				case OP_AugmentItem: {
+					if (app->size != sizeof(AugmentItem_Struct)) {
+						LogFile->write(EQEMuLog::Error, "Invalid size for AugmentItem_Struct: Expected: %i, Got: %i",
+							sizeof(AugmentItem_Struct), app->size);
+						break;
+					}
+					/*if (m_tradeskill_object == NULL) {
+						Message(13, "Error: Server is not aware of the tradeskill container you are attempting to use");
+						break;
+					}*/
+					
+					//fixed this to work for non-world objects
+					
+					// Delegate to tradeskill object to perform combine
+					AugmentItem_Struct* in_augment = (AugmentItem_Struct*)app->pBuffer;
+					Object::HandleAugmentation(this, in_augment, m_tradeskill_object);
+					break;
+				}
 				case OP_ClickDoor: {
                                         ClickDoor_Struct* cd = (ClickDoor_Struct*)app->pBuffer;
                                         Doors* currentdoor = entity_list.FindDoor(cd->doorid);
@@ -5481,32 +5498,16 @@ void Client::CompleteConnect()
 	UpdateWho();
 //	database.UpdateTimersClientConnected(CharacterID());
 	client_state = CLIENT_CONNECTED;
-	if(!m_inv[SLOT_CURSOR]){
-		for(int ndx=0;ndx<10;ndx++){
-			if(m_inv[8000+ndx]){
-				if(!m_inv[SLOT_CURSOR]){//no item has been put on the cursor from the que
-					m_inv.SwapItem(8000+ndx,SLOT_CURSOR);//put the next item in line onto the cursor
-					const ItemInst* inst = m_inv[SLOT_CURSOR];
-					if (inst)
-						SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
-				}
-				else{//item is on cursor now
-					m_inv.SwapItem(8000+ndx,8000+ndx-1);//move items ahead in the que
-					const ItemInst* inst = m_inv[8000+ndx-1];
-					if (inst)
-						SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
-				}
-				DeleteItemInInventory(8000+ndx);//delete the source item
-			}
-		}
+
+	iter_queue it;
+	for (it=m_inv.cursor_begin();it!=m_inv.cursor_end();it++) {
+		// First item cursor is sent in bulk inventory packet
+		if (it==m_inv.cursor_begin())
+			continue;
+		const ItemInst *inst=*it;
+		SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
 	}
-	else{
-		for(int ndx2=0;ndx2<10;ndx2++){
-			const ItemInst* inst = m_inv[8000+ndx2];
-			if (inst)
-				SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
-		}
-	}
+
 #ifdef GUILDWARS
 	guildwars.EnteringMessages(this);
 #endif

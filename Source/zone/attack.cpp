@@ -2061,13 +2061,17 @@ bool Mob::ChangeHP(Mob* other, sint32 amount, int16 spell_id, sint8 buffslot, bo
 	}
 	else
 	{
-		SetHP(GetHP() + amount);
+		int curhp=GetHP(),maxhp=GetMaxHP();
+		if (curhp!=maxhp) {
+			if ((curhp+amount)>maxhp)
+				curhp=maxhp;
+			else
+				curhp+=amount;
+			SetHP(curhp);
+
+			SendHPUpdate();
+		}
 	}
-
-	if(GetHP() > GetMaxHP())
-		SetHP(GetMaxHP());
-
-	SendHPUpdate();
 
 	return false;
 }

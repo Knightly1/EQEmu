@@ -64,6 +64,7 @@ void command_clear_perl();
 
 //commands
 void command_resetaa(Client* c,const Seperator *sep);
+void command_bind(Client* c,const Seperator *sep);
 void command_sendop(Client *c, const Seperator *sep);
 void command_pr(Client* c,const Seperator *sep);
 void command_range(Client* c,const Seperator *sep);

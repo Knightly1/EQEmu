@@ -1,5 +1,12 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==11/16/2004
+Doodman: Implemented Augmentation inserting, removal and distilling.
+Doodman: Augment saves in inventory, shared bank, player_corpse and object_contents.
+Doodman: Fixed world to detect and cleanup a zone disconnect immediately instead of when it tries to write to it.
+Doodman: Reimplmented cursor queue using an actually queue.  Should be unlimited depth now.
+Doodman: Updated items for new fields and new names.
+
 ==11/10/2004
 LethalEncounter: Fixed a couple of corpse related bugs.
 LethalEncounter: Added in various functions for the new login system.

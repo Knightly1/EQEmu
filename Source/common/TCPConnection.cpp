@@ -816,7 +816,8 @@ bool TCPConnection::RecvData(char* errbuf) {
 #endif
 			return false;
 		}
-	}
+	} else
+		return false;
 	if ((TCPMode == modePacket || TCPMode == modeTransition) && timeout_timer->Check()) {
 		if (errbuf)
 			snprintf(errbuf, TCPConnection_ErrorBufferSize, "TCPConnection::RecvData(): Connection timeout");

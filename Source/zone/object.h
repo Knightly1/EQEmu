@@ -87,6 +87,7 @@ public:
 	void Close() { m_inuse = false; }
 	void Delete(bool reset_state=false); // Object itself
 	static void HandleCombine(Client* user, const NewCombine_Struct* in_combine, Object *worldo);
+	static void HandleAugmentation(Client* user, const AugmentItem_Struct* in_augment, Object *worldo);
 	static void HandleAutoCombine(Client* user, const RecipeAutoCombine_Struct* rac);
 	
 	static uint32 TypeToSkill(uint32 type);

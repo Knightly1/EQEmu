@@ -799,6 +799,7 @@ protected:
 	sint32  max_hp;
 	sint32	base_hp;
 	sint32	cur_mana;
+	sint32	last_reported_mana;
 	sint32	max_mana;
 	sint32	hp_regen;
 	sint32	mana_regen;
