@@ -5307,29 +5307,12 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	if(zone->IsPVPZone())
 		m_pp.pvp=1;
 	m_pp.level2 = m_pp.level;
-	memset(m_pp.unknown1388,0,sizeof(int32));
-	memset(&m_pp.unknown3756,0,sizeof(int32));
-	memset(&m_pp.unknown11368,0,sizeof(int32));
-	memset(&m_pp.unknown5764,0,sizeof(m_pp.unknown5764));
-	memset(&m_pp.unknown3704[2],0xFF,sizeof(int32)*6);
-	memset(&m_pp.buffs,0,sizeof(m_pp.buffs));
-	memset(&m_pp.hunger_level,0,sizeof(int32));
-	memset(&m_pp.thirst_level,0,sizeof(int32));
-	memset(&m_pp.expAA,0xFF,sizeof(int32));
-	m_pp.aapoints = 0;
-	memset(&m_pp.item_material,0x00,sizeof(m_pp.item_material));
-	memset(&m_pp.item_tint,0x00,sizeof(m_pp.item_tint));
-	m_pp.pvp2 = 0;
-	m_pp.unknown4420 = 0;
-	m_pp.pvptype = 0;
-	m_pp.zone_change_count = 4;
 	CRC32::SetEQChecksum((unsigned char*)&m_pp, sizeof(PlayerProfile_Struct)-4);
 	outapp = new APPLAYER(OP_PlayerProfile,sizeof(PlayerProfile_Struct));
 #ifdef SOLAR
 	printf("PP size: %d\n", sizeof(PlayerProfile_Struct));
 #endif
 	memcpy(outapp->pBuffer,&m_pp,outapp->size);
-	DumpPacket(outapp);
 	outapp->Deflate();
 	outapp->priority = 6;
 	QueuePacket(outapp);
@@ -6102,6 +6085,7 @@ void Client::BulkSendInventoryItems()
 			ptr+=length+1;
 		}
 	}
+	DumpPacket(outapp);
 	outapp->Deflate();
 	QueuePacket(outapp);
 	safe_delete(outapp);
