@@ -50,7 +50,7 @@
 using namespace std;
 
 //atoi is not int32 or uint32 safe!!!!
-#define atoul(str) strtol(str, NULL, 10)
+#define atoul(str) strtoul(str, NULL, 10)
 
 //class Spawn;
 class Spawn2;

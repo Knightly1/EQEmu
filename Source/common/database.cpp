@@ -2549,6 +2549,10 @@ bool Database::GetCharacterInfoForLogin_result(MYSQL_RES* result, int32* charact
 				memset(aa, 0, sizeof(PlayerAA_Struct));
 				*aalen = sizeof(PlayerAA_Struct);
 				LogFile->write(EQEMuLog::Error, "Warning: Invalid PlayerAA_Struct size found in database");
+				for(int a=0;a<MAX_PP_AA_ARRAY;a++){
+					pp->aa_array[a].AA = 0;
+					pp->aa_array[a].value = 0;
+				}
 			}
 		}
 		if (guilddbid)

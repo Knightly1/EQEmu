@@ -267,9 +267,6 @@ int Client::HandlePacket(const APPLAYER *app)
 					entity_list.QueueClients(this, outapp, true);
 					safe_delete(outapp);
 					
-					// Send alt advance exp
-					SendAAStats();
-					
 					if(GuildDBID()!=0 && GuildDBID()!=0xFFFFFFFF)
 						SendGuildMembers(GuildDBID());
 					// Send exp packets
@@ -4792,7 +4789,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	
 	char temp1[64];
 	if (database.GetVariable("Max_AAXP", temp1, sizeof(temp1)-1)) {
-		max_AAXP = atoi(temp1);
+		max_AAXP = (atoi(temp1)*16)/10;
 	}
 	
 	//int32 aalen = database.GetPlayerAlternateAdv(account_id, name, &aa);
@@ -5187,7 +5184,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	m_inv.dumpInventory();
 #endif
 	strcpy(m_pp.servername,"eqemulator");
-	
+
 	CRC32::SetEQChecksum((unsigned char*)&m_pp, sizeof(PlayerProfile_Struct)-4);
 	outapp = new APPLAYER(OP_PlayerProfile,sizeof(PlayerProfile_Struct));
 #ifdef SOLAR
@@ -5198,7 +5195,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	outapp->priority = 6;
 	QueuePacket(outapp);
 	safe_delete(outapp);
-	
+
 	
 	
 	
@@ -5326,8 +5323,13 @@ void Client::CompleteConnect()
 	//build our AA array representation.
 	memset(&aa, 0, sizeof(aa));
 	for(int a=0; a < MAX_PP_AA_ARRAY; a++) {
-		aa.aa_list[a].aa_skill = m_pp.aa_array[a].AA;
-		aa.aa_list[a].aa_value = m_pp.aa_array[a].value;
+		if(m_pp.aa_array[a].value > 0){
+			if(m_pp.aa_array[a].value>1)
+				aa.aa_list[a].aa_skill = m_pp.aa_array[a].AA - m_pp.aa_array[a].value + 1;
+			else
+				aa.aa_list[a].aa_skill = m_pp.aa_array[a].AA;
+			aa.aa_list[a].aa_value = m_pp.aa_array[a].value;
+		}
 	}
 	SendAATable();
 	

@@ -442,7 +442,8 @@ public:
 	inline void	SetDuelTarget(int16 set_id) { duel_target=set_id; }
 	inline void	SetDueling(bool duel) { duelaccepted = duel; }
 	void  SendAAList();
-	void  SendAA(int32 id, int seq=1, bool update=false);
+	void  SendAA(int32 id, int seq=1);
+	void  SendPreviousAA(int32 id, int seq=1);
 	void  BuyAA(AA_Action* action);
 	// solar: this function is used by some AA stuff
 	void MemorizeSpell(int32 slot,int32 spellid,int32 scribing);

@@ -307,14 +307,8 @@ bool Client::Save(int8 iCommitNow) {
 	m_pp.guildrank=guildrank;
 	m_pp.heading = heading;
 	int spentpoints=0;
-	for(int a=0;a < MAX_PP_AA_ARRAY;a++){
-		if(aa.aa_list[a].aa_value>1)
-			m_pp.aa_array[a].AA=aa.aa_list[a].aa_skill+aa.aa_list[a].aa_value-1;
-		else
-			m_pp.aa_array[a].AA=aa.aa_list[a].aa_skill;
-		m_pp.aa_array[a].value=aa.aa_list[a].aa_value;
+	for(int a=0;a < MAX_PP_AA_ARRAY;a++)
 		spentpoints+=aa.aa_list[a].aa_value;
-	}
 	
 	m_pp.aapoints_spent = spentpoints;
 	if (GetHP() <= 0) {

@@ -29,7 +29,6 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemu.org)
 #include "../common/classes.h"
 #include "../common/eq_packet_structs.h"
 #include "StringIDs.h"
-
 #ifndef NEW_LoadSPDat
 	extern SPDat_Spell_Struct spells[SPDAT_RECORDS];
 #endif
@@ -588,15 +587,54 @@ void Client::SendAATable() {
     QueuePacket(outapp);
     safe_delete(outapp);
 }
-
-void Client::SendAA(int32 id, int seq, bool update) {
+void Client::SendPreviousAA(int32 id, int seq){
 	uint32 value=0;
 	SendAA_Struct* saa2 = NULL;
 	if(id==0)
 		saa2 = zone->GetAAList()->aa[seq];
 	else
 		saa2 = zone->FindAA(id);
-	
+	if(!saa2)
+		return;
+	int size=sizeof(SendAA_Struct)+sizeof(AA_Ability)*saa2->total_abilities;
+	uchar* buffer = new uchar[size];
+	SendAA_Struct* saa=(SendAA_Struct*)buffer;
+	value = GetAA(saa2->id);
+	APPLAYER* outapp = new APPLAYER(OP_SendAATable);
+	outapp->size=size;
+	outapp->pBuffer=(uchar*)saa;
+	value--;
+	while(value>0){
+		memcpy(saa,saa2,size);
+		if(saa->spellid==0)
+			saa->spellid=0xFFFFFFFF;
+		saa->id+=value;
+		saa->next_id=saa->id+1;
+		if(value==1)
+			saa->last_id=saa2->id;
+		else
+			saa->last_id=saa->id-1;
+		saa->current_level=value;
+		saa->cost2=saa->cost*value;
+		if(saa->type==1) //general ability
+			saa->abilities[0].increase_amt*=value;
+		QueuePacket(outapp);
+		value--;
+	}
+	memcpy(saa,saa2,size);
+	QueuePacket(outapp);
+	safe_delete(outapp);
+}
+void Client::SendAA(int32 id, int seq) {
+	uint32 value=0;
+	SendAA_Struct* saa2 = NULL;
+	if(id==0)
+		saa2 = zone->GetAAList()->aa[seq];
+	else
+		saa2 = zone->FindAA(id);
+	if(!saa2)
+		return;
+
 	int16 classes = saa2->classes;
 	if(!(classes & (1 << GetClass())) && (GetClass()!=BERSERKER || saa2->berserker==0)){
 		return;
@@ -611,7 +649,7 @@ void Client::SendAA(int32 id, int seq, bool update) {
 		saa->spellid=0xFFFFFFFF;
 	
 	value=GetAA(saa->id);
-	
+	int32 orig_val = value;
 	if(value){
 		if(value < saa->max_level){
 			saa->id+=value;
@@ -624,17 +662,18 @@ void Client::SendAA(int32 id, int seq, bool update) {
 		}
 		saa->last_id=saa->id-1;
 		saa->current_level=value;
-		saa->cost2=value;
+		saa->cost2=saa->cost*value;//value;
 		if(saa->type==1) //general ability
 			saa->abilities[0].increase_amt*=value;
 	}
-//printf("Sending AA(%d): id=%d pr=%d prm=%d\n", id, saa->id, saa->prereq_skill, saa->prereq_minpoints);
 	APPLAYER* outapp = new APPLAYER(OP_SendAATable);
 	outapp->size=size;
 	outapp->pBuffer=(uchar*)saa;
 	QueuePacket(outapp);
+	if(value && (orig_val < saa->max_level))
+		SendPreviousAA(id, seq);
 	safe_delete(outapp);
-	//will outapp delete the buffer for us even though it didnt make it?
+	//will outapp delete the buffer for us even though it didnt make it? Yes, it should
 }
 
 void Client::SendAAList(){
@@ -675,11 +714,15 @@ bool Client::SetAA(int32 aa_id, int32 new_value) {
 	for(int cur=0;cur < MAX_PP_AA_ARRAY;cur++){
 		if(aa.aa_list[cur].aa_skill==aa_id){
 			aa.aa_list[cur].aa_value=new_value;
+			m_pp.aa_array[cur].AA++;
+			m_pp.aa_array[cur].value=new_value;
 			return true;
 		}
 		else if(aa.aa_list[cur].aa_skill==0){ //end of list
 			aa.aa_list[cur].aa_skill=aa_id;
 			aa.aa_list[cur].aa_value=new_value;
+			m_pp.aa_array[cur].AA=aa_id;
+			m_pp.aa_array[cur].value=new_value;
 			return true;
 		}
 	}
