@@ -392,7 +392,7 @@ public:
 	bool	CheckLoreConflict(const Item_Struct* item);
 	void	ChangeLastName(const char* in_lastname);
 	
-	FACTION_VALUE	GetFactionCon(Mob* iOther);
+	FACTION_VALUE	GetReverseFactionCon(Mob* iOther);
     FACTION_VALUE   GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race, int32 p_class, int32 p_deity, sint32 pFaction, Mob* tnpc);
 	sint32	GetCharacterFactionLevel(sint32 faction_id);
 	

@@ -2083,7 +2083,7 @@ void command_ai(Client *c, const Seperator *sep)
 		if (target && sep->arg[2][0] != 0) {
 			Mob* tar2 = entity_list.GetMob(sep->arg[2]);
 			if (tar2)
-				c->Message(0, "%s considering %s: %i", target->GetName(), tar2->GetName(), target->GetFactionCon(tar2));
+				c->Message(0, "%s considering %s: %i", target->GetName(), tar2->GetName(), tar2->GetReverseFactionCon(target));
 			else
 				c->Message(0, "Error: %s not found.", sep->arg[2]);
 		}

@@ -2154,31 +2154,128 @@ int8 Mob::MaxSkill(int16 skillid, int16 class_, int16 level) {
 /////////////////////////////////////////
 // Common
 /////////////////////////////////////////
-    case BIND_WOUND:{
-      r_value = 5 + (level*5);
-      if (level > 50){
-        // Check for aa and class
-      }
-      switch (class_) {
-          case ENCHANTER: case ENCHANTERGM:
-          case MAGICIAN: case MAGICIANGM:
-          case NECROMANCER: case NECROMANCERGM:
-          case WIZARD: case WIZARDGM:{
-            if (  r_value > 100 )
-              r_value = 100;
-          }
-          case BERSERKER: case BERSERKERGM:{
-            if (  r_value > 210 )
-              r_value = 210;
-          }
-          break;
-          default:
-	        if (r_value > 200)
-	          r_value = 200;
-        	break;
-      }
-      break;
-    }
+	case BIND_WOUND:{
+	 switch(class_){
+		case BARD: case BARDGM:{
+		 r_value = ((level*5)+5);
+		 if(level >= 50) {
+			if(r_value > 210)
+				r_value = 210;
+		 } else {
+			if(r_value > 200)
+				r_value = 200;
+		 }
+		 break;
+		}
+		case CLERIC: case CLERICGM:{ 
+		 r_value = ((level*5)+5);			
+		 if(level >= 50) {
+			if(r_value > 201)
+				r_value = 201; 
+		 } else {
+			if(r_value > 200)
+				r_value = 200;
+		 }
+		 break;
+		}
+ 
+		case DRUID: case DRUIDGM:
+		case SHAMAN: case SHAMANGM:{
+		 r_value = ((level*5) + 5);
+		 if(r_value > 200)
+			r_value = 200;			 
+		 break;
+		}	 
+		case MAGICIAN: case MAGICIANGM:
+		case ENCHANTER: case ENCHANTERGM:
+		case NECROMANCER: case NECROMANCERGM:
+		case WIZARD: case WIZARDGM:{
+		  r_value = ((level*5) + 5);
+		  if(r_value > 100)
+			 r_value = 100;
+		break;
+		}
+		case BEASTLORD: case BEASTLORDGM:
+		case BERSERKER: case BERSERKERGM:
+		case MONK: case MONKGM: { 
+		 r_value = ((level*5)+5);			
+		 if(level >= 50) {
+			if(r_value > 210)
+				r_value = 210; 
+		 } else {
+			if(r_value > 200)
+				r_value = 200;
+		 }
+		 break;
+		}
+		case PALADIN: case PALADINGM: { 
+		  if (level > 10) {
+			r_value = (((level-10)*5)+5);			
+			if(level >= 50) {
+				if(r_value > 210)
+					r_value = 210; 
+			} else {
+				if(r_value > 200)
+					r_value = 200;
+			}
+		  }
+		  break;
+		}
+		case RANGER: case RANGERGM: { 
+		  if (level > 15) {
+			r_value = (((level-15)*5)+5);			
+			if(level >= 50) {
+				if(r_value > 200)
+					r_value = 200; 
+			} else {
+				if(r_value > 150)
+					r_value = 150;
+			}
+		  }
+		  break;
+		}
+ 
+		case ROGUE: case ROGUEGM: { 
+		 r_value = ((level*5)+5);			
+		 if(level >= 50) {
+			if(r_value > 210)
+				r_value = 210; 
+		 } else {
+			if(r_value > 176)
+				r_value = 176;
+		 }
+		 break;
+		}
+		case SHADOWKNIGHT: case SHADOWKNIGHTGM: { 
+		 r_value = ((level*5)+5);			
+		 if(level >= 50) {		
+			if(r_value > 200)
+				r_value = 200; 
+		 } else {
+			if(r_value > 150)
+				r_value = 150;
+		 }
+		 break;
+		}
+		case WARRIOR: case WARRIORGM: { 
+		 if (level > 5) {
+			r_value = (((level-5)*5)+5);			 
+			if(level >= 50) {
+				if(r_value > 210)
+					r_value = 210; 
+			} else {
+				if(r_value > 175)
+					r_value = 175;
+			}
+		 }
+		 break;
+		}
+ 
+		default: r_value = 0;
+		break;
+	 }
+	break;
+	}
     case SENSE_HEADING:
     case SWIMMING:
     case ALCOHOL_TOLERANCE:

@@ -289,7 +289,8 @@ bool EntityList::AICheckCloseSpells(Mob* caster, int8 iChance, float iRange, int
 			|| t2 > iRange
 			|| t3 > iRange
 			|| mob->DistNoRoot(*caster) > iRange2
-			|| mob->GetFactionCon(caster) <= FACTION_AMIABLE
+				//this call should seem backwards:
+			|| caster->GetReverseFactionCon(mob) <= FACTION_AMIABLE
 		) {
 			continue;
 		}
@@ -574,8 +575,10 @@ void Mob::AI_Process() {
 			}
 			
 			//should implement some checks for the target being dead mid-attack.
-			if (GetAppearance() == 0 && GetRunAnimSpeed() == 0 && !IsStunned()
-				&& attack_timer.Check()) 
+			if (GetAppearance() == 0 
+			  //&& GetRunAnimSpeed() < NPC_RUNANIM_RATIO 	//cant attack if running?? (at rate > 1.0)
+			  && !IsStunned()
+			  && attack_timer.Check()) 
 			{
 				Attack(target, 13);
 				if (target) 

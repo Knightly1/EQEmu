@@ -19,6 +19,12 @@ using namespace std;
 map<int,string> DBFieldNames;
 
 #ifndef WIN32
+#ifdef FREEBSD
+int print_stacktrace()
+{
+	printf("Insert stack trace here...\n");
+}
+#else //!WIN32 && !FREEBSD == linux
 #include <execinfo.h>
 int print_stacktrace()
 {
@@ -37,7 +43,8 @@ int print_stacktrace()
         }
     }
 }
-#endif
+#endif //!FREEBSD
+#endif //!WIN32
 
 void Unprotect(string &s, char what)
 {

@@ -103,7 +103,8 @@ bool Mob::CheckWillAggro(Mob *mob) {
 	}
 	
 	//Image: Get their current target and faction value now that its required
-	FACTION_VALUE fv = GetFactionCon(mob);
+	//this function call should seem backwards
+	FACTION_VALUE fv = mob->GetReverseFactionCon(this);
 	
 	// Make sure they're still in the zone
 	// Are they in range?
@@ -135,20 +136,20 @@ bool Mob::CheckWillAggro(Mob *mob) {
 		//FatherNiwtit: make sure we can see them. last since it is very expensive
 		if(CheckLosFN(mob)) {
 
-		// Aggro
-		#if EQDEBUG>=6
-			LogFile->write(EQEMuLog::Debug, "Check aggro for %s target %s.", GetName(), mob->GetName());
-		#endif
-		return(true);
-	}
+			// Aggro
+			#if EQDEBUG>=6
+				LogFile->write(EQEMuLog::Debug, "Check aggro for %s target %s.", GetName(), mob->GetName());
+			#endif
+			return(true);
+		}
 	  }
 #if EQDEBUG >= 6
-	  cout<<"Is In zone?:"<<mob->InZone()<<endl;
-	  cout<<"Dist^2:"<<dist2<<endl;
-	  cout<<"Range^2:"<<iAggroRange2<<endl;
-	  cout<<"Faction:"<<fv<<endl;
-	  cout<<"Int:"<<sender->GetINT()<<endl;
-	  cout<<"Con:"<<sender->GetLevelCon(mob->GetLevel())<<endl;
+	  printf("Is In zone?:%d\n", mob->InZone());
+	  printf("Dist^2: %f\n", dist2);
+	  printf("Range^2: %f\n", iAggroRange2);
+	  printf("Faction: %d\n", fv);
+	  printf("Int: %d\n", GetINT());
+	  printf("Con: %d\n", GetLevelCon(mob->GetLevel()));
 #endif		
 	return(false);
 }
@@ -206,9 +207,11 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 			//if they are in range, make sure we are not green...
 			//then jump in if they are our friend
 			if(attacker->GetLevelCon(mob->GetLevel()) != CON_GREEN
+			    && mob->GetPrimaryFaction() != 0	//PF==0 means I have no friends
 				&& (
 					mob->GetPrimaryFaction() == sender->CastToNPC()->GetPrimaryFaction() ||
-					mob->GetFactionCon(sender) <= FACTION_AMIABLE )
+					//see what mob thinks about the sender (its backwards)
+					sender->GetReverseFactionCon(mob) <= FACTION_AMIABLE )
 			  ) {
 				//attacking someone on same faction, or a friend
 				

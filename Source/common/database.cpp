@@ -4138,9 +4138,6 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 		
 	if (RunQuery(query, sizeof(query), errbuf, &result)) {
 		while((row = mysql_fetch_row(result))) {
-#if EQDEBUG >= 6
-				LogFile->write(EQEMuLog::Status, "Loading %s:%i:%i", row[15], atoi(row[5]),atoi(row[72]));
-#endif				
 			Item_Struct item;
 			memset(&item, 0, sizeof(Item_Struct));
 
@@ -4158,6 +4155,11 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 			strcpy(item.LoreName,row[11]);
 			strcpy(item.IDFile,row[12]);
 			item.ItemNumber = (uint32)atoul(row[13]);
+			if(item.ItemNumber == 0) {
+				//item ID 0 makes eqemu go crazy.
+				LogFile->write(EQEMuLog::Error, "Item ID 0 found in database. Skipping.");
+				continue;
+			}
 			item.Weight = (uint8)atoi(row[14]);
 			item.NoRent = (uint8)atoi(row[15]);
 			item.NoDrop = (uint8)atoi(row[16]);

@@ -52,7 +52,7 @@ public:
 		Client_SetFactionLevel2,
 		
 		NPC_Attack,
-		NPC_GetFactionCon,
+		NPC_GetReverseFactionCon,
 		NPC_Process,
 		
 		EntityList_TrapProcess,

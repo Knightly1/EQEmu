@@ -59,12 +59,12 @@ XS(XS_NPC_CheckNPCFactionAlly)
 	XSRETURN(1);
 }
 
-XS(XS_NPC_GetFactionCon); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_GetFactionCon)
+XS(XS_NPC_GetReverseFactionCon); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_GetReverseFactionCon)
 {
 	dXSARGS;
 	if (items != 2)
-		Perl_croak(aTHX_ "Usage: NPC::GetFactionCon(THIS, iOther)");
+		Perl_croak(aTHX_ "Usage: NPC::GetReverseFactionCon(THIS, iOther)");
 	{
 		NPC *		THIS;
 		FACTION_VALUE		RETVAL;
@@ -85,7 +85,7 @@ XS(XS_NPC_GetFactionCon)
 		else
 			Perl_croak(aTHX_ "iOther is not of type Mob");
 
-		RETVAL = THIS->GetFactionCon(iOther);
+		RETVAL = THIS->GetReverseFactionCon(iOther);
 		XSprePUSH; PUSHi((IV)RETVAL);
 	}
 	XSRETURN(1);
@@ -1282,7 +1282,7 @@ XS(boot_NPC)
 	XS_VERSION_BOOTCHECK ;
 
 		newXSproto(strcpy(buf, "CheckNPCFactionAlly"), XS_NPC_CheckNPCFactionAlly, file, "$$");
-		newXSproto(strcpy(buf, "GetFactionCon"), XS_NPC_GetFactionCon, file, "$$");
+		newXSproto(strcpy(buf, "GetReverseFactionCon"), XS_NPC_GetReverseFactionCon, file, "$$");
 		newXSproto(strcpy(buf, "GoToBind"), XS_NPC_GoToBind, file, "$");
 		newXSproto(strcpy(buf, "AddItem"), XS_NPC_AddItem, file, "$$$;$");
 		newXSproto(strcpy(buf, "AddLootTable"), XS_NPC_AddLootTable, file, "$");

@@ -105,6 +105,7 @@ void Client::CalcItemBonuses(StatBonuses* newbon) {
 	//memset assumed to be done by caller.
 	
 	int i;
+	//should not include 21 (SLOT_AMMO)
 	for (i=0; i<21; i++) {
 		const ItemInst* inst = m_inv[i];
 		if(inst == 0)

@@ -135,13 +135,13 @@ bool IsOfIndiffRace(int r1, int r2)
 }
 
 // returns what Other thinks of this
-FACTION_VALUE Client::GetFactionCon(Mob* iOther) {
+FACTION_VALUE Client::GetReverseFactionCon(Mob* iOther) {
 #if FACTIONS_DEBUG >= 5
-	LogFile->write(EQEMuLog::Debug, "called $s::GetFactionCon(%s)", GetName(), iOther->GetName());
+	LogFile->write(EQEMuLog::Debug, "called $s::GetReverseFactionCon(%s)", GetName(), iOther->GetName());
 #endif
 	
 	if (GetOwnerID()) {
-		return GetOwnerOrSelf()->GetFactionCon(iOther);
+		return GetOwnerOrSelf()->GetReverseFactionCon(iOther);
 	}
 	
 	iOther = iOther->GetOwnerOrSelf();
@@ -161,12 +161,13 @@ FACTION_VALUE Client::GetFactionCon(Mob* iOther) {
 //this is called with 'this' as the mob being looked at, and
 //iOther the mob who is doing the looking. It should figure out
 //what iOther thinks about 'this'
-FACTION_VALUE NPC::GetFactionCon(Mob* iOther) {
+FACTION_VALUE NPC::GetReverseFactionCon(Mob* iOther) {
 #if FACTIONS_DEBUG >= 20
-	LogFile->write(EQEMuLog::Debug, "called N $s::GetFactionCon(%s)", GetName(), iOther->GetName());
+	LogFile->write(EQEMuLog::Debug, "called N $s::GetReverseFactionCon(%s)", GetName(), iOther->GetName());
 #endif
 	
-	_ZP(NPC_GetFactionCon);
+	_ZP(NPC_GetReverseFactionCon);
+	
 	
 	iOther = iOther->GetOwnerOrSelf();
 	int primaryFaction= iOther->GetPrimaryFaction();
@@ -174,14 +175,30 @@ FACTION_VALUE NPC::GetFactionCon(Mob* iOther) {
 #if FACTIONS_DEBUG >= 20
 	LogFile->write(EQEMuLog::Debug, "	%s'd primary faction = %d", iOther->GetName(), primaryFaction);
 #endif
+	
+	//I am pretty sure that this special faction call is backwards
+	//and should be iOther->GetSpecialFactionCon(this)
 	if (primaryFaction < 0)
 		return GetSpecialFactionCon(iOther);
+	
 	if (primaryFaction == 0)
 		return FACTION_INDIFFERENT;
-	if (GetOwner())
-		return GetOwner()->GetFactionCon(iOther);
 	
-	return(CheckNPCFactionAlly(primaryFaction));
+	//if we are a pet, use our owner's faction stuff
+	if (GetOwnerID())
+		return GetOwner()->GetReverseFactionCon(iOther);
+	
+	//make sure iOther is an npc
+	//also, if we dont have a faction, then they arnt gunna think anything of us either
+	if(!iOther->IsNPC() || GetPrimaryFaction() == 0)
+		return(FACTION_INDIFFERENT);
+	
+	//if we get here, iOther is an NPC too
+	
+	//otherwise, employ the npc faction stuff
+	//so we need to look at iOther's faction table to see
+	//what iOther thinks about our primary faction
+	return(iOther->CastToNPC()->CheckNPCFactionAlly(GetPrimaryFaction()));
 }
 
 //Look through our faction list and return a faction con based 

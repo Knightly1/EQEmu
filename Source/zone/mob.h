@@ -634,7 +634,7 @@ bool logpos;
 	void				ResumeWandering();
 	void				PauseWandering(int pausetime);
 	void				MoveTo(float mtx, float mty, float mtz);
-	virtual FACTION_VALUE GetFactionCon(Mob* iOther) { return FACTION_INDIFFERENT; }
+	virtual FACTION_VALUE GetReverseFactionCon(Mob* iOther) { return FACTION_INDIFFERENT; }
 	FACTION_VALUE		GetSpecialFactionCon(Mob* iOther);
 	inline const bool&	IsAIControlled() { return pAIControlled; }
     inline const float&	GetGuardX() { return guard_x; }

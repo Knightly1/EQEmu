@@ -20,6 +20,7 @@
 #include "features.h"
 #ifdef EMBPERL_XS_CLASSES
 #include "embperl.h"
+#include "../common/debug.h"
 
 typedef const char Const_char;
 

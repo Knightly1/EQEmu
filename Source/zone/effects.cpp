@@ -607,7 +607,7 @@ void EntityList::AESpell(Mob *caster, Mob *center, float dist,
 		if(center->DistNoRoot(*curmob) > dist2)	//make sure they are in range
 			continue;
 		if(isnpc && curmob->IsNPC()) {	//check npc->npc casting
-			FACTION_VALUE f = caster->GetFactionCon(curmob);
+			FACTION_VALUE f = curmob->GetReverseFactionCon(caster);
 			if(bad) {
 				//affect mobs that are on our hate list, or
 				//which have bad faction with us

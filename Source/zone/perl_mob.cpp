@@ -3861,12 +3861,12 @@ XS(XS_Mob_MoveTo)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_Mob_GetFactionCon); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetFactionCon)
+XS(XS_Mob_GetReverseFactionCon); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_GetReverseFactionCon)
 {
 	dXSARGS;
 	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Mob::GetFactionCon(THIS, iOther)");
+		Perl_croak(aTHX_ "Usage: Mob::GetReverseFactionCon(THIS, iOther)");
 	{
 		Mob *		THIS;
 		FACTION_VALUE		RETVAL;
@@ -3887,7 +3887,7 @@ XS(XS_Mob_GetFactionCon)
 		else
 			Perl_croak(aTHX_ "iOther is not of type Mob");
 
-		RETVAL = THIS->GetFactionCon(iOther);
+		RETVAL = THIS->GetReverseFactionCon(iOther);
 		XSprePUSH; PUSHi((IV)RETVAL);
 	}
 	XSRETURN(1);
@@ -5624,7 +5624,7 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "ResumeWandering"), XS_Mob_ResumeWandering, file, "$");
 		newXSproto(strcpy(buf, "PauseWandering"), XS_Mob_PauseWandering, file, "$$");
 		newXSproto(strcpy(buf, "MoveTo"), XS_Mob_MoveTo, file, "$$$$");
-		newXSproto(strcpy(buf, "GetFactionCon"), XS_Mob_GetFactionCon, file, "$$");
+		newXSproto(strcpy(buf, "GetReverseFactionCon"), XS_Mob_GetReverseFactionCon, file, "$$");
 		newXSproto(strcpy(buf, "IsAIControlled"), XS_Mob_IsAIControlled, file, "$");
 		newXSproto(strcpy(buf, "GetGuardX"), XS_Mob_GetGuardX, file, "$");
 		newXSproto(strcpy(buf, "GetGuardY"), XS_Mob_GetGuardY, file, "$");

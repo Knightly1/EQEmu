@@ -1936,12 +1936,11 @@ bool Client::BindWound(Mob* bindmob, bool start, bool fail){
 						// 0.120 per skill point, 0.60 per skill level, minimum 3 max 30
 						int bindhps = 3;
 
-						if (GetSkill(BIND_WOUND) >= 10) {
-							bindhps += GetSkill(BIND_WOUND)*12/100;
-						}
-						
-						if (bindhps > 30){
-							bindhps = 30;
+
+						if (GetSkill(BIND_WOUND) > 200) {
+							bindhps += GetSkill(BIND_WOUND)*4/10;
+						} else if (GetSkill(BIND_WOUND) >= 10) {
+							bindhps += GetSkill(BIND_WOUND)/4;
 						}
 						
 						//Implementation of aaMithanielsBinding is a guess (the multiplier)

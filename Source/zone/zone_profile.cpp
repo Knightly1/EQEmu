@@ -130,7 +130,7 @@ const char *__zp_names[ZoneProfiler::MaxZoneProfilerId] = {
 		"Client_SetFactionLevel2",
 		
 		"NPC_Attack",
-		"NPC_GetFactionCon",
+		"NPC_GetReverseFactionCon",
 		"NPC_Process",
 		
 		"EntityList_TrapProcess",
