@@ -2469,7 +2469,7 @@ struct Item_Struct {
 /*005*/	uint32	Unknown005;
 /*006*/	uint32	Unknown006;
 /*007*/	uint32	Unknown007;
-/*008*/	uint32	Unknown008;		 //added in patch 
+/*008*/	uint32	SpellCharges;		 //added in patch 
 /*008*/	uint32	Attuneable;		 //new attuneable flag 0=not attune, 1=attune
 /*008*/	uint8	ItemClass;				// Item Type: 0=common, 1=container, 2=book (quote precedes field - dunno why)
 /*009*/	char	Name[64];			// Name

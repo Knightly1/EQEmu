@@ -4000,7 +4000,7 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 		//IN THE CODE BELOW (for books and containers)!!!
 		char query[] =
 			"SELECT charges,unknown002,unknown003,merchantprice,unknown005,"
-			"unknown006,unknown007,unknown008,itemclass,name,lore,idfile,id,weight,norent,"
+			"unknown006,unknown007,SpellCharges,itemclass,name,lore,idfile,id,weight,norent,"
 			"nodrop,attuneable,size,slots,cost,icon,unknown018,unknown019,unknown020,"
 			"tradeskills,cr,dr,pr,mr,fr,astr,asta,aagi,adex,acha,aint,awis,hp,"
 			"mana,ac,deity,skillmodvalue,skillmodtype,banedmgrace,banedmgamt,"
@@ -4036,7 +4036,7 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 				item.Unknown005					= (uint32)atoi(row[idx++]);
 				item.Unknown006					= (uint32)atoi(row[idx++]);
 				item.Unknown007					= (uint32)atoi(row[idx++]);
-				item.Unknown008					= (uint32)atoi(row[idx++]);
+				item.SpellCharges				= (uint32)atoi(row[idx++]);
 				item.ItemClass					= (uint8)atoi(row[idx++]);
 				strcpy(item.Name, row[idx++]);
 				strcpy(item.LoreName,row[idx++]);
@@ -4177,6 +4177,7 @@ bool Database::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 		}
 		else {
 			LogFile->write(EQEMuLog::Error, "DBLoadItems query '%s', %s", query, errbuf);
+			LogFile->write(EQEMuLog::Error, "If you got an error related to the 'SpellCharges' field, run the following SQL Query: ALTER TABLE `items` CHANGE `unknown008` `SpellCharges` INT(11)  DEFAULT \"0\" NOT NULL;");
 		}
 	#else
 		

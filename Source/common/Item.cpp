@@ -1055,6 +1055,9 @@ string ItemInst::Serialize(sint16 slot_id) const
 	int charges=m_charges;
 	if(charges==255)
 		charges=-1;
+	int32 spellcharges = m_item->SpellCharges;
+	if(spellcharges && m_item->Common.SpellId > 0 && m_item->Common.SpellId<65000 && m_item->Charges <= 1)
+		spellcharges = charges;
 	sprintf(ch,
 		"%i|%i|%i|%i|%i|%i|%i|%i|%i|\"%i|%s|%s|%s|%i|%i|%i|%i|%i|%i|%i|%i",
 		charges,
@@ -1064,7 +1067,7 @@ string ItemInst::Serialize(sint16 slot_id) const
 		m_item->Unknown006,
 		unknown5,
 		m_item->Unknown007,
-		m_item->Unknown008,
+		spellcharges,
 		m_item->Attuneable,
 		m_item->ItemClass,
 		m_item->Name,
