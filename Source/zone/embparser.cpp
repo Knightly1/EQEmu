@@ -26,21 +26,10 @@
 
 #include "masterentity.h"
 #include "../common/debug.h"
+#include "features.h"
 #include "embparser.h"
 
 #include <algorithm>
-
-//Uncomment this line, or put -DQUEST_SCRIPTS_BYNAME in your
-//makefile's cflags to enable named quest files:
-//#define QUEST_SCRIPTS_BYNAME
-
-#ifdef QUEST_SCRIPTS_BYNAME
-
-//extends byname system to look in templates directory
-#define QUEST_TEMPLATES_BYNAME
-#define QUEST_TEMPLATES_DIRECTORY "templates"
-
-#endif
 
 #ifdef WIN32
 //borrow this from Wes... I like it
