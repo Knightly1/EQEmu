@@ -1030,7 +1030,7 @@ struct Before_Sep14th_PlayerProfile_Struct
 /*4400*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
 /*4404*/	char				unknown3688[12];				
 /*4416*/	uint32				zone_id;			// Current zone of the player
-/*4420*/	SpellBuff_Struct		buffs[BUFF_COUNT];			// Buffs currently on the player
+/*4420*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
 /*4660*/	char 				groupMembers[6][64];		//
 /*5044*/	uint8				unknown4328[4]; 		//
 /*5048*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
@@ -1155,7 +1155,7 @@ struct Before_Aug13th_PlayerProfile_Struct
 /*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
 /*3688*/	char				unknown3688[12];				
 /*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct		buffs[BUFF_COUNT];			// Buffs currently on the player
+/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
 /*3944*/	char 				groupMembers[6][64];		//
 /*4328*/	uint8				unknown4328[4]; 		//
 /*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
@@ -1281,7 +1281,7 @@ struct PlayerProfile_Struct_Before_May26th
 /*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
 /*3688*/	char				unknown3688[12];				
 /*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct		buffs[BUFF_COUNT];			// Buffs currently on the player
+/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
 /*3944*/	char 				groupMembers[6][64];		//
 /*4328*/	uint8				unknown4328[4]; 		//
 /*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
@@ -1407,7 +1407,7 @@ struct BeforeMay5th_PlayerProfile_Struct
 /*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
 /*3688*/	char				unknown3688[12];				
 /*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct		buffs[BUFF_COUNT];			// Buffs currently on the player
+/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
 /*3944*/	char 				groupMembers[6][64];		//
 /*4328*/	uint8				unknown4328[4]; 		//
 /*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
@@ -1533,7 +1533,7 @@ struct BeforeApr21st_PlayerProfile_Struct
 /*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
 /*3688*/	char				unknown3688[12];				
 /*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct		buffs[BUFF_COUNT];			// Buffs currently on the player
+/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
 /*3944*/	char 				groupMembers[6][64];		//
 /*4328*/	uint8				unknown4328[4]; 		//
 /*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
@@ -1658,7 +1658,7 @@ struct BeforeApril14th_PlayerProfile_Struct
 /*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
 /*3688*/	char				unknown3688[12];				
 /*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct		buffs[BUFF_COUNT];			// Buffs currently on the player
+/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
 /*3944*/	char 				groupMembers[6][64];		//
 /*4328*/	uint8				unknown4328[4]; 		//
 /*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
@@ -1784,7 +1784,7 @@ struct BeforeFeb18_PlayerProfile_Struct
 /*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
 /*3688*/	char				unknown3688[12];				
 /*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct		buffs[BUFF_COUNT];			// Buffs currently on the player
+/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
 /*3944*/	char 				groupMembers[6][64];		//
 /*4328*/	uint8				unknown4328[4]; 		//
 /*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known
@@ -1909,7 +1909,7 @@ struct OldPlayerProfile_Struct
 /*3684*/	int32				aapoints;		// Wrong but needs to be put somewhere =P
 /*3688*/	char				unknown3688[12];				
 /*3700*/	uint32				zone_id;			// Current zone of the player
-/*3704*/	SpellBuff_Struct		buffs[15];			// Buffs currently on the player
+/*3704*/	SpellBuff_Struct	buffs[15];			// Buffs currently on the player
 /*3944*/	char 				groupMembers[6][64];		//
 /*4328*/	uint8				unknown4328[4]; 		//
 /*4332*/	uint32				ldon_guk_points;		// Earned Deepest Guk points - Doodman: guessing based on others that were known

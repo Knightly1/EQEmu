@@ -1489,7 +1489,70 @@ void Database::GetCharSelectInfo(int32 account_id, CharacterSelect_Struct* cs) {
 		safe_delete_array(query);
 		while ((row = mysql_fetch_row(result))) {
 			lengths = mysql_fetch_lengths(result);
-			if ((lengths[1] == sizeof(OldPlayerProfile_Struct))) {
+			////////////
+			////////////	This is the current one, the other are for converting
+			////////////
+			if ((lengths[1] == sizeof(PlayerProfile_Struct))) {
+				strcpy(cs->name[char_num], row[0]);
+				PlayerProfile_Struct* pp = (PlayerProfile_Struct*)row[1];
+				
+				// Character information
+				cs->level[char_num]				= pp->level;
+				cs->class_[char_num]			= pp->class_;
+				cs->race[char_num]				= pp->race;
+				cs->gender[char_num]			= pp->gender;
+				cs->deity[char_num]				= pp->deity;
+				cs->zone[char_num]				= GetZoneID(row[2]);
+				cs->face[char_num]				= pp->face;
+				cs->haircolor[char_num]		= pp->haircolor;
+				cs->beardcolor[char_num]	= pp->beardcolor;
+				cs->eyecolor2[char_num] 	= pp->eyecolor2;
+				cs->eyecolor1[char_num] 	= pp->eyecolor1;
+				cs->hair[char_num]				= pp->hairstyle;
+				cs->beard[char_num]				= pp->beard;
+				
+				// Character's equipped items
+				// @merth: Haven't done bracer01/bracer02 yet.
+				// Also: this needs a second look after items are a little more solid
+				// NOTE: items don't have a color, players MAY have a tint, if the
+				// use_tint part is set.  otherwise use the regular color
+				inv = new Inventory;
+				if(GetInventory(account_id, cs->name[char_num], inv))
+				{
+					for (uint8 material = 0; material <= 8; material++)
+					{
+						uint32 color;
+						ItemInst *item = inv->GetItem(Inventory::CalcSlotFromMaterial(material));
+						if(item == 0)
+							continue;
+
+						cs->equip[char_num][material] = item->GetItem()->Common.Material;
+
+						if(pp->item_tint[material].rgb.use_tint)	// they have a tint (LoY dye)
+							color = pp->item_tint[material].color;
+						else	// no tint, use regular item color
+							color = item->GetItem()->Common.Color;
+
+						cs->cs_colors[char_num][material].color = color;
+
+						// the weapons are kept elsewhere
+						if ((material==MATERIAL_PRIMARY) || (material==MATERIAL_SECONDARY))
+						{
+							uint32 melee_idx = (material==MATERIAL_PRIMARY) ? 0 : 1;
+							if(strlen(item->GetItem()->IDFile) > 2)
+								cs->melee[melee_idx][char_num] = atoi(&item->GetItem()->IDFile[2]);
+						}
+					}
+				}
+				else
+				{
+					printf("Error loading inventory for %s\n", cs->name[char_num]);
+				}
+				safe_delete(inv);	
+				if (++char_num > 10)
+					break;
+			}
+			else if ((lengths[1] == sizeof(OldPlayerProfile_Struct))) {
 				strcpy(cs->name[char_num], row[0]);
 				OldPlayerProfile_Struct* pp = (OldPlayerProfile_Struct*)row[1];
 				// Character information
@@ -1713,70 +1776,6 @@ void Database::GetCharSelectInfo(int32 account_id, CharacterSelect_Struct* cs) {
 						cs->melee[melee_idx][char_num] = cs->equip[char_num][material];
 					}
 				}
-				if (++char_num > 10)
-					break;
-			}
-////////////
-////////////	This is the current one, the other are for converting
-////////////
-			else if ((lengths[1] == sizeof(PlayerProfile_Struct))) {
-				strcpy(cs->name[char_num], row[0]);
-				PlayerProfile_Struct* pp = (PlayerProfile_Struct*)row[1];
-				
-				// Character information
-				cs->level[char_num]				= pp->level;
-				cs->class_[char_num]			= pp->class_;
-				cs->race[char_num]				= pp->race;
-				cs->gender[char_num]			= pp->gender;
-				cs->deity[char_num]				= pp->deity;
-				cs->zone[char_num]				= GetZoneID(row[2]);
-				cs->face[char_num]				= pp->face;
-				cs->haircolor[char_num]		= pp->haircolor;
-				cs->beardcolor[char_num]	= pp->beardcolor;
-				cs->eyecolor2[char_num] 	= pp->eyecolor2;
-				cs->eyecolor1[char_num] 	= pp->eyecolor1;
-				cs->hair[char_num]				= pp->hairstyle;
-				cs->beard[char_num]				= pp->beard;
-				
-				// Character's equipped items
-				// @merth: Haven't done bracer01/bracer02 yet.
-				// Also: this needs a second look after items are a little more solid
-				// NOTE: items don't have a color, players MAY have a tint, if the
-				// use_tint part is set.  otherwise use the regular color
-				inv = new Inventory;
-				if(GetInventory(account_id, cs->name[char_num], inv))
-				{
-					for (uint8 material = 0; material <= 8; material++)
-					{
-						uint32 color;
-						ItemInst *item = inv->GetItem(Inventory::CalcSlotFromMaterial(material));
-						if(item == 0)
-							continue;
-
-						cs->equip[char_num][material] = item->GetItem()->Common.Material;
-
-						if(pp->item_tint[material].rgb.use_tint)	// they have a tint (LoY dye)
-							color = pp->item_tint[material].color;
-						else	// no tint, use regular item color
-							color = item->GetItem()->Common.Color;
-
-						cs->cs_colors[char_num][material].color = color;
-
-						// the weapons are kept elsewhere
-						if ((material==MATERIAL_PRIMARY) || (material==MATERIAL_SECONDARY))
-						{
-							uint32 melee_idx = (material==MATERIAL_PRIMARY) ? 0 : 1;
-							if(strlen(item->GetItem()->IDFile) > 2)
-								cs->melee[melee_idx][char_num] = atoi(&item->GetItem()->IDFile[2]);
-						}
-					}
-				}
-				else
-				{
-					printf("Error loading inventory for %s\n", cs->name[char_num]);
-				}
-				safe_delete(inv);
-				
 				if (++char_num > 10)
 					break;
 			}
