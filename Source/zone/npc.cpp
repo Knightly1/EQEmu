@@ -1504,7 +1504,7 @@ int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn
 			break;
 		}
 		case 3: { // delete spawn from spawning - khuong
-			if (!RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND x='%f' AND y='%f' AND heading='%f'", zone, spawn->GetSpawnX(),spawn->GetSpawnY(),spawn->GetSpawnHeading()), errbuf, &result)) {
+			if (RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND x>'%.3f' AND x<'%.3f' AND y>'%.3f' AND y<'%.3f'", zone, spawn->GetSpawnX()-0.01f, spawn->GetSpawnX()+0.01f,spawn->GetSpawnY()-0.01f,spawn->GetSpawnY()+0.01f), errbuf, &result)) {
 				safe_delete_array(query);
 				return 0;
 			}
@@ -1538,7 +1538,7 @@ int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn
 			break;
 		}
 		case 4: { //delete spawn from DB (including npc_type) - khuong
-			if (RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND x='%f' AND y='%f' AND heading='%f'", zone, spawn->GetX(), spawn->GetY(), spawn->GetHeading()), errbuf, &result)) {
+			if (RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND x>'%.3f' AND x<'%.3f' AND y>'%.3f' AND y<'%.3f'", zone, spawn->GetSpawnX()-0.01f, spawn->GetSpawnX()+0.01f,spawn->GetSpawnY()-0.01f,spawn->GetSpawnY()+0.01f), errbuf, &result)) {
 				safe_delete_array(query);
 				return(0);
 			}
