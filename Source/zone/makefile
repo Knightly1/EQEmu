@@ -7,68 +7,39 @@ SF=../common/EQNetwork.o \
    faction.o Map.o PlayerCorpse.o petitions.o MobAI.o Object.o ../common/eqtime.o \
    groups.o ../common/classes.o ../common/races.o ../common/TCPConnection.o forage.o \
    ../common/crc32.o ../common/guilds.o ../common/md5.o ../common/dbcore.o \
-   ../common/dbasync.o zonedbasync.o parser.o embperl.o embparser.o \
+   ../common/dbasync.o zonedbasync.o parser.o beacon.o\
    ../common/EMuShareMem.o ../common/EQEMuError.o ../common/ptimer.o \
    .obj/debug.o .obj/database.o .obj/Item.o .obj/misc.o \
-   doors.o command.o beacon.o embxs.o AA.o trap.o \
+   doors.o command.o AA.o   \
    bonuses.o trading.o spdat.o  spell_effects.o aggro.o guilds.o \
    inventory.o client_mods.o tradeskills.o waypoints.o pets.o \
    effects.o
 
+
 CC=gcc
 LINKER=gcc
-
-#MYSQL_FLAGS=`mysql_config --cflags`
-#MYSQL_LIB=`mysql_config --libs`
-MYSQL_FLAGS=-I'/usr/local/include/mysql'
-
-DFLAGS=-DEQDEBUG=5 -DNO_PIDLOG -DSHAREMEM -DSPELL_EFFECT_SPAM -DFIELD_ITEMS -DFREEBSD
-#try commenting out the following three lines to disable embedded perl
-
-PERL_FLAGS=perl -MExtUtils::Embed -e ccopts
-PERL_LIB=perl -MExtUtils::Embed -e ldopts
-DFLAGS+=-DEMBPERL -DEMBPERL_PLUGIN 
-
-DFLAGS+=-DQUEST_SCRIPTS_BYNAME
-WFLAGS=-Wall -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -Wno-deprecated  -Wcomment -Wcast-align -Wuninitialized
-#COPTS=$(WFLAGS) -O -g -pg -march=i686 -pthread -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
-
-# BSD pthreads
-#MYSQL_LIB=-L'/usr/local/lib/mysql' -lmysqlclient -lz -lcrypt -lm
-#COPTS=$(WFLAGS) -O2 -ggdb -pthread -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
-#LINKOPTS=-rdynamic -L. -pthread -lstdc++ $(MYSQL_LIB)
-
-# linuxthreads
-MYSQL_LIB=-L'/usr/local/lib' -llmysqlclient -lz -lcrypt -lm
-DFLAGS+=-D__USE_UNIX98 -D_REENTRANT -D_THREAD_SAFE
-COPTS=$(WFLAGS) -I/usr/local/include/pthread/linuxthreads -O -ggdb -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
-
-#Unprofiled:
-LINKOPTS=-rdynamic -L. -llthread -llstdc++ -llsupc++ -llgcc_r $(MYSQL_LIB)
-
-#to enable profiling:
-#MYSQL_LIB=-L'/usr/local/lib' -llmysqlclient_p -lz_p -lcrypt_p -lm_p
-#LINKOPTS=-rdynamic -L. -lc_p -lm_p -lutil_p -lz_p -llthread_p -llstdc++_p -llsupc++_p -llgcc_r_p $(MYSQL_LIB) -pg
-#COPTS+=-pg
-#profile friendly (from `perl -MExtUtils::Embed -e ldopts`):
-#PERL_LIB=echo -Wl,-R/usr/local/lib/perl5/5.8.2/mach/CORE -Wl,-E  -L/usr/local/lib /usr/local/lib/perl5/5.8.2/mach/auto/DynaLoader/DynaLoader.a -L/usr/local/lib/perl5/5.8.2/mach/CORE -lperl -lutil_p -lc_p -lm_p -lcrypt_p
-
+MYSQL_FLAGS=`mysql_config --cflags`
+MYSQL_LIB=`mysql_config --libs`
+DFLAGS=-DEQDEBUG=5 -DNO_PIDLOG -DSHAREMEM -DSPELL_EFFECT_SPAM -DFIELD_ITEMS
+WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -Wno-deprecated  -Wcomment -Wcast-align
+COPTS=$(WFLAGS) -O2 -ggdb -pthread -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
+LINKOPTS=-rdynamic -L. -lstdc++ -ldl $(MYSQL_LIB)
 
 all: $(APP)
 
 
 $(APP): $(SF)
-	$(LINKER) $(COPTS) $(OBJS) $^ $(LINKOPTS) `$(PERL_LIB)` -o $@
+	$(LINKER) $(COPTS) $(OBJS) $^ $(LINKOPTS) -o $@
 
 
 import_raw_items: import_raw_items.o
-	$(LINKER) $(COPTS) $^ $(LINKOPTS) `$(PERL_LIB)` -o $@
+	$(LINKER) $(COPTS) $^ $(LINKOPTS) -o $@
 
 clean:
 	rm -f $(SF) $(APP) import_raw_items.o import_raw_items
 
 %.o: %.cpp
-	$(CC) -c $(COPTS) `$(PERL_FLAGS)` $< -o $@
+	$(CC) -c $(COPTS) $< -o $@
 
 .obj/debug.o: ../common/debug.cpp ../common/debug.h
 	mkdir -p .obj
