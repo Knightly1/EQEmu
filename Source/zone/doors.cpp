@@ -81,6 +81,9 @@ bool Doors::Process()
 
 void Doors::HandleClick(Client* sender)
 {
+	char tmp[120],tmpmsg[240]; // guild doors msgs
+
+
  #if EQDEBUG>=5  
         LogFile->write(EQEMuLog::Debug, "Doors:HandleClick(%s)", sender->GetName());
         DumpDoor();
@@ -88,6 +91,18 @@ void Doors::HandleClick(Client* sender)
 	if(GetTriggerType() == 255) { // this object isnt triggered
 		return;
 	}
+
+// guild doors
+	if (sender->GetIsSettingGuildDoor())
+	{
+		guildid=sender->GetSetGuildDoorID();		// update this door
+		database.UpdateDoorGuildID(db_id,guildid);		// update the db
+		sender->SetIsSettingGuildDoor(false);
+		DumpDoor();
+		sender->Message(4,"Door has been updated");
+		return;
+	}
+
 #if 1
     APPLAYER* outapp = new APPLAYER(OP_MoveDoor, sizeof(MoveDoor_Struct));
 	MoveDoor_Struct* md=(MoveDoor_Struct*)outapp->pBuffer;
@@ -98,10 +113,14 @@ void Doors::HandleClick(Client* sender)
 	//TODO: add check for other lockpick items 
 	//////////////////////////////////////////////////////////////////
 
-	int keyneeded=GetKeyItem(), playerkey=sender->GetItemIDAt(SLOT_CURSOR);
+	int keyneeded=GetKeyItem(), 
+		playerkey=sender->GetItemIDAt(SLOT_CURSOR);
 
-	if( (keyneeded==0 && GetLockpick() == 0)
-	   || (IsDoorOpen() && opentype == 58))
+// guild doors
+	if( (keyneeded==0 && GetLockpick() == 0 && guildid==0)
+	   || (IsDoorOpen() && opentype == 58)
+	   || (guildid>0 && guildid==sender->GuildDBID()))
+
 	{	//door not locked
 		if( !IsDoorOpen() || opentype == 58 )
 		{
@@ -113,7 +132,22 @@ void Doors::HandleClick(Client* sender)
 		} 
 	} 
 	else
-	{ // a key is required or the door is locked but can be picked or both
+	{ 
+// guild doors
+		if (guildid>0 && !sender->GetGM())
+		{
+			if (database.GetGuildNameByID(guildid, tmp))
+			{
+				sprintf(tmpmsg,"Only members of the <%s> guild may enter here",tmp);
+			}
+			else
+			{
+				strcpy(tmpmsg,"Door is locked by an unknown guild");
+			}
+			sender->Message(4,tmpmsg);
+			return;
+		}
+		// a key is required or the door is locked but can be picked or both
 		sender->Message(4,"This is locked...");		// debug spam - should probably go
 	    if (sender->GetGM())		// GM can always open locks - should probably be changed to require a key
 		{

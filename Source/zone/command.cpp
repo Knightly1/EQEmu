@@ -4493,7 +4493,10 @@ void command_guild(Client *c, const Seperator *sep)
 		if (!sep->IsNumber(2))
 			c->Message(0, "Usage: #guild setdoor guildEQid (0 = delete guilddoor)");
 		else {
-			if((!guilds[atoi(sep->arg[2])].databaseID) && (!atoi(sep->arg[2])) ){
+// guild doors
+			if((!guilds[atoi(sep->arg[2])].databaseID) && (atoi(sep->arg[2])!=0) )
+			{
+
 				c->Message(0, "These is no guild with this guildEQid");
 			}
 			else {
