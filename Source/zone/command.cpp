@@ -2540,6 +2540,8 @@ void command_level(Client *c, const Seperator *sep)
 			c->Message(0, "Error: #Level: Invalid Level");
 		else
 			c->GetTarget()->SetLevel(level, true);
+	if(c->GetTarget() && c->GetTarget()->IsClient())
+		c->GetTarget()->CastToClient()->SendLevelAppearance();
 }
 
 void command_spawn(Client *c, const Seperator *sep)

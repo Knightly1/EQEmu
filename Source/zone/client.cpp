@@ -861,6 +861,7 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 		char val1[20]={0};
 		if (GetLevel() == check_level-2){
 			Message_StringID(15,GAIN_LEVEL,ConvertArray(check_level-1,val1));
+			SendLevelAppearance();
 			//Message(15, "You have gained a level! Welcome to level %i!", check_level-1);
 		}
 		if (GetLevel() == check_level){
@@ -1901,7 +1902,25 @@ int8 Mob::MaxSkill(int16 skillid, int16 class_, int16 level) {
 	}
 }
 */
-
+void Client::SendLevelAppearance(){
+	APPLAYER* outapp = new APPLAYER(OP_LevelAppearance, sizeof(LevelAppearance_Struct));
+	LevelAppearance_Struct* la = (LevelAppearance_Struct*)outapp->pBuffer;
+	la->parm1 = 0x4D;
+	la->parm2 = la->parm1 + 1;
+	la->parm3 = la->parm2 + 1;
+	la->parm4 = la->parm3 + 1;
+	la->parm5 = la->parm4 + 1;
+	la->spawn_id = GetID();
+	la->value1a = 1;
+	la->value2a = 2;
+	la->value3a = 1;
+	la->value3b = 1;
+	la->value4a = 1;
+	la->value4b = 1;
+	la->value5a = 2;
+	QueuePacket(outapp);
+	safe_delete(outapp);
+}
 void Client::SetPVP(bool toggle) {
 	m_pp.pvp = toggle ? 1 : 0;
 

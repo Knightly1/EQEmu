@@ -4282,7 +4282,24 @@ struct RecipeAutoCombine_Struct {
 								// f5 ff ff ff in 'you dont have all the stuff' reply
 };
 
-
+struct LevelAppearance_Struct { //Sends a little graphic on level up
+	int32	spawn_id;
+	int32	parm1;
+	int32	value1a;
+	int32	value1b;
+	int32	parm2;
+	int32	value2a;
+	int32	value2b;
+	int32	parm3;
+	int32	value3a;
+	int32	value3b;
+	int32	parm4;
+	int32	value4a;
+	int32	value4b;
+	int32	parm5;
+	int32	value5a;
+	int32	value5b;
+};
 
 
 // Restore structure packing to default

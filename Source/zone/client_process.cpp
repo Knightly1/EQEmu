@@ -5318,7 +5318,6 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	printf("PP size: %d\n", sizeof(PlayerProfile_Struct));
 #endif
 	memcpy(outapp->pBuffer,&m_pp,outapp->size);
-	DumpPacket(outapp);
 	outapp->Deflate();
 	outapp->priority = 6;
 	QueuePacket(outapp);
@@ -5337,7 +5336,6 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	sze->player.spawn.npc=0;
 	sze->player.spawn.unknown367[0]=0xFFFFFFFF;
 	sze->player.spawn.unknown367[1]=0xFFFFFFFF;
-	DumpPacket(outapp);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	

@@ -278,6 +278,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define OP_FeignDeath		0x023f
 #define OP_Illusion			0x012b
 #define OP_LevelUpdate		0x0078
+#define OP_LevelAppearance	0x0371
 	// not used	#define OP_LocateCorpse     0x00d1  //Sent when a client casts Locate Corpse spells?
 
 #define OP_MemorizeSpell	0x00c2	// Memming a spell from book to spell slot

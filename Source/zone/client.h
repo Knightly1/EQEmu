@@ -371,7 +371,7 @@ public:
 	void	AddEXP(uint32 add_exp, int8 conlevel = 0xFF, bool resexp = false);
 	void	SetEXP(uint32 set_exp, uint32 set_aaxp, bool resexp=false);
 	virtual void SetLevel(uint8 set_level, bool command = false);
-	
+	void	SendLevelAppearance();
 	void	GoToBind();
 	void	Gate();
 	void	SetBindPoint(int to_zone = -1, float new_x = 0.0f, float new_y = 0.0f, float new_z = 0.0f);
