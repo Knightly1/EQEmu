@@ -17,7 +17,8 @@ SF=.obj/EQNetwork.o \
    perl_client.o perl_entity.o perl_mob.o perl_npc.o perl_PlayerCorpse.o \
    perl_groups.o client_packet.o tribute.o horse.o fearpath.o \
    ../common/rdtsc.o zone_profile.o updatemgr.o pathing.o \
-   ../common/timeoutmgr.o ../common/Condition.o
+   ../common/timeoutmgr.o ../common/Condition.o ../common/emu_opcodes.o \
+   .obj/opcodemgr.o
 
 CC=ccache gcc
 LINKER=gcc

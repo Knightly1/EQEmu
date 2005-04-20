@@ -147,7 +147,7 @@ enum RESISTTYPE
 #define SE_LocateCorpse				77
 #define SE_AbsorbMagicAtt			78	// rune for spells
 #define SE_CurrentHPOnce			79	// Heals and nukes, non-repeating if in a buff
-#define SE_Revive					81
+#define SE_Revive					81	//resurrect
 #define SE_TestSpells				82
 #define SE_Teleport					83
 #define SE_TossUp					84	// Gravity Flux

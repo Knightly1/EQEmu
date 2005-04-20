@@ -742,30 +742,6 @@ XS(XS_Mob_SendPosition)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_Mob_Rezzed); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_Rezzed)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::Rezzed(THIS)");
-	{
-		Mob *		THIS;
-		bool		RETVAL;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-
-		RETVAL = THIS->Rezzed();
-		ST(0) = boolSV(RETVAL);
-		sv_2mortal(ST(0));
-	}
-	XSRETURN(1);
-}
-
 XS(XS_Mob_HasProcs); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_HasProcs)
 {
@@ -5498,7 +5474,6 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "GMMove"), XS_Mob_GMMove, file, "$$$$;$");
 		newXSproto(strcpy(buf, "SendPosUpdate"), XS_Mob_SendPosUpdate, file, "$;$");
 		newXSproto(strcpy(buf, "SendPosition"), XS_Mob_SendPosition, file, "$");
-		newXSproto(strcpy(buf, "Rezzed"), XS_Mob_Rezzed, file, "$");
 		newXSproto(strcpy(buf, "HasProcs"), XS_Mob_HasProcs, file, "$");
 		newXSproto(strcpy(buf, "IsInvisible"), XS_Mob_IsInvisible, file, "$");
 		newXSproto(strcpy(buf, "SetInvisible"), XS_Mob_SetInvisible, file, "$$");

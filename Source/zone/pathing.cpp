@@ -502,10 +502,21 @@ bool PathManager::NextPathFinding(PathFindingState *state) {
 	if(next_node == NULL)
 		return(false);
 	
-
+	if(state->goal_node == link->dest_node) {
+		//..um.. WTF... why???
+#ifdef DEBUG_PATHING
+		LogFile->write(EQEMuLog::Debug, "Cycle Detected at %d (%.3f,%.3f,%.3f) going to %d", link->dest_node, next_node->x, next_node->y, next_node->z, state->dest_node);
+#endif
+		state->x = state->dest_x;
+		state->y = state->dest_y;
+		state->z = state->dest_z;
+		return(true);
+	}
+	
 #ifdef DEBUG_PATHING
 	LogFile->write(EQEMuLog::Debug, "Next Pathing: to %d (%.3f,%.3f,%.3f) via link %d", link->dest_node, next_node->x, next_node->y, next_node->z, off);
 #endif
+	
 	//set our next state.
 	state->goal_node = link->dest_node;
 	state->x = next_node->x;

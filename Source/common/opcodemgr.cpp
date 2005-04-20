@@ -1,4 +1,4 @@
-
+#include "debug.h"
 #include <stdio.h>
 #include "opcodemgr.h"
 #include "debug.h"
@@ -16,9 +16,6 @@ using namespace std;
 
 //#define DEBUG_TRANSLATE
 
-//TODO: remove this when we change to new flagless code
-#define StripFlags(x) (x&0x0FFF)
-
 
 OpcodeManager::OpcodeManager() {
 	loaded = false;
@@ -27,7 +24,7 @@ OpcodeManager::OpcodeManager() {
 bool OpcodeManager::LoadOpcodesFile(const char *filename, OpcodeSetStrategy *s) {
 	FILE *opf = fopen(filename, "r");
 	if(opf == NULL) {
-		LogFile->write(EQEMuLog::Error, "Unable to open opcodes file '%s'. Thats bad.", filename);
+		fprintf(stderr, "Unable to open opcodes file '%s'. Thats bad.\n", filename);
 		return(false);
 	}
 	
@@ -54,7 +51,7 @@ bool OpcodeManager::LoadOpcodesFile(const char *filename, OpcodeSetStrategy *s) 
 		}
 		//make sure we found =
 		if(*num != '=') {
-			LogFile->write(EQEMuLog::Error, "Malformed opcode line at %s:%d", filename, lineno);
+			fprintf(stderr, "Malformed opcode line at %s:%d\n", filename, lineno);
 			continue;
 		}
 		*num = '\0';	//null terminate the name
@@ -62,7 +59,7 @@ bool OpcodeManager::LoadOpcodesFile(const char *filename, OpcodeSetStrategy *s) 
 		
 		//read the opcode
 		if(sscanf(num, "0x%hx", &curop) != 1) {
-			LogFile->write(EQEMuLog::Error, "Malformed opcode at %s:%d", filename, lineno);
+			fprintf(stderr, "Malformed opcode at %s:%d\n", filename, lineno);
 			continue;
 		}
 		
@@ -80,11 +77,16 @@ bool OpcodeManager::LoadOpcodesFile(const char *filename, OpcodeSetStrategy *s) 
 	for(emu_op = OP_Unknown; emu_op < _maxEmuOpcode; emu_op=(EmuOpcode)(emu_op+1)) {
 		//get the name of this emu opcode
 		const char *op_name = OpcodeNames[emu_op];
+		if(op_name[0] == '\0') {
+			printf("Over-ran the bounds of the opcode name array. You prolly need to recompile the opcode stuff.\n");
+			printf("I will let you continue, since you may have gotten all the opcodes you need.\n");
+			break;
+		}
 		
 		//find the opcode in the file
 		res = eq.find(op_name);
 		if(res == eq.end()) {
-			LogFile->write(EQEMuLog::Error, "Opcode %s is missing from %s", op_name, filename);
+			fprintf(stderr, "Opcode %s is missing from %s\n", op_name, filename);
 			ret = false;
 			continue;	//continue to give them a list of all missing opcodes
 		}
@@ -103,8 +105,25 @@ const char *OpcodeManager::EmuToName(const EmuOpcode emu_op) {
 
 const char *OpcodeManager::EQToName(const uint16 eq_op) {
 	//first must resolve the eq op to an emu op
-	EmuOpcode emu_op = EQToEmu(StripFlags(eq_op));
+	EmuOpcode emu_op = EQToEmu(eq_op);
 	return(OpcodeNames[emu_op]);
+}
+
+EmuOpcode OpcodeManager::NameSearch(const char *name) {
+	EmuOpcode emu_op;
+	//stupid enum wont let me ++ on it...
+	for(emu_op = OP_Unknown; emu_op < _maxEmuOpcode; emu_op=(EmuOpcode)(emu_op+1)) {
+		//get the name of this emu opcode
+		const char *op_name = OpcodeNames[emu_op];
+		if(!strcasecmp(op_name, name)) {
+			return(emu_op);
+		}
+	}
+	return(OP_Unknown);
+}
+
+void OpcodeManager::SetOpcode(EmuOpcode emu_op, uint16 eq_op) {
+	return;
 }
 
 #ifdef SHARED_OPCODES
@@ -127,7 +146,7 @@ bool SharedOpcodeManager::DLLLoadOpcodesCallback(const char *filename) {
 }
 
 bool SharedOpcodeManager::ReloadOpcodes(const char *filename) {
-	if(!loaded)
+/*	if(!loaded)
 		return(LoadOpcodes(filename));
 	
 	MOpcodes.lock();
@@ -137,7 +156,10 @@ bool SharedOpcodeManager::ReloadOpcodes(const char *filename) {
 	bool ret = LoadOpcodesFile(filename, &s);
 	
 	MOpcodes.unlock();
-	return(ret);
+	return(ret);*/
+	
+	//shared memory is read only right now, cant reload it
+	return(false);
 }
 
 
@@ -148,21 +170,22 @@ uint16 SharedOpcodeManager::EmuToEQ(const EmuOpcode emu_op) {
 	res = EMuShareMemDLL.Opcodes.GetEQOpcode((uint16)emu_op);
 	MOpcodes.unlock();
 #ifdef DEBUG_TRANSLATE
-	LogFile->write(EQEMuLog::Debug, "S Translate Emu %s (%d) to EQ 0x%.4x", OpcodeNames[emu_op], emu_op, res);
+	fprintf(stderr, "S Translate Emu %s (%d) to EQ 0x%.4x\n", OpcodeNames[emu_op], emu_op, res);
 #endif
 	return(res);
 }
 
 EmuOpcode SharedOpcodeManager::EQToEmu(const uint16 eq_op) {
 	//opcode is checked for validity in GetEmuOpcode
-	if(eq_op > MAX_EQ_OPCODE)
-		return(OP_Unknown);
+//Disabled since current live EQ uses the entire uint16 bitspace for opcodes
+//	if(eq_op > MAX_EQ_OPCODE)
+//		return(OP_Unknown);
 	uint16 res;
 	MOpcodes.lock();
 	res = EMuShareMemDLL.Opcodes.GetEmuOpcode(eq_op);
 	MOpcodes.unlock();
 #ifdef DEBUG_TRANSLATE
-	LogFile->write(EQEMuLog::Debug, "S Translate EQ 0x%.4x to Emu %s (%d)", eq_op, OpcodeNames[res], res);
+	fprintf(stderr, "S Translate EQ 0x%.4x to Emu %s (%d)\n", eq_op, OpcodeNames[res], res);
 #endif
 	return((EmuOpcode)res);
 }
@@ -171,6 +194,7 @@ EmuOpcode SharedOpcodeManager::EQToEmu(const uint16 eq_op) {
 void SharedOpcodeManager::SharedMemStrategy::Set(EmuOpcode emu_op, uint16 eq_op) {
 	EMuShareMemDLL.Opcodes.SetOpcodePair((uint16)emu_op, eq_op);
 }
+
 #endif
 
 
@@ -188,14 +212,17 @@ RegularOpcodeManager::~RegularOpcodeManager() {
 
 bool RegularOpcodeManager::LoadOpcodes(const char *filename) {
 	NormalMemStrategy s;
+	s.it = this;
 	MOpcodes.lock();
 	
 	loaded = true;
 	eq_to_emu = new EmuOpcode[MAX_EQ_OPCODE];
 	emu_to_eq = new uint16[_maxEmuOpcode];
+	EQOpcodeCount = MAX_EQ_OPCODE;
+	EmuOpcodeCount = _maxEmuOpcode;
 	
 	//dont need to set eq_to_emu cause every element should get a value
-	memset(eq_to_emu, 0, sizeof(uint16)*MAX_EQ_OPCODE);
+	memset(eq_to_emu, 0, sizeof(EmuOpcode)*MAX_EQ_OPCODE);
 	
 	bool ret = LoadOpcodesFile(filename, &s);
 	MOpcodes.unlock();
@@ -207,6 +234,7 @@ bool RegularOpcodeManager::ReloadOpcodes(const char *filename) {
 		return(LoadOpcodes(filename));
 	
 	NormalMemStrategy s;
+	s.it = this;
 	MOpcodes.lock();
 	
 	memset(eq_to_emu, 0, sizeof(uint16)*MAX_EQ_OPCODE);
@@ -225,23 +253,37 @@ uint16 RegularOpcodeManager::EmuToEQ(const EmuOpcode emu_op) {
 	res = emu_to_eq[emu_op];
 	MOpcodes.unlock();
 #ifdef DEBUG_TRANSLATE
-	LogFile->write(EQEMuLog::Debug, "M Translate Emu %s (%d) to EQ 0x%.4x", OpcodeNames[emu_op], emu_op, res);
+	fprintf(stderr, "M Translate Emu %s (%d) to EQ 0x%.4x\n", OpcodeNames[emu_op], emu_op, res);
 #endif
 	return(res);
 }
 
 EmuOpcode RegularOpcodeManager::EQToEmu(const uint16 eq_op) {
 	//opcode is checked for validity in GetEmuOpcode
-	if(eq_op > MAX_EQ_OPCODE)
-		return(OP_Unknown);
+//Disabled since current live EQ uses the entire uint16 bitspace for opcodes
+//	if(eq_op > MAX_EQ_OPCODE)
+//		return(OP_Unknown);
 	EmuOpcode res;
 	MOpcodes.lock();
 	res = eq_to_emu[eq_op];
 	MOpcodes.unlock();
 #ifdef DEBUG_TRANSLATE
-	LogFile->write(EQEMuLog::Debug, "M Translate EQ 0x%.4x to Emu %s (%d)", eq_op, OpcodeNames[res], res);
+	fprintf(stderr, "M Translate EQ 0x%.4x to Emu %s (%d)\n", eq_op, OpcodeNames[res], res);
 #endif
 	return(res);
+}
+
+void RegularOpcodeManager::SetOpcode(EmuOpcode emu_op, uint16 eq_op) {
+	
+	//clear out old mapping
+	uint16 oldop = emu_to_eq[emu_op];
+	if(oldop != 0)
+		eq_to_emu[oldop] = OP_Unknown;
+	
+	//use our strategy, since we have it
+	NormalMemStrategy s;
+	s.it = this;
+	s.Set(emu_op, eq_op);
 }
 
 
@@ -252,7 +294,26 @@ void RegularOpcodeManager::NormalMemStrategy::Set(EmuOpcode emu_op, uint16 eq_op
 	it->eq_to_emu[eq_op] = emu_op;
 }
 
+NullOpcodeManager::NullOpcodeManager()
+: OpcodeManager() {
+}
 
+	
+bool NullOpcodeManager::LoadOpcodes(const char *filename) {
+	return(true);
+}
+
+bool NullOpcodeManager::ReloadOpcodes(const char *filename) {
+	return(true);
+}
+	
+uint16 NullOpcodeManager::EmuToEQ(const EmuOpcode emu_op) {
+	return(0);
+}
+
+EmuOpcode NullOpcodeManager::EQToEmu(const uint16 eq_op) {
+	return(OP_Unknown);
+}
 
 
 

@@ -1217,24 +1217,33 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 		}
 	}
 
-	if(spell != 0xFFFF)
+	if(spell != SPELL_UNKNOWN)
 	{
 		for(int buffIt = 0; buffIt < BUFF_COUNT; buffIt++)
 		{
 			if(buffs[buffIt].spellid == spell && buffs[buffIt].client)
 			{
 				exploss = 0;	// no exp loss for pvp dot
-				buffIt = BUFF_COUNT;
+				break;
 			}
 		}
 	}
 	
 	// now we apply the exp loss, unmem their spells, and make a corpse
 	// unless they're a GM (or less than lvl 10
-	if(!GetGM() && m_pp.level > 9)
+	if(!GetGM() && GetLevel() > 9)
 	{
-		if(exploss)
-			SetEXP(GetEXP() - exploss > 1 ? GetEXP() - exploss : 1, GetAAXP());
+		if(exploss > 0) {
+			uint32 newexp = GetEXP();
+			if(exploss > newexp) {
+				//lost more than we have... wtf..
+				newexp = 1;
+			} else {
+				newexp -= exploss;
+			}
+			SetEXP(newexp, GetAAXP());
+			m_pp.perAA = 0;	//reset to no AA exp on death.
+		}
 
 		BuffFadeAll();
 		UnmemSpellAll(false);

@@ -1057,7 +1057,13 @@ void Client::Handle_OP_Consume(const APPLAYER *app)
 	}
 	Consume_Struct* pcs = (Consume_Struct*)app->pBuffer;
 	
-	const Item_Struct* eat_item = GetInv().GetItem(pcs->slot)->GetItem();
+	ItemInst *myitem = GetInv().GetItem(pcs->slot);
+	if(myitem == NULL) {
+		LogFile->write(EQEMuLog::Error, "Consuming from empty slot %d", pcs->slot);
+		return;
+	}
+	
+	const Item_Struct* eat_item = myitem->GetItem();
 	if (pcs->type == 0x01) {
 #if EQDEBUG >= 1
 		LogFile->write(EQEMuLog::Debug, "Eating from slot:%i", (int)pcs->slot);

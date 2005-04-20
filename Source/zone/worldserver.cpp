@@ -936,7 +936,6 @@ void WorldServer::Process() {
 				Mob* corpse =entity_list.GetMob(srs->rez.corpse_name);
 				if (corpse && corpse->IsCorpse())
 					corpse->CastToCorpse()->CompleteRezz();
-				
 			}
 			
 			break;

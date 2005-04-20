@@ -370,8 +370,6 @@ bool logpos;
 	void MakeSpawnUpdate(PlayerPositionUpdateServer_Struct* spu);
 	void SendPosition();
 	void SendAllPosition();
-	bool Rezzed() { return rez; }
-	void Rezzed(bool in_rez) { rez = in_rez; }
 
 	void CreateDespawnPacket(APPLAYER* app);
 	void CreateHorseSpawnPacket(APPLAYER* app, const char* ownername, uint16 ownerid, Mob* ForWho = 0);
@@ -783,7 +781,6 @@ protected:
 	int FR;
 	int DR;
 	int PR;
-	bool rez;
 	bool moving;
 	bool targeted;
 	bool findable;

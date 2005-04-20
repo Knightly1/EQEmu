@@ -35,79 +35,82 @@ void Client::AddEXP(int32 add_exp, int8 conlevel, bool resexp) {
 #ifdef GUILDWARS
 	m_pp.perAA = 0;
 #endif
-	if (m_pp.perAA<0 || m_pp.perAA>100) m_pp.perAA=0;	// stop exploit with sanity check
-	int32 add_aaxp = add_exp * m_pp.perAA / 100;
-	add_exp -= add_aaxp;
 	
-	//int lvldiff = my_level - otherlevel;
+	if (m_pp.perAA<0 || m_pp.perAA>100)
+		m_pp.perAA=0;	// stop exploit with sanity check
 	
-	if (!resexp && zone->GetEXPMod() > 0) {
-		int32 factor = 100 * (int32) zone->GetEXPMod();
-		add_exp += (add_exp * factor / 10000);
-	}
+	int32 add_aaxp;
+	if(resexp) {
+		add_aaxp = 0;
+	} else {
+		//figure out how much of this goes to AAs
+		add_aaxp = add_exp * m_pp.perAA / 100;
+		//take that ammount away from regular exp
+		add_exp -= add_aaxp;
+	
+		//get zone modifier
+		if (zone->GetEXPMod() > 0) {
+			int32 factor = 100 * (int32) zone->GetEXPMod();
+			add_exp += (add_exp * factor / 10000);
+		}
+	
 #ifdef CON_XP_SCALING
-	if (!resexp && conlevel != 0xFF) {
-		switch (conlevel)
-		{
-		case CON_GREEN:
-			//Message(15,"This creature is trivial to you and offers no experience.");
-			return;
-		case CON_LIGHTBLUE:
-				add_exp = add_exp * 2/10;
-			break;
-		case CON_BLUE:
-			//if (lvldiff >= 12)
-			//	add_exp = add_exp * 6/10;
-			//else if (lvldiff > 5)
-				add_exp = add_exp * 8/10;
-			//else if (lvldiff > 3)
-			//	add_exp = add_exp * 9/10;
-			break;
-		case CON_WHITE:
-				add_exp = add_exp * 125/100;
-			break;
-		case CON_YELLOW:
-				add_exp = add_exp * 150/100;
-			break;
-		case CON_RED:
-				add_exp = add_exp * 200/100;
-			break;
+		if (conlevel != 0xFF) {
+			switch (conlevel)
+			{
+			case CON_GREEN:
+				//Message(15,"This creature is trivial to you and offers no experience.");
+				return;
+			case CON_LIGHTBLUE:
+					add_exp = add_exp * 2/10;
+				break;
+			case CON_BLUE:
+				//if (lvldiff >= 12)
+				//	add_exp = add_exp * 6/10;
+				//else if (lvldiff > 5)
+					add_exp = add_exp * 8/10;
+				//else if (lvldiff > 3)
+				//	add_exp = add_exp * 9/10;
+				break;
+			case CON_WHITE:
+					add_exp = add_exp * 125/100;
+				break;
+			case CON_YELLOW:
+					add_exp = add_exp * 150/100;
+				break;
+			case CON_RED:
+					add_exp = add_exp * 200/100;
+				break;
+			}
+			/*
+			if (otherlevel >= 65)
+			{
+				int add = add_exp*((otherlevel-49)*20/100);
+				add_exp += add_exp*((otherlevel-64))*2;
+				add_exp += add;
+			}
+			else if (otherlevel >= 50)
+			{
+				add_exp += add_exp*((otherlevel-49)*20/100);
+			}*/
 		}
-		/*
-		if (otherlevel >= 65)
-		{
-			int add = add_exp*((otherlevel-49)*20/100);
-			add_exp += add_exp*((otherlevel-64))*2;
-			add_exp += add;
-		}
-		else if (otherlevel >= 50)
-		{
-			add_exp += add_exp*((otherlevel-49)*20/100);
-		}*/
-	}
 #endif
+	}	//end !resexp
 	
 #ifdef FREEBSD
 	//Father Nitwit Debug:
 	Message(15, "Adding %i experience to your character.", add_exp);
 #endif
-
-	if (m_pp.perAA<0 || m_pp.perAA>100)
-		m_pp.perAA=0;	// stop exploit with sanity check
-
-	// Old function
-	//int32 exp = GetEXP() + (add_exp - add_aaxp);
-
-	// TC - Uses modifier now from variables table.
+	
 	int32 exp = GetEXP() + add_exp;
 
-	//int32 aaexp = GetAAXP() + add_aaxp;
-	// TC - New function
-
 	int32 aaexp = (int32)((zone->GetAAXPMod()) * add_aaxp);
-	if(GetAAXP()<0xFFFFFFFF)
-		aaexp+=GetAAXP();
-	SetEXP(exp, aaexp, false);
+	int32 had_aaexp = GetAAXP();
+	aaexp += had_aaexp;
+	if(aaexp < had_aaexp)
+		aaexp = had_aaexp;	//watch for wrap
+	
+	SetEXP(exp, aaexp, resexp);
 }
 
 void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
@@ -116,7 +119,9 @@ void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
 		Message(13, "Error in Client::SetEXP. EXP not set.");
 		return; // Must be invalid class/race
 	}
-	if ((set_exp + set_aaxp) > m_pp.exp) {
+	
+	
+	if ((set_exp + set_aaxp) > (m_pp.exp+m_pp.expAA)) {
 		if (isrezzexp)
 			this->Message_StringID(15,REZ_REGAIN);
 		else{
@@ -134,40 +139,63 @@ void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
 Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 #endif
 	
+	//check_level represents the level we should be when we have
+	//this ammount of exp (once these loops complete)
 	int16 check_level = GetLevel()+1;
+	//see if we gained any levels
 	while (set_exp >= GetEXPForLevel(check_level)) {
 		check_level++;
-		if (check_level > 100) { // Quagmire - this was happening because GetEXPForLevel returned 0 on unknown race/class combo, Changed it to return 0xFFFFFFFF on error
-			check_level = GetLevel()+1;
+		if (check_level > 127) {	//hard level cap
+			check_level = 127;
 			break;
 		}
 	}
+	//see if we lost any levels
 	while (set_exp < GetEXPForLevel(check_level-1)) {
 		check_level--;
-		if (check_level < 2) {
+		if (check_level < 2) {	//hard level minimum
 			check_level = 2;
 			break;
 		}
 	}
+	check_level--;
 	
+	//see if we gained any AAs
 	if (set_aaxp >= max_AAXP) {
-		int last_unspentAA = m_pp.aapoints;
+		/*
+			Note: AA exp is stored differently than normal exp.
+			Exp points are only stored in m_pp.expAA until you 
+			gain a full AA point, once you gain it, a point is 
+			added to m_pp.aapoints and the ammount needed to gain
+			that point is subtracted from m_pp.expAA
+			
+			then, once they spend an AA point, it is subtracted from
+			m_pp.aapoints. In theory it then goes into m_pp.aapoints_spent,
+			but im not sure if we have that in the right spot.
+		*/
+		//record how many points we have
+		uint32 last_unspentAA = m_pp.aapoints;
+		
+		//figure out how many AA points we get from the exp were setting
 		m_pp.aapoints = set_aaxp / max_AAXP;
+		
+		//get remainder exp points
 		set_aaxp = set_aaxp - (max_AAXP * m_pp.aapoints);
-		if(set_aaxp <=0) {
-			set_aaxp = 0;
-		}
+		//set our profile's remainder exp
 		m_pp.expAA = set_aaxp;
+		
+		//add in how many points we had
 		m_pp.aapoints += last_unspentAA;
-		set_aaxp = m_pp.expAA % max_AAXP;
+		//set_aaxp = m_pp.expAA % max_AAXP;
+		
+		//figure out how many points were actually gained
+		uint32 gained = m_pp.aapoints - last_unspentAA;
 		
 		//Message(15, "You have gained %d skill points!!", m_pp.aapoints - last_unspentAA);
 		char val1[20]={0};
-		Message_StringID(15,GAIN_ABILITY_POINT,ConvertArray(m_pp.aapoints,val1),"(s)");
+		Message_StringID(15,GAIN_ABILITY_POINT,ConvertArray(gained, val1),"(s)");
 		//Message(15, "You now have %d skill points available to spend.", m_pp.aapoints);
 	}
-	
-	m_pp.expAA = set_aaxp;
 
 	int8 maxlevel = LEVEL_CAP + 1;
 
@@ -181,49 +209,49 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 		else
 			maxlevel = GAINLEVEL;
 	#endif
-	if ((GetLevel() != check_level-1) && !(check_level-1 >= maxlevel)) {
+	
+	if ((GetLevel() != check_level) && !(check_level >= maxlevel)) {
 		char val1[20]={0};
-		if (GetLevel() == check_level-2){
-			Message_StringID(15,GAIN_LEVEL,ConvertArray(check_level-1,val1));
+		if (GetLevel() == check_level-1){
+			Message_StringID(15,GAIN_LEVEL,ConvertArray(check_level,val1));
 			SendLevelAppearance();
-			//Message(15, "You have gained a level! Welcome to level %i!", check_level-1);
+			//Message(15, "You have gained a level! Welcome to level %i!", check_level);
 		}
 		if (GetLevel() == check_level){
-			Message_StringID(15,LOSE_LEVEL,ConvertArray(check_level-1,val1));
-			//Message(15, "You lost a level! You are now level %i!", check_level-1);
+			Message_StringID(15,LOSE_LEVEL,ConvertArray(check_level,val1));
+			//Message(15, "You lost a level! You are now level %i!", check_level);
 		}
 		else
-			Message(15, "Welcome to level %i!", check_level-1);
-		m_pp.exp = set_exp;
-		SetLevel(check_level-1);
+			Message(15, "Welcome to level %i!", check_level);
+		SetLevel(check_level);
 	}
+	//set the client's EXP
+	m_pp.exp = set_exp;
+	
+	if (GetLevel() < 51)
+		m_pp.perAA = 0;	// turn off aa exp if they drop below 51
+	else
+		SendAAStats();	//otherwise, send them an AA update
 
 	//send the expdata in any case so the xp bar isnt stuck after leveling
-	APPLAYER* outapp = new APPLAYER(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
-	ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
 	int32 tmpxp1 = GetEXPForLevel(GetLevel()+1);
 	int32 tmpxp2 = GetEXPForLevel(GetLevel());
 	// Quag: crash bug fix... Divide by zero when tmpxp1 and 2 equalled each other, most likely the error case from GetEXPForLevel() (invalid class, etc)
 	if (tmpxp1 != tmpxp2 && tmpxp1 != 0xFFFFFFFF && tmpxp2 != 0xFFFFFFFF) {
+		APPLAYER* outapp = new APPLAYER(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
+		ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
 		double tmpxp = (double) ( (double) set_exp-tmpxp2 ) / ( (double) tmpxp1-tmpxp2 );
 		eu->exp = (uint32)(330.0f * tmpxp);
-		QueuePacket(outapp);
+		FastQueuePacket(&outapp);
 	}
-	safe_delete(outapp);
-	m_pp.exp = set_exp;
-
-	if (level<51) m_pp.perAA=0;	// turn off aa exp if they drop below 51
-
-	SendAAStats();
+	
 	if (admin>=100 && GetGM()) {
 		char val1[20]={0};
 		char val2[20]={0};
 		char val3[20]={0};
 		Message_StringID(15,GM_GAINXP,ConvertArray(set_aaxp,val1),ConvertArray(set_exp,val2),ConvertArray(GetEXPForLevel(GetLevel()+1),val3));
 		//Message(15, "[GM] You now have %d / %d EXP and %d / %d AA exp.", set_exp, GetEXPForLevel(GetLevel()+1), set_aaxp, max_AAXP);
-
 	}
-	SendAppearancePacket(AT_WhoLevel, GetLevel());
 }
 
 void Client::SetLevel(int8 set_level, bool command)

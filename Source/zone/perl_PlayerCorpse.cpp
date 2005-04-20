@@ -718,6 +718,30 @@ XS(XS_Corpse_AddLooter)
 	XSRETURN_EMPTY;
 }
 
+XS(XS_Corpse_Rezzed); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Corpse_Rezzed)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Corpse::Rezzed(THIS)");
+	{
+		Corpse *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "Corpse")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Corpse *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Corpse");
+
+		RETVAL = THIS->Rezzed();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
 XS(XS_Corpse_IsRezzed); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Corpse_IsRezzed)
 {
@@ -791,6 +815,7 @@ XS(boot_Corpse)
 		newXSproto(strcpy(buf, "CanMobLoot"), XS_Corpse_CanMobLoot, file, "$$");
 		newXSproto(strcpy(buf, "AllowMobLoot"), XS_Corpse_AllowMobLoot, file, "$$$");
 		newXSproto(strcpy(buf, "AddLooter"), XS_Corpse_AddLooter, file, "$$");
+		newXSproto(strcpy(buf, "Rezzed"), XS_Corpse_Rezzed, file, "$");
 		newXSproto(strcpy(buf, "IsRezzed"), XS_Corpse_IsRezzed, file, "$");
 	XSRETURN_YES;
 }

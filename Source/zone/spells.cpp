@@ -2107,34 +2107,6 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	return true;
 }
 
-void Corpse::CastRezz(int16 spellid, Mob* Caster){
-/*
-	if (!rezzexp) {
-		Caster->Message(4, "You cannot resurrect this corpse");
-		return;
-	}
-*/
-	if(Rezzed()){
-		if(Caster && Caster->IsClient())
-			Caster->Message(13,"This character has already been resurrected.");
-		return;
-	}
-
-	APPLAYER* outapp = new APPLAYER(OP_RezzRequest, sizeof(Resurrect_Struct));
-	Resurrect_Struct* rezz = (Resurrect_Struct*) outapp->pBuffer;
-	memcpy(rezz->your_name,this->orgname,30);
-	memcpy(rezz->corpse_name,this->name,30);
-	memcpy(rezz->rezzer_name,Caster->GetName(),30);
-	memcpy(rezz->zone,zone->GetShortName(),15);
-	rezz->spellid = spellid;
-	rezz->x = this->x_pos;
-	rezz->y = this->y_pos;
-	rezz->z = (float)this->z_pos;
-	worldserver.RezzPlayer(outapp, rezzexp, OP_RezzRequest);
-	//DumpPacket(outapp);
-	safe_delete(outapp);
-}
-
 bool Mob::FindBuff(int16 spellid)
 {
 	int i;

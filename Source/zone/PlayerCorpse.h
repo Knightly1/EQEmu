@@ -86,6 +86,8 @@ public:
 	bool CanMobLoot(int charid);
 	void AllowMobLoot(Mob *them, int8 slot);
 	void AddLooter(Mob *who);
+	bool Rezzed() { return rez; }
+	void Rezzed(bool in_rez) { rez = in_rez; }
 
 	char		orgname[64];
 	bool IsRezzed() { return isrezzed; }
@@ -108,6 +110,7 @@ private:
 	bool		p_depop;
 	int32		BeingLootedBy;
 	int32		rezzexp;
+	bool		rez;
 	bool		become_npc;
 	bool		isrezzed;
 	int			looters[MAX_LOOTERS]; // People allowed to loot the corpse, character id

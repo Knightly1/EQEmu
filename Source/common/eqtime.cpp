@@ -103,7 +103,7 @@ int EQTime::getEQTimeOfDay( time_t timeConvert, struct TimeOfDay_Struct *eqTimeO
    diff /= 24;
    ntz /= 24;
 
-   // The months range from 1-28
+   // The days range from 1-28
    // Modify it so that it works from
    // 0-27 for our calculations
    diff += ( eqTime.start_eqtime.day - 1 ) + (ntz%28);

@@ -2413,8 +2413,10 @@ bool BulkZoneSpawnPacket::AddSpawn(NewSpawn_Struct* ns) {
 void BulkZoneSpawnPacket::SendBuffer() {
 	if (!data)
 		return;
+	
 	int32 tmpBufSize = (index * sizeof(NewSpawn_Struct));
-	APPLAYER* outapp = new APPLAYER(OP_ZoneSpawns, (unsigned char *)data, tmpBufSize);
+	APPLAYER* outapp = new APPLAYER(OP_ZoneSpawns, tmpBufSize);
+	memcpy(outapp->pBuffer, data, tmpBufSize);
 	
 	//shrink it down
 	outapp->Deflate();

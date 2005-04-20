@@ -1999,7 +1999,7 @@ void Database::LoadWorldContainer(uint32 parentid, ItemContainerInst* container)
 	//ItemInst* inst = NULL;
 	
 	uint32 len_query =  MakeAnyLenString(&query, "select "
-		"bagidx,itemid,charges,augslot1,augslot2,augslot4,augslot4,augslot5 from object_contents where parentid=%i", parentid);
+		"bagidx,itemid,charges,augslot1,augslot2,augslot3,augslot4,augslot5 from object_contents where parentid=%i", parentid);
 	
 	if (database.RunQuery(query, len_query, errbuf, &result)) {
 		while ((row = mysql_fetch_row(result))) {
