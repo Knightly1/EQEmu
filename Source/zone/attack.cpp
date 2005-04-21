@@ -69,56 +69,56 @@ bool Mob::AttackAnimation(int &attack_skill, int16 &skillinuse, int Hand, const 
 {
 	// Determine animation
 	int type = 0;
-	if (weapon && weapon->IsType(ItemTypeCommon)) {
+	if (weapon && weapon->IsType(ItemClassCommon)) {
 		const Item_Struct* item = weapon->GetItem();
 #if EQDEBUG >= 11
-			LogFile->write(EQEMuLog::Debug, "Weapon skill:%i", item->Common.ItemUse);
+			LogFile->write(EQEMuLog::Debug, "Weapon skill:%i", item->Common.ItemType);
 #endif		
-		switch (item->Common.ItemUse)
+		switch (item->Common.ItemType)
 		{
-		case ItemUse1HS: // 1H Slashing
+		case ItemType1HS: // 1H Slashing
 		{
 			attack_skill = 1;
 			skillinuse = _1H_SLASHING;
 			type = anim1HWeapon;
 			break;
 		}
-		case ItemUse2HS: // 2H Slashing
+		case ItemType2HS: // 2H Slashing
 		{
 			attack_skill = 1;
 			skillinuse = _2H_SLASHING;
 			type = anim2HSlashing;
 			break;
 		}
-		case ItemUsePierce: // Piercing
+		case ItemTypePierce: // Piercing
 		{
 			attack_skill = 36;
 			skillinuse = PIERCING;
 			type = animPiercing;
 			break;
 		}
-		case ItemUse1HB: // 1H Blunt
+		case ItemType1HB: // 1H Blunt
 		{
 			attack_skill = 0;
 			skillinuse = _1H_BLUNT;
 			type = anim1HWeapon;
 			break;
 		}
-		case ItemUse2HB: // 2H Blunt
+		case ItemType2HB: // 2H Blunt
 		{
 			attack_skill = 0;
 			skillinuse = _2H_BLUNT;
 			type = anim2HWeapon;
 			break;
 		}
-		case ItemUse2HPierce: // 2H Piercing
+		case ItemType2HPierce: // 2H Piercing
 		{
 			attack_skill = 36;
 			skillinuse = PIERCING;
 			type = anim2HWeapon;
 			break;
 		}
-		case ItemUseHand2Hand:
+		case ItemTypeHand2Hand:
 		{
 			attack_skill = 4;
 			skillinuse = HAND_TO_HAND;
@@ -288,7 +288,10 @@ bool Mob::CheckHitChance(Mob* other, int8 attack_skill, int Hand, int16 skillinu
 #endif*/
 	
 	//I dont think this is 100% correct, but at least it does something...
-	chancetohit += attacker->spellbonuses.MeleeSkillCheck + attacker->itembonuses.MeleeSkillCheck;
+	if(attacker->spellbonuses.MeleeSkillCheckSkill == attack_skill || attacker->spellbonuses.MeleeSkillCheckSkill == 255)
+		chancetohit += attacker->spellbonuses.MeleeSkillCheck;
+	if(attacker->itembonuses.MeleeSkillCheckSkill == attack_skill || attacker->itembonuses.MeleeSkillCheckSkill == 255)
+		chancetohit += attacker->itembonuses.MeleeSkillCheck;
 	
 	
 	//add in our hit chance bonuses if we are using the right skill
@@ -377,11 +380,13 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 		}
 		
 		//handle damage increase diciplines + items
-		int mod = attacker->spellbonuses.DamageModifier + attacker->itembonuses.DamageModifier;
+		//this is completely wrong, and needs to account for both attacker and defenders modifieres
+		/*int mod = attacker->spellbonuses.DamageModifier + attacker->itembonuses.DamageModifier;
 		if(mod < -99)
 			damage = 0;	//all absorbed, should this be legal?
 		else
 			damage = damage * (100 + mod) / 100;
+		*/
 	}
 	
 #if ATTACK_DEBUG>=15
@@ -605,8 +610,11 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		weapon = GetInv().GetItem(SLOT_SECONDARY);
 	
 	const Item_Struct *weapon_item = NULL;
-	if(weapon != NULL)
+	if(weapon != NULL) {
+		if (!weapon->IsWeapon())
+			return(false);
 		weapon_item = weapon->GetItem();
+	}
 	
 	// calculate attack_skill and skillinuse depending on hand and weapon
 	// also send Packet to near clients
@@ -625,118 +633,121 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	if (skillinuse == HIGHEST_SKILL+1) { // the fallthru, only do 1 damage
 		damage = 1;
 	}
-	else
-	{
-		if ( damage >= 0 ) {
-			CheckIncreaseSkill(skillinuse, -10);
-			CheckIncreaseSkill(OFFENSE, -10);
-
-			if(skillinuse == 28 || !weapon) // weapon is hand-to-hand
-			{
-				//dont some weapons use the hand to hand skill?
-				if(GetClass() == MONK || GetClass() == BEASTLORD)
-					weapon_damage = GetMonkHandToHandDamage();	// Damage changes based on level
-				else
-					weapon_damage = 2; // This isn't quite right, something more like level/10 is more appropriate
-			}
-			else //not hand to hand and we have a weapon
-			{
-				if (weapon->IsWeapon()) {
-					weapon_damage = weapon->GetItem()->Common.Damage;
-					if (weapon_damage < 1)
-						weapon_damage = 1;
-				} else {
-					weapon_damage = 1;
-				}
-			}
-			
-			/*#if 0 // Racial bane damage
-						if (weapon && weapon->Common.BaneDmgAmt && weapon->Common.BaneDmgRace && other && other->GetRace() == weapon->common.BaneDMGRace) {
-							weapon_damage += weapon->common.BaneDMG;
-						}
-			#endif // Racial bane damage*/
-			
-			/*#if 0 // Body bane damage
-						if (weapon && weapon->Common.BaneDmgAmt && weapon->Common.bBaneDMGBody && other && other->GetBodyType() == weapon->common.BaneDMGBody) {
-							weapon_damage += weapon->common.BaneDMG;
-						}
-			#endif // Body bane damage*/
-			
-			min_hit = 1;
-			max_hit = (int) (weapon_damage * (( ((float)GetSTR()*2) + (float)GetSkill(skillinuse)*1.5+ (float)mylevel) / 100));	// Apply damage formula
-			/*#if 0 // Weighted MDF type damage
-				int magic_number = 0;
-				int weighted = 0;
-				if (GetLevel() >= 25) {
-					max_hit =  (int)(weapon_damage * (( ((float)GetSTR()) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100));	// Apply damage formula
-					min_hit = (GetLevel()-25)/3; // FIXME Brutal hack for Damage bonus this is here somewhere but
-					if (Hand != 13)
-						min_hit = 1;
-					magic_number = 2* weapon_damage + (level-25)/3;
-					weighted = (int)(0.9 * (weapon_damage+min_hit) + 0.1 * max_hit);
-				}
-			#endif // Weighted MDF type damage*/
-			
-			// Only apply the damage bonus to the main hand
-			if(Hand == 13)	// Kaiyodo - If we're not using the DWDA stuff, will always be the primary hand
-			{
-				int damage_bonus = GetWeaponDamageBonus(weapon_item);	// Can be NULL, will then assume fists
-				min_hit += damage_bonus;
-				max_hit += damage_bonus;
-			}
-			
-			min_hit = min_hit * (100 + itembonuses.MinDamageModifier + spellbonuses.MinDamageModifier) / 100;
+	else if ( damage >= 0 ) {
+		CheckIncreaseSkill(skillinuse, -10);
+		CheckIncreaseSkill(OFFENSE, -10);
 		
-			if(max_hit <= min_hit)
-				damage = min_hit;
+		/*
+			Hand to hand weapons are treated just like any other weapon
+			and monks gain no advantage from using them. I dont know
+			if this is
+		*/
+		
+		if(!weapon)		//we have no weapon, use fists
+		{
+			if(GetClass() == MONK || GetClass() == BEASTLORD)
+				weapon_damage = GetMonkHandToHandDamage();	// Damage changes based on level
 			else
-				damage = (int32)min_hit + MakeRandomInt(0, max_hit - min_hit + 1);
-			
-			//this still isnt the right place for this...
-			//also, is this damage supposed to be seperate??
-			// Elemental damage
-			if(weapon_item && weapon_item->Common.ElemDmg) {
-				float resist = other->ResistSpell(weapon_item->Common.ElemDmgType, 0, this);
-				if(resist > 0) {
-					damage += (int)( weapon_item->Common.ElemDmg * resist / 100.0f);
-				} //else: print message?
+				weapon_damage = 2; // This isn't quite right, something more like level/10 is more appropriate
+		
+		} else { //we have a weapon
+			weapon_damage = weapon->GetItem()->Common.Damage;
+			if (weapon_damage < 1)
+				weapon_damage = 1;
+		}
+		
+		/*#if 0 // Racial bane damage
+					if (weapon && weapon->Common.BaneDmgAmt && weapon->Common.BaneDmgRace && other && other->GetRace() == weapon->common.BaneDMGRace) {
+						weapon_damage += weapon->common.BaneDMG;
+					}
+		#endif // Racial bane damage*/
+		
+		/*#if 0 // Body bane damage
+					if (weapon && weapon->Common.BaneDmgAmt && weapon->Common.bBaneDMGBody && other && other->GetBodyType() == weapon->common.BaneDMGBody) {
+						weapon_damage += weapon->common.BaneDMG;
+					}
+		#endif // Body bane damage*/
+		
+		//berserker damage bonus
+		if(berserk && GetClass() == BERSERKER) {
+			int bonus = 3 + GetLevel()/10;		//unverified
+			weapon_damage = weapon_damage * (100+bonus) / 100;
+		}
+		
+		min_hit = 1;
+		max_hit = (int) (weapon_damage * (( ((float)GetSTR()*2) + (float)GetSkill(skillinuse)*1.5+ (float)mylevel) / 100));	// Apply damage formula
+		/*#if 0 // Weighted MDF type damage
+			int magic_number = 0;
+			int weighted = 0;
+			if (GetLevel() >= 25) {
+				max_hit =  (int)(weapon_damage * (( ((float)GetSTR()) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100));	// Apply damage formula
+				min_hit = (GetLevel()-25)/3; // FIXME Brutal hack for Damage bonus this is here somewhere but
+				if (Hand != 13)
+					min_hit = 1;
+				magic_number = 2* weapon_damage + (level-25)/3;
+				weighted = (int)(0.9 * (weapon_damage+min_hit) + 0.1 * max_hit);
 			}
+		#endif // Weighted MDF type damage*/
+		
+		// Only apply the damage bonus to the main hand
+		if(Hand == 13)	// Kaiyodo - If we're not using the DWDA stuff, will always be the primary hand
+		{
+			int damage_bonus = GetWeaponDamageBonus(weapon_item);	// Can be NULL, will then assume fists
+			min_hit += damage_bonus;
+			max_hit += damage_bonus;
+		}
+		
+		min_hit = min_hit * (100 + itembonuses.MinDamageModifier + spellbonuses.MinDamageModifier) / 100;
+	
+		if(max_hit <= min_hit)
+			damage = min_hit;
+		else
+			damage = (int32)min_hit + MakeRandomInt(0, max_hit - min_hit + 1);
+		
+		//this still isnt the right place for this...
+		//also, is this damage supposed to be seperate??
+		// Elemental damage
+		if(weapon_item && weapon_item->Common.ElemDmgAmt) {
+			float resist = other->ResistSpell(weapon_item->Common.ElemDmgType, 0, this);
+			if(resist > 0) {
+				damage += (int)( weapon_item->Common.ElemDmgAmt * resist / 100.0f);
+			} //else: print message?
+		}
 
-			/*#if 0 // Weighted MDF type damage
-				float hml = (float) ((float)rand()/(float)RAND_MAX);
-				if(GetLevel()>=25){
-					if (hml <= 0.10f){ // Low
-						damage = (int32) (min_hit + (rand()%(weighted-min_hit)));
-						if(damage > min_hit || damage > weighted || damage < min_hit) {
-							damage = min_hit;
-						}
+		/*#if 0 // Weighted MDF type damage
+			float hml = (float) ((float)rand()/(float)RAND_MAX);
+			if(GetLevel()>=25){
+				if (hml <= 0.10f){ // Low
+					damage = (int32) (min_hit + (rand()%(weighted-min_hit)));
+					if(damage > min_hit || damage > weighted || damage < min_hit) {
+						damage = min_hit;
 					}
-					else if (hml >= 0.11f && hml <= 0.89f){ // Middle
-						damage = (int32) (weighted + (rand()%(magic_number-weighted)+1));
-						if(damage > magic_number || damage < weighted) {
-							damage = magic_number;
-						}
-					}
-					else { // High
-						damage = (int32) (magic_number + (rand()%(max_hit-magic_number)+1));
-						if(damage < magic_number || damage >max_hit) {
-							damage = magic_number;
-						}
-					}
-#if EQDEBUG>=11 
-						LogFile->write(EQEMuLog::Debug,"%s::Attack(): min_hit:%i max_hit:%i weapon_damage:%i damage:%i mod:%f MN:%i WN:%i HML:%f",
-							GetName(), min_hit, max_hit, weapon_damage, damage, (( ((float)GetSTR()) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100), magic_number, weighted , hml);
-#endif
 				}
-			#endif // Weighted MDF type damage*/
-		} // End (damage >= 0)
+				else if (hml >= 0.11f && hml <= 0.89f){ // Middle
+					damage = (int32) (weighted + (rand()%(magic_number-weighted)+1));
+					if(damage > magic_number || damage < weighted) {
+						damage = magic_number;
+					}
+				}
+				else { // High
+					damage = (int32) (magic_number + (rand()%(max_hit-magic_number)+1));
+					if(damage < magic_number || damage >max_hit) {
+						damage = magic_number;
+					}
+				}
+#if EQDEBUG>=11 
+					LogFile->write(EQEMuLog::Debug,"%s::Attack(): min_hit:%i max_hit:%i weapon_damage:%i damage:%i mod:%f MN:%i WN:%i HML:%f",
+						GetName(), min_hit, max_hit, weapon_damage, damage, (( ((float)GetSTR()) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100), magic_number, weighted , hml);
+#endif
+			}
+		#endif // Weighted MDF type damage*/
+	} // End (damage >= 0)
 
 #if EQDEBUG>=11 
-			LogFile->write(EQEMuLog::Debug,"Client::Attack(): min_hit:%i max_hit:%i weapon_damage:%i damage:%i mod:%f",
-				min_hit, max_hit, weapon_damage, damage, (( ((float)GetSTR()*2) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100) );
+		LogFile->write(EQEMuLog::Debug,"Client::Attack(): min_hit:%i max_hit:%i weapon_damage:%i damage:%i mod:%f",
+			min_hit, max_hit, weapon_damage, damage, (( ((float)GetSTR()*2) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100) );
 #endif
-
-	} // End skill set?
+	
 	if (damage > 0) {
 	
 			//check to see if we hit..
@@ -883,7 +894,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	////////  Kaiyodo - Check for proc on weapon based on DEX
 	///////////////////////////////////////////////////////////
 	if(other && (other->GetHP() > -10)) {
-		TryWeaponProc(weapon_item, other);
+		TryWeaponProc(weapon, other);
 	}
    	if (damage <= 0) {
 		return false;
@@ -1043,7 +1054,7 @@ void Client::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill
 	}
 
 
-	APPLAYER* outapp = new APPLAYER(OP_Damage, sizeof(CombatDamage_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Damage, sizeof(CombatDamage_Struct));
 	
 	//outapp->pBuffer = new uchar[outapp->size];
 	//memset(outapp->pBuffer, 0, outapp->size);
@@ -1141,11 +1152,12 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 
 	if(!spell) spell = 0xffff;
 	// make death packet
-	APPLAYER app(OP_Death, sizeof(Death_Struct));
+	EQApplicationPacket app(OP_Death, sizeof(Death_Struct));
 	Death_Struct* d = (Death_Struct*)app.pBuffer;
 	d->spawn_id = GetID();
 	d->killer_id = other ? other->GetID() : 0;
-	d->unknown12 = 1;
+	//d->unknown12 = 1;
+	d->bindzoneid = m_pp.bind_zone_id;
 	d->spell_id = spell == 0xffff ? 0xffffffff : spell;
 	d->attack_skill = spell != 0xffff ? 0xe7 : attack_skill;
 	d->damage = damage;
@@ -1408,10 +1420,14 @@ other = tempkiller;
 
 	m_pp.zone_id = m_pp.bind_zone_id;
 	database.MoveCharacterToZone(this->CharacterID(), database.GetZoneName(m_pp.zone_id));
-
+	
+	//treat this like we sent them a zone request message
 	zonesummon_x = m_pp.bind_x[0];
 	zonesummon_y = m_pp.bind_y[0];
 	zonesummon_z = m_pp.bind_z[0];
+	zonesummon_id = m_pp.bind_zone_id;
+	zone_mode = ZoneToBindPoint;
+	
 	heading = 0;
 
 	Save();
@@ -1493,10 +1509,11 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		else if (equipment[8])
 		    weapon = database.GetItem(equipment[8]);
 
-		if (Hand == 14 && weapon && weapon->Common.ItemUse == ItemUseShield)
+		if (Hand == 14 && weapon && weapon->Common.ItemType == ItemTypeShield)
 			return false; // <Rogean> Cant Dual Wield with Shields
 		
-		ItemCommonInst weapon_inst(weapon,0);
+		sint16 charges = 0;
+		ItemCommonInst weapon_inst(weapon, charges);
 		AttackAnimation(attack_skill, skillinuse, Hand, &weapon_inst);
 		
 		int8 otherlevel = other->GetLevel();
@@ -1620,7 +1637,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	if (!target) return true; //We killed them
 	// Kaiyodo - Check for proc on weapon based on DEX
 	if( other && other->GetHP() > 0 ) {
-		TryWeaponProc(NULL, other);	//no weapon
+		TryWeaponProc((const Item_Struct*) NULL, other);	//no weapon
 	}
 	
 	// now check ripostes
@@ -1734,7 +1751,7 @@ void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, b
 		Death(other, damage, spell_id, attack_skill);
 		return;
 	}
-	APPLAYER* outapp = new APPLAYER(OP_Damage, sizeof(CombatDamage_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Damage, sizeof(CombatDamage_Struct));
 	//outapp->pBuffer = new uchar[outapp->size];
 	//memset(outapp->pBuffer, 0, sizeof(CombatDamage_Struct));
 	CombatDamage_Struct* a = (CombatDamage_Struct*)outapp->pBuffer;
@@ -1853,11 +1870,12 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 
 	BuffFadeAll();
 	
-	APPLAYER* app= new APPLAYER(OP_Death,sizeof(Death_Struct));
+	EQApplicationPacket* app= new EQApplicationPacket(OP_Death,sizeof(Death_Struct));
 	Death_Struct* d = (Death_Struct*)app->pBuffer;
 	d->spawn_id = GetID();
 	d->killer_id = other ? other->GetID() : 0;
-	d->unknown12 = 1;
+//	d->unknown12 = 1;
+	d->bindzoneid = 0;
 	d->spell_id = spell == SPELL_UNKNOWN ? 0xffffffff : spell;
 	d->attack_skill = spell != SPELL_UNKNOWN ? 0xe7 : attack_skill;
 	d->damage = damage;
@@ -1981,7 +1999,8 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	*/
 #endif // End Raid Addicts
 	
-	if (class_ != 32 && this->ownerid == 0 && this->flag[3]!=3 && CastToNPC()->MerchantType == 0 && killer && (killer->IsClient() || (killer->GetOwner() != 0 && killer->GetOwner()->IsClient())) ) {
+	if (!HasOwner() && class_ != MERCHANT && class_ != ADVENTUREMERCHANT 
+		&& MerchantType == 0 && killer && (killer->IsClient() || (killer->HasOwner() && killer->GetOwner()->IsClient())) ) {
 		Corpse* corpse = new Corpse(this, &itemlist, GetNPCTypeID(), &NPCTypedata);
 		entity_list.AddCorpse(corpse, this->GetID());
 		this->SetID(0);
@@ -2164,14 +2183,16 @@ int Mob::GetWeaponDamageBonus(const Item_Struct* Weapon)
 	
 	int BasicBonus = ((GetLevel() - 25) / 3) + 1;
 	
+	if(!Weapon)
+		return(BasicBonus);
+	
 	// If we have no weapon, or only a single handed weapon, just return the default
 	// damage bonus of (Level - 25) / 3
-	ItemCommonInst inst(Weapon);
-	if (!inst.IsType(ItemTypeCommon))
+	if (Weapon->ItemClass == ItemClassCommon)
 		return BasicBonus;
 	
 	const ItemCommon_Struct& common = Weapon->Common;
-	if ((common.ItemUse == ItemUse1HS) || (common.ItemUse == ItemUsePierce) || (common.ItemUse == ItemUse1HB))
+	if ((common.ItemType == ItemType1HS) || (common.ItemType == ItemTypePierce) || (common.ItemType == ItemType1HB))
 		return BasicBonus;
 	
 	// Things get more complicated with 2 handers, the bonus is based on the delay of
@@ -2252,9 +2273,6 @@ int Mob::GetMonkHandToHandDelay(void)
 		}
 	}
 }
-
-
-// neotokyo 14-Nov-02
 
 
 sint16 Mob::ReduceMagicalDamage(sint16 damage, int16 in_rune)

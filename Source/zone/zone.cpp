@@ -44,7 +44,8 @@ using namespace std;
 #include "net.h"
 #include "../common/seperator.h"
 #include "../common/packet_dump_file.h"
-#include "../common/EQNetwork.h"
+#include "../common/EQStreamFactory.h"
+#include "../common/EQStream.h"
 #include "map.h"
 #include "object.h"
 #include "petitions.h"
@@ -73,7 +74,6 @@ extern int32 numclients;
 extern NetConnection net;
 extern int16 adverrornum;
 extern PetitionList petition_list;
-extern EQNetworkServer eqns;
 Mutex MZoneShutdown;
 extern bool staticzone;
 Zone* zone = 0;
@@ -105,17 +105,6 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 		safe_delete(zone);
 		cerr << "Zone->Init failed" << endl;
 		worldserver.SetZone(0);
-		return false;
-	}
-	
-	//start up the network server
-	if (!eqns.Open(net.GetZonePort())) {
-		safe_delete(zone);
-		cerr << "eqns.Open failed" << endl;
-		worldserver.SetZone(0);
-#ifdef GUILDWARS
-		exit(1);
-#endif
 		return false;
 	}
 	
@@ -236,7 +225,7 @@ bool Zone::LoadZoneObjects() {
 			}
 			
 			// Load child objects if container
-			if (inst && inst->IsType(ItemTypeContainer)) {
+			if (inst && inst->IsType(ItemClassContainer)) {
 				database.LoadWorldContainer(id, (ItemContainerInst*)inst);
 			}
 			
@@ -271,7 +260,7 @@ bool Zone::LoadGroundSpawns() {
 			gsnumber=groundspawn.spawn[gsindex].max_allowed;
 			ix=0;
 			if(inst){
-				name=groundspawn.spawn[gsindex].name;
+				name = groundspawn.spawn[gsindex].name;
 				for(ix=0;ix<gsnumber;ix++){
 	//				printf("Spawning object %s at %f,%f,%f %f\n",name,gsx,gsy,gsz,gsheading);
 					Object* object = new Object(inst,name,groundspawn.spawn[gsindex].max_x,groundspawn.spawn[gsindex].min_x,groundspawn.spawn[gsindex].max_y,groundspawn.spawn[gsindex].min_y,groundspawn.spawn[gsindex].max_z,groundspawn.spawn[gsindex].heading,groundspawn.spawn[gsindex].respawntimer);//new object with id of 10000+
@@ -607,7 +596,6 @@ std::map<uint32,NPCType *>::iterator itr;
 		}
 	}
 	zone->ResetAuth();
-	eqns.Close();
 	safe_delete(zone);
 	dbasync->CommitWrites();
 	UpdateWindowTitle();
@@ -1140,24 +1128,21 @@ void Zone::SetTime(int8 hour, int8 minute)
 	}
 }
 
-ZonePoint* Zone::GetClosestZonePoint(float x, float y, float z, int32 to) {
-	return GetClosestZonePoint(x, y, z, database.GetZoneName(to));
-}
-
-ZonePoint* Zone::GetClosestZonePoint(float x, float y, float z, const char* to_name) {
+ZonePoint* Zone::GetClosestZonePoint(float x, float y, float z, int32 to, float max_distance) {
 	LinkedListIterator<ZonePoint*> iterator(zone_point_list);
 	ZonePoint* closest_zp = 0;
 	float closest_dist = FLT_MAX;
+	float max_distance2 = max_distance*max_distance;
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
 		ZonePoint* zp = iterator.GetData();
-		if (to_name != 0 && zp->target_zone != 0 && strcmp(zp->target_zone, to_name) == 0)
+		if (zp->target_zone_id == to)
 		{
 			float delta_x = zp->x - x;
 			float delta_y = zp->y - y;
 
-			float dist = sqrt(delta_x*delta_x+delta_y*delta_y);///*+(zp->z-z)*(zp->z-z)*/;
+			float dist = delta_x*delta_x+delta_y*delta_y;///*+(zp->z-z)*(zp->z-z)*/;
 			if (dist < closest_dist)
 			{
 				closest_zp = zp;
@@ -1166,20 +1151,30 @@ ZonePoint* Zone::GetClosestZonePoint(float x, float y, float z, const char* to_n
 		}
 		iterator.Advance();
 	}
-	// z fix
-	if(closest_dist>200.0f && closest_dist<50000.0f)
-		LogFile->write(EQEMuLog::Status, "WARNING: Closest zone point for %s is %f, you might need to update your zone_points table if you dont arrive at the right spot.",to_name,closest_dist);
-	//closest_zp->target_z = closest_zp->target_z;
+	
+	if(closest_dist>(200.0f*200.0f) && closest_dist<max_distance2)
+		LogFile->write(EQEMuLog::Status, "WARNING: Closest zone point for zone id %d is %f, you might need to update your zone_points table if you dont arrive at the right spot.",to,closest_dist);
+	
+	if(closest_dist > max_distance2)
+		closest_zp = NULL;
+	
 	if(!closest_zp)
-	closest_zp = GetClosestZonePointWithoutZone(x,y,z);
+		closest_zp = GetClosestZonePointWithoutZone(x,y,z);
 
 	return closest_zp;
 }
 
-ZonePoint* Zone::GetClosestZonePointWithoutZone(float x, float y, float z) {
+ZonePoint* Zone::GetClosestZonePoint(float x, float y, float z, const char* to_name, float max_distance) {
+	if(to_name == NULL)
+		return GetClosestZonePointWithoutZone(x,y,z, max_distance);
+	return GetClosestZonePoint(x, y, z, database.GetZoneID(to_name), max_distance);
+}
+
+ZonePoint* Zone::GetClosestZonePointWithoutZone(float x, float y, float z, float max_distance) {
 	LinkedListIterator<ZonePoint*> iterator(zone_point_list);
 	ZonePoint* closest_zp = 0;
 	float closest_dist = FLT_MAX;
+	float max_distance2 = max_distance*max_distance;
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
@@ -1195,8 +1190,8 @@ ZonePoint* Zone::GetClosestZonePointWithoutZone(float x, float y, float z) {
 			}
 		iterator.Advance();
 	}
-	if(closest_dist > 40000.0f)
-		closest_zp = 0;
+	if(closest_dist > max_distance2)
+		closest_zp = NULL;
 
 	return closest_zp;
 }
@@ -1209,7 +1204,7 @@ bool Database::LoadStaticZonePoints(LinkedList<ZonePoint*>* zone_point_list,cons
 	MYSQL_ROW row;
 	zone_point_list->Clear();
 	zone->numzonepoints = 0;
-	MakeAnyLenString(&query, "SELECT x,y,z,target_x,target_y,target_z,target_zone,heading,target_heading,number FROM zone_points WHERE zone='%s' order by number", zonename);
+	MakeAnyLenString(&query, "SELECT x,y,z,target_x,target_y,target_z,target_zone_id,heading,target_heading,number FROM zone_points WHERE zone='%s' order by number", zonename);
 	if (RunQuery(query, strlen(query), errbuf, &result))
 	{
 		safe_delete_array(query);
@@ -1222,7 +1217,7 @@ bool Database::LoadStaticZonePoints(LinkedList<ZonePoint*>* zone_point_list,cons
 			zp->target_x = atof(row[3]);
 			zp->target_y = atof(row[4]);
 			zp->target_z = atof(row[5]);
-			strncpy(zp->target_zone, row[6], 16);
+			zp->target_zone_id = atoi(row[6]);
 			zp->heading=atof(row[7]);
 			zp->target_heading=atof(row[8]);
 			zp->number=atoi(row[9]);
@@ -1642,7 +1637,7 @@ void Zone::weatherSend()
 		entity_list.Message(0, 0, "Strange weather patterns form in the sky. (%i)", zone_weather);
 		break;
 	}*/
-	APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 	if(zone_weather>0)
 		outapp->pBuffer[0] = zone_weather-1;
 	if(zone_weather>0)

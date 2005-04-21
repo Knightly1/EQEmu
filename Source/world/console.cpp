@@ -657,10 +657,10 @@ void Console::ProcessCommand(const char* command) {
 				CatchSignal(0);
 			}
 			else if (strcasecmp(sep.arg[0], "reloadops") == 0 && admin >= consoleOpcodesStatus) {
-				if(EQNetworkOpcodeManager == NULL) {
+				if(EQOpcodeManager == NULL) {
 					SendMessage(1, "It seems that the server is not using an opcode translator.");
 				} else {
-					EQNetworkOpcodeManager->ReloadOpcodes(OPCODES_FILE);
+					EQOpcodeManager->ReloadOpcodes(OPCODES_FILE);
 					SendMessage(1, "Opcodes reloaded.");
 				}
 			}

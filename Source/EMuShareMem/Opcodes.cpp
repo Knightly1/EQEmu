@@ -24,12 +24,6 @@ uint16 *MMFOpcodesData_emu_to_eq_write = NULL;
 //be a problem, but I figured it was noteworthy
 
 
-#ifdef WIN32
-#define DLLFUNC extern "C" __declspec(dllexport)
-#else
-#define DLLFUNC extern "C"
-#endif
-
 DLLFUNC uint16 GetEQOpcode(uint16 emu_op) {
 	if (MMFOpcodesData == 0 || (!OpcodesMMF.IsLoaded()) || emu_op >= MMFOpcodesData->EmuOpcodeCount )
 		return 0;
@@ -92,8 +86,10 @@ DLLFUNC bool DLLLoadOpcodes(CALLBACK_DBLoadOpcodes cb, int32 opsize, int32 eq_co
 				cout << "Error: EMuShareMem: DLLLoadOpcodes: !cbDBLoadOpcodes" << endl;
 				return false;
 			}
-
-			MMFOpcodesData_Writable = 0;
+			
+			//we dont disable the write handle here, so we can reload them
+			//MMFOpcodesData_Writable = 0;
+			
 			OpcodesMMF.SetLoaded();
 			MMFOpcodesData = (const MMFOpcodes_Struct*) OpcodesMMF.GetHandle();
 			if (!MMFOpcodesData) {
@@ -122,6 +118,11 @@ DLLFUNC bool DLLLoadOpcodes(CALLBACK_DBLoadOpcodes cb, int32 opsize, int32 eq_co
 			
 			//emu_to_eq is right after eq_to_emu
 			MMFOpcodesData_emu_to_eq = MMFOpcodesData->eq_to_emu + MMFOpcodesData->EQOpcodeCount;
+			
+			//cheat a little so we can retain writeable handles for reloading
+			MMFOpcodesData_Writable = const_cast<MMFOpcodes_Struct*>(MMFOpcodesData);
+			MMFOpcodesData_emu_to_eq_write = MMFOpcodesData_Writable->eq_to_emu + eq_count;
+			
 			
 			return true;
 		}

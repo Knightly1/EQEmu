@@ -46,13 +46,13 @@ extern WorldServer worldserver;
 extern npcDecayTimes_Struct npcCorpseDecayTimes[100];
 
 void Corpse::SendEndLootErrorPacket(Client* client) {
-	APPLAYER* outapp = new APPLAYER(OP_LootComplete, 0);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_LootComplete, 0);
 	client->QueuePacket(outapp);
 	safe_delete(outapp);
 }
 
 void Corpse::SendLootReqErrorPacket(Client* client, int8 response) {
-	APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
 	moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer;
 	d->response		= response;
 	d->unknown1		= 0x5a;
@@ -286,8 +286,8 @@ void Corpse::MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot)
 	sint16 interior_slot;
 	ItemInst *interior_item;
 
-	AddItem(item->GetItem()->ItemNumber, item->GetCharges(),  equipslot, item->GetAugmentItemID(0), item->GetAugmentItemID(1), item->GetAugmentItemID(2), item->GetAugmentItemID(3), item->GetAugmentItemID(4));
-	if(item->IsType(ItemTypeContainer))
+	AddItem(item->GetItem()->ID, item->GetCharges(),  equipslot, item->GetAugmentItemID(0), item->GetAugmentItemID(1), item->GetAugmentItemID(2), item->GetAugmentItemID(3), item->GetAugmentItemID(4));
+	if(item->IsType(ItemClassContainer))
 	{
 		for(bagindex = 0; bagindex <= 10; bagindex++)
 		{
@@ -295,7 +295,7 @@ void Corpse::MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot)
 			interior_item = client->GetInv().GetItem(interior_slot);
 			if(interior_item)
 			{
-				AddItem(interior_item->GetItem()->ItemNumber, interior_item->GetCharges(), interior_slot, interior_item->GetAugmentItemID(0), interior_item->GetAugmentItemID(1), interior_item->GetAugmentItemID(2), interior_item->GetAugmentItemID(3), interior_item->GetAugmentItemID(4));
+				AddItem(interior_item->GetItem()->ID, interior_item->GetCharges(), interior_slot, interior_item->GetAugmentItemID(0), interior_item->GetAugmentItemID(1), interior_item->GetAugmentItemID(2), interior_item->GetAugmentItemID(3), interior_item->GetAugmentItemID(4));
 				client->DeleteItemInInventory(interior_slot, interior_item->GetCharges(), false);
 			}
 		}
@@ -639,7 +639,7 @@ void Corpse::AllowMobLoot(Mob *them, int8 slot)
 }
 
 // @merth: this function needs some work
-void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
+void Corpse::MakeLootRequestPackets(Client* client, const EQApplicationPacket* app) {
 	// Added 12/08.  Started compressing loot struct on live.
 	char tmp[10];
 	if(p_depop)
@@ -693,7 +693,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 	if (tCanLoot >= 2 || (tCanLoot == 1 && client->Admin() >= 100 && client->GetGM()))
 	{
 		this->BeingLootedBy = client->GetID();
-		APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
 		moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer;
 		
 		d->response		= 1;
@@ -754,7 +754,8 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 		client->QueuePacket(outapp); 
 		safe_delete(outapp);
 		if(tCanLoot==5){
-			const Item_Struct* item = database.GetItem(GetPKItem());
+			int pkitem = GetPKItem();
+			const Item_Struct* item = database.GetItem(pkitem);
 			ItemInst* inst = ItemInst::Create(item, item->Common.MaxCharges);
 			if (inst)
 			{
@@ -806,7 +807,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 	client->QueuePacket(app);
 }
 
-void Corpse::LootItem(Client* client, const APPLAYER* app)
+void Corpse::LootItem(Client* client, const EQApplicationPacket* app)
 {
 	LootingItem_Struct* lootitem = (LootingItem_Struct*)app->pBuffer;
 
@@ -851,6 +852,10 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 	if (item != 0)
 	{
 		inst = ItemInst::Create(item, item_data?item_data->charges:0, item_data->aug1, item_data->aug2, item_data->aug3, item_data->aug4, item_data->aug5);
+		if(item->Common.MaxCharges == -1)
+			inst->SetCharges(1);
+		else
+			inst->SetCharges(item->Common.MaxCharges);
 	}
 
 	if (client && inst)
@@ -915,7 +920,7 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 		// now remove it from the corpse
 		RemoveItem(item_data->lootslot);
 		// remove bag contents too
-		if (item->ItemClass == ItemTypeContainer && (GetPKItem()!=-1 || GetPKItem()!=1))
+		if (item->ItemClass == ItemClassContainer && (GetPKItem()!=-1 || GetPKItem()!=1))
 		{
 			for (int i=0; i < 10; i++)
 			{
@@ -944,8 +949,8 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 	client->QueuePacket(app);
 }
 
-void Corpse::EndLoot(Client* client, const APPLAYER* app) {
-	APPLAYER* outapp = new APPLAYER;
+void Corpse::EndLoot(Client* client, const EQApplicationPacket* app) {
+	EQApplicationPacket* outapp = new EQApplicationPacket;
 	outapp->SetOpcode(OP_LootComplete);
 	outapp->size = 0;
 	client->QueuePacket(outapp);
@@ -980,7 +985,7 @@ void Corpse::QueryLoot(Client* to) {
 		ServerLootItem_Struct* sitem = *cur;
 		const Item_Struct* item = database.GetItem(sitem->item_id);
 		if (item)
-			to->Message(0, "  %d: %s", item->ItemNumber, item->Name);
+			to->Message(0, "  %d: %s", item->ID, item->Name);
 		else
 			to->Message(0, "  Error: 0x%04x", sitem->item_id);
 		x++;

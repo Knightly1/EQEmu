@@ -33,7 +33,7 @@
 #include "types.h"
 #include "linked_list.h"
 #include "eq_packet_structs.h"
-#include "EQNetwork.h"
+#include "EQStream.h"
 #include "../common/guilds.h"
 #include "../common/MiscFunctions.h"
 #include "../common/Mutex.h"
@@ -45,10 +45,7 @@
 #include "extprofile.h"
 #include <string>
 #include <vector>
-#ifdef GUILDWARS
 #include <map>
-#include <list>
-#endif
 using namespace std;
 
 //atoi is not int32 or uint32 safe!!!!
@@ -172,7 +169,7 @@ public:
 
 
 	AdventureInfo	GetAdventureInfo(int32 questid=0,int32 mobid=0,int8 advtype=0);
-	bool			GetLDoNDungeon(uint32 zoneid);
+	bool			IsLDoNDungeon(uint32 zoneid);
 	void			SetAdventureInfo(int32 questid,bool inuse,int32 status);
 	char*			GetAdventureNPCText(int32 npcid);
 	void			SetAdventureChar(int32 n,int32 charid,int32 questid);
@@ -226,6 +223,7 @@ public:
 	bool	MoveCharacterToZone(int32 iCharID, const char* iZonename);
 	bool	SetGMSpeed(int32 account_id, int8 gmspeed);
 	int8	GetGMSpeed(int32 account_id);
+	bool	SetHideMe(int32 account_id, int8 hideme);
 	int32	GetMiniLoginAccount(char* ip);
 	void	GetAccountFromID(int32 id, char* oAccountName, sint16* oStatus);
 	void	DeletePetitionFromDB(Petition* wpet);
@@ -306,14 +304,14 @@ public:
 	int32	GetAccountIDByName(const char* accname, sint16* status = 0, int32* lsid = 0);
 	void	GetAccountName(int32 accountid, char* name, int32* oLSAccountID = 0);
 	int32	GetCharacterInfo(const char* iName, int32* oAccID = 0, int32* oZoneID = 0, float* oX = 0, float* oY = 0, float* oZ = 0);
-	bool	GetAccountInfoForLogin(int32 account_id, sint16* admin = 0, char* account_name = 0, int32* lsaccountid = 0, int8* gmspeed = 0, bool* revoked = 0);
-	bool	GetAccountInfoForLogin_result(MYSQL_RES* result, sint16* admin = 0, char* account_name = 0, int32* lsaccountid = 0, int8* gmspeed = 0, bool* revoked = 0);
+	bool	GetAccountInfoForLogin(int32 account_id, sint16* admin = 0, char* account_name = 0, int32* lsaccountid = 0, int8* gmspeed = 0, bool* revoked = 0, bool* gmhideme = false);
+	bool	GetAccountInfoForLogin_result(MYSQL_RES* result, sint16* admin = 0, char* account_name = 0, int32* lsaccountid = 0, int8* gmspeed = 0, bool* revoked = 0, bool* gmhideme = false);
 	bool	GetCharacterInfoForLogin(const char* name, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, ExtendedProfile_Struct *ext = 0, uint32* pplen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
 	int32	GetGroupID(const char* name);
 	void	SetGroupID(const char* name, int32 id);
 	void	ClearGroup(int32 gid = 0);
 	char*	GetGroupLeaderForLogin(const char* name,char* leaderbuf);
-	bool	GetCharacterInfoForLogin_result(MYSQL_RES* result, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, ExtendedProfile_Struct *ext = 0, uint32* pplen = 0, uint32* guilddbid = 0, int8* guildrank = 0);
+	bool	GetCharacterInfoForLogin_result(MYSQL_RES* result, uint32* character_id = 0, char* current_zone = 0, PlayerProfile_Struct* pp = 0, Inventory* inv = 0, ExtendedProfile_Struct *ext = 0, uint32* pplen = 0, uint32* guilddbid = 0, int8* guildrank = 0, bool* gmhideme = false);
 	bool	SetLocalPassword(uint32 accid, const char* password);
 	
 	bool	InsertNewsPost(int8 type,char* logone,char* logtwo,int32 levelone,int32 leveltwo);
@@ -334,13 +332,13 @@ public:
 	int32	GetGuildDBIDbyLeader(int32 leader);
 	bool	SetGuildLeader(int32 guilddbid, int32 leader);
 	bool	SetGuildMOTD(int32 guilddbid, const char* motd);
-	char*	GetGuildMOTD(int32 guilddbid);
+	string	GetGuildMOTD(int32 guilddbid);
 	void	SaveMerchantTemp(int32 npcid, int32 slot, int32 item, int32 charges);
 	void	DeleteMerchantTemp(int32 npcid, int32 slot);
 	bool	GetSafePoints(const char* short_name, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, sint16* minstatus = 0, int8* minlevel = 0);
 	bool	GetSafePoints(int32 zoneID, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, sint16* minstatus = 0, int8* minlevel = 0) { return GetSafePoints(GetZoneName(zoneID), safe_x, safe_y, safe_z, minstatus, minlevel); }
 	
-	sint32	GetItemsCount(int32* oMaxID = 0);
+	sint32	GetItemsCount(int32* oMaxID = 0, int32* oSerializationSize =0);
 	sint32	GetNPCTypesCount(int32* oMaxID = 0);
 	sint32	GetDoorsCount(int32* oMaxID = 0);
 	sint32	GetNPCFactionListsCount(int32* oMaxID = 0);
@@ -375,6 +373,7 @@ public:
 	inline const int32&	GetMaxNPCType()			{ return max_npc_type; }
 	inline const int32& GetMaxNPCFactionList()	{ return npcfactionlist_max; }
 	const Item_Struct*		GetItem(uint32 id);
+	const unsigned char*		GetItemSerialization(uint32 id);
 	const NPCType*			GetNPCType(uint32 id);
 	const NPCFactionList*	GetNPCFactionList(uint32 id);
 	const Door*				GetDoor(int8 door_id, const char* zone_name);
@@ -428,7 +427,7 @@ public:
 	bool	GetTradeRecipe(const ItemContainerInst* container, uint8 c_type, uint8 tradeskill, DBTradeskillRecipe_Struct *spec);
 	bool	GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint8 tradeskill, DBTradeskillRecipe_Struct *spec);
 
-	bool	MakeDoorSpawnPacket(const char* zone,APPLAYER* app);
+	bool	MakeDoorSpawnPacket(const char* zone,EQApplicationPacket* app);
 	bool	CheckGuildDoor(int8 doorid,int16 guildid, const char* zone);
 	bool	SetGuildDoor(int8 doorid,int16 guildid, const char* zone);
 	bool	LoadStaticZonePoints(LinkedList<ZonePoint*>* zone_point_list,const char* zonename);
@@ -486,6 +485,7 @@ public:
 	void	UpdateTimeleftWorld();
 	void	UpdateTimeleft(int32 id,int32 timeleft);
 	void	HandleMysqlError(int32 errnum);
+	bool	FetchRowMap(MYSQL_RES *result, map<string,string> &rowmap);
 	
 	uint32  MaxDoors() { return max_door_type; }
 	void	UpdateDoorGuildID(int doorid, int guildid);

@@ -53,6 +53,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 	_ZP(Mob_SpellEffect);
 	
 	int caster_level, buffslot, effect, effect_value, i;
+	ItemInst *SummonedItem=NULL;
 #ifdef SPELL_EFFECT_SPAM
 #define _EDLEN	200
 	char effect_desc[_EDLEN];
@@ -232,9 +233,11 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 #endif
 				if(IsClient())
 				{
-				Group* group = entity_list.GetGroupByClient(this->CastToClient());
-				if(caster != this && (!group || !group->IsGroupMember(caster->CastToMob())))
-					break;
+					Group* group = entity_list.GetGroupByClient(this->CastToClient());
+					
+					if(caster != this && (!group || !group->IsGroupMember(caster->CastToMob())))
+						break;
+					
 					// solar: if it's blank or "0" it means bind point
 					// TODO: MovePC needs to take heading too, which is in base[3]
 					if(spell.teleport_zone && strlen(spell.teleport_zone) > 1)
@@ -246,9 +249,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 							spell.base[0],
 							spell.base[2]
 						);
-					}
-					else
-					{
+					} else {
 						Gate();
 					}
 				}
@@ -424,7 +425,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 				// tell caster it has a pet
 				if(caster->IsClient())
 				{
-					APPLAYER *app = new APPLAYER(OP_Charm, sizeof(Charm_Struct));
+					EQApplicationPacket *app = new EQApplicationPacket(OP_Charm, sizeof(Charm_Struct));
 					Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
 					ps->owner_id = caster->GetID();
 					ps->pet_id = this->GetID();
@@ -555,24 +556,72 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 
 			case SE_SummonItem:
 			{
-#ifdef SPELL_EFFECT_SPAM
 				const Item_Struct *item = database.GetItem(spell.base[i]);
+#ifdef SPELL_EFFECT_SPAM
 				const char *itemname = item ? item->Name : "*Unknown Item*";
 				snprintf(effect_desc, _EDLEN, "Summon Item: %s (id %d)", itemname, spell.base[i]);
 #endif
 				if(IsClient())
 				{
-					int charges;
-					if (spell.formula[i] < 100)
-					{
-						charges = spell.formula[i];
+					Client *c=CastToClient();
+					if (c->CheckLoreConflict(item))  {
+						Message_StringID(0,PICK_LORE);
+					} else {
+						int charges;
+						if (spell.formula[i] < 100)
+						{
+							charges = spell.formula[i];
+						}
+						else	// variable charges
+						{
+							charges = CalcSpellEffectValue_formula(spell.formula[i], 0, 20, caster_level, spell_id);
+						}
+						charges = charges < 1 ? 1 : (charges > 20 ? 20 : charges);
+						if (SummonedItem) {
+							c->PushItemOnCursor(*SummonedItem);
+							c->SendItemPacket(SLOT_CURSOR, SummonedItem, ItemPacketSummonItem);
+							safe_delete(SummonedItem);
+						}
+						SummonedItem=ItemInst::Create(spell.base[i],charges);
 					}
-					else	// variable charges
-					{
-						charges = CalcSpellEffectValue_formula(spell.formula[i], 0, 20, caster_level, spell_id);
+				}
+
+				break;
+			}
+			case SE_SummonItemIntoBag:
+			{
+				const Item_Struct *item = database.GetItem(spell.base[i]);
+#ifdef SPELL_EFFECT_SPAM
+				const char *itemname = item ? item->Name : "*Unknown Item*";
+				snprintf(effect_desc, _EDLEN, "Summon Item In Bag: %s (id %d)", itemname, spell.base[i]);
+#endif
+				uint8 slot;
+
+				if (!SummonedItem || !SummonedItem->IsType(ItemClassContainer)) {
+					caster->Message(13,"SE_SummonItemIntoBag but no bag has been summoned!");
+				} else if ((slot=((ItemContainerInst*)SummonedItem)->FirstOpenSlot())==0xff) {
+					caster->Message(13,"SE_SummonItemIntoBag but no room in summoned bag!");
+				} else if (IsClient())
+				{
+					if (CastToClient()->CheckLoreConflict(item))  {
+						Message_StringID(0,PICK_LORE);
+					} else {
+						int charges;
+						if (spell.formula[i] < 100)
+						{
+							charges = spell.formula[i];
+						}
+						else	// variable charges
+						{
+							charges = CalcSpellEffectValue_formula(spell.formula[i], 0, 20, caster_level, spell_id);
+						}
+						charges = charges < 1 ? 1 : (charges > 20 ? 20 : charges);
+						ItemInst *SubItem=ItemInst::Create(spell.base[i],charges);
+						if (SubItem!=NULL) {
+							((ItemContainerInst*)SummonedItem)->PutItem(slot,*SubItem);
+							safe_delete(SubItem);
+						}
 					}
-					charges = charges < 1 ? 1 : (charges > 20 ? 20 : charges);
-					CastToClient()->SummonItem(spell.base[i], charges);
 				}
 
 				break;
@@ -707,7 +756,8 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 #endif
 				//this sends the levitate packet to everybody else
 				//who does not otherwise receive the buff packet.
-				SendAppearancePacket(AT_Levitate, 2, true, true);
+				//SendAppearancePacket(AT_Levitate, 2, true, true);
+				SendAppearancePacket(AT_Levitate, 0, true, false);
 				break;
 			}
 
@@ -842,6 +892,8 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 						lvlmod = 8;	//this is an unconfirmed number, I made it up 
 					caster->SetMana(caster->GetMana()+(GetLevel()*lvlmod));
 					
+					if(caster->IsClient())
+						caster->CastToClient()->SetPet(0);
 					SetOwnerID(0);	// this will kill the pet
 				}
 				break;
@@ -1862,6 +1914,13 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, double partial)
 
 	CalcBonuses();
 
+	if (SummonedItem) {
+		Client *c=CastToClient();
+		c->PushItemOnCursor(*SummonedItem);
+		c->SendItemPacket(SLOT_CURSOR, SummonedItem, ItemPacketSummonItem);
+		safe_delete(SummonedItem);
+	}
+
 	return true;
 }
 
@@ -1973,13 +2032,13 @@ snare has both of them negative, yet their range should work the same:
 			result = ubase + (caster_level / 5); break;
 		
 		case 111:	
-            result = ubase + 6 * (caster_level - GetMinLevel(spell_id)); break;
+            result = updownsign * (ubase + 6 * (caster_level - GetMinLevel(spell_id))); break;
 		case 112:
-            result = ubase + 8 * (caster_level - GetMinLevel(spell_id)); break;
+            result = updownsign * (ubase + 8 * (caster_level - GetMinLevel(spell_id))); break;
 		case 113:
-            result = ubase + 10 * (caster_level - GetMinLevel(spell_id)); break;
+            result = updownsign * (ubase + 10 * (caster_level - GetMinLevel(spell_id))); break;
 		case 114:
-            result = ubase + 15 * (caster_level - GetMinLevel(spell_id)); break;
+            result = updownsign * (ubase + 15 * (caster_level - GetMinLevel(spell_id))); break;
         
         //these formula were updated according to lucy 10/16/04
 		case 115:	// solar: this is only in symbol of transal
@@ -2354,8 +2413,8 @@ sint16 Client::GetFocusEffect(focusType type, int16 spell_id) {
 		if (!ins)
 			continue;
 		TempItem = ins->GetItem();
-		if (TempItem && TempItem->Common.FocusId > 0 && TempItem->Common.FocusId != SPELL_UNKNOWN) {
-			Total = CalcFocusEffect(type, TempItem->Common.FocusId, spell_id);
+		if (TempItem && TempItem->Common.Focus.Effect > 0 && TempItem->Common.Focus.Effect != SPELL_UNKNOWN) {
+			Total = CalcFocusEffect(type, TempItem->Common.Focus.Effect, spell_id);
 			if(Total > realTotal) {
 				realTotal = Total;
 				UsedItem = TempItem;

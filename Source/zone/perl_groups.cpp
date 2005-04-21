@@ -309,12 +309,12 @@ XS(XS_Group_GetLeaderName)
 	XSRETURN(1);
 }
 
-XS(XS_Group_SendHPPackets); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Group_SendHPPackets)
+XS(XS_Group_SendHPPacketsTo); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Group_SendHPPacketsTo)
 {
 	dXSARGS;
 	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Group::SendHPPackets(THIS, newmember)");
+		Perl_croak(aTHX_ "Usage: Group::SendHPPacketsTo(THIS, newmember)");
 	{
 		Group *		THIS;
 		Mob*		newmember;
@@ -333,7 +333,36 @@ XS(XS_Group_SendHPPackets)
 		else
 			Perl_croak(aTHX_ "newmember is not of type Mob");
 
-		THIS->SendHPPackets(newmember);
+		THIS->SendHPPacketsTo(newmember);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_Group_SendHPPacketsFrom); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Group_SendHPPacketsFrom)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Group::SendHPPacketsFrom(THIS, newmember)");
+	{
+		Group *		THIS;
+		Mob*		newmember;
+
+		if (sv_derived_from(ST(0), "Group")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Group *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Group");
+
+		if (sv_derived_from(ST(1), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(1)));
+			newmember = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "newmember is not of type Mob");
+
+		THIS->SendHPPacketsFrom(newmember);
 	}
 	XSRETURN_EMPTY;
 }
@@ -506,7 +535,8 @@ XS(boot_Group)
 		newXSproto(strcpy(buf, "SetLeader"), XS_Group_SetLeader, file, "$$");
 		newXSproto(strcpy(buf, "GetLeader"), XS_Group_GetLeader, file, "$");
 		newXSproto(strcpy(buf, "GetLeaderName"), XS_Group_GetLeaderName, file, "$");
-		newXSproto(strcpy(buf, "SendHPPackets"), XS_Group_SendHPPackets, file, "$$");
+		newXSproto(strcpy(buf, "SendHPPacketsTo"), XS_Group_SendHPPacketsTo, file, "$$");
+		newXSproto(strcpy(buf, "SendHPPacketsFrom"), XS_Group_SendHPPacketsFrom, file, "$$");
 		newXSproto(strcpy(buf, "IsLeader"), XS_Group_IsLeader, file, "$$");
 		newXSproto(strcpy(buf, "GroupCount"), XS_Group_GroupCount, file, "$");
 		newXSproto(strcpy(buf, "GetHighestLevel"), XS_Group_GetHighestLevel, file, "$");

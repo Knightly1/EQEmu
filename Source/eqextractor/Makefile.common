@@ -1,0 +1,33 @@
+#the set of objects needed to do something useful with packetfiles
+PFOBJS=.obj/Mutex.o .obj/unix.o .obj/packetfile.o \
+  .obj/opcodemgr.o ../common/emu_opcodes.o
+
+#objects for EQ extractor
+EEOBJS=eqextractor.o $(PFOBJS) ../common/dbcore.o ExtractCollector.o \
+  Extractors.o ExtractDB.o ../common/MiscFunctions.o Explorers.o \
+  StructExplorer.o
+
+all: eqextractor pf2text
+
+pf2text: pf2text.o $(PFOBJS)
+	g++ $(LDFLAGS) -o $@ $^
+
+eqextractor: $(EEOBJS)
+	g++ $^ $(LDFLAGS) $(MYSQL_LIBS) -o $@ 
+
+#force these to depend on the oplist
+../common/emu_opcodes.o: ../common/emu_oplist.h
+.obj/opcodemgr.o: ../common/emu_oplist.h
+
+clean:
+	rm -f eqextract $(EEOBJS) $(PFOBJS) eqextractor pf2text pf2text.o
+
+.obj/%.o: ../common/%.cpp ../common/%.h
+	mkdir -p .obj
+	g++ $(CXXFLAGS) -c $< -o $@
+
+%.o: %.cpp %.h
+	mkdir -p .obj
+	g++ $(CXXFLAGS) -c $< -o $@
+
+

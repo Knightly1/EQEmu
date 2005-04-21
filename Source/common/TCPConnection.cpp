@@ -1498,7 +1498,7 @@ void TCPServer::Process() {
 	while(iterator.MoreElements()) {
 		if (iterator.GetData()->IsFree() && (!iterator.GetData()->CheckNetActive())) {
 			#if EQN_DEBUG >= 4
-				cout << "EQNetwork Connection deleted." << endl;
+				cout << "EQStream Connection deleted." << endl;
 			#endif
 			iterator.RemoveCurrent();
 		}

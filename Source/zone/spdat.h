@@ -174,7 +174,7 @@ enum RESISTTYPE
 #define SE_AntiGate					105	// Translocational Anchor
 #define SE_SummonBSTPet				106	// neotokyo: added BST pet support
 #define SE_Familiar					108
-#define SE_SummonItem2				109	// Summon Jewelry Bag - summons stuff into container
+#define SE_SummonItemIntoBag		109	// Summon Jewelry Bag - summons stuff into container
 #define SE_ResistAll				111
 #define SE_CastingLevel				112
 #define	SE_SummonHorse				113

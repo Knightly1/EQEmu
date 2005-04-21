@@ -51,7 +51,7 @@ extern WorldServer worldserver;
 
 
 void Petition::SendPetitionToPlayer(Client* clientto) {
-	APPLAYER* outapp = new APPLAYER(OP_PetitionCheckout,sizeof(Petition_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_PetitionCheckout,sizeof(Petition_Struct));
 	Petition_Struct* pet = (Petition_Struct*) outapp->pBuffer;
 	strcpy(pet->accountid,this->GetAccountName());
 	strcpy(pet->lastgm,this->GetLastGM());

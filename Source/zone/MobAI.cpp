@@ -392,7 +392,7 @@ void Client::AI_Start(int32 iMoveDelay) {
 		return;
 	// copy memed spells to the spells struct here
 	this->Message_StringID(13,PLAYER_CHARMED);
-/*	APPLAYER *app = new APPLAYER(OP_Charm, sizeof(Charm_Struct));
+/*	EQApplicationPacket *app = new EQApplicationPacket(OP_Charm, sizeof(Charm_Struct));
 	Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
 	ps->owner_id = GetOwnerOrSelf()->GetID();
 	ps->pet_id = this->GetID();
@@ -447,7 +447,7 @@ void Mob::AI_Stop() {
 void Client::AI_Stop() {
 	Mob::AI_Stop();
 	this->Message_StringID(13,PLAYER_REGAIN);
-	APPLAYER *app = new APPLAYER(OP_Charm, sizeof(Charm_Struct));
+	EQApplicationPacket *app = new EQApplicationPacket(OP_Charm, sizeof(Charm_Struct));
 	Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
 	ps->owner_id = 0;
 	ps->pet_id = this->GetID();
@@ -1182,9 +1182,9 @@ int32 Mob::GetLevelCon(int8 mylevel, int8 iOtherLevel) {
 	}
 	else if (mylevel <= 50)
 	{
-        if (diff <= -14)
+        if (diff <= -18)
             conlevel = CON_GREEN;
-        else if (diff <= -12)
+        else if (diff <= -17)
             conlevel = CON_LIGHTBLUE;
         else
             conlevel = CON_BLUE;

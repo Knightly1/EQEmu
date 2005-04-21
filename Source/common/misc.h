@@ -1,6 +1,7 @@
 #ifndef _MISC_H
 
 #define _MISC_H
+#include <stdio.h>
 #include <string>
 #include <map>
 
@@ -31,9 +32,10 @@ int Inflate(unsigned char* indata, int indatalen, unsigned char* outdata, int ou
 int print_stacktrace();
 #endif
 
-void dump_message_column(unsigned char *buffer, unsigned long length, string leader);
+void dump_message_column(unsigned char *buffer, unsigned long length, string leader="", FILE *to = stdout);
 string string_from_time(string pattern, time_t now=0);
 string timestamp(time_t now=0);
 string long2ip(unsigned long ip);
+string pop_arg(string &s, string seps, bool obey_quotes);
 
 #endif

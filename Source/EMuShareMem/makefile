@@ -1,6 +1,6 @@
 # Generated automatically from Makefile.in by configure.
 APP=libEMuShareMem.so
-SF=MMFMutex.o Doors.o Items.o Spells.o NPCFactionLists.o MMF.o Loot.o ../common/timer.o ../common/unix.o ../common/EMuShareMem.o
+SF=MMFMutex.o Doors.o Items.o Spells.o NPCFactionLists.o MMF.o Loot.o ../common/timer.o ../common/unix.o ../common/EMuShareMem.o Opcodes.o
 
 CC=gcc
 LD=ld
@@ -13,7 +13,7 @@ LD=ld
 #For Linux, and defaults that don't need to be overwritten.
 MYSQL_CFLAGS=`mysql_config --cflags`
 MYSQL_LIBS=`mysql_config --libs`
-DFLAGS=-DDEBUG=1 -DSHAREMEM -DCATCH_CRASH -DEMUSHAREMEM
+DFLAGS=-DDEBUG=1 -DSHAREMEM -DCATCH_CRASH -DEMUSHAREMEM -DAPP_OPCODE_SIZE=2
 
 WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual -Wstrict-prototypes -Wno-deprecated -Wcomment -Wcast-align
 COPTS=$(WFLAGS) $(DFLAGS) -g -fPIC -O2 -D_GNU_SOURCE -DINVERSEXY -DFX $(MYSQL_CFLAGS)

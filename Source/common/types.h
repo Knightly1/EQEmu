@@ -87,6 +87,11 @@ typedef unsigned char		uchar;
 #endif
 
 
+#ifdef WIN32
+#define DLLFUNC extern "C" __declspec(dllexport)
+#else
+#define DLLFUNC extern "C"
+#endif
 
 
 #pragma pack(1)

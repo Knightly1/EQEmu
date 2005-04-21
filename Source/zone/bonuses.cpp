@@ -132,65 +132,65 @@ void Client::CalcItemBonuses(StatBonuses* newbon) {
 }
 		
 void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
-	if(!inst || !inst->IsType(ItemTypeCommon))
+	if(!inst || !inst->IsType(ItemClassCommon))
 		return;
 	const Item_Struct *item = inst->GetItem();
 	const ItemCommon_Struct& common = item->Common;
-	if( GetLevel() >= common.RecommendedLevel )
+	if( GetLevel() >= common.RecLevel )
 	{
 		newbon->AC += common.AC;
 		newbon->HP += common.HP;
 		newbon->Mana += common.Mana;
-		newbon->STR += common.STR;
-		newbon->STA += common.STA;
-		newbon->DEX += common.DEX;
-		newbon->AGI += common.AGI;
-		newbon->INT += common.INT;
-		newbon->WIS += common.WIS;
-		newbon->CHA += common.CHA;
+		newbon->STR += common.AStr;
+		newbon->STA += common.ASta;
+		newbon->DEX += common.ADex;
+		newbon->AGI += common.AAgi;
+		newbon->INT += common.AInt;
+		newbon->WIS += common.AWis;
+		newbon->CHA += common.ACha;
 		
-		newbon->MR += common.SvMagic;
-		newbon->FR += common.SvFire;
-		newbon->CR += common.SvCold;
-		newbon->PR += common.SvPoison;
-		newbon->DR += common.SvDisease;
+		newbon->MR += common.MR;
+		newbon->FR += common.FR;
+		newbon->CR += common.CR;
+		newbon->PR += common.PR;
+		newbon->DR += common.DR;
 	}
 	else
 	{
 		int lvl = GetLevel();
-		int reclvl = common.RecommendedLevel;
+		int reclvl = common.RecLevel;
 
 		newbon->AC += CalcRecommendedLevelBonus( lvl, reclvl, common.AC );
 		newbon->HP += CalcRecommendedLevelBonus( lvl, reclvl, common.HP );
 		newbon->Mana += CalcRecommendedLevelBonus( lvl, reclvl, common.Mana );
-		newbon->STR += CalcRecommendedLevelBonus( lvl, reclvl, common.STR );
-		newbon->STA += CalcRecommendedLevelBonus( lvl, reclvl, common.STA );
-		newbon->DEX += CalcRecommendedLevelBonus( lvl, reclvl, common.DEX );
-		newbon->AGI += CalcRecommendedLevelBonus( lvl, reclvl, common.AGI );
-		newbon->INT += CalcRecommendedLevelBonus( lvl, reclvl, common.INT );
-		newbon->WIS += CalcRecommendedLevelBonus( lvl, reclvl, common.WIS );
-		newbon->CHA += CalcRecommendedLevelBonus( lvl, reclvl, common.CHA );
+		newbon->STR += CalcRecommendedLevelBonus( lvl, reclvl, common.AStr );
+		newbon->STA += CalcRecommendedLevelBonus( lvl, reclvl, common.ASta );
+		newbon->DEX += CalcRecommendedLevelBonus( lvl, reclvl, common.ADex );
+		newbon->AGI += CalcRecommendedLevelBonus( lvl, reclvl, common.AAgi );
+		newbon->INT += CalcRecommendedLevelBonus( lvl, reclvl, common.AInt );
+		newbon->WIS += CalcRecommendedLevelBonus( lvl, reclvl, common.AWis );
+		newbon->CHA += CalcRecommendedLevelBonus( lvl, reclvl, common.ACha );
 
-		newbon->MR += CalcRecommendedLevelBonus( lvl, reclvl, common.SvMagic );
-		newbon->FR += CalcRecommendedLevelBonus( lvl, reclvl, common.SvFire );
-		newbon->CR += CalcRecommendedLevelBonus( lvl, reclvl, common.SvCold );
-		newbon->PR += CalcRecommendedLevelBonus( lvl, reclvl, common.SvPoison );
-		newbon->DR += CalcRecommendedLevelBonus( lvl, reclvl, common.SvDisease );
+		newbon->MR += CalcRecommendedLevelBonus( lvl, reclvl, common.MR );
+		newbon->FR += CalcRecommendedLevelBonus( lvl, reclvl, common.FR );
+		newbon->CR += CalcRecommendedLevelBonus( lvl, reclvl, common.CR );
+		newbon->PR += CalcRecommendedLevelBonus( lvl, reclvl, common.PR );
+		newbon->DR += CalcRecommendedLevelBonus( lvl, reclvl, common.DR );
 	}
 	
 	//FatherNitwit: New style haste, shields, and regens
-	if(common.EffectType == ET_WornEffect) {
-		if(newbon->haste < (sint8)item->hastepercent)
-			newbon->haste = item->hastepercent;
+	if(common.Click.Type == ET_WornEffect) {
+		if(newbon->haste < (sint8)item->Common.Haste)
+			newbon->haste = item->Common.Haste;
 	}
-	if(item->hpregen > 0) {
-		newbon->HPRegen += item->hpregen;
+	if(common.Regen > 0) {
+		newbon->HPRegen += common.Regen;
 	}
-	if(item->manaregen > 0) {
-		newbon->ManaRegen += item->manaregen;
+	if(common.ManaRegen > 0) {
+		newbon->ManaRegen += common.ManaRegen;
 	}
-	if(item->damageshield > 0) {
-		newbon->DamageShield += item->damageshield;
+	if(common.DamageShield > 0) {
+		newbon->DamageShield += common.DamageShield;
 	}
 	if(common.SpellShield > 0) {
 		newbon->SpellDamageShield += common.SpellShield;
@@ -213,58 +213,53 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 	if(common.CombatEffects > 0) {
 		newbon->ProcChance += common.CombatEffects;
 	}
-	
-	if ((common.SpellId == 998) && (common.EffectType == ET_WornEffect)) { // item haste
-		if (newbon->haste < common.ProcLevel)
-			newbon->haste = common.ProcLevel;
+	else if (common.Worn.Effect>0 && (common.Worn.Type == ET_WornEffect)) { // latent effects
+		ApplySpellsBonuses(common.Worn.Effect, common.Worn.Level, newbon);
 	}
-	else if ((common.SpellId != 0xFFFF) && (common.EffectType == ET_WornEffect)) { // latent effects
-		ApplySpellsBonuses(common.SpellId, common.ProcLevel, newbon);
-	}
-	switch(common.BardSkillType)
+	switch(common.BardType)
 	{
 	case 51: /* All (e.g. Singing Short Sword) */
 		{
-			if(common.BardSkillAmt > newbon->singingMod)
-				newbon->singingMod = common.BardSkillAmt;
-			if(common.BardSkillAmt > newbon->brassMod)
-				newbon->brassMod = common.BardSkillAmt;
-			if(common.BardSkillAmt > newbon->stringedMod)
-				newbon->stringedMod = common.BardSkillAmt;
-			if(common.BardSkillAmt > newbon->percussionMod)
-				newbon->percussionMod = common.BardSkillAmt;
-			if(common.BardSkillAmt > newbon->windMod)
-				newbon->windMod = common.BardSkillAmt;
+			if(common.BardValue > newbon->singingMod)
+				newbon->singingMod = common.BardValue;
+			if(common.BardValue > newbon->brassMod)
+				newbon->brassMod = common.BardValue;
+			if(common.BardValue > newbon->stringedMod)
+				newbon->stringedMod = common.BardValue;
+			if(common.BardValue > newbon->percussionMod)
+				newbon->percussionMod = common.BardValue;
+			if(common.BardValue > newbon->windMod)
+				newbon->windMod = common.BardValue;
 			break;
 		}
 	case 50: /* Singing */
 		{
-			if(common.BardSkillAmt > newbon->singingMod)
-				newbon->singingMod = common.BardSkillAmt;
+			if(common.BardValue > newbon->singingMod)
+				newbon->singingMod = common.BardValue;
 			break;
 		}
 	case 23: /* Wind */
 		{
-			if(common.BardSkillAmt > newbon->windMod)
-				newbon->windMod = common.BardSkillAmt;
+			if(common.BardValue > newbon->windMod)
+				newbon->windMod = common.BardValue;
 			break;
 		}
 	case 24: /* stringed */
 		{
-			if(common.BardSkillAmt > newbon->stringedMod)
-				newbon->stringedMod = common.BardSkillAmt;
+			if(common.BardValue > newbon->stringedMod)
+				newbon->stringedMod = common.BardValue;
 			break;
 		}
 	case 25: /* brass */
 		{
-			if(common.BardSkillAmt > newbon->brassMod)
-				newbon->brassMod = common.BardSkillAmt;
+			if(common.BardValue > newbon->brassMod)
+				newbon->brassMod = common.BardValue;
 			break;
 		}
 	case 26: /* Percussion */
 		{
-			if(common.BardSkillAmt > newbon->percussionMod)
-				newbon->percussionMod = common.BardSkillAmt;
+			if(common.BardValue > newbon->percussionMod)
+				newbon->percussionMod = common.BardValue;
 			break;
 		}
 	}
@@ -275,7 +270,8 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 	}
 
 	const ItemCommonInst *ci=(const ItemCommonInst *)inst;
-	for(int i=0;i<5;i++) {
+	int i;
+	for(i = 0; i < MAX_AUGMENT_SLOTS; i++) {
 		AddItemBonuses(ci->GetAugment(i),newbon);
 	}
 }
@@ -294,11 +290,11 @@ void Client::CalcEdibleBonuses(StatBonuses* newbon) {
 		if (food && drink)
 			break;
 		const ItemInst* inst = GetInv().GetItem(i);
-		if (inst && inst->GetItem() && inst->IsType(ItemTypeCommon)) {
+		if (inst && inst->GetItem() && inst->IsType(ItemClassCommon)) {
 			const ItemCommon_Struct& common = inst->GetItem()->Common;
-			if (common.ItemUse == ItemUseFood && !food)
+			if (common.ItemType == ItemTypeFood && !food)
 				food = true;
-			else if (common.ItemUse == ItemUseDrink && !drink)
+			else if (common.ItemType == ItemTypeDrink && !drink)
 				drink = true;
 			else
 				continue;
@@ -310,11 +306,11 @@ void Client::CalcEdibleBonuses(StatBonuses* newbon) {
 		if (food && drink)
 			break;
 		const ItemInst* inst = GetInv().GetItem(i);
-		if (inst && inst->GetItem() && inst->IsType(ItemTypeCommon)) {
+		if (inst && inst->GetItem() && inst->IsType(ItemClassCommon)) {
 			const ItemCommon_Struct& common = inst->GetItem()->Common;
-			if (common.ItemUse == ItemUseFood && !food)
+			if (common.ItemType == ItemTypeFood && !food)
 				food = true;
-			else if (common.ItemUse == ItemUseDrink && !drink)
+			else if (common.ItemType == ItemTypeDrink && !drink)
 				drink = true;
 			else
 				continue;
@@ -697,8 +693,10 @@ void Mob::ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newb
 				
 			case SE_MeleeSkillCheck:
 			{
-				if(newbon->MeleeSkillCheck < effect_value)
+				if(newbon->MeleeSkillCheck < effect_value) {
 					newbon->MeleeSkillCheck = effect_value;
+					newbon->MeleeSkillCheckSkill = spells[spell_id].base2[i]==-1?255:spells[spell_id].base2[i];
+				}
 				break;
 			}
 				
@@ -716,8 +714,10 @@ void Mob::ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newb
 				
 			case SE_DamageModifier:
 			{
-				if(newbon->DamageModifier < effect_value)
+				if(newbon->DamageModifier < effect_value) {
 					newbon->DamageModifier = effect_value;
+					newbon->DamageModifierSkill = spells[spell_id].base2[i]==-1?255:spells[spell_id].base2[i];
+				}
 				break;
 			}
 				

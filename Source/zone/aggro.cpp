@@ -24,6 +24,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "spdat.h"
 #include "../common/skills.h"
 #include "StringIDs.h"
+#include <iostream>
 
 //#define LOSDEBUG 6
 
@@ -571,9 +572,11 @@ bool Mob::IsAttackAllowed(Mob *target)
 		return true;
 
 	// can't damage own pet (applies to everthing)
-	if(target->GetOwner() && target->GetOwner() == this)
+	Mob *target_owner = target->GetOwner();
+	Mob *our_owner = GetOwner();
+	if(target_owner && target_owner == this)
 		return false;
-	else if(GetOwner() && GetOwner() == target)
+	else if(our_owner && our_owner == target)
 		return false;
 	
 	//cannot hurt untargetable mobs
@@ -595,8 +598,8 @@ bool Mob::IsAttackAllowed(Mob *target)
 	
 	// first figure out if we're pets.  we always look at the master's flags.
 	// no need to compare pets to anything
-	mob1 = this->GetOwner() ? this->GetOwner() : this;
-	mob2 = target->GetOwner() ? target->GetOwner() : target;
+	mob1 = our_owner ? our_owner : this;
+	mob2 = target_owner ? target_owner : target;
 
 	reverse = 0;
 	do
@@ -864,6 +867,8 @@ bool Mob::IsBeneficialAllowed(Mob *target)
 
 bool Mob::CombatRange(Mob* other)
 {
+	if(!other)
+		return(false);
     // neotokyo: some mobs have set size == -1; this caused a signed/unsigned overflow
 	sint32 size_mod = (sint32)GetSize();
 	if(GetRace() == 49 || GetRace() == 158 || GetRace() == 196) //For races with a fixed size

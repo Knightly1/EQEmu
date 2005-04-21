@@ -1,5 +1,6 @@
 #ifndef STRING_IDS
 #define STRING_IDS
+
 #define STRING_FEIGNFAILED 1456 //%1 has fallen to the ground.
 #define STRING_SURNAME_TOO_LONG 12942 //Surname must be less than 20 characters in length.
 #define DUEL_DECLINE 1383 //%1 has declined your challenge to duel to the death.
@@ -83,7 +84,9 @@
 #define OTHER_HIT_NONMELEE 434 //%1 was hit by non-melee for %2 points of damage.
 #define YOU_HIT_NONMELEE 12481 //You were hit by non-melee for %1 damage.
 #define BEAM_SMILE 12501 //%1 beams a smile at %2
+#define FACTION_WORST 469 //Your faction standing with %1 could not possibly get any worse.
 #define FACTION_WORSE 470 //Your faction standing with %1 got worse.
+#define FACTION_BEST 471 //Your faction standing with %1 could not possibly get any better.
 #define FACTION_BETTER 472 //Your faction standing with %1 got better.
 #define CANNOT_SAC_SELF 205 //You cannot sacrifice yourself.
 #define CANNOT_AFFECT_PC 210 //That spell can not affect this target PC.
@@ -173,5 +176,9 @@
 #define PIERCE_STRING 12193 //pierce
 #define KICK_STRING 12195 //kick
 #define STRIKE_STRING 12197 //strike
+#define LOOTED_MESSAGE 467	//--You have looted a %1--
+#define OTHER_LOOTED_MESSAGE 466	//--%1 has looted a %2--
+#define EATING_MESSAGE 1091	//Chomp, chomp, chomp...  %1 takes a bite from a %2.
+#define DRINKING_MESSAGE 1093 //Glug, glug, glug...  %1 takes a drink from a %2.
 
 #endif

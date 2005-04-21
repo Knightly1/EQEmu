@@ -23,7 +23,7 @@
 using namespace std;
 
 #include "packet_dump.h"
-#include "EQNetwork.h"
+#include "EQStream.h"
 #include "../common/servertalk.h"
 
 void DumpPacketAscii(const uchar* buf, int32 size, int32 cols, int32 skip) {
@@ -90,12 +90,12 @@ void DumpPacketHex(const uchar* buf, int32 size, int32 cols, int32 skip) {
 	safe_delete_array(ascii);
 }
 
-void DumpPacketHex(const APPLAYER* app)
+void DumpPacketHex(const EQApplicationPacket* app)
 {
 	DumpPacketHex(app->pBuffer, app->size);
 }
 
-void DumpPacketAscii(const APPLAYER* app)
+void DumpPacketAscii(const EQApplicationPacket* app)
 {
 	DumpPacketAscii(app->pBuffer, app->size);
 }
@@ -106,7 +106,7 @@ void DumpPacket(const uchar* buf, int32 size)
 //	DumpPacketAscii(buf,size);
 }
 
-void DumpPacket(const APPLAYER* app, bool iShowInfo) {
+void DumpPacket(const EQApplicationPacket* app, bool iShowInfo) {
 	if (iShowInfo) {
 		cout << "Dumping Applayer: 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec;
 		cout << " size:" << app->size << endl;
@@ -123,7 +123,7 @@ void DumpPacket(const ServerPacket* pack, bool iShowInfo) {
 	DumpPacketHex(pack->pBuffer, pack->size);
 }
 
-void DumpPacketBin(const APPLAYER* app) {
+void DumpPacketBin(const EQApplicationPacket* app) {
 	DumpPacketBin(app->pBuffer, app->size);
 }
 

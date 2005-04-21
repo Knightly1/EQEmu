@@ -259,7 +259,7 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	float mobDist;
 	sint32 orgcasttime;
 	float modrange;
-	APPLAYER *outapp = NULL;
+	EQApplicationPacket *outapp = NULL;
 
 	if(!IsValidSpell(spell_id))
 		return;
@@ -427,7 +427,7 @@ printf("Error no target.\n");
 
 
 	// now tell the people in the area
-	outapp = new APPLAYER(OP_BeginCast,sizeof(BeginCast_Struct));
+	outapp = new EQApplicationPacket(OP_BeginCast,sizeof(BeginCast_Struct));
 	BeginCast_Struct* begincast = (BeginCast_Struct*)outapp->pBuffer;
 	begincast->caster_id = GetID();
 	begincast->spell_id = spell_id;
@@ -674,7 +674,7 @@ void Mob::InterruptSpell(int16 spellid)
 // solar: color not used right now
 void Mob::InterruptSpell(int16 message, int16 color, int16 spellid)
 {
-	APPLAYER *outapp;
+	EQApplicationPacket *outapp;
 	int16 message_other;
 
 	if (spellid == 0xFFFF)
@@ -708,7 +708,7 @@ void Mob::InterruptSpell(int16 message, int16 color, int16 spellid)
 		if (IsClient())
 		{
 			// the interrupt message
-			outapp = new APPLAYER(OP_InterruptCast, sizeof(InterruptCast_Struct));
+			outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct));
 			InterruptCast_Struct* ic = (InterruptCast_Struct*) outapp->pBuffer;
 			ic->messageid = message;
 			ic->spawnid = GetID();
@@ -741,7 +741,7 @@ void Mob::InterruptSpell(int16 message, int16 color, int16 spellid)
 		}
 
 		// this is the actual message, it works the same as a formatted message
-		outapp = new APPLAYER(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(GetCleanName()) + 1);
+		outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(GetCleanName()) + 1);
 		InterruptCast_Struct* ic = (InterruptCast_Struct*) outapp->pBuffer;
 		ic->messageid = message_other;
 		ic->spawnid = GetID();
@@ -919,7 +919,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 		&& inventory_slot != 0xFFFFFFFF)	// 10 is an item
 	{
 		const ItemInst* inst = CastToClient()->GetInv()[inventory_slot];
-		if (inst && inst->IsType(ItemTypeCommon))
+		if (inst && inst->IsType(ItemClassCommon))
 		{
 			//const Item_Struct* item = inst->GetItem();
 			sint16 charges = inst->GetItem()->Common.MaxCharges;
@@ -1032,7 +1032,7 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 {
 	_ZP(Mob_SpellFinished);
 	
-	APPLAYER *outapp = NULL;
+	EQApplicationPacket *outapp = NULL;
 	int recourse_spell=0;
 	float range;
 	Mob *spell_target = NULL, *ae_center = NULL;
@@ -1281,7 +1281,7 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 	// solar: check line of sight to target if it's a detrimental spell
 	// NOTE: remove the map files if you're having problems with this,
 	// don't remove this check
-	if(spell_target && IsDetrimentalSpell(spell_id) && !CheckLos(spell_target))
+	if(spell_target && IsDetrimentalSpell(spell_id) && !CheckLosFN(spell_target))
 	{
 		Message_StringID(13,CANT_SEE_TARGET);
 		return false;
@@ -1401,7 +1401,7 @@ bool Mob::SpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_
 	}
 
 	// animation
-	outapp = new APPLAYER(OP_Animation, sizeof(Animation_Struct));
+	outapp = new EQApplicationPacket(OP_Animation, sizeof(Animation_Struct));
 	Animation_Struct* a = (Animation_Struct*)outapp->pBuffer;
 	a->spawn_id = GetID();
 	a->animation_speed = 10;
@@ -1849,7 +1849,7 @@ int Mob::CanBuffStack(int16 spellid, int8 caster_level, bool iFailIfOverwrite)
 //
 bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 {
-	APPLAYER *action_packet, *message_packet;
+	EQApplicationPacket *action_packet, *message_packet;
 	double spell_effectiveness;
 
 	if(!IsValidSpell(spell_id))
@@ -1870,7 +1870,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	// doesn't land due to pvp protection
 	// note: this packet is sent again if the spell is successful, with a flag
 	// set
-	action_packet = new APPLAYER(OP_Action, sizeof(Action_Struct));
+	action_packet = new EQApplicationPacket(OP_Action, sizeof(Action_Struct));
 	Action_Struct* action = (Action_Struct*) action_packet->pBuffer;
 
 	// select source
@@ -2091,7 +2091,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 
 	// solar: TEMPORARY - this is the message for the spell.
 	// double message on effects that use ChangeHP - working on this
-	message_packet = new APPLAYER(OP_Damage, sizeof(CombatDamage_Struct));
+	message_packet = new EQApplicationPacket(OP_Damage, sizeof(CombatDamage_Struct));
 	CombatDamage_Struct *cd = (CombatDamage_Struct *)message_packet->pBuffer;
 	cd->target = action->target;
 	cd->source = action->source;
@@ -2105,6 +2105,34 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	safe_delete(message_packet);
 
 	return true;
+}
+
+void Corpse::CastRezz(int16 spellid, Mob* Caster){
+/*
+	if (!rezzexp) {
+		Caster->Message(4, "You cannot resurrect this corpse");
+		return;
+	}
+*/
+	if(Rezzed()){
+		if(Caster && Caster->IsClient())
+			Caster->Message(13,"This character has already been resurrected.");
+		return;
+	}
+
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_RezzRequest, sizeof(Resurrect_Struct));
+	Resurrect_Struct* rezz = (Resurrect_Struct*) outapp->pBuffer;
+	memcpy(rezz->your_name,this->orgname,30);
+	memcpy(rezz->corpse_name,this->name,30);
+	memcpy(rezz->rezzer_name,Caster->GetName(),30);
+	rezz->zone_id = zone->GetZoneID();
+	rezz->spellid = spellid;
+	rezz->x = this->x_pos;
+	rezz->y = this->y_pos;
+	rezz->z = (float)this->z_pos;
+	worldserver.RezzPlayer(outapp, rezzexp, OP_RezzRequest);
+	//DumpPacket(outapp);
+	safe_delete(outapp);
 }
 
 bool Mob::FindBuff(int16 spellid)
@@ -2262,7 +2290,7 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 				}
 				if(tempmob && tempmob->IsClient())
 				{
-					APPLAYER *app = new APPLAYER(OP_Charm, sizeof(Charm_Struct));
+					EQApplicationPacket *app = new EQApplicationPacket(OP_Charm, sizeof(Charm_Struct));
 					Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
 					ps->owner_id = tempmob->GetID();
 					ps->pet_id = this->GetID();
@@ -2683,7 +2711,7 @@ float Mob::ResistSpell(int8 resist_type, int16 spell_id, Mob *caster)
 // 'other' functions
 
 void Mob::Spin() {
-	APPLAYER* outapp = new APPLAYER(OP_Action, sizeof(Action_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Action, sizeof(Action_Struct));
 	outapp->pBuffer[0] = 0x0B;
 	outapp->pBuffer[1] = 0x0A;
 	outapp->pBuffer[2] = 0x0B;
@@ -2726,7 +2754,7 @@ void Mob::SendSpellBarEnable(int16 spell_id)
 	if(!IsClient())
 		return;
 
-	APPLAYER *outapp = new APPLAYER(OP_ManaChange, sizeof(ManaChange_Struct));
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_ManaChange, sizeof(ManaChange_Struct));
 	ManaChange_Struct* manachange = (ManaChange_Struct*)outapp->pBuffer;
 	manachange->new_mana = GetMana();
 	manachange->spell_id = spell_id;
@@ -2753,7 +2781,7 @@ void Client::Stun(int duration)
 {
 	Mob::Stun(duration);
 
-	APPLAYER* outapp = new APPLAYER(OP_Stun, sizeof(Stun_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Stun, sizeof(Stun_Struct));
 	Stun_Struct* stunon = (Stun_Struct*) outapp->pBuffer;
 	stunon->duration = duration;
 	outapp->priority = 5;
@@ -2780,7 +2808,7 @@ void Mob::Mesmerize()
 
 /* this stuns the client for max time, with no way to break it -solar
 	if (this->IsClient()){
-		APPLAYER* outapp = new APPLAYER(OP_Stun, sizeof(Stun_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_Stun, sizeof(Stun_Struct));
 		Stun_Struct* stunon = (Stun_Struct*) outapp->pBuffer;
 		stunon->duration = 0xFFFF;
 		this->CastToClient()->QueuePacket(outapp);
@@ -2793,9 +2821,9 @@ void Mob::Mesmerize()
 
 void Client::MakeBuffFadePacket(int16 spell_id, int slot_id, bool send_message)
 {
-	APPLAYER* outapp;
+	EQApplicationPacket* outapp;
 	
-	outapp = new APPLAYER(OP_Buff, sizeof(SpellBuffFade_Struct));
+	outapp = new EQApplicationPacket(OP_Buff, sizeof(SpellBuffFade_Struct));
 	SpellBuffFade_Struct* sbf = (SpellBuffFade_Struct*) outapp->pBuffer;
 
 	sbf->entityid=GetID();
@@ -2830,7 +2858,7 @@ void Client::MakeBuffFadePacket(int16 spell_id, int slot_id, bool send_message)
 	{
 		const char *fadetext = spells[spell_id].spell_fades;
 		sint32 color = MT_Spells;
-		outapp = new APPLAYER(OP_BuffFadeMsg, sizeof(color) + strlen(fadetext) + 1);
+		outapp = new EQApplicationPacket(OP_BuffFadeMsg, sizeof(color) + strlen(fadetext) + 1);
 		*(sint32 *)outapp->pBuffer = color;
 		char *bufptr = (char *)outapp->pBuffer + sizeof(color);
 		memcpy(bufptr,fadetext,strlen(fadetext));
@@ -2912,7 +2940,7 @@ void Client::UnscribeSpell(int slot, bool update_client)
 
 	if(update_client)
 	{
-		APPLAYER* outapp = new APPLAYER(OP_DeleteSpell, sizeof(DeleteSpell_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_DeleteSpell, sizeof(DeleteSpell_Struct));
 		DeleteSpell_Struct* del = (DeleteSpell_Struct*)outapp->pBuffer;
 		del->spell_slot = slot;
 		del->success = 1;
@@ -2930,34 +2958,6 @@ void Client::UnscribeSpellAll(bool update_client)
 		if(m_pp.spell_book[i] != 0xFFFFFFFF)
 			UnscribeSpell(i, update_client);
 	}
-}
-
-void Client::SetBindPoint(int to_zone, float new_x, float new_y, float new_z) {
-	if (to_zone == -1) {
-		m_pp.bind_zone_id = zone->GetZoneID();
-		m_pp.bind_x[0] = x_pos;
-		m_pp.bind_y[0] = y_pos;
-		m_pp.bind_z[0] = z_pos;
-	}
-	else {
-		m_pp.bind_zone_id = to_zone;
-		m_pp.bind_x[0] = new_x;
-		m_pp.bind_y[0] = new_y;
-		m_pp.bind_z[0] = new_z;
-	}
-}
-
-void Client::GoToBind() {
-	if (m_pp.bind_zone_id == zone->GetZoneID()) { //if same zone no reason to zone
-		GMMove(m_pp.bind_x[0],
-               m_pp.bind_y[0],
-               m_pp.bind_z[0]);
-    } else {
-		MovePC(m_pp.bind_zone_id,
-               m_pp.bind_x[0],
-               m_pp.bind_y[0],
-               m_pp.bind_z[0], 1); //lets zone
-    }
 }
 
 void Mob::CheckBuffs() {
@@ -3414,22 +3414,6 @@ bool Mob::UseBardSpellLogic(int16 spell_id, int slot)
 		IsBardSong(spell_id) &&
 		slot <= 8
 	);
-}
-
-void Mob::Gate()
-{
-	GoToBind();
-}
-
-void Client::Gate()
-{
-	Mob::Gate();
-}
-
-void NPC::Gate()
-{
-	entity_list.MessageClose_StringID(this, true, 200, MT_Spells, GATES, GetCleanName());
-	Mob::Gate();
 }
 
 int Mob::GetCasterLevel(int16 spell_id) {

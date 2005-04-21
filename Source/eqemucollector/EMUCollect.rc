@@ -1,0 +1,363 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\EMUCollect.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON    DISCARDABLE     "res\\EMUCollect.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 235, 55
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About EMUCollect"
+FONT 8, "MS Sans Serif"
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC,11,17,20,20
+    LTEXT           "EMUCollect Version 1.0",IDC_STATIC,40,10,119,8,
+                    SS_NOPREFIX
+    LTEXT           "Copyright (C) 2004",IDC_STATIC,40,25,119,8
+    DEFPUSHBUTTON   "OK",IDOK,178,7,50,14,WS_GROUP
+END
+
+IDD_EMUCOLLECT_DIALOG DIALOGEX 0, 0, 372, 130
+STYLE DS_3DLOOK | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU | WS_THICKFRAME
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "EqEMU Packet Collector (PEQ Edition)"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Watch IP:",IDC_STATIC,7,9,33,8
+    EDITTEXT        IDC_WATCH_IP,42,7,69,12,ES_AUTOHSCROLL
+    LTEXT           "Your Name:",IDC_UPLOAD_LABEL,14,282,38,8,WS_DISABLED
+    EDITTEXT        IDC_UPLOAD_NAME,56,279,62,12,ES_AUTOHSCROLL | 
+                    WS_DISABLED
+    GROUPBOX        "Simple Collecting (Uploading)",IDC_SC_GROUP,8,260,149,
+                    126
+    CONTROL         "Items Only",IDC_ITEMSONLY,"Button",BS_AUTORADIOBUTTON | 
+                    WS_DISABLED | WS_TABSTOP,13,292,49,10
+    CONTROL         "All Packets",IDC_ALLPACKETS,"Button",BS_AUTORADIOBUTTON | 
+                    WS_DISABLED | WS_TABSTOP,13,303,51,10
+    CONTROL         "Items",IDC_CollectItems,"Button",BS_AUTOCHECKBOX | 
+                    WS_DISABLED | WS_TABSTOP,26,314,33,10
+    CONTROL         "Doors",IDC_CollectDoors,"Button",BS_AUTOCHECKBOX | 
+                    WS_DISABLED | WS_TABSTOP,26,327,35,10
+    CONTROL         "Zone Objects",IDC_CollectObjects,"Button",
+                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,26,338,59,10
+    CONTROL         "Zone Points",IDC_CollectZones,"Button",BS_AUTOCHECKBOX | 
+                    WS_DISABLED | WS_TABSTOP,26,350,54,10
+    CONTROL         "Spawn Data",IDC_CollectSpawns,"Button",BS_AUTOCHECKBOX | 
+                    WS_DISABLED | WS_TABSTOP,26,361,55,10
+    CONTROL         "Spawn Grids",IDC_CollectGrids,"Button",BS_AUTOCHECKBOX | 
+                    WS_DISABLED | WS_TABSTOP,26,372,56,10
+    GROUPBOX        "Collecting",IDC_STATIC,1,173,149,95,WS_DISABLED
+    CONTROL         "Enable Packet Logging (text)",IDC_TEXTLOGS,"Button",
+                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,11,191,107,10
+    LTEXT           "Text File:",IDC_STATIC,17,205,30,8,WS_DISABLED
+    EDITTEXT        IDC_TEXTFILE,51,204,97,12,ES_AUTOHSCROLL | WS_DISABLED
+    PUSHBUTTON      "Select File...",IDC_SelectTextLog,97,218,50,11,
+                    WS_DISABLED
+    CONTROL         "Enable Packet File Logging (binary)",IDC_BINLOGS,"Button",
+                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,2,217,127,10
+    LTEXT           "Packet File:",IDC_STATIC,11,233,38,8,WS_DISABLED
+    EDITTEXT        IDC_BINFILE,53,231,95,12,ES_AUTOHSCROLL | WS_DISABLED
+    PUSHBUTTON      "Select File...",IDC_SelectBinLog,99,246,50,11,
+                    WS_DISABLED
+    CONTROL         "Enable Database Upload",IDC_DBUpload,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,15,270,95,10
+    CONTROL         "Show Opcode Names",IDC_ShowOpcodes,"Button",
+                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,284,206,90,10
+    GROUPBOX        "Filtering",IDC_STATIC,189,266,103,196,WS_DISABLED
+    CONTROL         "No Filter",IDC_FilterNone,"Button",BS_AUTORADIOBUTTON | 
+                    WS_DISABLED,195,287,42,10
+    CONTROL         "Include Only Opcodes:",IDC_FilterInclude,"Button",
+                    BS_AUTORADIOBUTTON | WS_DISABLED,195,297,88,10
+    LISTBOX         IDC_OPINCLUDE,195,309,88,41,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_DISABLED | WS_VSCROLL | 
+                    WS_TABSTOP
+    PUSHBUTTON      "Add",IDC_OPI_ADD,195,352,25,11,WS_DISABLED
+    PUSHBUTTON      "Remove",IDC_OPI_REMOVE,223,352,33,11,WS_DISABLED
+    DEFPUSHBUTTON   "Begin Collecting",IDC_BeginCollecting,294,27,71,14,
+                    WS_DISABLED
+    PUSHBUTTON      "Save List",IDC_OPI_SAVE,234,365,41,11,WS_DISABLED
+    PUSHBUTTON      "Load List",IDC_OPI_LOAD,195,365,41,11,WS_DISABLED
+    CONTROL         "Exclude Only Opcodes:",IDC_FilterExclude,"Button",
+                    BS_AUTORADIOBUTTON | WS_DISABLED,185,379,90,10
+    PUSHBUTTON      "Add",IDC_OPE_ADD,195,434,25,11,WS_DISABLED
+    PUSHBUTTON      "Remove",IDC_OPE_REMOVE,223,434,33,11,WS_DISABLED
+    LISTBOX         IDC_OPEXCLUDE,195,391,88,41,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_DISABLED | WS_VSCROLL | 
+                    WS_TABSTOP
+    PUSHBUTTON      "Save List",IDC_OPE_SAVE,234,447,41,11,WS_DISABLED
+    PUSHBUTTON      "Load List",IDC_OPE_LOAD,195,447,41,11,WS_DISABLED
+    PUSHBUTTON      "EXIT",IDCANCEL,294,109,71,14
+    GROUPBOX        "Collection Statistics",IDC_STATIC,310,279,90,74
+    LTEXT           "Packets: 0",IDC_STAT_PACKETS,305,257,77,8
+    LTEXT           "Items: 0",IDC_STAT_ITEMS,305,267,77,8
+    LTEXT           "Running: No",IDC_STAT_RUNNING,317,289,77,8
+    LTEXT           "On Device:",IDC_STATIC,119,9,37,8
+    COMBOBOX        IDC_DEVICE,159,7,206,119,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Raw Packet Output",IDC_RawLogging,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,221,258,79,10
+    DEFPUSHBUTTON   "Stop Collecting",IDC_StopCollecting,294,43,71,14,
+                    WS_DISABLED
+    CONTROL         "Debug Console",IDC_DEBUG_CONSOLE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,275,81,65,10
+    GROUPBOX        "Privacy",IDC_STATIC,165,25,90,95
+    CONTROL         "Enable Privacy Mode",IDC_PrivacyMode,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,171,50,82,10
+    EDITTEXT        IDC_PrivacyName,171,76,79,12,ES_AUTOHSCROLL | 
+                    WS_DISABLED
+    LTEXT           "Hide This Char Name:",IDC_PrivacyLabel,170,65,70,8,
+                    WS_DISABLED
+    PUSHBUTTON      "About Privacy",IDC_ABOUTPRIVACY,171,92,79,13
+    CONTROL         "Ignore World",IDC_IgnoreWorld,"Button",BS_AUTOCHECKBOX | 
+                    WS_DISABLED | WS_TABSTOP,176,210,82,10
+    PUSHBUTTON      "Save Settings",IDC_SaveSettings,309,60,56,14
+    LTEXT           "Not Done Yet",IDC_STATIC,217,277,44,8
+    PUSHBUTTON      "See Mob Info",ID_MOBINFO,61,28,71,14,WS_DISABLED
+    CONTROL         "Mob Info:",IDC_ONMOBINFO,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,7,30,46,10
+    CONTROL         "Force Flush Packet File",IDC_ForceFlush,"Button",
+                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,284,216,90,10
+    LTEXT           "Running: No",IDC_STAT_RUNNING2,7,54,77,8
+    LTEXT           "Opcodes Loaded: No",IDC_STAT_OPCODES,7,66,77,8
+END
+
+IDD_PRIVACY DIALOG DISCARDABLE  0, 0, 259, 146
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About Privacy Mode"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,202,125,50,14
+    LTEXT           "Privacy Mode is designed to allow you to packet collect without including your identity in the packet collection at all. When enabled it will selectively exclude packets which contain your characters name or guild from the collected files.",
+                    IDC_STATIC,7,7,245,27
+    LTEXT           "Your characters name is needed to be absolutely sure that it does not occurr anywhere in the file. ",
+                    IDC_STATIC,7,44,245,19
+    LTEXT           "Finally the Ignore World mode is designed to drop communications with the world server (character select), because we do not need this data at all.",
+                    IDC_STATIC,7,73,245,19
+END
+
+IDD_DIALOG1 DIALOG DISCARDABLE  0, 0, 226, 77
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Dialog"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "Yes",IDOK,169,56,50,14
+    PUSHBUTTON      "No",IDCANCEL,7,56,50,14
+    LTEXT           "Static",IDC_TEXT,7,7,212,39
+END
+
+IDD_MOBINFO DIALOG DISCARDABLE  0, 0, 318, 199
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "Mob Information"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,261,178,50,14
+    LTEXT           "Collected Mobs: (dont keep this window open, it will not update)",
+                    IDC_STATIC,7,7,201,8
+    LISTBOX         IDC_MOBLIST,7,18,304,154,NOT LBS_NOTIFY | LBS_SORT | 
+                    LBS_USETABSTOPS | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | 
+                    WS_TABSTOP
+END
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 1,0,0,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "\0"
+            VALUE "FileDescription", "EMUCollect MFC Application\0"
+            VALUE "FileVersion", "1, 0, 0, 1\0"
+            VALUE "InternalName", "EMUCollect\0"
+            VALUE "LegalCopyright", "Copyright (C) 2004\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OriginalFilename", "EMUCollect.EXE\0"
+            VALUE "ProductName", "EMUCollect Application\0"
+            VALUE "ProductVersion", "1, 0, 0, 1\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 228
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 48
+    END
+
+    IDD_EMUCOLLECT_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 365
+        VERTGUIDE, 275
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 123
+    END
+
+    IDD_PRIVACY, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 252
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 139
+    END
+
+    IDD_DIALOG1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 219
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 70
+    END
+
+    IDD_MOBINFO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 311
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 192
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_ABOUTBOX            "&About EMUCollect..."
+    IDP_SOCKETS_INIT_FAILED "Windows sockets initialization failed."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\EMUCollect.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

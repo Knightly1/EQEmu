@@ -51,7 +51,7 @@ public:
 	void SetZone(int32 iZoneID);
 	void SetConnectInfo();
 	int32 SendGroupIdRequest();
-	bool RezzPlayer(APPLAYER* rpack,int32 rezzexp, int16 opcode);
+	bool RezzPlayer(EQApplicationPacket* rpack,int32 rezzexp, int16 opcode);
 	int32	GetIP()		{ return tcpc->GetrIP(); }
 	int16	GetPort()	{ return tcpc->GetrPort(); }
 	bool	Connected()	{ return (pConnected && tcpc->Connected()); }

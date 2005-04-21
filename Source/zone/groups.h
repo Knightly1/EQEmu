@@ -35,8 +35,21 @@ enum {	//Group  action fields
 	groupActInviteInitial = 9
 };
 
-class Group /*: public Entity*/
-{
+class GroupIDConsumer {
+public:
+	GroupIDConsumer() { id = 0; }
+	GroupIDConsumer(uint32 gid) { id = gid; }
+	inline const int32 GetID()	const { return id; }
+	
+protected:
+	friend class EntityList;
+	//use of this function is highly discouraged
+	inline void SetID(int32 set_id) { id = set_id; }
+private:
+	int32 id;
+};
+
+class Group : public GroupIDConsumer {
 public:
 	Group(Mob* leader);
 	Group(int32 gid);
@@ -58,19 +71,18 @@ public:
 	void	SetLeader(Mob* newleader){ leader=newleader; };
 	Mob*	GetLeader(){ return leader; };
 	char*	GetLeaderName(){ return membername[0]; };
-	void	SendHPPackets(Mob* newmember);
+	void	SendHPPacketsTo(Mob* newmember);
+	void	SendHPPacketsFrom(Mob* newmember);
 	bool	UpdatePlayer(Mob* update);
 	void	MemberZoned(Mob* removemob);
 	bool	IsLeader(Mob* leadertest) { return leadertest==leader; };
 	int8	GroupCount();
 	int32	GetHighestLevel();
 	int32	GetLowestLevel();
-	void	QueuePacket(const APPLAYER *app, bool ack_req = true);
+	void	QueuePacket(const EQApplicationPacket *app, bool ack_req = true);
 	void	TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z);
 	bool	LearnMembers();
 	void	VerifyGroup();
-	
-	inline const int32 GetID()	const { return id; }
 	
 #ifdef ENABLE_GROUP_LINKING
 	//linking methods
@@ -99,11 +111,6 @@ private:
 #ifdef ENABLE_GROUP_LINKING
 	int32	link[MAX_GROUP_LINKS];
 #endif
-
-protected:
-	friend class EntityList;
-	inline void SetID(int32 set_id) { id = set_id; }
-	int32 id;
 };
 
 #endif

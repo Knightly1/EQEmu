@@ -38,24 +38,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 
 
 
-////////////////////////////////////
-// New EQ protocol opcodes
-////////////////////////////////////
-
-static const char OP_SessionRequest	=	0x01;
-static const char OP_SessionResponse	=	0x02;
-static const char OP_Combined		=	0x03;
-static const char OP_SessionDisconnect	=	0x05;
-static const char OP_KeepAlive		=	0x06;
-static const char OP_SessionStatRequest	=	0x07;
-static const char OP_SessionStatResponse=	0x08;
-static const char OP_Packet		=	0x09;
-static const char OP_Fragment		=	0x0d;
-static const char OP_OutOfOrderAck	=	0x11;
-static const char OP_Ack		=	0x15;
-static const char OP_AppCombined	=	0x19;
-
-
 //////////////////////////////////////
 // Zone.exe opcodes:
 //////////////////////////////////////
@@ -481,7 +463,6 @@ static const char OP_AppCombined	=	0x19;
 //////////////////////////////////////
 #define LiveOP_AckPacket			0x0017	// Appears to be generic ack at the presentation level
 #define LiveOP_WearChange			0x012c	// Client texture/color update
-
 
 ////////////////////////////
 // OLD opcodes:

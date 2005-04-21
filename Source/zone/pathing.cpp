@@ -849,7 +849,7 @@ else {
 void Client::SendPathPacket(vector<FindPerson_Point> &points) {
 	if(points.size() < 2) {
 		//empty length packet == not found.
-		APPLAYER outapp(OP_FindPersonReply, 0);
+		EQApplicationPacket outapp(OP_FindPersonReply, 0);
 		QueuePacket(&outapp);
 		return;
 	}
@@ -857,7 +857,7 @@ void Client::SendPathPacket(vector<FindPerson_Point> &points) {
 	printf("Sending a path packet with %d nodes.\n", points.size());
 	
 	int len = sizeof(FindPersonResult_Struct) + (points.size()+1) * sizeof(FindPerson_Point);
-	APPLAYER *outapp = new APPLAYER(OP_FindPersonReply, len);
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_FindPersonReply, len);
 	FindPersonResult_Struct* fpr=(FindPersonResult_Struct*)outapp->pBuffer;
 	
 printf("%d*%d + %d = %d\n", points.size(), sizeof(FindPerson_Point), sizeof(FindPersonResult_Struct), len);

@@ -357,7 +357,7 @@ void Client::SummonHorse(int16 spell_id) {
 	// Okay, lets say they have a horse now.
 	
 	
-	APPLAYER outapp;
+	EQApplicationPacket outapp;
 	horse->CreateHorseSpawnPacket(&outapp, GetName(), GetID());
 /*	// Doodman: Kludged in here instead of adding a field to PCType. FIXME!
 	NewSpawn_Struct* ns=(NewSpawn_Struct*)outapp->pBuffer;
@@ -391,7 +391,7 @@ void Client::SetHorseId(int16 horseid_in) {
 	horseId = horseid_in;
 }
 
-void Mob::CreateHorseSpawnPacket(APPLAYER* app, const char* ownername, uint16 ownerid, Mob* ForWho) {
+void Mob::CreateHorseSpawnPacket(EQApplicationPacket* app, const char* ownername, uint16 ownerid, Mob* ForWho) {
 	app->SetOpcode(OP_NewSpawn);
 	app->pBuffer = new uchar[sizeof(NewSpawn_Struct)];
 	app->size = sizeof(NewSpawn_Struct);

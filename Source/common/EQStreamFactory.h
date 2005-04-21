@@ -1,0 +1,54 @@
+#ifndef _EQSTREAMFACTORY_H
+
+#define _EQSTREAMFACTORY_H
+
+#include <queue>
+#include <map>
+#include "../common/EQStream.h"
+#include "../common/Condition.h"
+#include "../common/timeoutmgr.h"
+#include "../common/opcodemgr.h"
+
+void *EQStreamFactoryLoop(void *eqfs);
+
+class EQStreamFactory : private Timeoutable {
+	private:
+		int sock;
+		int Port;
+
+		bool ReaderRunning;
+		Mutex MReaderRunning;
+		bool WriterRunning;
+		Mutex MWriterRunning;
+
+		Condition WriterWork;
+
+		EQStreamType StreamType;
+		
+		queue<EQStream *> NewStreams;
+		Mutex MNewStreams;
+
+		map<string,EQStream *> Streams;
+
+		virtual void CheckTimeout();
+
+	public:
+		EQStreamFactory(EQStreamType type) : Timeoutable(5000) { ReaderRunning=false; WriterRunning=false; StreamType=type; }
+		EQStreamFactory(EQStreamType type, int port);
+
+		EQStream *Pop();
+		void Push(EQStream *s);
+
+		bool Open();
+		bool Open(unsigned long port) { Port=port; return Open(); }
+		void Close();
+		void ReaderLoop();
+		void WriterLoop();
+		void Stop() { StopReader(); StopWriter(); }
+		void StopReader() { MReaderRunning.lock(); ReaderRunning=false; MReaderRunning.unlock(); }
+		void StopWriter() { MWriterRunning.lock(); WriterRunning=false; MWriterRunning.unlock(); WriterWork.Signal(); }
+		void SignalWriter() { WriterWork.Signal(); }
+
+};
+
+#endif

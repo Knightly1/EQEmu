@@ -50,6 +50,7 @@ extern bool spells_loaded;
 #include "masterentity.h"
 #include "worldserver.h"
 #include "net.h"
+#include "../common/misc.h"
 #include "../common/database.h"
 #include "spdat.h"
 #include "../common/packet_dump.h"
@@ -89,7 +90,7 @@ extern GuildWars guildwars;
 extern RaidAddicts raidaddicts;
 #endif
 
-Client::Client(EQNetworkConnection* ieqnc)
+Client::Client(EQStream* ieqs)
 : Mob("No name",	// name
 	"",	// lastname
 	0,	// cur_hp
@@ -159,20 +160,21 @@ Client::Client(EQNetworkConnection* ieqnc)
 #endif
 	tribute_timer(Tribute_duration),
 #ifdef PACKET_UPDATE_MANAGER
-	update_manager(ieqnc),
+	update_manager(ieqs),
 #endif
 	proximity_timer(ClientProximity_interval)
 {
 	for(int cf=0;cf<21;cf++)
 		ClientFilters[cf]=0;
 	character_id = 0;
+	conn_state = NoPacketsReceived;
 	client_data_loaded = false;
 	feigned = false;
 	berserk = false;
 	dead = false;
-	eqnc = ieqnc;
-	ip = eqnc->GetrIP();
-	port = ntohs(eqnc->GetrPort());
+	eqs = ieqs;
+	ip = eqs->GetrIP();
+	port = ntohs(eqs->GetrPort());
 	client_state = CLIENT_CONNECTING;
 	Trader=false;
 	withcustomer=false;
@@ -205,7 +207,10 @@ Client::Client(EQNetworkConnection* ieqnc)
 	zonesummon_x = -2;
 	zonesummon_y = -2;
 	zonesummon_z = -2;
+	zonesummon_id = 0;
 	zonesummon_ignorerestrictions = 0;
+	zoning = false;
+	zone_mode = ZoneUnsolicited;
 	proximity_x = 9e100;	//arbitrary large number
 	proximity_y = 9e100;
 	proximity_z = 9e100;
@@ -218,7 +223,6 @@ Client::Client(EQNetworkConnection* ieqnc)
 	shield_timer.Disable();
 	dead_timer.Disable();
 	camp_timer.Disable();
-	zoning = false;
 	instalog = false;
 	pLastUpdate = 0;
 	pLastUpdateWZ = 0;
@@ -234,7 +238,6 @@ Client::Client(EQNetworkConnection* ieqnc)
 	horseId = 0;
 	tgb = false;
 	AbilityTimer=false;
-	memset(zonesummon_name, 0, sizeof(zonesummon_name));
 	tribute_master_id = 0xFFFFFFFF;
 	tribute_timer.Disable();
 	
@@ -258,6 +261,11 @@ Client::~Client() {
 	Object* object=GetTradeskillObject();
 	if(object)
 		object->Close();
+	
+	if(conn_state != ClientConnectFinished) {
+		LogFile->write(EQEMuLog::Debug, "Client '%s' was destroyed before reaching the connected state:", GetName());
+		ReportConnectingState();
+	}
 	
 #ifdef CLIENT_LOGS
 	client_logs.unsubscribeAll(this);
@@ -290,7 +298,7 @@ Client::~Client() {
 	if(isgrouped && !zoning)
 		LeaveGroup();
 	
-	eqnc->Free();
+	eqs->Free();
 	UpdateWho(2);
 	// we save right now, because the client might be zoning and the world
 	// will need this data right away
@@ -302,6 +310,38 @@ Client::~Client() {
 	guildwars.SetCurrentUsers(numclients);
 #endif
 	zone->RemoveAuth(GetName());
+}
+
+void Client::ReportConnectingState() {
+	switch(conn_state) {
+	case NoPacketsReceived:		//havent gotten anything
+		LogFile->write(EQEMuLog::Debug, "Client has not sent us an initial zone entry packet.");
+		break;
+	case ReceivedZoneEntry:		//got the first packet, loading up PP
+		LogFile->write(EQEMuLog::Debug, "Client sent initial zone packet, but we never got their player info from the database.");
+		break;
+	case PlayerProfileLoaded:	//our DB work is done, sending it
+		LogFile->write(EQEMuLog::Debug, "We were sending the player profile, tributes, tasks, spawns, time and weather, but never finished.");
+		break;
+	case ZoneInfoSent:		//includes PP, tributes, tasks, spawns, time and weather
+		LogFile->write(EQEMuLog::Debug, "We successfully sent player info and spawns, waiting for client to request new zone.");
+		break;
+	case NewZoneRequested:	//received and sent new zone request
+		LogFile->write(EQEMuLog::Debug, "We received client's new zone request, waiting for client spawn request.");
+		break;
+	case ClientSpawnRequested:	//client sent ReqClientSpawn
+		LogFile->write(EQEMuLog::Debug, "We received the client spawn request, and were sending objects, doors, zone points and some other stuff, but never finished.");
+		break;
+	case ZoneContentsSent:		//objects, doors, zone points
+		LogFile->write(EQEMuLog::Debug, "The rest of the zone contents were successfully sent, waiting for client ready notification.");
+		break;
+	case ClientReadyReceived:	//client told us its ready, send them a bunch of crap like guild MOTD, etc
+		LogFile->write(EQEMuLog::Debug, "We received client ready notification, but never finished Client::CompleteConnect");
+		break;
+	case ClientConnectFinished:	//client finally moved to finished state, were done here
+		LogFile->write(EQEMuLog::Debug, "  Client is successfully connected.");
+		break;
+	};
 }
 
 bool Client::Save(int8 iCommitNow) {
@@ -444,7 +484,7 @@ CLIENTPACKET::~CLIENTPACKET()
 }
 
 //this assumes we do not own pApp, and clones it.
-bool Client::AddPacket(const APPLAYER *pApp, bool bAckreq) {
+bool Client::AddPacket(const EQApplicationPacket *pApp, bool bAckreq) {
 	if (!pApp)
 		return false;
 	if(!zoneinpacket_timer.Enabled()) {
@@ -461,7 +501,7 @@ bool Client::AddPacket(const APPLAYER *pApp, bool bAckreq) {
 }
 
 //this assumes that it owns the object pointed to by *pApp
-bool Client::AddPacket(APPLAYER** pApp, bool bAckreq) {
+bool Client::AddPacket(EQApplicationPacket** pApp, bool bAckreq) {
 	if (!pApp || !(*pApp))
 		return false;
 	if(!zoneinpacket_timer.Enabled()) {
@@ -485,8 +525,8 @@ bool Client::SendAllPackets() {
 	iterator.Reset();
 	while(iterator.MoreElements()) {
 		cp = iterator.GetData();
-		if(eqnc)
-			eqnc->FastQueuePacket(&cp->app, cp->ack_req);
+		if(eqs)
+			eqs->FastQueuePacket(&cp->app, cp->ack_req);
 		iterator.RemoveCurrent();
 #if EQDEBUG >= 6
 		LogFile->write(EQEMuLog::Normal, "Transmitting a packet");
@@ -495,17 +535,20 @@ bool Client::SendAllPackets() {
 	return true;
 }
 
-void Client::QueuePacket(const APPLAYER* app, bool ack_req, CLIENT_CONN_STATUS required_state,int8 filter) {
+void Client::QueuePacket(const EQApplicationPacket* app, bool ack_req, CLIENT_CONN_STATUS required_state,int8 filter) {
+/*	if (app->opcode==0x9999) {
+		cout << "Sending an unknown opcode from: " << endl;
+		print_stacktrace();
+	}
+	if (app->opcode==OP_SkillUpdate) {
+		cout << "Sending OP_SkillUpdate from: " << endl;
+		print_stacktrace();
+	}
+*/
 	_ZP(Client_QueuePacket);
 	if(filter!=0){
 		if(GetFilter(filter)==0)
 			return; //Client has this filter on, no need to send packet
-	}
-	if (app != 0) {
-		if (app->size >= 31500) {
-			cout << "WARNING: abnormal packet size. n='" << this->GetName() << "', o=0x" << hex << app->GetOpcode() << dec << ", s=" << app->size << endl;
-			return;
-		}
 	}
 	if(client_state != CLIENT_CONNECTED && required_state == CLIENT_CONNECTED){
 		AddPacket(app, ack_req);
@@ -527,17 +570,11 @@ void Client::QueuePacket(const APPLAYER* app, bool ack_req, CLIENT_CONN_STATUS r
 //        LogFile->write(EQEMuLog::Normal, "Adding Packet to list (%d) (%d)", app->GetOpcode(), (int)required_state);
     }
     else
-	    if(eqnc)
-            eqnc->QueuePacket(app, ack_req);
+	    if(eqs)
+            eqs->QueuePacket(app, ack_req);
 }
 
-void Client::FastQueuePacket(APPLAYER** app, bool ack_req, CLIENT_CONN_STATUS required_state) {
-	if (app != 0 && (*app) != 0) {
-		if ((*app)->size >= 31500) {
-			cout << "WARNING: abnormal packet size. n='" << this->GetName() << "', o=0x" << hex << (*app)->GetOpcode() << dec << ", s=" << (*app)->size << endl;
-			return;
-		}
-	}
+void Client::FastQueuePacket(EQApplicationPacket** app, bool ack_req, CLIENT_CONN_STATUS required_state) {
 	
 	//cout << "Sending: 0x" << hex << setw(4) << setfill('0') << (*app)->GetOpcode() << dec << ", size=" << (*app)->size << endl;
 	
@@ -549,8 +586,8 @@ void Client::FastQueuePacket(APPLAYER** app, bool ack_req, CLIENT_CONN_STATUS re
 		return;
     }
     else {
-	    if(eqnc)
-            eqnc->FastQueuePacket(app, ack_req);
+	    if(eqs)
+            eqs->FastQueuePacket(app, ack_req);
 		else if (app && (*app))
 			delete *app;
 		*app = 0;
@@ -676,7 +713,7 @@ void Client::ChannelMessageSend(const char* from, const char* to, int8 chan_num,
 	vsnprintf(buffer, 4096, message, argptr);
 	va_end(argptr);
 
-	APPLAYER app(OP_ChannelMessage, sizeof(ChannelMessage_Struct)+strlen(buffer)+1);
+	EQApplicationPacket app(OP_ChannelMessage, sizeof(ChannelMessage_Struct)+strlen(buffer)+1);
 	ChannelMessage_Struct* cm = (ChannelMessage_Struct*)app.pBuffer;
 
 	if (from == 0)
@@ -702,7 +739,6 @@ void Client::ChannelMessageSend(const char* from, const char* to, int8 chan_num,
 
 	cm->chan_num = chan_num;
 	strcpy(&cm->message[0], buffer);
-	app.Deflate();
 	QueuePacket(&app);
 }
 
@@ -731,7 +767,7 @@ void Client::Message(uint32 type, const char* message, ...) {
 	}
 	
 	//uint32 len_packet = sizeof(SpecialMesg_Struct)+strlen(buffer)+1;
-	APPLAYER* app = new APPLAYER(OP_SpecialMesg, len_packet);
+	EQApplicationPacket* app = new EQApplicationPacket(OP_SpecialMesg, len_packet);
 	SpecialMesg_Struct* sm=(SpecialMesg_Struct*)app->pBuffer;
 	sm->header[0] = 0x04; // Header used for #emote style messages..
 	sm->header[1] = 0x04; // Play around with these to see other types
@@ -739,7 +775,6 @@ void Client::Message(uint32 type, const char* message, ...) {
 	sm->msg_type = type;
 	sm->target_spawn_id = this->GetID();
 	memcpy(sm->message, buffer, strlen(buffer));
-	app->Deflate();
 	
 	QueuePacket(app);
 	safe_delete(app);
@@ -882,7 +917,7 @@ bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
 #ifdef RAIDADDICTS
 	raidaddicts.UpdateRAPoints(points, theme, this);
 #endif
-	APPLAYER* outapp = new APPLAYER(OP_AdventurePointsUpdate, sizeof(AdventurePoints_Update_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_AdventurePointsUpdate, sizeof(AdventurePoints_Update_Struct));
 	AdventurePoints_Update_Struct* apus = (AdventurePoints_Update_Struct*)outapp->pBuffer;
 	apus->ldon_available_points = m_pp.ldon_available_points;
 	apus->ldon_guk_points = m_pp.ldon_guk_points;
@@ -899,109 +934,6 @@ bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
 }
 #endif
 
-void Client::MovePC(int32 zoneID, float x, float y, float z, int8 ignorerestrictions, bool summoned)
-{
-	MovePC(database.GetZoneName(zoneID), x, y, z, ignorerestrictions, summoned);
-}
-
-void Client::MovePC(const char* zonename, float x, float y, float z, int8 ignorerestrictions, bool summoned)
-{
-	//if (this->isgrouped && GetGroup() != 0)
-	//	GetGroup()->DelMember(this->CastToMob());
-#ifdef GUILDWARS
-if(admin == 0)
-{
-if(database.FindZoneKillTimeStamp(GetName(),zonename))
-{
-Message(0,"You died too recently there, you may not enter.");
-return;
-}
-}
-#endif
-	if(GetPetID() != 0 && zonename == 0) {
-		Mob *p = GetPet();
-		if(p != NULL) {
-			p->GMMove(x+15, y, z);	//so it dosent have to run across the map.
-		}
-	}
-	if (IsAIControlled() && zonename == 0) {
-		GMMove(x, y, z);
-		return;
-	}
-
-	zonesummon_ignorerestrictions = ignorerestrictions;
-	APPLAYER* outapp = new APPLAYER;
-
-	if (summoned == true) {
-		outapp->size = sizeof(GMSummon_Struct);
-		outapp->pBuffer = new uchar[outapp->size];
-		memset(outapp->pBuffer, 0, outapp->size);
-		GMSummon_Struct* gms = (GMSummon_Struct*) outapp->pBuffer;
-
-		strcpy(gms->charname, this->GetName());
-		strcpy(gms->gmname, this->GetName());
-
-		outapp->SetOpcode(OP_GMSummon);
-		gms->x = (sint32) x;
-		gms->y = (sint32) y;
-		gms->z = (sint32) z;
-
-		if (zonename == 0) {
-			gms->zoneID = zone->GetZoneID();
-		}
-		else {
-			gms->zoneID = database.GetZoneID(zonename);
-			strcpy(zonesummon_name, zonename);
-			zonesummon_x = x;
-			zonesummon_y = y;
-			zonesummon_z = z;
-		}
-		if (gms->zoneID != zone->GetZoneID()) {
-			zoning = true;
-		}
-	}
-	else {
-		outapp->size = sizeof(GMGoto_Struct);
-		outapp->pBuffer = new uchar[outapp->size];
-		memset(outapp->pBuffer, 0, outapp->size);
-		GMGoto_Struct* gmg = (GMGoto_Struct*) outapp->pBuffer;
-
-		strcpy(gmg->charname, this->GetName());
-		strcpy(gmg->gmname, this->GetName());
-
-		outapp->SetOpcode(OP_GMGoto);
-		gmg->x = (sint32) x;
-		gmg->y = (sint32) y;
-		gmg->z = (sint32) z;
-
-		if (zonename == 0) {
-            gmg->zoneID = zone->GetZoneID();
-        }
-        else {
-            gmg->zoneID = database.GetZoneID(zonename);
-            if (gmg->zoneID == 0)
-			{
-				Message(0, "Invalid zone name");
-				safe_delete(outapp);
-				return;
-			}
-			strcpy(zonesummon_name, zonename);
-            zonesummon_x = x;
-            zonesummon_y = y;
-            zonesummon_z = z;
-			if (gmg->zoneID != zone->GetZoneID()) {
-				zoning = true;
-	        }
-	    }
-	}
-	
-	outapp->priority = 6;
-	QueuePacket(outapp);
-	safe_delete(outapp);
-#ifdef PACKET_UPDATE_MANAGER   
-	update_manager.FlushQueues();
-#endif
-}
 
 void Client::SetSkill(int skillid, int8 value) {
 	if (skillid > HIGHEST_SKILL)
@@ -1009,7 +941,7 @@ void Client::SetSkill(int skillid, int8 value) {
 	m_pp.skills[skillid + 1] = value; // We need to be able to #setskill 254 and 255 to reset skills
 
 	if(value <= 252) {
-		APPLAYER* outapp = new APPLAYER(OP_SkillUpdate, sizeof(SkillUpdate_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SkillUpdate, sizeof(SkillUpdate_Struct));
 		SkillUpdate_Struct* skill = (SkillUpdate_Struct*)outapp->pBuffer;
 		skill->skillId=skillid;
 		skill->value=value;
@@ -1028,7 +960,7 @@ void Client::AddSkill(int skillid, int8 value) {
 }
 
 void Client::SendSound(){//-Cofruben:Makes a sound.
-	APPLAYER* outapp = new APPLAYER(OP_0x01a6, 68);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Sound, 68);
 	unsigned char x[68];
 	memset(x, 0, 68);
 	x[0]=0x22;
@@ -1136,7 +1068,7 @@ void Client::SetStats(int8 type,sint16 increase_val){
 		printf("Error in Client::SetStats, received invalid type of: %i\n",type); 
 		return;
 	}
-	APPLAYER* outapp = new APPLAYER(OP_IncreaseStats,sizeof(IncreaseStat_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_IncreaseStats,sizeof(IncreaseStat_Struct));
 	IncreaseStat_Struct* iss=(IncreaseStat_Struct*)outapp->pBuffer;
 	switch(type){
 		case STAT_STR:
@@ -1235,7 +1167,7 @@ void Client::SendManaUpdatePacket() {
 	//cout << "Sending mana update: " << (cur_mana - last_reported_mana) << endl;
 	if (last_reported_mana != cur_mana) {
 		
-		APPLAYER* outapp = new APPLAYER(OP_ManaChange, sizeof(ManaChange_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ManaChange, sizeof(ManaChange_Struct));
 		ManaChange_Struct* manachange = (ManaChange_Struct*)outapp->pBuffer;
 		manachange->new_mana = cur_mana;
 		manachange->stamina = 6000;
@@ -1290,52 +1222,52 @@ void Client::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 	// (update: i think pp should do it, as this holds LoY dye - plus, this is ugly code with Inventory!)
 	const Item_Struct* item = NULL;
 	const ItemInst* inst = NULL;
-	if ((inst = m_inv[SLOT_HANDS]) && inst->IsType(ItemTypeCommon)) {
+	if ((inst = m_inv[SLOT_HANDS]) && inst->IsType(ItemClassCommon)) {
 		item = inst->GetItem();
 		ns->spawn.equipment[MATERIAL_HANDS]	= item->Common.Material;
 		ns->spawn.dye_rgb[MATERIAL_HANDS].color	= item->Common.Color;
 	}
-	if ((inst = m_inv[SLOT_HEAD]) && inst->IsType(ItemTypeCommon)) {
+	if ((inst = m_inv[SLOT_HEAD]) && inst->IsType(ItemClassCommon)) {
 		item = inst->GetItem();
 		ns->spawn.equipment[MATERIAL_HEAD]	= item->Common.Material;
 		ns->spawn.dye_rgb[MATERIAL_HEAD].color	= item->Common.Color;
 	}
-	if ((inst = m_inv[SLOT_ARMS]) && inst->IsType(ItemTypeCommon)) {
+	if ((inst = m_inv[SLOT_ARMS]) && inst->IsType(ItemClassCommon)) {
 		item = inst->GetItem();
 		ns->spawn.equipment[MATERIAL_ARMS]	= item->Common.Material;
 		ns->spawn.dye_rgb[MATERIAL_ARMS].color	= item->Common.Color;
 	}
-	if ((inst = m_inv[SLOT_BRACER01]) && inst->IsType(ItemTypeCommon)) {
+	if ((inst = m_inv[SLOT_BRACER01]) && inst->IsType(ItemClassCommon)) {
 		item = inst->GetItem();
 		ns->spawn.equipment[MATERIAL_BRACER]= item->Common.Material;
 		ns->spawn.dye_rgb[MATERIAL_BRACER].color	= item->Common.Color;
 	}
-	if ((inst = m_inv[SLOT_BRACER02]) && inst->IsType(ItemTypeCommon)) {
+	if ((inst = m_inv[SLOT_BRACER02]) && inst->IsType(ItemClassCommon)) {
 		item = inst->GetItem();
 		ns->spawn.equipment[MATERIAL_BRACER]= item->Common.Material;
 		ns->spawn.dye_rgb[MATERIAL_BRACER].color	= item->Common.Color;
 	}
-	if ((inst = m_inv[SLOT_CHEST]) && inst->IsType(ItemTypeCommon)) {
+	if ((inst = m_inv[SLOT_CHEST]) && inst->IsType(ItemClassCommon)) {
 		item = inst->GetItem();
 		ns->spawn.equipment[MATERIAL_CHEST]	= item->Common.Material;
 		ns->spawn.dye_rgb[MATERIAL_CHEST].color	= item->Common.Color;
 	}
-	if ((inst = m_inv[SLOT_LEGS]) && inst->IsType(ItemTypeCommon)) {
+	if ((inst = m_inv[SLOT_LEGS]) && inst->IsType(ItemClassCommon)) {
 		item = inst->GetItem();
 		ns->spawn.equipment[MATERIAL_LEGS]	= item->Common.Material;
 		ns->spawn.dye_rgb[MATERIAL_LEGS].color	= item->Common.Color;
 	}
-	if ((inst = m_inv[SLOT_FEET]) && inst->IsType(ItemTypeCommon)) {
+	if ((inst = m_inv[SLOT_FEET]) && inst->IsType(ItemClassCommon)) {
 		item = inst->GetItem();
 		ns->spawn.equipment[MATERIAL_FEET]	= item->Common.Material;
 		ns->spawn.dye_rgb[MATERIAL_FEET].color	= item->Common.Color;
 	}
-	if ((inst = m_inv[SLOT_PRIMARY]) && inst->IsType(ItemTypeCommon)) {
+	if ((inst = m_inv[SLOT_PRIMARY]) && inst->IsType(ItemClassCommon)) {
 		item = inst->GetItem();
 		if (strlen(item->IDFile) > 2)
 			ns->spawn.equipment[MATERIAL_PRIMARY] = atoi(&item->IDFile[2]);
 	}
-	if ((inst = m_inv[SLOT_SECONDARY]) && inst->IsType(ItemTypeCommon)) {
+	if ((inst = m_inv[SLOT_SECONDARY]) && inst->IsType(ItemClassCommon)) {
 		item = inst->GetItem();
 		if (strlen(item->IDFile) > 2)
 			ns->spawn.equipment[MATERIAL_SECONDARY] = atoi(&item->IDFile[2]);
@@ -1375,7 +1307,7 @@ void Client::ChangeLastName(const char* in_lastname) {
 		strncpy(m_pp.last_name, in_lastname, sizeof(m_pp.last_name) - 1);
 	else
 		strcpy(m_pp.last_name, in_lastname);
-	APPLAYER* outapp = new APPLAYER(OP_GMLastName, sizeof(GMLastName_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GMLastName, sizeof(GMLastName_Struct));
 	GMLastName_Struct* gmn = (GMLastName_Struct*)outapp->pBuffer;
 	strcpy(gmn->name, name);
 	strcpy(gmn->gmname, name);
@@ -1408,7 +1340,7 @@ bool Client::ChangeFirstName(const char* in_firstname, const char* gmname)
 	Save();
 	
 	// send name update packet
-	APPLAYER* outapp = new APPLAYER(OP_GMNameChange, sizeof(GMName_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GMNameChange, sizeof(GMName_Struct));
 	GMName_Struct* gmn=(GMName_Struct*)outapp->pBuffer;
 	strncpy(gmn->gmname,gmname,64);
 	strncpy(gmn->oldname,GetName(),64);
@@ -1449,12 +1381,12 @@ void Client::ReadBook(BookRequest_Struct *book) {
 #if EQDEBUG >= 6
 		LogFile->write(EQEMuLog::Normal,"Client::ReadBook() textfile:%s Text:%s", txtfile, booktxt2.c_str());
 #endif
-		APPLAYER* outapp = new APPLAYER(OP_ReadBook, length + 3);
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ReadBook, length + 3);
 		
-		BookRequest_Struct *out = (BookRequest_Struct *) outapp->pBuffer;
+		BookText_Struct *out = (BookText_Struct *) outapp->pBuffer;
 		out->unknown0 = book->unknown0;
 		out->type = book->type;
-		memcpy(out->txtfile, booktxt2.c_str(), length);
+		memcpy(out->booktext, booktxt2.c_str(), length);
 		
 		QueuePacket(outapp);
 		safe_delete(outapp);
@@ -1462,7 +1394,7 @@ void Client::ReadBook(BookRequest_Struct *book) {
 }
 
 void Client::SendClientMoneyUpdate(int8 type,int32 amount){
-	APPLAYER* outapp = new APPLAYER(OP_TradeMoneyUpdate,sizeof(TradeMoneyUpdate_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_TradeMoneyUpdate,sizeof(TradeMoneyUpdate_Struct));
 	TradeMoneyUpdate_Struct* mus= (TradeMoneyUpdate_Struct*)outapp->pBuffer;
 	mus->amount=amount;
 	mus->trader=0;
@@ -1671,7 +1603,7 @@ int8 Mob::MaxSkill(int16 skillid, int16 class_, int16 level) {
 }
 */
 void Client::SendLevelAppearance(){
-	APPLAYER* outapp = new APPLAYER(OP_LevelAppearance, sizeof(LevelAppearance_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_LevelAppearance, sizeof(LevelAppearance_Struct));
 	LevelAppearance_Struct* la = (LevelAppearance_Struct*)outapp->pBuffer;
 	la->parm1 = 0x4D;
 	la->parm2 = la->parm1 + 1;
@@ -1689,6 +1621,7 @@ void Client::SendLevelAppearance(){
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
+
 void Client::SetPVP(bool toggle) {
 	m_pp.pvp = toggle ? 1 : 0;
 
@@ -1702,7 +1635,7 @@ void Client::SetPVP(bool toggle) {
 }
 
 void Client::WorldKick() {
-	APPLAYER* outapp = new APPLAYER(OP_GMKick, sizeof(GMKick_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GMKick, sizeof(GMKick_Struct));
 	GMKick_Struct* gmk = (GMKick_Struct *)outapp->pBuffer;
 	strcpy(gmk->name,GetName());
 	QueuePacket(outapp);
@@ -1711,7 +1644,7 @@ void Client::WorldKick() {
 }
 
 void Client::GMKill() {
-	APPLAYER* outapp = new APPLAYER(OP_GMKill, sizeof(GMKill_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GMKill, sizeof(GMKill_Struct));
 	GMKill_Struct* gmk = (GMKill_Struct *)outapp->pBuffer;
 	strcpy(gmk->name,GetName());
 	QueuePacket(outapp);
@@ -1726,7 +1659,7 @@ bool Client::CheckAccess(sint16 iDBLevel, sint16 iDefaultLevel) {
 }
 
 void Client::MemorizeSpell(int32 slot,int32 spellid,int32 scribing){
-	APPLAYER* outapp = new APPLAYER(OP_MemorizeSpell,sizeof(MemorizeSpell_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_MemorizeSpell,sizeof(MemorizeSpell_Struct));
 	MemorizeSpell_Struct* mss=(MemorizeSpell_Struct*)outapp->pBuffer;
 	mss->scribing=scribing;
 	mss->slot=slot;
@@ -1769,7 +1702,7 @@ void Client::LogMerchant(Client* player, Mob* merchant, Merchant_Purchase_Struct
 		memset(itemname,0,sizeof(itemid));
 		memset(itemquantity,0,sizeof(itemid));
 		itoa(mp->quantity,itemquantity,10);
-		itoa(item->ItemNumber,itemid,10);
+		itoa(item->ID,itemid,10);
 		itoa(mp->price,itemcost,20);
 		sprintf(itemname,"%s",item->Name);
 //		itoa(mp->price,itemcost,10);
@@ -1788,7 +1721,7 @@ void Client::LogMerchant(Client* player, Mob* merchant, Merchant_Purchase_Struct
 		memset(itemname,0,sizeof(itemid));
 		memset(itemquantity,0,sizeof(itemid));
 		itoa(mp->quantity,itemquantity,10);
-		itoa(item->ItemNumber,itemid,10);
+		itoa(item->ID,itemid,10);
 		sprintf(itemname,"%s",item->Name);
 		// @merth: struct change broke this
 		/*
@@ -1813,7 +1746,7 @@ void Client::LogLoot(Client* player, Corpse* corpse, const Item_Struct* item){
 	if (item!=0){
 		memset(itemid,0,sizeof(itemid));
 		memset(itemname,0,sizeof(itemid));
-		itoa(item->ItemNumber,itemid,10);
+		itoa(item->ID,itemid,10);
 		sprintf(itemname,"%s",item->Name);
 		logtext=itemname;
 		
@@ -1838,14 +1771,14 @@ void Client::LogLoot(Client* player, Corpse* corpse, const Item_Struct* item){
 
 
 bool Client::BindWound(Mob* bindmob, bool start, bool fail){
-	APPLAYER* outapp = 0;
+	EQApplicationPacket* outapp = 0;
 	if(!fail) {
-		outapp = new APPLAYER(OP_Bind_Wound, sizeof(BindWound_Struct));
+		outapp = new EQApplicationPacket(OP_Bind_Wound, sizeof(BindWound_Struct));
 		BindWound_Struct* bind_out = (BindWound_Struct*) outapp->pBuffer;
 		// Start bind
 		if(!bindwound_timer.Enabled()) {
 			//make sure we actually have a bandage... and consume it.
-			sint16 bslot = m_inv.HasItemByUse(ItemUseBandage, 1, invWhereWorn|invWherePersonal);
+			sint16 bslot = m_inv.HasItemByUse(ItemTypeBandage, 1, invWhereWorn|invWherePersonal);
 			if(bslot == SLOT_INVALID) {
 				bind_out->type = 3;
 				QueuePacket(outapp);
@@ -1986,7 +1919,7 @@ bool Client::BindWound(Mob* bindmob, bool start, bool fail){
 	}
 	else if (bindwound_timer.Enabled()) {
 		// You moved
-		outapp = new APPLAYER(OP_Bind_Wound, sizeof(BindWound_Struct));
+		outapp = new EQApplicationPacket(OP_Bind_Wound, sizeof(BindWound_Struct));
 		BindWound_Struct* bind_out = (BindWound_Struct*) outapp->pBuffer;
 		bindwound_timer.Disable();
 		bindwound_target = 0;
@@ -2001,7 +1934,7 @@ bool Client::BindWound(Mob* bindmob, bool start, bool fail){
 
 void Client::SetMaterial(sint16 in_slot, uint32 item_id){
 	const Item_Struct* item = database.GetItem(item_id);
-	if (item && (item->ItemClass==ItemTypeCommon)) {
+	if (item && (item->ItemClass==ItemClassCommon)) {
 		if (in_slot==SLOT_HEAD)
 			m_pp.item_material[MATERIAL_HEAD]		= item->Common.Material;
 		else if (in_slot==SLOT_CHEST)
@@ -2078,7 +2011,7 @@ void Client::ServerFilter(SetServerFilter_Struct* filter){
 // this version is for messages with no parameters
 void Client::Message_StringID(int32 type, int32 string_id, int32 distance)
 {
-	APPLAYER* outapp = new APPLAYER(OP_SimpleMessage,12);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_SimpleMessage,12);
 	SimpleMessage_Struct* sms = (SimpleMessage_Struct*)outapp->pBuffer;
 	sms->color=type;
 	sms->string_id=string_id;
@@ -2130,7 +2063,7 @@ void Client::Message_StringID(int32 type, int32 string_id,  const char* message1
 	for(argcount = length = 0; message_arg[argcount]; argcount++)
 		length += strlen(message_arg[argcount]) + 1;
 	
-	APPLAYER* outapp = new APPLAYER(OP_FormattedMessage, length+13);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_FormattedMessage, length+13);
 	FormattedMessage_Struct *fm = (FormattedMessage_Struct *)outapp->pBuffer;
 	fm->string_id = string_id;
 	fm->type = type;
@@ -2188,17 +2121,19 @@ bool Client::CheckCheat(){
 
 void Client::SetHideMe(bool flag)
 {
-	APPLAYER app;
+	EQApplicationPacket app;
 
 	gmhideme = flag;
 
 	if(gmhideme)
 	{
+		database.SetHideMe(AccountID(),false);
 		CreateDespawnPacket(&app);
 		entity_list.RemoveFromTargets(this);
 	}
 	else
 	{
+		database.SetHideMe(AccountID(),true);
 		CreateSpawnPacket(&app);
 	}
 
@@ -2291,12 +2226,14 @@ void Client::Escape()
 {
 	invisible = true;
 	entity_list.ClearFeignAggro(this);
-	APPLAYER* outapp = new APPLAYER(OP_0x0202,12);
-	uint8 rawData0[12] = { 0x5A, 0x01, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	memcpy(outapp->pBuffer,rawData0,12);
-	QueuePacket(outapp);
-	safe_delete(outapp);
-	outapp = new APPLAYER(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_SimpleMessage,12);
+	SimpleMessage_Struct *msg=(SimpleMessage_Struct *)outapp->pBuffer;
+	msg->color=0x010E;
+	msg->string_id=114;
+	FastQueuePacket(&outapp);
+
+	outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
 	SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
 	sa_out->spawn_id = GetID();
 	sa_out->type = 0x03;
@@ -2367,7 +2304,7 @@ void Client::Insight(int32 t_id)
 		Message(0,"You must get closer to your target!");
 		return;
 	}
-	if (!CheckLos(who))
+	if (!CheckLosFN(who))
 	{
 		Message(0,"You must be able to see your target!");
 		return;
@@ -2756,7 +2693,7 @@ void Client::DeleteCharInAdventure(int32 id,int32 qid) {
 void Client::SendAdventureFinish(uint32 state,uint32 points,bool grouptoo)
 {
 	if(GetAdventureID()==0)return;
-	APPLAYER* outapp = new APPLAYER(OP_AdventureFinish,sizeof(AdventureFinish_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_AdventureFinish,sizeof(AdventureFinish_Struct));
 	memset(outapp->pBuffer,0,outapp->size);
 	AdventureFinish_Struct* af=(AdventureFinish_Struct*)outapp->pBuffer;
 	AdventureInfo AI=database.GetAdventureInfo(GetAdventureID());
@@ -2797,7 +2734,7 @@ void Client::SendAdventureFinish(uint32 state,uint32 points,bool grouptoo)
 		safe_delete(outapp);
 	}
 }
-void Client::SendAdventureInfoRequest(const APPLAYER* app){
+void Client::SendAdventureInfoRequest(const EQApplicationPacket* app){
 	EntityId_Struct* eid = (EntityId_Struct*)app->pBuffer;
 	Mob* tmp = entity_list.GetMob(eid->entity_id);
 	char* buffer1;
@@ -2809,7 +2746,7 @@ void Client::SendAdventureInfoRequest(const APPLAYER* app){
 	strcpy(buffer1,p);
 	buffer1[strlen(p)]=0x00;
 	buffer1[strlen(p)+1]='\0';
-	APPLAYER* outapp = new APPLAYER(OP_AdventureInfo,strlen(buffer1)+1);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_AdventureInfo,strlen(buffer1)+1);
 	memset(outapp->pBuffer,0,outapp->size);
 	char* buffer=(char*)outapp->pBuffer;
 	memcpy(buffer,buffer1, strlen(buffer1)+1);
@@ -2821,7 +2758,7 @@ void Client::SendAdventureUpdate(){
 	AdventureInfo AF=database.GetAdventureInfo(GetAdventureID());
 	database.SetAdventureInfo(GetAdventureID(),true,AF.status+1);
 	AF.status+=1;
-	APPLAYER* outapp=new APPLAYER(OP_AdventureUpdate,8);
+	EQApplicationPacket* outapp=new EQApplicationPacket(OP_AdventureUpdate,8);
 	uchar* p=(uchar*)outapp->pBuffer;
 	memcpy(p,&AF.status,4);
 	p+=4;
@@ -2845,7 +2782,7 @@ void Client::SendAdventureRequest(){
 	int count=0;
 	char* buffer1;
 	AdventureInfo AF=database.GetAdventureInfo(0,GetAdventureID(),rd);
-	APPLAYER* outapp;
+	EQApplicationPacket* outapp;
 	bool flag=AF.in_use;
 	while(flag==true && count!=20){
 		if(flag==0)break;
@@ -2861,13 +2798,13 @@ void Client::SendAdventureRequest(){
 	if(count==20){
 		const char* p="There is no adventure available";
 		printf("%s\n", p);
-		outapp=new APPLAYER(OP_AdventureInfo,strlen(p)+1);
+		outapp=new EQApplicationPacket(OP_AdventureInfo,strlen(p)+1);
 		buffer1=new char[strlen(p)+1];
 		strcpy(buffer1,p);
 		buffer1[strlen(p)]=0x00;
 	}
 	else {
-		outapp = new APPLAYER(OP_AdventureDetails,strlen(AF.text)+1);
+		outapp = new EQApplicationPacket(OP_AdventureDetails,strlen(AF.text)+1);
 		buffer1=new char[strlen(AF.text)+1];
 		strcpy(buffer1,AF.text);
 		buffer1[strlen(AF.text)]=0x00;
@@ -2888,7 +2825,7 @@ void Client::SendAdventureRequestData(Group* group,bool EnteredDungeon,bool Ente
 		printf("adventure with id %i not found!\n",GetAdventureID());
 		return;
 	}
-	APPLAYER* outapp = new APPLAYER(OP_AdventureData,sizeof(AdventureRequestResponse_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_AdventureData,sizeof(AdventureRequestResponse_Struct));
 	memset(outapp->pBuffer,0,outapp->size);
 	AdventureRequestResponse_Struct* adrr=(AdventureRequestResponse_Struct*)outapp->pBuffer;
 	adrr->risk=1;

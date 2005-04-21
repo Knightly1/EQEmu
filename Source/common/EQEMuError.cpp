@@ -59,7 +59,7 @@ void AddEQEMuError(eEQEMuError iError, bool iExitNow) {
 	EQEMuErrorList->Append(tmp);
 
 	if (iExitNow)
-		CatchSignal(0);
+		CatchSignal(2);
 }
 
 void AddEQEMuError(char* iError, bool iExitNow) {
@@ -74,7 +74,7 @@ void AddEQEMuError(char* iError, bool iExitNow) {
 	EQEMuErrorList->Append(tmp);
 
 	if (iExitNow)
-		CatchSignal(0);
+		CatchSignal(2);
 }
 
 int32 CheckEQEMuError() {

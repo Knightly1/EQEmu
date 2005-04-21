@@ -21,7 +21,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #define COMMAND_H
 
 #include "../common/seperator.h"
-#include "../common/EQNetwork.h"
+#include "../common/EQStream.h"
 #include "client.h"
 
 #define	COMMAND_CHAR	'#'
@@ -249,7 +249,7 @@ void command_qglobal(Client *c, const Seperator *sep);
 void command_fear(Client *c, const Seperator *sep);
 void command_path(Client *c, const Seperator *sep);
 void command_ginfo(Client *c, const Seperator *sep);
-void command_reloadops(Client *c, const Seperator *sep);
+void command_opcode(Client *c, const Seperator *sep);
 
 #ifdef GUILDWARS
 void command_zonelocations(Client *c, const Seperator *sep);

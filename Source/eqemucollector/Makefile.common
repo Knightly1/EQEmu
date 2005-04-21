@@ -1,0 +1,38 @@
+OBJS=eqemucollector.o .obj/EQStream.o .obj/EQPacket.o .obj/misc.o .obj/CRC16.o \
+  EQStreamPair.o PluginManager.o ../common/SharedLibrary.o .obj/Mutex.o \
+  .obj/unix.o StreamPairManager.o .obj/timeoutmgr.o .obj/timer.o \
+  climain.o PacketHandler.o .obj/opcodemgr.o ../common/emu_opcodes.o \
+  ../common/Condition.o
+
+PLUGS=dump_packet.so dump_packet_header.so dump_packetfiles.so watch_packet.so \
+   dump_unknowns.so dump_pf_privacy.so
+
+all: eqemucollector plugins
+
+eqemucollector: $(OBJS) 
+	g++ -o $@ $^ $(LDFLAGS)
+
+plugins: $(PLUGS)
+
+dump_packetfiles.so: dump_packetfiles.cpp .obj/packetfile.o
+	g++ $(CXXFLAGS) -shared -Wl,-soname,$@ -o $@ $^
+
+dump_pf_privacy.so: dump_pf_privacy.cpp .obj/packetfile.o
+        g++ $(CXXFLAGS) -shared -Wl,-soname,$@ -o $@ $^
+
+clean:
+	rm -f eqemucollector $(OBJS) $(PLUGS)
+
+#general plugin rule
+%.so: %.cpp PacketHandler.h
+	g++ $(CXXFLAGS) -shared -Wl,-soname,$@ -o $@ $< 
+
+
+.obj/%.o: ../common/%.cpp ../common/%.h
+	mkdir -p .obj
+	g++ $(CXXFLAGS) -c $< -o $@
+
+%.o: %.cpp %.h
+	mkdir -p .obj
+	g++ $(CXXFLAGS) -c $< -o $@
+

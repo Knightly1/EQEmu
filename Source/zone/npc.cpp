@@ -167,7 +167,28 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	//Trumpcard:  Gives low end monsters no regen if set to 0 in database. Should make low end monsters killable
 	//Might want to lower this to /5 rather than 10.
 	if(hp_regen == 0)
-		hp_regen = (int)( moblevel / 10 );
+	{
+		if(GetLevel() <= 6)  
+            hp_regen = 1;  
+       else if(GetLevel() > 6 && GetLevel() <= 10)  
+            hp_regen = 2;  
+       else if(GetLevel() > 10 && GetLevel() <= 15)  
+            hp_regen = 3;  
+       else if(GetLevel() > 15 && GetLevel() <= 20)  
+            hp_regen = 5;  
+       else if(GetLevel() > 20 && GetLevel() <= 30)  
+            hp_regen = 7;  
+       else if(GetLevel() > 30 && GetLevel() <= 35)  
+            hp_regen = 9;  
+       else if(GetLevel() > 35 && GetLevel() <= 40)  
+            hp_regen = 12;  
+       else if(GetLevel() > 40 && GetLevel() <= 45)  
+            hp_regen = 18;  
+       else if(GetLevel() > 45 && GetLevel() <= 50)  
+            hp_regen = 21;  
+       else if(GetLevel() > 50)  
+            hp_regen = 30;
+	}
 	
     CalcMaxMana();
     SetMana(GetMaxMana());
@@ -385,7 +406,7 @@ void NPC::QueryLoot(Client* to) {
 	for(; cur != end; cur++) {
 		const Item_Struct* item = database.GetItem((*cur)->item_id);
 		if (item)
-		    to->Message(0, "  %d: %s", item->ItemNumber, item->Name);
+		    to->Message(0, "  %d: %s", item->ID, item->Name);
 		else
 		    LogFile->write(EQEMuLog::Error, "Database error, invalid item");
 		x++;
@@ -1506,7 +1527,7 @@ int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn
 			break;
 		}
 		case 3: { // delete spawn from spawning - khuong
-			if (RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND x>'%.3f' AND x<'%.3f' AND y>'%.3f' AND y<'%.3f'", zone, spawn->GetSpawnX()-0.01f, spawn->GetSpawnX()+0.01f,spawn->GetSpawnY()-0.01f,spawn->GetSpawnY()+0.01f), errbuf, &result)) {
+			if (!RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND spawngroupID=%i", zone, spawn->GetSp2()), errbuf, &result)) {
 				safe_delete_array(query);
 				return 0;
 			}
@@ -1541,7 +1562,7 @@ int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn
 			break;
 		}
 		case 4: { //delete spawn from DB (including npc_type) - khuong
-			if (RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND x>'%.3f' AND x<'%.3f' AND y>'%.3f' AND y<'%.3f'", zone, spawn->GetSpawnX()-0.01f, spawn->GetSpawnX()+0.01f,spawn->GetSpawnY()-0.01f,spawn->GetSpawnY()+0.01f), errbuf, &result)) {
+			if (!RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND spawngroupID=%i", zone, spawn->GetSp2()), errbuf, &result)) {
 				safe_delete_array(query);
 				return(0);
 			}
@@ -1667,12 +1688,12 @@ void NPC::PickPocket(Client* thief) {
 			{
 				inst = ItemInst::Create(item, citem->charges);
 				int slot_id = thief->GetInv().FindFreeSlot(false, true, inst->GetItem()->Size);
-				if (/*!Equipped(item->ItemNumber) &&*/
-					 !item->loreflag && !item->Common.Magic && item->NoDrop != 0 && !inst->IsType(ItemTypeContainer) && slot_id != SLOT_INVALID 
+				if (/*!Equipped(item->ID) &&*/
+					 !item->LoreFlag && !item->Common.Magic && item->NoDrop != 0 && !inst->IsType(ItemClassContainer) && slot_id != SLOT_INVALID 
 					/*&& steal_skill > item->Common.StealSkill*/ )
 				{
 					slot[x] = slot_id;
-					steal_items[x] = item->ItemNumber;
+					steal_items[x] = item->ID;
 					if (inst->IsStackable())
 						charges[x] = 1;
 					else
@@ -1684,15 +1705,15 @@ void NPC::PickPocket(Client* thief) {
 		if (x > 0)
 		{
 			int random = MakeRandomInt(0, x-1);
-			const Item_Struct* item = database.GetItem(steal_items[random]);
-			inst = ItemInst::Create(item,charges[random]);
+			inst = ItemInst::Create(steal_items[random], charges[random]);
+			const Item_Struct* item = inst->GetItem();
 
 			if (/*item->Common.StealSkill || */steal_skill >= stealchance)
 			{
 				thief->Message_StringID(0,12903,item->Name,0);
 				thief->PutItemInInventory(slot[random], *inst);
 				thief->SendItemPacket(slot[random], inst, ItemPacketTrade);
-				RemoveItem(item->ItemNumber);
+				RemoveItem(item->ID);
 			}
 			else
 			{

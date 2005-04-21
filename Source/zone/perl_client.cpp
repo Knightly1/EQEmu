@@ -31,6 +31,7 @@
 #include "../common/debug.h"
 
 #include "client.h"
+#include "../common/debug.h"
 
 XS(XS_Client_SendSound); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_SendSound)

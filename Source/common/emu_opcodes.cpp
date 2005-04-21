@@ -23,7 +23,12 @@ const char *OpcodeNames[_maxEmuOpcode+1] = {
 	
 //a preprocessor hack so we dont have to maintain two lists
 #define N(x) #x
-#include "emu_oplist.h"
+#if !defined(LOGIN) && !defined(CHAT) && !defined(MAIL)
+	#include "emu_oplist.h"
+#endif
+#ifdef LOGIN
+	#include "login_oplist.h"
+#endif
 #undef N
 	
 	""

@@ -75,7 +75,7 @@
 	#define DebugBreak()			if(0) {}
 #endif
 
-#if defined(WIN32) && defined(PACKETCOLLECTOR)
+#if defined(WIN32) && ( defined(PACKETCOLLECTOR) || defined(COLLECTOR) )
 	// Packet Collector on win32 requires winsock2.h due to latest pcap.h
 	// winsock2.h must come before windows.h
 	#include <winsock2.h>

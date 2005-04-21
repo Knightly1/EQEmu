@@ -660,6 +660,17 @@ bool Database::LoadFactionValues_result(MYSQL_RES* result, LinkedList<FactionVal
 //o--------------------------------------------------------------
 char* BuildFactionMessage(sint32 tmpvalue, sint32 faction_id, sint32 totalvalue)
 {
+/*
+
+This should be replaced to send string-ID based messages using:
+#define FACTION_WORST 469 //Your faction standing with %1 could not possibly get any worse.
+#define FACTION_WORSE 470 //Your faction standing with %1 got worse.
+#define FACTION_BEST 471 //Your faction standing with %1 could not possibly get any better.
+#define FACTION_BETTER 472 //Your faction standing with %1 got better.
+
+some day.
+
+*/
 	//tmpvalue is the change as best I can tell.
 	char *faction_message = 0;
 

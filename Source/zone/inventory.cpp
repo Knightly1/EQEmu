@@ -94,10 +94,10 @@ uint32 Client::NukeItem(uint32 itemnum) {
 bool Client::CheckLoreConflict(const Item_Struct* item) {
 	if (!item)
 		return false;
-	if (!(item->attribs & ItemAttribLore))
+	if (!(item->LoreFlag))
 		return false;
 	
-	return (m_inv.HasItem(item->ItemNumber) != SLOT_INVALID);
+	return (m_inv.HasItem(item->ID) != SLOT_INVALID);
 }
 
 void Client::SummonItem(uint32 item_id, sint8 charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5) {
@@ -111,7 +111,8 @@ void Client::SummonItem(uint32 item_id, sint8 charges, uint32 aug1, uint32 aug2,
 	bool foundlore = CheckLoreConflict(item);
 	
 	// Checking to see if it is a GM only Item or not.
-	bool foundgm = (item->gm && (this->Admin() < 100));
+	//bool foundgm = (item->gm && (this->Admin() < 100));
+	bool foundgm = false;
 	
 	if (!foundlore && !foundgm) { // Okay, It isn't LORE, or if it is, it is not in player's inventory.
 		ItemInst* inst = ItemInst::Create(item, charges);
@@ -119,6 +120,8 @@ void Client::SummonItem(uint32 item_id, sint8 charges, uint32 aug1, uint32 aug2,
 			// Custom logic for SummonItem
 			if ((inst->GetCharges()==0))// && inst->IsStackable())
 				inst->SetCharges(1);
+			if ((inst->GetCharges()>0))
+				inst->SetCharges(inst->GetCharges());
 			if (aug1) {
 				ItemCommonInst aug(aug1);
 				((ItemCommonInst *)inst)->PutAugment(1,aug1);
@@ -215,7 +218,7 @@ void Client::DropInst(const ItemInst* inst)
 uint32 Client::GetItemIDAt(sint16 slot_id) {
 	const ItemInst* inst = m_inv[slot_id];
 	if (inst)
-		return inst->GetItem()->ItemNumber;
+		return inst->GetItem()->ID;
 	
 	// None found
 	return INVALID_ID;
@@ -244,7 +247,7 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 	if(client_update)
 	{
 /*
-		APPLAYER *outapp = new APPLAYER(OP_MoveItem, sizeof(MoveItem_Struct));
+		EQApplicationPacket *outapp = new EQApplicationPacket(OP_MoveItem, sizeof(MoveItem_Struct));
 		MoveItem_Struct *mi = (MoveItem_Struct *)outapp->pBuffer;
 		mi->from_slot = slot_id;
 		mi->to_slot = 256;
@@ -253,7 +256,7 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 		safe_delete(outapp);
 */
 		if (inst && inst->GetCharges()) {
-			APPLAYER* outapp = new APPLAYER(OP_ConsumeAmmo, sizeof(MoveItem_Struct));
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_ConsumeAmmo, sizeof(MoveItem_Struct));
 			MoveItem_Struct* delitem	= (MoveItem_Struct*)outapp->pBuffer;
 			delitem->from_slot			= slot_id;
 			delitem->to_slot			= 0xFFFFFFFF;
@@ -263,7 +266,7 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 			safe_delete(outapp);
 		}
 		else {
-			APPLAYER* outapp = new APPLAYER(OP_MoveItem, sizeof(MoveItem_Struct));
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoveItem, sizeof(MoveItem_Struct));
 			MoveItem_Struct* delitem	= (MoveItem_Struct*)outapp->pBuffer;
 			delitem->from_slot			= slot_id;
 			delitem->to_slot			= 0xFFFFFFFF;
@@ -335,11 +338,11 @@ bool Client::TryStacking(ItemInst* item, int8 type, bool try_worn, bool try_curs
 	if(!item || !item->IsStackable() || item->GetCharges()>=20)
 		return false;
 	sint16 i;
-	int32 item_id = item->GetItem()->ItemNumber;
+	int32 item_id = item->GetItem()->ID;
 	for (i = 22; i <= 29; i++)
 	{
 		ItemInst* tmp_inst = m_inv.GetItem(i);	
-		if(tmp_inst && tmp_inst->GetItem()->ItemNumber == item_id && tmp_inst->GetCharges() < ITEM_MAX_STACK){
+		if(tmp_inst && tmp_inst->GetItem()->ID == item_id && tmp_inst->GetCharges() < ITEM_MAX_STACK){
 			MoveItemCharges(*item, i, type);
 			CalcBonuses();
 			if(item->GetCharges())	// we didn't get them all
@@ -354,7 +357,7 @@ bool Client::TryStacking(ItemInst* item, int8 type, bool try_worn, bool try_curs
 			int16 slotid = Inventory::CalcSlotId(i, j);
 			ItemInst* tmp_inst = m_inv.GetItem(slotid);
 
-			if(tmp_inst && tmp_inst->GetItem()->ItemNumber == item_id && tmp_inst->GetCharges() < ITEM_MAX_STACK){
+			if(tmp_inst && tmp_inst->GetItem()->ID == item_id && tmp_inst->GetCharges() < ITEM_MAX_STACK){
 				MoveItemCharges(*item, slotid, type);
 				CalcBonuses();
 				if(item->GetCharges())	// we didn't get them all
@@ -371,7 +374,7 @@ bool Client::TryStacking(ItemInst* item, int8 type, bool try_worn, bool try_curs
 bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_cursor, ServerLootItem_Struct** bag_item_data)
 {
 	// #1: Try to auto equip
-	if (try_worn && inst.IsEquipable(GetRace(), GetClass()) && inst.GetItem()->Common.RequiredLevel<=level)
+	if (try_worn && inst.IsEquipable(GetRace(), GetClass()) && inst.GetItem()->Common.ReqLevel<=level)
 
 	{
 		for (sint16 i = 0; i < 22; i++)
@@ -380,7 +383,7 @@ bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_curs
 			{
 				if( i == SLOT_PRIMARY && inst.IsWeapon() ) // If item is primary slot weapon
 				{
-					if( (inst.GetItem()->Common.ItemUse == ItemUse2HS) || (inst.GetItem()->Common.ItemUse == ItemUse2HB) || (inst.GetItem()->Common.ItemUse == ItemUse2HPierce) ) // and uses 2hs \ 2hb \ 2hp
+					if( (inst.GetItem()->Common.ItemType == ItemType2HS) || (inst.GetItem()->Common.ItemType == ItemType2HB) || (inst.GetItem()->Common.ItemType == ItemType2HPierce) ) // and uses 2hs \ 2hb \ 2hp
 					{
 						if( m_inv[SLOT_SECONDARY] ) // and if secondary slot is not empty
 						{
@@ -390,8 +393,8 @@ bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_curs
 				}
 				if( i== SLOT_SECONDARY && m_inv[SLOT_PRIMARY]) // check to see if primary slot is a two hander
 				{
-					int8 use = m_inv[SLOT_PRIMARY]->GetItem()->Common.ItemUse;
-					if(use == ItemUse2HS || use == ItemUse2HB || use == ItemUse2HPierce)
+					int8 use = m_inv[SLOT_PRIMARY]->GetItem()->Common.ItemType;
+					if(use == ItemType2HS || use == ItemType2HB || use == ItemType2HPierce)
 						continue;
 				}
 				if
@@ -421,7 +424,7 @@ bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_curs
 	}
 
 	// #3: put it in inventory
-	sint16 slot_id = m_inv.FindFreeSlot(inst.IsType(ItemTypeContainer), try_cursor, inst.GetItem()->Size);
+	sint16 slot_id = m_inv.FindFreeSlot(inst.IsType(ItemClassContainer), try_cursor, inst.GetItem()->Size);
 	if (slot_id != SLOT_INVALID)
 	{
 		PutLootInInventory(slot_id, inst, bag_item_data);
@@ -466,12 +469,12 @@ void Client::SendItemLink(const ItemInst* inst, bool send_to_all)
 	
 	const Item_Struct* item = inst->GetItem();
 	const char* name2 = &item->Name[0];
-	APPLAYER* outapp = new APPLAYER(OP_ItemLinkText,strlen(name2)+68);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ItemLinkText,strlen(name2)+68);
 	char buffer2[135] = {0};
 	char itemlink[135] = {0};
 	sprintf(itemlink,"%c0%06u0%05u-%05u-%05u-%05u-%05u00000000%c",
 		0x12,
-		item->ItemNumber,
+		item->ID,
 		inst->GetAugmentItemID(0),
 		inst->GetAugmentItemID(1),
 		inst->GetAugmentItemID(2),
@@ -485,11 +488,10 @@ void Client::SendItemLink(const ItemInst* inst, bool send_to_all)
 	if (send_to_all==false)
 		return;
 	const char* charname = this->GetName();
-	outapp = new APPLAYER(OP_ItemLinkText,strlen(itemlink)+14+strlen(charname));
+	outapp = new EQApplicationPacket(OP_ItemLinkText,strlen(itemlink)+14+strlen(charname));
 	char buffer3[150] = {0};
 	sprintf(buffer3,"%c%c%c%c%c%c%c%c%c%c%c%c%6s%c%s",0x00,0x00,0x00,0x00,0xD2,0x01,0x00,0x00,0x00,0x00,0x00,0x00,charname,0x00,itemlink);
 	memcpy(outapp->pBuffer,buffer3,outapp->size);
-	outapp->Deflate();
 	entity_list.QueueCloseClients(this->CastToMob(),outapp,true,200,0,false);
 	safe_delete(outapp);
 }
@@ -509,9 +511,9 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 		DeleteItemInInventory(move_in->from_slot);
 		return true; // Item deletetion
 	}
-	if(auto_attack && (move_in->from_slot == SLOT_PRIMARY || move_in->from_slot == SLOT_SECONDARY))
+	if(auto_attack && (move_in->from_slot == SLOT_PRIMARY || move_in->from_slot == SLOT_SECONDARY || move_in->from_slot == SLOT_RANGE))
 		SetAttackTimer();
-	else if(auto_attack && (move_in->to_slot == SLOT_PRIMARY || move_in->to_slot == SLOT_SECONDARY))
+	else if(auto_attack && (move_in->to_slot == SLOT_PRIMARY || move_in->to_slot == SLOT_SECONDARY || move_in->to_slot == SLOT_RANGE))
 		SetAttackTimer();
 	// Step 1: Variables
 	sint16 src_slot_id = (sint16)move_in->from_slot;
@@ -536,7 +538,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	ItemInst* src_inst = m_inv.GetItem(src_slot_id);
 	ItemInst* dst_inst = m_inv.GetItem(dst_slot_id);
 	if (src_inst){
-		srcitemid = src_inst->GetItem()->ItemNumber;
+		srcitemid = src_inst->GetItem()->ID;
 		SetTint(dst_slot_id,src_inst->GetColor());
 		if (src_inst->GetCharges() > 0 && (src_inst->GetCharges() < (sint16)move_in->number_in_stack || move_in->number_in_stack > 20))
 		{
@@ -545,7 +547,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 		}
 	}
 	if (dst_inst) {
-		dstitemid = dst_inst->GetItem()->ItemNumber;
+		dstitemid = dst_inst->GetItem()->ID;
 	}
 	if (Trader && srcitemid>0){
 		ItemInst* srcbag;
@@ -553,7 +555,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 		if (src_slot_id>=250 && src_slot_id<330){
 			srcbag=m_inv.GetItem(((int)(src_slot_id/10))-3);
 			if(srcbag)
-				srcbagid=srcbag->GetItem()->ItemNumber;
+				srcbagid=srcbag->GetItem()->ID;
 		}
 		
 		if (srcitemid==17899 || srcbagid==17899){
@@ -598,7 +600,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 				const Item_Struct* src_item = src_inst->GetItem();
 				if (world_item && (int32)world_item!=0xFEEEFEEE && src_item) {
 					// Case 2: Same item on cursor, stacks, transfer of charges needed
-					if ((world_item->ItemNumber == src_item->ItemNumber) && src_inst->IsStackable()) {
+					if ((world_item->ID == src_item->ID) && src_inst->IsStackable()) {
 						sint8 world_charges = world_inst->GetCharges();
 						sint8 src_charges = src_inst->GetCharges();
 						
@@ -680,7 +682,10 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 			
 			// Depleted all charges?
 			if (src_inst->GetCharges() < 1)
+			{
+				database.SaveInventory(CharacterID(),NULL,src_slot_id);
 				m_inv.DeleteItem(src_slot_id);
+			}
 		}
 		else {
 			// Nothing in destination slot: split stack into two
@@ -700,7 +705,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	else {
 		// Not dealing with charges - just do direct swap
 		if(src_inst && dst_slot_id<22 && dst_slot_id>0)
-			SetMaterial(dst_slot_id,src_inst->GetItem()->ItemNumber);
+			SetMaterial(dst_slot_id,src_inst->GetItem()->ID);
 		m_inv.SwapItem(src_slot_id, dst_slot_id);
 	}
 	
@@ -753,13 +758,13 @@ void Client::DyeArmor(DyeStruct* dye){
 			}
 		}
 	}
-	APPLAYER* outapp=new APPLAYER(OP_Dye,0);
+	EQApplicationPacket* outapp=new EQApplicationPacket(OP_Dye,0);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	Save();
 }
 
-/*bool Client::DecreaseByItemUse(int32 type, int8 amt) {
+/*bool Client::DecreaseByItemType(int32 type, int8 amt) {
 	const Item_Struct* TempItem = 0;
 	ItemInst* ins;
 	int x;
@@ -769,7 +774,7 @@ void Client::DyeArmor(DyeStruct* dye){
 		ins = GetInv().GetItem(x);
 		if (ins)
 			TempItem = ins->GetItem();
-		if (TempItem && TempItem->Common.ItemUse == type)
+		if (TempItem && TempItem->Common.ItemType == type)
 		{
 			if (ins->GetCharges() < amt)
 			{
@@ -791,7 +796,7 @@ void Client::DyeArmor(DyeStruct* dye){
 		ins = GetInv().GetItem(x);
 		if (ins)
 			TempItem = ins->GetItem();
-		if (TempItem && TempItem->Common.ItemUse == type)
+		if (TempItem && TempItem->Common.ItemType == type)
 		{
 			if (ins->GetCharges() < amt)
 			{
@@ -823,7 +828,7 @@ bool Client::DecreaseByID(int32 type, int8 amt) {
 		ins = GetInv().GetItem(x);
 		if (ins)
 			TempItem = ins->GetItem();
-		if (TempItem && TempItem->ItemNumber == type)
+		if (TempItem && TempItem->ID == type)
 		{
 			num += ins->GetCharges();
 			if (num >= amt)
@@ -840,7 +845,7 @@ bool Client::DecreaseByID(int32 type, int8 amt) {
 		ins = GetInv().GetItem(x);
 		if (ins)
 			TempItem = ins->GetItem();
-		if (TempItem && TempItem->ItemNumber == type)
+		if (TempItem && TempItem->ID == type)
 		{
 			if (ins->GetCharges() < amt)
 			{
@@ -963,7 +968,7 @@ sint32 Client::GetEquipment(int8 material_slot)
 
 	if(item != 0)
 	{
-		return item->GetItem()->ItemNumber;
+		return item->GetItem()->ID;
 	}
 
 	return -1;
@@ -1012,10 +1017,10 @@ bool Client::LootToStack(int32 itemid) {  //Loots stackable items to existing st
 	for (i=22; i<=29; i++) {
 		item = GetItemAt(i);
 		if (item) {
-			if (m_pp.invitemproperties[i].charges < 20 && item->ItemNumber == itemid)
+			if (m_pp.invitemproperties[i].charges < 20 && item->ID == itemid)
 			{
 				m_pp.invitemproperties[i].charges += 1;
-				APPLAYER* outapp = new APPLAYER(OP_PlaceItem, sizeof(Item_Struct));
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_PlaceItem, sizeof(Item_Struct));
 				memcpy(outapp->pBuffer, item, outapp->size);
 				Item_Struct* outitem = (Item_Struct*) outapp->pBuffer;
 				outitem->equipSlot = i;
@@ -1029,11 +1034,11 @@ bool Client::LootToStack(int32 itemid) {  //Loots stackable items to existing st
 	for (i=0; i<=pp_containerinv_size; i++) {
 		if (m_pp.containerinv[i] != 0xFFFF) {
 			item = database.GetItem(m_pp.containerinv[i]);
-			if (m_pp.bagitemproperties[i].charges < 20 && item->ItemNumber == itemid)
+			if (m_pp.bagitemproperties[i].charges < 20 && item->ID == itemid)
 			{
 				m_pp.bagitemproperties[i].charges += 1;
 
-				APPLAYER* outapp = new APPLAYER(OP_PlaceItem, sizeof(Item_Struct));
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_PlaceItem, sizeof(Item_Struct));
 				memcpy(outapp->pBuffer, item, outapp->size);
 				Item_Struct* outitem = (Item_Struct*) outapp->pBuffer;
 				outitem->equipSlot = 250+i;
@@ -1058,12 +1063,12 @@ void Client::SendItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType
 	string packet = inst->Serialize(slot_id);
 	
 	EmuOpcode opcode = OP_Unknown;
-	APPLAYER* outapp = NULL;
+	EQApplicationPacket* outapp = NULL;
 	ItemPacket_Struct* itempacket = NULL;
 	
 	// Construct packet
 	opcode = (packet_type==ItemPacketViewLink) ? OP_ItemLinkResponse : OP_ItemPacket;
-	outapp = new APPLAYER(opcode, packet.length()+5);
+	outapp = new EQApplicationPacket(opcode, packet.length()+5);
 	itempacket = (ItemPacket_Struct*)outapp->pBuffer;
 	memcpy(itempacket->SerializedItem, packet.c_str(), packet.length());
 	itempacket->PacketType = packet_type;
@@ -1071,15 +1076,11 @@ void Client::SendItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType
 #if EQDEBUG >= 9
 		DumpPacket(outapp);
 #endif
-	//outapp->Deflate();
-		if(slot_id >= 22)
-			outapp->priority = 6;
 	//DumpPacket(outapp);
-	QueuePacket(outapp);
-	safe_delete(outapp);
+	FastQueuePacket(&outapp);
 }
 
-APPLAYER* Client::ReturnItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type)
+EQApplicationPacket* Client::ReturnItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type)
 {
 	if (!inst)
 		return 0;
@@ -1088,12 +1089,12 @@ APPLAYER* Client::ReturnItemPacket(sint16 slot_id, const ItemInst* inst, ItemPac
 	string packet = inst->Serialize(slot_id);
 	
 	EmuOpcode opcode = OP_Unknown;
-	APPLAYER* outapp = NULL;
+	EQApplicationPacket* outapp = NULL;
 	BulkItemPacket_Struct* itempacket = NULL;
 	
 	// Construct packet
 	opcode = OP_ItemPacket;
-	outapp = new APPLAYER(opcode, packet.length()+1);
+	outapp = new EQApplicationPacket(opcode, packet.length()+1);
 	itempacket = (BulkItemPacket_Struct*)outapp->pBuffer;
 	memcpy(itempacket->SerializedItem, packet.c_str(), packet.length());
 

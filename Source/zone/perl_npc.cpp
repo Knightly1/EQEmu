@@ -33,6 +33,7 @@
 typedef const char Const_char;
 
 #include "npc.h"
+#include "../common/debug.h"
 
 XS(XS_NPC_CheckNPCFactionAlly); /* prototype to pass -Wmissing-prototypes */
 XS(XS_NPC_CheckNPCFactionAlly)

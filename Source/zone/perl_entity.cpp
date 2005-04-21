@@ -31,6 +31,7 @@
 #include "../common/debug.h"
 
 #include "entity.h"
+#include "../common/debug.h"
 
 XS(XS_EntityList_GetMobID); /* prototype to pass -Wmissing-prototypes */
 XS(XS_EntityList_GetMobID)

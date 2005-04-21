@@ -1,5 +1,5 @@
 /*  EQEMu:  Everquest Server Emulator
-    Copyright (C) 2001-2004  EQEMu Development Team (http://eqemulator.net)
+    Copyright (C) 2001-2005  EQEMu Development Team (http://eqemulator.net)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -449,7 +449,7 @@ bool QuestManager::isdisctome(int item_id) {
 		return(false);
 	}
 	
-	if(item->ItemClass != ItemTypeCommon || item->Common.ItemUse != ItemUseSpell) {
+	if(item->ItemClass != ItemClassCommon || item->Common.ItemType != ItemTypeSpell) {
 		return(false);
 	}
 	
@@ -476,7 +476,7 @@ bool QuestManager::isdisctome(int item_id) {
 		return(false);
 	}
 	
-	int32 spell_id = item->Common.SpellId;
+	int32 spell_id = item->Common.Scroll.Effect;
 	if(!IsValidSpell(spell_id)) {
 		return(false);
 	}
@@ -497,12 +497,12 @@ bool QuestManager::isdisctome(int item_id) {
 
 void QuestManager::safemove() {
 	if (initiator && initiator->IsClient())
-		initiator->MovePC(zone->GetShortName(),database.GetSafePoint(zone->GetShortName(),"x"),database.GetSafePoint(zone->GetShortName(),"y"),database.GetSafePoint(zone->GetShortName(),"z"));
+		initiator->GoToSafeCoords(zone->GetZoneID());
 }
 
 void QuestManager::rain(int weather) {
 	zone->zone_weather = weather;
-	APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 	*((int32*) &outapp->pBuffer[4]) = (int32) weather; // Why not just use 0x01/2/3?
 	entity_list.QueueClients(npc, outapp);
 	safe_delete(outapp);
@@ -510,7 +510,7 @@ void QuestManager::rain(int weather) {
 
 void QuestManager::snow(int weather) {
 	zone->zone_weather = weather + 1;
-	APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 	outapp->pBuffer[0] = 0x01;
 	*((int32*) &outapp->pBuffer[4]) = (int32)weather;
 	entity_list.QueueClients(initiator, outapp);
@@ -568,7 +568,7 @@ void QuestManager::scribespells() {
 }
 
 void QuestManager::givecash(int copper, int silver, int gold, int platinum) {
-	APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct)); 
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct)); 
 	moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer; 
 	d->response      = 1; 
 	d->unknown1      = 0x5a; 
@@ -662,7 +662,7 @@ void QuestManager::movegrp(int zoneid, float x, float y, float z) {
 			g->TeleportGroup(initiator, zoneid, x, y, z);
 		}
 		else {
-			if (initiator) initiator->MovePC(zoneid, x, y, z);
+			initiator->MovePC(zoneid, x, y, z);
 		}
 	}
 }
@@ -732,7 +732,7 @@ void QuestManager::faction(int faction_id, int faction_value) {
 void QuestManager::setsky(uint8 new_sky) {
 	if (zone)
 		zone->newzone_data.sky = new_sky;
-	APPLAYER* outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
 	memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 	entity_list.QueueClients(initiator, outapp);
 	safe_delete(outapp);
@@ -799,11 +799,11 @@ Code:
 sprintf(hashstr, "%d%s%d%d", id, name, weight, booktype); 
 */
 
-// MYRA - added itemlink(ItemNumber) command
+// MYRA - added itemlink(ID) command
 	const Item_Struct* item = 0; 
 	int16 itemid = item_id; 
 	item = database.GetItem(itemid); 
-	initiator->Message(0, "%s tells you, '%c00%i %s%c",npc->GetName(),0x12, item->ItemNumber, item->Name, 0x12);
+	initiator->Message(0, "%s tells you, '%c00%i %s%c",npc->GetName(),0x12, item->ID, item->Name, 0x12);
 }
 
 void QuestManager::signalwith(int npc_id, int signal_id, int wait_ms) {

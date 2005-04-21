@@ -1,19 +1,19 @@
 APP=world
-SF=../common/EQNetwork.o \
+SF=.obj/EQStreamFactory.o .obj/EQPacket.o ../common/CRC16.o .obj/EQStream.o \
    ../common/timer.o ../common/packet_dump.o ../common/races.o ../common/unix.o \
    ../common/Mutex.o ../common/MiscFunctions.o ../common/serverinfo.o ../common/packet_functions.o \
    ../common/classes.o ../common/TCPConnection.o ../common/eqtime.o ../common/crc32.o \
    client.o net.o console.o zoneserver.o LoginServer.o ../common/md5.o ../common/dbcore.o \
    ../common/dbasync.o ../common/EMuShareMem.o ../common/EQEMuError.o ../common/misc.o \
    .obj/debug.o .obj/database.o .obj/Item.o ../common/extprofile.o ../common/timeoutmgr.o \
-   ../common/Condition.o ../common/opcodemgr.o ../common/emu_opcodes.o
+   ../common/Condition.o .obj/opcodemgr.o ../common/emu_opcodes.o ../common/SharedLibrary.o
 
 MYSQL_CFLAGS=-I'/usr/local/include/mysql'
 
 CC=gcc
 LINKER=gcc
 DFLAGS=-DDEBUG=5 -DSHAREMEM -DCATCH_CRASH -DNO_PIDLOG -DFIELD_ITEMS -DFREEBSD -D__USE_UNIX98
-WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -Wcomment -Wcast-align -Winline -Wno-deprecated
+WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -Wcomment -Wcast-align -Wno-deprecated
 
 #pthreads
 #MYSQL_LIBS=-L'/usr/local/lib/mysql' -lmysqlclient -lz -lcrypt -lm
@@ -37,19 +37,9 @@ clean:
 
 %.o: %.cpp
 	$(CC) -c $(COPTS) $< -o $@
-	
 
-.obj/debug.o: ../common/debug.cpp ../common/debug.h
+.obj/%.o: ../common/%.cpp ../common/%.h
 	mkdir -p .obj
-	$(CC) $(COPTS) -c ../common/debug.cpp  -o .obj/debug.o
-
-
-.obj/database.o: ../common/database.cpp ../common/database.h
-	mkdir -p .obj
-	$(CC) $(COPTS) -c ../common/database.cpp  -o .obj/database.o
-
-.obj/Item.o: ../common/Item.cpp ../common/Item.h
-	mkdir -p .obj
-	$(CC) $(COPTS) -c ../common/Item.cpp  -o .obj/Item.o
+	$(CC) $(COPTS) -c $< -o $@
 
 

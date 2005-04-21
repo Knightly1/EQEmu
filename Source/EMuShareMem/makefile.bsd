@@ -1,4 +1,3 @@
-# Generated automatically from Makefile.in by configure.
 APP=libEMuShareMem.so
 SF=MMFMutex.o Doors.o Items.o Spells.o NPCFactionLists.o MMF.o Loot.o ../common/timer.o ../common/unix.o ../common/EMuShareMem.o Opcodes.o
 

@@ -44,6 +44,16 @@ typedef map<sint16, ItemInst*>::const_iterator			iter_inst;
 typedef map<uint8, ItemCommonInst*>::const_iterator		iter_augment;
 typedef map<uint8, ItemInst*>::const_iterator			iter_bag;
 
+namespace ItemField {
+	enum {
+		serialization=0,
+#define F(x) x,
+#include "item_fieldlist.h"
+#undef F
+		updated
+	};
+};
+
 // Indexing positions into item material arrays
 #define MATERIAL_HEAD		0
 #define MATERIAL_CHEST		1
@@ -300,25 +310,31 @@ public:
 	/////////////////////////
 	
 	// Constructors/Destructor
-	ItemInst(const Item_Struct* item = NULL, sint16 charges = 0) {
+	ItemInst(const Item_Struct* item = NULL, const unsigned char* item_s = NULL, sint16 charges = 0) {
 		m_use_type = ItemUseNormal;
 		m_item = item;
+		m_item_serialization = item_s;
 		m_charges = charges;
 		m_price = 0;
+		m_instnodrop = false;
 		m_merchantslot = 0;
-		if(m_item &&m_item->ItemClass == ItemTypeCommon)
+		if(m_item &&m_item->ItemClass == ItemClassCommon)
 			m_color = m_item->Common.Color;
 		else
 			m_color = 0;
 	}
+	
+	ItemInst(const Item_Struct* item = NULL, sint16 charges = 0);
 	
 	ItemInst(uint32 item_id, sint16 charges = 0);
 	
 	ItemInst(ItemUseType use_type) {
 		m_use_type = use_type;
 		m_item = NULL;
+		m_item_serialization = NULL;
 		m_charges = 0;
 		m_price = 0;
+		m_instnodrop = false;
 		m_merchantslot = 0;
 		m_color = 0;
 	}
@@ -326,14 +342,11 @@ public:
 	virtual ~ItemInst() {}
 	
 	// Query item type
-	virtual bool IsType(ItemType item_type) const;
-	
-	// Query Attribute of item
-	virtual bool IsAttrib(ItemAttrib attribs) const;
+	virtual bool IsType(ItemClass item_class) const;
 	
 	// Can item be stacked?
 	virtual bool IsStackable() const;
-	
+
 	// Can item be equipped by/at?
 	virtual bool IsEquipable(int16 race, int16 class_) const;
 	virtual bool IsEquipable(sint16 slot_id) const;
@@ -348,7 +361,7 @@ public:
 	virtual string Serialize(sint16 slot_id) const;
 	
 	// Accessors
-	const uint32 GetID() const { return m_item->ItemNumber; }
+	const uint32 GetID() const { return m_item->ID; }
 	const Item_Struct* GetItem() const		{ return m_item; }
 	void SetItem(const Item_Struct* item)	{ m_item = item; }
 	
@@ -367,6 +380,10 @@ public:
 	sint16 GetCurrentSlot() const			{ return m_currentslot; }
 	void SetCurrentSlot(sint16 curr_slot)   { m_currentslot = curr_slot; }
 
+	// Is this item already attuned?
+	bool IsInstNoDrop() const { return m_instnodrop; }
+	void SetInstNoDrop(bool flag) { m_instnodrop=flag; }
+
 	// Allows treatment of this object as though it were a pointer to m_item
 	operator bool() const { return (m_item != NULL); }
 	
@@ -381,7 +398,7 @@ public:
 	static ItemInst* Create(uint32 item_id, sint16 charges=0, uint32 aug1=0, uint32 aug2=0, uint32 aug3=0, uint32 aug4=0, uint32 aug5=0);
 	static ItemInst* Create(const Item_Struct* item, sint16 charges=0, uint32 aug1=0, uint32 aug2=0, uint32 aug3=0, uint32 aug4=0, uint32 aug5=0);
 	
-	
+	bool IsSlotAllowed(sint16 slot_id) const;
 protected:
 	//////////////////////////
 	// Protected Members
@@ -389,11 +406,13 @@ protected:
 	
 	ItemUseType			m_use_type;	// Usage type for item
 	const Item_Struct*	m_item;		// Ptr to item data
+	const unsigned char*	m_item_serialization;		// Ptr to item serialization
 	sint16				m_charges;	// # of charges for chargeable items
 	uint32				m_price;	// Bazaar /trader price
 	uint32				m_color;
 	uint32				m_merchantslot;
 	sint16				m_currentslot;
+	bool 				m_instnodrop;
 };
 
 
@@ -411,6 +430,7 @@ public:
 	
 	// Constructors/Destructor
 	ItemCommonInst(const Item_Struct* item = NULL, sint16 charges = 0, uint32 aug1 = 0, uint32 aug2 = 0, uint32 aug3 = 0, uint32 aug4 = 0, uint32 aug5 = 0);
+	ItemCommonInst(const Item_Struct* item = NULL, const unsigned char* item_s = NULL, sint16 charges = 0, uint32 aug1 = 0, uint32 aug2 = 0, uint32 aug3 = 0, uint32 aug4 = 0, uint32 aug5 = 0);
 	ItemCommonInst(uint32 item_id, sint16 charges = 0, uint32 aug1 = 0, uint32 aug2 = 0, uint32 aug3 = 0, uint32 aug4 = 0, uint32 aug5 = 0);
 	ItemCommonInst(const ItemCommonInst& copy);
 	virtual ~ItemCommonInst();
@@ -425,7 +445,7 @@ public:
 	// Augements
 	inline bool IsAugmentable() const { return m_item->Common.AugSlotType[0]!=0; }
 	sint8 AvailableAugmentSlot(sint32 augtype) const;
-	inline sint32 GetAugmentType() const { return m_item->Common.augtype; }
+	inline sint32 GetAugmentType() const { return m_item->Common.AugType; }
 	
 	// Has attack/delay?
 	virtual bool IsWeapon() const;
@@ -454,6 +474,8 @@ public:
 	
 	// Clone current item
 	virtual ItemInst* Clone() const;
+
+	bool IsSlotAllowed(sint16 slot_id);
 	
 	
 protected:
@@ -489,6 +511,7 @@ public:
 	/////////////////////////
 	
 	// Constructors/Destructor
+	ItemContainerInst(const Item_Struct* item = NULL, const unsigned char* item_s = NULL, sint16 charges = 0) : ItemInst(item, item_s, charges) {}
 	ItemContainerInst(const Item_Struct* item = NULL, sint16 charges = 0) : ItemInst(item, charges) {}
 	ItemContainerInst(uint32 item_id, sint16 charges = 0) : ItemInst(item_id, charges) {}
 	ItemContainerInst(ItemUseType use_type) : ItemInst(use_type) {}
@@ -520,13 +543,15 @@ public:
 	//Remove items based on their flags
 	//the three flag types (nodrop, norent, flags) are ORed
 	//but all the flags in flags_set must be set to match that
-	void ClearByFlags(byFlagSetting is_nodrop, byFlagSetting is_norent, byFlagSetting is_flags = byFlagIgnore, ItemAttrib flags_set = ItemAttribUnknown);
+	void ClearByFlags(byFlagSetting is_nodrop, byFlagSetting is_norent);
 	
 	// Query item type
-	virtual bool IsType(ItemType item_type) const;
+	virtual bool IsType(ItemClass item_class) const;
 	
 	// Clone current item
 	virtual ItemInst* Clone() const;
+
+	uint8 FirstOpenSlot() const;
 	
 	
 protected:
@@ -565,6 +590,7 @@ public:
 	/////////////////////////
 	
 	// Constructors/Destructor
+	ItemBookInst(const Item_Struct* item = NULL, const unsigned char* item_s = NULL, sint16 charges = 0) : ItemInst(item, item_s, charges) {}
 	ItemBookInst(const Item_Struct* item = NULL, sint16 charges = 0) : ItemInst(item, charges) {}
 	ItemBookInst(uint32 item_id, sint16 charges = 0) : ItemInst(item_id, charges) {}
 	virtual ~ItemBookInst() {}

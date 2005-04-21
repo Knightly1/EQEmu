@@ -56,6 +56,7 @@ typedef enum {
 	//					...
 	BT_SwarmPet			= 63,	//is this valid, or made up?
 	//					...
+	BT_InvisMan			= 66,	//seen on 'InvisMan'
 	BT_Special			= 67
 } bodyType;
 /* bodytypes above 64 make the mob not show up */

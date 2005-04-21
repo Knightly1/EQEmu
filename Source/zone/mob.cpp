@@ -102,9 +102,10 @@ Mob::Mob(const char*   in_name,
 
 		 ) : 
 		attack_timer(2000),
+		attack_dw_timer(2000),
+		ranged_timer(2000),
 		tic_timer(6000),
 		mana_timer(2000),
-		attack_dw_timer(2000),
 		spellend_timer(0),
 		stunned_timer(0),
 		bardsong_timer(6000),
@@ -115,7 +116,7 @@ Mob::Mob(const char*   in_name,
 	//	mezzed_timer(0)
 {
 	targeted = false;
-logpos = false;
+	logpos = false;
 	tar_ndx=0;
 	tar_vector=0;
 	tar_vx=0;
@@ -372,7 +373,7 @@ Mob::~Mob()
 	for (int i=0; i<SPECATK_MAXNUM ; i++) {
 		safe_delete(SpecAttackTimers[i]);
 	}
-	APPLAYER app;
+	EQApplicationPacket app;
 	CreateDespawnPacket(&app);
 	Corpse* corpse = entity_list.GetCorpseByID(GetID());
 	if(!corpse || (corpse && !corpse->IsPlayerCorpse()))
@@ -572,7 +573,7 @@ char Mob::GetCasterClass() {
 	}
 }
 
-void Mob::CreateSpawnPacket(APPLAYER* app, Mob* ForWho) {
+void Mob::CreateSpawnPacket(EQApplicationPacket* app, Mob* ForWho) {
 	app->SetOpcode(OP_NewSpawn);
 	app->size = sizeof(NewSpawn_Struct);
 	app->pBuffer = new uchar[app->size];
@@ -581,8 +582,7 @@ void Mob::CreateSpawnPacket(APPLAYER* app, Mob* ForWho) {
 	FillSpawnStruct(ns, ForWho);
 }
 
-
-void Mob::CreateSpawnPacket(APPLAYER* app, NewSpawn_Struct* ns) {
+void Mob::CreateSpawnPacket(EQApplicationPacket* app, NewSpawn_Struct* ns) {
 	app->SetOpcode(OP_NewSpawn);
 	app->size = sizeof(NewSpawn_Struct);
 	
@@ -702,6 +702,7 @@ void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 	//ns->spawn.trap_type	= bodytype;
 	//ns->spawn.walkspeed	= walkspeed;
 	//ns->spawn.runspeed	= runspeed;
+	ns->spawn.last_name[0] = '\0';
 
 	if(IsNPC())
 		ns->spawn.aa_title = 0xFF;
@@ -723,14 +724,14 @@ void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 	//0xff,0x33,0x33,0x33,0x3f                  A0,3f
 	//value of FF in chMemCpy222 causes npcs to wear helms
 
-	for(i = 0; i < 9; i++)
+	for(i = 0; i < 7; i++)
 	{
 		ns->spawn.equipment[i] = GetEquipmentMaterial(i);
 		ns->spawn.dye_rgb[i].color = GetEquipmentColor(i);
 	}
 }
 
-void Mob::CreateDespawnPacket(APPLAYER* app)
+void Mob::CreateDespawnPacket(EQApplicationPacket* app)
 {
 	app->SetOpcode(OP_DeleteSpawn);
 	app->size = sizeof(DeleteSpawn_Struct);
@@ -740,7 +741,7 @@ void Mob::CreateDespawnPacket(APPLAYER* app)
 	ds->spawn_id = GetID();
 }
 
-void Mob::CreateHPPacket(APPLAYER* app)
+void Mob::CreateHPPacket(EQApplicationPacket* app)
 { 
 	this->IsFullHP=(cur_hp>=max_hp); 
 	app->SetOpcode(OP_SendHPTarget); 
@@ -793,7 +794,7 @@ void Mob::CreateHPPacket(APPLAYER* app)
 // sends hp update of this mob to people who might care
 void Mob::SendHPUpdate()
 {
-	APPLAYER hp_app;
+	EQApplicationPacket hp_app;
 	Group *group;
 	
 	// destructor will free the pBuffer
@@ -809,8 +810,7 @@ void Mob::SendHPUpdate()
 	if(IsGrouped())
 	{
 		group = entity_list.GetGroupByMob(this);
-		if(group)
-			group->QueuePacket(&hp_app, false);
+		group->SendHPPacketsFrom(this);
 	}	
 
 	// send to master
@@ -829,7 +829,7 @@ void Mob::SendHPUpdate()
 	// send to self - we need the actual hps here
 	if(IsClient())
 	{
-		APPLAYER* hp_app2 = new APPLAYER(OP_HPUpdate,sizeof(SpawnHPUpdate_Struct));
+		EQApplicationPacket* hp_app2 = new EQApplicationPacket(OP_HPUpdate,sizeof(SpawnHPUpdate_Struct));
 		SpawnHPUpdate_Struct* ds = (SpawnHPUpdate_Struct*)hp_app2->pBuffer; 
 		ds->cur_hp = CastToClient()->GetHP() - itembonuses.HP;
 		ds->spawn_id = GetID();
@@ -841,9 +841,9 @@ void Mob::SendHPUpdate()
 
 // this one just warps the mob to the current location
 void Mob::SendPosition() {
-	APPLAYER* app = new APPLAYER(OP_MobUpdate, sizeof(SpawnPositionUpdate_Struct));
-	SpawnPositionUpdate_Struct* spu = (SpawnPositionUpdate_Struct*)app->pBuffer;	
-	MakeSpawnUpdate(spu);
+	EQApplicationPacket* app = new EQApplicationPacket(OP_ClientUpdate, sizeof(PlayerPositionUpdateServer_Struct));
+	PlayerPositionUpdateServer_Struct* spu = (PlayerPositionUpdateServer_Struct*)app->pBuffer;	
+	MakeSpawnUpdateNoDelta(spu);
 //?	spu->heading *= 8;
 #ifdef PACKET_UPDATE_MANAGER
 	entity_list.QueueManaged(this, app, true);
@@ -855,9 +855,9 @@ void Mob::SendPosition() {
 
 // this one just warps the mob to the current location
 void Mob::SendAllPosition() {
-	APPLAYER* app = new APPLAYER(OP_MobUpdate, sizeof(SpawnPositionUpdate_Struct));
-	SpawnPositionUpdate_Struct* spu = (SpawnPositionUpdate_Struct*)app->pBuffer;	
-	MakeSpawnUpdate(spu);
+	EQApplicationPacket* app = new EQApplicationPacket(OP_ClientUpdate, sizeof(PlayerPositionUpdateServer_Struct));
+	PlayerPositionUpdateServer_Struct* spu = (PlayerPositionUpdateServer_Struct*)app->pBuffer;	
+	MakeSpawnUpdateNoDelta(spu);
 //?	spu->heading *= 8;
 	entity_list.QueueClients(this, app, true);
 	safe_delete(app);
@@ -865,32 +865,34 @@ void Mob::SendAllPosition() {
 
 // this one is for mobs on the move, with deltas - this makes them walk
 void Mob::SendPosUpdate(int8 iSendToSelf) {
-	APPLAYER* app = new APPLAYER(OP_ClientUpdate, sizeof(PlayerPositionUpdateServer_Struct));
+	EQApplicationPacket* app = new EQApplicationPacket(OP_ClientUpdate, sizeof(PlayerPositionUpdateServer_Struct));
 	PlayerPositionUpdateServer_Struct* spu = (PlayerPositionUpdateServer_Struct*)app->pBuffer;
 	MakeSpawnUpdate(spu);
 	if (iSendToSelf == 2) {
 		if (this->IsClient())
-			this->CastToClient()->FastQueuePacket(&app);
+			this->CastToClient()->FastQueuePacket(&app,false);
 	}
 	else
 #ifdef PACKET_UPDATE_MANAGER
-		entity_list.QueueManaged(this, app, (iSendToSelf==0));
+		entity_list.QueueManaged(this, app, (iSendToSelf==0),false);
 #else
-		entity_list.QueueCloseClients(this, app, (iSendToSelf==0), 800);
+		entity_list.QueueCloseClients(this, app, (iSendToSelf==0), 800, NULL, false);
 #endif
 	safe_delete(app);
 }
 
 // this is for SendPosition()
-void Mob::MakeSpawnUpdate(SpawnPositionUpdate_Struct *spu){
-//if(logpos) {
+void Mob::MakeSpawnUpdateNoDelta(PlayerPositionUpdateServer_Struct *spu){
 	spu->spawn_id	= GetID();
-	spu->y		= FloatToEQ19(y_pos);
-	spu->x		= FloatToEQ19(x_pos);
-	spu->z		= FloatToEQ19(z_pos);
+	spu->y_pos		= FloatToEQ19(x_pos);
+	spu->x_pos		= FloatToEQ19(y_pos);
+	spu->z_pos		= FloatToEQ19(z_pos);
+	spu->delta_x	= FloatToEQ13(0);
+	spu->delta_y	= FloatToEQ13(0);
+	spu->delta_z	= FloatToEQ13(0);
 	spu->heading	= FloatToEQ19(heading);
-	spu->u3=0;
-	spu->unused2=15;
+	spu->animation	= 0;
+	spu->delta_heading = FloatToEQ13(0);
 }
 
 // this is for SendPosUpdate()
@@ -934,7 +936,7 @@ void Mob::ShowStats(Client* client) {
 			int32 spawngroupid = 0;
 			if(this->CastToNPC()->respawn2 != 0)
 				spawngroupid = this->CastToNPC()->respawn2->SpawnGroupID();
-			client->Message(0, "  NPCID: %u  SpawnGroupID: %u LootTable: %u  FactionID: %i  SpellsID: %u", this->GetNPCTypeID(),spawngroupid, this->CastToNPC()->GetLoottableID(), this->CastToNPC()->GetNPCFactionID(), this->GetNPCSpellsID());
+			client->Message(0, "  NPCID: %u  SpawnGroupID: %u LootTable: %u  FactionID: %i  SpellsID: %u MerchantID: %i", this->GetNPCTypeID(),spawngroupid, this->CastToNPC()->GetLoottableID(), this->CastToNPC()->GetNPCFactionID(), this->GetNPCSpellsID(),this->CastToNPC()->MerchantType);
 		}
 		if (this->IsAIControlled()) {
 			client->Message(0, "  AIControlled: AggroRange: %1.0f  AssistRange: %1.0f", this->GetAggroRange(), this->GetAssistRange());
@@ -943,7 +945,7 @@ void Mob::ShowStats(Client* client) {
 }
 
 void Mob::DoAnim(const int animnum, int type, bool ackreq) {
-	APPLAYER* outapp = new APPLAYER(OP_EmoteAnim, sizeof(EmoteAnim_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_EmoteAnim, sizeof(EmoteAnim_Struct));
 	EmoteAnim_Struct* anim = (EmoteAnim_Struct*)outapp->pBuffer;
 	anim->spawnid = GetID();
 	if(type==1){
@@ -1086,7 +1088,7 @@ void Mob::SendIllusionPacket(int16 in_race, int8 in_gender, int16 in_texture, in
 
 		this->aa_title = 0xFF;
 	}
-	APPLAYER* outapp = new APPLAYER(OP_Illusion, sizeof(Illusion_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Illusion, sizeof(Illusion_Struct));
 	memset(outapp->pBuffer, 0, sizeof(outapp->pBuffer));
 	Illusion_Struct* is = (Illusion_Struct*) outapp->pBuffer;
 	is->spawnid = this->GetID();
@@ -1155,7 +1157,7 @@ void Mob::TicProcess() {
 void Mob::SendAppearancePacket(int32 type, int32 value, bool WholeZone, bool iIgnoreSelf) {
 	if (!GetID())
 		return;
-	APPLAYER* outapp = new APPLAYER(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
 	SpawnAppearance_Struct* appearance = (SpawnAppearance_Struct*)outapp->pBuffer;
 	appearance->spawn_id = this->GetID();
 	appearance->type = type;
@@ -1317,14 +1319,19 @@ void Mob::SetAttackTimer() {
 	Timer* TimerToUse = NULL;
 	const Item_Struct* PrimaryWeapon = NULL;
 	
-	for (int i=SLOT_PRIMARY; i<=SLOT_SECONDARY; i++) {
-		const Item_Struct* ItemToUse = NULL;
+	for (int i=SLOT_RANGE; i<=SLOT_SECONDARY; i++) {
 		
 		//pick a timer
 		if (i == SLOT_PRIMARY)
 			TimerToUse = &attack_timer;
-		else
+		else if (i == SLOT_RANGE)
+			TimerToUse = &ranged_timer;
+		else if(i == SLOT_SECONDARY)
 			TimerToUse = &attack_dw_timer;
+		else	//invalid slot (hands will always hit this)
+			continue;
+		
+		const Item_Struct* ItemToUse = NULL;
 		
 		//find our item
 		if (IsClient()) {
@@ -1340,15 +1347,15 @@ void Mob::SetAttackTimer() {
 		if(i == SLOT_SECONDARY) {
 			//if we have a 2H weapon in our main hand, no dual
 			if(PrimaryWeapon != NULL) {
-				if(	PrimaryWeapon->ItemClass == ItemTypeCommon
-					&& (PrimaryWeapon->Common.ItemUse == ItemUse2HS
-					||	PrimaryWeapon->Common.ItemUse == ItemUse2HB
-					||	PrimaryWeapon->Common.ItemUse == ItemUse2HPierce)) {
+				if(	PrimaryWeapon->ItemClass == ItemClassCommon
+					&& (PrimaryWeapon->Common.ItemType == ItemType2HS
+					||	PrimaryWeapon->Common.ItemType == ItemType2HB
+					||	PrimaryWeapon->Common.ItemType == ItemType2HPierce)) {
 					attack_dw_timer.Disable();
 					continue;
 				}
 			}
-			
+
 			//clients must have the skill to use it...
 			if(IsClient()) {
 				int8 tmp = GetSkill(DUAL_WIELD);
@@ -1367,17 +1374,37 @@ void Mob::SetAttackTimer() {
 			}
 		}
 		
+		if(i == SLOT_RANGE) {
+			if(!ItemToUse) {
+				//no item, no timer.
+				ranged_timer.Disable();
+				continue;
+			}
+			
+			//dont enforce skill requirement, I dont think its required.
+			uint8 skill = 0;
+			if(ItemToUse->Common.ItemType == ItemTypeBow) {
+				skill = ARCHERY;
+			} else if(ItemToUse->Common.ItemType == ItemTypeThrowing || ItemToUse->Common.ItemType == ItemTypeThrowingv2) {
+				skill = THROWING;
+			} else {
+				//not a throwing weapon, no timer.
+				ranged_timer.Disable();
+				continue;
+			}
+		}
+		
 		//see if we have a valid weapon
 		if(ItemToUse != NULL) {
 			//check type and damage/delay
-			if(ItemToUse->ItemClass != ItemTypeCommon 
+			if(ItemToUse->ItemClass != ItemClassCommon 
 				|| ItemToUse->Common.Damage == 0 
 				|| ItemToUse->Common.Delay == 0) {
 				//no weapon
 				ItemToUse = NULL;
 			}
 			// Check to see if skill is valid
-			else if((ItemToUse->Common.ItemUse > ItemUse2HB) && (ItemToUse->Common.ItemUse != ItemUseHand2Hand) && (ItemToUse->Common.ItemUse != ItemUse2HPierce)) {
+			else if((ItemToUse->Common.ItemType > ItemType2HB) && (ItemToUse->Common.ItemType != ItemTypeHand2Hand) && (ItemToUse->Common.ItemType != ItemType2HPierce)) {
 				//no weapon
 				ItemToUse = NULL;
 			}
@@ -1390,7 +1417,7 @@ void Mob::SetAttackTimer() {
 				//we are a monk, use special delay
 				int speed = (int)(GetMonkHandToHandDelay()*(100.0f+attack_speed)*PermaHaste);
 				// neotokyo: 1200 seemed too much, with delay 10 weapons available
-            	if(speed < 500)	//lower bound
+				if(speed < 500)	//lower bound
 					speed = 500;
 				TimerToUse->SetAtTrigger(speed, true);	// Hand to hand, delay based on level or epic
 			} else {
@@ -1460,9 +1487,9 @@ bool Mob::CanThisClassDualWield(void) //Dual wield not Duel, busy someone else f
 	if (IsClient()) {
 		const ItemInst* inst = CastToClient()->GetInv().GetItem(SLOT_PRIMARY);
 		// 2HS, 2HB, or 2HP
-		if (inst && inst->IsType(ItemTypeCommon)) {
+		if (inst && inst->IsType(ItemClassCommon)) {
 			const Item_Struct* item = inst->GetItem();
-			if ((item->Common.ItemUse == ItemUse2HB) || (item->Common.ItemUse == ItemUse2HS) || (item->Common.ItemUse == ItemUse2HPierce))
+			if ((item->Common.ItemType == ItemType2HB) || (item->Common.ItemType == ItemType2HS) || (item->Common.ItemType == ItemType2HPierce))
 				return false;
 		} else {
 			//No weapon in hand... using hand-to-hand...
@@ -1884,7 +1911,7 @@ void Mob::FaceTarget(Mob* MobToFace, bool update) {
 	// TODO: Simplify?
 	float oldheading = heading;
 	heading=(CalculateHeadingToTarget(MobToFace->GetX(),MobToFace->GetY()));
-//	APPLAYER* outapp = new APPLAYER(OP_ClientUpdate, sizeof(PlayerPositionUpdateServer_Struct));
+//	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClientUpdate, sizeof(PlayerPositionUpdateServer_Struct));
 //	PlayerPositionUpdateServer_Struct* spu = (PlayerPositionUpdateServer_Struct*)outapp->pBuffer;
 //	MakeSpawnUpdate(spu);
 //	entity_list.QueueCloseClients(this, outapp, true, 300);
@@ -1990,7 +2017,7 @@ sint32 Mob::GetEquipment(int8 material_slot)
 
 void Mob::SendWearChange(int8 material_slot)
 {
-	APPLAYER* outapp = new APPLAYER(OP_WearChange, sizeof(WearChange_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_WearChange, sizeof(WearChange_Struct));
 	WearChange_Struct* wc = (WearChange_Struct*)outapp->pBuffer;
 
 	wc->spawn_id = GetID();
@@ -2246,7 +2273,7 @@ void Mob::StopSong()
 {
 	if (IsClient() && (bardsong || IsBardSong(casting_spell_id)))
 	{
-		APPLAYER* outapp = new APPLAYER(OP_ManaChange, sizeof(ManaChange_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ManaChange, sizeof(ManaChange_Struct));
 		ManaChange_Struct* manachange = (ManaChange_Struct*)outapp->pBuffer;
 		manachange->new_mana = cur_mana;
 		if (!bardsong)
@@ -2281,41 +2308,91 @@ sint32 Mob::GetActSpellCasttime(int16 spell_id, sint32 casttime) {
 	return(casttime);
 }
 
+void Mob::TryWeaponProc(const ItemInst* weapon_g, Mob *on) {
+	if(!weapon_g || !weapon_g->IsType(ItemClassCommon)) {
+		TryWeaponProc((const Item_Struct*) NULL, on);
+		return;
+	}
+	const ItemCommonInst* weapon = (const ItemCommonInst *) weapon_g;
+	
+	//do main procs
+	TryWeaponProc(weapon->GetItem(), on);
+	
+	//we have to calculate these again, oh well
+	int ourlevel = GetLevel();
+	float ProcChance, ProcBonus;
+	GetProcChances(ProcChance, ProcBonus);
+	
+	//do augment procs
+	int r;
+	for(r = 0; r < MAX_AUGMENT_SLOTS; r++) {
+		const ItemCommonInst* aug_i = weapon->GetAugment(r);
+		if(!aug_i)
+			continue;
+		const Item_Struct* aug = aug_i->GetItem();
+		if(!aug)
+			continue;
+		
+		if (IsValidSpell(aug->Common.Proc.Effect) 
+			&& (aug->Common.Proc.Type == ET_CombatProc)) {
+			if (MakeRandomFloat(0, 1) < ProcChance) {	// 255 dex = 0.084 chance of proc. No idea what this number should be really.
+				if(aug->Common.Proc.Level > ourlevel) {
+					Mob * own = GetOwner();
+					if(own != NULL) {
+						own->Message_StringID(13,PROC_PETTOOLOW);
+					} else {
+						Message_StringID(13,PROC_TOOLOW);
+					}
+				} else {
+					ExecWeaponProc(aug->Common.Proc.Effect, on);
+				}
+			}
+		}
+	}
+}
+
+//proc chance includes proc bonus
+float Mob::GetProcChances(float &ProcBonus, float &ProcChance) {
+	int mydex = GetDEX();
+	ProcBonus = 0;
+	if(IsClient()) {
+		//increases based off 1 guys observed results.
+		switch(CastToClient()->GetAA(aaWeaponAffinity)) {
+			case 1:
+				ProcBonus += 0.10f;
+				break;
+			case 2:
+				ProcBonus += 0.15f;
+				break;
+			case 3:
+				ProcBonus += 0.25f;
+				break;
+		}
+	}
+	ProcBonus += float(itembonuses.ProcChance + spellbonuses.ProcChance) / 1000.0f;
+	
+	ProcChance = float(mydex) / 3020.0f + ProcBonus;
+}
+
 void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
-	int16 usedspellID = SPELL_UNKNOWN;
 	
 	int ourlevel = GetLevel();
-	int mydex = GetDEX();
+	float ProcChance, ProcBonus;
+	GetProcChances(ProcChance, ProcBonus);
 	
 	//give weapon a chance to proc first.
 	if(weapon != NULL) {
-		if (usedspellID == SPELL_UNKNOWN && IsValidSpell(weapon->Common.SpellId) && (weapon->Common.EffectType == ET_CombatProc)) {
-			float ProcChance = (float) mydex / 3020.0f;
-			if(IsClient()) {
-				//increases based off 1 guys observed results.
-				switch(CastToClient()->GetAA(aaWeaponAffinity)) {
-					case 1:
-						ProcChance += 0.10f;
-						break;
-					case 2:
-						ProcChance += 0.15f;
-						break;
-					case 3:
-						ProcChance += 0.25f;
-						break;
-				}
-			}
-			ProcChance += float(itembonuses.ProcChance + spellbonuses.ProcChance) / 1000.0f;
+		if (IsValidSpell(weapon->Common.Proc.Effect) && (weapon->Common.Proc.Type == ET_CombatProc)) {
 			if (MakeRandomFloat(0, 1) < ProcChance) {	// 255 dex = 0.084 chance of proc. No idea what this number should be really.
-				usedspellID = weapon->Common.SpellId;
-				
-				if(weapon->Common.ProcLevel > ourlevel) {
-					if(GetOwner() != NULL) {
-						GetOwner()->Message_StringID(13,PROC_PETTOOLOW);
+				if(weapon->Common.Proc.Level > ourlevel) {
+					Mob * own = GetOwner();
+					if(own != NULL) {
+						own->Message_StringID(13,PROC_PETTOOLOW);
 					} else {
 						Message_StringID(13,PROC_TOOLOW);
-						usedspellID = SPELL_UNKNOWN;
 					}
+				} else {
+					ExecWeaponProc(weapon->Common.Proc.Effect, on);
 				}
 			}
 		}
@@ -2323,45 +2400,44 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 	
 	int ourclass = GetClass();
 	
-	if(usedspellID != SPELL_UNKNOWN) {
-		//now try our proc arrays
-		float dexmod = (float) GetDEX() / 100;
-	    for(int i = 0; i < MAX_PROCS; i++) {
-			if (PermaProcs[i].spellID != SPELL_UNKNOWN) {
-				if(MakeRandomInt(0,99) < (PermaProcs[i].chance * dexmod)) {
-					int spelllevel = spells[PermaProcs[i].spellID].classes[ourclass-1];
-					//pets must be high enough to cast the spell..?
-					if(GetOwner() != NULL && ourlevel < spelllevel) {
-						GetOwner()->Message_StringID(13,PROC_PETTOOLOW);
-					} else {
-						usedspellID = PermaProcs[i].spellID;
-					}
-					break;
+	//now try our proc arrays
+	float procmod =  float(GetDEX()) / 100.0f + ProcBonus;
+    for(int i = 0; i < MAX_PROCS; i++) {
+		if (PermaProcs[i].spellID != SPELL_UNKNOWN) {
+			if(MakeRandomInt(0,99) < (PermaProcs[i].chance * procmod)) {
+				int spelllevel = spells[PermaProcs[i].spellID].classes[ourclass-1];
+				//pets must be high enough to cast the spell..?
+				if(GetOwner() != NULL && ourlevel < spelllevel) {
+					GetOwner()->Message_StringID(13,PROC_PETTOOLOW);
+				} else {
+					ExecWeaponProc(PermaProcs[i].spellID, on);
 				}
+				break;
 			}
-			if (SpellProcs[i].spellID != SPELL_UNKNOWN) {
-				if(MakeRandomInt(0,99) < (SpellProcs[i].chance * dexmod)) {
-					int spelllevel = spells[SpellProcs[i].spellID].classes[ourclass-1];
-					//pets must be high enough to cast the spell..?
-					if(GetOwner() != NULL && ourlevel < spelllevel) {
-						GetOwner()->Message_StringID(13,PROC_PETTOOLOW);
-					} else {
-						usedspellID = SpellProcs[i].spellID;
-					}
-					break;
+		}
+		if (SpellProcs[i].spellID != SPELL_UNKNOWN) {
+			if(MakeRandomInt(0,99) < (SpellProcs[i].chance * procmod)) {
+				int spelllevel = spells[SpellProcs[i].spellID].classes[ourclass-1];
+				//pets must be high enough to cast the spell..?
+				if(GetOwner() != NULL && ourlevel < spelllevel) {
+					GetOwner()->Message_StringID(13,PROC_PETTOOLOW);
+				} else {
+					ExecWeaponProc(SpellProcs[i].spellID, on);
 				}
 			}
 		}
 	}
-	
+}
+
+void Mob::ExecWeaponProc(uint16 spell_id, Mob *on) {
 	// Trumpcard: Changed proc targets to look up based on the spells goodEffect flag.
 	// This should work for the majority of weapons.
-	if(usedspellID != SPELL_UNKNOWN) {
-		if ( IsBeneficialSpell(usedspellID) )
-			SpellFinished(usedspellID, GetID(), 10, 0);
-		else if(!(on->IsClient() && on->CastToClient()->dead))
-			SpellFinished(usedspellID, on->GetID(), 10, 0);
-	}
+	if(spell_id == SPELL_UNKNOWN)
+		return;
+	if ( IsBeneficialSpell(spell_id) )
+		SpellFinished(spell_id, GetID(), 10, 0);
+	else if(!(on->IsClient() && on->CastToClient()->dead))	//dont proc on dead clients
+		SpellFinished(spell_id, on->GetID(), 10, 0);
 }
 
 int Mob::GetHaste() {
@@ -2395,54 +2471,12 @@ int Mob::GetHaste() {
 	return(h); 
 }
 
-void Mob::InstillDoubt(Mob *who) {
-	//make sure we can use this skill
-	int skill = GetSkill(INTIMIDATION);
-	if(skill < 1 || skill > 252)
-		return;
-	
-	//make sure our target is an NPC
-	if(!who || !who->IsNPC())
-		return;
-	
-	//range check
-	if(!CombatRange(who))
-		return;
-	
-	if(IsClient()) {
-		//timer check...
-		if(!CastToClient()->GetPTimers().Expired(pTimerInstillDoubt, false)) {
-			Message(13,"Ability recovery time not yet met.");
-			return;
-		}
-		CastToClient()->GetPTimers().Start(pTimerInstillDoubt, InstillDoubtReuseTime-1);
-		
-		CastToClient()->CheckIncreaseSkill(INTIMIDATION);
-	}
 
-	//I think this formula needs work
-	int value = 0;
-	
-	//user's bonus
-	value += GetSkill(INTIMIDATION) + GetCHA()/4;
-	
-	//target's counters
-	value -= target->GetLevel()*4 + who->GetWIS()/4;
-	
-	if (MakeRandomInt(0,99) < value) {
-		//temporary hack...
-		//cast fear on them... should prolly be a different spell
-		//and should be un-resistable.
-		SpellOnTarget(229, who);
-		//is there a success message?
-	} else {
-		Message_StringID(4,NOT_SCARING);
-		//Idea from WR:
-		/* if (target->IsNPC() && MakeRandomInt(0,99) < 10 ) {
-			entity_list.MessageClose(target, false, 50, MT_Rampage, "%s lashes out in anger!",target->GetName());
-			//should we actually do this? and the range is completely made up, unconfirmed
-			entity_list.AEAttack(target, 50);
-		}*/
-	}
-}
+
+
+
+
+
+
+
 

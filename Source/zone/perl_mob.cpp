@@ -33,6 +33,7 @@
 typedef const char Const_char;
 
 #include "mob.h"
+#include "../common/debug.h"
 
 XS(XS_Mob_IsClient); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_IsClient)
