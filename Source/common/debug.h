@@ -40,7 +40,8 @@
 //
 #endif
 
-#if defined(_EQDEBUG) && defined(WIN32)
+
+#if defined(_DEBUG) && defined(WIN32)
 	#ifndef _CRTDBG_MAP_ALLOC
 		#include <stdlib.h>
 		#include <crtdbg.h>

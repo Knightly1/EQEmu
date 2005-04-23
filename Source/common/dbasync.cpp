@@ -9,7 +9,9 @@ using namespace std;
 #include "common_profile.h"
 #include <string.h>
 #include "../common/MiscFunctions.h"
-
+#ifdef WIN32
+	#include <process.h>
+#endif
 #define ASYNC_LOOP_GRANULARITY 4 //# of ms between checking our work
 
 extern Database database;

@@ -1,11 +1,19 @@
 #include "EQStreamFactory.h"
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/select.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#ifdef WIN32
+	#include <winsock2.h>
+	#include <process.h>
+	#include <windows.h>
+	#include <io.h>
+	#include <stdio.h>
+#else
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <sys/select.h>
+	#include <arpa/inet.h>
+	#include <netdb.h>
+	#include <pthread.h>
+#endif
 #include <fcntl.h>
-#include <pthread.h>
 #include <iostream>
 #include "op_codes.h"
 #include "EQStream.h"
@@ -47,8 +55,9 @@ void EQStreamFactory::Close()
 bool EQStreamFactory::Open()
 {
 struct sockaddr_in address;
-pthread_t t1,t2;
-
+#ifndef WIN32
+	pthread_t t1,t2;
+#endif
 	/* Setup internet address information.  
 	This is used with the bind() call */
 	memset((char *) &address, 0, sizeof(address));
@@ -67,12 +76,19 @@ pthread_t t1,t2;
 		sock=-1;
 		return false;
 	}
-
-	fcntl(sock, F_SETFL, O_NONBLOCK);
-
-	pthread_create(&t1,NULL,EQStreamFactoryReaderLoop,this);
-	pthread_create(&t2,NULL,EQStreamFactoryWriterLoop,this);
-
+	#ifdef WIN32
+		unsigned long nonblock = 1;
+		ioctlsocket(sock, FIONBIO, &nonblock);
+	#else
+		fcntl(sock, F_SETFL, O_NONBLOCK);
+	#endif
+	#ifdef WIN32
+		_beginthread(EQStreamFactoryReaderLoop,0, this);
+		_beginthread(EQStreamFactoryWriterLoop,0, this);
+	#else
+		pthread_create(&t1,NULL,EQStreamFactoryReaderLoop,this);
+		pthread_create(&t2,NULL,EQStreamFactoryWriterLoop,this);
+	#endif
 	return true;
 }
 
@@ -130,7 +146,11 @@ timeval sleep_time;
 			continue;
 
 		if (FD_ISSET(sock,&readset)) {
+#ifdef WIN32
+			if ((length=recvfrom(sock,(char*)buffer,sizeof(buffer),0,(struct sockaddr*)&from,(int *)&socklen))<0) {		
+#else
 			if ((length=recvfrom(sock,buffer,2048,0,(struct sockaddr *)&from,(socklen_t *)&socklen))<0) {
+#endif
 				// What do we wanna do?
 			} else {
 				char temp[25];

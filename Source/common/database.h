@@ -24,8 +24,9 @@
 
 // Disgrace: for windows compile
 #ifdef WIN32
+	#include <winsock2.h>
 	#include <windows.h>
-	#include <winsock.h>
+	//#include <winsock.h>
 #endif
 #include <mysql.h>
 

@@ -316,7 +316,7 @@ bool Client::HandlePacket(const EQApplicationPacket *app) {
 			if (database.CheckNameFilter(name)) {
 				valid = false;
 			}
-			else if(name[0] >= 'A' && n[0] <= 'z') {
+			else if(name[0] < 'A' && name[0] > 'Z') {
 				//name must begin with an upper-case letter.
 				valid = false;
 			}

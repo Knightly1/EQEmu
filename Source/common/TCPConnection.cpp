@@ -1371,19 +1371,13 @@ bool TCPConnection::SendData(char* errbuf) {
 	return true;
 }
 
+ThreadReturnType TCPConnectionLoop(void* tmp) {
 #ifdef WIN32
-void TCPConnectionLoop(void* tmp) {
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
-#else
-void* TCPConnectionLoop(void* tmp) {
 #endif
 	if (tmp == 0) {
 		ThrowError("TCPConnectionLoop(): tmp = 0!");
-#ifdef WIN32
-		return;
-#else
-		return 0;
-#endif
+		THREAD_RETURN(NULL);
 	}
 	TCPConnection* tcpc = (TCPConnection*) tmp;
 	tcpc->MLoopRunning.lock();
@@ -1407,11 +1401,8 @@ void* TCPConnectionLoop(void* tmp) {
 			Sleep(10);
 	}
 	tcpc->MLoopRunning.unlock();
-#ifdef WIN32
-	_endthread();
-#else
-	return 0;
-#endif
+	
+	THREAD_RETURN(NULL);
 }
 
 bool TCPConnection::RunLoop() {
@@ -1460,19 +1451,13 @@ bool TCPServer::RunLoop() {
 	return ret;
 }
 
+ThreadReturnType TCPServerLoop(void* tmp) {
 #ifdef WIN32
-void TCPServerLoop(void* tmp) {
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
-#else
-void* TCPServerLoop(void* tmp) {
 #endif
 	if (tmp == 0) {
 		ThrowError("TCPServerLoop(): tmp = 0!");
-#ifdef WIN32
-		return;
-#else
-		return 0;
-#endif
+		THREAD_RETURN(NULL);
 	}
 	TCPServer* tcps = (TCPServer*) tmp;
 	tcps->MLoopRunning.lock();
@@ -1482,11 +1467,8 @@ void* TCPServerLoop(void* tmp) {
 		tcps->Process();
 	}
 	tcps->MLoopRunning.unlock();
-#ifdef WIN32
-	return;
-#else
-	return 0;
-#endif
+	
+	THREAD_RETURN(NULL);
 }
 
 void TCPServer::Process() {

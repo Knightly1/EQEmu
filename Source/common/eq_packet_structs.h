@@ -2691,12 +2691,12 @@ struct PlayMP3_Struct {
 struct TitleEntry_Struct {
 	uint32	skill_id;
 	uint32	skill_value;
-	char	title[0];
+	char	title[1];
 };
 
 struct Titles_Struct {
 	uint32	title_count;
-	TitleEntry_Struct titles[0];
+	TitleEntry_Struct titles[1];
 };
 
 struct TaskDescription_Struct {
@@ -2713,7 +2713,7 @@ struct TaskDescription_Struct {
 /*031*/	uint32	unknown31;
 /*035*/	uint32	unknown35;
 /*039*/	uint16	unknown39;
-/*041*/	char	reward_link[0];	//variable length, 0 terminated
+/*041*/	char	reward_link[1];	//variable length, 0 terminated
 /*042*/	uint32	unknown43;  //maybe crystal count?
 };
 
@@ -2753,7 +2753,7 @@ struct TaskActivity_Struct {
 
 struct TaskHistoryEntry_Struct {
 	uint32	task_id;
-	char	name[0];
+	char	name[1];
 	uint32	completed_time;
 };
 struct TaskHistory_Struct {
@@ -2834,7 +2834,7 @@ struct RaidDetails_Struct {
 struct RaidMembers_Struct {
 /*000*/	RaidDetails_Struct		details;
 /*358*/	uint32					member_count;		//including leader
-/*362*/	RaidMemberInfo_Struct	members[0];
+/*362*/	RaidMemberInfo_Struct	members[1];
 /*...*/	RaidMemberInfo_Struct	empty;	//seem to have an extra member with a 0 length name on the end
 };
 
