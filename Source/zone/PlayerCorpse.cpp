@@ -1194,13 +1194,8 @@ void Corpse::AddLooter(Mob* who)
 	}
 }
 
-void Corpse::CastRezz(int16 spellid, Mob* Caster){
 /*
-	if (!rezzexp) {
-		Caster->Message(4, "You cannot resurrect this corpse");
-		return;
-	}
-*/
+void Corpse::CastRezz(int16 spellid, Mob* Caster){
 	if(Rezzed()){
 		if(Caster && Caster->IsClient())
 			Caster->Message(13,"This character has already been resurrected.");
@@ -1221,6 +1216,7 @@ void Corpse::CastRezz(int16 spellid, Mob* Caster){
 	//DumpPacket(outapp);
 	safe_delete(outapp);
 }
+*/
 
 
 

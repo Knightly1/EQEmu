@@ -234,13 +234,11 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 		SendAAStats();	//otherwise, send them an AA update
 
 	//send the expdata in any case so the xp bar isnt stuck after leveling
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
-	ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
 	int32 tmpxp1 = GetEXPForLevel(GetLevel()+1);
 	int32 tmpxp2 = GetEXPForLevel(GetLevel());
 	// Quag: crash bug fix... Divide by zero when tmpxp1 and 2 equalled each other, most likely the error case from GetEXPForLevel() (invalid class, etc)
 	if (tmpxp1 != tmpxp2 && tmpxp1 != 0xFFFFFFFF && tmpxp2 != 0xFFFFFFFF) {
-		APPLAYER* outapp = new APPLAYER(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
 		ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
 		double tmpxp = (double) ( (double) set_exp-tmpxp2 ) / ( (double) tmpxp1-tmpxp2 );
 		eu->exp = (uint32)(330.0f * tmpxp);
