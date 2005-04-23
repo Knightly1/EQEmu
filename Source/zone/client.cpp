@@ -938,7 +938,7 @@ bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
 void Client::SetSkill(int skillid, int8 value) {
 	if (skillid > HIGHEST_SKILL)
 		return;
-	m_pp.skills[skillid + 1] = value; // We need to be able to #setskill 254 and 255 to reset skills
+	m_pp.skills[skillid] = value; // We need to be able to #setskill 254 and 255 to reset skills
 
 	if(value <= 252) {
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SkillUpdate, sizeof(SkillUpdate_Struct));

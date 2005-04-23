@@ -58,9 +58,11 @@ typedef unsigned char		uchar;
 	#define strncasecmp	_strnicmp
 	#define strcasecmp  _stricmp
 	typedef void ThreadReturnType;
+	#define THREAD_RETURN(x) ;
 #else
 	typedef void* ThreadReturnType;
 	typedef int SOCKET;
+	#define THREAD_RETURN(x) return(x);
 #endif
 
 #define safe_delete(d) if(d) { delete d; d=0; }

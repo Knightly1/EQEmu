@@ -512,6 +512,7 @@ void StartCollecting() {
 
 ThreadReturnType ProcessThread(void *tmp) {
 	ProcessThreadRunning = true;
+	DoLoop = true;
 	while (DoLoop) {
 #ifdef WIN32
 /*		if(kbhit()){

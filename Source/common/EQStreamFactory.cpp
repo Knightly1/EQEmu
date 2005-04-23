@@ -12,22 +12,22 @@
 
 using namespace std;
 
-void *EQStreamFactoryReaderLoop(void *eqfs)
+ThreadReturnType EQStreamFactoryReaderLoop(void *eqfs)
 {
 EQStreamFactory *fs=(EQStreamFactory *)eqfs;
 cout << "Starting factory Reader" << endl;
 	fs->ReaderLoop();
 
-	return NULL;
+	THREAD_RETURN(NULL);
 }
 
-void *EQStreamFactoryWriterLoop(void *eqfs)
+ThreadReturnType EQStreamFactoryWriterLoop(void *eqfs)
 {
 EQStreamFactory *fs=(EQStreamFactory *)eqfs;
 cout << "Starting factory Writer" << endl;
 	fs->WriterLoop();
 
-	return NULL;
+	THREAD_RETURN(NULL);
 }
 
 EQStreamFactory::EQStreamFactory(EQStreamType type, int port) : Timeoutable(5000)

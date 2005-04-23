@@ -122,7 +122,7 @@ void EQPacket::DumpRaw(FILE *to) const
 {
 	DumpRawHeader();
 	if (pBuffer && size)
-		dump_message_column(pBuffer, size, "     ", to);
+		dump_message_column(pBuffer, size, " ", to);
 	fprintf(to, "\n");
 }
 

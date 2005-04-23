@@ -30,7 +30,6 @@ SharedLibrary::~SharedLibrary() {
 bool SharedLibrary::Load(const char *name)
 {
 #ifdef WIN32
-	DWORD load_error = 0;
 	SetLastError(0);
 #endif
 	
@@ -39,7 +38,7 @@ bool SharedLibrary::Load(const char *name)
 	if(!hDLL) {
 		const char *load_error = GetError();
 		fprintf(stderr, "[Error] Load Shared Library '%s' failed.  Error=%s\n", name, load_error?load_error:"Null Return, no error");
-	    return false;
+		return false;
 	}
 #ifdef WIN32
     else { SetLastError(0); } // Clear the win9x error

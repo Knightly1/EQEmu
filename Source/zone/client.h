@@ -462,10 +462,10 @@ public:
 	void	OnDisconnect(bool hard_disconnect);
 	int16	GetSkillPoints() {return m_pp.points;}
 	void	SetSkillPoints(int inp) {m_pp.points = inp;}
-	void	IncreaseSkill(int skill_id, int value = 1) { if (skill_id <= HIGHEST_SKILL) { m_pp.skills[skill_id + 1] += value; } }
+	void	IncreaseSkill(int skill_id, int value = 1) { if (skill_id <= HIGHEST_SKILL) { m_pp.skills[skill_id] += value; } }
 	void	IncreaseLanguageSkill(int skill_id, int value = 1) { if (skill_id < 26) { m_pp.languages[skill_id] += value; } }
-	uint32		GetSkill(int skill_id) { if (skill_id <= HIGHEST_SKILL) { return((itembonuses.skillmod[skill_id] > 0)? m_pp.skills[skill_id + 1]*(100 + itembonuses.skillmod[skill_id])/100 : m_pp.skills[skill_id + 1]); } return 0; }
-	uint32		GetRawSkill(int skill_id) { if (skill_id <= HIGHEST_SKILL) { return(m_pp.skills[skill_id + 1]); } return 0; }
+	uint32		GetSkill(int skill_id) { if (skill_id <= HIGHEST_SKILL) { return((itembonuses.skillmod[skill_id] > 0)? m_pp.skills[skill_id]*(100 + itembonuses.skillmod[skill_id])/100 : m_pp.skills[skill_id]); } return 0; }
+	uint32		GetRawSkill(int skill_id) { if (skill_id <= HIGHEST_SKILL) { return(m_pp.skills[skill_id]); } return 0; }
 	
 	//Father Nitwit's Tradeskill Rework:
 	void TradeskillSearchResults(const char *query, unsigned long qlen, unsigned long objtype, unsigned long someid);

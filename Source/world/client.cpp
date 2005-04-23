@@ -312,15 +312,21 @@ bool Client::HandlePacket(const EQApplicationPacket *app) {
 			outapp->SetOpcode(OP_ApproveName);
 		   	outapp->pBuffer = new uchar[1];
 		   	outapp->size = 1;
+		   	bool valid;
 			if (database.CheckNameFilter(name)) {
-				outapp->pBuffer[0] = 0;
+				valid = false;
+			}
+			else if(name[0] >= 'A' && n[0] <= 'z') {
+				//name must begin with an upper-case letter.
+				valid = false;
 			}
 			else if (database.ReserveName(GetAccountID(), name)) {
-				outapp->pBuffer[0] = 1;
+				valid = true;
 			}
 			else {
-				outapp->pBuffer[0] = 0;
+				valid = false;
 			}
+			outapp->pBuffer[0] = valid? 1 : 0;
 			QueuePacket(outapp);
 			safe_delete(outapp);
 		    break;			

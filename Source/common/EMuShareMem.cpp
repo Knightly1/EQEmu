@@ -103,6 +103,7 @@ bool LoadEMuShareMemDLL::Load() {
 		return true;
 	}
 	else {
+		LogFile->write(EQEMuLog::Error, "%s was not loaded, but did not report an error.", EmuLibName);
 	}
 	return false;
 }

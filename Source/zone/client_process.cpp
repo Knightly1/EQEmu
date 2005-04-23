@@ -1348,7 +1348,7 @@ void Client::OPGMTrainSkill(const EQApplicationPacket *app)
 			{
 				return;
 			}
-			//m_pp.skills[gmskill->skill_id + 1] = t_level;
+			//m_pp.skills[gmskill->skill_id] = t_level;
 			SetSkill(gmskill->skill_id, t_level);
 		}
 		else if (skilllevel <= 251)

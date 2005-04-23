@@ -9,8 +9,6 @@
 #include "../common/timeoutmgr.h"
 #include "../common/opcodemgr.h"
 
-void *EQStreamFactoryLoop(void *eqfs);
-
 class EQStreamFactory : private Timeoutable {
 	private:
 		int sock;

@@ -18,7 +18,7 @@ dump_packetfiles.so: dump_packetfiles.cpp .obj/packetfile.o
 	g++ $(CXXFLAGS) -shared -Wl,-soname,$@ -o $@ $^
 
 dump_pf_privacy.so: dump_pf_privacy.cpp .obj/packetfile.o
-        g++ $(CXXFLAGS) -shared -Wl,-soname,$@ -o $@ $^
+	g++ $(CXXFLAGS) -shared -Wl,-soname,$@ -o $@ $^
 
 clean:
 	rm -f eqemucollector $(OBJS) $(PLUGS)

@@ -2380,7 +2380,7 @@ void command_showskills(Client *c, const Seperator *sep)
 		t=c->GetTarget()->CastToClient();
 
 	c->Message(0, "Skills for %s", t->GetName());
-	for (int i=0; i<74; i++)
+	for (int i=0; i <= HIGHEST_SKILL; i++)
 		c->Message(0, "Skill [%d] is at [%d]", i, t->GetSkill(i));
 }
 
