@@ -362,7 +362,7 @@ int Client::HandlePacket(const EQApplicationPacket *app)
 		p = ConnectedOpcodes[opcode];
 		if(p == NULL) {
 //TODO: replace this 0 with the EQ opcode
-			LogFile->write(EQEMuLog::Error, "Unknown opcode: %s (#%d, eq=0x%04x), size: %i, Client: %s", OpcodeNames[opcode], opcode, 0, app->size, GetName());
+			LogFile->write(EQEMuLog::Error, "Unhandled incoming opcode: %s (#%d, eq=0x%04x), size: %i, Client: %s", OpcodeNames[opcode], opcode, 0, app->size, GetName());
 			if(app->size<1000)
 				DumpPacket(app->pBuffer, app->size);
 			else{
