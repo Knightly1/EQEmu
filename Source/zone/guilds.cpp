@@ -43,7 +43,7 @@ extern RaidAddicts raidaddicts;
 
 extern GuildRanks_Struct guilds[512];
 
-void Client::SendGuildMembers(int32 guildid){
+void Client::SendGuildMembers(int32 guildid, bool sendtoall){
 	if(guildid==0)
 		return;
 	uint32 len = (sizeof(GuildMember)*database.NumberInGuild(guildid)+sizeof(GuildMember_Struct));
@@ -59,7 +59,7 @@ void Client::SendGuildMembers(int32 guildid){
 		return;
 	}
 	int16 namelen=strlen(GetName());
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GuildMemberList,gms->length+(34*gms->count)+namelen+5);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GuildMemberList,gms->length+(42*gms->count)+namelen+5);
 	memset(outapp->pBuffer,0,outapp->size);
 	uchar* buffer=(uchar*)outapp->pBuffer;
 	memcpy(buffer,GetName(), namelen);
@@ -91,7 +91,7 @@ void Client::SendGuildMembers(int32 guildid){
 			memcpy(buffer,&gms->member[i].publicnote, strlen(gms->member[i].publicnote));
 			buffer+=strlen(gms->member[i].publicnote);
 		}
-		buffer+=sizeof(int32);
+		buffer+=sizeof(int8);
 		Client *member = entity_list.GetClientByName(gms->member[i].name);
 		if(member)	//only add zone info if player is online :)
 			memcpy(buffer,&gms->member[i].zoneinstance, sizeof(int16));	
@@ -100,7 +100,10 @@ void Client::SendGuildMembers(int32 guildid){
 			memcpy(buffer,&gms->member[i].zoneid, sizeof(int16));	
 		buffer+=sizeof(int16);
 	}
-	QueuePacket(outapp);
+	if(sendtoall)
+		entity_list.QueueClientsGuild(this, outapp, false, GuildEQID());
+	else
+		QueuePacket(outapp);
 	safe_delete(outapp);
 	safe_delete_array(blah);
 }
@@ -203,6 +206,7 @@ void Client::SendGuildJoin(GuildJoin_Struct* gj){
 	outgj->zoneid=gj->zoneid;
 	QueuePacket(outapp);
 	safe_delete(outapp);
+	SendGuildMembers(guilds[gj->guildid].databaseID, true);
 }
 
 void Client::GuildChangeRank(int32 guildid,int32 oldrank,int32 newrank){
@@ -218,6 +222,7 @@ void Client::GuildChangeRank(const char* name, int32 guildid,int32 oldrank,int32
 	gms->oldrank=oldrank;
 	entity_list.QueueClientsGuild(this,outapp,false,guildid);
 	safe_delete(outapp);
+	SendGuildMembers(guilds[guildid].databaseID, true);
 }
 
 // Rogean: Moved this function from common/guilds.cpp, VS 6.0 Doesn't like same filenames ^_^
@@ -285,7 +290,7 @@ void Database::GetGuildMembers(int32 guildid,GuildMember_Struct* gms){
 			length+=strlen(row[0])+strlen(row[4]);
 			PlayerProfile_Struct* pps=(PlayerProfile_Struct*)row[1];
 			gms->member[count].level=htonl(pps->level);
-			gms->member[count].zoneid=pps->zone_id;
+			gms->member[count].zoneid=(pps->zone_id*256);
 			gms->member[count].timelaston=htonl(atol(row[2]));
 			gms->member[count].class_=htonl(pps->class_);
 			gms->member[count].rank=atoi(row[3]);

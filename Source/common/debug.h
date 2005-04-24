@@ -18,7 +18,7 @@
 
 // Debug Levels
 #ifndef EQDEBUG
-#define EQDEBUG 0
+#define EQDEBUG 5
 #else
 ////// File/Console options
 // 0 <= Quiet mode Errors to file Status and Normal ignored

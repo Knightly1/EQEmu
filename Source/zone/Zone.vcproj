@@ -147,7 +147,7 @@
 				EnableIntrinsicFunctions="TRUE"
 				ImproveFloatingPointConsistency="FALSE"
 				OptimizeForWindowsApplication="FALSE"
-				PreprocessorDefinitions="SHAREMEM,_WIN32_WINNT=0x0400,_EQDEBUG,ZONE,INVERSEXY,WIN32,_CONSOLE,EQDEBUG,FIELD_ITEMS"
+				PreprocessorDefinitions="SHAREMEM;_WIN32_WINNT=0x0400;_EQDEBUG;ZONE;INVERSEXY;WIN32;_CONSOLE;FIELD_ITEMS"
 				StringPooling="TRUE"
 				MinimalRebuild="TRUE"
 				BasicRuntimeChecks="0"
@@ -469,6 +469,9 @@
 				RelativePath=".\client.h">
 			</File>
 			<File
+				RelativePath=".\client_packet.h">
+			</File>
+			<File
 				RelativePath=".\command.h">
 			</File>
 			<File
@@ -594,6 +597,9 @@
 			</File>
 			<File
 				RelativePath="..\common\emu_opcodes.h">
+			</File>
+			<File
+				RelativePath="..\common\emu_oplist.h">
 			</File>
 			<File
 				RelativePath="..\common\EMuShareMem.h">

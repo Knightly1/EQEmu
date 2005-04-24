@@ -181,7 +181,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_GuildDelete] = &Client::Handle_OP_GuildDelete;
 	ConnectedOpcodes[OP_GuildPublicNote] = &Client::Handle_OP_GuildPublicNote;
 	ConnectedOpcodes[OP_GetGuildMOTD] = &Client::Handle_OP_GetGuildMOTD;
-	ConnectedOpcodes[OP_GuildMOTD] = &Client::Handle_OP_GuildMOTD;
+	ConnectedOpcodes[OP_SetGuildMOTD] = &Client::Handle_OP_SetGuildMOTD;
 	ConnectedOpcodes[OP_GuildPeace] = &Client::Handle_OP_GuildPeace;
 	ConnectedOpcodes[OP_GuildWar] = &Client::Handle_OP_GuildWar;
 	ConnectedOpcodes[OP_GuildLeader] = &Client::Handle_OP_GuildLeader;
@@ -294,6 +294,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_TributeUpdate] = &Client::Handle_OP_TributeUpdate;
 	ConnectedOpcodes[OP_TributeToggle] = &Client::Handle_OP_TributeToggle;
 	ConnectedOpcodes[OP_TributeNPC] = &Client::Handle_OP_TributeNPC;
+	ConnectedOpcodes[OP_ConfirmDelete] = &Client::Handle_OP_ConfirmDelete;
 	ConnectedOpcodes[OP_CrashDump] = &Client::Handle_OP_CrashDump;
 	ConnectedOpcodes[OP_ControlBoat] = &Client::Handle_OP_ControlBoat;
 	ConnectedOpcodes[OP_DumpName] = &Client::Handle_OP_DumpName;
@@ -670,7 +671,7 @@ void Client::Handle_Connect_OP_SendExpZonein(const EQApplicationPacket *app)
 	
 	int32 guildid = GuildDBID();
 	if(guildid!=0 && guildid!=0xFFFFFFFF) {
-		SendGuildMembers(guildid);
+		SendGuildMembers(guildid, true);
 		
 		outapp = new EQApplicationPacket(OP_GuildMOTD, sizeof(GuildMOTD_Struct));
 		GuildMOTD_Struct *motd = (GuildMOTD_Struct *) outapp->pBuffer;
@@ -2257,6 +2258,9 @@ void Client::Handle_OP_Dye(const EQApplicationPacket *app)
 	return;
 }
 
+void Client::Handle_OP_ConfirmDelete(const EQApplicationPacket* app){
+	return;
+}
 void Client::Handle_OP_LootItem(const EQApplicationPacket *app)
 {
 	if (app->size != sizeof(LootingItem_Struct)) {
@@ -2319,6 +2323,7 @@ void Client::Handle_OP_GuildPublicNote(const EQApplicationPacket *app)
 {
 	GuildUpdate_PublicNote* gpn=(GuildUpdate_PublicNote*)app->pBuffer;
 	database.SetPublicNote(guilddbid,gpn->target,gpn->note);
+	SendGuildMembers(guilddbid, true);
 	return;
 }
 
@@ -2347,7 +2352,7 @@ void Client::Handle_OP_GetGuildMOTD(const EQApplicationPacket *app)
 	}
 }
 
-void Client::Handle_OP_GuildMOTD(const EQApplicationPacket *app)
+void Client::Handle_OP_SetGuildMOTD(const EQApplicationPacket *app)
 {
 	char tmp[600]={0};
 	if (app->size !=sizeof(GuildMOTD_Struct)) {
@@ -2361,14 +2366,27 @@ void Client::Handle_OP_GuildMOTD(const EQApplicationPacket *app)
 		if (!database.SetGuildMOTD(guilddbid, tmp)) {
 			Message(0, "Motd update failed.");
 		}
-		worldserver.SendEmoteMessage(0, guilddbid, MT_Guild, "Guild MOTD: %s", tmp);
+		else{
+			EQApplicationPacket *outapp = new EQApplicationPacket(OP_GuildMOTD, sizeof(GuildMOTD_Struct));
+			GuildMOTD_Struct *motd = (GuildMOTD_Struct *) outapp->pBuffer;
+			motd->unknown0 = 0;
+			strncpy(motd->name, m_pp.name, 64);
+			string motd_str = database.GetGuildMOTD(GuildDBID());
+			strncpy(motd->motd, motd_str.c_str(), 512);
+			entity_list.QueueClientsGuild(this, outapp, false, GuildEQID());
+		}
+		
+		//worldserver.SendEmoteMessage(0, guilddbid, MT_Guild, "Guild MOTD: %s", tmp);
+		
 	}
 	else {
-		string str = database.GetGuildMOTD(guilddbid);
+		/*string str = database.GetGuildMOTD(guilddbid);
 		if (str.length() > 0)
 			Message_StringID(MT_Guild,GENERIC_STRING,str.c_str());
 			//Message(MT_Guild, "Guild MOTD: %s", tmp);
 		//Message(MT_Guild, "Guild MOTD Disabled for now");
+		*/
+		Handle_OP_GetGuildMOTD(app);
 	}
 	
 	return;
@@ -2413,6 +2431,7 @@ void Client::Handle_OP_GuildLeader(const EQApplicationPacket *app)
 		else
 			Message(0,"Failed to change leader, could not find target.");
 	}
+	SendGuildMembers(guilddbid, true);
 	return;
 }
 
@@ -2431,6 +2450,7 @@ void Client::Handle_OP_GuildDemote(const EQApplicationPacket *app)
 		}
 		Message(0,"Successfully demoted %s.",demote->target);
 	}
+	SendGuildMembers(guilddbid, true);
 	return;
 }
 
@@ -2469,6 +2489,7 @@ void Client::Handle_OP_GuildInvite(const EQApplicationPacket *app)
 		else
 			Message(0,"You must be in the same zone as the person you are inviting.");
 	}
+	SendGuildMembers(guilddbid, true);
 	return;
 }
 
@@ -2506,6 +2527,7 @@ void Client::Handle_OP_GuildRemove(const EQApplicationPacket *app)
 		else
 			Message(0,"Unable to remove %s from your guild.",gc->othername);
 	}
+	SendGuildMembers(guilddbid, true);
 	return;
 }
 
@@ -2534,12 +2556,12 @@ void Client::Handle_OP_GuildInviteAccept(const EQApplicationPacket *app)
 				entity_list.QueueClientsGuild(this,outapp,false,GuildEQID());
 				safe_delete(outapp);*/
 				if(gj->response<2){
-					GuildChangeRank(GuildEQID(),0,1);
 					SetGuild(guilddbid,1);
+					GuildChangeRank(GuildEQID(),0,1);
 				}
 				else{
-					GuildChangeRank(GuildEQID(),1,0);
 					SetGuild(guilddbid,0);
+					GuildChangeRank(GuildEQID(),1,0);
 				}
 				return;
 			}
@@ -2555,7 +2577,7 @@ void Client::Handle_OP_GuildInviteAccept(const EQApplicationPacket *app)
 			else
 				SetGuild(guilds[gj->guildeqid].databaseID,gj->response);
 			worldserver.SendGuildJoin(gj2);
-			SendGuildMembers(guilds[gj->guildeqid].databaseID);
+			SendGuildMembers(guilds[gj->guildeqid].databaseID, true);
 			safe_delete(gj2);
 		}
 	}

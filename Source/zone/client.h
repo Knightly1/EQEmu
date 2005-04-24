@@ -440,7 +440,7 @@ public:
 	void	GuildChangeRank(int32 guildid,int32 oldrank,int32 newrank);
 	void	GuildChangeRank(const char* name,int32 guildid,int32 oldrank,int32 newrank);
 	void	SendManaUpdatePacket();
-	void	SendGuildMembers(int32 guildid);
+	void	SendGuildMembers(int32 guildid, bool sendtoall=false);
     // Disgrace: currently set from database.CreateCharacter. 
 	// Need to store in proper position in PlayerProfile...
 	int8	GetFace()		{ return m_pp.face; } 

@@ -74,7 +74,7 @@
 	void Handle_OP_GuildDelete(const EQApplicationPacket *app);
 	void Handle_OP_GuildPublicNote(const EQApplicationPacket *app);
 	void Handle_OP_GetGuildMOTD(const EQApplicationPacket *app);
-	void Handle_OP_GuildMOTD(const EQApplicationPacket *app);
+	void Handle_OP_SetGuildMOTD(const EQApplicationPacket *app);
 	void Handle_OP_GuildPeace(const EQApplicationPacket *app);
 	void Handle_OP_GuildWar(const EQApplicationPacket *app);
 	void Handle_OP_GuildLeader(const EQApplicationPacket *app);
@@ -188,6 +188,7 @@
 	void Handle_OP_TributeUpdate(const EQApplicationPacket *app);
 	void Handle_OP_TributeToggle(const EQApplicationPacket *app);
 	void Handle_OP_TributeNPC(const EQApplicationPacket *app);
+	void Handle_OP_ConfirmDelete(const EQApplicationPacket *app);
 	void Handle_OP_CrashDump(const EQApplicationPacket *app);
 	void Handle_OP_ControlBoat(const EQApplicationPacket *app);
 	void Handle_OP_DumpName(const EQApplicationPacket *app);
