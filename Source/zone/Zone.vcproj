@@ -229,7 +229,7 @@
 				OutputFile=".\../Build/Zone.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames="libc"
+				IgnoreDefaultLibraryNames="libc,MSVCRT"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../Build/Zone.pdb"
 				GenerateMapFile="TRUE"
@@ -532,6 +532,9 @@
 				RelativePath=".\petitions.h">
 			</File>
 			<File
+				RelativePath=".\pets.h">
+			</File>
+			<File
 				RelativePath=".\PlayerCorpse.h">
 			</File>
 			<File
@@ -603,9 +606,6 @@
 			</File>
 			<File
 				RelativePath="..\common\EMuShareMem.h">
-			</File>
-			<File
-				RelativePath="..\common\eq_opcodes.h">
 			</File>
 			<File
 				RelativePath="..\common\eq_packet_structs.h">
@@ -787,6 +787,9 @@
 			</File>
 			<File
 				RelativePath="..\common\packet_dump.cpp">
+			</File>
+			<File
+				RelativePath="..\common\packet_dump_file.cpp">
 			</File>
 			<File
 				RelativePath="..\common\packet_functions.cpp">

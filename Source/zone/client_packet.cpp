@@ -62,6 +62,7 @@
 #include "StringIDs.h"
 #include "map.h"
 #include "titles.h"
+#include "pets.h"
 using namespace std;
 
 #ifdef GUILDWARS

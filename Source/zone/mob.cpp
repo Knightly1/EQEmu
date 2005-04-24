@@ -35,7 +35,7 @@ extern GuildRanks_Struct guilds[512];
 extern GuildWars guildwars;
 #endif
 
-#include "../common/eq_opcodes.h"
+#include "../common/emu_opcodes.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/database.h"
 #include "../common/packet_dump.h"

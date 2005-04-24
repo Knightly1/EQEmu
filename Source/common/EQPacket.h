@@ -29,7 +29,7 @@
 	#include <netinet/in.h>
 #endif
 
-#include "eq_opcodes.h"
+#include "emu_opcodes.h"
 #include "op_codes.h"
 
 class OpcodeManager;

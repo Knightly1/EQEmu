@@ -18,6 +18,14 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #ifndef EQ_OPCODES_H
 #define EQ_OPCODES_H
 
+
+//THIS FILE IS NOT USED ANYMORE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+/*
+*
+*
+*
+*
 // solar: updated 2/12/04
 //
 // Invalid opcodes have been \t'd out, confirmed have no \t
@@ -25,7 +33,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 // is just an invalid opcode.  if an opcode is known to be wrong set it to
 // this to avoid conflicts with real ops
 //
-// codes preceded by '/**/' are ones that are known to be right but not used
+// codes preceded by '//' are ones that are known to be right but not used
 // by any code yet
 //
 // codes preceded by '// not used' are ones that are probably wrong and not
@@ -83,15 +91,15 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define LiveOP_ChannelMessage	0x0024
 #define LiveOP_SimpleMessage    0x01d7
 #define LiveOP_FormattedMessage 0x01d8
-/*#define LiveOP_RaidInvite		0x01e4*/ 	// wrong. from seq - not used by eqemu
-/**/ #define LiveOP_RaidJoin		0x01e5	// from seq - not used by eqemu
+//#define LiveOP_RaidInvite		0x01e4 	// wrong. from seq - not used by eqemu
+// #define LiveOP_RaidJoin		0x01e5	// from seq - not used by eqemu
 	// not used	#define LiveOP_ApplyPoison		0x00b7
 #define LiveOP_TGB				0x01c6 // /targetgroupbuff
-/**/ #define LiveOP_CharInfo			0x0012 // /charinfo
-/**/ #define LiveOP_Movelog			0x0290 // /movelog
-/**/ #define LiveOP_Beta				0x02cb // /beta
+// #define LiveOP_CharInfo			0x0012 // /charinfo
+// #define LiveOP_Movelog			0x0290 // /movelog
+// #define LiveOP_Beta				0x02cb // /beta
 #define LiveOP_TestBuff			0x0285 // /testbuffme
-/**/ #define LiveOP_Key				0x01e2 // /keys
+// #define LiveOP_Key				0x01e2 // /keys
 #define LiveOP_Bind_Wound		0x012d
 #define LiveOP_Charm			0x01ab
 #define LiveOP_Begging			0x014c
@@ -100,7 +108,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define LiveOP_Sneak			0x009d // Clicked sneak - Doodman 10/10/2003
 #define LiveOP_ExpUpdate		0x0079
 #define LiveOP_DumpName			0x027d //no idea what this is: just tired of looking at it as unknown; updated by Shawn319
-/**/ #define LiveOP_UpdateAA			0x0222
+// #define LiveOP_UpdateAA			0x0222
 #define LiveOP_RespondAA		0x01ea // AA table
 #define LiveOP_SendAAStats		0x01c9
 #define LiveOP_SendAATable		0x0366
@@ -122,7 +130,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 
 #define LiveOP_SendExpZonein		0x002b	// 0 length packets
 #define LiveOP_ZoneInSendName		0x01e4
-	/*Guild Opcodes*/
+	//Guild Opcodes
 #define LiveOP_GuildLeader		 0x01bf // /guildleader, was 00a7
 #define LiveOP_GuildPeace		 0x009a // /guildpeace
 #define LiveOP_GuildRemove		 0x0132 // /guildremove
@@ -141,7 +149,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define LiveOP_GuildManageRemove	0x0233
 #define LiveOP_GuildManageAdd		0x022d
 #define LiveOP_GuildManageStatus	0x0039
-	/*Bazaar*/
+	//Bazaar
 #define LiveOP_Trader			0x01e8 // /trader
 #define LiveOP_Bazaar			0x01e7 // /bazaar search
 
@@ -160,7 +168,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 
 
 
-/*Shops*/
+//Shops
 #define LiveOP_ShopItem			0x02cd	// Send merchant item data to client (header = 0x64)
 #define LiveOP_ShopPlayerBuy	0x0065
 	// not used	#define LiveOP_ShopTakeMoney	0x0066
@@ -175,14 +183,14 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define	LiveOP_AdventureMerchantPurchase	0x02d3
 #define	LiveOP_AdventurePointsUpdate	0x02e3
 
-/**/ #define LiveOP_LFPCommand		     0x0272	// Looking for player
-/**/ #define LiveOP_LFPGetMatchesRequest  0x0273
-/**/ #define LiveOP_LFPGetMatchesResponse 0x0275
+// #define LiveOP_LFPCommand		     0x0272	// Looking for player
+// #define LiveOP_LFPGetMatchesRequest  0x0273
+// #define LiveOP_LFPGetMatchesResponse 0x0275
 
-/**/ #define LiveOP_LFGGetMatchesRequest  0x0271
-/**/ #define LiveOP_LFGGetMatchesResponse 0x0274
+// #define LiveOP_LFGGetMatchesRequest  0x0271
+// #define LiveOP_LFGGetMatchesResponse 0x0274
 #define LiveOP_LFGCommand		     0x0270	// When client issues /LFG command
-/**/ #define LiveOP_LFGResponse           0x01b1
+// #define LiveOP_LFGResponse           0x01b1
 #define LiveOP_LFGAppearance	0x01d0	// Some other char in zone turns LFG on/off
 
 #define	LiveOP_MoneyUpdate		0x01b5
@@ -255,8 +263,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define LiveOP_Hide				0x009e
 #define LiveOP_Forage			0x012e // Clicked forage  - @Doodman 10/10/2003
 #define LiveOP_Fishing 			0x0077	
-/**/ #define LiveOP_Adventure		0x02d0 // /adventure
-/**/ #define LiveOP_Feedback			0x0161	// /feedback
+// #define LiveOP_Adventure		0x02d0 // /adventure
+// #define LiveOP_Feedback			0x0161	// /feedback
 #define LiveOP_Bug				0x0246	// /bug
 #define LiveOP_Emote			0x00f2	// /me goes blah
 #define LiveOP_EmoteAnim		0x0140 // solar: untested
@@ -294,9 +302,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 	#define LiveOP_MendHPUpdate		0x009b
 #define LiveOP_Taunt			0x0160
 
-/**/ #define LiveOP_Summoncorpse		0x02b5 // /summoncorpse
-/**/ #define LiveOP_GMSearchCorpse	0x0097	// GM /searchcorpse	- Search all zones for named corpse
-/**/ #define LiveOP_SearchCorpse		LiveOP_GMSearchCorpse	// /searchcorpse
+// #define LiveOP_Summoncorpse		0x02b5 // /summoncorpse
+// #define LiveOP_GMSearchCorpse	0x0097	// GM /searchcorpse	- Search all zones for named corpse
+// #define LiveOP_SearchCorpse		LiveOP_GMSearchCorpse	// /searchcorpse
 #define LiveOP_GMDelCorpse		0x0199 // /delcorpse
 #define LiveOP_GMFind			0x0047	// GM /find			- ?
 // not used	#define LiveOP_FindResponse		0x02cc
@@ -311,11 +319,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define LiveOP_GMEmoteZone		0x028f	// GM /emotezone	- Send zonewide emote
 #define LiveOP_GMBecomeNPC		0x0074	// GM /becomenpc	- Become an NPC
 // (TODO: Use opcode 0x012d, which is also sent with LiveOP_GMBecomeNPC to create correct npc
-/**/ #define LiveOP_GMApproval		0x01b0	// GM /approval		- Name approval duty?
+// #define LiveOP_GMApproval		0x01b0	// GM /approval		- Name approval duty?
 // not used	#define LiveOP_NameApproval		0x011f //Name approval
 #define LiveOP_GMHideMe			0x00de	// GM /hideme		- Remove self from spawn lists and make invis
-/**/ #define LiveOP_GMInquire		0x00da	// GM /inquire		- Search soulmark data
-/**/ #define	LiveOP_GMSoulmark		0x00dc	// GM /praise /warn	- Add soulmark comment to user file
+// #define LiveOP_GMInquire		0x00da	// GM /inquire		- Search soulmark data
+// #define	LiveOP_GMSoulmark		0x00dc	// GM /praise /warn	- Add soulmark comment to user file
 #define LiveOP_GMZoneRequest	0x0184	// GM /zone			- Transport to another zone
 #define LiveOP_GMZoneRequest2	0x0239	// GM /zone 2
 
@@ -323,7 +331,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define LiveOP_PetitionRefresh	0x0085
 #define LiveOP_PDeletePetition	0x01ee
 #define LiveOP_PetitionBug		0x0092	// 0094 feedback 0095 guide
-/**/ #define LiveOP_PViewPetition	0x01ef
+// #define LiveOP_PViewPetition	0x01ef
 #define LiveOP_PetitionUpdate	0x0069	// Updates the Petitions in the Que
 #define LiveOP_PetitionCheckout	0x0076	// Petition Checkout
 #define LiveOP_PetitionCheckout2	0x0056 //Also sent when a player checks out a petition Possibly requesting who all
@@ -340,7 +348,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 
 #define LiveOP_NewSpawn			0x0218	// New NPC or PC entering zone
 #define LiveOP_Animation		0x0140
-/**/ #define LiveOP_MobHealth		0x022e	// health sent when a player clicks on the mob
+// #define LiveOP_MobHealth		0x022e	// health sent when a player clicks on the mob
 #define LiveOP_ZoneChange		0x0142	// Client requesting transfer to a different zone
 #define LiveOP_DeleteSpawn		0x00f3	// Remove a spawn from the current zone
 	// not used	#define LiveOP_ConfirmDelete	0x0178	//Client sends this to server to confirm op_deletespawn
@@ -353,7 +361,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define LiveOP_Damage			0x00e2	// seq calls this Action2
 #define LiveOP_ManaChange		0x00bf
 #define LiveOP_ClientError		0x027c
-/**/ #define LiveOP_LoadSpellSet		0x02a4
+// #define LiveOP_LoadSpellSet		0x02a4
 #define LiveOP_Save				0x00fb	// Client asking server to save user state
 #define LiveOP_LocInfo			0x0316
 
@@ -366,7 +374,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define	LiveOP_ClickObject		0x00f9	//Client clicking on object
 #define LiveOP_ClearObject		0x01c1
 #define LiveOP_ZoneUnavail		0x0265
-/**/ #define LiveOP_FlashMessage		0x02cd //wierd opcode that flashes message on screen
+// #define LiveOP_FlashMessage		0x02cd //wierd opcode that flashes message on screen
 #define LiveOP_ItemPacket		0x02e0	// Variety of ways for sending out item data
 		//0x0283 hmm
 #define LiveOP_TradeRequest		0x029a	// Client request trade session
@@ -377,7 +385,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define LiveOP_TradeCoins		0x0036
 #define LiveOP_CancelTrade		0x002e
 #define LiveOP_FinishTrade		0x002f
-/**/ #define LiveOP_Translocate		0x01c5
+// #define LiveOP_Translocate		0x01c5
 	// not used	#define LiveOP_WebUpdate		0x01f2
 #define LiveOP_SaveOnZoneReq    0x00a1
 #define LiveOP_Logout           0x0185  // Last opcode seny by server when you zone or camp
@@ -491,7 +499,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 
 
 // Agz: The following is from the old source I used as base
-/************ ENUMERATED PACKET OPCODES ************/
+/ENUMERATED PACKET OPCODE
 	#define ALL_FINISH                  0x0005
 	#define LS_REQUEST_VERSION          0x0059
 	#define LS_SEND_VERSION             0x0059
@@ -510,5 +518,5 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 	#define WS_SEND_LOGIN_INFO          0x5818
 	#define WS_SEND_LOGIN_APPROVED      0x0710
 	#define WS_SEND_LOGIN_APPROVED2     0x0180
-	#define WS_SEND_CHAR_INFO           0x4720
+	#define WS_SEND_CHAR_INFO           0x4720*/
 #endif

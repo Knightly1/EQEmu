@@ -163,7 +163,7 @@
 				OutputFile=".\../build/World.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames="libc"
+				IgnoreDefaultLibraryNames="libc,msvcrt"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../build/World.pdb"
 				GenerateMapFile="TRUE"

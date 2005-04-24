@@ -3,7 +3,7 @@
 #include <iostream>
 #include <iomanip>
 #include "../common/types.h"
-#include "packetfile.h"
+#include "../common/packetfile.h"
 #include "../common/opcodemgr.h"
 #include "../common/files.h"
 
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 	uint32 packlen;
 	struct timeval tim;
 	bool to_server;
-	unsigned char packet_buf[PACKET_BUFFER_SIZE];
+	unsigned char* packet_buf = new unsigned char[PACKET_BUFFER_SIZE];
 	
 	//read in each EQ packet, ship it off to the build manager.
 	while((packlen = PACKET_BUFFER_SIZE)

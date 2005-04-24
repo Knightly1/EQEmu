@@ -43,7 +43,7 @@ using namespace std;
 #include "database.h"
 #include "EQStream.h"
 #include "packet_functions.h"
-#include "eq_opcodes.h"
+#include "emu_opcodes.h"
 #include "../common/classes.h"
 #include "../common/races.h"
 #include "../common/files.h"

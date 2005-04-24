@@ -11,14 +11,25 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Zone", "Zone\Zone.vcproj", 
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pf2text", "eqextractor\pf2text.vcproj", "{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Azone", "utils\Azone\Azone.vcproj", "{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfiguration) = preSolution
+		Apathing - Debug = Apathing - Debug
 		Debug = Debug
 		DebugPerl = DebugPerl
 		Raid Addicts = Raid Addicts
 		Release = Release
 	EndGlobalSection
 	GlobalSection(ProjectConfiguration) = postSolution
+		{21168136-6906-4039-B486-6086E164E743}.Apathing - Debug.ActiveCfg = Debug|Win32
+		{21168136-6906-4039-B486-6086E164E743}.Apathing - Debug.Build.0 = Debug|Win32
 		{21168136-6906-4039-B486-6086E164E743}.Debug.ActiveCfg = Debug|Win32
 		{21168136-6906-4039-B486-6086E164E743}.Debug.Build.0 = Debug|Win32
 		{21168136-6906-4039-B486-6086E164E743}.DebugPerl.ActiveCfg = Debug|Win32
@@ -27,6 +38,8 @@ Global
 		{21168136-6906-4039-B486-6086E164E743}.Raid Addicts.Build.0 = Release|Win32
 		{21168136-6906-4039-B486-6086E164E743}.Release.ActiveCfg = Release|Win32
 		{21168136-6906-4039-B486-6086E164E743}.Release.Build.0 = Release|Win32
+		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Apathing - Debug.ActiveCfg = Debug|Win32
+		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Apathing - Debug.Build.0 = Debug|Win32
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Debug.ActiveCfg = Debug|Win32
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Debug.Build.0 = Debug|Win32
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.DebugPerl.ActiveCfg = Debug|Win32
@@ -35,6 +48,8 @@ Global
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Raid Addicts.Build.0 = Raid Addicts|Win32
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Release.ActiveCfg = Release|Win32
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Release.Build.0 = Release|Win32
+		{197A661B-390A-46D6-94FC-E99F93280695}.Apathing - Debug.ActiveCfg = Debug|Win32
+		{197A661B-390A-46D6-94FC-E99F93280695}.Apathing - Debug.Build.0 = Debug|Win32
 		{197A661B-390A-46D6-94FC-E99F93280695}.Debug.ActiveCfg = Debug|Win32
 		{197A661B-390A-46D6-94FC-E99F93280695}.Debug.Build.0 = Debug|Win32
 		{197A661B-390A-46D6-94FC-E99F93280695}.DebugPerl.ActiveCfg = DebugPerl|Win32
@@ -43,6 +58,26 @@ Global
 		{197A661B-390A-46D6-94FC-E99F93280695}.Raid Addicts.Build.0 = Raid Addicts|Win32
 		{197A661B-390A-46D6-94FC-E99F93280695}.Release.ActiveCfg = Release|Win32
 		{197A661B-390A-46D6-94FC-E99F93280695}.Release.Build.0 = Release|Win32
+		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Apathing - Debug.ActiveCfg = Debug|Win32
+		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Apathing - Debug.Build.0 = Debug|Win32
+		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Debug.ActiveCfg = Debug|Win32
+		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Debug.Build.0 = Debug|Win32
+		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.DebugPerl.ActiveCfg = Debug|Win32
+		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.DebugPerl.Build.0 = Debug|Win32
+		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Raid Addicts.ActiveCfg = Release|Win32
+		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Raid Addicts.Build.0 = Release|Win32
+		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Release.ActiveCfg = Release|Win32
+		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Release.Build.0 = Release|Win32
+		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Apathing - Debug.ActiveCfg = Debug|Win32
+		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Apathing - Debug.Build.0 = Debug|Win32
+		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Debug.ActiveCfg = Debug|Win32
+		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Debug.Build.0 = Debug|Win32
+		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.DebugPerl.ActiveCfg = Debug|Win32
+		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.DebugPerl.Build.0 = Debug|Win32
+		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Raid Addicts.ActiveCfg = Release|Win32
+		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Raid Addicts.Build.0 = Release|Win32
+		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Release.ActiveCfg = Release|Win32
+		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Release.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection

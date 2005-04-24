@@ -21,7 +21,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include <string.h>
 
 #include "../common/files.h"
-#include "../common/eq_opcodes.h"
+#include "../common/emu_opcodes.h"
 #include "../common/eq_packet_structs.h"
 #include "client.h"
 #include "zone_profile.h"
