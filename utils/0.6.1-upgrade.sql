@@ -329,5 +329,5 @@ ALTER TABLE zone_points DROP target_zone;
 
 ALTER TABLE account ADD hideme TINYINT NOT NULL DEFAULT 0;
 
-
+ALTER TABLE `character_` ADD `extprofile` BLOB NOT NULL;
 

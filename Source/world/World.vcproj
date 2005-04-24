@@ -103,7 +103,7 @@
 				OutputFile="../build/WorldDebug.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames="LIBCMTD,LIBC,LIBCMT"
+				IgnoreDefaultLibraryNames="LIBCMT,LIBC,MSVCRT"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../build/WorldDebug.pdb"
 				SubSystem="1"/>

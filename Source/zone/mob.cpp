@@ -2372,6 +2372,7 @@ float Mob::GetProcChances(float &ProcBonus, float &ProcChance) {
 	ProcBonus += float(itembonuses.ProcChance + spellbonuses.ProcChance) / 1000.0f;
 	
 	ProcChance = float(mydex) / 3020.0f + ProcBonus;
+	return ProcChance;
 }
 
 void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {

@@ -19,6 +19,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <float.h>
 
 #include "../common/files.h"
 #include "zone_profile.h"
@@ -80,12 +81,12 @@ Map* Map::LoadMapfile(const char* in_zonename) {
 }
 
 Map::Map() {
-	_minz = 999999e111;
-	_minx = 999999e111;
-	_miny = 999999e111;
-	_maxz = -999999e111;
-	_maxx = -999999e111;
-	_maxy = -999999e111;
+	_minz = FLT_MAX;
+	_minx = FLT_MAX;
+	_miny = FLT_MAX;
+	_maxz = FLT_MIN;
+	_maxx = FLT_MIN;
+	_maxy = FLT_MIN;
 	
 	m_Faces = 0;
 	m_Nodes = 0;

@@ -6230,11 +6230,11 @@ void Client::Handle_OP_PurchaseLeadershipAA(const EQApplicationPacket *app) {
 	}
 	
 	//success, send them an update
-	EQApplicationPacket *outapp = new EQApplicationPacket(OP_UpdateLeadershipAA, sizeof(UpdateLeadershipAA_Struct));
+	/*EQApplicationPacket *outapp = new EQApplicationPacket(OP_UpdateLeadershipAA, sizeof(UpdateLeadershipAA_Struct));
 	UpdateLeadershipAA_Struct *u = (UpdateLeadershipAA_Struct *) outapp->pBuffer;
 	u->ability_id = aaid;
 	u->new_rank = m_pp.leader_abilities.ranks[aaid];
-	FastQueuePacket(&outapp);
+	FastQueuePacket(&outapp);*/
 }
 
 void Client::Handle_OP_ClearTitle(const EQApplicationPacket *app) {

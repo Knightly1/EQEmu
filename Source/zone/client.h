@@ -37,6 +37,7 @@ class Client;
 #include "../common/seperator.h"
 #include "../common/Item.h"
 #include "updatemgr.h"
+#include <float.h>
 
 #define ITEM_MAX_STACK 20
 
@@ -299,7 +300,7 @@ public:
 	inline float ProximityX() { return(proximity_x); }
 	inline float ProximityY() { return(proximity_y); }
 	inline float ProximityZ() { return(proximity_z); }
-	inline void ClearAllProximities() { entity_list.ProcessMove(this, 1000e99, 1000e99, 1000e99); proximity_x = 1000e99; proximity_y = 1000e99; proximity_z = 1000e99; }
+	inline void ClearAllProximities() { entity_list.ProcessMove(this, FLT_MAX, FLT_MAX, FLT_MAX); proximity_x = FLT_MAX; proximity_y = FLT_MAX; proximity_z = FLT_MAX; }
 	
 	/*
 		Begin client modifiers

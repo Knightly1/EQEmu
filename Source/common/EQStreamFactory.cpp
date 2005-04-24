@@ -23,7 +23,6 @@ using namespace std;
 ThreadReturnType EQStreamFactoryReaderLoop(void *eqfs)
 {
 EQStreamFactory *fs=(EQStreamFactory *)eqfs;
-cout << "Starting factory Reader" << endl;
 	fs->ReaderLoop();
 
 	THREAD_RETURN(NULL);
@@ -31,8 +30,7 @@ cout << "Starting factory Reader" << endl;
 
 ThreadReturnType EQStreamFactoryWriterLoop(void *eqfs)
 {
-EQStreamFactory *fs=(EQStreamFactory *)eqfs;
-cout << "Starting factory Writer" << endl;
+	EQStreamFactory *fs=(EQStreamFactory *)eqfs;
 	fs->WriterLoop();
 
 	THREAD_RETURN(NULL);
@@ -82,6 +80,9 @@ struct sockaddr_in address;
 	#else
 		fcntl(sock, F_SETFL, O_NONBLOCK);
 	#endif
+	//moved these because on windows the output was delayed and causing the console window to look bad
+	cout << "Starting factory Reader" << endl;
+	cout << "Starting factory Writer" << endl;
 	#ifdef WIN32
 		_beginthread(EQStreamFactoryReaderLoop,0, this);
 		_beginthread(EQStreamFactoryWriterLoop,0, this);

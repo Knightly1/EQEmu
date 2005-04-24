@@ -181,6 +181,9 @@
 				RelativePath=".\NPCTypes.cpp">
 			</File>
 			<File
+				RelativePath=".\Opcodes.cpp">
+			</File>
+			<File
 				RelativePath=".\Spells.cpp">
 			</File>
 		</Filter>
@@ -207,6 +210,9 @@
 			</File>
 			<File
 				RelativePath=".\NPCTypes.h">
+			</File>
+			<File
+				RelativePath=".\Opcodes.h">
 			</File>
 			<File
 				RelativePath=".\Spells.h">

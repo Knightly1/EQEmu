@@ -1,12 +1,22 @@
 #include "rdtsc.h"
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/time.h>
+
+#ifdef WIN32
+	#include <winsock2.h>
+	#include <windows.h>
+	#include <sys/timeb.h>
+	#include "../common/timer.h"
+#else
+	#include <unistd.h>
+	#include <sys/time.h>
+#endif
 
 #ifdef i386
 #define USE_RDTSC
 #else
-#warning RDTSC_Timer cannot use rdtsc on a non-intel platform, using gettimeofday
+	#ifndef WIN32
+		#warning RDTSC_Timer cannot use rdtsc on a non-intel platform, using gettimeofday
+	#endif
 #endif
 
 bool RDTSC_Timer::_inited = false;

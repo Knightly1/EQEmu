@@ -211,9 +211,9 @@ Client::Client(EQStream* ieqs)
 	zonesummon_ignorerestrictions = 0;
 	zoning = false;
 	zone_mode = ZoneUnsolicited;
-	proximity_x = 9e100;	//arbitrary large number
-	proximity_y = 9e100;
-	proximity_z = 9e100;
+	proximity_x = FLT_MAX;	//arbitrary large number
+	proximity_y = FLT_MAX;
+	proximity_z = FLT_MAX;
 	casting_spell_id = 0;
 	npcflag = false;
 	npclevel = 0;
