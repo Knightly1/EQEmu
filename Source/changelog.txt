@@ -1,7 +1,12 @@
 EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
-==04/31/2005
+==04/23/2005
+LethalEncounter: Fixed compile errors on Windows
+LethalEncounter: Fixed guild crash bug while logging in
+LethalEncounter: Fixed most of the guild commands
+
+==04/13/2005
 Cofruben: Fixed possible crashes using #npscpawn command.
 Cofruben: Added a few more cheat locators.
 
