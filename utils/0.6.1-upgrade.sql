@@ -12,11 +12,6 @@ alter table tributes ADD isguild TINYINT NOT NULL DEFAULT '0';
 alter table tributes drop primary key;
 alter table tributes ADD primary key(id,isguild);
 
-ALTER TABLE zone ADD fog_red1 tinyint(3) unsigned NOT NULL default '0';
-ALTER TABLE zone ADD fog_green1 tinyint(3) unsigned NOT NULL default '0';
-ALTER TABLE zone ADD fog_blue1 tinyint(3) unsigned NOT NULL default '0';
-ALTER TABLE zone ADD fog_minclip1 float NOT NULL default '450';
-ALTER TABLE zone ADD fog_maxclip1 float NOT NULL default '450';
 ALTER TABLE zone ADD fog_red2 tinyint(3) unsigned NOT NULL default '0';
 ALTER TABLE zone ADD fog_green2 tinyint(3) unsigned NOT NULL default '0';
 ALTER TABLE zone ADD fog_blue2 tinyint(3) unsigned NOT NULL default '0';
@@ -32,11 +27,11 @@ ALTER TABLE zone ADD fog_green4 tinyint(3) unsigned NOT NULL default '0';
 ALTER TABLE zone ADD fog_blue4 tinyint(3) unsigned NOT NULL default '0';
 ALTER TABLE zone ADD fog_minclip4 float NOT NULL default '450';
 ALTER TABLE zone ADD fog_maxclip4 float NOT NULL default '450';
-UPDATE zone SET fog_red1=fog_red,fog_red2=fog_red,fog_red3=fog_red,fog_red4=fog_red,
-fog_green1=fog_green,fog_green2=fog_green,fog_green3=fog_green,fog_green4=fog_green,
-fog_blue1=fog_blue,fog_blue2=fog_blue,fog_blue3=fog_blue,fog_blue4=fog_blue,
-fog_minclip1=fog_minclip,fog_minclip2=fog_minclip,fog_minclip3=fog_minclip,fog_minclip4=fog_minclip,
-fog_maxclip1=fog_maxclip,fog_maxclip2=fog_maxclip,fog_maxclip3=fog_maxclip,fog_maxclip4=fog_maxclip;
+UPDATE zone SET fog_red2=fog_red,fog_red3=fog_red,fog_red4=fog_red,
+fog_green2=fog_green,fog_green3=fog_green,fog_green4=fog_green,
+fog_blue2=fog_blue,fog_blue3=fog_blue,fog_blue4=fog_blue,
+fog_minclip2=fog_minclip,fog_minclip3=fog_minclip,fog_minclip4=fog_minclip,
+fog_maxclip2=fog_maxclip,fog_maxclip3=fog_maxclip,fog_maxclip4=fog_maxclip;
 
 ALTER TABLE zone_points ADD target_zone_id int UNSIGNED NOT NULL;
 UPDATE zone_points SET target_zone_id=39 WHERE target_zone='hole';

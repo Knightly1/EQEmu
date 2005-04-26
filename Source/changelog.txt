@@ -42,12 +42,6 @@ FatherNitwit: (bUri) Fixed attack code with non-weapons and h2h weapons.
 FatherNitwit: Split zone fog types into seperate DB fields.
 FatherNitwit: Differentiated between guild and player tributes.
 Required SQL: utils/0.6.1-upgrade.sql  (will be updated until release)
-#Optional cleanup SQL, breaks backwards compatibility:
-ALTER TABLE zone DROP fog_red;
-ALTER TABLE zone DROP fog_green;
-ALTER TABLE zone DROP fog_blue;
-ALTER TABLE zone DROP fog_minclip;
-ALTER TABLE zone DROP fog_maxclip;
 
 ==01/15/2005
 Doodman: Fixed charges/quantity

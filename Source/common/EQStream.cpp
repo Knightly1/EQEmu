@@ -45,6 +45,31 @@
 #include "CRC16.h"
 
 
+void EQStream::init() {
+	State=CLOSED;
+	StreamType=UnknownStream;
+	compressed=true;
+	encoded=false;
+	app_opcode_size=2;
+	active_users = 0;
+	Session=0;
+	Key=0;
+	MaxLen=0;
+	NextInSeq=0;
+	NextOutSeq=0;
+	CombinedAppPacket=NULL;
+	MaxAckReceived=-1;
+	NextAckToSend=-1;
+	LastAckSent=-1;
+	LastSeqSent=-1;
+	MaxSends=5;
+	LastPacket=0;
+	oversize_buffer=NULL;
+	oversize_length=0;
+	oversize_offset=0;
+	Factory = NULL;
+}
+
 void EQStream::ProcessPacket(EQProtocolPacket *p)
 {
 uint32 processed=0,subpacket_length=0;
@@ -600,9 +625,13 @@ EQProtocolPacket *out=new EQProtocolPacket(OP_SessionRequest,NULL,sizeof(Session
 
 void EQStream::SendDisconnect()
 {
-EQProtocolPacket *out=new EQProtocolPacket(OP_SessionDisconnect,NULL,sizeof(uint32));
+	if(GetState() != ESTABLISHED)
+		return;
+	
+	EQProtocolPacket *out=new EQProtocolPacket(OP_SessionDisconnect,NULL,sizeof(uint32));
 	*(uint32 *)out->pBuffer=htonl(Session);
 	NonSequencedPush(out);
+	
 	SetState(CLOSING);
 }
 
@@ -661,8 +690,13 @@ EQApplicationPacket *p=NULL;
 bool EQStream::HasOutgoingData()
 {
 bool flag;
+	
+	//once closed, we have nothing more to say
+	if(CheckClosed())
+		return(false);
+	
 	MOutboundQueue.lock();
-	flag=(NonSequencedQueue.size()>0);
+	flag=(!NonSequencedQueue.empty());
 	if (!flag) {
 		map<uint16, EQProtocolPacket *>::reverse_iterator itr;
 		if ((itr=SequencedQueue.rbegin())!=SequencedQueue.rend()) {

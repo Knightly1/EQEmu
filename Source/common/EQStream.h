@@ -17,9 +17,11 @@
 
 using namespace std;
 
-#define CLOSED 0
-#define ESTABLISHED 1
-#define CLOSING 2
+typedef enum {
+	ESTABLISHED,
+	CLOSING,
+	CLOSED
+} EQStreamState;
 
 #define FLAG_COMPRESSED	0x01
 #define FLAG_ENCODED	0x04
@@ -90,10 +92,10 @@ class EQStream {
 		uint32  MaxLen;
 		uint16 MaxSends;
 
-		bool in_use;
+		uint8 active_users;	//how many things are actively using this
 		Mutex MInUse;
 
-		int State;
+		EQStreamState State;
 		Mutex MState;
 
 		uint32 LastPacket;
@@ -133,11 +135,11 @@ class EQStream {
 		EQStreamFactory *Factory;
 
 	public:
-		EQStream() { init(); State=CLOSED; app_opcode_size=2; compressed=true; encoded=false; StreamType=UnknownStream; }
-		EQStream(sockaddr_in addr) { init(); remote_ip=addr.sin_addr.s_addr; remote_port=addr.sin_port; State=CLOSED; app_opcode_size=2; compressed=true; encoded=false; StreamType=UnknownStream; }
+		EQStream() { init(); remote_ip = 0; remote_port = 0; }
+		EQStream(sockaddr_in addr) { init(); remote_ip=addr.sin_addr.s_addr; remote_port=addr.sin_port; }
 		virtual ~EQStream() { RemoveData(); }
 		inline void SetFactory(EQStreamFactory *f) { Factory=f; }
-		inline void init() { Session=0; Key=0; MaxLen=0; NextInSeq=0; NextOutSeq=0; CombinedAppPacket=NULL; MaxAckReceived=-1;NextAckToSend=-1;LastAckSent=-1;LastSeqSent=-1;MaxSends=5;LastPacket=0; oversize_buffer=NULL, oversize_length=0; oversize_offset=0; }
+		void init();
 		void SetMaxLen(uint32 length) { MaxLen=length; }
 
 		void QueuePacket(const EQApplicationPacket *p, bool ack_req=true);
@@ -182,10 +184,13 @@ class EQStream {
 
 		void RemoveData() { InboundQueueClear(); OutboundQueueClear(); if (CombinedAppPacket) delete CombinedAppPacket; }
 
-		inline bool InUse() { bool flag; MInUse.lock(); flag=in_use; MInUse.unlock(); return flag; }
-		inline void SetInUse(const bool flag) { MInUse.lock(); in_use=flag; MInUse.unlock(); }
-		inline int GetState() { int s; MState.lock(); s=State; MState.unlock(); return s; }
-		inline void SetState(int state) { MState.lock(); State=state; MState.unlock(); }
+		//
+		inline bool IsInUse() { bool flag; MInUse.lock(); flag=(active_users>0); MInUse.unlock(); return flag; }
+		inline void PutInUse() { MInUse.lock(); active_users++; MInUse.unlock(); }
+		inline void ReleaseFromUse() { MInUse.lock(); if(active_users > 0) active_users--; MInUse.unlock(); }
+		
+		inline EQStreamState GetState() { EQStreamState s; MState.lock(); s=State; MState.unlock(); return s; }
+		inline void SetState(EQStreamState state) { MState.lock(); State=state; MState.unlock(); }
 
 		inline uint32 GetRemoteIP() { return remote_ip; }
 		inline uint32 GetrIP() { return remote_ip; }
@@ -195,9 +200,9 @@ class EQStream {
 
 		static EQProtocolPacket *Read(int eq_fd, sockaddr_in *from);
 
-		void Free() { SetInUse(false); }
 		void Close() { SendDisconnect(); }
 		bool CheckActive() { return GetState()==ESTABLISHED; }
+		bool CheckClosed() { return GetState()==CLOSED; }
 		void SetOpcodeSize(uint8 s) { app_opcode_size = s; }
 		void SetStreamType(EQStreamType t);
 		inline const EQStreamType GetStreamType() const { return StreamType; }

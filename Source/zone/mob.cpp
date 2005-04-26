@@ -810,7 +810,8 @@ void Mob::SendHPUpdate()
 	if(IsGrouped())
 	{
 		group = entity_list.GetGroupByMob(this);
-		group->SendHPPacketsFrom(this);
+		if(group)	//not sure why this might be null, but it happens
+			group->SendHPPacketsFrom(this);
 	}	
 
 	// send to master

@@ -101,7 +101,7 @@ EQStream *s=NULL;
 	if (NewStreams.size()) {
 		s=NewStreams.front();
 		NewStreams.pop();
-		s->SetInUse(true);
+		s->PutInUse();
 	}
 	MNewStreams.unlock();
 	//cout << "Pop(): Unlocking MNewStreams" << endl;
@@ -148,15 +148,18 @@ timeval sleep_time;
 
 		if (FD_ISSET(sock,&readset)) {
 #ifdef WIN32
-			if ((length=recvfrom(sock,(char*)buffer,sizeof(buffer),0,(struct sockaddr*)&from,(int *)&socklen))<0) {		
+			if ((length=recvfrom(sock,(char*)buffer,sizeof(buffer),0,(struct sockaddr*)&from,(int *)&socklen))<0)
 #else
-			if ((length=recvfrom(sock,buffer,2048,0,(struct sockaddr *)&from,(socklen_t *)&socklen))<0) {
+			if ((length=recvfrom(sock,buffer,2048,0,(struct sockaddr *)&from,(socklen_t *)&socklen))<0)
 #endif
+			{
 				// What do we wanna do?
 			} else {
 				char temp[25];
 				sprintf(temp,"%lu.%d",ntohl(from.sin_addr.s_addr),ntohs(from.sin_port));
+				MStreams.lock();
 				if ((stream_itr=Streams.find(temp))==Streams.end()) {
+					MStreams.unlock();
 					if (buffer[1]==OP_SessionRequest) {
 						EQStream *s=new EQStream(from);
 						s->SetFactory(this);
@@ -167,8 +170,19 @@ timeval sleep_time;
 						s->SetLastPacketTime(Timer::GetCurrentTime());
 					}
 				} else {
-					stream_itr->second->Process(buffer,length);
-					stream_itr->second->SetLastPacketTime(Timer::GetCurrentTime());
+					EQStream *curstream = stream_itr->second;
+					//dont bother processing incoming packets for closed connections
+					if(curstream->CheckClosed())
+						curstream = NULL;
+					else
+						curstream->PutInUse();
+					MStreams.unlock();
+					
+					if(curstream) {
+						curstream->Process(buffer,length);
+						curstream->SetLastPacketTime(Timer::GetCurrentTime());
+						curstream->ReleaseFromUse();
+					}
 				}
 			}
 		}
@@ -177,49 +191,57 @@ timeval sleep_time;
 
 void EQStreamFactory::CheckTimeout()
 {
-unsigned long now=Timer::GetCurrentTime();
-map<string,EQStream *>::iterator stream_itr;
+	//lock streams the entire time were checking timeouts, it should be fast.
+	MStreams.lock();
+	
+	unsigned long now=Timer::GetCurrentTime();
+	map<string,EQStream *>::iterator stream_itr;
+	
 	for(stream_itr=Streams.begin();stream_itr!=Streams.end();) {
-		bool in_use=stream_itr->second->InUse();
-		int state=stream_itr->second->GetState();
-		bool remove_connection=false;
-		//cout << "Checking timeout" << endl;
-		if (state==CLOSING && !stream_itr->second->HasOutgoingData()) {
-			remove_connection=true;
-
-		} else if (state==CLOSED) {
-			if (in_use)
-				;//stream_itr->second->Closed();
-			else
-				remove_connection=true;
-		} else if (stream_itr->second->CheckTimeout(now,30000)) { 
+		EQStream *s = stream_itr->second;
+		EQStreamState state = s->GetState();
+		
+		if (state==CLOSING && !s->HasOutgoingData()) {
+			stream_itr->second->SetState(CLOSED);
+			state = CLOSED;
+		} else if (s->CheckTimeout(now, STREAM_TIMEOUT)) { 
 			cout << "Timeout up!, state=" << state << endl;
 			if (state==ESTABLISHED) {
-				//if (in_use)
-					//stream_itr->second->Timeout();
-				stream_itr->second->SendDisconnect();
-			} else if (state==CLOSING) {
-				stream_itr->second->SetState(CLOSED);
+				s->Close();
+			} else if (state == CLOSING) {
+				//if we time out in the closing state, just give up
+				s->SetState(CLOSED);
+				state = CLOSED;
 			}
 		}
-
-		if (remove_connection) {
-			cout << "Removing connection" << endl;
-			map<string,EQStream *>::iterator temp=stream_itr;
-			stream_itr++;
-			delete temp->second;
-			Streams.erase(temp);
-			continue;
+		//not part of the else so we check it right away on state change
+		if (state==CLOSED) {
+			if (s->IsInUse()) {
+				//give it a little time for everybody to finish with it
+			} else {
+				//everybody is done, we can delete it now
+				cout << "Removing connection" << endl;
+				map<string,EQStream *>::iterator temp=stream_itr;
+				stream_itr++;
+				//let whoever has the stream outside delete it
+				delete temp->second;
+				Streams.erase(temp);
+				continue;
+			}
 		}
 
 		stream_itr++;
 	}
+	MStreams.unlock();
 }
 
 void EQStreamFactory::WriterLoop()
 {
 map<string,EQStream *>::iterator stream_itr;
 bool havework=true;
+vector<EQStream *> wants_write;
+vector<EQStream *>::iterator cur,end;
+	
 	WriterRunning=true;
 	while(sock!=-1) {
 		//if (!havework) {
@@ -229,13 +251,28 @@ bool havework=true;
 		if (!WriterRunning)
 			break;
 		MWriterRunning.unlock();
-
-		havework=false;
+		
+		havework = false;
+		wants_write.clear();
+		
+		//copy streams into a seperate list so we dont have to keep
+		//MStreams locked while we are writting
+		MStreams.lock();
 		for(stream_itr=Streams.begin();stream_itr!=Streams.end();stream_itr++) {
 			if (stream_itr->second->HasOutgoingData()) {
 				havework=true;
-				stream_itr->second->Write(sock);
+				stream_itr->second->PutInUse();
+				wants_write.push_back(stream_itr->second);
 			}
+		}
+		MStreams.unlock();
+		
+		//do the actual writes
+		cur = wants_write.begin();
+		end = wants_write.end();
+		for(; cur != end; cur++) {
+			(*cur)->Write(sock);
+			(*cur)->ReleaseFromUse();
 		}
 
 		Sleep(40);

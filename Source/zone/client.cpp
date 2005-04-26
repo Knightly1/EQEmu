@@ -298,7 +298,6 @@ Client::~Client() {
 	if(isgrouped && !zoning)
 		LeaveGroup();
 	
-	eqs->Free();
 	UpdateWho(2);
 	// we save right now, because the client might be zoning and the world
 	// will need this data right away
@@ -310,6 +309,11 @@ Client::~Client() {
 	guildwars.SetCurrentUsers(numclients);
 #endif
 	zone->RemoveAuth(GetName());
+	
+	//let the stream factory know were done with this stream
+	eqs->Close();
+	eqs->ReleaseFromUse();
+	eqs = NULL;
 }
 
 void Client::ReportConnectingState() {

@@ -9,6 +9,8 @@
 #include "../common/timeoutmgr.h"
 #include "../common/opcodemgr.h"
 
+#define STREAM_TIMEOUT 45000 //in ms
+
 class EQStreamFactory : private Timeoutable {
 	private:
 		int sock;
@@ -27,6 +29,7 @@ class EQStreamFactory : private Timeoutable {
 		Mutex MNewStreams;
 
 		map<string,EQStream *> Streams;
+		Mutex MStreams;
 
 		virtual void CheckTimeout();
 

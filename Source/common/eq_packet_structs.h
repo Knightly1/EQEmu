@@ -2696,7 +2696,6 @@ struct TitleEntry_Struct {
 
 struct Titles_Struct {
 	uint32	title_count;
-	TitleEntry_Struct titles[1];
 };
 
 struct TaskDescription_Struct {

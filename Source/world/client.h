@@ -60,7 +60,6 @@ public:
 	inline const char*	GetCharName()		{ return char_name; }
 	inline ClientListEntry* GetCLE()		{ return cle; }
 	inline void			SetCLE(ClientListEntry* iCLE)			{ cle = iCLE; }
-	inline void		Free()			{ eqs->Free(); }
 private:
 	int32	ip;
 	int16	port;

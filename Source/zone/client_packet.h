@@ -201,4 +201,5 @@
 	void Handle_OP_LeadershipExpToggle(const EQApplicationPacket *app);
 	void Handle_OP_ClearTitle(const EQApplicationPacket *app);
 	void Handle_OP_PurchaseLeadershipAA(const EQApplicationPacket *app);
+	void Handle_OP_Ignore(const EQApplicationPacket *app);
 

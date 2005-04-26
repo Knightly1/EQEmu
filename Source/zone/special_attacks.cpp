@@ -477,6 +477,7 @@ void Client::RangedAttack(Mob* other) {
 		return;
 	
 	//make sure the attack and ranged timers are up
+	//if the ranged timer is disabled, then they have no ranged weapon and shouldent be attacking anyhow
 	if(!attack_timer.Check(false) || !ranged_timer.Check())
 		return;
 	
@@ -663,6 +664,7 @@ void Client::RangedAttack(Mob* other) {
 void Client::ThrowingAttack(Mob* other) { //old was 51
 	
 	//make sure the attack and ranged timers are up
+	//if the ranged timer is disabled, then they have no ranged weapon and shouldent be attacking anyhow
 	if(!attack_timer.Check(false) || !ranged_timer.Check())
 		return;
 	

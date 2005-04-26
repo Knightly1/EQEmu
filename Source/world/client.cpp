@@ -78,7 +78,12 @@ Client::Client(EQStream* ieqs) {
 Client::~Client() {
 	if (RunLoops && cle && zoneID == 0)
 		cle->SetOnline(CLE_Status_Offline);
-	eqs->Free();
+	
+	//let the stream factory know were done with this stream
+	eqs->Close();
+	eqs->ReleaseFromUse();
+	eqs = NULL;
+	
 	safe_delete(autobootup_timeout);
 	safe_delete(CLE_keepalive_timer);
 	safe_delete(connect);
@@ -857,7 +862,8 @@ void ClientList::Process() {
 			struct in_addr  in;
 			in.s_addr = iterator.GetData()->GetIP();
 			cout << "Removing client from ip:" << inet_ntoa(in) << " port:" << iterator.GetData()->GetPort() << endl;
-			iterator.GetData()->Free();
+//the client destructor should take care of this.
+//			iterator.GetData()->Free();
 			iterator.RemoveCurrent();
 		}
 		else

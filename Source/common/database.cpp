@@ -310,7 +310,7 @@ bool Database::SaveZoneCFG(int32 zoneid,NewZone_Struct* zd){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	if (!RunQuery(query, MakeAnyLenString(&query, "update zone set underworld=%f,minclip1=%f,"
-		"maxclip1=%f,fog_minclip1=%f,fog_maxclip1=%f,fog_blue1=%i,fog_red1=%i,fog_green1=%i,sky=%i,"
+		"maxclip=%f,fog_minclip=%f,fog_maxclip=%f,fog_blue=%i,fog_red=%i,fog_green=%i,sky=%i,"
 		"ztype=%i,zone_exp_multiplier=%f,walkspeed=%f,safe_x=%f,safe_y=%f,safe_z=%f "
 		"where zoneidnumber=%i",
 		zd->underworld,zd->minclip,
@@ -333,7 +333,7 @@ NewZone_Struct* Database::GetZoneCFG(int32 zoneid){
 	int i=0;
 	NewZone_Struct* zone_data = NULL;
 	if (database.RunQuery(query, MakeAnyLenString(&query, "SELECT ztype,"
-		"fog_red1,fog_green1,fog_blue1,fog_minclip1,fog_maxclip1,"
+		"fog_red,fog_green,fog_blue,fog_minclip,fog_maxclip,"
 		"fog_red2,fog_green2,fog_blue2,fog_minclip2,fog_maxclip2,"
 		"fog_red3,fog_green3,fog_blue3,fog_minclip3,fog_maxclip3,"
 		"fog_red4,fog_green4,fog_blue4,fog_minclip4,fog_maxclip4,"

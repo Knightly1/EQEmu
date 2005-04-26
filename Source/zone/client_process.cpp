@@ -186,11 +186,29 @@ bool Client::Process() {
 				- being stunned or mezzed
 				- having used a ranged weapon recently
 		*/
-		if(!IsAIControlled() && !dead
-			&& !(spellend_timer.Enabled() && (spells[casting_spell_id].classes[7] < 1 && spells[casting_spell_id].classes[7] > 65)) 
-			&& !IsStunned() && !IsMezzed() && appearance != 3
-			&& !ranged_timer.Check(false))
-			may_use_attacks = true;
+		if(auto_attack) {
+			if(!IsAIControlled() && !dead
+				&& !(spellend_timer.Enabled() && (spells[casting_spell_id].classes[7] < 1 && spells[casting_spell_id].classes[7] > 65)) 
+				&& !IsStunned() && !IsMezzed() && appearance != 3
+				)
+				may_use_attacks = true;
+			
+			if(may_use_attacks && ranged_timer.Enabled()) {
+				//if the range timer is enabled, we need to consider it
+				if(!ranged_timer.Check(false)) {
+					//the ranged timer has not elapsed, cannot attack.
+					may_use_attacks = false;
+				}
+			}
+/*			
+			printf("May Attack Debug: ai? %d, dead? %d, spells? %d, stunned? %d, mezzed? %d, app==3? %d, ranged? %d\n", 
+				IsAIControlled(), dead, spellend_timer.Enabled() && (spells[casting_spell_id].classes[7] < 1 && spells[casting_spell_id].classes[7] > 65), 
+				IsStunned(), IsMezzed(), appearance, ranged_timer.Check(false));
+			
+			printf("Auto Attack Enabled, mut=%d, at=%d, t=0x%x\n", may_use_attacks, attack_timer.Check(false), target);
+		*/
+		}
+		
 		
 		if (auto_attack && target != NULL && may_use_attacks && attack_timer.Check()) {
 			if (!CombatRange(target)) {

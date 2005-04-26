@@ -308,6 +308,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_LeadershipExpToggle] = &Client::Handle_OP_LeadershipExpToggle;
 	ConnectedOpcodes[OP_PurchaseLeadershipAA] = &Client::Handle_OP_PurchaseLeadershipAA;
 	ConnectedOpcodes[OP_ClearTitle] = &Client::Handle_OP_ClearTitle;
+	ConnectedOpcodes[OP_SenseHeading] = &Client::Handle_OP_Ignore;
 	
 }
 
@@ -853,28 +854,27 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 
 void Client::Handle_OP_AutoAttack(const EQApplicationPacket *app)
 {
-	if (app->size == 4)	{
-		if (app->pBuffer[0] == 0) {
-			auto_attack = false;
-			if (IsAIControlled())
-				return;
-			attack_timer.Disable();
-			attack_dw_timer.Disable();
-			SetAttackTimer();
-		}
-		else if (app->pBuffer[0] == 1) {
-			auto_attack = true;
-			if (IsAIControlled())
-				return;
-			attack_timer.Enable();
-			attack_dw_timer.Enable();
-			SetAttackTimer();
-		}
-	}
-	else {
+	if (app->size != 4) {
 		LogFile->write(EQEMuLog::Error, "OP size error: OP_AutoAttack expected:4 got:%i", app->size);
+		return;
 	}
-	return;
+	
+	if (app->pBuffer[0] == 0) {
+		auto_attack = false;
+		if (IsAIControlled())
+			return;
+		attack_timer.Disable();
+		attack_dw_timer.Disable();
+		SetAttackTimer();
+	}
+	else if (app->pBuffer[0] == 1) {
+		auto_attack = true;
+		if (IsAIControlled())
+			return;
+		attack_timer.Enable();
+		attack_dw_timer.Enable();
+		SetAttackTimer();
+	}
 }
 
 void Client::Handle_OP_AutoAttack2(const EQApplicationPacket *app)
@@ -5440,6 +5440,10 @@ void Client::Handle_OP_Heartbeat(const EQApplicationPacket *app)
 }
 
 void Client::Handle_OP_SafePoint(const EQApplicationPacket *app)
+{
+}
+
+void Client::Handle_OP_Ignore(const EQApplicationPacket *app)
 {
 }
 
