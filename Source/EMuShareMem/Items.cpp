@@ -8,7 +8,6 @@
 */
 
 #ifdef WIN32
-#include <winsock2.h>
 #include <windows.h>
 #else
 #include "../common/unix.h"
@@ -25,31 +24,55 @@ MMF ItemsMMF;
 const MMFItems_Struct* MMFItemsData = 0;
 MMFItems_Struct* MMFItemsData_Writable = 0;
 
-MMF ItemsSerializationMMF;
-const MMFItemsSerialization_Struct* MMFItemsSerializationData = 0;
-MMFItemsSerialization_Struct* MMFItemsSerializationData_Writable = 0;
+#ifdef WIN32
+extern "C" __declspec(dllexport) const Item_Struct* GetItem(uint32 id) {
+	return pGetItem(id);
+};
 
-DLLFUNC bool AddItem(uint32 id, const Item_Struct* item, const unsigned char* item_s) {
-	if (!MMFItemsData_Writable || !MMFItemsSerializationData_Writable)
+extern "C" __declspec(dllexport) bool AddItem(uint32 id, const Item_Struct* item) {
+	return pAddItem(id, item);
+};
+
+extern "C" __declspec(dllexport) const Item_Struct* IterateItems(uint32* NextIndex) {
+	return pIterateItems(NextIndex);
+};
+
+extern "C" __declspec(dllexport) bool DLLLoadItems(CALLBACK_DBLoadItems cbDBLoadItems, int32 iItemStructSize, sint32* iItemCount, int32* iMaxItemID) {
+	return pDLLLoadItems(cbDBLoadItems, iItemStructSize, iItemCount, iMaxItemID);
+};
+#else
+extern "C" const Item_Struct* GetItem(uint32 id) {
+	return pGetItem(id);
+};
+extern "C" bool AddItem(uint32 id, const Item_Struct* item) {
+        return pAddItem(id, item);
+};
+	
+extern "C" const Item_Struct* IterateItems(uint32* NextIndex) {
+	return pIterateItems(NextIndex);
+};
+		
+extern "C" bool DLLLoadItems(CALLBACK_DBLoadItems cbDBLoadItems, int32 iItemStructSize, sint32* iItemCount, int32* iMaxItemID) {
+	return pDLLLoadItems(cbDBLoadItems, iItemStructSize, iItemCount, iMaxItemID);
+};
+
+#endif
+
+bool pAddItem(uint32 id, const Item_Struct* item) {
+	if (!MMFItemsData_Writable)
 		return false;
 	if (id > MMF_EQMAX_ITEMS || MMFItemsData_Writable->NextFreeIndex >= MMFItemsData_Writable->ItemCount)
 		return false;
 	if (MMFItemsData_Writable->ItemIndex[id] != 0xFFFF)
 		return false;
 	
-	uint32 nextid = MMFItemsData_Writable->NextFreeIndex++;
-	MMFItemsData_Writable->ItemIndex[id] = nextid;
-	memcpy(&MMFItemsData_Writable->Items[nextid], item, sizeof(Item_Struct));
-
-	MMFItemsSerializationData_Writable->SerializationOffset[id] = MMFItemsSerializationData_Writable->NextSerializationOffset;
-	int32 SerializationLength=strlen((const char *)item_s);
-	memcpy(&MMFItemsSerializationData_Writable->Serializations[0]+MMFItemsSerializationData_Writable->NextSerializationOffset, item_s, SerializationLength+1);
-	MMFItemsSerializationData_Writable->NextSerializationOffset+=SerializationLength+1;
+	MMFItemsData_Writable->ItemIndex[id] = MMFItemsData_Writable->NextFreeIndex++;
+	memcpy(&MMFItemsData_Writable->Items[MMFItemsData_Writable->ItemIndex[id]], item, sizeof(Item_Struct));
 
 	return true;
 }
 
-DLLFUNC bool DLLLoadItems(CALLBACK_DBLoadItems cbDBLoadItems, int32 iItemStructSize, sint32* iItemCount, int32* iMaxItemID, int32 *iSerializationSize) {
+bool pDLLLoadItems(CALLBACK_DBLoadItems cbDBLoadItems, int32 iItemStructSize, sint32* iItemCount, int32* iMaxItemID) {
 	if (iItemStructSize != sizeof(Item_Struct)) {
 		cout << "Error: EMuShareMem: DLLLoadItems: iItemStructSize != sizeof(Item_Struct)" << endl;
 		cout << "Item_Struct has changed, EMuShareMem.dll needs to be recompiled." << endl;
@@ -60,11 +83,11 @@ DLLFUNC bool DLLLoadItems(CALLBACK_DBLoadItems cbDBLoadItems, int32 iItemStructS
 		cout << "You need to increase the define in Items.h." << endl;
 		return false;
 	}
-	
-	MMFItemsData_Writable = 0;
-	//Allocate the shared memory for the item structures
+
+//MMF ItemsMMF;
+//const MMFItems_Struct* MMFItemsData = 0;
+//MMFItems_Struct* MMFItemsData_Writable = 0;
 	int32 tmpMemSize = sizeof(MMFItems_Struct) + 256 + (sizeof(Item_Struct) * (*iItemCount));
-	cout << tmpMemSize << endl;
 	if (ItemsMMF.Open("EQEMuItems", tmpMemSize)) {
 		if (ItemsMMF.CanWrite()) {
 			MMFItemsData_Writable = (MMFItems_Struct*) ItemsMMF.GetWriteableHandle();
@@ -78,9 +101,23 @@ DLLFUNC bool DLLLoadItems(CALLBACK_DBLoadItems cbDBLoadItems, int32 iItemStructS
 				MMFItemsData_Writable->ItemIndex[i] = 0xFFFF;
 			MMFItemsData_Writable->MaxItemID = *iMaxItemID;
 			MMFItemsData_Writable->ItemCount = *iItemCount;
-			//the writable handle has been created, do the load below after we have the 
-			//serialization handle as well.
-		} else {
+			// use a callback so the DB functions are done in the main exe
+			// this way the DLL doesnt have to open a connection to mysql
+			if (!cbDBLoadItems(*iItemCount, *iMaxItemID)) {
+				cout << "Error: EMuShareMem: DLLLoadItems: !cbDBLoadItems" << endl;
+				return false;
+			}
+
+			MMFItemsData_Writable = 0;
+			ItemsMMF.SetLoaded();
+			MMFItemsData = (const MMFItems_Struct*) ItemsMMF.GetHandle();
+			if (!MMFItemsData) {
+				cout << "Error: EMuShareMem: DLLLoadItems: !MMFItemsData (CanWrite=true)" << endl;
+				return false;
+			}
+			return true;
+		}
+		else {
 			if (!ItemsMMF.IsLoaded()) {
 				Timer::SetCurrentTime();
 				int32 starttime = Timer::GetCurrentTime();
@@ -100,107 +137,23 @@ DLLFUNC bool DLLLoadItems(CALLBACK_DBLoadItems cbDBLoadItems, int32 iItemStructS
 			}
 			*iMaxItemID = MMFItemsData->MaxItemID;
 			*iItemCount = MMFItemsData->ItemCount;
+			return true;
 		}
-	} else {
+	}
+	else {
 		cout << "Error Loading Items: Items.cpp: pDLLLoadItems: Open() == false" << endl;
 		return false;
 	}
-	/*
-	
-			// use a callback so the DB functions are done in the main exe
-			// this way the DLL doesnt have to open a connection to mysql
-			if (!cbDBLoadItems(*iItemCount, *iMaxItemID)) {
-				cout << "Error: EMuShareMem: DLLLoadItems: !cbDBLoadItems" << endl;
-				return false;
-			}
-
-	*/
-	
-	//Allocate the shared memory for the item serializations
-	tmpMemSize = sizeof(MMFItemsSerialization_Struct) + *iSerializationSize;
-	cout << tmpMemSize << endl;
-	if (ItemsSerializationMMF.Open("EQEMuZSerializations", tmpMemSize)) {
-		if (ItemsSerializationMMF.CanWrite()) {
-			if(!MMFItemsData_Writable) {
-				cout << "Error: EMuShareMem: DLLLoadItems: Inconsistent state. Cannot write to structs, but can write to serialization." << endl;
-				return false;
-			}
-			MMFItemsSerializationData_Writable = (MMFItemsSerialization_Struct*) ItemsSerializationMMF.GetWriteableHandle();
-			if (!MMFItemsSerializationData_Writable) {
-				cout << "Error: EMuShareMem: DLLLoadItems: !MMFItemsSerializationData_Writable" << endl;
-				return false;
-			}
-
-			memset(MMFItemsSerializationData_Writable, 0, tmpMemSize);
-			// use a callback so the DB functions are done in the main exe
-			// this way the DLL doesnt have to open a connection to mysql
-			if (!cbDBLoadItems(*iItemCount, *iMaxItemID)) {
-				cout << "Error: EMuShareMem: DLLLoadItems: !cbDBLoadItems" << endl;
-				return false;
-			}
-			
-			
-			//Now, Disable the write handle and get the read handle.
-			//do this for both item struct and serialization data
-			
-			MMFItemsData_Writable = 0;
-			ItemsMMF.SetLoaded();
-			MMFItemsData = (const MMFItems_Struct*) ItemsMMF.GetHandle();
-			if (!MMFItemsData) {
-				cout << "Error: EMuShareMem: DLLLoadItems: !MMFItemsData (CanWrite=true)" << endl;
-				return false;
-			}
-			
-			MMFItemsSerializationData_Writable = 0;
-			ItemsSerializationMMF.SetLoaded();
-			MMFItemsSerializationData = (const MMFItemsSerialization_Struct*) ItemsSerializationMMF.GetHandle();
-			if (!MMFItemsSerializationData) {
-				cout << "Error: EMuShareMem: DLLLoadItems: !MMFItemsSerializationData (CanWrite=true)" << endl;
-				return false;
-			}
-		} else {
-			if (!ItemsSerializationMMF.IsLoaded()) {
-				Timer::SetCurrentTime();
-				int32 starttime = Timer::GetCurrentTime();
-				while ((!ItemsSerializationMMF.IsLoaded()) && ((Timer::GetCurrentTime() - starttime) < 300000)) {
-					Sleep(10);
-					Timer::SetCurrentTime();
-				}
-				if (!ItemsSerializationMMF.IsLoaded()) {
-					cout << "Error: EMuShareMem: DLLLoadItems: !ItemsSerializationMMF.IsLoaded() (timeout)" << endl;
-					return false;
-				}
-			}
-			MMFItemsSerializationData = (const MMFItemsSerialization_Struct*) ItemsSerializationMMF.GetHandle();
-			if (!MMFItemsSerializationData) {
-				cout << "Error: EMuShareMem: DLLLoadItems: !MMFItemsSerializationData (CanWrite=false)" << endl;
-				return false;
-			}
-		}
-	} else {
-		cout << "Error Loading Item Serialization: Items.cpp: pDLLLoadItems: Open() == false" << endl;
-		return false;
-	}
-	
-	return true;
+	return false;
 };
 
-DLLFUNC const Item_Struct* GetItem(uint32 id) {
+const Item_Struct* pGetItem(uint32 id) {
 	if (MMFItemsData == 0 || (!ItemsMMF.IsLoaded()) || id > MMF_EQMAX_ITEMS || MMFItemsData->ItemIndex[id] == 0xFFFF)
 		return 0;
 	return &MMFItemsData->Items[MMFItemsData->ItemIndex[id]];
 }
 
-//uses both chared memory segments
-DLLFUNC const unsigned char* GetItemSerialization(uint32 id) {
-	if (MMFItemsData == 0 || (!ItemsMMF.IsLoaded()) || 
-		MMFItemsSerializationData == 0 || (!ItemsSerializationMMF.IsLoaded()) || 
-		id > MMF_EQMAX_ITEMS || MMFItemsData->ItemIndex[id] == 0xFFFF)
-		return 0;
-	return MMFItemsSerializationData->Serializations+MMFItemsSerializationData->SerializationOffset[id];
-}
-
-DLLFUNC const Item_Struct* IterateItems(uint32* NextIndex) {
+const Item_Struct* pIterateItems(uint32* NextIndex) {
 	if (MMFItemsData == 0 || (!ItemsMMF.IsLoaded()) || (*NextIndex) > MMF_EQMAX_ITEMS)
 		return 0;
 	do {

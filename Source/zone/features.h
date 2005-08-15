@@ -251,16 +251,9 @@ enum {	//timer settings, all in milliseconds
 //The Level Cap:
 #define LEVEL_CAP 65
 
-//the square of the maximum range at whihc you could possibly use NPC services (shop, tribute, etc)
-#define USE_NPC_RANGE2 200*200		//arbitrary right now
-
 //the formula for experience for killing a mob.
 //level is the only valid variable to use
 #define EXP_FORMULA level*level*75*35/10
-
-//Leadership AA experience points
-#define GROUP_EXP_PER_POINT 1000
-#define RAID_EXP_PER_POINT 2000
 
 //Some hard coded statuses from commands and other places:
 enum {
@@ -289,15 +282,6 @@ enum {
 	commandChangeDatarate = 201,	//edit client's data rate
 	commandZoneToCoords = 0			//can #zone with coords
 };
-
-//these are large right now because the x,y,z coords of the zone
-//lines do not make a lot of sense
-//Maximum distance from a zone point given that the request didnt
-//know what zone that the line was for
-#define ZONEPOINT_NOZONE_RANGE 40000.0f
-//Maximum distance from a zone point if zone was specified
-#define ZONEPOINT_ZONE_RANGE 40000.0f
-
 
 /*
 

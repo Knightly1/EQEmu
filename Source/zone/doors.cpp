@@ -93,7 +93,18 @@ void Doors::HandleClick(Client* sender)
 		return;
 	}
 
-    EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoveDoor, sizeof(MoveDoor_Struct));
+// guild doors
+	if (sender->GetIsSettingGuildDoor())
+	{
+		guildid=sender->GetSetGuildDoorID();		// update this door
+		database.UpdateDoorGuildID(db_id,guildid);		// update the db
+		sender->SetIsSettingGuildDoor(false);
+		DumpDoor();
+		sender->Message(4,"Door has been updated");
+		return;
+	}
+
+    APPLAYER* outapp = new APPLAYER(OP_MoveDoor, sizeof(MoveDoor_Struct));
 	MoveDoor_Struct* md=(MoveDoor_Struct*)outapp->pBuffer;
 	//DumpPacket(app);
 	md->doorid = door_id;
@@ -170,8 +181,8 @@ void Doors::HandleClick(Client* sender)
 				{	// client has the lock pick skill and this lock can be picked
 					float modskill=0.0f; 
 					const ItemInst* inst = sender->GetInv().GetItem(SLOT_CURSOR);
-					if (inst && inst->IsType(ItemClassCommon)
-						&& inst->GetItem()->Common.ItemType == ItemTypeLockPick)
+					if (inst && inst->IsType(ItemTypeCommon)
+						&& inst->GetItem()->Common.ItemUse == ItemUseLockPick)
 					{	// we can try to pick the lock with these lock picking tools
 						modskill=sender->GetSkill(PICK_LOCK);
 						
@@ -264,7 +275,7 @@ void Doors::NPCOpen(NPC* sender)
 	if(GetTriggerType() == 255 || GetTriggerDoorID() > 0 || GetLockpick() != 0 || GetKeyItem() != 0 || opentype == 59 || opentype == 58) { // this object isnt triggered or door is locked - NPCs should not open locked doors!
 		return;
 	}
-    EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoveDoor, sizeof(MoveDoor_Struct));
+    APPLAYER* outapp = new APPLAYER(OP_MoveDoor, sizeof(MoveDoor_Struct));
 	MoveDoor_Struct* md=(MoveDoor_Struct*)outapp->pBuffer;
 	md->doorid = door_id;
 	md->action = 0x02;

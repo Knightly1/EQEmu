@@ -29,9 +29,9 @@
 #define MAX_SPAWNS_PER_PACKET	100
 
 //#ifdef WIN32
-	class	EQApplicationPacket;
+	class	APPLAYER;
 //#else
-//	struct	EQApplicationPacket;
+//	struct	APPLAYER;
 //#endif
 
 class Client;
@@ -122,8 +122,6 @@ public:
 	void ClearClientPetitionQueue();
     bool CanAddHateForMob(Mob *p);
 	void	SendGuildJoin(GuildJoin_Struct* gj);
-	// Check group list for NULL entries
-   void CheckGroupList (const char *fname, const int fline);
 	void	GroupProcess();
 	void	DoorProcess();
 	void	ObjectProcess();
@@ -134,7 +132,7 @@ public:
 	void	ProcessMove(Client *c, float x, float y, float z);
 	void	SendAATimer(int32 charid,UseAA_Struct* uaa);
 	Doors*	FindDoor(int8 door_id);
-	bool	MakeDoorSpawnPacket(EQApplicationPacket* app);
+	bool	MakeDoorSpawnPacket(APPLAYER* app);
 	bool    MakeTrackPacket(Client* client);
 	void	SendTraders(Client* client);	
 	void    AddClient(Client*);
@@ -199,13 +197,13 @@ public:
 
 	void    RemoveFromTargets(Mob* mob);
     void    ReplaceWithTarget(Mob* pOldMob, Mob*pNewTarget);
-	void	FilterQueueCloseClients(int8 filter,int8 required,Mob* sender, const EQApplicationPacket* app, bool ignore_sender=false, float dist=200, Mob* SkipThisMob = 0, bool ackreq = true);
-	void	QueueCloseClients(Mob* sender, const EQApplicationPacket* app, bool ignore_sender=false, float dist=200, Mob* SkipThisMob = 0, bool ackreq = true,int8 filter=0);
-	void    QueueClients(Mob* sender, const EQApplicationPacket* app, bool ignore_sender=false, bool ackreq = true);
-	void	QueueClientsStatus(Mob* sender, const EQApplicationPacket* app, bool ignore_sender = false, int8 minstatus = 0, int8 maxstatus = 0);
-	void	QueueClientsGuild(Mob* sender, const EQApplicationPacket* app, bool ignore_sender = false, int32 guildeqid = 0);
-	void	QueueClientsByTarget(Mob* sender, const EQApplicationPacket* app, bool iSendToSender = true, Mob* SkipThisMob = 0, bool ackreq = true);
-	void    QueueManaged(Mob* sender, const EQApplicationPacket* app, bool ignore_sender=false, bool ackreq = true);
+	void	FilterQueueCloseClients(int8 filter,int8 required,Mob* sender, const APPLAYER* app, bool ignore_sender=false, float dist=200, Mob* SkipThisMob = 0, bool ackreq = true);
+	void	QueueCloseClients(Mob* sender, const APPLAYER* app, bool ignore_sender=false, float dist=200, Mob* SkipThisMob = 0, bool ackreq = true,int8 filter=0);
+	void    QueueClients(Mob* sender, const APPLAYER* app, bool ignore_sender=false, bool ackreq = true);
+	void	QueueClientsStatus(Mob* sender, const APPLAYER* app, bool ignore_sender = false, int8 minstatus = 0, int8 maxstatus = 0);
+	void	QueueClientsGuild(Mob* sender, const APPLAYER* app, bool ignore_sender = false, int32 guildeqid = 0);
+	void	QueueClientsByTarget(Mob* sender, const APPLAYER* app, bool iSendToSender = true, Mob* SkipThisMob = 0, bool ackreq = true);
+	void    QueueManaged(Mob* sender, const APPLAYER* app, bool ignore_sender=false, bool ackreq = true);
 
 	void	AEAttack(Mob *attacker, float dist, int Hand = 13, int count = 0);
 	void	AETaunt(Client *caster, float range = 0);
@@ -282,7 +280,7 @@ private:
 	LinkedList<Client*> client_list;
 	LinkedList<Mob*> mob_list;
 	LinkedList<NPC*> npc_list;
-	list<Group*> group_list;
+	LinkedList<Group*> group_list;
 	LinkedList<Corpse*> corpse_list;
 	LinkedList<Object*> object_list;
 	LinkedList<Doors*> door_list;

@@ -459,29 +459,29 @@ int i;
 	}
 }
 
-void dump_message_column(unsigned char *buffer, unsigned long length, string leader, FILE *to)
+
+
+void dump_message_column(unsigned char *buffer, unsigned long length, string leader)
 {
 unsigned long i,j;
 unsigned long rows,offset=0;
 	rows=(length/16)+1;
 	for(i=0;i<rows;i++) {
-		fprintf(to, "%s%05ld: ",leader.c_str(),i*16);
+		printf("%s0x%04lx: ",leader.c_str(),i*16);
 		for(j=0;j<16;j++) {
-			if(j == 8)
-				fprintf(to, "- ");
 			if (offset+j<length)
-				fprintf(to, "%02x ",*(buffer+offset+j));
+				printf("%02x ",*(buffer+offset+j));
 			else
-				fprintf(to, "   ");
+				printf("   ");
 		}
-		fprintf(to, "| ");
+		printf("| ");
 		for(j=0;j<16;j++,offset++) {
 			if (offset<length) {
 				char c=*(buffer+offset);
-				fprintf(to, "%c",isprint(c) ? c : '.');
+				printf("%c",isprint(c) ? c : '.');
 			}
 		}
-		fprintf(to, "\n");
+		printf("\n");
 	}
 }
 
@@ -496,6 +496,11 @@ union { unsigned long ip; struct { unsigned char a,b,c,d; } octet;} ipoctet;
 	return string(temp);
 }
 
+string timestamp(time_t now)
+{
+	return string_from_time("[%Y%m%d.%H%M%S] ",now);
+}
+
 string string_from_time(string pattern, time_t now)
 {
 struct tm *now_tm;
@@ -508,41 +513,4 @@ char time_string[51];
 	strftime(time_string,51,pattern.c_str(),now_tm);
 
 	return string(time_string);
-}
-
-string timestamp(time_t now)
-{
-	return string_from_time("[%Y%m%d.%H%M%S] ",now);
-}
-
-
-string pop_arg(string &s, string seps, bool obey_quotes)
-{
-string ret;
-unsigned long i;
-bool in_quote=false;
-
-	unsigned long length=s.length();
-	for(i=0;i<length;i++) {
-		char c=s[i];
-		if (c=='"' && obey_quotes) {
-			in_quote=!in_quote;
-		}
-		if (in_quote)
-			continue;
-		if (seps.find(c)!=string::npos) { 
-			break;
-		}
-	}
-
-	if (i==length) {
-		ret=s;
-		s="";
-	} else {
-		ret=s.substr(0,i);
-		s.erase(0,i+1);
-	}
-
-
-	return ret;
 }

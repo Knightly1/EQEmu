@@ -43,6 +43,25 @@ using namespace std;
 
 /*
 
+CREATE TABLE tributes (
+	id INT UNSIGNED AUTO_INCREMENT,
+	unknown INT UNSIGNED NOT NULL,
+	name VARCHAR(255) NOT NULL,
+	descr MEDIUMTEXT NOT NULL,
+	PRIMARY KEY(id)
+);
+
+CREATE TABLE tribute_levels (
+	tribute_id INT UNSIGNED NOT NULL,
+	level INT UNSIGNED NOT NULL,
+	cost INT UNSIGNED NOT NULL,
+	item_id INT UNSIGNED NOT NULL,
+	PRIMARY KEY(tribute_id,level)
+);
+*/
+
+/*
+
 The server periodicly sends tribute timer updates to the client on live,
 but I dont see a point to that right now, so I dont do it.
 
@@ -58,7 +77,6 @@ public:
 	uint32 unknown;
 	string name;
 	string description;
-	bool is_guild;	//is a guild tribute item
 };
 
 map<int32, TributeData> tribute_list;
@@ -114,7 +132,7 @@ void Client::ToggleTribute(bool enabled) {
 }
 
 void Client::DoTributeUpdate() {
-	EQApplicationPacket outapp(OP_TributeUpdate, sizeof(TributeInfo_Struct));
+	APPLAYER outapp(OP_TributeUpdate, sizeof(TributeInfo_Struct));
 	TributeInfo_Struct *tis = (TributeInfo_Struct *) outapp.pBuffer;
 	
 	tis->active = m_pp.tribute_active ? 1 : 0;
@@ -183,7 +201,7 @@ void Client::DoTributeUpdate() {
 
 void Client::SendTributeTimer() {
 	//update their timer.
-	EQApplicationPacket outapp2(OP_TributeTimer, sizeof(uint32));
+	APPLAYER outapp2(OP_TributeTimer, sizeof(uint32));
 	uint32 *timeleft = (uint32 *) outapp2.pBuffer;
 	if(m_pp.tribute_active)
 		*timeleft = m_pp.tribute_time_remaining;
@@ -228,7 +246,7 @@ void Client::SendTributeDetails(int32 client_id, uint32 tribute_id) {
 	TributeData &td = tribute_list[tribute_id];
 
 	int len = td.description.length();
-	EQApplicationPacket outapp(OP_SelectTribute, sizeof(SelectTributeReply_Struct)+len+1);
+	APPLAYER outapp(OP_SelectTribute, sizeof(SelectTributeReply_Struct)+len+1);
 	SelectTributeReply_Struct *t = (SelectTributeReply_Struct *) outapp.pBuffer;
 	
 	t->client_id = client_id;
@@ -247,9 +265,9 @@ sint32 Client::TributeItem(int32 slot, int32 quantity) {
 		return(0);
 	
 	//figure out what its worth
-	sint32 pts = inst->GetItem()->Favor;
+	sint32 pts = inst->GetItem()->tribute;
 	if(pts < 1) {
-		Message(13, "This item is worthless for favor.");
+		Message(13, "This item is worthless for tribute.");
 		return(0);
 	}
 	
@@ -284,7 +302,7 @@ sint32 Client::TributeMoney(int32 platinum) {
 }
 
 void Client::AddTributePoints(sint32 ammount) {
-	EQApplicationPacket outapp(OP_TributePointUpdate, sizeof(TributePoint_Struct));
+	APPLAYER outapp(OP_TributePointUpdate, sizeof(TributePoint_Struct));
 	TributePoint_Struct *t = (TributePoint_Struct *) outapp.pBuffer;
 	
 	//change the point values.
@@ -301,59 +319,17 @@ void Client::AddTributePoints(sint32 ammount) {
 	QueuePacket(&outapp);
 }
 
-void Client::SendTributes() {
+void Client::SendTribute() {
 	
 	map<int32, TributeData>::iterator cur,end;
 	cur = tribute_list.begin();
 	end = tribute_list.end();
-	
-	for(; cur != end; cur++) {
-		if(cur->second.is_guild)
-			continue;	//skip guild tributes here
-		int len = cur->second.name.length();
-		EQApplicationPacket outapp(OP_TributeInfo, sizeof(TributeAbility_Struct) + len + 1);
-		TributeAbility_Struct* tas = (TributeAbility_Struct*)outapp.pBuffer;
-		
-		tas->tribute_id = htonl(cur->first);
-		tas->unknown = htonl(cur->second.unknown);
-		
-		//gotta copy over the data from tiers, and flip all the
-		//byte orders, no idea why its flipped here
-		int32 r, c;
-		c = cur->second.tier_count;
-		TributeLevel_Struct *dest = tas->tiers;
-		TributeLevel_Struct *src = cur->second.tiers;
-		for(r = 0; r < c; r++, dest++, src++) {
-			dest->cost = htonl(src->cost);
-			dest->level = htonl(src->level);
-			dest->tribute_item_id = htonl(src->tribute_item_id);
-		}
-		
-		memcpy(tas->name, cur->second.name.c_str(), len);
-		tas->name[len] = '\0';
-		
-		QueuePacket(&outapp);
-	}
-}
 
-void Client::SendGuildTributes() {
-	
-	map<int32, TributeData>::iterator cur,end;
-	cur = tribute_list.begin();
-	end = tribute_list.end();
-	
+	//is there a way to make a big combined packet for this?
 	for(; cur != end; cur++) {
-		if(!cur->second.is_guild)
-			continue;	//skip guild tributes here
 		int len = cur->second.name.length();
-		
-		//guild tribute has an unknown uint32 at its begining, guild ID?
-		EQApplicationPacket outapp(OP_TributeInfo, sizeof(TributeAbility_Struct) + len + 1 + 4);
-		uint32 *unknown = (uint32 *) outapp.pBuffer;
-		TributeAbility_Struct* tas = (TributeAbility_Struct*) (outapp.pBuffer+4);
-		
-		//this is prolly wrong in general, prolly for one specific guild
-		*unknown = 0x8A110000;
+		APPLAYER outapp(OP_TributeInfo, sizeof(TributeAbility_Struct) + len + 1);
+		TributeAbility_Struct* tas = (TributeAbility_Struct*)outapp.pBuffer;
 		
 		tas->tribute_id = htonl(cur->first);
 		tas->unknown = htonl(cur->second.unknown);
@@ -388,7 +364,7 @@ bool Database::LoadTributes() {
 	
 	tribute_list.clear();
 	
-	const char *query = "SELECT id,name,descr,unknown,isguild FROM tributes";
+	const char *query = "SELECT id,name,descr,unknown FROM tributes";
 	if (RunQuery(query, strlen(query), errbuf, &result)) {
 		int r;
 		while ((row = mysql_fetch_row(result))) {
@@ -397,7 +373,6 @@ bool Database::LoadTributes() {
 			t.name = row[r++];
 			t.description = row[r++];
 			t.unknown = strtoul(row[r++], NULL, 10);
-			t.is_guild = atol(row[r++])==0?false:true;
 			
 			tribute_list[id] = t;
 		}

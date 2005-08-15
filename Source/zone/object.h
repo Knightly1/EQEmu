@@ -23,7 +23,7 @@
 
 #include "../common/types.h"
 #include "../common/linked_list.h"
-#include "../common/emu_opcodes.h"
+#include "../common/eq_opcodes.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/Item.h"
 #include "client.h"
@@ -31,44 +31,6 @@
 #include "npc.h"
 #include "entity.h"
 #include "../common/timer.h"
-
-/*
-item icon numbers
-IT1_ACTORDEF=Long Sword
-IT5_ACTORDEF=Throwing Knife
-IT8_ACTORDEF=Basic Staff
-IT10_ACTORDEF=Arrow
-IT14_ACTORDEF=Basic Hammer
-IT16_ACTORDEF=Basic Spear
-IT27_ACTORDEF=Book
-IT35_ACTORDEF=Mod Rod
-IT62_ACTORDEF=Flaming Sword
-IT63_ACTORDEF=Small Bag
-IT64_ACTORDEF=Large Bag
-IT65_ACTORDEF=Scroll
-IT66_ACTORDEF=Forge
-IT67_ACTORDEF=Voodoo Doll
-IT68_ACTORDEF=Glowing Black Stone
-IT69_ACTORDEF=Oven
-IT70_ACTORDEF=Brew Barrel
-IT73_ACTORDEF=Kiln
-IT74_ACTORDEF=Pottery Wheel
-IT78_ACTORDEF=Campfire (Oven)
-IT128_ACTORDEF=Loom
-IT177_ACTORDEF=Shattering Hammer
-IT203_ACTORDEF=Round Shield
-IT210_ACTORDEF=Shimmering Orb
-IT400_ACTORDEF=Globe of Slush Water
-IT401_ACTORDEF=Red Mushroom
-IT402_ACTORDEF=Blue Mushroom
-IT403_ACTORDEF=Yew Leaf
-IT10511_ACTORDEF=A Soulstone Shard
-IT10512_ACTORDEF=Orb of Exploration
-IT10630_ACTORDEF=Fish Sword
-IT10661_ACTORDEF=Blade of Walnan
-IT10714_ACTORDEF=Augmentation Sealer
-IT10725_ACTORDEF=Shuriken
-*/
 
 // Object Types
 #define OT_DROPPEDITEM	0x01
@@ -131,8 +93,8 @@ public:
 	static uint32 TypeToSkill(uint32 type);
 	
 	// Packet functions
-	void CreateSpawnPacket(EQApplicationPacket* app);
-	void CreateDeSpawnPacket(EQApplicationPacket* app);
+	void CreateSpawnPacket(APPLAYER* app);
+	void CreateDeSpawnPacket(APPLAYER* app);
 	
 	//Decay functions
 	void StartDecay() {decay_timer.Start();}

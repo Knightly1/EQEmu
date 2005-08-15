@@ -1,4 +1,3 @@
-#define DONT_SHARED_OPCODES
 /*  EQEMu:  Everquest Server Emulator
 Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 
@@ -69,8 +68,7 @@ extern volatile bool ZoneLoaded;
 
 #include "../common/queue.h"
 #include "../common/timer.h"
-#include "../common/EQStream.h"
-#include "../common/EQStreamFactory.h"
+#include "../common/EQNetwork.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/Mutex.h"
 #include "../common/version.h"
@@ -90,7 +88,6 @@ extern volatile bool ZoneLoaded;
 #include "perlparser.h"
 #include "client_logs.h"
 #include "questmgr.h"
-#include "titles.h"
 
 #ifdef GUILDWARS
 #include "../GuildWars/GuildWars.h"
@@ -108,10 +105,8 @@ GuildRanks_Struct	guilds[512];
 char errorname[32];
 int16 adverrornum = 0;
 extern Zone* zone;
-EQStreamFactory eqsf(ZoneStream);
+EQNetworkServer eqns;
 npcDecayTimes_Struct npcCorpseDecayTimes[100];
-TitleManager title_manager;
-
 
 bool zoneprocess;
 
@@ -205,11 +200,11 @@ int main(int argc, char** argv) {
 	
 	LogFile->write(EQEMuLog::Status, "Loading opcodes..");
 #ifdef DONT_SHARED_OPCODES
-	EQOpcodeManager = new RegularOpcodeManager();
+	EQNetworkOpcodeManager = new RegularOpcodeManager();
 #else
-	EQOpcodeManager = new SharedOpcodeManager();
+	EQNetworkOpcodeManager = new SharedOpcodeManager();
 #endif
-	if(!EQOpcodeManager->LoadOpcodes(OPCODES_FILE)) {
+	if(!EQNetworkOpcodeManager->LoadOpcodes(OPCODES_FILE)) {
 		LogFile->write(EQEMuLog::Error, "Loading opcodes failed. I cant live like this!");
 		return(1);
 	}
@@ -247,9 +242,10 @@ int main(int argc, char** argv) {
 		CheckEQEMuErrorAndPause();
 		return 0;
 	}
+#ifdef SHAREMEM
 	LogFile->write(EQEMuLog::Status, "Loading doors");
 	database.LoadDoors();
-	
+#endif
 	LoadSPDat();
 
 	// New Load function.  keeping it commented till I figure out why its not working correctly in linux. Trump.
@@ -258,8 +254,6 @@ int main(int argc, char** argv) {
 	database.LoadGuilds(guilds);
 	LogFile->write(EQEMuLog::Status, "Loading factions");
 	database.LoadFactionData();
-	LogFile->write(EQEMuLog::Status, "Loading titles");
-	title_manager.LoadTitles();
 	LogFile->write(EQEMuLog::Status, "Loading AA effects");
 	database.LoadAAEffects();
 	LogFile->write(EQEMuLog::Status, "Loading swarm spells");
@@ -270,6 +264,7 @@ int main(int argc, char** argv) {
 	database.GetDecayTimes(npcCorpseDecayTimes);
 	LogFile->write(EQEMuLog::Status, "Loading what ever is left");
 	database.ExtraOptions();
+/* solar: new command system */
 	LogFile->write(EQEMuLog::Status, "Loading commands");
 	int retval=command_init();
 	if(retval<0)
@@ -315,15 +310,6 @@ int main(int argc, char** argv) {
 		LogFile->write(EQEMuLog::Error, "worldserver.Connect() FAILED!");
 	}
 	
-	LogFile->write(EQEMuLog::Status, "Starting EQ Network server.");
-	//start up the network server
-	if (!eqsf.Open(net.GetZonePort())) {
-		safe_delete(zone);
-		cerr << "eqsf.Open failed" << endl;
-		worldserver.SetZone(0);
-		return false;
-	}
-	
 	if (strcmp(zone_name, ".") == 0 || strcasecmp(zone_name, "sleep") == 0) {
 		LogFile->write(EQEMuLog::Status, "Entering sleep mode");
 	} else if (!Zone::Bootup(database.GetZoneID(zone_name), true)) {
@@ -341,17 +327,26 @@ int main(int argc, char** argv) {
 	Timer quest_timers(1000);	//highest resolution quest timer is 1 second
 	UpdateWindowTitle();
 	bool worldwasconnected = worldserver.Connected();
-	EQStream* eqs;
+	EQNetworkConnection* eqnc;
 	Timer temp_timer(10);
 	temp_timer.Start();
 	while(RunLoops) {
 		{	//profiler block to omit the sleep from times
 		_ZP(net_main);
-		
-		//Advance the timer to our current point in time
 		Timer::SetCurrentTime();
 		
-		//process stuff from world
+		//look for new connections
+		while ((eqnc = eqns.NewQueuePop())) {
+			struct in_addr	in;
+			in.s_addr = eqnc->GetrIP();
+			LogFile->write(EQEMuLog::Status, "%i New client from ip:%s port:%i", Timer::GetCurrentTime(), inet_ntoa(in), ntohs(eqnc->GetrPort()));
+			Client* client = new Client(eqnc);
+			entity_list.AddClient(client);
+		}
+		
+		//check for timeouts in other threads
+		timeout_manager.CheckTimeouts();
+		
 #ifdef CATCH_CRASH
 		try{
 #endif
@@ -364,20 +359,7 @@ int main(int argc, char** argv) {
 			worldserver.Disconnect();
 			worldwasconnected = false;
 		}
-#endif
-		
-		//look for new connections
-		while ((eqs = eqsf.Pop())) {
-			struct in_addr	in;
-			in.s_addr = eqs->GetrIP();
-			LogFile->write(EQEMuLog::Status, "%i New client from ip:%s port:%i", Timer::GetCurrentTime(), inet_ntoa(in), ntohs(eqs->GetrPort()));
-			Client* client = new Client(eqs);
-			entity_list.AddClient(client);
-		}
-		
-		//check for timeouts in other threads
-		timeout_manager.CheckTimeouts();
-		
+#endif			
 		if (worldserver.Connected()) {
 			worldwasconnected = true;
 		}
@@ -545,7 +527,7 @@ int main(int argc, char** argv) {
 		)
 		Zone::Shutdown(true);
 	//Fix for Linux world server problem.
-	eqsf.Close();
+	eqns.Close();
 	worldserver.Disconnect();
 	dbasync->CommitWrites();
 	dbasync->StopThread();

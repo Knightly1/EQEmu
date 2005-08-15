@@ -21,7 +21,7 @@
 #ifdef PACKET_UPDATE_MANAGER
 #include "updatemgr.h"
 #include "mob.h"
-#include "../common/EQStream.h"
+#include "../common/EQNetwork.h"
 
 //squared distances for each level
 //these values are pulled out of my ass, should be tuned some day
@@ -51,7 +51,7 @@ const int32 UpdateManager::level_timers[UPDATE_LEVELS+1]
 //build a unique ID based on opcode and mob id..
 #define MakeUpdateID(mob, app) (((mob->GetID())<<12) | (app->GetOpcode()&0xFFF))
 
-UpdateManager::UpdateManager(EQStream *c)
+UpdateManager::UpdateManager(EQNetworkConnection *c)
  : limiter(UPDATE_RESOLUTION)   
 {
 	net = c;
@@ -69,8 +69,8 @@ UpdateManager::~UpdateManager() {
 		cur = levels[r].begin();
 		end = levels[r].end();
 		for(; cur != end; cur++) {
-			EQApplicationPacket *tmp = cur->second.app;
-			EQApplicationPacket::PacketUsed(&tmp);
+			APPLAYER *tmp = cur->second.app;
+			APPLAYER::PacketUsed(&tmp);
 		}
 		levels[r].clear();
 	}
@@ -79,7 +79,7 @@ UpdateManager::~UpdateManager() {
 /*
 	Puts a packet into its proper spacial queue
 */
-void UpdateManager::QueuePacket(EQApplicationPacket *app, bool ack_req, Mob *from, float range2) {
+void UpdateManager::QueuePacket(APPLAYER *app, bool ack_req, Mob *from, float range2) {
 	int r = UPDATE_LEVELS;
 	UMMap *cur = levels;
 	const float *cur_d = level_distances2;
@@ -164,7 +164,7 @@ if(level > 0)
 		//relies on fast queue setting .app to null if it eats it
 //LogFile->write(EQEMuLog::Debug, "Sending id 0x%x for level %d\n", key, level);
 		net->FastQueuePacket(&cur->second.app, cur->second.ack);
-//EQApplicationPacket::PacketUsed(&cur->second.app);
+//APPLAYER::PacketUsed(&cur->second.app);
 		cur++;
 		om->erase(key);
 		
@@ -175,9 +175,9 @@ if(level > 0)
 			//do we need this count check?
 			if(curm->count(key) != 0) {
 				//reference decrementing is taken care of my UMType destructor
-				EQApplicationPacket *tmp = (*curm)[key].app;
+				APPLAYER *tmp = (*curm)[key].app;
 				curm->erase(key);
-				EQApplicationPacket::PacketUsed(&tmp);
+				APPLAYER::PacketUsed(&tmp);
 			}
 		}
 	}

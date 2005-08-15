@@ -483,7 +483,7 @@ bool Client::CheckAAEffect(aaEffectType type) {
 }
 
 void Client::SendAAStats() {
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_AAExpUpdate, sizeof(AltAdvStats_Struct));
+	APPLAYER* outapp = new APPLAYER(OP_SendAAStats, sizeof(AltAdvStats_Struct));
 	AltAdvStats_Struct *aps = (AltAdvStats_Struct *)outapp->pBuffer;
 	aps->experience = m_pp.expAA;
 	aps->experience = (int32)(((float)330.0f * (float)m_pp.expAA) / (float)max_AAXP);
@@ -543,7 +543,7 @@ void Client::BuyAA(AA_Action* action){
 }
 
 void Client::SendAATimer(int32 ability, int32 begin, int32 end) {
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_AAAction,sizeof(UseAA_Struct));
+	APPLAYER* outapp = new APPLAYER(OP_AAAction,sizeof(UseAA_Struct));
 	UseAA_Struct* uaaout = (UseAA_Struct*)outapp->pBuffer;
 	uaaout->ability = ability;
 	uaaout->begin = begin;
@@ -554,8 +554,8 @@ void Client::SendAATimer(int32 ability, int32 begin, int32 end) {
 
 //sends all AA timers.
 void Client::SendAATimers() {
-	//we dont use SendAATimer because theres no reason to allocate the EQApplicationPacket every time
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_AAAction,sizeof(UseAA_Struct));
+	//we dont use SendAATimer because theres no reason to allocate the APPLAYER every time
+	APPLAYER* outapp = new APPLAYER(OP_AAAction,sizeof(UseAA_Struct));
 	UseAA_Struct* uaaout = (UseAA_Struct*)outapp->pBuffer;
 	
 	PTimerList::iterator c,e;
@@ -576,13 +576,14 @@ void Client::SendAATimers() {
 }
 
 void Client::SendAATable() {
-    EQApplicationPacket* outapp = new EQApplicationPacket(OP_RespondAA, sizeof(AATable_Struct));
+    APPLAYER* outapp = new APPLAYER(OP_RespondAA, sizeof(AATable_Struct));
     
     AATable_Struct* aa2 = (AATable_Struct *)outapp->pBuffer;
 	for(int i=0;i < MAX_PP_AA_ARRAY;i++){
 		aa2->aa_list[i].aa_skill = aa[i]->AA;
 		aa2->aa_list[i].aa_value = aa[i]->value;
 	}
+	outapp->Deflate();
     QueuePacket(outapp);
     safe_delete(outapp);
 }
@@ -599,7 +600,7 @@ void Client::SendPreviousAA(int32 id, int seq){
 	uchar* buffer = new uchar[size];
 	SendAA_Struct* saa=(SendAA_Struct*)buffer;
 	value = GetAA(saa2->id);
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_SendAATable);
+	APPLAYER* outapp = new APPLAYER(OP_SendAATable);
 	outapp->size=size;
 	outapp->pBuffer=(uchar*)saa;
 	value--;
@@ -664,7 +665,7 @@ void Client::SendAA(int32 id, int seq) {
 		if(saa->type==1) //general ability
 			saa->abilities[0].increase_amt*=value;
 	}
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_SendAATable);
+	APPLAYER* outapp = new APPLAYER(OP_SendAATable);
 	outapp->size=size;
 	outapp->pBuffer=(uchar*)saa;
 	if(id==0 && value && (orig_val < saa->max_level)) //send previous AA only on zone in

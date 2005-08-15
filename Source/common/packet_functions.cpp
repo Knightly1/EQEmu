@@ -22,7 +22,7 @@
 #include <zlib.h>
 #include "packet_dump.h"
 #include "EQCheckTable.h"
-#include "EQStream.h"
+#include "EQNetwork.h"
 #include "packet_functions.h"
 
 #ifndef WIN32
@@ -31,8 +31,8 @@
 
 using namespace std;
 
-void EncryptProfilePacket(EQApplicationPacket* app) {
-	//EncryptProfilePacket(app->pBuffer, app->size);
+void EncryptProfilePacket(APPLAYER* app) {
+	EncryptProfilePacket(app->pBuffer, app->size);
 }
 
 void EncryptProfilePacket(uchar* pBuffer, int32 size) {
@@ -54,8 +54,8 @@ void EncryptProfilePacket(uchar* pBuffer, int32 size) {
     }
 }
 
-void EncryptZoneSpawnPacket(EQApplicationPacket* app) {
-	//EncryptZoneSpawnPacket(app->pBuffer, app->size);
+void EncryptZoneSpawnPacket(APPLAYER* app) {
+	EncryptZoneSpawnPacket(app->pBuffer, app->size);
 }
 
 void EncryptZoneSpawnPacket(uchar* pBuffer, int32 size) {
@@ -139,9 +139,8 @@ int DeflatePacket(unsigned char* in_data, int in_length, unsigned char* out_data
 		return 0;
 	}
 #else
-	if(in_data == NULL) {
+	if(in_data == NULL)
 		return(0);
-	}
 	
 	z_stream zstream;
     int zerror;

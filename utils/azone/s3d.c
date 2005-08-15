@@ -5,7 +5,7 @@
 
 #include "s3d.h"
 
-void decompress(char *p, char *p2, int len, int uLen) {
+inline void decompress(char *p, char *p2, int len, int uLen) {
   int status;
   z_stream d_stream;
 

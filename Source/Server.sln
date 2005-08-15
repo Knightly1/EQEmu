@@ -1,83 +1,83 @@
-Microsoft Visual Studio Solution File, Format Version 8.00
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EMuShareMem", "EMuShareMem\EMuShareMem.vcproj", "{21168136-6906-4039-B486-6086E164E743}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
+Microsoft Visual Studio Solution File, Format Version 7.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Zone", "Zone\Zone.vcproj", "{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "World", "World\World.vcproj", "{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "World", "world\World.vcproj", "{4961B640-C99F-4A69-8BF2-4A40A13F919C}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Zone", "Zone\Zone.vcproj", "{197A661B-390A-46D6-94FC-E99F93280695}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pf2text", "eqextractor\pf2text.vcproj", "{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Azone", "utils\Azone\Azone.vcproj", "{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EMuShareMem", "EMuShareMem\EMuShareMem.vcproj", "{76650C30-E6C6-4A21-AC4D-C7106D352FA9}"
 EndProject
 Global
 	GlobalSection(SolutionConfiguration) = preSolution
-		Apathing - Debug = Apathing - Debug
-		Debug = Debug
-		DebugPerl = DebugPerl
-		Raid Addicts = Raid Addicts
-		Release = Release
+		ConfigName.0 = Debug
+		ConfigName.1 = GotFrags
+		ConfigName.2 = GuildWars
+		ConfigName.3 = GuildWars Debug
+		ConfigName.4 = MiniLogin
+		ConfigName.5 = Perl
+		ConfigName.6 = Profiling
+		ConfigName.7 = PublicLogin
+		ConfigName.8 = Release
+		ConfigName.9 = Win9x
+	EndGlobalSection
+	GlobalSection(ProjectDependencies) = postSolution
 	EndGlobalSection
 	GlobalSection(ProjectConfiguration) = postSolution
-		{21168136-6906-4039-B486-6086E164E743}.Apathing - Debug.ActiveCfg = Debug|Win32
-		{21168136-6906-4039-B486-6086E164E743}.Apathing - Debug.Build.0 = Debug|Win32
-		{21168136-6906-4039-B486-6086E164E743}.Debug.ActiveCfg = Debug|Win32
-		{21168136-6906-4039-B486-6086E164E743}.Debug.Build.0 = Debug|Win32
-		{21168136-6906-4039-B486-6086E164E743}.DebugPerl.ActiveCfg = Debug|Win32
-		{21168136-6906-4039-B486-6086E164E743}.DebugPerl.Build.0 = Debug|Win32
-		{21168136-6906-4039-B486-6086E164E743}.Raid Addicts.ActiveCfg = Release|Win32
-		{21168136-6906-4039-B486-6086E164E743}.Raid Addicts.Build.0 = Release|Win32
-		{21168136-6906-4039-B486-6086E164E743}.Release.ActiveCfg = Release|Win32
-		{21168136-6906-4039-B486-6086E164E743}.Release.Build.0 = Release|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Apathing - Debug.ActiveCfg = Debug|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Apathing - Debug.Build.0 = Debug|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Debug.ActiveCfg = Debug|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Debug.Build.0 = Debug|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.DebugPerl.ActiveCfg = Debug|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.DebugPerl.Build.0 = Debug|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Raid Addicts.ActiveCfg = Raid Addicts|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Raid Addicts.Build.0 = Raid Addicts|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Release.ActiveCfg = Release|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Release.Build.0 = Release|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.Apathing - Debug.ActiveCfg = Debug|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.Apathing - Debug.Build.0 = Debug|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.Debug.ActiveCfg = Debug|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.Debug.Build.0 = Debug|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.DebugPerl.ActiveCfg = DebugPerl|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.DebugPerl.Build.0 = DebugPerl|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.Raid Addicts.ActiveCfg = Raid Addicts|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.Raid Addicts.Build.0 = Raid Addicts|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.Release.ActiveCfg = Release|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.Release.Build.0 = Release|Win32
-		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Apathing - Debug.ActiveCfg = Debug|Win32
-		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Apathing - Debug.Build.0 = Debug|Win32
-		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Debug.ActiveCfg = Debug|Win32
-		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Debug.Build.0 = Debug|Win32
-		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.DebugPerl.ActiveCfg = Debug|Win32
-		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.DebugPerl.Build.0 = Debug|Win32
-		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Raid Addicts.ActiveCfg = Release|Win32
-		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Raid Addicts.Build.0 = Release|Win32
-		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Release.ActiveCfg = Release|Win32
-		{E9F11F58-E2DA-4DD6-A55B-7C2F36F5B9AA}.Release.Build.0 = Release|Win32
-		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Apathing - Debug.ActiveCfg = Debug|Win32
-		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Apathing - Debug.Build.0 = Debug|Win32
-		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Debug.ActiveCfg = Debug|Win32
-		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Debug.Build.0 = Debug|Win32
-		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.DebugPerl.ActiveCfg = Debug|Win32
-		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.DebugPerl.Build.0 = Debug|Win32
-		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Raid Addicts.ActiveCfg = Release|Win32
-		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Raid Addicts.Build.0 = Release|Win32
-		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Release.ActiveCfg = Release|Win32
-		{64F17C8F-6D9A-42E9-B2CE-DA5073885E72}.Release.Build.0 = Release|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Debug.ActiveCfg = Debug|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.GotFrags.ActiveCfg = GotFrags|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.GotFrags.Build.0 = GotFrags|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.GuildWars.ActiveCfg = GuildWars|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.GuildWars.Build.0 = GuildWars|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.GuildWars Debug.ActiveCfg = GuildWars Debug|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.GuildWars Debug.Build.0 = GuildWars Debug|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.MiniLogin.ActiveCfg = Release|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.MiniLogin.Build.0 = Release|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Perl.ActiveCfg = Perl|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Perl.Build.0 = Perl|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Profiling.ActiveCfg = Profiling|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Profiling.Build.0 = Profiling|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.PublicLogin.ActiveCfg = Profiling|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Release.ActiveCfg = Release|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Release.Build.0 = Release|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Win9x.ActiveCfg = Win9x|Win32
+		{9BD4E179-5FC4-466A-ACC9-E9E19C616D9B}.Win9x.Build.0 = Win9x|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Debug.ActiveCfg = Debug|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Debug.Build.0 = Debug|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.GotFrags.ActiveCfg = GotFrags|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.GotFrags.Build.0 = GotFrags|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.GuildWars.ActiveCfg = GotFrags|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.GuildWars.Build.0 = GotFrags|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.GuildWars Debug.ActiveCfg = Debug|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.GuildWars Debug.Build.0 = Debug|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.MiniLogin.ActiveCfg = Profiling|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.MiniLogin.Build.0 = Profiling|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Perl.ActiveCfg = Perl|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Perl.Build.0 = Perl|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Profiling.ActiveCfg = Profiling|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Profiling.Build.0 = Profiling|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.PublicLogin.ActiveCfg = Profiling|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.PublicLogin.Build.0 = Profiling|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Release.ActiveCfg = Release|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Release.Build.0 = Release|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Win9x.ActiveCfg = Profiling|Win32
+		{4961B640-C99F-4A69-8BF2-4A40A13F919C}.Win9x.Build.0 = Profiling|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Debug.ActiveCfg = Debug|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.GotFrags.ActiveCfg = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.GotFrags.Build.0 = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.GuildWars.ActiveCfg = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.GuildWars.Build.0 = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.GuildWars Debug.ActiveCfg = Debug|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.GuildWars Debug.Build.0 = Debug|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.MiniLogin.ActiveCfg = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.MiniLogin.Build.0 = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Perl.ActiveCfg = Perl|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Perl.Build.0 = Perl|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Profiling.ActiveCfg = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Profiling.Build.0 = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.PublicLogin.ActiveCfg = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.PublicLogin.Build.0 = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Release.ActiveCfg = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Release.Build.0 = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Win9x.ActiveCfg = Release|Win32
+		{76650C30-E6C6-4A21-AC4D-C7106D352FA9}.Win9x.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection

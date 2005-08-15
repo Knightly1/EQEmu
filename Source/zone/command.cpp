@@ -1,5 +1,5 @@
 /*	EQEMu:	Everquest Server Emulator
-Copyright (C) 2001-2002	EQEMu Development Team (http://eqemulator.net)
+Copyright (C) 2001-2002	EQEMu Development Team (http://eqemu.org)
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -48,7 +48,6 @@ Copyright (C) 2001-2002	EQEMu Development Team (http://eqemulator.net)
 #include "../common/serverinfo.h"
 #include "../common/files.h"
 #include "../common/opcodemgr.h"
-#include "../common/EQPacket.h"
 //#include "../common/servertalk.h" // for oocmute and revoke
 #include "worldserver.h"
 #include "masterentity.h"
@@ -382,7 +381,7 @@ int command_init(void)
 		command_add("reloadpl","- Reload perl quest for target",80,command_reloadpl) || 
 #endif
 
-		command_add("opcode","- opcode management",250,command_opcode) || 
+		command_add("reloadops","- Reload opcodes for this zone",250,command_reloadops) || 
 		command_add("logs","[status|normal|error|debug|quest|all] - Subscribe to a log type",250,command_logs) ||
 		command_add("nologs","[status|normal|error|debug|quest|all] - Unsubscribe to a log type",250,command_nologs) ||
 		command_add("datarate","[rate] - Query/set datarate",100,command_datarate) ||
@@ -793,7 +792,7 @@ void command_sendop(Client *c,const Seperator *sep){
 
 	*/
 	if(sep->arg[1][0] && sep->arg[2][0]){
-		EQApplicationPacket* outapp = new EQApplicationPacket((EmuOpcode)atoi(sep->arg[1]),sizeof(GMName_Struct));
+		APPLAYER* outapp = new APPLAYER((EmuOpcode)atoi(sep->arg[1]),sizeof(GMName_Struct));
 		GMName_Struct* gms=(GMName_Struct*)outapp->pBuffer;
 		memset(outapp->pBuffer,0,outapp->size);
 		strcpy(gms->gmname,c->GetName());
@@ -806,7 +805,7 @@ void command_sendop(Client *c,const Seperator *sep){
 	}
 	/*
 		else{
-			EQApplicationPacket* outapp = new EQApplicationPacket(121,atoi(sep->arg[2]));
+			APPLAYER* outapp = new APPLAYER(121,atoi(sep->arg[2]));
 			memset(outapp->pBuffer,0,outapp->size);
 			int8 offset=atoi(sep->arg[3]);
 			if(offset<outapp->size && sep->arg[4][0])
@@ -831,7 +830,7 @@ void command_sendop(Client *c,const Seperator *sep){
 		}*/
 		//c->SetStats(atoi(sep->arg[1]),atoi(sep->arg[2]));
 	//}
-		/*EQApplicationPacket* outapp = new EQApplicationPacket(atoi(sep->arg[1]), sizeof(PlayerAA_Struct));
+		/*APPLAYER* outapp = new APPLAYER(atoi(sep->arg[1]), sizeof(PlayerAA_Struct));
 		memcpy(outapp->pBuffer,c->GetAAStruct(),outapp->size);
 		c->QueuePacket(outapp);
 		safe_delete(outapp);
@@ -844,7 +843,7 @@ void command_sendop(Client *c,const Seperator *sep){
 
 void command_optest(Client *c, const Seperator *sep)
 {
-	EQApplicationPacket *outapp = new EQApplicationPacket(OP_MoneyUpdate, sizeof(MoneyUpdate_Struct));
+	APPLAYER *outapp = new APPLAYER(OP_MoneyUpdate, sizeof(MoneyUpdate_Struct));
 	MoneyUpdate_Struct *mu = (MoneyUpdate_Struct *)outapp->pBuffer;
 	mu->platinum = sep->arg[1][0] ? atoi(sep->arg[1]) : 0;
 	mu->gold = sep->arg[2][0] ? atoi(sep->arg[2]): 0;
@@ -854,7 +853,7 @@ void command_optest(Client *c, const Seperator *sep)
 	safe_delete(outapp);
 
 /*
-	EQApplicationPacket outapp;
+	APPLAYER outapp;
 	if(sep->arg[1][0])
 	{
 		c->CreateDespawnPacket(&outapp);
@@ -878,14 +877,14 @@ void command_optest(Client *c, const Seperator *sep)
 	
 
 /*
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_MemorizeSpell, sizeof(MemorizeSpell_Struct));
+	APPLAYER* outapp = new APPLAYER(OP_MemorizeSpell, sizeof(MemorizeSpell_Struct));
 	MemorizeSpell_Struct* mem = (MemorizeSpell_Struct*)outapp->pBuffer;
 	mem->slot = sep->arg[1][0] ? atoi(sep->arg[1]) : 0;
 	mem->spell_id = sep->arg[2][0] ? atoi(sep->arg[2]) : 15;
 	mem->scribing = 0;
 	c->QueuePacket(outapp);
 
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Action, sizeof(Action_Struct));
+	APPLAYER* outapp = new APPLAYER(OP_Action, sizeof(Action_Struct));
 	Action_Struct *act = (Action_Struct *)outapp->pBuffer;
 	act->target = c->GetTarget() ? c->GetTarget()->GetID() : c->GetID();
 	act->source = c->GetID();
@@ -908,14 +907,14 @@ void command_optest(Client *c, const Seperator *sep)
 */
 
 /*
-	EQApplicationPacket *outapp = new EQApplicationPacket(OP_MoveDoor, sizeof(MoveDoor_Struct));
+	APPLAYER *outapp = new APPLAYER(OP_MoveDoor, sizeof(MoveDoor_Struct));
 	MoveDoor_Struct *md = (MoveDoor_Struct *)outapp->pBuffer;
 	md->doorid = sep->arg[1][0] ? atoi(sep->arg[1]) : 0;
 	md->action = sep->arg[2][0] ? atoi(sep->arg[2]): 0;
 	entity_list.QueueClients(c, outapp);
 	safe_delete(outapp);
 
-	EQApplicationPacket *outapp = new EQApplicationPacket(OP_Damage, sizeof(CombatDamage_Struct));
+	APPLAYER *outapp = new APPLAYER(OP_Damage, sizeof(CombatDamage_Struct));
 	CombatDamage_Struct *cd = (CombatDamage_Struct *)outapp->pBuffer;
 	cd->target = c->GetTarget() ? c->GetTarget()->GetID() : c->GetID();
 	cd->source = c->GetID();
@@ -1003,7 +1002,7 @@ void command_serversidename(Client *c, const Seperator *sep)
 
 void command_testspawnkill(Client *c, const Seperator *sep)
 {
-/*	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Death, sizeof(Death_Struct));
+/*	APPLAYER* outapp = new APPLAYER(OP_Death, sizeof(Death_Struct));
 	Death_Struct* d = (Death_Struct*)outapp->pBuffer;
 	d->corpseid = 1000;
 	//	d->unknown011 = 0x05;
@@ -1019,7 +1018,7 @@ void command_testspawnkill(Client *c, const Seperator *sep)
 void command_testspawn(Client *c, const Seperator *sep)
 {
 	if (sep->IsNumber(1)) {
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewSpawn, sizeof(NewSpawn_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_NewSpawn, sizeof(NewSpawn_Struct));
 		NewSpawn_Struct* ns = (NewSpawn_Struct*)outapp->pBuffer;
 		c->FillSpawnStruct(ns, c);
 		strcpy(ns->spawn.name, "Test");
@@ -1038,6 +1037,7 @@ void command_testspawn(Client *c, const Seperator *sep)
 		else {
 			strcpy((char*) (&((int8*) &ns->spawn)[atoi(sep->arg[1])]), sep->argplus[2]);
 		}
+		//outapp->Deflate();
 		EncryptSpawnPacket(outapp);
 		c->FastQueuePacket(&outapp);
 	}
@@ -1051,12 +1051,9 @@ void command_wc(Client *c, const Seperator *sep)
 	{
 		c->Message(0, "Usage: #wc [wear slot] [material]");
 	}
-	else if(c->GetTarget() == NULL) {
-		c->Message(13, "You must have a target to do a wear change.");
-	}
 	else
 	{
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_WearChange, sizeof(WearChange_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_WearChange, sizeof(WearChange_Struct));
 		WearChange_Struct* wc = (WearChange_Struct*)outapp->pBuffer;
 		wc->spawn_id = c->GetTarget()->GetID();
 		wc->wear_slot_id = atoi(sep->arg[1]);
@@ -1423,19 +1420,20 @@ void command_summon(Client *c, const Seperator *sep)
 			return;
 		}
 		c->Message(0, "Summoning player %s to %1.1f, %1.1f, %1.1f", t->GetName(), c->GetX(), c->GetY(), c->GetZ());
-		t->CastToClient()->MovePC(zone->GetZoneID(), c->GetX(), c->GetY(), c->GetZ(), 2, true);
+		t->CastToClient()->MovePC((char*) 0, c->GetX(), c->GetY(), c->GetZ(), 2, true);
 	}
 }
 
 void command_zone(Client *c, const Seperator *sep)
 {
+/*
+ * solar: this function will NOT work if INVERSEXY isn't defined
+ */
  	if(c->Admin() < commandZoneToCoords &&
  		(sep->IsNumber(2) || sep->IsNumber(3) || sep->IsNumber(4))) {
  		c->Message(0, "Your status is not high enough to zone to specific coordinates.");
  		return;
  	}
- 	
- 	uint16 zoneid = 0;
 	
 	if (sep->IsNumber(1))
 	{
@@ -1443,36 +1441,30 @@ void command_zone(Client *c, const Seperator *sep)
 				c->Message(0, "Only Guides and above can goto that zone.");
 				return;
 		}
-		zoneid = atoi(sep->arg[1]);
+		c->MovePC(atoi(sep->arg[1]),
+		(sep->IsNumber(2)) ? (atof(sep->arg[2])):(-1),
+		(sep->IsNumber(3)) ? (atof(sep->arg[3])):(-1),
+		(sep->IsNumber(4)) ? (atof(sep->arg[4])):(-1));
 	}
 	else if (sep->arg[1][0] == 0)
 	{
 		c->Message(0, "Usage: #zone [zonename]");
 		c->Message(0, "Optional Usage: #zone [zonename] y x z");
-		return;
 	}
-	else if (zone->GetZoneID() == 184 && c->Admin() < commandZoneToSpecials) {	// Zone: 'Load'
+	else if (zone->GetZoneID() == 184 && c->Admin() < commandZoneToSpecials)	// Zone: 'Load'
 		c->Message(0, "The Gods brought you here, only they can send you away.");
-		return;
-	} else {
+	else{
 		if((strcasecmp(sep->arg[1], "cshome")==0) && (c->Admin() < commandZoneToSpecials)){
 			c->Message(0, "Only Guides and above can goto that zone.");
 			return;
 		}
-		
-		zoneid = database.GetZoneID(sep->arg[1]);
-		if(zoneid == 0) {
-			c->Message(0, "Unable to locate zone '%s'", sep->arg[1]);
-			return;
-		}
+		if (strcasecmp(sep->arg[1], zone->GetShortName()) == 0 && sep->IsNumber(2) || sep->IsNumber(3) || sep->IsNumber(4))
+			c->MovePC(sep->arg[1], atof(sep->arg[2]), atof(sep->arg[3]), atof(sep->arg[4]));
+		else if (strcasecmp(sep->arg[1], zone->GetShortName()) == 0)
+			c->MovePC(sep->arg[1], zone->safe_y(), zone->safe_x(), zone->safe_z());
+		else
+			c->MovePC(sep->arg[1], -1, -1, -1);
 	}
-		
-	if (sep->IsNumber(2) || sep->IsNumber(3) || sep->IsNumber(4))
-		//zone to specific coords
-		c->MovePC(zoneid, atof(sep->arg[2]), atof(sep->arg[3]), atof(sep->arg[4]), 0, false);
-	else
-		//zone to safe coords
-		c->GoToSafeCoords(zoneid);
 }
 
 void command_showbuffs(Client *c, const Seperator *sep)
@@ -1532,7 +1524,7 @@ void command_viewpetition(Client *c, const Seperator *sep)
 			LogFile->write(EQEMuLog::Normal,"View petition request from %s, petition number:", c->GetName(), atoi(sep->argplus[1]) );
 			if (queryfound==0)
 				c->Message(13,"There was an error in your request: ID not found! Please check the Id and try again.");
-			mysql_free_result(result);
+				mysql_free_result(result);
 		}
 		safe_delete_array(query);
 	}
@@ -1635,7 +1627,7 @@ void command_timezone(Client *c, const Seperator *sep)
 		database.SetZoneTZ(zone->GetZoneID(), ntz);
 
 		// Update all clients with new TZ.
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
 		TimeOfDay_Struct* tod = (TimeOfDay_Struct*)outapp->pBuffer;
 		zone->zone_time.getEQTimeOfDay(time(0), tod);
 		entity_list.QueueClients(c, outapp);
@@ -1646,7 +1638,7 @@ void command_timezone(Client *c, const Seperator *sep)
 void command_synctod(Client *c, const Seperator *sep)
 {
 	c->Message(13, "Updating Time/Date for all clients in zone...");
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
+	APPLAYER* outapp = new APPLAYER(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
 	TimeOfDay_Struct* tod = (TimeOfDay_Struct*)outapp->pBuffer;
 	zone->zone_time.getEQTimeOfDay(time(0), tod);
 	entity_list.QueueClients(c, outapp);
@@ -1766,7 +1758,7 @@ void command_zclip(Client *c, const Seperator *sep)
 			zone->newzone_data.fog_maxclip[0]=atof(sep->arg[5]);
 		if(sep->arg[6][0]!=0)
 			zone->newzone_data.fog_maxclip[1]=atof(sep->arg[6]);
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -1880,7 +1872,7 @@ void command_weather(Client *c, const Seperator *sep)
 			if(sep->arg[2][0] != 0 && sep->arg[3][0] != 0) {
 				c->Message(0, "Sending weather packet... TYPE=%s, INTENSITY=%s", sep->arg[2], sep->arg[3]);
 				zone->zone_weather = atoi(sep->arg[2]);
-				EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
+				APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
 				outapp->pBuffer[0] = atoi(sep->arg[2]);
 				outapp->pBuffer[4] = atoi(sep->arg[3]); // This number changes in the packets, intensity?
 				entity_list.QueueClients(c, outapp);
@@ -1893,7 +1885,7 @@ void command_weather(Client *c, const Seperator *sep)
 		else if(sep->arg[1][0] == '2')	{
 			entity_list.Message(0, 0, "Snowflakes begin to fall from the sky.");
 			zone->zone_weather = 2;
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
+			APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
 			outapp->pBuffer[0] = 0x01;
 			outapp->pBuffer[4] = 0x02; // This number changes in the packets, intensity?
 			entity_list.QueueClients(c, outapp);
@@ -1902,7 +1894,7 @@ void command_weather(Client *c, const Seperator *sep)
 		else if(sep->arg[1][0] == '1')	{
 			entity_list.Message(0, 0, "Raindrops begin to fall from the sky.");
 			zone->zone_weather = 1;
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
+			APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
 			outapp->pBuffer[4] = 0x01; // This is how it's done in Fear, and you can see a decent distance with it at this value
 			entity_list.QueueClients(c, outapp);
 			safe_delete(outapp);
@@ -1912,7 +1904,7 @@ void command_weather(Client *c, const Seperator *sep)
 		if(zone->zone_weather == 1)	{ // Doing this because if you have rain/snow on, you can only turn one off.
 			entity_list.Message(0, 0, "The sky clears as the rain ceases to fall.");
 			zone->zone_weather = 0;
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
+			APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
 			// To shutoff weather you send an empty 8 byte packet (You get this everytime you zone even if the sky is clear)
 			entity_list.QueueClients(c, outapp);
 			safe_delete(outapp);
@@ -1920,7 +1912,7 @@ void command_weather(Client *c, const Seperator *sep)
 		else if(zone->zone_weather == 2) {
 			entity_list.Message(0, 0, "The sky clears as the snow stops falling.");
 			zone->zone_weather = 0;
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
+			APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
 			// To shutoff weather you send an empty 8 byte packet (You get this everytime you zone even if the sky is clear)
 			outapp->pBuffer[0] = 0x01; // Snow has it's own shutoff packet
 			entity_list.QueueClients(c, outapp);
@@ -1929,7 +1921,7 @@ void command_weather(Client *c, const Seperator *sep)
 		else {
 			entity_list.Message(0, 0, "The sky clears.");
 			zone->zone_weather = 0;
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
+			APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
 			// To shutoff weather you send an empty 8 byte packet (You get this everytime you zone even if the sky is clear)
 			entity_list.QueueClients(c, outapp);
 			safe_delete(outapp);
@@ -1951,7 +1943,7 @@ void command_zheader(Client *c, const Seperator *sep)
 			c->Message(0, "Successfully loaded zone header for %s from database.", sep->argplus[1]);
 		else
 			c->Message(0, "Failed to load zone header %s from database", sep->argplus[1]);
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -1967,7 +1959,7 @@ void command_zsky(Client *c, const Seperator *sep)
 		c->Message(0, "ERROR: Sky type can not be less than 0 or greater than 255!");
 	else {
 		zone->newzone_data.sky = atoi(sep->arg[1]);
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -1991,7 +1983,7 @@ void command_zcolor(Client *c, const Seperator *sep)
 			zone->newzone_data.fog_green[z] = atoi(sep->arg[2]);
 			zone->newzone_data.fog_blue[z] = atoi(sep->arg[3]);
 		}
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -2005,7 +1997,7 @@ void command_spon(Client *c, const Seperator *sep)
 
 void command_spoff(Client *c, const Seperator *sep)
 {
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ManaChange, 0);
+	APPLAYER* outapp = new APPLAYER(OP_ManaChange, 0);
 	outapp->priority = 5;
 	c->QueuePacket(outapp);
 	safe_delete(outapp);
@@ -2024,7 +2016,7 @@ void command_itemtest(Client *c, const Seperator *sep)
 	fread(chBuffer, sizeof(chBuffer), sizeof(char), f);
 	fclose(f);
 		
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ItemLinkResponse, strlen(chBuffer)+5);
+	APPLAYER* outapp = new APPLAYER(OP_ItemLinkResponse, strlen(chBuffer)+5);
 	memcpy(&outapp->pBuffer[4], chBuffer, strlen(chBuffer));
 	c->QueuePacket(outapp);
 	safe_delete(outapp);
@@ -2380,7 +2372,7 @@ void command_showskills(Client *c, const Seperator *sep)
 		t=c->GetTarget()->CastToClient();
 
 	c->Message(0, "Skills for %s", t->GetName());
-	for (int i=0; i <= HIGHEST_SKILL; i++)
+	for (int i=0; i<74; i++)
 		c->Message(0, "Skill [%d] is at [%d]", i, t->GetSkill(i));
 }
 
@@ -2815,7 +2807,7 @@ void command_peekinv(Client *c, const Seperator *sep)
 			const ItemInst* inst = client->GetInv().GetItem(i);
 			item = (inst) ? inst->GetItem() : NULL;
 			c->Message((item==0), "WornSlot: %i, Item: %i (%s)", i,
-				((item==0)?0:item->ID), ((item==0)?"null":item->Name));
+				((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
 		}
 	}
 	if (bAll || (strcasecmp(sep->arg[1], "inv")==0)) {
@@ -2825,15 +2817,15 @@ void command_peekinv(Client *c, const Seperator *sep)
 			const ItemInst* inst = client->GetInv().GetItem(i);
 			item = (inst) ? inst->GetItem() : NULL;
 			c->Message((item==0), "InvSlot: %i, Item: %i (%s)", i,
-			((item==0)?0:item->ID), ((item==0)?"null":item->Name));
+			((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
 			
-			if (inst && inst->IsType(ItemClassContainer)) {
+			if (inst && inst->IsType(ItemTypeContainer)) {
 				for (uint8 j=0; j<10; j++) {
 					const ItemInst* instbag = client->GetInv().GetItem(i, j);
 					item = (instbag) ? instbag->GetItem() : NULL;
 					c->Message((item==0), "   InvBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
 						Inventory::CalcSlotId(i, j),
-						i, j, ((item==0)?0:item->ID),
+						i, j, ((item==0)?0:item->ItemNumber),
 						((item==0)?"null":item->Name));
 				}
 			}
@@ -2848,15 +2840,15 @@ void command_peekinv(Client *c, const Seperator *sep)
 			const ItemInst* inst = *it;
 			item = (inst) ? inst->GetItem() : NULL;
 			c->Message((item==0), "CursorSlot: %i, Depth: %i, Item: %i (%s)", SLOT_CURSOR,i,
-				((item==0)?0:item->ID), ((item==0)?"null":item->Name));
+				((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
 			
-			if (inst && inst->IsType(ItemClassContainer)) {
+			if (inst && inst->IsType(ItemTypeContainer)) {
 				for (uint8 j=0; j<10; j++) {
 					const ItemInst* instbag = client->GetInv().GetItem(SLOT_CURSOR, j);
 					item = (instbag) ? instbag->GetItem() : NULL;
 					c->Message((item==0), "   CursorBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
 						Inventory::CalcSlotId(SLOT_CURSOR, j),
-						SLOT_CURSOR, j, ((item==0)?0:item->ID),
+						SLOT_CURSOR, j, ((item==0)?0:item->ItemNumber),
 						((item==0)?"null":item->Name));
 				}
 			}
@@ -2870,15 +2862,15 @@ void command_peekinv(Client *c, const Seperator *sep)
 			const ItemInst* inst = client->GetInv().GetItem(i);
 			item = (inst) ? inst->GetItem() : NULL;
 			c->Message((item==0), "BankSlot: %i, Item: %i (%s)", i,
-				((item==0)?0:item->ID), ((item==0)?"null":item->Name));
+				((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
 				
-			if (inst && inst->IsType(ItemClassContainer)) {
+			if (inst && inst->IsType(ItemTypeContainer)) {
 				for (uint8 j=0; j<10; j++) {
 					const ItemInst* instbag = client->GetInv().GetItem(i, j);
 					item = (instbag) ? instbag->GetItem() : NULL;
 					c->Message((item==0), "   BankBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
 						Inventory::CalcSlotId(i, j),
-						i, j, ((item==0)?0:item->ID),
+						i, j, ((item==0)?0:item->ItemNumber),
 						((item==0)?"null":item->Name));
 				}
 			}
@@ -2887,15 +2879,15 @@ void command_peekinv(Client *c, const Seperator *sep)
 			const ItemInst* inst = client->GetInv().GetItem(i);
 			item = (inst) ? inst->GetItem() : NULL;
 			c->Message((item==0), "ShBankSlot: %i, Item: %i (%s)", i,
-				((item==0)?0:item->ID), ((item==0)?"null":item->Name));
+				((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
 			
-			if (inst && inst->IsType(ItemClassContainer)) {
+			if (inst && inst->IsType(ItemTypeContainer)) {
 				for (uint8 j=0; j<10; j++) {
 					const ItemInst* instbag = client->GetInv().GetItem(i, j);
 					item = (instbag) ? instbag->GetItem() : NULL;
 					c->Message((item==0), "   ShBankBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
 						Inventory::CalcSlotId(i, j),
-						i, j, ((item==0)?0:item->ID),
+						i, j, ((item==0)?0:item->ItemNumber),
 						((item==0)?"null":item->Name));
 				}
 			}
@@ -2908,15 +2900,15 @@ void command_peekinv(Client *c, const Seperator *sep)
 			const ItemInst* inst = client->GetInv().GetItem(i);
 			item = (inst) ? inst->GetItem() : NULL;
 			c->Message((item==0), "TradeSlot: %i, Item: %i (%s)", i,
-				((item==0)?0:item->ID), ((item==0)?"null":item->Name));
+				((item==0)?0:item->ItemNumber), ((item==0)?"null":item->Name));
 			
-			if (inst && inst->IsType(ItemClassContainer)) {
+			if (inst && inst->IsType(ItemTypeContainer)) {
 				for (uint8 j=0; j<10; j++) {
 					const ItemInst* instbag = client->GetInv().GetItem(i, j);
 					item = (instbag) ? instbag->GetItem() : NULL;
 					c->Message((item==0), "   TradeBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%s)",
 						Inventory::CalcSlotId(i, j),
-						i, j, ((item==0)?0:item->ID),
+						i, j, ((item==0)?0:item->ItemNumber),
 						((item==0)?"null":item->Name));
 				
 				}
@@ -3094,7 +3086,7 @@ void command_kick(Client *c, const Seperator *sep)
 		if (client != 0) {
 			if (client->Admin() <= c->Admin()) {
 				client->Message(0, "You have been kicked by %s",c->GetName());
-				EQApplicationPacket* outapp = new EQApplicationPacket(OP_GMKick,0);
+				APPLAYER* outapp = new APPLAYER(OP_GMKick,0);
 				client->QueuePacket(outapp);
 				client->Kick();
 				c->Message(0, "Kick: local: kicking %s", sep->arg[1]);
@@ -3174,7 +3166,8 @@ void command_listpetition(Client *c, const Seperator *sep)
 				blahloopcount=1;
 				c->Message(13,"	ID : Character Name , Account Name");
 			}
-			c->Message(15, " %s:	%s , %s ",row[0],row[1],row[2]);
+			else
+				c->Message(15, " %s:	%s , %s ",row[0],row[1],row[2]);
 		}
 		mysql_free_result(result);
 	}
@@ -3186,8 +3179,8 @@ void command_equipitem(Client *c, const Seperator *sep)
 	uint32 slot_id = atoi(sep->arg[1]);
 	if (sep->IsNumber(1) && (slot_id>=0) && (slot_id<=21)) {
 		const ItemInst* inst = c->GetInv().GetItem(SLOT_CURSOR);
-		if (inst && inst->IsType(ItemClassCommon)) {
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoveItem, sizeof(MoveItem_Struct));
+		if (inst && inst->IsType(ItemTypeCommon)) {
+			APPLAYER* outapp = new APPLAYER(OP_MoveItem, sizeof(MoveItem_Struct));
 			MoveItem_Struct* mi	= (MoveItem_Struct*)outapp->pBuffer;
 			mi->from_slot		= SLOT_CURSOR;
 			mi->to_slot			= slot_id;
@@ -3457,8 +3450,6 @@ void command_title(Client *c, const Seperator *sep)
 		c->Message(0, "Usage: #title [remove|text] - remove or set title to 'text'");
 	else {
 		Mob *target_mob = c->GetTarget();
-		if(!target_mob)
-			target_mob = c;
 		if(!target_mob->IsClient()) {
 			c->Message(13, "#title only works on players.");
 			return;
@@ -3682,7 +3673,7 @@ void command_zuwcoords(Client *c, const Seperator *sep)
 		zone->newzone_data.underworld = atof(sep->arg[1]);
 		//float newdata = atof(sep->arg[1]);
 		//memcpy(&zone->zone_header_data[130], &newdata, sizeof(float));
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -3714,7 +3705,7 @@ void command_zsafecoords(Client *c, const Seperator *sep)
 		//memcpy(&zone->zone_header_data[118], &newdatay, sizeof(float));
 		//memcpy(&zone->zone_header_data[122], &newdataz, sizeof(float));
 		//zone->SetSafeCoords();
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -4095,12 +4086,12 @@ void command_loc(Client *c, const Seperator *sep)
 void command_goto(Client *c, const Seperator *sep)
 {
 	// Pyro's goto function
-	if (sep->arg[1][0] == '\0' && c->GetTarget())
-		c->MovePC(c->GetTarget()->GetX(), c->GetTarget()->GetY(), c->GetTarget()->GetZ());
+ if (sep->arg[1][0] == 0 && c->GetTarget() != 0)
+		c->MovePC((char*) 0, c->GetTarget()->GetX(), c->GetTarget()->GetY(), c->GetTarget()->GetZ());
 	else if (!(sep->IsNumber(1) && sep->IsNumber(2) && sep->IsNumber(3)))
 		c->Message(0, "Usage: #goto [x y z]");
 	else
-		c->MovePC(atof(sep->arg[1]), atof(sep->arg[2]), atof(sep->arg[3]), 1, false);
+		c->MovePC((char*) 0,atof(sep->arg[1]), atof(sep->arg[2]), atof(sep->arg[3]), 1, false);
 }
 
 #ifdef BUGTRACK
@@ -4128,23 +4119,23 @@ void command_iteminfo(Client *c, const Seperator *sep)
 		c->Message(13, "Error: You need an item on your cursor for this command");
 	else {
 		const Item_Struct* item = inst->GetItem();
-		c->Message(0, "ID: %i Name: %s", item->ID, item->Name);
-		c->Message(0, "  Lore: %s  ND: %i  NS: %i  Type: %i", (item->LoreFlag) ? "true":"false", item->NoDrop, item->NoRent, item->ItemClass);
-		c->Message(0, "  IDF: %s  Size: %i  Weight: %i  icon_id: %i  Price: %i", item->IDFile, item->Size, item->Weight, item->Icon, item->Price);
+		c->Message(0, "ID: %i Name: %s", item->ItemNumber, item->Name);
+		c->Message(0, "  Lore: %s  ND: %i  NS: %i  Type: %i", (item->loreflag) ? "true":"false", item->NoDrop, item->NoRent, item->ItemClass);
+		c->Message(0, "  IDF: %s  Size: %i  Weight: %i  icon_id: %i  Cost: %i", item->IDFile, item->Size, item->Weight, item->IconNumber, item->Cost);
 		if (c->Admin() >= 200)
-			c->Message(0, "MinStatus: %i", database.GetItemStatus(item->ID));
-		if (item->ItemClass==ItemClassBook)
-			c->Message(0, "  This item is a Book: %s", item->Book.Filename);
-		else if (item->ItemClass==ItemClassContainer)
-			c->Message(0, "  This item is a container with %i slots", item->Container.BagSlots);
+			c->Message(0, "MinStatus: %i", database.GetItemStatus(item->ItemNumber));
+		if (item->ItemClass==ItemTypeBook)
+			c->Message(0, "  This item is a Book: %s", item->Book.File);
+		else if (item->ItemClass==ItemTypeContainer)
+			c->Message(0, "  This item is a container with %i slots", item->Container.Slots);
 		else {
-			c->Message(0, "  equipableSlots: %u equipable Classes: %u", item->Slots, item->Common.Classes);
-			c->Message(0, "  Magic: %i  SpellID: %i  Proc Level: %i DBCharges: %i  CurCharges: %i", item->Common.Magic, item->Common.Click.Effect, item->Common.Click.Level, item->Common.MaxCharges, inst->GetCharges());
-			c->Message(0, "  EffectType: 0x%02x  CastTime: %.2f", (int8) item->Common.Click.Type, (double) item->Common.CastTime/1000);
-			c->Message(0, "  Material: 0x02%x  Color: 0x%08x  Skill: %i", item->Common.Material, item->Common.Color, item->Common.ItemType);
-			c->Message(0, " Required level: %i Required skill: %i Recommended level:%i", item->Common.ReqLevel,  item->Common.RecSkill, item->Common.RecLevel);
+			c->Message(0, "  equipableSlots: %u equipable Classes: %u", item->EquipSlots, item->Common.Classes);
+			c->Message(0, "  Magic: %i  SpellID: %i  Proc Level: %i DBCharges: %i  CurCharges: %i", item->Common.Magic, item->Common.SpellId, item->Common.ProcLevel, item->Common.MaxCharges, inst->GetCharges());
+			c->Message(0, "  EffectType: 0x%02x  CastTime: %.2f", (int8) item->Common.EffectType, (double) item->Common.CastTime/1000);
+			c->Message(0, "  Material: 0x02%x  Color: 0x%08x  Skill: %i", item->Common.Material, item->Common.Color, item->Common.ItemUse);
+			c->Message(0, " Required level: %i Required skill: %i Recommended level:%i", item->Common.RequiredLevel,  item->Common.RecommendedSkill, item->Common.RecommendedLevel);
 			c->Message(0, " Skill mod: %i percent: %i", item->Common.SkillModType, item->Common.SkillModValue);
-			c->Message(0, " BaneRace: %i BaneBody: %i BaneDMG: %i", item->Common.BaneDmgRace, item->Common.BaneDmgBody, item->Common.BaneDmgAmt);
+			c->Message(0, " BaneRace: %i BaneBody: %i BaneDMG: %i", item->Common.BaneDmgRace, item->Common.BaneDmgBody, item->Common.BaneDmg);
 		}
 	}
 }
@@ -4970,7 +4961,7 @@ void command_face(Client *c, const Seperator *sep)
 {
 	c->Message(0,"This command is not yet implemented.");
 
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Illusion, sizeof(Illusion_Struct));
+	APPLAYER* outapp = new APPLAYER(OP_Illusion, sizeof(Illusion_Struct));
 	Illusion_Struct* is = (Illusion_Struct*) outapp->pBuffer;
 		
 	strcpy(is->charname, c->GetPP().name);
@@ -5116,7 +5107,7 @@ void command_interrupt(Client *c, const Seperator *sep)
 
 void command_d1(Client *c, const Seperator *sep)
 {
-	EQApplicationPacket app(OP_Action);
+	APPLAYER app(OP_Action);
 	app.size = sizeof(Action_Struct);
 	app.pBuffer = new uchar[app.size];
 	memset(app.pBuffer, 0, app.size);
@@ -5168,7 +5159,7 @@ void command_itemsearch(Client *c, const Seperator *sep)
 		if (Seperator::IsNumber(search_criteria)) {
 			item = database.GetItem(atoi(search_criteria));
 			if (item)
-				c->Message(0, "  %i: %s", (int) item->ID, item->Name);
+				c->Message(0, "  %i: %s", (int) item->ItemNumber, item->Name);
 			else
 				c->Message(0, "Item #%s not found", search_criteria);
 			return;
@@ -5187,7 +5178,7 @@ void command_itemsearch(Client *c, const Seperator *sep)
 			strupr(sName);
 			pdest = strstr(sName, sCriteria);
 			if (pdest != NULL) {
-				c->Message(0, "  %i: %s", (int) item->ID, item->Name);
+				c->Message(0, "  %i: %s", (int) item->ItemNumber, item->Name);
 				count++;
 			}
 			if (count == 20)
@@ -5203,18 +5194,18 @@ void command_itemsearch(Client *c, const Seperator *sep)
 
 void command_datarate(Client *c, const Seperator *sep)
 {
-//	EQStream *eqs = c->Connection();
+	EQNetworkConnection *eqnc = c->Connection();
 
 	if (sep->arg[1][0] == 0) {
-		//c->Message(0, "Datarate: %1.1f", eqs->GetDataRate());
-		//if (c->Admin() >= commandChangeDatarate) {
-			//c->Message(0, "Dataflow: %i", eqs->GetDataFlow());
-			//c->Message(0, "Datahigh: %i", eqs->GetDataHigh());
-		//}
+		c->Message(0, "Datarate: %1.1f", eqnc->GetDataRate());
+		if (c->Admin() >= commandChangeDatarate) {
+			c->Message(0, "Dataflow: %i", eqnc->GetDataFlow());
+			c->Message(0, "Datahigh: %i", eqnc->GetDataHigh());
+		}
 	}
 	else if (sep->IsNumber(1) && atof(sep->arg[1]) > 0 && (c->Admin() >= commandChangeDatarate || atof(sep->arg[1]) <= 25)) {
-		//eqs->SetDataRate(atof(sep->arg[1]));
-		//c->Message(0, "Datarate: %1.1f", eqs->GetDataRate());
+		eqnc->SetDataRate(atof(sep->arg[1]));
+		c->Message(0, "Datarate: %1.1f", eqnc->GetDataRate());
 	}
 	else
 		c->Message(0, "Usage: #DataRate [new data rate in kb/sec, max 25]");
@@ -5226,14 +5217,11 @@ void command_setaaxp(Client *c, const Seperator *sep)
 
 	if(c->GetTarget() && c->GetTarget()->IsClient())
 		t=c->GetTarget()->CastToClient();
-	
-	if (sep->IsNumber(1)) {
+
+	if (sep->IsNumber(1))
 		t->SetEXP(t->GetEXP(), atoi(sep->arg[1]), false);
-		if(sep->IsNumber(2) && sep->IsNumber(3)) {
-			t->SetLeadershipEXP(atoi(sep->arg[2]), atoi(sep->arg[3]));
-		}
-	} else
-		c->Message(0, "Usage: #setaaxp <new AA XP value> (<new Group AA XP value> <new Raid XP value>)");
+	else
+		c->Message(0, "Usage: #setaaxp <new AA XP value>");
 }
 
 void command_setaapts(Client *c, const Seperator *sep)
@@ -5243,16 +5231,12 @@ void command_setaapts(Client *c, const Seperator *sep)
 	if(c->GetTarget() && c->GetTarget()->IsClient())
 		t=c->GetTarget()->CastToClient();
 
-	if(sep->arg[1][0] == '\0' || sep->arg[2][0] == '\0')
-		c->Message(0, "Usage: #setaapts <AA|group|raid> <new AA points value>");
-	else if(atoi(sep->arg[2]) <= 0 || atoi(sep->arg[2]) > 200)
+	if(sep->arg[1][0] == 0)
+		c->Message(0, "Usage: #setaapts <new AA points value>");
+	else if(atoi(sep->arg[1]) <= 0 || atoi(sep->arg[1]) > 200)
 		c->Message(0, "You must have a number greater than 0 for points and no more than 200.");
-	else if(!strcasecmp(sep->arg[1], "group")) {
-		t->SetLeadershipEXP(atoi(sep->arg[2])*GROUP_EXP_PER_POINT, t->GetRaidEXP());
-	} else if(!strcasecmp(sep->arg[1], "raid")) {
-		t->SetLeadershipEXP(t->GetGroupEXP(), atoi(sep->arg[2])*RAID_EXP_PER_POINT);
-	} else {
-		t->SetEXP(t->GetEXP(),t->GetMaxAAXP()*atoi(sep->arg[2]),false);
+	else {
+		t->SetEXP(t->GetEXP(),t->GetMaxAAXP()*atoi(sep->arg[1]),false);
 		t->SendAAStats();
 		t->SendAATable();
 	}
@@ -5950,83 +5934,13 @@ void command_profilereset(Client *c, const Seperator *sep) {
 }
 #endif
 
-void command_opcode(Client *c, const Seperator *sep) {
-	if(EQOpcodeManager == NULL) {
+void command_reloadops(Client *c, const Seperator *sep) {
+	if(EQNetworkOpcodeManager == NULL) {
 		c->Message(13, "It seems that the server is not using an opcode translator.");
 		return;
 	}
-	
-	if(!strcasecmp( sep->arg[1], "mode" )) {
-		OpcodeManager *new_mgr, *old_mgr;
-		if(!strcasecmp( sep->arg[2], "shared" )) {
-			new_mgr = new SharedOpcodeManager();
-		} else if(!strcasecmp( sep->arg[2], "private" )) {
-			new_mgr = new RegularOpcodeManager();
-		} else {
-			c->Message(13, "You specified an invalid manager type. Options: shared | private");
-			return;
-		}
-		if(!new_mgr->LoadOpcodes(OPCODES_FILE)) {
-			LogFile->write(EQEMuLog::Error, "Loading new opcode manager failed. Not switching");
-			c->Message(13, "Loading new opcode manager failed. Not switching");
-			return;
-		}
-		
-		old_mgr = EQOpcodeManager;
-		EQOpcodeManager = new_mgr;
-		safe_delete(old_mgr);
-	} else if(!strcasecmp( sep->arg[1], "reload" )) {
-		if(!EQOpcodeManager->Editable()) {
-			c->Message(13, "Your opcode manager is not editable. Only private opcode manager can be edited right now.");
-			return;
-		}
-		EQOpcodeManager->ReloadOpcodes(OPCODES_FILE);
-		c->Message(0, "Opcodes have been reloaded");
-	} else if(!strcasecmp( sep->arg[1], "get" )) {
-		EmuOpcode op = EQOpcodeManager->NameSearch(sep->arg[2]);
-		if(op == OP_Unknown) {
-			c->Message(0, "Opcode '%s' is unknown.", sep->arg[2]);
-		} else {
-			uint16 eq_op = EQOpcodeManager->EmuToEQ(op);
-			c->Message(0, "Opcode '%s' is 0x%.4x", sep->arg[2], eq_op);
-		}
-	} else if(!strcasecmp( sep->arg[1], "set" )) {
-		if(!EQOpcodeManager->Editable()) {
-			c->Message(13, "Your opcode manager is not editable. Only private opcode manager can be edited right now.");
-			return;
-		}
-		//find the named opcode
-		EmuOpcode op = EQOpcodeManager->NameSearch(sep->arg[2]);
-		if(op == OP_Unknown) {
-			c->Message(13, "Unable to locate opcode named '%s'", sep->arg[2]);
-			return;
-		}
-		
-		//turn the second value into a number
-		uint16 newop = 0;
-		if(sscanf(sep->arg[3], "0x%x", &newop) != 1) {
-			c->Message(13, "Unable to read your opcode value. It hsould be of the form 0x0000");
-			return;
-		}
-		
-		//set it
-		EQOpcodeManager->SetOpcode(op, newop);
-		if(newop == 0) {
-			c->Message(0, "Opcode '%s' has been cleared.");
-		} else {
-			c->Message(0, "Opcode '%s' has been set to 0x%.4x.", newop);
-		}
-	} else {
-		c->Message(0, "Usage: #opcodes [command]");
-		c->Message(0, "Commands:");
-		c->Message(0, "  mode [shared|private] - Switch to a new opcode manager of this type.");
-		c->Message(0, "  reload - Reloads your opcodes.conf");
-		c->Message(0, "  get [name] - Get the value for the opcode name.");
-		c->Message(0, "  set [name] [value 0x..] - Set an opcode in game (temporary).");
-		c->Message(0, "  search [value 0x..] - Try to find the name for an opcode.");
-	}
-	
-	
+	EQNetworkOpcodeManager->ReloadOpcodes(OPCODES_FILE);
+	c->Message(0, "Opcodes have been reloaded");
 }
 
 void command_logsql(Client *c, const Seperator *sep) {
@@ -6290,7 +6204,7 @@ void command_fear(Client *c, const Seperator *sep) {
 		
 		if(target == NULL) {
 			//empty length packet == not found.
-			EQApplicationPacket outapp(OP_FindPersonReply, 0);
+			APPLAYER outapp(OP_FindPersonReply, 0);
 			c->QueuePacket(&outapp);
 			return;
 		}
@@ -6316,13 +6230,13 @@ void command_fear(Client *c, const Seperator *sep) {
 		
 		if(points.size() == 0) {
 			//empty length packet == not found.
-			EQApplicationPacket outapp(OP_FindPersonReply, 0);
+			APPLAYER outapp(OP_FindPersonReply, 0);
 			c->QueuePacket(&outapp);
 			return;
 		}
 		
 		int len = sizeof(FindPersonResult_Struct) + points.size() * sizeof(FindPerson_Point);
-		EQApplicationPacket *outapp = new EQApplicationPacket(OP_FindPersonReply, len);
+		APPLAYER *outapp = new APPLAYER(OP_FindPersonReply, len);
 		FindPersonResult_Struct* fpr=(FindPersonResult_Struct*)outapp->pBuffer;
 		
 		vector<FindPerson_Point>::iterator cur, end;

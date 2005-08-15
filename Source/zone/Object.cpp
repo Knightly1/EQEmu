@@ -212,7 +212,7 @@ void Object::PutItem(uint8 index, const ItemInst* inst)
 		return;
 	}
 	
-	if (m_inst && m_inst->IsType(ItemClassContainer)) {
+	if (m_inst && m_inst->IsType(ItemTypeContainer)) {
 		ItemContainerInst* bag = (ItemContainerInst*)m_inst;
 		if (inst) {
 			bag->PutItem(index, *inst);
@@ -228,12 +228,18 @@ void Object::PutItem(uint8 index, const ItemInst* inst)
 
 void Object::Close() {
 	m_inuse = false;
+	
+	//Clear out no-drop and no-rent items
+	if (m_inst && m_inst->IsType(ItemTypeContainer)) {
+		ItemContainerInst* bag = (ItemContainerInst*)m_inst;
+		bag->ClearByFlags(byFlagSet, byFlagSet);
+	}
 }
 
 // Remove item from container
 void Object::DeleteItem(uint8 index)
 {
-	if (m_inst && m_inst->IsType(ItemClassContainer)) {
+	if (m_inst && m_inst->IsType(ItemTypeContainer)) {
 		ItemContainerInst* bag = (ItemContainerInst*)m_inst;
 		bag->DeleteItem(index);
 		
@@ -247,7 +253,7 @@ ItemInst* Object::PopItem(uint8 index)
 {
 	ItemInst* inst = NULL;
 	
-	if (m_inst && m_inst->IsType(ItemClassContainer)) {
+	if (m_inst && m_inst->IsType(ItemTypeContainer)) {
 		ItemContainerInst* bag = (ItemContainerInst*)m_inst;
 		inst = bag->PopItem(index);
 		
@@ -258,15 +264,15 @@ ItemInst* Object::PopItem(uint8 index)
 	return inst;
 }
 
-void Object::CreateSpawnPacket(EQApplicationPacket* app)
+void Object::CreateSpawnPacket(APPLAYER* app)
 {
-	app->SetOpcode(OP_GroundSpawn);
+	app->SetOpcode(OP_CreateObject);
 	app->pBuffer = new uchar[sizeof(Object_Struct)];
 	app->size = sizeof(Object_Struct);
 	memcpy(app->pBuffer, &m_data, sizeof(Object_Struct));
 }
 
-void Object::CreateDeSpawnPacket(EQApplicationPacket* app)
+void Object::CreateDeSpawnPacket(APPLAYER* app)
 {
 	app->SetOpcode(OP_ClickObject);
 	app->pBuffer = new uchar[sizeof(ClickObject_Struct)];
@@ -278,7 +284,7 @@ void Object::CreateDeSpawnPacket(EQApplicationPacket* app)
 bool Object::Process(){
 	if(m_type == OT_DROPPEDITEM && decay_timer.Enabled() && decay_timer.Check()) {
 		// Send click to all clients (removes entity on client)
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClickObject, sizeof(ClickObject_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_ClickObject, sizeof(ClickObject_Struct));
 		ClickObject_Struct* click_object = (ClickObject_Struct*)outapp->pBuffer;
 		click_object->drop_id = GetID();
 		entity_list.QueueClients(NULL, outapp, false);
@@ -294,7 +300,7 @@ bool Object::Process(){
 		m_data.y = ((rand()%(int)m_max_y)-(rand()%(int)m_min_y));
 		m_data.x = ((rand()%(int)m_max_x)-(rand()%(int)m_min_x));
 		//printf("Spawning object %s at %f,%f,%f\n",m_data.object_name,m_data.x,m_data.y,m_data.z);
-		EQApplicationPacket app;
+		APPLAYER app;
 		CreateSpawnPacket(&app);
 		entity_list.QueueCloseClients(0,&app,true);
 	}
@@ -318,7 +324,7 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 		}
 		
 		// Send click to all clients (removes entity on client)
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClickObject, sizeof(ClickObject_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_ClickObject, sizeof(ClickObject_Struct));
 		memcpy(outapp->pBuffer, click_object, sizeof(ClickObject_Struct));
 		entity_list.QueueClients(NULL, outapp, false);
 		safe_delete(outapp);
@@ -330,7 +336,7 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 	}
 	else {
 		// Tradeskill item
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClickObjectAck, sizeof(ClickObjectAck_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_ClickObjectAck, sizeof(ClickObjectAck_Struct));
 		ClickObjectAck_Struct* coa = (ClickObjectAck_Struct*)outapp->pBuffer;
 		
 			// Starting to use this object
@@ -348,24 +354,19 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 		safe_delete(outapp);
 		// Send items inside of container
 
-		if (m_inst && m_inst->IsType(ItemClassContainer)) {
-
-			//Clear out no-drop and no-rent items first
-			//TODO: should/could only do this if a different player opens it
-			ItemContainerInst* container = (ItemContainerInst*)m_inst;
-			container->ClearByFlags(byFlagSet, byFlagSet);
-			
-			EQApplicationPacket* outapp=new EQApplicationPacket(OP_ClientReady,0);
-			sender->QueuePacket(outapp);
-			safe_delete(outapp);
-			for (uint8 i=0; i<10; i++) {
-				const ItemInst* inst = container->GetItem(i);
-				if (inst) {
-					//sender->GetInv().PutItem(i+4000,inst);
-					sender->SendItemPacket(i, inst, ItemPacketWorldContainer);
+			if (m_inst && m_inst->IsType(ItemTypeContainer)) {
+				APPLAYER* outapp=new APPLAYER(OP_ClientReady,0);
+				sender->QueuePacket(outapp);
+				safe_delete(outapp);
+				ItemContainerInst* container = (ItemContainerInst*)m_inst;
+				for (uint8 i=0; i<10; i++) {
+					const ItemInst* inst = container->GetItem(i);
+					if (inst) {
+						//sender->GetInv().PutItem(i+4000,inst);
+						sender->SendItemPacket(i, inst, ItemPacketWorldContainer);
+					}
 				}
 			}
-		}
 	}
 	
 	return true;

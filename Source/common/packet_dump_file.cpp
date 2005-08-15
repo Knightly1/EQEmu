@@ -36,7 +36,7 @@
 	#include <stdarg.h>
 #endif
 
-#include "EQStream.h"
+#include "EQNetwork.h"
 #include "packet_dump_file.h"
 
 using namespace std;
@@ -130,12 +130,12 @@ void FileDumpPacketHex(const char* filename, const uchar* buf, int32 size, int32
 	delete ascii;
 }
 
-void FileDumpPacketHex(const char* filename, const EQApplicationPacket* app)
+void FileDumpPacketHex(const char* filename, const APPLAYER* app)
 {
 	FileDumpPacketHex(filename, app->pBuffer, app->size);
 }
 
-void FileDumpPacketAscii(const char* filename, const EQApplicationPacket* app)
+void FileDumpPacketAscii(const char* filename, const APPLAYER* app)
 {
 	FileDumpPacketAscii(filename, app->pBuffer, app->size);
 }
@@ -147,7 +147,7 @@ void FileDumpPacket(const char* filename, const uchar* buf, int32 size)
 //	FileDumpPacketAscii(filename, buf,size);
 }
 
-void FileDumpPacket(const char* filename, const EQApplicationPacket* app)
+void FileDumpPacket(const char* filename, const APPLAYER* app)
 {
 	FilePrintLine(filename, true, "Size: %5i, OPCode: 0x%04x", app->size, app->GetOpcode());
 	FileDumpPacketHex(filename, app->pBuffer, app->size);

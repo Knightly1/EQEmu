@@ -22,13 +22,14 @@
 #include <memory.h>
 #include <iostream>
 using namespace std;
-	/*#ifdef _CRTDBG_MAP_ALLOC
+	#ifdef _CRTDBG_MAP_ALLOC
 		#undef new
-	#endif*/
+	#endif
 #include <fstream>
-	/*#ifdef _CRTDBG_MAP_ALLOC
+	#ifdef _CRTDBG_MAP_ALLOC
 		#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
-	#endif*/
+	#endif
+#include "../common/debug.h"
 
 #define EQT_VERSION 1000
 

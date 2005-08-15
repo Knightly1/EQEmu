@@ -8,8 +8,7 @@
 	void	SetLeader(Mob* newleader){ leader=newleader; };
 	Mob*	GetLeader(){ return leader; };
 	char*	GetLeaderName(){ return membername[0]; };
-	void	SendHPPacketsTo(Mob* newmember);
-	void	SendHPPacketsFrom(Mob* newmember);
+	void	SendHPPackets(Mob* newmember);
 	bool	IsLeader(Mob* leadertest) { return leadertest==leader; };
 	int8	GroupCount();
 	int32	GetHighestLevel();

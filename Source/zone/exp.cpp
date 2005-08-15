@@ -238,7 +238,7 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 	int32 tmpxp2 = GetEXPForLevel(GetLevel());
 	// Quag: crash bug fix... Divide by zero when tmpxp1 and 2 equalled each other, most likely the error case from GetEXPForLevel() (invalid class, etc)
 	if (tmpxp1 != tmpxp2 && tmpxp1 != 0xFFFFFFFF && tmpxp2 != 0xFFFFFFFF) {
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
 		ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
 		double tmpxp = (double) ( (double) set_exp-tmpxp2 ) / ( (double) tmpxp1-tmpxp2 );
 		eu->exp = (uint32)(330.0f * tmpxp);
@@ -268,7 +268,7 @@ void Client::SetLevel(int8 set_level, bool command)
 		return;
 	}
 
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_LevelUpdate, sizeof(LevelUpdate_Struct));
+	APPLAYER* outapp = new APPLAYER(OP_LevelUpdate, sizeof(LevelUpdate_Struct));
 	LevelUpdate_Struct* lu = (LevelUpdate_Struct*)outapp->pBuffer;
 	lu->level = set_level;
 	lu->level_old = level;
@@ -454,48 +454,5 @@ void Group::SplitExp(uint32 exp, Mob* other) {
 	}
 #endif
 }
-
-
-
-void Client::SetLeadershipEXP(uint32 group_exp, uint32 raid_exp) {
-	while(group_exp >= GROUP_EXP_PER_POINT) {
-		group_exp -= GROUP_EXP_PER_POINT;
-		m_pp.group_leadership_points++;
-	}
-	while(raid_exp >= RAID_EXP_PER_POINT) {
-		raid_exp -= RAID_EXP_PER_POINT;
-		m_pp.raid_leadership_points++;
-	}
-	
-	m_pp.group_leadership_exp = group_exp;
-	m_pp.raid_leadership_exp = raid_exp;
-	
-	SendLeadershipEXPUpdate();
-}
-
-void Client::AddLeadershipEXP(uint32 group_exp, uint32 raid_exp) {
-	SetLeadershipEXP(GetGroupEXP() + group_exp, GetRaidEXP() + raid_exp);
-}
-
-void Client::SendLeadershipEXPUpdate() {
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_LeadershipExpUpdate, sizeof(LeadershipExpUpdate_Struct));
-	LeadershipExpUpdate_Struct* eu = (LeadershipExpUpdate_Struct *) outapp->pBuffer;
-	
-	eu->group_leadership_exp = m_pp.group_leadership_exp;
-	eu->group_leadership_points = m_pp.group_leadership_points;
-	eu->raid_leadership_exp = m_pp.raid_leadership_exp;
-	eu->raid_leadership_points = m_pp.raid_leadership_points;
-	
-	FastQueuePacket(&outapp);
-}
-
-
-
-
-
-
-
-
-
 
 

@@ -38,8 +38,8 @@ using namespace std;
 //if the player moves more than this ammount, all queues are flushed.
 #define UPDATE_JUMP_FLUSH 200	//
 
-class EQStream;
-class EQApplicationPacket;
+class EQNetworkConnection;
+class APPLAYER;
 class Mob;
 
 class UMType {
@@ -47,11 +47,11 @@ public:
 	UMType() {
 		app = NULL; ack = false;
 	}
-	UMType(EQApplicationPacket *_app, bool _ack) {
+	UMType(APPLAYER *_app, bool _ack) {
 		app = _app; ack = _ack;
 	}
 	
-	EQApplicationPacket *app;
+	APPLAYER *app;
 	bool ack;
 };
 
@@ -66,18 +66,18 @@ protected:
 	static const int32 level_timers[UPDATE_LEVELS+1];
 	
 public:
-	UpdateManager(EQStream *c);
+	UpdateManager(EQNetworkConnection *c);
 	~UpdateManager();
 	
 	//range2 is the range of 'from' to this client, squared
-	void QueuePacket(EQApplicationPacket *app, bool ack_req, Mob *from, float range2);
+	void QueuePacket(APPLAYER *app, bool ack_req, Mob *from, float range2);
 	void Process();
 	void FlushQueues();
 	
 protected:
 	void _SendLevel(int level);
 	
-	EQStream *net;
+	EQNetworkConnection *net;
 	
 	UMMap levels[UPDATE_LEVELS+1];
 	Timer *timers[UPDATE_LEVELS+1];

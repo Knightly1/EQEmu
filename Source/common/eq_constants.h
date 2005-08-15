@@ -55,64 +55,63 @@ enum ItemAttrib
 ** Item types
 **
 */
-enum ItemClass
+enum ItemType
 {
-	ItemClassCommon		= 0,
-	ItemClassContainer	= 1,
-	ItemClassBook		= 2
+	ItemTypeCommon		= 0,
+	ItemTypeContainer	= 1,
+	ItemTypeBook		= 2
 };
 
 /*
 ** Item uses
 **
 */
-enum ItemTypes
+enum ItemUses
 {
-	ItemType1HS			= 0,
-	ItemType2HS			= 1,
-	ItemTypePierce		= 2,
-	ItemType1HB			= 3,
-	ItemType2HB			= 4,
-	ItemTypeBow			= 5,
-	//6
-	ItemTypeThrowing		= 7,
-	ItemTypeShield		= 8,
-	//9
-	ItemTypeArmor		= 10,
-	ItemTypeUnknon		= 11,	//A lot of random crap has this item use.
-	ItemTypeLockPick		= 12,
-	ItemTypeFood			= 14,
-	ItemTypeDrink		= 15,
-	ItemTypeLightSource	= 16,
-	ItemTypeStackable	= 17,	//Not all stackable items are this use...
-	ItemTypeBandage		= 18,
-	ItemTypeThrowingv2	= 19,
-	ItemTypeSpell		= 20,	//spells and tomes
-	ItemTypePotion		= 21,
-	ItemTypeWindInstr	= 23,
-	ItemTypeStringInstr	= 24,
-	ItemTypeBrassInstr	= 25,
-	ItemTypeDrumInstr	= 26,
-	ItemTypeArrow		= 27,
-	ItemTypeJewlery		= 29,
-	ItemTypeSkull		= 30,
-	ItemTypeTome			= 31,
-	ItemTypeNote			= 32,
-	ItemTypeKey			= 33,
-	ItemTypeCoin			= 34,
-	ItemType2HPierce		= 35,
-	ItemTypeFishingPole	= 36,
-	ItemTypeFishingBait	= 37,
-	ItemTypeAlcohol		= 38,
-	ItemTypeCompass		= 40,
-	ItemTypePoison		= 42,	//might be wrong, but includes poisons
-	ItemTypeHand2Hand	= 45,
+	ItemUse1HS			= 0,
+	ItemUse2HS			= 1,
+	ItemUsePierce		= 2,
+	ItemUse1HB			= 3,
+	ItemUse2HB			= 4,
+	ItemUseBow			= 5,
+	ItemUseThrowing		= 7,
+	ItemUseShield		= 8,
+	ItemUseArmor		= 10,
+	ItemUseUnknon		= 11,	//A lot of random crap has this item use.
+	ItemUseLockPick		= 12,
+	ItemUseFood			= 14,
+	ItemUseDrink		= 15,
+	ItemUseLightSource	= 16,
+	ItemUseStackable	= 17,	//Not all stackable items are this use...
+	ItemUseBandage		= 18,
+	ItemUseThrowingv2	= 19,
+	ItemUseSpell		= 20,	//spells and tomes
+	ItemUsePotion		= 21,
+	ItemUseWindInstr	= 23,
+	ItemUseStringInstr	= 24,
+	ItemUseBrassInstr	= 25,
+	ItemUseDrumInstr	= 26,
+	ItemUseArrow		= 27,
+	ItemUseStackable2	= 28,
+	ItemUseJewlery		= 29,
+	ItemUseSkull		= 30,
+	ItemUseTome			= 31,
+	ItemUseNote			= 32,
+	ItemUseKey			= 33,
+	ItemUse2HPierce		= 35,
+	ItemUseCoin			= 34,
+	ItemUseFishingPole	= 36,
+	ItemUseFishingBait	= 37,
+	ItemUseAlcohol		= 38,
+	ItemUseCompass		= 40,
+	ItemUsePoison		= 42,	//might be wrong, but includes poisons
+	ItemUseHand2Hand	= 45,
+	ItemUseAllInstruments=51,
 	ItemUseSinging		= 50,
-	ItemUseAllInstruments	= 51,
-	ItemTypeCharm		= 52,
-	ItemTypeAugment		= 54,
-	ItemTypeAugmentSolvent	= 55,
-	ItemTypeAugmentDistill	= 56
+	ItemUseCharm		= 52,
+	ItemUseAugment		= 54,
+	ItemUseAugmentSolvent=55,
+	ItemUseAugmentDistill=56
 };
 
 /*
@@ -126,10 +125,8 @@ enum {
 	ET_Expendable = 3,
 	ET_EquipClick = 4,
 	ET_ClickEffect2 = 5,	//name unknown
-	ET_Focus = 6,
-	ET_Scroll = 7
+	ET_Focus = 6
 };
-
 
 #define AT_Die				0	// this causes the client to keel over and zone to bind point
 #define AT_WhoLevel		1	// the level that shows up on /who

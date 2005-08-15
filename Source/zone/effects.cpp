@@ -406,7 +406,7 @@ bool Client::TrainDiscipline(int32 itemid) {
 		return(false);
 	}
 	
-	if(item->ItemClass != ItemClassCommon || item->Common.ItemType != ItemTypeSpell) {
+	if(item->ItemClass != ItemTypeCommon || item->Common.ItemUse != ItemUseSpell) {
 		Message(13, "Invalid item type, you cannot learn from this item.");
 		//summon them the item back...
 		SummonItem(itemid);
@@ -447,7 +447,7 @@ bool Client::TrainDiscipline(int32 itemid) {
 		return(false);
 	}
 	
-	int32 spell_id = item->Common.Scroll.Effect;
+	int32 spell_id = item->Common.SpellId;
 	if(!IsValidSpell(spell_id)) {
 		Message(13, "This tome contains invalid knowledge.");
 		return(false);
@@ -493,7 +493,7 @@ bool Client::TrainDiscipline(int32 itemid) {
 void Client::SendDisciplineUpdate() {
 	//this dosent seem to work right now
 	
-	EQApplicationPacket app(OP_DisciplineUpdate, sizeof(Disciplines_Struct));
+	APPLAYER app(OP_DisciplineUpdate, sizeof(Disciplines_Struct));
 	Disciplines_Struct *d = (Disciplines_Struct*)app.pBuffer;
 	//dunno why I dont just send the one from m_pp
 	memcpy(d, &m_pp.disciplines, sizeof(m_pp.disciplines));

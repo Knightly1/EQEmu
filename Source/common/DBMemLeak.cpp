@@ -6,8 +6,6 @@
 #include "../common/Mutex.h"
 #include "DBMemLeak.h"
 
-#include <crtdbg.h>
-
 #ifdef WIN32
 #define snprintf	_snprintf
 #define strncasecmp	_strnicmp

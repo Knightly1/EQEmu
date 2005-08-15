@@ -13,6 +13,13 @@ using namespace std;
 	#define EmuLibName "EMuShareMem"
 #else
 	#define EmuLibName "libEMuShareMem.so"
+
+	#include "../common/unix.h"
+	#include <dlfcn.h>
+    #define GetProcAddress(a,b) dlsym(a,b)
+	#define LoadLibrary(a) dlopen(a, RTLD_NOW) 
+	#define  FreeLibrary(a) dlclose(a)
+	#define GetLastError() dlerror()
 #endif
 
 LoadEMuShareMemDLL EMuShareMemDLL;
@@ -22,6 +29,7 @@ int32 LoadEMuShareMemDLL::refCount = 0;
 #endif
 
 LoadEMuShareMemDLL::LoadEMuShareMemDLL() {
+	hDLL = 0;
 	ClearFunc();
 #ifndef WIN32
     refCountU();
@@ -39,35 +47,55 @@ LoadEMuShareMemDLL::~LoadEMuShareMemDLL() {
 }
 
 bool LoadEMuShareMemDLL::Load() {
-	if(!SharedLibrary::Load(EmuLibName))
-		return(false);
+#ifdef WIN32
+	DWORD load_error = 0;
+	SetLastError(0);
+#else
+	const char* load_error = 0;
+#endif
+	if (Loaded())
+	{
+		return true;
+	}
+	hDLL = LoadLibrary(EmuLibName);
+#ifdef WIN32
+	if(!hDLL) {
+		load_error = GetLastError();
+		LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to load library '%s'.  Error=%i", EmuLibName, load_error);
+	    return false;
+	}
+    else { SetLastError(0); } // Clear the win9x error
+#else
+	if(!hDLL || ((load_error = GetLastError()) != NULL) ) {
+		LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to load library '%s'.  Error=%s", EmuLibName, load_error?load_error:"Null Return, no error");
+	    return false;
+	}
+#endif
 	
 	if (Loaded()) {
-		Items.GetItem = (DLLFUNC_GetItem) GetSym("GetItem");
-		Items.GetItemSerialization = (DLLFUNC_GetItemSerialization) GetSym("GetItemSerialization");
-		Items.IterateItems = (DLLFUNC_IterateItems) GetSym("IterateItems");
-		Items.cbAddItem = (DLLFUNC_AddItem) GetSym("AddItem");
-		Items.DLLLoadItems = (DLLFUNC_DLLLoadItems) GetSym("DLLLoadItems");
-		Doors.GetDoor = (DLLFUNC_GetDoor) GetSym("GetDoor");
-		Doors.cbAddDoor = (DLLFUNC_AddDoor) GetSym("AddDoor");
-		Doors.DLLLoadDoors = (DLLFUNC_DLLLoadDoors) GetSym("DLLLoadDoors");
-		Spells.DLLLoadSPDat = (DLLFUNC_DLLLoadSPDat) GetSym("DLLLoadSPDat");
-		NPCFactionList.DLLLoadNPCFactionLists = (DLLFUNC_DLLLoadNPCFactionLists) GetSym("DLLLoadNPCFactionLists");
-		NPCFactionList.GetNPCFactionList = (DLLFUNC_GetNPCFactionList) GetSym("GetNPCFactionList");
-		NPCFactionList.cbAddNPCFactionList = (DLLFUNC_AddNPCFactionList) GetSym("AddNPCFactionList");
-		NPCFactionList.cbSetFaction = (DLLFUNC_SetFaction) GetSym("SetNPCFaction");
-		Loot.DLLLoadLoot = (DLLFUNC_DLLLoadLoot) GetSym("DLLLoadLoot");
-		Loot.cbAddLootTable = (DLLFUNC_AddLootTable) GetSym("AddLootTable");
-		Loot.cbAddLootDrop = (DLLFUNC_AddLootDrop) GetSym("AddLootDrop");
-		Loot.GetLootTable = (DLLFUNC_GetLootTable) GetSym("GetLootTable");
-		Loot.GetLootDrop = (DLLFUNC_GetLootDrop) GetSym("GetLootDrop");
-		Opcodes.GetEQOpcode = (DLLFUNC_GetEQOpcode) GetSym("GetEQOpcode");
-		Opcodes.GetEmuOpcode = (DLLFUNC_GetEmuOpcode) GetSym("GetEmuOpcode");
-		Opcodes.SetOpcodePair = (DLLFUNC_SetOpcodePair) GetSym("SetOpcodePair");
-		Opcodes.DLLLoadOpcodes = (DLLFUNC_DLLLoadOpcodes) GetSym("DLLLoadOpcodes");
-		Opcodes.ClearEQOpcodes = (DLLFUNC_ClearEQOpcodes) GetSym("ClearEQOpcodes");
+		Items.GetItem = (DLLFUNC_GetItem) GetProcAddress(hDLL, "GetItem");
+		Items.IterateItems = (DLLFUNC_IterateItems) GetProcAddress(hDLL, "IterateItems");
+		Items.cbAddItem = (DLLFUNC_AddItem) GetProcAddress(hDLL, "AddItem");
+		Items.DLLLoadItems = (DLLFUNC_DLLLoadItems) GetProcAddress(hDLL, "DLLLoadItems");
+		Doors.GetDoor = (DLLFUNC_GetDoor) GetProcAddress(hDLL, "GetDoor");
+		Doors.cbAddDoor = (DLLFUNC_AddDoor) GetProcAddress(hDLL, "AddDoor");
+		Doors.DLLLoadDoors = (DLLFUNC_DLLLoadDoors) GetProcAddress(hDLL, "DLLLoadDoors");
+		Spells.DLLLoadSPDat = (DLLFUNC_DLLLoadSPDat) GetProcAddress(hDLL, "DLLLoadSPDat");
+		NPCFactionList.DLLLoadNPCFactionLists = (DLLFUNC_DLLLoadNPCFactionLists) GetProcAddress(hDLL, "DLLLoadNPCFactionLists");
+		NPCFactionList.GetNPCFactionList = (DLLFUNC_GetNPCFactionList) GetProcAddress(hDLL, "GetNPCFactionList");
+		NPCFactionList.cbAddNPCFactionList = (DLLFUNC_AddNPCFactionList) GetProcAddress(hDLL, "AddNPCFactionList");
+		NPCFactionList.cbSetFaction = (DLLFUNC_SetFaction) GetProcAddress(hDLL, "SetNPCFaction");
+		Loot.DLLLoadLoot = (DLLFUNC_DLLLoadLoot) GetProcAddress(hDLL, "DLLLoadLoot");
+		Loot.cbAddLootTable = (DLLFUNC_AddLootTable) GetProcAddress(hDLL, "AddLootTable");
+		Loot.cbAddLootDrop = (DLLFUNC_AddLootDrop) GetProcAddress(hDLL, "AddLootDrop");
+		Loot.GetLootTable = (DLLFUNC_GetLootTable) GetProcAddress(hDLL, "GetLootTable");
+		Loot.GetLootDrop = (DLLFUNC_GetLootDrop) GetProcAddress(hDLL, "GetLootDrop");
+		Opcodes.GetEQOpcode = (DLLFUNC_GetEQOpcode) GetProcAddress(hDLL, "GetEQOpcode");
+		Opcodes.GetEmuOpcode = (DLLFUNC_GetEmuOpcode) GetProcAddress(hDLL, "GetEmuOpcode");
+		Opcodes.SetOpcodePair = (DLLFUNC_SetOpcodePair) GetProcAddress(hDLL, "SetOpcodePair");
+		Opcodes.DLLLoadOpcodes = (DLLFUNC_DLLLoadOpcodes) GetProcAddress(hDLL, "DLLLoadOpcodes");
+		Opcodes.ClearEQOpcodes = (DLLFUNC_ClearEQOpcodes) GetProcAddress(hDLL, "ClearEQOpcodes");
 		if ((!Items.GetItem)
-			|| (!Items.GetItemSerialization)
 			|| (!Items.IterateItems)
 			|| (!Items.cbAddItem)
 			|| (!Items.DLLLoadItems)
@@ -89,13 +117,17 @@ bool LoadEMuShareMemDLL::Load() {
 			|| (!Opcodes.SetOpcodePair)
 			|| (!Opcodes.DLLLoadOpcodes)
 			|| (!Opcodes.ClearEQOpcodes)
-		) {
-			const char *err;
-			if((err = GetError()) != NULL) {
-				LogFile->write(EQEMuLog::Error, "Function Attach Error: %s\n", err);
-			}
+#ifndef WIN32
+			|| ((load_error = GetLastError()) != NULL)
+#else
+			&& ((load_error = GetLastError()) != 0)
+#endif
+			) {
+#ifdef WIN32
+			load_error = GetLastError();
+#endif
 			Unload();
-			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach a function.");
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach a function.  Error=%i", load_error);
 			return false;
 		}
 		
@@ -103,19 +135,33 @@ bool LoadEMuShareMemDLL::Load() {
 		return true;
 	}
 	else {
-		LogFile->write(EQEMuLog::Error, "%s was not loaded, but did not report an error.", EmuLibName);
+#ifdef WIN32
+		if ((load_error = GetLastError()) != 0)
+#else
+		if ((load_error = GetLastError()) != NULL)
+#endif 
+			LogFile->write(EQEMuLog::Error, "LoadLibrary() FAILED!  Error=%i", load_error);
+		else
+			LogFile->write(EQEMuLog::Error, "LoadLibrary() FAILED!  Error=(unknown)", load_error);
 	}
 	return false;
 }
 
 void LoadEMuShareMemDLL::Unload() {
 	ClearFunc();
-	SharedLibrary::Unload();
+	if (this->hDLL) {
+		FreeLibrary(this->hDLL);
+#ifndef WIN32
+		const char* error;
+		if ((error = GetLastError()) != NULL)
+			LogFile->write(EQEMuLog::Error, "FreeLibrary() error = %s", error);
+#endif
+	}
+	hDLL = 0;
 }
 
 void LoadEMuShareMemDLL::ClearFunc() {
 	Items.GetItem = 0;
-	Items.GetItemSerialization = 0;
 	Items.IterateItems = 0;
 	Items.cbAddItem = 0;
 	Items.DLLLoadItems = 0;

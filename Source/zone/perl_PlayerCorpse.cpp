@@ -31,7 +31,6 @@
 #include "../common/debug.h"
 
 #include "PlayerCorpse.h"
-#include "../common/debug.h"
 
 XS(XS_Corpse_GetCharID); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Corpse_GetCharID)

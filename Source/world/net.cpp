@@ -28,8 +28,7 @@ using namespace std;
 #include "../common/debug.h"
 #include "../common/queue.h"
 #include "../common/timer.h"
-#include "../common/EQStreamFactory.h"
-#include "../common/EQStream.h"
+#include "../common/EQNetwork.h"
 #include "net.h"
 #include "client.h"
 #include "../common/database.h"
@@ -82,7 +81,7 @@ CommonProfiler _cp;
 #include "LoginServer.h"
 #include "../common/dbasync.h"
 
-EQStreamFactory eqsf(WorldStream,PORT);
+EQNetworkServer eqns(PORT);
 TCPServer tcps(PORT);
 NetConnection net;
 ClientList client_list;
@@ -203,11 +202,11 @@ int main(int argc, char** argv) {
 	srand(time(NULL));
 	LogFile->write(EQEMuLog::Status, "Loading opcodes..");
 #ifdef DONT_SHARED_OPCODES
-	EQOpcodeManager = new RegularOpcodeManager();
+	EQNetworkOpcodeManager = new RegularOpcodeManager();
 #else
-	EQOpcodeManager = new SharedOpcodeManager();
+	EQNetworkOpcodeManager = new SharedOpcodeManager();
 #endif
-	if(!EQOpcodeManager->LoadOpcodes(OPCODES_FILE)) {
+	if(!EQNetworkOpcodeManager->LoadOpcodes(OPCODES_FILE)) {
 		LogFile->write(EQEMuLog::Error, "Loading opcodes failed. I cant live like this!");
 		return(1);
 	}
@@ -292,7 +291,7 @@ int main(int argc, char** argv) {
 		cout << "errbuf=" << errbuf << endl;
 		return 1;
 	}
-	if (eqsf.Open()) {
+	if (eqns.Open()) {
 		if (strlen(net.GetWorldAddress()) == 0)
 			cout << "World server listening on: port " << PORT << endl;
 		else
@@ -308,16 +307,16 @@ int main(int argc, char** argv) {
 	zoneserver_list.reminder->Disable();
 	Timer InterserverTimer(INTERSERVER_TIMER); // does MySQL pings and auto-reconnect
 	InterserverTimer.Trigger();
-	EQStream* eqs;
+	EQNetworkConnection* eqnc;
 	TCPConnection* tcpc;
 	while(RunLoops) {
 		Timer::SetCurrentTime();
 
-		while ((eqs = eqsf.Pop())) {
+		while ((eqnc = eqns.NewQueuePop())) {
 			struct in_addr	in;
-			in.s_addr = eqs->GetRemoteIP();
-			cout << Timer::GetCurrentTime() << " New client from ip: " << inet_ntoa(in) << " port: " << ntohs(eqs->GetRemotePort()) << endl;
-			Client* client = new Client(eqs);
+			in.s_addr = eqnc->GetrIP();
+			cout << Timer::GetCurrentTime() << " New client from ip: " << inet_ntoa(in) << " port: " << ntohs(eqnc->GetrPort()) << endl;
+			Client* client = new Client(eqnc);
 			// @merth: client->zoneattempt=0;
 			client_list.Add(client);
 		}
@@ -325,7 +324,7 @@ int main(int argc, char** argv) {
 		while ((tcpc = tcps.NewQueuePop())) {
 			struct in_addr in;
 			in.s_addr = tcpc->GetrIP();
-			cout << Timer::GetCurrentTime() << " New TCP connection: " << inet_ntoa(in) << ":" << tcpc->GetrIP() << endl;
+			cout << Timer::GetCurrentTime() << " New TCP connection: " << inet_ntoa(in) << ":" << tcpc->GetrPort() << endl;
 			console_list.Add(new Console(tcpc));
 		}
 		//check for timeouts in other threads
@@ -355,7 +354,7 @@ int main(int argc, char** argv) {
 	console_list.KillAll();
 	zoneserver_list.KillAll();
 	tcps.Close();
-	eqsf.Close();
+	eqns.Close();
 #if 0
 #if defined(SHAREMEM) && !defined(WIN32)
 		for (int ipc_files = 0; ipc_files <= 4; ipc_files++) {
@@ -561,12 +560,6 @@ bool NetConnection::ReadLoginINI() {
 				if (Seperator::IsNumber(buf) && atoi(buf) > 0 && atoi(buf) < 0xFFFF) {
 					DEFAULTSTATUS = atoi(buf);
 				}
-			}
-			if (!strncasecmp (type, "worldshortname", 14)) {
-				snprintf(worldshortname, sizeof(worldshortname), "%s", buf);
-				items[2] = 1;
-				if(strlen(worldshortname)<3)
-					cout << "Invalid worldshortname, please edit LoginServer.ini.  Short server name must be at least 3 characters." << endl;
 			}
 		}
 	}

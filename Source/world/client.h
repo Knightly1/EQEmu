@@ -18,7 +18,7 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include "../common/EQStream.h"
+#include "../common/EQNetwork.h"
 #include "../common/linked_list.h"
 #include "../common/timer.h"
 #include "zoneserver.h"
@@ -29,7 +29,7 @@ class Client;
 
 class Client {
 public:
-	Client(EQStream* ieqs);
+	Client(EQNetworkConnection* ieqnc);
     ~Client();
 	
 	bool	Process();
@@ -37,14 +37,10 @@ public:
 	void	SendCharInfo();
 	void	EnterWorld(bool TryBootup = true);
 	void	ZoneUnavail();
-	void	QueuePacket(const EQApplicationPacket* app, bool ack_req = true);
+	void	QueuePacket(const APPLAYER* app, bool ack_req = true);
 	void	Clearance(sint8 response);
 	void	SendGuildList();
-	void	SendEnterWorld(string name);
-	void	SendExpansionInfo();
-	void	SendLogServer();
 	void	SendApproveWorld();
-	void	SendPostEnterWorld();
 	bool	GenPassKey(char* key);
 
 	inline int32		GetIP()				{ return ip; }
@@ -66,7 +62,6 @@ private:
 	int32	charid; 
 	char	char_name[64];
 	int32	zoneID;
-	bool	pZoning;
 	Timer*	autobootup_timeout;
 	int32	pwaitingforbootup;
 
@@ -82,8 +77,8 @@ private:
 	bool firstlogin;
 	bool seencharsel;
 	bool realfirstlogin;
-	bool HandlePacket(const EQApplicationPacket *app);
-	EQStream* eqs;
+	bool HandlePacket(const APPLAYER *app);
+	EQNetworkConnection* eqnc;
 };
 
 class ClientList {

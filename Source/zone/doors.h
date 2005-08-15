@@ -1,7 +1,7 @@
 #include "../common/types.h"
 #include "../common/linked_list.h"
 #include "../common/timer.h"
-#include "../common/emu_opcodes.h"
+#include "../common/eq_opcodes.h"
 #include "../common/eq_packet_structs.h"
 #include "entity.h"
 #include "mob.h"

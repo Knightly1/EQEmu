@@ -43,13 +43,10 @@ extern RaidAddicts raidaddicts;
 
 extern GuildRanks_Struct guilds[512];
 
-void Client::SendGuildMembers(int32 guildid, bool sendtoall){
+void Client::SendGuildMembers(int32 guildid){
 	if(guildid==0)
 		return;
-	uint32 len = (sizeof(GuildMember)*database.NumberInGuild(guildid)+sizeof(GuildMember_Struct));
-	uchar* blah=new uchar[len];
-	memset(blah, 0, len);
-	
+	uchar* blah=new uchar[(sizeof(GuildMember)*database.NumberInGuild(guildid)+sizeof(GuildMember_Struct))];
 	GuildMember_Struct* gms=(GuildMember_Struct*)blah;
 	database.GetGuildMembers(guildid,gms);
 	if(!gms || gms->count==0){
@@ -59,7 +56,7 @@ void Client::SendGuildMembers(int32 guildid, bool sendtoall){
 		return;
 	}
 	int16 namelen=strlen(GetName());
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GuildMemberList,gms->length+(42*gms->count)+namelen+5);
+	APPLAYER* outapp = new APPLAYER(OP_GuildMemberList,gms->length+(34*gms->count)+namelen+5);
 	memset(outapp->pBuffer,0,outapp->size);
 	uchar* buffer=(uchar*)outapp->pBuffer;
 	memcpy(buffer,GetName(), namelen);
@@ -72,38 +69,24 @@ void Client::SendGuildMembers(int32 guildid, bool sendtoall){
 		buffer+=(strlen(gms->member[i].name)+1);
 		memcpy(buffer,&gms->member[i].level, sizeof(int32));
 		buffer+=sizeof(int32);
-		memcpy(buffer,&gms->member[i].banker_flag, sizeof(int32));
-		buffer+=sizeof(int32);
 		memcpy(buffer,&gms->member[i].class_, sizeof(int32));
 		buffer+=sizeof(int32);
 		gms->member[i].rank=htonl(gms->member[i].rank);
 		memcpy(buffer,&gms->member[i].rank, sizeof(int32));
 		buffer+=sizeof(int32);
 		memcpy(buffer,&gms->member[i].timelaston, sizeof(int32));
-		buffer+=sizeof(int32);
-		memcpy(buffer,&gms->member[i].guild_tribute_flag, sizeof(int32));
-		buffer+=sizeof(int32);
-		memcpy(buffer,&gms->member[i].guild_tribute_donated, sizeof(int32));
-		buffer+=sizeof(int32);
-		memcpy(buffer,&gms->member[i].last_tribute_donation_time, sizeof(int32));
-		buffer+=sizeof(int32);
+		buffer+=(sizeof(int32)*4);
 		if(strlen(gms->member[i].publicnote)>1){
 			memcpy(buffer,&gms->member[i].publicnote, strlen(gms->member[i].publicnote));
 			buffer+=strlen(gms->member[i].publicnote);
 		}
-		buffer+=sizeof(int8);
+		buffer+=sizeof(int32);
 		Client *member = entity_list.GetClientByName(gms->member[i].name);
 		if(member)	//only add zone info if player is online :)
-			memcpy(buffer,&gms->member[i].zoneinstance, sizeof(int16));	
-		buffer+=sizeof(int16);
-		if(member)	//only add zone info if player is online :)
-			memcpy(buffer,&gms->member[i].zoneid, sizeof(int16));	
-		buffer+=sizeof(int16);
+			memcpy(buffer,&gms->member[i].zoneid, sizeof(int8));	
+		buffer+=sizeof(int8);
 	}
-	if(sendtoall)
-		entity_list.QueueClientsGuild(this, outapp, false, GuildEQID());
-	else
-		QueuePacket(outapp);
+	QueuePacket(outapp);
 	safe_delete(outapp);
 	safe_delete_array(blah);
 }
@@ -196,7 +179,7 @@ bool Database::SetGuildDoor(int8 doorid,int16 guildid, const char* zone) {
 }
 
 void Client::SendGuildJoin(GuildJoin_Struct* gj){
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GuildManageAdd,sizeof(GuildJoin_Struct));
+	APPLAYER* outapp = new APPLAYER(OP_GuildManageAdd,sizeof(GuildJoin_Struct));
 	GuildJoin_Struct* outgj=(GuildJoin_Struct*)outapp->pBuffer;
 	outgj->class_=gj->class_;
 	outgj->guildid=gj->guildid;
@@ -206,7 +189,6 @@ void Client::SendGuildJoin(GuildJoin_Struct* gj){
 	outgj->zoneid=gj->zoneid;
 	QueuePacket(outapp);
 	safe_delete(outapp);
-	SendGuildMembers(guilds[gj->guildid].databaseID, true);
 }
 
 void Client::GuildChangeRank(int32 guildid,int32 oldrank,int32 newrank){
@@ -214,7 +196,7 @@ void Client::GuildChangeRank(int32 guildid,int32 oldrank,int32 newrank){
 }
 
 void Client::GuildChangeRank(const char* name, int32 guildid,int32 oldrank,int32 newrank){
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GuildManageStatus,sizeof(GuildManageStatus_Struct));
+	APPLAYER* outapp = new APPLAYER(OP_GuildManageStatus,sizeof(GuildManageStatus_Struct));
 	GuildManageStatus_Struct* gms=(GuildManageStatus_Struct*)outapp->pBuffer;
 	gms->guildid=guildid;
 	strcpy(gms->name,name);
@@ -222,7 +204,6 @@ void Client::GuildChangeRank(const char* name, int32 guildid,int32 oldrank,int32
 	gms->oldrank=oldrank;
 	entity_list.QueueClientsGuild(this,outapp,false,guildid);
 	safe_delete(outapp);
-	SendGuildMembers(guilds[guildid].databaseID, true);
 }
 
 // Rogean: Moved this function from common/guilds.cpp, VS 6.0 Doesn't like same filenames ^_^
@@ -290,7 +271,7 @@ void Database::GetGuildMembers(int32 guildid,GuildMember_Struct* gms){
 			length+=strlen(row[0])+strlen(row[4]);
 			PlayerProfile_Struct* pps=(PlayerProfile_Struct*)row[1];
 			gms->member[count].level=htonl(pps->level);
-			gms->member[count].zoneid=(pps->zone_id*256);
+			gms->member[count].zoneid=pps->zone_id;
 			gms->member[count].timelaston=htonl(atol(row[2]));
 			gms->member[count].class_=htonl(pps->class_);
 			gms->member[count].rank=atoi(row[3]);
@@ -616,19 +597,23 @@ bool Database::SetGuildMOTD(int32 guilddbid, const char* motd) {
 	return false;
 }
 
-string Database::GetGuildMOTD(int32 guilddbid)
+char* Database::GetGuildMOTD(int32 guilddbid)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
     MYSQL_ROW row;
-	string motd_str;
+	char* motd = new char[599];
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT motd FROM guilds WHERE id=%i", guilddbid), errbuf, &result)) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {
 			row = mysql_fetch_row(result);
-			if (row[0])
-				motd_str = row[0];
+			if (row[0] == 0)
+				strcpy(motd, "");
+			else
+				strcpy(motd, row[0]);
+			mysql_free_result(result);
+			return motd;
 		}
 		mysql_free_result(result);
 	}
@@ -636,7 +621,7 @@ string Database::GetGuildMOTD(int32 guilddbid)
 		cerr << "Error in GetGuildMOTD query '" << query << "' " << errbuf << endl;
 		safe_delete_array(query);
 	}
-	return motd_str;
+	return motd;
 }
 
 

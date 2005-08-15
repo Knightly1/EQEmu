@@ -227,7 +227,7 @@ sint16 Client::GetRawItemAC() {
 	
 	for (sint16 slot_id=0; slot_id<21; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
-		if (inst && inst->IsType(ItemClassCommon)) {
+		if (inst && inst->IsType(ItemTypeCommon)) {
 			Total += inst->GetItem()->Common.AC;
 		}
 	}
@@ -721,8 +721,8 @@ int16 Client::CalcCurrentWeight() {
 					bagslot += 1;
 			}
 			ItemInst* baginst = GetInv().GetItem(bagslot);
-			if (baginst && baginst->GetItem() && baginst->IsType(ItemClassContainer))
-				reduction = baginst->GetItem()->Container.BagWR;
+			if (baginst && baginst->GetItem() && baginst->IsType(ItemTypeContainer))
+				reduction = baginst->GetItem()->Container.WeightReduction;
 			if (reduction > 0)
 				TmpWeight -= TmpWeight*reduction/100;
 			Total += TmpWeight;

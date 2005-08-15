@@ -50,83 +50,6 @@ typedef enum {	//AA Effect IDs
 	aaEffectFrostArrows
 } aaEffectType;
 
-
-enum {	//leadership AA indexes
-	groupAAMarkNPC = 0,
-	groupAANPCHealth,
-	groupAADelegateMainAssist,
-	groupAADelegateMarkNPC,
-	groupAA4,
-	groupAA5,
-	groupAAInspectBuffs,
-	groupAA7,
-	groupAASpellAwareness,
-	groupAAOffenseEnhancement,
-	groupAAManaEnhancement,
-	groupAAHealthEnhancement,
-	groupAAHealthRegeneration,
-	groupAAFindPathToPC,
-	groupAAHealthOfTargetsTarget,
-	groupAA15,
-	
-	raidAAMarkNPC,	//0x10, things assume this is the first raid ability
-	raidAANPCHealth,
-	raidAADelegateMainAssist,
-	raidAADelegateMarkNPC,
-	raidAA4,
-	raidAA5,
-	raidAA6,
-	raidAASpellAwareness,
-	raidAAOffenseEnhancement,
-	raidAAManaEnhancement,
-	raidAAHealthEnhancement,
-	raidAAHealthRegeneration,
-	raidAAFindPathToPC,
-	raidAAHealthOfTargetsTarget,
-	raidAA14,
-	raidAA15,
-	
-	_maxLeaderAA	//=32
-};
-
-#define MAX_LEADERSHIP_TIERS 6
-//each progression should be 0 terminated to mark it as the end.
-static const int8 LeadershipAACosts[_maxLeaderAA][MAX_LEADERSHIP_TIERS] = { 
-{ 1, 2, 3, 0, 0, 0 },	//groupAAMarkNPC
-{ 2, 0, 0, 0, 0, 0 },	//groupAANPCHealth
-{ 4, 0, 0, 0, 0, 0 },	//groupAADelegateMainAssist
-{ 4, 0, 0, 0, 0, 0 },	//groupAADelegateMarkNPC
-{ 0, 0, 0, 0, 0, 0 },	//groupAA4
-{ 0, 0, 0, 0, 0, 0 },	//groupAA5
-{ 4, 6, 0, 0, 0, 0 },	//groupAAInspectBuffs
-{ 0, 0, 0, 0, 0, 0 },	//groupAA7
-{ 6, 0, 0, 0, 0, 0 },	//groupAASpellAwareness
-{ 4, 5, 6, 7, 8, 0 },	//groupAAOffenseEnhancement
-{ 4, 6, 8, 0, 0, 0 },	//groupAAManaEnhancement
-{ 4, 6, 8, 0, 0, 0 },	//groupAAHealthEnhancement
-{ 4, 6, 8, 0, 0, 0 },	//groupAAHealthRegeneration
-{ 4, 0, 0, 0, 0, 0 },	//groupAAFindPathToPC
-{ 7, 0, 0, 0, 0, 0 },	//groupAAHealthOfTargetsTarget
-{ 0, 0, 0, 0, 0, 0 },	//groupAA15
-	
-{ 5, 99, 99, 0, 0, 0 },	//raidAAMarkNPC	//0x10
-{ 4, 0, 0, 0, 0, 0 },	//raidAANPCHealth
-{ 6, 99, 99, 0, 0, 0 },	//raidAADelegateMainAssist
-{ 6, 99, 99, 0, 0, 0 },	//raidAADelegateMarkNPC
-{ 0, 0, 0, 0, 0, 0 },	//raidAA4
-{ 0, 0, 0, 0, 0, 0 },	//raidAA5
-{ 0, 0, 0, 0, 0, 0 },	//raidAA6
-{ 8, 0, 0, 0, 0, 0 },	//raidAASpellAwareness
-{ 6, 99, 99, 99, 99, 0 },	//raidAAOffenseEnhancement
-{ 6, 99, 99, 0, 0, 0 },	//raidAAManaEnhancement
-{ 6, 99, 99, 0, 0, 0 },	//raidAAHealthEnhancement
-{ 6, 99, 99, 0, 0, 0 },	//raidAAHealthRegeneration
-{ 5, 0, 0, 0, 0, 0 },	//raidAAFindPathToPC
-{ 9, 0, 0, 0, 0, 0 },	//raidAAHealthOfTargetsTarget
-{ 0, 0, 0, 0, 0, 0 },	//raidAA14
-{ 0, 0, 0, 0, 0, 0 },	//raidAA15
-};
-
 typedef enum {	//AA IDs
 	aaUnknown0 = 0,
 	aaInnateStrength = 2,			//works
@@ -542,13 +465,6 @@ struct AA_Action {
 struct AA_Skills {
 /*00*/	int32	aa_skill; 
 /*04*/	int32	aa_value;
-};
-
-struct AAExpUpdate_Struct {
-/*00*/	int32 unknown00;	//seems to be a value from AA_Action.ability
-/*04*/	int32 aapoints_unspent;
-/*08*/	int8 aaxp_percent;	//% of exp that goes to AAs
-/*09*/	int8 unknown09[3];	//live dosent always zero these, so they arnt part of 
 };
 
 struct PlayerAA_Struct {

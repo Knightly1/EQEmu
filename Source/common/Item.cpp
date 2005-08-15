@@ -22,11 +22,10 @@
 	// Quagmire: Dont know why the one in debug.h doesnt work, but it doesnt.
 #endif
 #include "../common/debug.h"
-/*#ifdef _CRTDBG_MAP_ALLOC
+#ifdef _CRTDBG_MAP_ALLOC
 	#undef new
 	#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
 #endif
-*/
 #include <sstream>
 #include <iostream>
 #include "../common/Item.h"
@@ -43,32 +42,25 @@ ItemInst* ItemInst::Create(uint32 item_id, sint16 charges, uint32 aug1, uint32 a
 {
 	const Item_Struct* item = NULL;
 	item = database.GetItem(item_id);
-	if (item)
-		return ItemInst::Create(item, charges, aug1, aug2, aug3, aug4, aug5);
-	else
-		return NULL;
+	return ItemInst::Create(item, charges, aug1, aug2, aug3, aug4, aug5);
 }
 #endif
-
 // Create appropriate ItemInst class
 ItemInst* ItemInst::Create(const Item_Struct* item, sint16 charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5)
 {
-	const unsigned char* item_s = NULL;
-	if (item)
-		item_s = database.GetItemSerialization(item->ID);
 	ItemInst* inst = NULL;
-	if (item && item_s) {
+	if (item) {
 		if (charges == 0)
 			charges = item->Common.MaxCharges;
 		switch (item->ItemClass) {
-		case ItemClassCommon:
-			inst = new ItemCommonInst(item, item_s, charges, aug1, aug2, aug3, aug4, aug5);
+		case ItemTypeCommon:
+			inst = new ItemCommonInst(item, charges, aug1, aug2, aug3, aug4, aug5);
 			break;
-		case ItemClassContainer:
-			inst = new ItemContainerInst(item, item_s, charges);
+		case ItemTypeContainer:
+			inst = new ItemContainerInst(item, charges);
 			break;
-		case ItemClassBook:
-			inst = new ItemBookInst(item, item_s, charges);
+		case ItemTypeBook:
+			inst = new ItemBookInst(item, charges);
 			break;
 		}
 		inst->SetCharges(charges);
@@ -77,35 +69,13 @@ ItemInst* ItemInst::Create(const Item_Struct* item, sint16 charges, uint32 aug1,
 	return inst;
 }
 
-ItemInst::ItemInst(const Item_Struct* item, sint16 charges) {
-	m_use_type = ItemUseNormal;
-	m_item = item;
-	if (item)
-		m_item_serialization = database.GetItemSerialization(item->ID);
-	else 
-		m_item_serialization = NULL;
-	m_charges = charges;
-	m_price = 0;
-	m_instnodrop = false;
-	m_merchantslot = 0;
-	if(m_item &&m_item->ItemClass == ItemClassCommon)
-		m_color = m_item->Common.Color;
-	else
-		m_color = 0;
-}
-
 ItemInst::ItemInst(uint32 item_id, sint16 charges) {
 	m_use_type = ItemUseNormal;
 	m_item = database.GetItem(item_id);
-	if (m_item)
-		m_item_serialization = database.GetItemSerialization(item_id);
-	else
-		m_item_serialization = NULL;
 	m_charges = charges;
 	m_price = 0;
 	m_merchantslot = 0;
-	m_instnodrop=false;
-	if(m_item && m_item->ItemClass == ItemClassCommon)
+	if(m_item && m_item->ItemClass == ItemTypeCommon)
 		m_color = m_item->Common.Color;
 	else
 		m_color = 0;
@@ -167,8 +137,7 @@ Inventory::~Inventory() {
 	m_trade.clear();
 }
 
-ItemCommonInst::ItemCommonInst(const Item_Struct* item, sint16 charges , uint32 aug1 , uint32 aug2 , uint32 aug3 , uint32 aug4 , uint32 aug5 )
-: ItemInst(item, charges)
+ItemCommonInst::ItemCommonInst(const Item_Struct* item , sint16 charges , uint32 aug1 , uint32 aug2 , uint32 aug3 , uint32 aug4 , uint32 aug5 ) : ItemInst(item, charges)
 {
 	PutAugment(0,aug1);
 	PutAugment(1,aug2);
@@ -177,18 +146,7 @@ ItemCommonInst::ItemCommonInst(const Item_Struct* item, sint16 charges , uint32 
 	PutAugment(4,aug5);
 }
 
-ItemCommonInst::ItemCommonInst(const Item_Struct* item, const unsigned char* item_s, sint16 charges , uint32 aug1 , uint32 aug2 , uint32 aug3 , uint32 aug4 , uint32 aug5 )
-: ItemInst(item, item_s, charges)
-{
-	PutAugment(0,aug1);
-	PutAugment(1,aug2);
-	PutAugment(2,aug3);
-	PutAugment(3,aug4);
-	PutAugment(4,aug5);
-}
-
-ItemCommonInst::ItemCommonInst(uint32 item_id, sint16 charges , uint32 aug1 , uint32 aug2 , uint32 aug3 , uint32 aug4 , uint32 aug5 )
-: ItemInst(item_id, charges) 
+ItemCommonInst::ItemCommonInst(uint32 item_id, sint16 charges , uint32 aug1 , uint32 aug2 , uint32 aug3 , uint32 aug4 , uint32 aug5 ) : ItemInst(item_id, charges) 
 {
 	PutAugment(0,aug1);
 	PutAugment(1,aug2);
@@ -204,7 +162,7 @@ ItemCommonInst::ItemCommonInst(const ItemCommonInst& copy) : ItemInst((ItemInst&
 	iter_augment it;
 	for (it=copy.m_augments.begin(); it!=copy.m_augments.end(); it++) {
 		ItemCommonInst* augment_old = it->second;
-		ItemCommonInst* augment_new = new ItemCommonInst(augment_old->m_item, augment_old->m_item_serialization, augment_old->m_charges);
+		ItemCommonInst* augment_new = new ItemCommonInst(augment_old->m_item, augment_old->m_charges);
 		m_augments[it->first] = augment_new;
 	}
 }
@@ -274,24 +232,33 @@ ItemInst* ItemBookInst::Clone() const
 }
 
 // Query item type
-bool ItemInst::IsType(ItemClass item_class) const
+bool ItemInst::IsType(ItemType item_type) const
 {
 	if (!m_item)
 		return false;
 	
-	return (m_item->ItemClass == item_class);
+	return (m_item->ItemClass == item_type);
 }
 
 // Query item type
 // Overrides base class implementation
-bool ItemContainerInst::IsType(ItemClass item_class) const
+bool ItemContainerInst::IsType(ItemType item_type) const
 {
 	// Check usage type
-	if ((m_use_type == ItemUseWorldContainer) && (item_class == ItemClassContainer))
+	if ((m_use_type == ItemUseWorldContainer) && (item_type == ItemTypeContainer))
 		return true;
 	
 	// Delegate to base class
-	return ItemInst::IsType(item_class);
+	return ItemInst::IsType(item_type);
+}
+
+// Query Attribute of item
+bool ItemInst::IsAttrib(ItemAttrib attribs) const
+{
+	if (!m_item)
+		return false;
+	
+	return (m_item->attribs & attribs);
 }
 
 // Can item be stacked?
@@ -325,26 +292,12 @@ bool ItemInst::IsWeapon() const
 // Is item stackable?
 bool ItemCommonInst::IsStackable() const
 {
-	//This function may not be right, but I think these are the itemtypes
-	//that can be stacked
-	bool result=false;
-	if (m_item) {
-		switch (m_item->Common.ItemType) {
-			case ItemTypeFood:
-			case ItemTypeDrink:
-			case ItemTypeBandage:
-			case ItemTypeThrowingv2:
-			case ItemTypeArrow:
-			case ItemTypeFishingBait:
-			case ItemTypeStackable:
-			case ItemTypeAlcohol:
-			case ItemTypeAugmentSolvent:
-			case ItemTypeAugmentDistill:
-				result=true;
-		}
-	}
-
-	return result;
+	//This function is not correct. Not all stackable items have itemuse 
+	//set to ItemUseStackable, example: fishing grubs
+	if (m_item)
+		return ((m_item->Common.MaxCharges == 1) && (m_item->Common.ItemUse>=14) && (m_item->Common.ItemUse<=19));
+	
+	return false;
 }
 
 // Can item be equipped?
@@ -357,7 +310,7 @@ bool ItemCommonInst::IsEquipable(int16 race, int16 class_) const
 	bool israce = false;
 	bool isclass = false;
 	
-	if (m_item->Slots == 0) {
+	if (m_item->EquipSlots == 0) {
 		return false;
 	}
 	
@@ -397,7 +350,7 @@ bool ItemCommonInst::IsEquipable(sint16 slot_id) const
 	
 	if (slot_id < 22) {
 		uint32 slot_mask = (1 << slot_id);
-		if (slot_mask & m_item->Slots)
+		if (slot_mask & m_item->EquipSlots)
 			return true;
 	}
 	
@@ -425,7 +378,7 @@ uint32 ItemCommonInst::GetAugmentItemID(uint8 slot) const
 const ItemCommonInst *aug;
 uint32 id=0;
 	if ((aug=GetAugment(slot))!=NULL)
-		id= aug->GetItem()->ID;
+		id= aug->GetItem()->ItemNumber;
 
 	return id;
 }
@@ -436,7 +389,7 @@ bool ItemCommonInst::IsWeapon() const
 {
 	if (!m_item)
 		return false;
-	if(m_item->Common.ItemType==ItemTypeArrow && m_item->Common.Damage != 0)
+	if(m_item->Common.ItemUse==ItemUseArrow && m_item->Common.Damage != 0)
 		return true;
 	else
 		return ((m_item->Common.Damage != 0) && (m_item->Common.Delay != 0));
@@ -550,7 +503,7 @@ void ItemContainerInst::Clear()
 }
 
 // Remove all items from container
-void ItemContainerInst::ClearByFlags(byFlagSetting is_nodrop, byFlagSetting is_norent)
+void ItemContainerInst::ClearByFlags(byFlagSetting is_nodrop, byFlagSetting is_norent, byFlagSetting is_flags, ItemAttrib flags_set)
 {
 	// Destroy container contents
 	iter_bag cur, end, del;
@@ -588,6 +541,23 @@ void ItemContainerInst::ClearByFlags(byFlagSetting is_nodrop, byFlagSetting is_n
 			}
 		case byFlagNotSet:
 			if (item->NoRent != 0) {
+				safe_delete(inst);
+				m_contents.erase(del->first);
+				continue;
+			}
+		default:
+			break;
+		}
+		
+		switch(is_flags) {
+		case byFlagSet:
+			if ((item->attribs & flags_set) == flags_set) {
+				safe_delete(inst);
+				m_contents.erase(del->first);
+				continue;
+			}
+		case byFlagNotSet:
+			if ((item->attribs & flags_set) != flags_set) {
 				safe_delete(inst);
 				m_contents.erase(del->first);
 				continue;
@@ -680,7 +650,7 @@ ItemInst* Inventory::GetItem(sint16 slot_id) const
 	else if (slot_id>=3031 && slot_id<=3110) {
 		// Trade bag slots
 		ItemInst* inst = _GetItem(m_trade, Inventory::CalcSlotId(slot_id));
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			result = bag->GetItem(Inventory::CalcBagIdx(slot_id));
 		}
@@ -688,7 +658,7 @@ ItemInst* Inventory::GetItem(sint16 slot_id) const
 	else if (slot_id>=2531 && slot_id<=2550) {
 		// Shared Bank bag slots
 		ItemInst* inst = _GetItem(m_shbank, Inventory::CalcSlotId(slot_id));
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			result = bag->GetItem(Inventory::CalcBagIdx(slot_id));
 		}
@@ -696,7 +666,7 @@ ItemInst* Inventory::GetItem(sint16 slot_id) const
 	else if (slot_id>=2031 && slot_id<=2190) {
 		// Bank bag slots
 		ItemInst* inst = _GetItem(m_bank, Inventory::CalcSlotId(slot_id));
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			result = bag->GetItem(Inventory::CalcBagIdx(slot_id));
 		}
@@ -704,7 +674,7 @@ ItemInst* Inventory::GetItem(sint16 slot_id) const
 	else if (slot_id>=331 && slot_id<=340) {
 		// Cursor bag slots
 		ItemInst* inst = m_cursor.peek_front();
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			result = bag->GetItem(Inventory::CalcBagIdx(slot_id));
 		}
@@ -712,7 +682,7 @@ ItemInst* Inventory::GetItem(sint16 slot_id) const
 	else if (slot_id>=251 && slot_id<=330) {
 		// Personal inventory bag slots
 		ItemInst* inst = _GetItem(m_inv, Inventory::CalcSlotId(slot_id));
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			result = bag->GetItem(Inventory::CalcBagIdx(slot_id));
 		}
@@ -753,10 +723,8 @@ sint16 Inventory::PutItem(sint16 slot_id, const ItemInst& inst)
 void Inventory::SwapItem(sint16 slot_a, sint16 slot_b)
 {
 	// Temp holding area for a
-
 	ItemInst* inst_a = GetItem(slot_a);
-	if(!inst_a->IsSlotAllowed(slot_b))
-		return;
+	
 	// Copy b->a
 	_PutItem(slot_a, GetItem(slot_b));
 	
@@ -922,7 +890,7 @@ ItemInst* Inventory::PopItem(sint16 slot_id)
 	else {
 		// Is slot inside bag?
 		ItemInst* baginst = GetItem(Inventory::CalcSlotId(slot_id));
-		if (baginst != NULL && baginst->IsType(ItemClassContainer)) {
+		if (baginst != NULL && baginst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)baginst;
 			p = bag->PopItem(Inventory::CalcBagIdx(slot_id));
 		}
@@ -946,12 +914,12 @@ sint16 Inventory::FindFreeSlot(bool for_bag, bool try_cursor, int8 min_size)
 	if (!for_bag) {
 		for (sint16 i=22; i<=29; i++) {
 			const ItemInst* inst = GetItem(i);
-			if (inst && inst->IsType(ItemClassContainer) 
-				&& inst->GetItem()->Container.BagSize >= min_size
+			if (inst && inst->IsType(ItemTypeContainer) 
+				&& inst->GetItem()->Container.SizeCapacity >= min_size
 				) {
 				sint16 base_slot_id = Inventory::CalcSlotId(i, 0);
 
-				int8 slots=inst->GetItem()->Container.BagSlots;
+				int8 slots=inst->GetItem()->Container.Slots;
 				uint8 j;
 				for (j=0; j<slots; j++) {
 					if (!GetItem(base_slot_id + j))
@@ -987,7 +955,7 @@ void Inventory::dumpInventory() {
 		printf("Slot %d: %s (%d)\n", it->first, it->second->GetItem()->Name, (inst->GetCharges()<=0) ? 1 : inst->GetCharges());
 		
 		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			
 			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
@@ -1010,7 +978,7 @@ void Inventory::dumpInventory() {
 		printf("Slot %d: %s (%d)\n", it->first, it->second->GetItem()->Name, (inst->GetCharges()<=0) ? 1 : inst->GetCharges());
 		
 		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			
 			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
@@ -1034,7 +1002,7 @@ void Inventory::dumpInventory() {
 		printf("Slot %d: %s (%d)\n", it->first, it->second->GetItem()->Name, (inst->GetCharges()<=0) ? 1 : inst->GetCharges());
 		
 		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			
 			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
@@ -1058,7 +1026,7 @@ void Inventory::dumpInventory() {
 		printf("Slot %d: %s (%d)\n", it->first, it->second->GetItem()->Name, (inst->GetCharges()<=0) ? 1 : inst->GetCharges());
 		
 		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			
 			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
@@ -1130,7 +1098,7 @@ sint16 Inventory::_PutItem(sint16 slot_id, ItemInst* inst)
 	else {
 		// Slot must be within a bag
 		ItemInst* baginst = GetItem(Inventory::CalcSlotId(slot_id)); // Get parent bag
-		if (baginst && baginst->IsType(ItemClassContainer)) {
+		if (baginst && baginst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)baginst;
 			bag->_PutItem(Inventory::CalcBagIdx(slot_id), inst);
 			result = slot_id;
@@ -1163,7 +1131,7 @@ sint16 Inventory::_HasItem(map<sint16, ItemInst*>& bucket, const Item_Struct* it
 		}
 		
 		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			
 			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
@@ -1198,7 +1166,7 @@ sint16 Inventory::_HasItem(ItemInstQueue& iqueue, const Item_Struct* item, uint8
 		}
 		
 		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			
 			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
@@ -1227,19 +1195,19 @@ sint16 Inventory::_HasItemByUse(map<sint16, ItemInst*>& bucket, uint8 use, uint8
 	// Check item: After failed checks, check bag contents (if bag)
 	for (it=bucket.begin(); it!=bucket.end(); it++) {
 		inst = it->second;
-		if (inst && inst->IsType(ItemClassCommon) && inst->GetItem()->Common.ItemType == use) {
+		if (inst && inst->IsType(ItemTypeCommon) && inst->GetItem()->Common.ItemUse == use) {
 			quantity_found += (inst->GetCharges()<=0) ? 1 : inst->GetCharges();
 			if (quantity_found >= quantity)
 				return it->first;
 		}
 		
 		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			
 			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
 				ItemInst* baginst = itb->second;
-				if (baginst && baginst->IsType(ItemClassCommon) && baginst->GetItem()->Common.ItemType == use) {
+				if (baginst && baginst->IsType(ItemTypeCommon) && baginst->GetItem()->Common.ItemUse == use) {
 					quantity_found += (baginst->GetCharges()<=0) ? 1 : baginst->GetCharges();
 					if (quantity_found >= quantity)
 						return Inventory::CalcSlotId(it->first, itb->first);
@@ -1262,19 +1230,19 @@ sint16 Inventory::_HasItemByUse(ItemInstQueue& iqueue, uint8 use, uint8 quantity
 	// Read-only iteration of queue
 	for (it=iqueue.begin(); it!=iqueue.end(); it++) {
 		ItemInst* inst = *it;
-		if (inst && inst->IsType(ItemClassCommon) && inst->GetItem()->Common.ItemType == use) {
+		if (inst && inst->IsType(ItemTypeCommon) && inst->GetItem()->Common.ItemUse == use) {
 			quantity_found += (inst->GetCharges()<=0) ? 1 : inst->GetCharges();
 			if (quantity_found >= quantity)
 				return SLOT_CURSOR;
 		}
 		
 		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (inst && inst->IsType(ItemTypeContainer)) {
 			ItemContainerInst* bag = (ItemContainerInst*)inst;
 			
 			for (itb=bag->_begin(); itb!=bag->_end(); itb++) {
 				ItemInst* baginst = itb->second;
-				if (baginst && baginst->IsType(ItemClassCommon) && baginst->GetItem()->Common.ItemType == use) {
+				if (baginst && baginst->IsType(ItemTypeCommon) && baginst->GetItem()->Common.ItemUse == use) {
 					quantity_found += (baginst->GetCharges()<=0) ? 1 : baginst->GetCharges();
 					if (quantity_found >= quantity)
 						return Inventory::CalcSlotId(SLOT_CURSOR, itb->first);
@@ -1287,61 +1255,47 @@ sint16 Inventory::_HasItemByUse(ItemInstQueue& iqueue, uint8 use, uint8 quantity
 	return SLOT_INVALID;
 }
 
-bool ItemInst::IsSlotAllowed(sint16 slot_id) const
-{
-	if(!m_item)
-		return false;
-	else if(Inventory::SupportsContainers(slot_id))
-		return true;
-	else if(m_item->Slots & (1 << slot_id))
-		return true;
-	else if(slot_id > 21)
-		return true;
-	else
-		return false;
-}
-
-bool ItemCommonInst::IsSlotAllowed(sint16 slot_id)
-{
-	if(!m_item)
-		return false;
-
-//	const ItemCommon_Struct* common = &m_item->Common;
-	const Item_Struct* item = m_item;
-	if(!item)
-		return false;
-	else if(Inventory::SupportsContainers(slot_id))
-		return true;
-	else if(item->Slots & (1 << slot_id))
-		return true;
-	else if(slot_id > 21)
-		return true;
-	else
-		return false;
-}
 // Return base item data without delim at end
 string ItemInst::Serialize(sint16 slot_id) const
 {
 	_CP(ItemInst_Serialize);
-	if (!m_item_serialization)
+	if (!m_item)
 		return "";
 	
-	char ch[600] = {0}; // Estimate on largest possible
+	char ch[250] = {0}; // Estimate on largest possible
 	
 	// Format pipe-delimited string for packet
+	int charges=m_charges;
+	if(charges==255)
+		charges=-1;
+	int32 spellcharges = m_item->SpellCharges;
+	if(spellcharges && m_item->Common.SpellId > 0 && m_item->Common.SpellId<65000 && m_item->Charges <= 1)
+		spellcharges = charges;
+	if(charges==-1)
+		spellcharges = charges;
 	sprintf(ch,
-		"%i|%i|%i|%i|%i|%i|%i|%i|%i|\"%s\"",
-		IsStackable() ? m_charges : 1,
-		0,
+		"%i|%i|%i|%i|%i|%i|%i|%i|%i|\"%i|%s|%s|%s|%i|%i|%i|%i|%i|%i|%i|%i",
+		charges,
+		m_item->Unknown001,
 		slot_id,
 		m_price,
-		0,
-		(m_merchantslot==0) ? 0 : m_merchantslot,
-		0,
-		IsStackable() ? 0 : m_charges,
-		IsInstNoDrop() ? 1 : 0,
-		m_item_serialization
-	);
+		m_item->Unknown004,
+		(m_merchantslot==0) ? m_item->Unknown005 : m_merchantslot,
+		m_item->Unknown006,
+		spellcharges,
+		m_item->Attuneable,
+		m_item->ItemClass,
+		m_item->Name,
+		m_item->LoreName,
+		m_item->IDFile,
+		m_item->ItemNumber,
+		m_item->Weight,
+		m_item->NoRent,
+		m_item->NoDrop,
+		m_item->Size,
+		m_item->EquipSlots,
+		m_item->Cost,
+		m_item->IconNumber);
 	
 	return ch;
 }
@@ -1350,12 +1304,141 @@ string ItemInst::Serialize(sint16 slot_id) const
 string ItemCommonInst::Serialize(sint16 slot_id) const
 {
 	_CP(ItemCommonInst_Serialize);
-	if (!m_item_serialization)
+	if (!m_item)
 		return "";
 	
+	char ch[1000] = {0}; // Estimate on largest packet
+	const ItemCommon_Struct* common = &m_item->Common;
+	const Item_Struct* item = m_item;
 	string serialized,subitem;
 	
-	serialized=ItemInst::Serialize(slot_id);
+	sprintf(ch,
+		"%s|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|"	// ended with Deity
+		"%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|"	// ended with Color
+		"%i|%i|%i|%i|%i|%i|%i|%6.6f|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|"	// ended with SpellShield
+		"%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%s|%i|%i|%i|%i|%i|%i|%i|%i|%i|"	// ended with Unknown100
+		"%i|%i|%i|%i|%i|%i|%s|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|%i|"       //
+		"%i|%i|%i|%i|%i|%i|%i|%i|%i\"",						// bag/books stuff
+		ItemInst::Serialize(slot_id).c_str(),
+		common->Unknown021,
+		common->Unknown022,
+		common->Unknown023,
+		common->Tradeskills,
+		common->SvCold,
+		common->SvDisease,
+		common->SvPoison,
+		common->SvMagic,
+		common->SvFire,
+		common->STR,
+		common->STA,
+		common->AGI,
+		common->DEX,
+		common->CHA,
+		common->INT,
+		common->WIS,
+		common->HP,
+		common->Mana,
+		common->AC,
+		common->Deity,
+		// End of first row
+		common->SkillModValue,
+		common->SkillModType,
+		common->BaneDmgRace,
+		common->BaneDmg,
+		common->BaneDmgBody,
+		common->Magic,
+		common->casttime2,
+		common->ProcLevel,
+		common->RequiredLevel,
+		common->BardSkillType,
+		common->BardSkillAmt,
+		common->Light,
+		common->Delay,
+		common->RecommendedLevel,
+		common->RecommendedSkill,
+		common->ElemDmgType,
+		common->ElemDmg,
+		common->EffectType,
+		common->Range,
+		common->Damage,
+		m_color,
+		// End of second row
+		common->Classes,
+		common->Races,
+		common->Unknown064,
+		common->SpellId,
+		common->MaxCharges,
+		common->ItemUse,
+		common->Material,
+		common->SellRate,
+		common->Unknown070,
+		common->CastTime,
+		common->Unknown072,
+		common->ProcRateMod,
+		common->FocusId,
+		common->CombatEffects,
+		common->Shielding,
+		common->StunResist,
+		common->StrikeThrough,
+		common->CombatSkill,
+		common->CombatSkillDmg,
+		common->SpellShield,
+		// End of third row
+		common->Avoidance,
+		common->Accuracy,
+		common->CharmFormula,
+		common->FactionMod1,
+		common->FactionMod2,
+		common->FactionMod3,
+		common->FactionMod4,
+		common->FactionAmt1,
+		common->FactionAmt2,
+		common->FactionAmt3,
+		common->FactionAmt4,
+		common->CharmFile,
+		common->augtype,
+		common->AugSlotType[0],
+		common->AugSlotType[1],
+		common->AugSlotType[2],
+		common->AugSlotType[3],
+		common->AugSlotType[4],
+		common->ldonpointtheme,
+		common->ldonpointcost,
+		common->ldonsold,
+		//End of fourth row
+		0,	// bagtype
+		0,	// bagslots
+		0,	// bagsize
+		0,	// bagwr
+		0,	// booktype
+		0,	// unknown108
+		"",	// filename
+		item->banedmgamt2,
+		item->augmentrestriction,
+		item->loreflag,
+		item->pendingloreflag,
+		item->artifactflag,
+		item->summonedflag,
+		item->tribute,
+		item->gm,
+		item->endur,
+		item->dotshielding,
+		item->attackbonus,
+		item->hpregen,
+		item->manaregen,
+		item->hastepercent,
+		// End of fifth row
+		item->damageshield,
+		item->unknown125,
+		item->unknown126,
+		item->unknown127,
+		item->distiller,
+		item->unknown129,
+		item->unknown130,
+		item->unknown131,
+		item->unknown132
+		);
+	serialized=ch;
 	
 	// Doodman:  Do ten even tho we will only have 5 augments.  We need to fill 10 fields
 	//   6-10 should always be empty (well, 5-9, actually)
@@ -1382,12 +1465,26 @@ string ItemCommonInst::Serialize(sint16 slot_id) const
 string ItemContainerInst::Serialize(sint16 slot_id) const
 {
 	_CP(ItemContainerInst_Serialize);
-	if (!m_item_serialization)
+	if (!m_item)
 		return "";
 	
+	char ch[4000] = {0}; // Estimate on largest packet
+	const ItemContainer_Struct* container = &m_item->Container;
 	string serialized,subitem;
-
-	serialized=ItemInst::Serialize(slot_id);
+	
+	sprintf(ch,
+		"%s|-1|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|"		// ended with Deity
+		"0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|"		// ended with Color
+		"0|0|0|-1|0|0|0|1.000000|0|0|0|0|0|0|0|0|0|0|0|0|"	// ended with SpellShield
+		"0|0|0|0|0|0|0|0|0|0|0||0|0|0|0|0|0|0|0|"			// ended with Unknown100
+		"0|%i|%i|%i|%i|0||0|0|0|0|0|\"",					// bag/books stuff
+		ItemInst::Serialize(slot_id).c_str(),
+		container->PackType,
+		container->Slots,
+		container->SizeCapacity,
+		container->WeightReduction);
+	
+	serialized=ch;
 	
 	// Doodman:  Do ten even tho we will only have "TotalSlots" items.  We need to fill 10 fields
 	//   Slots over TotalSlots should be empty
@@ -1410,26 +1507,27 @@ string ItemContainerInst::Serialize(sint16 slot_id) const
 	return serialized;
 }
 
-uint8 ItemContainerInst::FirstOpenSlot() const
-{
-	int8 slots=m_item->Container.BagSlots,i;
-	for(i=0;i<slots;i++) {
-		if (!GetItem(i))
-			break;
-	}
-
-	return (i<slots) ? i : 0xff;
-}
-
 // Serialize to a packet string
 string ItemBookInst::Serialize(sint16 slot_id) const
 {
-	if (!m_item_serialization)
+	if (!m_item)
 		return "";
-
-	string serialized=ItemInst::Serialize(slot_id)+"||||||||||";
 	
-	return serialized;
+	char ch[1000] = {0}; // Estimate on largest packet
+	const ItemBook_Struct* book = &m_item->Book;
+	
+	sprintf(ch,
+		"%s|-1|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|"		// ended with Deity
+		"0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|"		// ended with Color
+		"0|0|0|-1|0|0|0|1.000000|0|0|0|0|0|0|0|0|0|0|0|0|"	// ended with SpellShield
+		"0|0|0|0|0|0|0|0|0|0|0||0|0|0|0|0|0|0|0|0|"			// ended with Unknown100
+		"0|0|0|0|%i|%i|%s|0|0|0|0|0|0|\"||||||||||",			// bag/books stuff
+		ItemInst::Serialize(slot_id).c_str(),
+		book->BookType,
+		book->Unknown108,
+		book->File);
+	
+	return ch;
 }
 
 // Calculate slot_id for an item within a bag

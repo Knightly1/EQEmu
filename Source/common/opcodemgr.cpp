@@ -128,10 +128,8 @@ void OpcodeManager::SetOpcode(EmuOpcode emu_op, uint16 eq_op) {
 
 #ifdef SHARED_OPCODES
 bool SharedOpcodeManager::LoadOpcodes(const char *filename) {
-	if (!EMuShareMemDLL.Load()) {
-		printf("Unable to load EMuShareMem for opcodes.\n");
+	if (!EMuShareMemDLL.Load())
 		return false;
-	}
 	MOpcodes.lock();
 	
 	loaded = true;

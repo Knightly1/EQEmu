@@ -8,23 +8,20 @@
 #include "../common/eq_packet_structs.h"
 #include "../zone/zonedump.h"
 #include "../zone/loottable.h"
-#include "SharedLibrary.h"
 
 ////////////
 // Items //
 ///////////
 typedef bool(*CALLBACK_DBLoadItems)(sint32, int32);
 
-typedef bool(*DLLFUNC_DLLLoadItems)(const CALLBACK_DBLoadItems, int32, sint32*, int32*, int32*);
+typedef bool(*DLLFUNC_DLLLoadItems)(const CALLBACK_DBLoadItems, int32, sint32*, int32*);
 typedef const Item_Struct*(*DLLFUNC_GetItem)(uint32);
-typedef const unsigned char *(*DLLFUNC_GetItemSerialization)(uint32);
 typedef const Item_Struct*(*DLLFUNC_IterateItems)(uint32*);
-typedef bool(*DLLFUNC_AddItem)(int32, const Item_Struct*, const unsigned char *);
+typedef bool(*DLLFUNC_AddItem)(int32, const Item_Struct*);
 
 struct ItemsDLLFunc_Struct {
 	DLLFUNC_DLLLoadItems DLLLoadItems;
 	DLLFUNC_GetItem GetItem;
-	DLLFUNC_GetItemSerialization GetItemSerialization;
 	DLLFUNC_IterateItems IterateItems;
 	DLLFUNC_AddItem cbAddItem;
 };
@@ -123,14 +120,15 @@ struct OpcodeDLLFunc_Struct {
 
 
 
-class LoadEMuShareMemDLL : public SharedLibrary {
+class LoadEMuShareMemDLL {
 public:
 	LoadEMuShareMemDLL();
 	~LoadEMuShareMemDLL();
 
-	bool Load();
-	void Unload();
-	
+	inline bool	Loaded() { return ((hDLL != NULL) && !(hDLL <= 0)); }
+	bool	Load();
+	void	Unload();
+
 	ItemsDLLFunc_Struct				Items;
 	//NPCTypesDLLFunc_Struct			NPCTypes;
 	DoorsDLLFunc_Struct				Doors;
@@ -142,7 +140,9 @@ private:
 	void ClearFunc();
 
 #ifdef WIN32
+	HINSTANCE hDLL;
 #else
+	void* hDLL;
 	static int32  refCount;
 	static int32  refCountU() { return ++refCount; };
 	static int32  refCountD() { return --refCount; };

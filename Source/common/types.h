@@ -58,12 +58,9 @@ typedef unsigned char		uchar;
 	#define strncasecmp	_strnicmp
 	#define strcasecmp  _stricmp
 	typedef void ThreadReturnType;
-//	#define THREAD_RETURN(x) return;
-	#define THREAD_RETURN(x) _endthread(); return; 
 #else
 	typedef void* ThreadReturnType;
 	typedef int SOCKET;
-	#define THREAD_RETURN(x) return(x);
 #endif
 
 #define safe_delete(d) if(d) { delete d; d=0; }
@@ -90,11 +87,6 @@ typedef unsigned char		uchar;
 #endif
 
 
-#ifdef WIN32
-#define DLLFUNC extern "C" __declspec(dllexport)
-#else
-#define DLLFUNC extern "C"
-#endif
 
 
 #pragma pack(1)

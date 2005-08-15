@@ -181,11 +181,9 @@ struct StatBonuses {
 	sint16 ResistFearChance;	//i
 	sint16 StunResist;		//i
 	sint16 MeleeSkillCheck;	//i
-	uint8  MeleeSkillCheckSkill;
 	sint16 HitChance;			//HitChance/15 == % increase i
 	uint8  HitChanceSkill;
-	sint16 DamageModifier;		//needs to be thought about more and implemented
-	uint8  DamageModifierSkill;
+	sint16 DamageModifier;		//i
 	sint16 MinDamageModifier;   //i
 	sint16 ProcChance;			// ProcChance/10 == % increase i
 	sint16 ExtraAttackChance;
@@ -260,7 +258,7 @@ bool logpos;
 	int32	GetPRange(float x, float y, float z);
 	static	int32	RandomTimer(int min, int max);
 	static	int8	GetDefaultGender(int16 in_race, int8 in_gender = 0xFF);
-	static	void	CreateSpawnPacket(EQApplicationPacket* app, NewSpawn_Struct* ns);
+	static	void	CreateSpawnPacket(APPLAYER* app, NewSpawn_Struct* ns);
 //	static	int		CheckEffectIDMatch(int8 effectindex, int16 spellid1, int8 caster_level1, int16 spellid2, int8 caster_level2);
 	static	int32	GetAppearanceValue(int8 iAppearance);
 //  static	int8	MaxSkill(int16 skillid, int16 class_, int16 level);
@@ -368,16 +366,16 @@ bool logpos;
 	void ChangeSize(float in_size, bool bNoRestriction = false);
 	virtual void GMMove(float x, float y, float z, float heading = 0.01);
 	void SendPosUpdate(int8 iSendToSelf = 0);
-	void MakeSpawnUpdateNoDelta(PlayerPositionUpdateServer_Struct* spu);
+	void MakeSpawnUpdate(SpawnPositionUpdate_Struct* spu);
 	void MakeSpawnUpdate(PlayerPositionUpdateServer_Struct* spu);
 	void SendPosition();
 	void SendAllPosition();
 
-	void CreateDespawnPacket(EQApplicationPacket* app);
-	void CreateHorseSpawnPacket(EQApplicationPacket* app, const char* ownername, uint16 ownerid, Mob* ForWho = 0);
-	void CreateSpawnPacket(EQApplicationPacket* app, Mob* ForWho = 0);
+	void CreateDespawnPacket(APPLAYER* app);
+	void CreateHorseSpawnPacket(APPLAYER* app, const char* ownername, uint16 ownerid, Mob* ForWho = 0);
+	void CreateSpawnPacket(APPLAYER* app, Mob* ForWho = 0);
 	virtual void FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho);
-	void CreateHPPacket(EQApplicationPacket* app);
+	void CreateHPPacket(APPLAYER* app);
 	void SendHPUpdate();
 		
 	bool AddProcToWeapon(int16 spell_id, bool bPerma = false, int8 iChance = 3);
@@ -544,23 +542,19 @@ bool logpos;
 	inline const int8&	GetAppearance()				{ return appearance; }
 	inline const int8&	GetRunAnimSpeed()			{ return pRunAnimSpeed; }
 	inline void			SetRunAnimSpeed(sint8 in)	{ if (pRunAnimSpeed != in) { pRunAnimSpeed = in; pLastChange = Timer::GetCurrentTime(); } }
-	
 	Mob*	GetPet();
 	Mob*	GetFamiliar();
 	void	SetPet(Mob* newpet);
 	Mob*	GetOwner();
 	Mob*	GetOwnerOrSelf();
-	void	SetPetID(int16 NewPetID);
-	inline int16	GetPetID()						{ return petid;  }
-	void	SetFamiliarID(int16 NewPetID);
-	inline int16	GetFamiliarID()					{ return familiarid;  }
-	void	SetOwnerID(int16 NewOwnerID);
-	inline int16	GetOwnerID()					{ return ownerid; }
+					void	SetPetID(int16 NewPetID);
+	inline const	int16&	GetPetID()						{ return petid;  }
+					void	SetFamiliarID(int16 NewPetID);
+	inline const	int16&	GetFamiliarID()					{ return familiarid;  }
+					void	SetOwnerID(int16 NewOwnerID);
+	inline const	int16&	GetOwnerID()					{ return ownerid; }
 	inline const	int16&	GetPetType()					{ return typeofpet; }
 	bool IsFamiliar() { return(typeofpet >= 1 && typeofpet <= 4); }
-	inline bool HasOwner() { return(GetOwnerID() != 0); }
-	inline bool HasPet() { return(GetPetID() != 0); }
-	
     inline const	bodyType	GetBodyType() const	{ return bodytype; }
     int16   FindSpell(int16 classp, int16 level, int type, FindSpellType spelltype, float distance, sint32 mana_avail);
 	void	CheckBuffs();
@@ -833,13 +827,10 @@ protected:
 	void CalcSpellBonuses(StatBonuses* newbon);
 	virtual void CalcBonuses();
 	void TryWeaponProc(const Item_Struct* weapon, Mob *on);
-	void TryWeaponProc(const ItemInst* weapon, Mob *on);
-	void ExecWeaponProc(uint16 spell_id, Mob *on);
-	float GetProcChances(float &ProcBonus, float &ProcChance);
 	
-	enum {MAX_PROCS = 4};
-	tProc PermaProcs[MAX_PROCS];
-	tProc SpellProcs[MAX_PROCS];
+    enum {MAX_PROCS = 4};
+    tProc PermaProcs[MAX_PROCS];
+    tProc SpellProcs[MAX_PROCS];
 	
 	char    name[64];
 	char		clean_name[64];
@@ -862,11 +853,12 @@ protected:
 	
 	Mob*	target;
 	Timer	attack_timer;
-	Timer	attack_dw_timer;
-	Timer	ranged_timer;
 	float	attack_speed;		//% increase/decrease in attack speed (not haste)
 	Timer	tic_timer;
 	Timer	mana_timer;
+	
+	// Kaiyodo - Timer added for dual wield
+	Timer attack_dw_timer;
 	
 	Timer spellend_timer;
 	int16	casting_spell_id;

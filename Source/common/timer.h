@@ -23,7 +23,7 @@
 // Disgrace: for windows compile
 #ifdef WIN32
 	#include <windows.h>
-	#include <winsock2.h>
+	#include <winsock.h>
 	int gettimeofday (timeval *tp, ...);
 #endif
 

@@ -52,13 +52,13 @@ public:
 		DBAsync_DispatchWork,
 		DBAsyncLoop_loop,
 		
-		EQStreamServer_Process,
+		EQNetworkServer_Process,
 		
-		EQStream_Process,
+		EQNetworkConnection_Process,
 		
-		EQStreamServerLoop,
-		EQStreamInLoop,
-		EQStreamOutLoop,
+		EQNetworkServerLoop,
+		EQNetworkConnectionInLoop,
+		EQNetworkConnectionOutLoop,
 		TCPServerLoop,
 		TCPConnectionLoop,
 		

@@ -176,41 +176,7 @@ bool Client::Process() {
 		    BindWound(bindwound_target, false);
 		}
 		
-		bool may_use_attacks = false;
-		/*
-			Things which prevent us from attacking:
-				- being under AI control, the AI does attacks
-				- being dead
-				- casting a spell (not sure what the rest is doing, prolly bard)
-				- not having a target
-				- being stunned or mezzed
-				- having used a ranged weapon recently
-		*/
-		if(auto_attack) {
-			if(!IsAIControlled() && !dead
-				&& !(spellend_timer.Enabled() && (spells[casting_spell_id].classes[7] < 1 && spells[casting_spell_id].classes[7] > 65)) 
-				&& !IsStunned() && !IsMezzed() && appearance != 3
-				)
-				may_use_attacks = true;
-			
-			if(may_use_attacks && ranged_timer.Enabled()) {
-				//if the range timer is enabled, we need to consider it
-				if(!ranged_timer.Check(false)) {
-					//the ranged timer has not elapsed, cannot attack.
-					may_use_attacks = false;
-				}
-			}
-/*			
-			printf("May Attack Debug: ai? %d, dead? %d, spells? %d, stunned? %d, mezzed? %d, app==3? %d, ranged? %d\n", 
-				IsAIControlled(), dead, spellend_timer.Enabled() && (spells[casting_spell_id].classes[7] < 1 && spells[casting_spell_id].classes[7] > 65), 
-				IsStunned(), IsMezzed(), appearance, ranged_timer.Check(false));
-			
-			printf("Auto Attack Enabled, mut=%d, at=%d, t=0x%x\n", may_use_attacks, attack_timer.Check(false), target);
-		*/
-		}
-		
-		
-		if (auto_attack && target != NULL && may_use_attacks && attack_timer.Check()) {
+		if (auto_attack && !IsAIControlled() && !(spellend_timer.Enabled() && (spells[casting_spell_id].classes[7] < 1 && spells[casting_spell_id].classes[7] > 65)) && target != 0 && attack_timer.Check() && !IsStunned() && !IsMezzed() && dead == 0) {
 			if (!CombatRange(target)) {
 				//Message(0,"Target's Name: %s",target->GetName());
 				//Message(0,"Target's X: %f, Your X: %f",target->CastToMob()->GetX(),GetX());
@@ -296,28 +262,24 @@ bool Client::Process() {
 				}
 			}
 		}
-		
-		if (GetClass() == WARRIOR || GetClass() == BERSERKER) {
-			if(!dead && !berserk && this->GetHPRatio() < 30) {
-	//			char temp[100];
-	//			snprintf(temp, 100, "%s goes into a berserker frenzy!", this->GetName());
-	//			entity_list.MessageClose(this, 0, 200, 10, temp);
-				entity_list.MessageClose_StringID(this, false, 200, 0, BERSERK_START, GetName());
-				this->berserk = true;
-			}
-			if (berserk && this->GetHPRatio() > 30) {
-	//			char temp[100];
-	//			snprintf(temp, 100, "%s is no longer berserk.", this->GetName());
-	//			entity_list.MessageClose(this, 0, 200, 10, temp);
-				entity_list.MessageClose_StringID(this, false, 200, 0, BERSERK_END, GetName());
-				this->berserk = false;
-			}
+		if (GetClass() == WARRIOR && dead == 0 && !this->berserk && this->GetHPRatio() < 30) {
+//			char temp[100];
+//			snprintf(temp, 100, "%s goes into a berserker frenzy!", this->GetName());
+//			entity_list.MessageClose(this, 0, 200, 10, temp);
+			entity_list.MessageClose_StringID(this, false, 200, 0, BERSERK_START, GetName());
+			this->berserk = true;
 		}
-		
+		if (GetClass() == WARRIOR && this->berserk && this->GetHPRatio() > 30) {
+//			char temp[100];
+//			snprintf(temp, 100, "%s is no longer berserk.", this->GetName());
+//			entity_list.MessageClose(this, 0, 200, 10, temp);
+			entity_list.MessageClose_StringID(this, false, 200, 0, BERSERK_END, GetName());
+			this->berserk = false;
+		}
 		// Kaiyodo - Check offhand attack timer
-		if(auto_attack && may_use_attacks && target != NULL
-			&& CanThisClassDualWield() && attack_dw_timer.Check()) {
-			
+		if(auto_attack && !IsAIControlled() && CanThisClassDualWield() && target != 0 && attack_dw_timer.Check()&& !IsStunned() && !IsMezzed() && dead == 0) {
+		
+			attack_dw_timer.Start(0);
 			// Range check
 			if(!CombatRange(target)) {
 				//Message(13,"Your target is too far away, get closer! (dual)");
@@ -413,13 +375,6 @@ bool Client::Process() {
 			// see this char disappear after 10-12 seconds of inactivity
 			if (position_timer_counter >= 36) { // Approx. 4 ticks per second
 				entity_list.SendPositionUpdates(this, pLastUpdateWZ, 500, target, true);
-			/* if (position_timer_counter >= 3) { // Send every 750ms?
-				//Image (2k5): The trick of stopping MQ map without screwing up client updates, shorter distances, faster updates, however if its an admin we can send further updates
-				if(Admin() > 80)
-					entity_list.SendPositionUpdates(this, pLastUpdateWZ, 450, 0, true);
-				else
-					entity_list.SendPositionUpdates(this, pLastUpdateWZ, 150, 0, true);
-			*/
 				pLastUpdate = Timer::GetCurrentTime();
 				pLastUpdateWZ = pLastUpdate;
 				position_timer_counter = 0;
@@ -471,7 +426,7 @@ bool Client::Process() {
 			TicProcess();
 			
 			if(stamina_timer.Check()){
-				EQApplicationPacket* outapp = new EQApplicationPacket(OP_Stamina, sizeof(Stamina_Struct));
+				APPLAYER* outapp = new APPLAYER(OP_Stamina, sizeof(Stamina_Struct));
 				Stamina_Struct* sta = (Stamina_Struct*)outapp->pBuffer;
 				if (m_pp.hunger_level > 0)
 					m_pp.hunger_level-=32;
@@ -504,7 +459,7 @@ bool Client::Process() {
 		return false;
 	}
 	
-	if (client_state != CLIENT_LINKDEAD && !eqs->CheckActive()) {
+	if (client_state != CLIENT_LINKDEAD && !eqnc->CheckActive()) {
 		cout << "Client linkdead: " << name << endl;
 		OnDisconnect(true);
 
@@ -520,19 +475,19 @@ bool Client::Process() {
 	}
 	/************ Get all packets from packet manager out queue and process them ************/
 	adverrorinfo = 5;
-	if((int32)eqs == 0xFEEEFEEE) {
+	if((int32)eqnc == 0xFEEEFEEE) {
 		OnDisconnect(true);
-		safe_delete(eqs);
+		safe_delete(eqnc);
 		return false;
 	}
 	
-	EQApplicationPacket *app = 0;
-	if(eqs->GetState()==CLOSING && eqs->CheckActive()){
-		//eqs->Close();
+	APPLAYER *app = 0;
+	if(eqnc->GetState()>=EQNC_Closing && eqnc->CheckActive()){
+		//eqnc->Close();
 		//return false;
 		//handled below 
 	} else {
-		while(ret && (app = eqs->PopPacket())) {
+		while(ret && (app = eqnc->PopPacket())) {
 			if(app)
 				ret = HandlePacket(app);
 			safe_delete(app);
@@ -547,7 +502,7 @@ bool Client::Process() {
 	}
 #endif	
 	
-	if (client_state != CLIENT_LINKDEAD && (client_state == CLIENT_ERROR || client_state == DISCONNECTED || client_state == CLIENT_KICKED || !eqs->CheckActive())) {
+	if (client_state != CLIENT_LINKDEAD && (client_state == CLIENT_ERROR || client_state == DISCONNECTED || client_state == CLIENT_KICKED || !eqnc->CheckActive())) {
 		//client logged out or errored out
 		if (!zoning) {
 			RemoveNoRent(); //Get rid of ze no rent stuff if logging out
@@ -602,11 +557,7 @@ void Client::OnDisconnect(bool hard_disconnect) {
 	if(GetAdventureID()>0)
 		DeleteCharInAdventure(CharacterID(),GetAdventureID());
 	
-	
-	EQApplicationPacket *outapp = new EQApplicationPacket(OP_Logout);
-	FastQueuePacket(&outapp);
-	
-	Disconnect();
+	eqnc->Close();
 }
 
 // Sends the client complete inventory used in character login
@@ -625,7 +576,7 @@ void Client::BulkSendInventoryItems()
 	//new item. It should be changed to loop through once, gather the
 	//lengths, and item packet pointers into an array (fixed length), and
 	//then loop again to build the packet.
-	//EQApplicationPacket *packets[50];
+	//APPLAYER *packets[50];
 	//unsigned long buflen = 0;
 	//unsigned long pos = 0;
 	//memset(packets, 0, sizeof(packets));
@@ -645,8 +596,6 @@ void Client::BulkSendInventoryItems()
 	//Inventory items
 	for (slot_id=0; slot_id<=30; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
-		if(inst && inst->IsSlotAllowed(slot_id) == 0)
-			inst = NULL;
 		if (inst){
 			string packet = inst->Serialize(slot_id);
 			ser_items[i++] = packet;
@@ -656,8 +605,6 @@ void Client::BulkSendInventoryItems()
 	// Bank items
 	for (slot_id=2000; slot_id<=2015; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
-		if(inst && inst->IsSlotAllowed(slot_id) == 0)
-			inst = NULL;
 		if (inst){
 			string packet = inst->Serialize(slot_id);
 			ser_items[i++] = packet;
@@ -667,15 +614,13 @@ void Client::BulkSendInventoryItems()
 	// Shared Bank items
 	for (slot_id=2500; slot_id<=2501; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
-		if(inst && inst->IsSlotAllowed(slot_id) == 0)
-			inst = NULL;
 		if (inst){
 			string packet = inst->Serialize(slot_id);
 			ser_items[i++] = packet;
 			size+=packet.length() + 1;
 		}
 	}
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_CharInventory,size);
+	APPLAYER* outapp = new APPLAYER(OP_CharInventory,size);
 	uchar* ptr = outapp->pBuffer;
 	for(itr=ser_items.begin();itr!=ser_items.end();itr++){
 		int length = itr->second.length();
@@ -685,6 +630,7 @@ void Client::BulkSendInventoryItems()
 		}
 	}
 	//DumpPacket(outapp);
+	outapp->Deflate();
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	// LINKDEAD TRADE ITEMS
@@ -693,7 +639,7 @@ void Client::BulkSendInventoryItems()
 	for (sint16 trade_slot_id=3000; trade_slot_id<=3007; trade_slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst) {
-			sint16 free_slot_id = m_inv.FindFreeSlot(inst->IsType(ItemClassContainer), true, inst->GetItem()->Size);
+			sint16 free_slot_id = m_inv.FindFreeSlot(inst->IsType(ItemTypeContainer), true, inst->GetItem()->Size);
 			DeleteItemInInventory(trade_slot_id, 0, false);
 			PutItemInInventory(free_slot_id, *inst, true);
 		}
@@ -737,7 +683,7 @@ void Client::BulkSendInventoryItems()
 	for (sint16 trade_slot_id=3000; trade_slot_id<=3007; trade_slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst) {
-			sint16 free_slot_id = m_inv.FindFreeSlot(inst->IsType(ItemClassContainer), true, inst->GetItem()->Size);
+			sint16 free_slot_id = m_inv.FindFreeSlot(inst->IsType(ItemTypeContainer), true, inst->GetItem()->Size);
 			DeleteItemInInventory(trade_slot_id, 0, false);
 			PutItemInInventory(free_slot_id, *inst, true);
 		}
@@ -745,7 +691,7 @@ void Client::BulkSendInventoryItems()
 }
 #endif*/
 void Client::RemoveData() {
-	eqs->RemoveData();
+	eqnc->RemoveData();
 }
 
 void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
@@ -769,18 +715,18 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 		MerchantList ml = *itr;
 		handychance = MakeRandomInt(0, merlist.size() + tmp_merlist.size() - 1 );
 		
-		item = database.GetItem(ml.item);
-		if(item) {
+		item=database.GetItem(ml.item);
+		if (item) {
 			if(handychance==0)
 				handyitem=item;
 			else
 				handychance--;
 			int charges=1;
-			if(item->ItemClass==ItemClassCommon)
+			if(item->ItemClass==ItemTypeCommon)
 				charges=item->Common.MaxCharges;
-			ItemInst* inst = ItemInst::Create(item, charges);
+			ItemInst* inst = ItemInst::Create(item,charges);
 			if (inst) {
-				inst->SetPrice(item->Price*127/100);
+				inst->SetPrice(item->Cost*127/100);
 				inst->SetMerchantSlot(ml.slot);
 				if(charges > 0)
 					inst->SetCharges(charges);
@@ -804,13 +750,13 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 			else
 				handychance--;
 			int charges=1;
-			if(item->ItemClass==ItemClassCommon && (sint16)ml.charges <= item->Common.MaxCharges)
+			if(item->ItemClass==ItemTypeCommon && (sint16)ml.charges <= item->Common.MaxCharges)
 				charges=ml.charges;
 			else
 				charges = item->Common.MaxCharges;
-			ItemInst* inst = ItemInst::Create(item, charges);
+			ItemInst* inst = ItemInst::Create(item,charges);
 			if (inst) {
-				inst->SetPrice(item->Price*127/100);
+				inst->SetPrice(item->Cost*127/100);
 				inst->SetMerchantSlot(ml.slot);
 				if(charges > 0)
 					inst->SetCharges(charges);
@@ -857,7 +803,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 			Message_StringID(10,GENERIC_STRINGID_SAY,merchantname,handy_id,this->GetName());
 		
 		merch->CastToNPC()->FaceTarget(this->CastToMob());
-    }
+        }
 		
 //		safe_delete_array(cpi);
 }
@@ -870,34 +816,29 @@ int8 Client::WithCustomer(){
 		return 1;
 	}
 }
-void Client::OPRezzAnswer(const EQApplicationPacket* app) {
+void Client::OPRezzAnswer(const APPLAYER* app) {
 	if (!pendingrezzexp)
 		return;
 	const Resurrect_Struct* ra = (const Resurrect_Struct*) app->pBuffer;
-	if (ra->action == 1) {
+	if (ra->action == 1){
 		cout << "Player " << this->name << " got a " << (int16)spells[ra->spellid].base[0] << "% Rezz" << endl;
 		this->BuffFadeAll();
 		SetMana(0);
 		SetHP(GetMaxHP()/5);
-		EQApplicationPacket* outapp = app->Copy();
+		APPLAYER* outapp = app->Copy();
 		outapp->SetOpcode(OP_RezzComplete);
 		worldserver.RezzPlayer(outapp,0,OP_RezzComplete);
 		cout << "pe: " << pendingrezzexp << endl;
 		SetEXP(((int)(GetEXP()+((float)((pendingrezzexp/100)*spells[ra->spellid].base[0])))),GetAAXP(),true);
 		pendingrezzexp = 0;
-		
-		//they are gunna be trying to zone soon.
-		zonesummon_x = ra->x;
-		zonesummon_y = ra->y;
-		zonesummon_z = ra->z;
-		zonesummon_id = ra->zone_id;
-		zone_mode = ZoneSolicited;
-		
+		if (strcmp(ra->zone,zone->GetShortName()) != 0){
+			SetZoneSummonCoords(ra->x,ra->y,ra->z);
+		}
 		this->FastQueuePacket(&outapp);
 	}
 }
 
-void Client::OPTGB(const EQApplicationPacket *app)
+void Client::OPTGB(const APPLAYER *app)
 {
 	if(!app) return;
 	if(!app->pBuffer) return;
@@ -909,7 +850,7 @@ void Client::OPTGB(const EQApplicationPacket *app)
 		tgb = tgb_flag;
 }
 
-void Client::OPMemorizeSpell(const EQApplicationPacket* app)
+void Client::OPMemorizeSpell(const APPLAYER* app)
 {
 	if(app->size != sizeof(MemorizeSpell_Struct))
 	{
@@ -943,16 +884,16 @@ void Client::OPMemorizeSpell(const EQApplicationPacket* app)
 		case memSpellScribing:	{	// scribing spell to book
 			ItemInst* inst = m_inv.PopItem(SLOT_CURSOR);
 			
-			if(inst && inst->IsType(ItemClassCommon))
+			if(inst && inst->IsType(ItemTypeCommon))
 			{
 				const Item_Struct* item = inst->GetItem();
 				
-				if(item && item->Common.Scroll.Effect == (uint32)(memspell->spell_id))
+				if(item && item->Common.SpellId == (sint32)(memspell->spell_id))
 				{
 					ScribeSpell(memspell->spell_id, memspell->slot);
 
 					// Destroy scroll on cursor
-					EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoveItem, sizeof(MoveItem_Struct));
+					APPLAYER* outapp = new APPLAYER(OP_MoveItem, sizeof(MoveItem_Struct));
 					MoveItem_Struct* spellmoveitem = (MoveItem_Struct*) outapp->pBuffer;
 					spellmoveitem->from_slot = SLOT_CURSOR;
 					spellmoveitem->to_slot = SLOT_INVALID;
@@ -988,7 +929,7 @@ void Client::BreakInvis()
 {
 	if (invisible)
 	{
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
 		SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
 		sa_out->spawn_id = GetID();
 		sa_out->type = 0x03;
@@ -999,7 +940,7 @@ void Client::BreakInvis()
 	}
 }
 
-void Client::OPMoveCoin(const EQApplicationPacket* app)
+void Client::OPMoveCoin(const APPLAYER* app)
 {
 	MoveCoin_Struct* mc = (MoveCoin_Struct*)app->pBuffer;
 	int value = 0, amount_to_take = 0, amount_to_add = 0;
@@ -1227,7 +1168,7 @@ void Client::OPMoveCoin(const EQApplicationPacket* app)
 			trade->sp, trade->cp
 		);
 
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_TradeCoins,sizeof(TradeCoin_Struct));
+		APPLAYER* outapp = new APPLAYER(OP_TradeCoins,sizeof(TradeCoin_Struct));
 		TradeCoin_Struct* tcs = (TradeCoin_Struct*)outapp->pBuffer;
 		tcs->trader = trader->GetID();
 		tcs->slot = mc->cointype2;
@@ -1241,35 +1182,26 @@ void Client::OPMoveCoin(const EQApplicationPacket* app)
 	Save();
 }
 
-void Client::OPGMTraining(const EQApplicationPacket *app)
+void Client::OPGMTraining(const APPLAYER *app)
 {
 	int cur_skill;
 
-	EQApplicationPacket* outapp = app->Copy();
+	APPLAYER* outapp = app->Copy();
 	GMTrainee_Struct* gmtrain = (GMTrainee_Struct*) outapp->pBuffer;
 
 	Mob* pTrainer = entity_list.GetMob(gmtrain->npcid);
 
-	if(!pTrainer || !pTrainer->IsNPC() || pTrainer->GetClass() < WARRIORGM || pTrainer->GetClass() > BERSERKERGM)
-		return;
-	
-	//you can only use your own trainer, client enforces this, but why trust it
-	int trains_class = pTrainer->GetClass() - (WARRIORGM - WARRIOR);
-	if(GetClass() != trains_class)
-		return;
-	
-	//you have to be somewhat close to a trainer to be properly using them
-	if(DistNoRoot(*pTrainer) > USE_NPC_RANGE2)
+	if(!pTrainer)
 		return;
 
 	for (cur_skill = 0; cur_skill <= HIGHEST_SKILL; cur_skill++)
 	{
 		gmtrain->skills[cur_skill] = pTrainer->CastToMob()->MaxSkill(cur_skill);
 	}
-	uchar ending[]={0x34,0x87,0x8a,0x3F,0x01
+	uchar ending[]={0xE0,0xCB,0x90,0x3F,0x01
 		,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9
 		,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9
-		,0x76,0x75,0x3f};
+		,0x88,0x49,0x00};
 	memcpy(&outapp->pBuffer[outapp->size-40],ending,sizeof(ending));
 	FastQueuePacket(&outapp);
 
@@ -1280,53 +1212,30 @@ void Client::OPGMTraining(const EQApplicationPacket *app)
 	}
 }
 
-void Client::OPGMEndTraining(const EQApplicationPacket *app)
+void Client::OPGMEndTraining(const APPLAYER *app)
 {
-	EQApplicationPacket *outapp = new EQApplicationPacket(OP_GMEndTrainingResponse, 0);
+	APPLAYER *outapp = new APPLAYER(OP_GMEndTrainingResponse, 0);
 	GMTrainEnd_Struct *p = (GMTrainEnd_Struct *)app->pBuffer;
 
 	FastQueuePacket(&outapp);
 
 	Mob* pTrainer = entity_list.GetMob(p->npcid);
-	if(!pTrainer || !pTrainer->IsNPC() || pTrainer->GetClass() < WARRIORGM || pTrainer->GetClass() > BERSERKERGM)
-		return;
-	
-	//you can only use your own trainer, client enforces this, but why trust it
-	int trains_class = pTrainer->GetClass() - (WARRIORGM - WARRIOR);
-	if(GetClass() != trains_class)
-		return;
 
-	//you have to be somewhat close to a trainer to be properly using them
-	if(DistNoRoot(*pTrainer) > USE_NPC_RANGE2)
-		return;
-	
 	// goodbye message
-	if (pTrainer->IsNPC())
+	if (pTrainer && pTrainer->IsNPC())
 	{
 		pTrainer->Say_StringID(MakeRandomInt(1208, 1211), GetCleanName());
 	}
 }
 
-void Client::OPGMTrainSkill(const EQApplicationPacket *app)
+void Client::OPGMTrainSkill(const APPLAYER *app)
 {
+	DumpPacket(app);
+
 	if(!m_pp.points)
 		return;
 
 	GMSkillChange_Struct* gmskill = (GMSkillChange_Struct*) app->pBuffer;
-	
-	Mob* pTrainer = entity_list.GetMob(gmskill->npcid);
-	if(!pTrainer || !pTrainer->IsNPC() || pTrainer->GetClass() < WARRIORGM || pTrainer->GetClass() > BERSERKERGM)
-		return;
-	
-	//you can only use your own trainer, client enforces this, but why trust it
-	int trains_class = pTrainer->GetClass() - (WARRIORGM - WARRIOR);
-	if(GetClass() != trains_class)
-		return;
-	
-	//you have to be somewhat close to a trainer to be properly using them
-	if(DistNoRoot(*pTrainer) > USE_NPC_RANGE2)
-		return;
-	
 	if (gmskill->skillbank == 0x01)
 	{
 		// languages go here
@@ -1366,7 +1275,7 @@ void Client::OPGMTrainSkill(const EQApplicationPacket *app)
 			{
 				return;
 			}
-			//m_pp.skills[gmskill->skill_id] = t_level;
+			//m_pp.skills[gmskill->skill_id + 1] = t_level;
 			SetSkill(gmskill->skill_id, t_level);
 		}
 		else if (skilllevel <= 251)
@@ -1386,7 +1295,7 @@ void Client::OPGMTrainSkill(const EQApplicationPacket *app)
 }
 
 // this is used for /summon and /corpse
-void Client::OPGMSummon(const EQApplicationPacket *app)
+void Client::OPGMSummon(const APPLAYER *app)
 {
 	GMSummon_Struct* gms = (GMSummon_Struct*) app->pBuffer;
 	Mob* st = entity_list.GetMob(gms->charname);
@@ -1405,7 +1314,7 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 		{
 			Message(0, "Local: Summoning %s to %i, %i, %i", gms->charname, gms->x, gms->y, gms->z);
 			if (st->IsClient() && (st->CastToClient()->GetAnon() != 1 || this->Admin() >= st->CastToClient()->Admin()))
-				st->CastToClient()->MovePC((char *) 0, gms->x, gms->y, gms->z, 2, true);
+				st->CastToClient()->MovePC((char*) 0, gms->x, gms->y, gms->z, 2, true);
 			else
 				st->GMMove(this->GetX(), this->GetY(), this->GetZ(),this->GetHeading());
 		}
@@ -1438,6 +1347,7 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 		}
 	}
 }
+
 
 void Client::DoHPRegen() {
 	sint32 normal_regen = LevelRegen();
