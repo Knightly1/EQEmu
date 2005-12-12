@@ -31,6 +31,7 @@ using namespace std;
 #include "../common/packet_dump.h"
 #include "../common/seperator.h"
 #include "../common/eq_packet_structs.h"
+#include "../common/EQWorldPacket.h"
 #include "LoginServer.h"
 #include "../common/serverinfo.h"
 #include "../common/md5.h"
@@ -60,7 +61,7 @@ Console::Console(TCPConnection* itcpc) : WorldTCPConnection() {
 	memset(paccountname, 0, sizeof(paccountname));
 	admin = 0;
 	pAcceptMessages = false;
-	tcpc->Send((uchar*) "Username: ", strlen("Username: "));
+	tcpc->Send((const uchar*) "Username: ", strlen("Username: "));
 }
 
 Console::~Console() {
@@ -582,7 +583,7 @@ void Console::ProcessCommand(const char* command) {
 							whom->lvllow = atoi(sep.arg[i]);
 							whom->lvlhigh = whom->lvllow;
 						}
-						else if (atoi(sep.arg[i]) > whom->lvllow)
+						else if (atoi(sep.arg[i]) > int(whom->lvllow))
 							whom->lvlhigh = atoi(sep.arg[i]);
 						else
 							whom->lvllow = atoi(sep.arg[i]);
@@ -657,10 +658,10 @@ void Console::ProcessCommand(const char* command) {
 				CatchSignal(0);
 			}
 			else if (strcasecmp(sep.arg[0], "reloadops") == 0 && admin >= consoleOpcodesStatus) {
-				if(EQNetworkOpcodeManager == NULL) {
+				if(WorldOpcodeManager == NULL) {
 					SendMessage(1, "It seems that the server is not using an opcode translator.");
 				} else {
-					EQNetworkOpcodeManager->ReloadOpcodes(OPCODES_FILE);
+					WorldOpcodeManager->ReloadOpcodes(OPCODES_FILE);
 					SendMessage(1, "Opcodes reloaded.");
 				}
 			}

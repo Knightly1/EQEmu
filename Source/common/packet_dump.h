@@ -18,23 +18,16 @@
 #ifndef PACKET_DUMP_H
 #define PACKET_DUMP_H
 
-#include <iostream>
-using namespace std;
-
 #include "../common/types.h"
+#include "EQPacket.h"
 
-class APPLAYER;
 class ServerPacket;
 
 void DumpPacketAscii(const uchar* buf, int32 size, int32 cols=16, int32 skip=0);
 void DumpPacketHex(const uchar* buf, int32 size, int32 cols=16, int32 skip=0);
-void DumpPacketHex(const APPLAYER* app);
-void DumpPacketAscii(const APPLAYER* app);
 void DumpPacketBin(const void* data, int32 len);
 void DumpPacket(const uchar* buf, int32 size);
-void DumpPacket(const APPLAYER* app, bool iShowInfo = false);
 void DumpPacket(const ServerPacket* pack, bool iShowInfo = false);
-void DumpPacketBin(const APPLAYER* app);
 void DumpPacketBin(const ServerPacket* pack);
 void DumpPacketBin(int32 data);
 void DumpPacketBin(int16 data);

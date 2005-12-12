@@ -132,13 +132,13 @@ typedef struct struct_Data22 {
   long flags, fragment1, size1, size2, params1, size3, size4, params2, size5, size6;
 } struct_Data22;
 
-typedef struct BSP_Region {
+/*typedef struct BSP_Region {
   
-} BSP_Region;
+} BSP_Region;*/
 
 typedef struct BSP_Node {
   float normal[3], splitdistance;
-  BSP_Region *region;
+  //BSP_Region *region;
   struct BSP_Node *left, *right;
 } BSP_Node;
 

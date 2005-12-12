@@ -83,7 +83,8 @@ extern bool holdzones;
 extern volatile bool RunLoops;
 Timer* spawntimeleft=new Timer(300000);
 
-ZoneServer::ZoneServer(TCPConnection* itcpc) : ls_zboot(5000),WorldTCPConnection() {
+ZoneServer::ZoneServer(TCPConnection* itcpc) 
+: WorldTCPConnection(), ls_zboot(5000) {
 	tcpc = itcpc;
 	ID = zoneserver_list.GetNextID();
 	memset(zone_name, 0, sizeof(zone_name));
@@ -421,7 +422,7 @@ bool ZoneServer::Process() {
 			if(pack->size==0){
 				zoneserver_list.SendPacket(pack);
 				zoneserver_list.Process();
-				CatchSignal(0);
+				CatchSignal(2);
 			}
 			else{
 				WorldShutDown_Struct* wsd=(WorldShutDown_Struct*)pack->pBuffer;
@@ -850,6 +851,7 @@ ZSList::ZSList() {
 	NextCLEID = 1;
 	CLStale_timer = new Timer(45000);
 	CurGroupID = 1;
+	memset(pLockedZones, 0, sizeof(pLockedZones));
 }
 
 ZSList::~ZSList() {
@@ -883,7 +885,7 @@ void ZSList::Process()
 		zoneserver_list.SendPacket(pack2);
 		safe_delete(pack2);
 		zoneserver_list.Process();
-		CatchSignal(0);
+		CatchSignal(2);
 	}
 	if(reminder && reminder->Check()){
 		SendEmoteMessage(0,0,0,15,"<SYSTEMWIDE MESSAGE>:SYSTEM MSG:World coming down, everyone log out now.  World will shut down in %i seconds...",shutdowntimer->GetRemainingTime()/1000);
@@ -993,8 +995,8 @@ ZoneServer* ZSList::FindByZoneID(int32 ZoneID) {
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
-		if (iterator.GetData()->GetZoneID()==ZoneID) {
-			ZoneServer* tmp = iterator.GetData();
+		ZoneServer* tmp = iterator.GetData();
+		if (tmp->GetZoneID()==ZoneID) {
 			return tmp;
 		}
 		iterator.Advance();

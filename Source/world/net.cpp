@@ -28,7 +28,9 @@ using namespace std;
 #include "../common/debug.h"
 #include "../common/queue.h"
 #include "../common/timer.h"
-#include "../common/EQNetwork.h"
+#include "../common/EQStreamFactory.h"
+#include "../common/EQStream.h"
+#include "../common/EQWorldPacket.h"
 #include "net.h"
 #include "client.h"
 #include "../common/database.h"
@@ -81,8 +83,8 @@ CommonProfiler _cp;
 #include "LoginServer.h"
 #include "../common/dbasync.h"
 
-EQNetworkServer eqns(PORT);
-TCPServer tcps(PORT);
+EQStreamFactory eqsf(WorldStream,EQ_WORLD_PORT);
+TCPServer tcps(WORLDSERVER_PORT);
 NetConnection net;
 ClientList client_list;
 extern ConsoleList console_list;
@@ -202,15 +204,17 @@ int main(int argc, char** argv) {
 	srand(time(NULL));
 	LogFile->write(EQEMuLog::Status, "Loading opcodes..");
 #ifdef DONT_SHARED_OPCODES
-	EQNetworkOpcodeManager = new RegularOpcodeManager();
+	WorldOpcodeManager = new RegularOpcodeManager();
 #else
-	EQNetworkOpcodeManager = new SharedOpcodeManager();
+	WorldOpcodeManager = new SharedOpcodeManager();
 #endif
-	if(!EQNetworkOpcodeManager->LoadOpcodes(OPCODES_FILE)) {
+
+	if(!WorldOpcodeManager->LoadOpcodes(OPCODES_FILE)) {
 		LogFile->write(EQEMuLog::Error, "Loading opcodes failed. I cant live like this!");
 		return(1);
 	}
 	
+	cout << hex << WorldOpcodeManager << dec << endl;
 	
 	LogFile->write(EQEMuLog::Status, "Loading variables..");
 	database.LoadVariables();
@@ -218,6 +222,8 @@ int main(int argc, char** argv) {
 	database.LoadZoneNames();
 	LogFile->write(EQEMuLog::Status, "Clearing groups..");
 	database.ClearGroup();
+	LogFile->write(EQEMuLog::Status, "Clearing temporary merchant lists..");
+	database.ClearMerchantTemp();
 	LogFile->write(EQEMuLog::Status, "Loading items..");
 	if (!database.LoadItems()) {
 		LogFile->write(EQEMuLog::Error, "Error: Could not load item data.  But ignoring");
@@ -225,6 +231,8 @@ int main(int argc, char** argv) {
 	net.ReadLoginINI();
 	LogFile->write(EQEMuLog::Status, "Loading guild ranks..");
 	database.LoadGuilds(guilds);
+	LogFile->write(EQEMuLog::Status, "Loading guild link..");
+	database.LoadGuildList();
 	LogFile->write(EQEMuLog::Status, "Loading %s..", ADDON_INI_FILE);
 	database.ExtraOptions();
 	LogFile->write(EQEMuLog::Status, "Loading EQ time of day..");
@@ -232,6 +240,7 @@ int main(int argc, char** argv) {
 		LogFile->write(EQEMuLog::Error, "Unable to load %s", EQTIME_INI);
 	
 	char tmp[20];
+	tmp[0] = '\0';
 	database.GetVariable("holdzones",tmp, 20);	
 	if ((strcasecmp(tmp, "1") == 0)) {
 		LogFile->write(EQEMuLog::Status, "Reboot zone modes ON");
@@ -280,22 +289,22 @@ int main(int argc, char** argv) {
 		break;
 	}
 	char errbuf[TCPConnection_ErrorBufferSize];
-	if (tcps.Open(PORT, errbuf)) {
+	if (tcps.Open(WORLDSERVER_PORT, errbuf)) {
 		if (strlen(net.GetWorldAddress()) == 0)
-			cout << "TCP listening on: port " << PORT << endl;
+			cout << "TCP listening on: port " << WORLDSERVER_PORT << endl;
 		else
-			cout << "TCP listening on: " << net.GetWorldAddress() << ":" << PORT << endl;
+			cout << "TCP listening on: " << net.GetWorldAddress() << ":" << WORLDSERVER_PORT << endl;
 	}
 	else {
-		cout << "Failed to open TCP port "<<PORT<<"." << endl;
+		cout << "Failed to open TCP port "<<WORLDSERVER_PORT<<"." << endl;
 		cout << "errbuf=" << errbuf << endl;
 		return 1;
 	}
-	if (eqns.Open()) {
+	if (eqsf.Open()) {
 		if (strlen(net.GetWorldAddress()) == 0)
-			cout << "World server listening on: port " << PORT << endl;
+			cout << "World server listening on: port " << WORLDSERVER_PORT << endl;
 		else
-			cout << "World server listening on: " << net.GetWorldAddress() << ":" << PORT << endl;
+			cout << "World server listening on: " << net.GetWorldAddress() << ":" << WORLDSERVER_PORT << endl;
 	}
 	else {
 		cout << "Failed to open port 9000." << endl;
@@ -307,16 +316,16 @@ int main(int argc, char** argv) {
 	zoneserver_list.reminder->Disable();
 	Timer InterserverTimer(INTERSERVER_TIMER); // does MySQL pings and auto-reconnect
 	InterserverTimer.Trigger();
-	EQNetworkConnection* eqnc;
+	EQStream* eqs;
 	TCPConnection* tcpc;
 	while(RunLoops) {
 		Timer::SetCurrentTime();
 
-		while ((eqnc = eqns.NewQueuePop())) {
+		while ((eqs = eqsf.Pop())) {
 			struct in_addr	in;
-			in.s_addr = eqnc->GetrIP();
-			cout << Timer::GetCurrentTime() << " New client from ip: " << inet_ntoa(in) << " port: " << ntohs(eqnc->GetrPort()) << endl;
-			Client* client = new Client(eqnc);
+			in.s_addr = eqs->GetRemoteIP();
+			cout << Timer::GetCurrentTime() << " New client from ip: " << inet_ntoa(in) << " port: " << ntohs(eqs->GetRemotePort()) << endl;
+			Client* client = new Client(eqs);
 			// @merth: client->zoneattempt=0;
 			client_list.Add(client);
 		}
@@ -324,7 +333,7 @@ int main(int argc, char** argv) {
 		while ((tcpc = tcps.NewQueuePop())) {
 			struct in_addr in;
 			in.s_addr = tcpc->GetrIP();
-			cout << Timer::GetCurrentTime() << " New TCP connection: " << inet_ntoa(in) << ":" << tcpc->GetrPort() << endl;
+			cout << Timer::GetCurrentTime() << " New TCP connection: " << inet_ntoa(in) << ":" << tcpc->GetrIP() << endl;
 			console_list.Add(new Console(tcpc));
 		}
 		//check for timeouts in other threads
@@ -354,7 +363,7 @@ int main(int argc, char** argv) {
 	console_list.KillAll();
 	zoneserver_list.KillAll();
 	tcps.Close();
-	eqns.Close();
+	eqsf.Close();
 #if 0
 #if defined(SHAREMEM) && !defined(WIN32)
 		for (int ipc_files = 0; ipc_files <= 4; ipc_files++) {
@@ -560,6 +569,12 @@ bool NetConnection::ReadLoginINI() {
 				if (Seperator::IsNumber(buf) && atoi(buf) > 0 && atoi(buf) < 0xFFFF) {
 					DEFAULTSTATUS = atoi(buf);
 				}
+			}
+			if (!strncasecmp (type, "worldshortname", 14)) {
+				snprintf(worldshortname, sizeof(worldshortname), "%s", buf);
+				items[2] = 1;
+				if(strlen(worldshortname)<3)
+					cout << "Invalid worldshortname, please edit LoginServer.ini.  Short server name must be at least 3 characters." << endl;
 			}
 		}
 	}

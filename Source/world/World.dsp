@@ -43,7 +43,8 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /D "NDEBUG" /D "WORLD" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /D "IRC" /FR /YX /FD /c
+# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /D "NDEBUG" /D "IRC" /D "WIN32" /D "i386" /D "WORLD" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /FD /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -51,7 +52,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo /o"../Build/World/World.bsc"
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/World.map" /debug /machine:I386 /nodefaultlib:"libc"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/World.map" /debug /machine:I386 /nodefaultlib:"libc" /libpath:"c:\eqemu\lib" /libpath:"c:\mysql\lib\opt"
 # SUBTRACT LINK32 /pdb:none
 
 !ELSEIF  "$(CFG)" == "World - Win32 Debug"
@@ -68,7 +69,8 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /Gm /GX /ZI /Od /D "WORLD" /D "_DEBUG" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /Gm /GX /ZI /Od /I "c:\mysql\include" /I "c:\eqemu\include" /D "_DEBUG" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /FD /GZ /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -76,7 +78,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /debug /machine:I386 /nodefaultlib:"LIBCMT" /nodefaultlib:"LIBC" /out:"../build/WorldDebug.exe" /pdbtype:sept
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib mysqlclient.lib /nologo /subsystem:console /debug /machine:I386 /nodefaultlib:"LIBCMT" /nodefaultlib:"LIBC" /out:"../build/WorldDebug.exe" /pdbtype:sept /libpath:"c:\eqemu\lib" /libpath:"c:\mysql\lib\opt"
 # SUBTRACT LINK32 /pdb:none /map
 
 !ELSEIF  "$(CFG)" == "World - Win32 Raid Addicts"
@@ -93,7 +95,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /D "NDEBUG" /D "WORLD" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /YX /FD /c
+# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /D "NDEBUG" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -101,7 +103,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo /o"../Build/World/World.bsc"
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/World.map" /debug /machine:I386 /nodefaultlib:"libc"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/World.map" /debug /machine:I386 /nodefaultlib:"libc" /libpath:"c:\eqemu\lib" /libpath:"c:\mysql\lib\opt"
 # SUBTRACT LINK32 /pdb:none
 
 !ENDIF 
@@ -176,6 +178,10 @@ SOURCE=..\common\Condition.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\CRC16.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\crc32.cpp
 # End Source File
 # Begin Source File
@@ -211,7 +217,15 @@ SOURCE=..\common\debug.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\emu_opcodes.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\EMuShareMem.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQChatPacket.cpp
 # End Source File
 # Begin Source File
 
@@ -219,11 +233,35 @@ SOURCE=..\common\EQEMuError.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\EQNetwork.cpp
+SOURCE=..\common\EQLoginPacket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQMailPacket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQPacket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQStream.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQStreamFactory.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=..\common\eqtime.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQWorldPacket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQZonePacket.cpp
 # End Source File
 # Begin Source File
 
@@ -259,6 +297,10 @@ SOURCE=..\common\Mutex.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\opcodemgr.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\packet_dump.cpp
 # End Source File
 # Begin Source File
@@ -276,6 +318,10 @@ SOURCE=..\common\races.cpp
 # Begin Source File
 
 SOURCE=..\common\serverinfo.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\SharedLibrary.cpp
 # End Source File
 # Begin Source File
 
@@ -339,7 +385,19 @@ SOURCE=..\common\EQCheckTable.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\EQNetwork.h
+SOURCE=..\common\EQPacket.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQStream.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQStreamFactory.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQStreamLocator.h
 # End Source File
 # Begin Source File
 
@@ -380,6 +438,10 @@ SOURCE=..\common\moremath.h
 # Begin Source File
 
 SOURCE=..\common\Mutex.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\opcodemgr.h
 # End Source File
 # Begin Source File
 

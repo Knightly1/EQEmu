@@ -17,10 +17,10 @@ int WLD_GetObjectMesh(wld_object *obj, char *name, Mesh **mesh);
 
 uchar encarr[] = {0x95, 0x3A, 0xC5, 0x2A, 0x95, 0x7A, 0x95, 0x6A};
 
-inline void decode(uchar *str, int len) { int i; for(i = 0; i < len; ++i) str[i] ^= encarr[i % 8]; }
+void decode(uchar *str, int len) { int i; for(i = 0; i < len; ++i) str[i] ^= encarr[i % 8]; }
 
 FRAGMENT_FUNC(Data03) {
-  int i, pos, nameLen;
+  int i, pos, nameLen,r;
   Texture *tex = (Texture *) malloc(sizeof(Texture));
   tex->count = *((long *) buf) + 1;
   tex->flags = (int *) malloc(sizeof(int) * tex->count);
@@ -37,7 +37,6 @@ FRAGMENT_FUNC(Data03) {
     tex->filenames[i] = (char *) malloc(nameLen + 1);
     memcpy(tex->filenames[i], (char *) (buf + pos + sizeof(short)), nameLen + 1);
     decode(tex->filenames[i], nameLen);
-    int r;
     for(r = 0; r < nameLen; r++) {
     	(tex->filenames[i])[r] = tolower((tex->filenames[i])[r]);
     }

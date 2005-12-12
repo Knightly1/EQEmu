@@ -33,7 +33,7 @@
 void CatchSignal(int sig_num);
 void UpdateWindowTitle(char* iNewTitle);
 
-#define PORT		9000
+#define EQ_WORLD_PORT 9000		//mandated by the client
 #define LOGIN_PORT	5997
 
 class NetConnection

@@ -1,4 +1,5 @@
 #include "../common/debug.h"
+#include "../common/EQWorldPacket.h"
 #include <iostream>
 using namespace std;
 #include <iomanip>
@@ -30,7 +31,7 @@ using namespace std;
 #endif
 
 #include "client.h"
-#include "../common/eq_opcodes.h"
+#include "../common/emu_opcodes.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/packet_dump.h"
 #include "../common/database.h"
@@ -53,11 +54,12 @@ extern uint32 numclients;
 extern NetConnection net;
 extern volatile bool RunLoops;
 
-Client::Client(EQNetworkConnection* ieqnc) {
-	eqnc = ieqnc;
-	eqnc->SetDataRate(7);
-	ip = eqnc->GetrIP();
-	port = ntohs(eqnc->GetrPort());
+Client::Client(EQStream* ieqs) {
+	eqs = ieqs;
+	// Live does not send datarate as of 3/11/2005
+	//eqs->SetDataRate(7);
+	ip = eqs->GetrIP();
+	port = ntohs(eqs->GetrPort());
 
 	autobootup_timeout = new Timer(10000);
 	autobootup_timeout->Disable();
@@ -65,8 +67,6 @@ Client::Client(EQNetworkConnection* ieqnc) {
 	CLE_keepalive_timer = new Timer(15000);
 	connect = new Timer(1000);
 	connect->Disable();
-	firstlogin = true;
-	realfirstlogin = false;
 	seencharsel = false;
 	cle = 0;
 	zoneID = 0;
@@ -79,11 +79,58 @@ Client::Client(EQNetworkConnection* ieqnc) {
 Client::~Client() {
 	if (RunLoops && cle && zoneID == 0)
 		cle->SetOnline(CLE_Status_Offline);
-	eqnc->Free();
+	
+	//let the stream factory know were done with this stream
+	eqs->Close();
+	eqs->ReleaseFromUse();
+	eqs = NULL;
+	
 	safe_delete(autobootup_timeout);
 	safe_delete(CLE_keepalive_timer);
 	safe_delete(connect);
 	numclients--;
+}
+
+void Client::SendLogServer()
+{
+	EQWorldPacket *outapp = new EQWorldPacket(OP_LogServer, sizeof(LogServer_Struct)); 
+	LogServer_Struct *l=(LogServer_Struct *)outapp->pBuffer;
+	char *wsn=net.GetWorldShortName();
+	memcpy(l->worldshortname,wsn,strlen(wsn));
+	QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+void Client::SendEnterWorld(string name)
+{
+char char_name[32]= { 0 };
+	if (pZoning && database.GetLiveChar(GetAccountID(), char_name)) {
+		if(database.GetAccountIDByChar(char_name) != GetAccountID()) {
+			eqs->Close();
+			return;
+		} else {
+			cout << "Telling client to continue session with: " << char_name << endl;
+		}
+	}
+
+	EQWorldPacket *outapp = new EQWorldPacket(OP_EnterWorld, strlen(char_name)+1); 
+	memcpy(outapp->pBuffer,char_name,strlen(char_name)+1);
+	QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+void Client::SendExpansionInfo() {
+	EQWorldPacket *outapp = new EQWorldPacket(OP_ExpansionInfo, 4);
+	uint32 *v = (uint32 *) outapp->pBuffer;
+	char val[20] = {0};
+	if (database.GetVariable("Expansions", val, 20)) {
+		*v = atoi(val);
+	}
+	else {
+		*v = 0x1FF;
+	}
+	QueuePacket(outapp);
+	safe_delete(outapp);
 }
 
 void Client::SendCharInfo() {
@@ -93,98 +140,84 @@ void Client::SendCharInfo() {
 	
 	seencharsel = true;
 	
-	// Send OP_EnterWorld
-	APPLAYER* outapp = 0;
-				char cname[64] = {0};
-				if (!firstlogin && database.GetLiveChar(GetAccountID(), cname)) {
-					if(database.GetAccountIDByChar(cname) != GetAccountID())
-					eqnc->Close();
 
-					cout << "Telling client to continue session with: " << cname << endl;
-					outapp = new APPLAYER(OP_EnterWorld, strlen(cname)+1);
-					memcpy(outapp->pBuffer, cname, strlen(cname));
-					QueuePacket(outapp);
-					safe_delete(outapp);
-				}
-				else {
-					outapp = new APPLAYER(OP_EnterWorld, 1);
-					QueuePacket(outapp);
-					safe_delete(outapp);
-				}
-
-	if(firstlogin)
-	{
-	// Send OP_ExpansionInfo
-	outapp = new APPLAYER(OP_ExpansionInfo, 4);
-	char val[20] = {0};
-	if (database.GetVariable("Expansions", val, 20)) {
-		outapp->pBuffer[0] = atoi(val);
-	}
-	else {
-		outapp->pBuffer[0] = 0xFF;
-	}
-	QueuePacket(outapp);
-	safe_delete(outapp);
-	}
-	
 	// Send OP_SendCharInfo
-	outapp = new APPLAYER(OP_SendCharInfo, sizeof(CharacterSelect_Struct));
+	EQWorldPacket *outapp = new EQWorldPacket(OP_SendCharInfo, sizeof(CharacterSelect_Struct));
 	CharacterSelect_Struct* cs = (CharacterSelect_Struct*)outapp->pBuffer;
 	
 	database.GetCharSelectInfo(GetAccountID(), cs);
-	outapp->Deflate();
 	
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
 
-bool Client::HandlePacket(const APPLAYER *app) {
+void Client::SendPostEnterWorld() {
+	EQWorldPacket *outapp = new EQWorldPacket(OP_PostEnterWorld, 1);
+	outapp->size=0;
+	QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+bool Client::HandlePacket(const EQWorldPacket *app) {
+	EmuOpcode opcode = app->GetOpcode();
 	#if DEBUG == 9
-		cout << "Received 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec << endl;
+		cout << "Received 0x" << hex << setfill('0') << setw(4) << opcode << dec << endl;
 		DumpPacket(app);
 	#endif
 	
 	bool ret = true;
 	
-	if (!eqnc->CheckActive()) {
+	if (!eqs->CheckActive()) {
 		cout << "Client disconnected" << endl;
 		return false;
 	}
 	
-	if (GetAccountID() == 0 && app->GetOpcode() != OP_SendLoginInfo) {
+	if (GetAccountID() == 0 && opcode != OP_SendLoginInfo) {
 		// Got a packet other than OP_SendLoginInfo when not logged in
-		LogFile->write(EQEMuLog::Error, "Expecting OP_SendLoginInfo, got %x", app->GetOpcode());
+		LogFile->write(EQEMuLog::Error, "Expecting OP_SendLoginInfo, got %x", opcode);
 		return false;
 	}
-	else if (app->GetOpcode() == OP_AckPacket) {
+	else if (opcode == OP_AckPacket) {
 		return true;
 	}
 	
 	#ifdef MERTHALICIOUS
 		//@merth: this just here temporarily for my debugging
-		cout << "Received 0x" << hex << setw(4) << setfill('0') << app->GetOpcode() << ", size=" << dec << app->size << endl;
+		cout << "Received 0x" << hex << setw(4) << setfill('0') << opcode << ", size=" << dec << app->size << endl;
 	#endif
 	
-	switch(app->GetOpcode())
+	switch(opcode)
 	{
 		case OP_CrashDump:
 			break;
 		case OP_SendLoginInfo:
 		{
-			//DumpPacket(app);
-			// Quagmire - max len for name is 18, pass 15
-			char name[19] = {0};
-			char password[16] = {0};
-			strncpy(name, (char*)app->pBuffer,18);
-			if (app->size < strlen(name)+2) {
+			if (app->size != sizeof(LoginInfo_Struct)) {
 				ret = false;
 				break;
 			}
+
+			LoginInfo_Struct *li=(LoginInfo_Struct *)app->pBuffer;
+
+			// Quagmire - max len for name is 18, pass 15
+			char name[19] = {0};
+			char password[16] = {0};
+			strncpy(name, (char*)li->login_info,18);
+			strncpy(password, (char*)&(li->login_info[strlen(name)+1]), 15);
+
+			if (strlen(password) <= 1) {
+				// TODO: Find out how to tell the client wrong username/password
+				cerr << "Login without a password" << endl;
+				ret = false;
+				break;
+			}
+
+			pZoning=(li->zoning==1);
+
 #ifdef IPBASED_AUTH_HACK
 			struct in_addr tmpip;
 			tmpip.s_addr = ip;
 #endif
-			strncpy(password, (char*)&app->pBuffer[strlen(name)+1], 15);
 			int32 id=0;
 			bool minilogin = loginserver.MiniLogin();
 			if(minilogin){
@@ -196,111 +229,69 @@ bool Client::HandlePacket(const APPLAYER *app) {
 				id=atoi(&name[3]);
 			else
 				id=atoi(name);
-			if (id > 0 && id < 100000) {
 #ifdef IPBASED_AUTH_HACK
-				if ((cle = zoneserver_list.CheckAuth(inet_ntoa(tmpip), password)))
+			if ((cle = zoneserver_list.CheckAuth(inet_ntoa(tmpip), password)))
 #else
-				if (loginserver.Connected() == false) {
-					cout << "Error: Login server login while not connected to login server." << endl;
-					ret = false;
-					break;
-				}
-				if ((minilogin && (cle = zoneserver_list.CheckAuth(id,password,ip))) || (cle = zoneserver_list.CheckAuth(id, password)))
-#endif
-				{
-					if (cle->AccountID() == 0 || (!minilogin && cle->LSID()==0)) {
-						cout << "ERROR! ID is 0!!!\nIs this server connected to minilogin?\n";
-						if(!minilogin)
-							cout << "If so you forget the minilogin variable...\n";
-						else
-							cout << "Could not find a minilogin account, verify ip address logging into minilogin is the same that is in your account table.\n";
-						ret = false;
-						break;
-					}
-					
-					
-					cle->SetOnline();
-					
-					cout << "Logged in: ";
-					if (firstlogin)
-						cout << "FirstLogin ";
-					if(minilogin){
-						net.UpdateStats = false;
-						cout << "Account #" << cle->AccountID() << ": " << cle->AccountName() << endl;
-					}
-					else
-						cout << "LS#" << cle->LSID() << ": " << cle->LSName() << endl;
-					if(net.UpdateStats){
-						ServerPacket* pack = new ServerPacket;
-						pack->opcode = ServerOP_LSPlayerJoinWorld;
-						pack->size = sizeof(ServerLSPlayerJoinWorld_Struct);
-						pack->pBuffer = new uchar[pack->size];
-						memset(pack->pBuffer,0,pack->size);
-						ServerLSPlayerJoinWorld_Struct* join =(ServerLSPlayerJoinWorld_Struct*)pack->pBuffer;
-						strcpy(join->key,GetLSKey());
-						join->lsaccount_id = GetLSID();
-						loginserver.SendPacket(pack);
-						safe_delete(pack);
-					}
-					
-					APPLAYER* outapp;
-					if(firstlogin)
-					{
-						if(!connect->Enabled())
-							connect->Start();
-						// Send OPCode: OP_LogServer
-						outapp = new APPLAYER(OP_LogServer, sizeof(LogServer_Struct));
-						QueuePacket(outapp);
-						safe_delete(outapp);
-					}
-					else{
-						SendGuildList();// Send OPCode: OP_GuildsList
-						SendApproveWorld();
-					}
-				}
-				else {
-					// TODO: Find out how to tell the client wrong username/password
-					//cerr << "Bad/expired session key: " << name << ", k=" << password << endl;
-					cerr << "Bad/expired session key: " << name << endl;
-					ret = false;
-					break;
-				}
-			}
-			else if (strlen(password) <= 1) {
-				// TODO: Find out how to tell the client wrong username/password
-				cerr << "Login without a password" << endl;
+			if (loginserver.Connected() == false && !pZoning) {
+				cout << "Error: Login server login while not connected to login server." << endl;
 				ret = false;
 				break;
 			}
-			else {
-#ifdef IPBASED_AUTH_HACK
-				cle = zoneserver_list.CheckAuth(inet_ntoa(tmpip), password);
-#else
-				cle = zoneserver_list.CheckAuth(name, password);
+			if ((minilogin && (cle = zoneserver_list.CheckAuth(id,password,ip))) || (cle = zoneserver_list.CheckAuth(id, password)))
 #endif
-				if (cle == 0)
-				{
-					// TODO: Find out how to tell the client wrong username/password
-					struct in_addr	in;
-					in.s_addr = ip;
-					cerr << inet_ntoa(in) << ": Wrong name/pass: name='" << name << "'" << endl;
+			{
+				if (cle->AccountID() == 0 || (!minilogin && cle->LSID()==0)) {
+					cout << "ERROR! ID is 0!!!\nIs this server connected to minilogin?\n";
+					if(!minilogin)
+						cout << "If so you forget the minilogin variable...\n";
+					else
+						cout << "Could not find a minilogin account, verify ip address logging into minilogin is the same that is in your account table.\n";
 					ret = false;
 					break;
 				}
-				cout << "Logged in: Local: " << name << endl;
-				APPLAYER* outapp; 
-				if (firstlogin) 
-				{ 
-				// Send OPCode: OP_LogServer 
-				outapp = new APPLAYER(OP_LogServer, sizeof(LogServer_Struct)); 
-				QueuePacket(outapp); 
-				delete outapp; 
-				} 
-				// Send OPCode: OP_GuildsList 
-				SendGuildList(); 
+				
+				cle->SetOnline();
+				
+				cout << "Logged in: " << (pZoning ? "(Zoning) " : "(CharSel) ");
+				
+				if(minilogin){
+					net.UpdateStats = false;
+					cout << "Account #" << cle->AccountID() << ": " << cle->AccountName() << endl;
+				}
+				else
+					cout << "LS#" << cle->LSID() << ": " << cle->LSName() << endl;
+				if(net.UpdateStats){
+					ServerPacket* pack = new ServerPacket;
+					pack->opcode = ServerOP_LSPlayerJoinWorld;
+					pack->size = sizeof(ServerLSPlayerJoinWorld_Struct);
+					pack->pBuffer = new uchar[pack->size];
+					memset(pack->pBuffer,0,pack->size);
+					ServerLSPlayerJoinWorld_Struct* join =(ServerLSPlayerJoinWorld_Struct*)pack->pBuffer;
+					strcpy(join->key,GetLSKey());
+					join->lsaccount_id = GetLSID();
+					loginserver.SendPacket(pack);
+					safe_delete(pack);
+				}
+				
+				if (!pZoning)
+					SendGuildList();
+				SendLogServer();
 				SendApproveWorld();
+				SendEnterWorld(cle->name());
+				SendPostEnterWorld();
+				if (!pZoning) {
+					SendExpansionInfo();
+					SendCharInfo();
+				}
 			}
-			
+			else {
+				// TODO: Find out how to tell the client wrong username/password
+				//cerr << "Bad/expired session key: " << name << ", k=" << password << endl;
+				cerr << "Bad/expired session key: " << name << endl;
+				ret = false;
+				break;
+			}
+
 			if (!cle)
 				break;
 			cle->SetIP(GetIP());
@@ -322,20 +313,26 @@ bool Client::HandlePacket(const APPLAYER *app) {
 		    cout << " race:" << (int)race;
 		    cout << " class:" << (int)clas << endl;
 
-			APPLAYER *outapp;
-			outapp = new APPLAYER;
+			EQWorldPacket *outapp;
+			outapp = new EQWorldPacket;
 			outapp->SetOpcode(OP_ApproveName);
 		   	outapp->pBuffer = new uchar[1];
 		   	outapp->size = 1;
+		   	bool valid;
 			if (database.CheckNameFilter(name)) {
-				outapp->pBuffer[0] = 0;
+				valid = false;
+			}
+			else if(name[0] < 'A' && name[0] > 'Z') {
+				//name must begin with an upper-case letter.
+				valid = false;
 			}
 			else if (database.ReserveName(GetAccountID(), name)) {
-				outapp->pBuffer[0] = 1;
+				valid = true;
 			}
 			else {
-				outapp->pBuffer[0] = 0;
+				valid = false;
 			}
+			outapp->pBuffer[0] = valid? 1 : 0;
 			QueuePacket(outapp);
 			safe_delete(outapp);
 		    break;			
@@ -445,7 +442,7 @@ bool Client::HandlePacket(const APPLAYER *app) {
 			if(OPCharCreate(cc) == false)
 			{
 				database.DeleteCharacter(cc->name);
-				APPLAYER *outapp = new APPLAYER(OP_ApproveName, 1);
+				EQWorldPacket *outapp = new EQWorldPacket(OP_ApproveName, 1);
 				outapp->pBuffer[0] = 0;
 				QueuePacket(outapp);
 				safe_delete(outapp);
@@ -459,30 +456,31 @@ bool Client::HandlePacket(const APPLAYER *app) {
 		{
 			if (GetAccountID() == 0) {
 				cerr << "Enter world with no logged in account" << endl;
-				eqnc->Close();
+				eqs->Close();
 				break;
 			}
 			if(GetAdmin() < 0)
 			{
 				cerr << "Banned or suspended." << endl;
-				eqnc->Close();
+				eqs->Close();
 				break;
 			}
-			strncpy(char_name, (char*)app->pBuffer, 64);
+			EnterWorld_Struct *ew=(EnterWorld_Struct *)app->pBuffer;
+			strncpy(char_name, ew->name, 64);
 			
-			APPLAYER *outapp;
+			EQWorldPacket *outapp;
 			int32 tmpaccid = 0;
 			charid = database.GetCharacterInfo(char_name, &tmpaccid, &zoneID);
 			if (charid == 0 || tmpaccid != GetAccountID()) {
 				cerr << "Could not get CharInfo for " << char_name << endl;
-				eqnc->Close();
+				eqs->Close();
 				break;
 			}
 			
 			// Make sure this account owns this character
 			if (tmpaccid != GetAccountID()) {
 				cerr << "This account does not own this character" << endl;
-				eqnc->Close();
+				eqs->Close();
 				break;
 			}
 			
@@ -492,61 +490,66 @@ bool Client::HandlePacket(const APPLAYER *app) {
 				LogFile->write(EQEMuLog::Error, "Zone not found in database zone_id=%i, moveing char to arena character:%s", zoneID, char_name);
 			}
 			
-			if (firstlogin) {
-				outapp = new APPLAYER(OP_MOTD);
-				char tmp[500] = {0};
-				if (database.GetVariable("MOTD", tmp, 500)) {
-					outapp->size = strlen(tmp)+1;
-					outapp->pBuffer = new uchar[outapp->size];
-					memset(outapp->pBuffer,0,outapp->size);
-					strcpy((char*)outapp->pBuffer, tmp);
-					
-					if(realfirstlogin)
-						database.SetGroupID(char_name,0);
-					else{
-						int32 groupid=database.GetGroupID(char_name);
-						if(groupid>0){
-							char* leader=0;
-							char leaderbuf[64]={0};
-							if((leader=database.GetGroupLeaderForLogin(char_name,leaderbuf)) && strlen(leader)>1){
-								APPLAYER* outapp3 = new APPLAYER(OP_GroupUpdate,sizeof(GroupJoin_Struct));
-								GroupJoin_Struct* gj=(GroupJoin_Struct*)outapp3->pBuffer;
-								gj->action=8;
-								strcpy(gj->yourname,char_name);
-								strcpy(gj->membername,leader);
-								QueuePacket(outapp3);
-								safe_delete(outapp3);
-							}
-						}
+			if(!pZoning)
+				database.SetGroupID(char_name,0);
+			else{
+				int32 groupid=database.GetGroupID(char_name);
+				if(groupid>0){
+					char* leader=0;
+					char leaderbuf[64]={0};
+					if((leader=database.GetGroupLeaderForLogin(char_name,leaderbuf)) && strlen(leader)>1){
+						EQWorldPacket* outapp3 = new EQWorldPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+						GroupJoin_Struct* gj=(GroupJoin_Struct*)outapp3->pBuffer;
+						gj->action=8;
+						strcpy(gj->yourname,char_name);
+						strcpy(gj->membername,leader);
+						QueuePacket(outapp3);
+						safe_delete(outapp3);
 					}
-				} else {
-					//char DefaultMOTD[] = "Welcome to EQ Emu(tm)!";
-					//outapp->size = strlen(DefaultMOTD) + 1;
-					//outapp->pBuffer = new uchar[outapp->size];
-					//strcpy((char*)outapp->pBuffer, DefaultMOTD);
-					// Null Message of the Day. :)
-					outapp->size = 1;
-					outapp->pBuffer = new uchar[outapp->size];
-					outapp->pBuffer[0] = 0;
 				}
-				QueuePacket(outapp);
-				safe_delete(outapp);
 			}
-			APPLAYER *outapp2 = new APPLAYER(OP_SetChatServer);
+
+			outapp = new EQWorldPacket(OP_MOTD);
+			char tmp[500] = {0};
+			if (database.GetVariable("MOTD", tmp, 500)) {
+				outapp->size = strlen(tmp)+1;
+				outapp->pBuffer = new uchar[outapp->size];
+				memset(outapp->pBuffer,0,outapp->size);
+				strcpy((char*)outapp->pBuffer, tmp);
+					
+			} else {
+				// Null Message of the Day. :)
+				outapp->size = 1;
+				outapp->pBuffer = new uchar[outapp->size];
+				outapp->pBuffer[0] = 0;
+			}
+			QueuePacket(outapp);
+			safe_delete(outapp);
+
+			EQWorldPacket *outapp2 = new EQWorldPacket(OP_SetChatServer);
 			char buffer[112];
 			sprintf(buffer,"%s,%i,%s.%s,%s",net.GetChatAddress(),net.GetChatPort(),net.GetWorldShortName(),this->GetCharName(),"067a79d4");
 			outapp2->size=strlen(buffer)+1;
 			outapp2->pBuffer = new uchar[outapp2->size];
 			memcpy(outapp2->pBuffer,buffer,outapp2->size);
 			QueuePacket(outapp2);
+			safe_delete(outapp);
+
+			outapp2 = new EQWorldPacket(OP_SetChatServer);
+			sprintf(buffer,"192.168.0.5,7775,%s.%s,%s",net.GetWorldShortName(),this->GetCharName(),"067a79d4");
+			outapp2->size=strlen(buffer)+1;
+			outapp2->pBuffer = new uchar[outapp2->size];
+			memcpy(outapp2->pBuffer,buffer,outapp2->size);
+
+			outapp2->SetOpcode(OP_SetChatServer2);
+			QueuePacket(outapp2);
+			safe_delete(outapp);
 			//DumpPacket(outapp2);
 			
-			firstlogin = false;
 			EnterWorld();
 			break;
 		}
 		case OP_LoginComplete:{
-			realfirstlogin=true;
 			break;
 		}
 		case OP_DeleteCharacter: {
@@ -557,11 +560,6 @@ bool Client::HandlePacket(const APPLAYER *app) {
 		}
 		case OP_ApproveWorld:
 		{
-			if(seencharsel)
-				firstlogin = false;
-			else
-				firstlogin = true;
-			SendCharInfo();
 			break;
 		}
 		case OP_World_Client_CRC1:
@@ -569,8 +567,12 @@ bool Client::HandlePacket(const APPLAYER *app) {
 		case OP_WearChange: { // User has selected a different character
 			break;
 		}
+		case OP_WorldComplete: {
+			eqs->SendDisconnect();
+			break;
+		}
 		default: {
-			cout << "Received unknown opcode: 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec;
+			cout << "Received unknown opcode: 0x" << hex << setfill('0') << setw(4) << opcode << dec;
 			cout << " size:" << app->size << " bytes" << endl;
 #if DEBUG >= 5
 			DumpPacket(app);
@@ -586,7 +588,6 @@ bool Client::HandlePacket(const APPLAYER *app) {
 bool Client::Process() {
 	bool ret = true;
 	//bool sendguilds = true;
-	//bool firstlogin = true;
     sockaddr_in to;
 
 	memset((char *) &to, 0, sizeof(to));
@@ -608,14 +609,14 @@ bool Client::Process() {
 	}
     
 	/************ Get all packets from packet manager out queue and process them ************/
-	APPLAYER *app = 0;
-	while(ret && (app = eqnc->PopPacket())) {
+	EQWorldPacket *app = 0;
+	while(ret && (app = (EQWorldPacket *)eqs->PopPacket())) {
 		ret = HandlePacket(app);
 
 		delete app;
 	}    
 
-	if (!eqnc->CheckActive()) {
+	if (!eqs->CheckActive()) {
 		if(net.UpdateStats){
 			ServerPacket* pack = new ServerPacket;
 			pack->opcode = ServerOP_LSPlayerLeftWorld;
@@ -666,11 +667,13 @@ void Client::EnterWorld(bool TryBootup) {
 	
 	cle->SetChar(charid, char_name);
 	database.UpdateLiveChar(char_name, GetAccountID());
-	cout << "Enter world: " << char_name << ": " << database.GetZoneName(zoneID, true) << " (" << zoneID << ")" << endl;
+	cout << "Enter world: " << char_name << ": " << database.GetZoneName(zoneID, true) << " (" << zoneID << ")" << (seencharsel?" (EnterWorld)":" (ZoneToZone)")<< endl;
 //	database.SetAuthentication(account_id, char_name, zone_name, ip);
 	
 	if (seencharsel) {
 		if (GetAdmin() < 80 && zoneserver_list.IsZoneLocked(zoneID)) {
+			cout << "Enter world for " << char_name << " failed. zone is locked." << endl;
+			bool locked = zoneserver_list.IsZoneLocked(zoneID);
 			ZoneUnavail();
 			return;
 		}
@@ -707,7 +710,7 @@ void Client::Clearance(sint8 response)
         return;
     }
 	
-	APPLAYER* outapp;
+	EQWorldPacket* outapp;
 	
     if (zs->GetCAddress() == NULL) {
         cout << "Unable to do zs->GetCAddress() in Client::Clearance!!" << endl;
@@ -731,17 +734,19 @@ void Client::Clearance(sint8 response)
 	// @bp This is the chat server
 	/*
 	char packetData[] = "64.37.148.34.9876,MyServer,Testchar,23cd2c95";
-	outapp = new APPLAYER(OP_0x0282, sizeof(packetData));
+	outapp = new EQWorldPacket(OP_0x0282, sizeof(packetData));
 	strcpy((char*)outapp->pBuffer, packetData);
 	QueuePacket(outapp);
 	delete outapp;
 	*/
 	
 	// Send zone server IP data
-	outapp = new APPLAYER(OP_ZoneServerInfo, sizeof(ZoneServerInfo_Struct));
+	outapp = new EQWorldPacket(OP_ZoneServerInfo, sizeof(ZoneServerInfo_Struct));
 	ZoneServerInfo_Struct* zsi = (ZoneServerInfo_Struct*)outapp->pBuffer;
     strcpy(zsi->ip, zs->GetCAddress());
-	zsi->port = ntohs(zs->GetCPort());
+    //strcpy(zsi->ip, "199.108.5.10");
+    cout << "Zoneport=" << zs->GetCPort() << endl;
+	zsi->port =zs->GetCPort();
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	
@@ -750,7 +755,7 @@ void Client::Clearance(sint8 response)
 }
 
 void Client::ZoneUnavail() {
-	APPLAYER* outapp = new APPLAYER(OP_ZoneUnavail, sizeof(ZoneUnavail_Struct));
+	EQWorldPacket* outapp = new EQWorldPacket(OP_ZoneUnavail, sizeof(ZoneUnavail_Struct));
 	ZoneUnavail_Struct* ua = (ZoneUnavail_Struct*)outapp->pBuffer;
 	const char* zonename = database.GetZoneName(zoneID);
 	if (zonename)
@@ -771,7 +776,7 @@ bool Client::GenPassKey(char* key) {
 	return true;
 }
 
-void Client::QueuePacket(const APPLAYER* app, bool ack_req) {
+void Client::QueuePacket(const EQWorldPacket* app, bool ack_req) {
 	//#if DEBUG == 9
 		#ifdef MERTHALICIOUS // just temporary
 			cout << "Sending: 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec << endl;
@@ -780,27 +785,24 @@ void Client::QueuePacket(const APPLAYER* app, bool ack_req) {
 	//#endif
 	
 	ack_req = true;	// It's broke right now, dont delete this line till fix it. =P
-	if (app != 0) {
-		if (app->size > 49156) {
-			cout << "WARNING: abnormal packet size. o=0x" << hex << app->GetOpcode() << dec << ", s=" << app->size << endl;
-		}
-	}
-	eqnc->QueuePacket(app, ack_req);
+	eqs->QueuePacket(app, ack_req);
 }
 
 void Client::SendGuildList() {
-	APPLAYER *outapp;
-	outapp = new APPLAYER(OP_GuildsList, sizeof(GuildsList_Struct));
+	EQWorldPacket *outapp;
+	outapp = new EQWorldPacket(OP_GuildsList, sizeof(GuildsList_Struct));
+	memset(outapp->pBuffer,0,sizeof(GuildsList_Struct));
 	GuildsList_Struct* gl = (GuildsList_Struct*) outapp->pBuffer;
+	uint32 max_id=database.GetMaxGuildID();
+	const char *ptr;
 	
-	for (int i=0; i < 512; i++) {
-		if (guilds[i].databaseID != 0) {
-			strcpy(gl->Guilds[i].name, guilds[i].name);
+	for (uint32 i=0; i < max_id; i++) {
+		if ((ptr=database.GetGuild(i+1))!=NULL) {
+			strcpy(gl->Guilds[i].name, ptr);
 		}
 	}
-	outapp->Deflate();
 	this->QueuePacket(outapp);
-	delete outapp;
+	//delete outapp;
 }
 
 ClientList::ClientList() {
@@ -818,7 +820,7 @@ Client* ClientList::FindByAccountID(int32 account_id) {
 
 	iterator.Reset();
 	while(iterator.MoreElements()) {
-		LogFile->write(EQEMuLog::Debug, "World: ClientList[0x%08x]::FindByAccountID(0x%08x) iterator.GetData()[0x%08x]", (int32) this, account_id, iterator.GetData());
+		LogFile->write(EQEMuLog::Debug, "World: ClientList[0x%08x]::FindByAccountID(%p) iterator.GetData()[%p]", this, account_id, iterator.GetData());
 		if (iterator.GetData()->GetAccountID() == account_id) {
 			Client* tmp = iterator.GetData();
 			return tmp;
@@ -867,6 +869,8 @@ void ClientList::Process() {
 			struct in_addr  in;
 			in.s_addr = iterator.GetData()->GetIP();
 			cout << "Removing client from ip:" << inet_ntoa(in) << " port:" << iterator.GetData()->GetPort() << endl;
+//the client destructor should take care of this.
+//			iterator.GetData()->Free();
 			iterator.RemoveCurrent();
 		}
 		else
@@ -907,17 +911,33 @@ void ClientList::RemoveCLEReferances(ClientListEntry* cle) {
 // @merth: I have no idea what this struct is for, so it's hardcoded for now
 void Client::SendApproveWorld()
 {
-	APPLAYER* outapp;
+	EQWorldPacket* outapp;
 	
 	// Send OPCode: OP_ApproveWorld, size: 544
-	outapp = new APPLAYER(OP_ApproveWorld, sizeof(ApproveWorld_Struct));
+	outapp = new EQWorldPacket(OP_ApproveWorld, sizeof(ApproveWorld_Struct));
 	ApproveWorld_Struct* aw = (ApproveWorld_Struct*)outapp->pBuffer;
-	uchar foo[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x95,0x5E,0x30,0xA5,0xCA,0xD4,0xEA,0xF5,
-0xCB,0x14,0xFC,0xF7,0x78,0xE2,0x73,0x15,0x90,0x17,0xCE,0x7A,0xEB,0xEC,0x3C,0x34,
-0x5C,0x6D,0x10,0x05,0xFC,0xEA,0xED,0x19,0xC5,0x0D,0x7A,0x82,0x17,0xCC,0xCC,0x71,
-0x56,0x38,0xDF,0x78,0x8D,0xE6,0x44,0xD3,0x6F,0xDB,0xE3,0xCF,0x21,0x30,0x75,0x2F,
-0xCD,0xDC,0xE9,0xB4,0xA4,0x4E,0x58,0xDE,0xEE,0x54,0xDD,0x87,0xDA,0xE9,0xC6,0xC8,
-0x02,0xDD,0xC4,0xFD,0x94,0x36,0x32,0xAD,0x1B,0x39,0x0F,0x00,0x00,0x00,0x00,0x00,
+	uchar foo[] = {
+//0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x95,0x5E,0x30,0xA5,0xCA,0xD4,0xEA,0xF5,
+//0xCB,0x14,0xFC,0xF7,0x78,0xE2,0x73,0x15,0x90,0x17,0xCE,0x7A,0xEB,0xEC,0x3C,0x34,
+//0x5C,0x6D,0x10,0x05,0xFC,0xEA,0xED,0x19,0xC5,0x0D,0x7A,0x82,0x17,0xCC,0xCC,0x71,
+//0x56,0x38,0xDF,0x78,0x8D,0xE6,0x44,0xD3,0x6F,0xDB,0xE3,0xCF,0x21,0x30,0x75,0x2F,
+//0xCD,0xDC,0xE9,0xB4,0xA4,0x4E,0x58,0xDE,0xEE,0x54,0xDD,0x87,0xDA,0xE9,0xC6,0xC8,
+//0x02,0xDD,0xC4,0xFD,0x94,0x36,0x32,0xAD,0x1B,0x39,0x0F,0x00,0x00,0x00,0x00,0x00,
+
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x37,0x87,0x13,0xbe,0xc8,0xa7,0x77,0xcb,
+0x27,0xed,0xe1,0xe6,0x5d,0x1c,0xaa,0xd3,0x3c,0x26,0x3b,0x6d,0x8c,0xdb,0x36,0x8d,
+0x91,0x72,0xf5,0xbb,0xe0,0x5c,0x50,0x6f,0x09,0x6d,0xc9,0x1e,0xe7,0x2e,0xf4,0x38,
+0x1b,0x5e,0xa8,0xc2,0xfe,0xb4,0x18,0x4a,0xf7,0x72,0x85,0x13,0xf5,0x63,0x6c,0x16,
+0x69,0xf4,0xe0,0x17,0xff,0x87,0x11,0xf3,0x2b,0xb7,0x73,0x04,0x37,0xca,0xd5,0x77,
+0xf8,0x03,0x20,0x0a,0x56,0x8b,0xfb,0x35,0xff,0x59,0x00,0x00,0x00,0x00,0x00,0x00,
+
+//0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x1f,0x42,0x69,0x2a,0x87,0xdd,0x04,0x3d,
+//0x7f,0xb1,0xb3,0xbb,0xde,0xd5,0x5f,0xfc,0x1f,0xb3,0x25,0x94,0x16,0xd5,0xf3,0x97,
+//0x43,0xdf,0xb9,0x69,0x68,0xdf,0x2b,0x64,0x98,0xf5,0x44,0xbe,0x38,0x65,0xef,0xff,
+//0x36,0x89,0x90,0xcf,0x26,0xbb,0x9f,0x76,0xd5,0xaf,0x6d,0xf2,0x08,0xbe,0xce,0xd8,
+//0x3e,0x4b,0x53,0x8a,0xf3,0x44,0x7c,0x19,0x49,0x5d,0x97,0x99,0xd8,0x8b,0xee,0x10,
+//0x1a,0x7d,0xb7,0x8b,0x49,0x9b,0x40,0x8c,0xea,0x49,0x09,0x00,0x00,0x00,0x00,0x00,
+//
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -945,10 +965,11 @@ void Client::SendApproveWorld()
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00};
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00
+};
 	memcpy(aw->unknown544, foo, sizeof(foo));
 	QueuePacket(outapp);
-	safe_delete(outapp);
+	//safe_delete(outapp);
 }
 
 bool Client::OPCharCreate(CharCreate_Struct *cc)
@@ -1027,7 +1048,8 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 	pp.level			= 1;
 	pp.points			= 5;
 	pp.cur_hp			= 1000; // 1k hp during dev only
-	pp.expAA			= 0xFFFFFFFF;
+	//what was the point of this? zone dosent handle this:
+	//pp.expAA			= 0xFFFFFFFF;
 
 	// FIXME: FV roleplay, database goodness...
 
@@ -1036,8 +1058,9 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 	SetRaceStartingSkills( &pp ); // bUsh
 	SetClassStartingSkills( &pp ); // bUsh
 	pp.skills[SENSE_HEADING + 1] = 200;
-	pp.unknown3596[28] = 15; // @bp: This is to enable disc usage
-	strcpy(pp.servername, "eqemu");
+	// Some one fucking fix this to use a field name. -Doodman
+	//pp.unknown3596[28] = 15; // @bp: This is to enable disc usage
+	strcpy(pp.servername, net.GetWorldShortName());
 			
 
 	for(i = 0; i < MAX_PP_SPELLBOOK; i++)
@@ -1125,62 +1148,62 @@ bool CheckCharCreateInfo(CharCreate_Struct *cc)
 #define _TABLE_RACES	15
 
 	int BaseRace[_TABLE_RACES][7] =
-	{          /* STR  STA  AGI  DEX  WIS  INT  CHR */
-	/*Human*/      75,  75,  75,  75,  75,  75,  75,
-	/*Barbarian*/ 103,  95,  82,  70,  70,  60,  55,
-	/*Erudite*/    60,  70,  70,  70,  83, 107,  70,
-	/*Wood Elf*/   65,  65,  95,  80,  80,  75,  75,
-	/*High Elf*/   55,  65,  85,  70,  95,  92,  80,
-	/*Dark Elf*/   60,  65,  90,  75,  83,  99,  60,                
-	/*Half Elf*/   70,  70,  90,  85,  60,  75,  75,
-	/*Dwarf*/      90,  90,  70,  90,  83,  60,  45,
-	/*Troll*/     108, 109,  83,  75,  60,  52,  40,
-	/*Ogre*/      130, 122,  70,  70,  67,  60,  37,
-	/*Halfling*/   70,  75,  95,  90,  80,  67,  50,
-	/*Gnome*/      60,  70,  85,  85,  67,  98,  60,
-	/*Iksar*/      70,  70,  90,  85,  80,  75,  55,
-	/*Vah Shir*/   90,  75,  90,  70,  70,  65,  65,
-	/*Froglok*/    70,  80, 100, 100,  75,  75,  50 
+	{            /* STR  STA  AGI  DEX  WIS  INT  CHR */
+	{ /*Human*/      75,  75,  75,  75,  75,  75,  75},
+	{ /*Barbarian*/ 103,  95,  82,  70,  70,  60,  55},
+	{ /*Erudite*/    60,  70,  70,  70,  83, 107,  70},
+	{ /*Wood Elf*/   65,  65,  95,  80,  80,  75,  75},
+	{ /*High Elf*/   55,  65,  85,  70,  95,  92,  80},
+	{ /*Dark Elf*/   60,  65,  90,  75,  83,  99,  60},                
+	{ /*Half Elf*/   70,  70,  90,  85,  60,  75,  75},
+	{ /*Dwarf*/      90,  90,  70,  90,  83,  60,  45},
+	{ /*Troll*/     108, 109,  83,  75,  60,  52,  40},
+	{ /*Ogre*/      130, 122,  70,  70,  67,  60,  37},
+	{ /*Halfling*/   70,  75,  95,  90,  80,  67,  50},
+	{ /*Gnome*/      60,  70,  85,  85,  67,  98,  60},
+	{ /*Iksar*/      70,  70,  90,  85,  80,  75,  55},
+	{ /*Vah Shir*/   90,  75,  90,  70,  70,  65,  65},
+	{ /*Froglok*/    70,  80, 100, 100,  75,  75,  50} 
 	};
 
 	int BaseClass[PLAYER_CLASS_COUNT][8] =
-	{            /* STR  STA  AGI  DEX  WIS  INT  CHR  ADD*/
-	/*Warrior*/      10,  10,   5,   0,   0,   0,   0,  25,
-	/*Cleric*/        5,   5,   0,   0,  10,   0,   0,  30,
-	/*Paladin*/      10,   5,   0,   0,   5,   0,  10,  20,
-	/*Ranger*/        5,  10,  10,   0,   5,   0,   0,  20,
-	/*ShadowKnight*/ 10,   5,   0,   0,   0,   10,  5,  20,
-	/*Druid*/         0,  10,   0,   0,  10,   0,   0,  30,
-	/*Monk*/          5,   5,  10,  10,   0,   0,   0,  20,                
-	/*Bard*/          5,   0,   0,  10,   0,   0,  10,  25,
-	/*Rouge*/         0,   0,  10,  10,   0,   0,   0,  30,
-	/*Shaman*/        0,   5,   0,   0,  10,   0,   5,  30,
-	/*Necromancer*/   0,   0,   0,  10,   0,  10,   0,  30,
-	/*Wizard*/        0,  10,   0,   0,   0,  10,   0,  30,
-	/*Magician*/      0,  10,   0,   0,   0,  10,   0,  30,
-	/*Enchanter*/     0,   0,   0,   0,   0,  10,  10,  30,
-	/*Beastlord*/     0,  10,   5,   0,  10,   0,   5,  20,
-	/*Berserker*/    10,   5,   0,  10,   0,   0,   0,  25
+	{              /* STR  STA  AGI  DEX  WIS  INT  CHR  ADD*/
+	{ /*Warrior*/      10,  10,   5,   0,   0,   0,   0,  25},
+	{ /*Cleric*/        5,   5,   0,   0,  10,   0,   0,  30},
+	{ /*Paladin*/      10,   5,   0,   0,   5,   0,  10,  20},
+	{ /*Ranger*/        5,  10,  10,   0,   5,   0,   0,  20},
+	{ /*ShadowKnight*/ 10,   5,   0,   0,   0,   10,  5,  20},
+	{ /*Druid*/         0,  10,   0,   0,  10,   0,   0,  30},
+	{ /*Monk*/          5,   5,  10,  10,   0,   0,   0,  20},                
+	{ /*Bard*/          5,   0,   0,  10,   0,   0,  10,  25},
+	{ /*Rouge*/         0,   0,  10,  10,   0,   0,   0,  30},
+	{ /*Shaman*/        0,   5,   0,   0,  10,   0,   5,  30},
+	{ /*Necromancer*/   0,   0,   0,  10,   0,  10,   0,  30},
+	{ /*Wizard*/        0,  10,   0,   0,   0,  10,   0,  30},
+	{ /*Magician*/      0,  10,   0,   0,   0,  10,   0,  30},
+	{ /*Enchanter*/     0,   0,   0,   0,   0,  10,  10,  30},
+	{ /*Beastlord*/     0,  10,   5,   0,  10,   0,   5,  20},
+	{ /*Berserker*/    10,   5,   0,  10,   0,   0,   0,  25}
 	};
 
 	bool ClassRaceLookupTable[PLAYER_CLASS_COUNT][_TABLE_RACES]= 
-	{                 /*Human  Barbarian Erudite Woodelf Highelf Darkelf Halfelf Dwarf  Troll  Ogre   Halfling Gnome  Iksar  Vahshir Froglok*/
-	/*Warrior*/         true,  true,     false,  true,   false,  true,   true,   true,  true,  true,  true,    true,  true,  true,   true,
-	/*Cleric*/          true,  false,    true,   false,  true,   true,   true,   true,  false, false, true,    true,  false, false,  true,  
-	/*Paladin*/         true,  false,    true,   false,  true,   false,  true,   true,  false, false, true,    true,  false, false,  true,
-	/*Ranger*/          true,  false,    false,  true,   false,  false,  true,   false, false, false, true,    false, false, false,  false,
-	/*ShadowKnight*/    true,  false,    true,   false,  false,  true,   false,  false, true,  true,  false,   true,  true,  false,  false,
-	/*Druid*/           true,  false,    false,  true,   false,  false,  true,   false, false, false, true,    false, false, false,  false,    
-	/*Monk*/            true,  false,    false,  false,  false,  false,  false,  false, false, false, false,   false, true,  false,  false,
-	/*Bard*/            true,  false,    false,  true,   false,  false,  true,   false, false, false, false,   false, false, true,   false,
-	/*Rogue*/           true,  true,     false,  true,   false,  true,   true,   true,  false, false, true,    true,  false, true,   false,
-	/*Shaman*/          false, true,     false,  false,  false,  false,  false,  false, true,  true,  false,   false, true,  true,   true,
-	/*Necromancer*/     true,  false,    true,   false,  false,  true,   false,  false, false, false, false,   true,  true,  false,  false,
-	/*Wizard*/          true,  false,    true,   false,  true,   true,   false,  false, false, false, false,   true,  false, false,  true,
-	/*Magician*/        true,  false,    true,   false,  true,   true,   false,  false, false, false, false,   true,  false, false,  false,
-	/*Enchanter*/       true,  false,    true,   false,  true,   true,   false,  false, false, false, false,   true,  false, false,  false,  
-	/*Beastlord*/       false, true,     false,  false,  false,  false,  false,  false, true,  true,  false,   false, true,  true,   false,
-	/*Berserker*/       false, true,     false,  false,  false,  false,  false,  true,  true,  true,  false,   false, false, true,   false
+	{                   /*Human  Barbarian Erudite Woodelf Highelf Darkelf Halfelf Dwarf  Troll  Ogre   Halfling Gnome  Iksar  Vahshir Froglok*/
+	{ /*Warrior*/         true,  true,     false,  true,   false,  true,   true,   true,  true,  true,  true,    true,  true,  true,   true},
+	{ /*Cleric*/          true,  false,    true,   false,  true,   true,   true,   true,  false, false, true,    true,  false, false,  true},  
+	{ /*Paladin*/         true,  false,    true,   false,  true,   false,  true,   true,  false, false, true,    true,  false, false,  true},
+	{ /*Ranger*/          true,  false,    false,  true,   false,  false,  true,   false, false, false, true,    false, false, false,  false},
+	{ /*ShadowKnight*/    true,  false,    true,   false,  false,  true,   false,  false, true,  true,  false,   true,  true,  false,  false},
+	{ /*Druid*/           true,  false,    false,  true,   false,  false,  true,   false, false, false, true,    false, false, false,  false},    
+	{ /*Monk*/            true,  false,    false,  false,  false,  false,  false,  false, false, false, false,   false, true,  false,  false},
+	{ /*Bard*/            true,  false,    false,  true,   false,  false,  true,   false, false, false, false,   false, false, true,   false},
+	{ /*Rogue*/           true,  true,     false,  true,   false,  true,   true,   true,  false, false, true,    true,  false, true,   false},
+	{ /*Shaman*/          false, true,     false,  false,  false,  false,  false,  false, true,  true,  false,   false, true,  true,   true},
+	{ /*Necromancer*/     true,  false,    true,   false,  false,  true,   false,  false, false, false, false,   true,  true,  false,  false},
+	{ /*Wizard*/          true,  false,    true,   false,  true,   true,   false,  false, false, false, false,   true,  false, false,  true},
+	{ /*Magician*/        true,  false,    true,   false,  true,   true,   false,  false, false, false, false,   true,  false, false,  false},
+	{ /*Enchanter*/       true,  false,    true,   false,  true,   true,   false,  false, false, false, false,   true,  false, false,  false},  
+	{ /*Beastlord*/       false, true,     false,  false,  false,  false,  false,  false, true,  true,  false,   false, true,  true,   false },
+	{ /*Berserker*/       false, true,     false,  false,  false,  false,  false,  true,  true,  true,  false,   false, false, true,   false }
 	};//Initial table by kathgar, editted by Wiz for accuracy, solar too
 
 	if(!cc) return false;
