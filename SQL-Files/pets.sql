@@ -417,7 +417,7 @@ INSERT INTO pets (type,npcID,temp) VALUES('TunareBane', 636, 1);
 INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(636, 'TunareBane', 50, 76, 1, 24, 2500, 2, 3, 2, 6, 0, 71, 78, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('Burnout', 637, 1);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(637, 'Burnout', 50, , 1, 24, 1000, 2, 0, 6, 6, 164, 60, 87, 'Q', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(637, 'Burnout', 50, 75, 1, 24, 1000, 2, 0, 6, 6, 164, 60, 87, 'Q', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('DruidPet', 638, 0);
 INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(638, 'DruidPet', 25, 43, 1, 24, 100, 2, 0, 1, 6, 0, 17, 25, '', 6.66, 1.25);
