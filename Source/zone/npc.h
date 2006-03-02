@@ -60,8 +60,7 @@ public:
 	virtual bool Process();
 	void	AI_Init();
 	void	AI_Start(int32 iMoveDelay = 0);
-
-	void Heal();
+	
 	virtual void SetTarget(Mob* mob);
 
 #ifdef GUILDWARS
@@ -86,6 +85,7 @@ public:
 	void	InteractiveChat(int8 chan_num, int8 language, const char * message, const char* targetname,Mob* sender);
 	void	TakenAction(int8 action,Mob* actiontaker);
 	virtual void SpellProcess();
+	virtual void FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho);
 
 	void	AddItem(const Item_Struct* item, int8 charges, int8 slot = 0);
 	void	AddItem(int32 itemid, int8 charges, int8 slot = 0);
@@ -103,6 +103,7 @@ public:
 
 	bool	IsRanger() { return rangerstance; }
 
+	void	DescribeAggro(Client *towho, Mob *mob, bool verbose);
 	void    RemoveItem(uint16 item_id, int16 quantity = 0, int16 slot = 0);
 //	bool	AddNPCSpells(int32 iDBSpellsID, AISpells_Struct* AIspells);
 //	void	RemoveItem(uint16 item_id);
@@ -142,7 +143,8 @@ public:
 	uint32	MerchantType;
 	void	Depop(bool StartSpawnTimer = true);
 	void	Stun(int duration);
-	inline bool	IsStunned() { return stunned; }
+	
+	inline void SignalNPC(int _signal_id) { signaled = true; signal_id = _signal_id; }
 
 
 	#ifdef IPC
@@ -177,6 +179,7 @@ public:
 	void	StartSwarmTimer(int32 duration) { swarm_timer.Start(duration); }
 	void	AddLootDrop(const Item_Struct*dbitem, ItemList* itemlistconst, sint8 charges, bool equipit, bool wearchange = false);
 	void	DoClassAttacks(Mob *target);
+	void	CheckSignal();
 	
 	inline bool WillAggroNPCs() const { return(npc_aggro); }
 	
@@ -190,6 +193,7 @@ public:
 
 	Spawn2*	respawn2;
 protected:
+	
 	const NPCType*	NPCTypedata;
 	NPCType*	NPCTypedata_ours;	//special case for npcs with uniquely created data.
 
@@ -214,7 +218,7 @@ protected:
     Timer	taunt_timer;		//for pet taunting
     Timer	assist_timer;		//ask for help from nearby mobs
 
-	int		attack_event;
+	bool		attack_event;
 
     bool	evader;
 	int8	position;	// 0 - Standing, 1 - Sitting, 2 - Crouching, 4 - Looting
@@ -236,6 +240,9 @@ protected:
 	bool	taunting;
 
 	bool npc_aggro;
+	
+	int		signal_id;
+	bool	signaled;	// used by quest signal() command
 		
 private:
 #ifdef GUILDWARS

@@ -139,7 +139,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 					}
 					case SpellType_Root: {
 						if (
-							!tar->IsRooted() && dist2 >= 900 && (rand()%100) < 50
+							!tar->IsRooted() && dist2 >= 900 && MakeRandomInt(0, 99) < 50
 							&& tar->DontRootMeBefore() < Timer::GetCurrentTime()
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
@@ -183,7 +183,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 						break;
 					}
 					case SpellType_Pet: {
-						if (!(GetPetID()||GetOwner()) && (rand()%100) < 25) {
+						if (!IsPet() && !GetPetID() && MakeRandomInt(0, 99) < 25) {
 							AIDoSpellCast(i, tar, mana_cost);
 							return true;
 						}
@@ -191,7 +191,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 					}
 					case SpellType_Lifetap: {
 						if (GetHPRatio() <= 75
-							&& (rand()%100) < 50
+							&& MakeRandomInt(0, 99) < 50
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
 							AIDoSpellCast(i, tar, mana_cost);
@@ -201,7 +201,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 					}
 					case SpellType_Snare: {
 						if (
-							!tar->IsRooted() && (rand()%100) < 50
+							!tar->IsRooted() && MakeRandomInt(0, 99) < 50
 							&& tar->DontSnareMeBefore() < Timer::GetCurrentTime()
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
@@ -212,7 +212,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 					}
 					case SpellType_DOT: {
 						if (
-							tar->GetHPRatio() > 50 && (rand()%100) < 20
+							tar->GetHPRatio() > 50 && MakeRandomInt(0, 99) < 20
 							&& tar->DontDotMeBefore() < Timer::GetCurrentTime()
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
@@ -290,7 +290,7 @@ bool EntityList::AICheckCloseSpells(Mob* caster, int8 iChance, float iRange, int
 			|| t3 > iRange
 			|| mob->DistNoRoot(*caster) > iRange2
 				//this call should seem backwards:
-			|| caster->GetReverseFactionCon(mob) <= FACTION_AMIABLE
+			|| mob->GetReverseFactionCon(caster) <= FACTION_AMIABLE
 		) {
 			continue;
 		}
@@ -392,7 +392,7 @@ void Client::AI_Start(int32 iMoveDelay) {
 		return;
 	// copy memed spells to the spells struct here
 	this->Message_StringID(13,PLAYER_CHARMED);
-/*	APPLAYER *app = new APPLAYER(OP_Charm, sizeof(Charm_Struct));
+/*	EQZonePacket *app = new EQZonePacket(OP_Charm, sizeof(Charm_Struct));
 	Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
 	ps->owner_id = GetOwnerOrSelf()->GetID();
 	ps->pet_id = this->GetID();
@@ -410,8 +410,6 @@ void Client::AI_Start(int32 iMoveDelay) {
 	pClientSideTarget = target ? target->GetID() : 0;
 	SendAppearancePacket(AT_Anim, ANIM_FREEZE);	// this freezes the client
 	SendAppearancePacket(AT_Linkdead, 1); // Sending LD packet so *LD* appears by the player name when charmed/feared -Kasai
-	attack_timer.Enable();
-	attack_dw_timer.Enable();
 	SetAttackTimer();
 }
 
@@ -447,14 +445,14 @@ void Mob::AI_Stop() {
 void Client::AI_Stop() {
 	Mob::AI_Stop();
 	this->Message_StringID(13,PLAYER_REGAIN);
-	APPLAYER *app = new APPLAYER(OP_Charm, sizeof(Charm_Struct));
+	EQZonePacket *app = new EQZonePacket(OP_Charm, sizeof(Charm_Struct));
 	Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
 	ps->owner_id = 0;
 	ps->pet_id = this->GetID();
 	ps->command = 0;
 	FastQueuePacket(&app);
 	target = entity_list.GetMob(pClientSideTarget);
-	SendAppearancePacket(AT_Anim, GetAppearanceValue(appearance));
+	SendAppearancePacket(AT_Anim, GetAppearanceValue(GetAppearance()));
 	SendAppearancePacket(AT_Linkdead, 0); // Removing LD packet so *LD* no longer appears by the player name when charmed/feared -Kasai
 	if (!auto_attack) {
 		attack_timer.Disable();
@@ -471,7 +469,6 @@ void Mob::AI_Process() {
 	_ZP(Mob_AI_Process);
 	
 	sint16 gridno; 
-
 
 	if (!IsAIControlled())
 		return;
@@ -574,83 +571,84 @@ void Mob::AI_Process() {
 				tar_ndx =0;
 			}
 			
-			//should implement some checks for the target being dead mid-attack.
-			if (GetAppearance() == 0 
-			  //&& GetRunAnimSpeed() < NPC_RUNANIM_RATIO 	//cant attack if running?? (at rate > 1.0)
-			  && !IsStunned()
-			  && attack_timer.Check()) 
-			{
-				Attack(target, 13);
-				if (target) 
-				{
-					if (CanThisClassDoubleAttack()) 
+			//casting checked above...
+			if(target && !IsStunned() && !IsMezzed() && GetAppearance() != eaDead) {
+				
+				//we should check to see if they die mid-attacks, previous
+				//crap of checking target for null was not gunna cut it
+				
+				//try main hand first
+				if(attack_timer.Check()) {
+					Attack(target, 13);
+					if (target) 
 					{
-						sint32 RandRoll = rand()%100;
-						if (target && RandRoll < (GetLevel() + 20))  
+						//we use this random value in three comparisons with different
+						//thresholds, and if its truely random, then this should work
+						//out reasonably and will save us compute resources.
+						sint32 RandRoll = MakeRandomInt(0, 99);
+						if (CanThisClassDoubleAttack()
+							//check double attack, this is NOT the same rules that clients use...
+							&& RandRoll < (GetLevel() + NPCDualAttackModifier))  
 						{
 							if (Attack(target, 13)) 
 							{
 								// lets see if we can do a triple attack with the main hand
-								if (SpecAttacks[SPECATK_TRIPLE]) 
+								//pets are excluded from triple and quads...
+								if (SpecAttacks[SPECATK_TRIPLE]
+									&& !IsPet() && RandRoll < (GetLevel()+NPCTripleAttackModifier))
 								{
-									if (!GetOwner() && RandRoll < (GetLevel()))
-									{
-										if (Attack(target, 13)) 
-										{	// now lets check the quad attack
-											if (SpecAttacks[SPECATK_QUAD]) 
-											{
-												if (!GetOwner() && RandRoll < (GetLevel() - 20))  
-												{
-													Attack(target, 13);
-												}
-											} // if (SpecAttacks[SPECATK_QUAD])
-										}
+									if (Attack(target, 13)) 
+									{	// now lets check the quad attack
+										if (SpecAttacks[SPECATK_QUAD]
+											&& RandRoll < (GetLevel() + NPCQuadAttackModifier))  
+										{
+											Attack(target, 13);
+										} // if (SpecAttacks[SPECATK_QUAD])
 									}
 								} // if (SpecAttacks[SPECATK_TRIPLE])
 							}
-						}
-					} // if (CanThisClassDoubleAttack())
-				}
-
-				if (SpecAttacks[SPECATK_FLURRY]) {
-				    // perhaps get the values from the db?
-				    if (MakeRandomInt(0, 99) < 20)
-						Flurry();
-				}
-
-				if (SpecAttacks[SPECATK_RAMPAGE]) {
-				    // perhaps get the values from the db?
-				    if (MakeRandomInt(0, 99) < 20)
-						Rampage();
-				}
-			}
-		
-			if (target && attack_dw_timer.Check() && CanThisClassDualWield()) 
-			{
-				int myclass = GetClass();
-				//can only dual weild without a weapon if your a monk
-				if((equipment[8] && GetLevel() > 39) || myclass == MONK || myclass == MONKGM) {
-					float DualWieldProbability = (GetSkill(DUAL_WIELD) + GetLevel()) / 400.0f;
-					DualWieldProbability -= MakeRandomFloat(0, 1);
-					if(DualWieldProbability < 0){
-						Attack(target, 14);
-						if (CanThisClassDoubleAttack()) 
-						{
-							sint32 RandRoll = rand()%100;
-							if (RandRoll < (GetLevel() + 20))  
-							{
-								if (target && Attack(target, 14));
-							}
 						} // if (CanThisClassDoubleAttack())
 					}
+	
+					if (SpecAttacks[SPECATK_FLURRY]) {
+					    // perhaps get the values from the db?
+					    if (MakeRandomInt(0, 99) < 20)
+							Flurry();
+					}
+	
+					if (SpecAttacks[SPECATK_RAMPAGE]) {
+					    // perhaps get the values from the db?
+					    if (MakeRandomInt(0, 99) < 20)
+							Rampage();
+					}
 				}
-			}
-			//should be checking for dead I think...
-			if(!target) return;
 				
-			if(IsNPC())
-				CastToNPC()->DoClassAttacks(target);
-			
+				//now off hand
+				if (attack_dw_timer.Check() && CanThisClassDualWield()) 
+				{
+					int myclass = GetClass();
+					//can only dual weild without a weapon if your a monk
+					if((equipment[8] && GetLevel() > 39) || myclass == MONK || myclass == MONKGM) {
+						float DualWieldProbability = (GetSkill(DUAL_WIELD) + GetLevel()) / 400.0f;
+						DualWieldProbability -= MakeRandomFloat(0, 1);
+						if(DualWieldProbability < 0){
+							Attack(target, 14);
+							if (CanThisClassDoubleAttack()) 
+							{
+								sint32 RandRoll = rand()%100;
+								if (RandRoll < (GetLevel() + 20))  
+								{
+									if (Attack(target, 14));
+								}
+							} // if (CanThisClassDoubleAttack())
+						}
+					}
+				}
+				
+				//now special attacks (kick, etc)
+				if(IsNPC())
+					CastToNPC()->DoClassAttacks(target);
+			}
 			if (AIautocastspell_timer->Check()) 
 			{
 		#if MobAI_DEBUG_Spells >= 25
@@ -692,20 +690,13 @@ void Mob::AI_Process() {
 		}
 	}
 	else { // not engaged
-		//if (pStandingPetOrder == SPO_Follow && GetOwnerID() && !IsStunned())
+		//if (pStandingPetOrder == SPO_Follow && IsPet() && !IsStunned())
 			//SetHeading(CalculateHeadingToTarget(target->GetX(), target->GetY())*8);
 			//FaceTarget(GetOwner(), true);
-// trigger EVENT_SIGNAL if required
-		if (signaled==true)
-		{
-//			printf("Signal received\n");
-			if(IsNPC()) {
-				char buf[32];
-				snprintf(buf, 31, "%d", signal_id);
-				buf[31] = '\0';
-				parse->Event(EVENT_SIGNAL, GetNPCTypeID(), buf, CastToNPC(), NULL);
-			}
-			signaled=false;
+		
+		// trigger EVENT_SIGNAL if required
+		if(IsNPC()) {
+			CastToNPC()->CheckSignal();
 		}
 		if (AIautocastspell_timer->Check()) 
 		{
@@ -730,7 +721,7 @@ void Mob::AI_Process() {
 		{
 			_ZP(Mob_AI_Process_move);
 			SetRunAnimSpeed(0);
-			if (GetOwnerID()) 
+			if (IsPet()) 
 			{
 				_ZP(Mob_AI_Process_pet);
 				// we're a pet, do as we're told
@@ -759,9 +750,9 @@ void Mob::AI_Process() {
 							SetHeading(owner->GetHeading());
 							if(moved)
 							{
-								SendPosition();
 								moved=false;
 								SetMoving(false);
+								SendPosition();
 							}
 						}
 					
@@ -783,7 +774,7 @@ void Mob::AI_Process() {
 					}
 					case SPO_Sit: 
 					{
-						SetAppearance(1, false);
+						SetAppearance(eaSitting, false);
 						break;
 					}
 					case SPO_Guard: 
@@ -910,10 +901,11 @@ void Mob::AI_Process() {
 								} else { 
 									movetimercompleted=false; 
 									char temp[100]; 
+									itoa(cur_wp,temp,10);	//convert before changing waypoint info
 									entity_list.OpenDoorsNear(CastToNPC());
-									parse->Event(EVENT_WAYPOINT,this->GetNPCTypeID(), itoa(cur_wp,temp,10), CastToNPC(), NULL); 
 									CalculateNewWaypoint(); 
-									SetAppearance(0, false); 
+									SetAppearance(eaStanding, false); 
+									parse->Event(EVENT_WAYPOINT,this->GetNPCTypeID(), temp, CastToNPC(), NULL); 
 		                        } 
 		                    }	// endif (movetimercompleted==true)     
 							else if (!(AIwalking_timer->Enabled()))
@@ -921,7 +913,8 @@ void Mob::AI_Process() {
 								if (cur_wp_x == GetX() && cur_wp_y == GetY()) 
 								{	// are we there yet? then stop
 									SetWaypointPause(); 
-									SetAppearance(0, false); 
+									SetAppearance(eaStanding, false);
+									SetMoving(false);
 									SendPosition();
 								} 
 								else
@@ -936,7 +929,7 @@ void Mob::AI_Process() {
 							if (movetimercompleted==true)    
 							{ // time to pause has ended
 								CastToNPC()->SetGrid( 0 - CastToNPC()->GetGrid()); // revert to AI control
-								SetAppearance(0, false); 
+								SetAppearance(eaStanding, false); 
 							}
 						}
 
@@ -1182,9 +1175,9 @@ int32 Mob::GetLevelCon(int8 mylevel, int8 iOtherLevel) {
 	}
 	else if (mylevel <= 50)
 	{
-        if (diff <= -14)
+        if (diff <= -18)
             conlevel = CON_GREEN;
-        else if (diff <= -12)
+        else if (diff <= -17)
             conlevel = CON_LIGHTBLUE;
         else
             conlevel = CON_BLUE;
@@ -1210,6 +1203,18 @@ int32 Mob::GetLevelCon(int8 mylevel, int8 iOtherLevel) {
 	return conlevel;
 
 }
+
+void NPC::CheckSignal() {
+	if (signaled) {
+		char buf[32];
+		snprintf(buf, 31, "%d", signal_id);
+		buf[31] = '\0';
+		parse->Event(EVENT_SIGNAL, GetNPCTypeID(), buf, this, NULL);
+		signaled=false;
+	}
+}
+
+
 
 /*
 alter table npc_types drop column usedspells;

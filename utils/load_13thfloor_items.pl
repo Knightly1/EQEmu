@@ -3,14 +3,40 @@
 use DBI;
 use Getopt::Std;
 
-getopts('u:h:p:d:');
-if (!$opt_d || !$opt_p || !$opt_u) {
-	die "Usage:\n\tload_13thfloor_items.pl -d db -u user -p pass [-h host]\n";
+getopts('d:h');
+$dbini = "db.ini";
+if($opt_h) {
+	die "Usage: serialize_items.pl [-d path/to/db.ini]\n";
 }
-$source="DBI:mysql:database=$opt_d";
-$source.=";host=$opt_h" if ($opt_h);
+if($opt_d) {
+	$dbini = $opt_d;
+}
 
-my $dbh = DBI->connect($source, $opt_u, $opt_p) || die "Could not create db handle\n";
+$db = "";
+$user = "";
+$pass = "";
+$host = "";
+open(F, "<$dbini") or die "Unable to open database config $dbini\n";
+while(<F>) {
+	s/\r//g;
+	if(/host\s*=\s*(.*)/) {
+		$host = $1;
+	} elsif(/user\s*=\s*(.*)/) {
+		$user = $1;
+	} elsif(/password\s*=\s*(.*)/) {
+		$pass = $1;
+	} elsif(/database\s*=\s*(.*)/) {
+		$db = $1;
+	}
+}
+if(!$db || !$user || !$pass || !$host) {
+	die "Invalid db.ini, missing one of: host, user, password, database\n";
+}
+
+$source="DBI:mysql:database=$db;host=$host";
+
+my $dbh = DBI->connect($source, $user, $pass) || die "Could not create db handle\n";
+
 
 
 $_=<STDIN>;

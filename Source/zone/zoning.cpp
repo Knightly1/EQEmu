@@ -28,17 +28,17 @@ extern WorldServer worldserver;
 extern Zone* zone;
 
 
-void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
+void Client::Handle_OP_ZoneChange(const EQZonePacket *app) {
 	zoning = true;
 	if (app->size != sizeof(ZoneChange_Struct)) {
-		cout << "Wrong size: OP_ZoneChange, size=" << app->size << ", expected " << sizeof(ZoneChange_Struct) << endl;
+		LogFile->write(EQEMuLog::Debug, "Wrong size: OP_ZoneChange, size=%d, expected %d", app->size, sizeof(ZoneChange_Struct));
 		return;
 	}
 
-	#if EQDEBUG >= 5
+#if EQDEBUG >= 5
 	LogFile->write(EQEMuLog::Debug, "Zone request from %s", GetName());
 	DumpPacket(app);
-	#endif
+#endif
 	ZoneChange_Struct* zc=(ZoneChange_Struct*)app->pBuffer;
 
 	uint16 target_zone_id = 0;
@@ -75,6 +75,7 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 				//that can be a valid un-zolicited zone request?
 				
 				Message(13, "Invalid unsolicited zone request.");
+				LogFile->write(EQEMuLog::Error, "Zoning %s: Invalid unsolicited zone request to zone id '%d'.", GetName(), target_zone_id);
 				SendZoneCancel(zc);
 				return;
 			}
@@ -93,6 +94,7 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 			//then we assume this is invalid.
 			if(!zone_point || zone_point->target_zone_id != target_zone_id) {
 				Message(13, "Invalid unsolicited zone request.");
+				LogFile->write(EQEMuLog::Error, "Zoning %s: Invalid unsolicited zone request to zone id '%d'.", GetName(), target_zone_id);
 				SendZoneCancel(zc);
 				return;
 			}
@@ -105,6 +107,7 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	if(target_zone_name == NULL) {
 		//invalid zone...
 		Message(13, "Invalid target zone ID.");
+		LogFile->write(EQEMuLog::Error, "Zoning %s: Unable to get zone name for zone id '%d'.", GetName(), target_zone_id);
 		SendZoneCancel(zc);
 		return;
 	}
@@ -116,6 +119,7 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	if(!database.GetSafePoints(target_zone_name, &safe_x, &safe_y, &safe_z, &minstatus, &minlevel)) {
 		//invalid zone...
 		Message(13, "Invalid target zone while getting safe points.");
+		LogFile->write(EQEMuLog::Error, "Zoning %s: Unable to get safe coordinates for zone '%s'.", GetName(), target_zone_name);
 		SendZoneCancel(zc);
 		return;
 	}
@@ -183,6 +187,7 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 		
 		//could not find a valid reason for them to be zoning, stop it.
 		Message(13, "Invalid unsolicited zone request.");
+		LogFile->write(EQEMuLog::Error, "Zoning %s: Invalid unsolicited zone request to zone id '%s'. Not near a zone point.", GetName(), target_zone_name);
 		SendZoneCancel(zc);
 		return;
 	};
@@ -209,11 +214,13 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 			AdventureInfo ai = database.GetAdventureInfo(advid);
 			if(target_zone_id != ai.zonedungeonid) {
 				Message(13, "You are not allowed to enter this dungeon!");
+				LogFile->write(EQEMuLog::Error, "Zoning %s: Not allowed to enter dungeon '%s' (%d). Not in the right adventure.", GetName(), target_zone_name, target_zone_id);
 				SendZoneCancel(zc);
 				return;
 			}
 		} else {
 			Message(13, "You are not allowed to enter this dungeon!");
+			LogFile->write(EQEMuLog::Error, "Zoning %s: Not allowed to enter dungeon '%s' (%d). Not in any adventure.", GetName(), target_zone_name, target_zone_id);
 			SendZoneCancel(zc);
 			return;
 		}
@@ -223,6 +230,7 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 		//we have successfully zoned
 		DoZoneSuccess(zc, target_zone_id, dest_x, dest_y, dest_z, dest_h, ignorerestrictions);
 	} else {
+		LogFile->write(EQEMuLog::Error, "Zoning %s: Rules prevent this char from zoning into '%s'", GetName(), target_zone_name);
 		SendZoneError(zc, myerror);
 	}
 }
@@ -230,8 +238,8 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 void Client::SendZoneCancel(ZoneChange_Struct *zc) {
 	//effectively zone them right back to where they were
 	//unless we find a better way to stop the zoning process.
-	EQApplicationPacket *outapp;
-	outapp = new EQApplicationPacket(OP_ZoneChange, sizeof(ZoneChange_Struct));
+	EQZonePacket *outapp;
+	outapp = new EQZonePacket(OP_ZoneChange, sizeof(ZoneChange_Struct));
 	ZoneChange_Struct *zc2 = (ZoneChange_Struct*)outapp->pBuffer;
 	strcpy(zc2->char_name, zc->char_name);
 	zc2->zoneID = zone->GetZoneID();
@@ -246,8 +254,8 @@ void Client::SendZoneCancel(ZoneChange_Struct *zc) {
 void Client::SendZoneError(ZoneChange_Struct *zc, sint8 err) {
 	LogFile->write(EQEMuLog::Error, "Zone %i is not available because target wasn't found or character insufficent level", zc->zoneID);
 	
-	EQApplicationPacket *outapp;
-	outapp = new EQApplicationPacket(OP_ZoneChange, sizeof(ZoneChange_Struct));
+	EQZonePacket *outapp;
+	outapp = new EQZonePacket(OP_ZoneChange, sizeof(ZoneChange_Struct));
 	ZoneChange_Struct *zc2 = (ZoneChange_Struct*)outapp->pBuffer;
 	strcpy(zc2->char_name, zc->char_name);
 	zc2->zoneID = zc->zoneID;
@@ -285,7 +293,7 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, float dest_x, 
 	if (zone_id == zone->GetZoneID()) {
 		// No need to ask worldserver if we're zoning to ourselves (most
 		// likely to a bind point), also fixes a bug since the default response was failure
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneChange,sizeof(ZoneChange_Struct));
+		EQZonePacket* outapp = new EQZonePacket(OP_ZoneChange,sizeof(ZoneChange_Struct));
 		ZoneChange_Struct* zc2 = (ZoneChange_Struct*) outapp->pBuffer;
 		strcpy(zc2->char_name, GetName());
 		zc2->zoneID = zone_id;
@@ -315,7 +323,7 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, float dest_x, 
 }
 
 void Client::MovePC(const char* zonename, float x, float y, float z, int8 ignorerestrictions, bool summoned, ZoneMode zm) {
-	MovePC(zone->GetZoneID(), x, y, z, ignorerestrictions, summoned, zm);
+	MovePC(database.GetZoneID(zonename), x, y, z, ignorerestrictions, summoned, zm);
 }
 
 void Client::MovePC(float x, float y, float z, int8 ignorerestrictions, bool summoned, ZoneMode zm)
@@ -341,35 +349,6 @@ void Client::MovePC(int32 zoneID, float x, float y, float z, int8 ignorerestrict
 		GMMove(x, y, z);
 		return;
 	}
-
-	EQApplicationPacket* outapp;
-
-	//Summon is using the regular code until somebody finds the packet
-/*	if (summoned == true) {
-		outapp = new EQApplicationPacket(OP_GMSummon, sizeof(GMSummon_Struct));
-		GMSummon_Struct* gms = (GMSummon_Struct*) outapp->pBuffer;
-
-		strcpy(gms->charname, this->GetName());
-		strcpy(gms->gmname, this->GetName());
-
-		gms->x = (sint32) x;
-		gms->y = (sint32) y;
-		gms->z = (sint32) z;
-
-		gms->zoneID = zoneID;
-		
-	} else {*/
-		outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
-		RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
-		
-		gmg->zone_id = zoneID;
-		gmg->x = x;
-		gmg->y = y;
-		gmg->z = z;
-		gmg->heading = 0;
-		gmg->type = 0x01;	//an observed value, not sure of meaning
-		
-	//}
 	
 	//if we are actually going to zone...
 	if (zoneID != zone->GetZoneID()) {
@@ -389,16 +368,16 @@ void Client::MovePC(int32 zoneID, float x, float y, float z, int8 ignorerestrict
 		
 		switch(zm) {
 		case ZoneToSafeCoords: {
-			x_pos = zone->safe_x();
-			y_pos = zone->safe_y();
-			z_pos = zone->safe_z();
+			x = x_pos = zone->safe_x();
+			y = y_pos = zone->safe_y();
+			z = z_pos = zone->safe_z();
 			break;
 		}
 		case ZoneToBindPoint:
-           x_pos = m_pp.bind_x[0];
-           y_pos = m_pp.bind_y[0];
-           z_pos = m_pp.bind_z[0];
-           break;
+			x = x_pos = m_pp.bind_x[0];
+			y = y_pos = m_pp.bind_y[0];
+			z = z_pos = m_pp.bind_z[0];
+			break;
 		case ZoneSummoned:
 		case ZoneSolicited:
 			//these two modes actually use the supplied coords
@@ -425,8 +404,36 @@ void Client::MovePC(int32 zoneID, float x, float y, float z, int8 ignorerestrict
 		update_manager.FlushQueues();
 #endif
     }
-    
-    //now tell the client to zone
+	
+	//tell the client to move or request a zoning
+	EQZonePacket* outapp;
+
+	//Summon is using the regular code until somebody finds the packet
+/*	if (summoned == true) {
+		outapp = new EQZonePacket(OP_GMSummon, sizeof(GMSummon_Struct));
+		GMSummon_Struct* gms = (GMSummon_Struct*) outapp->pBuffer;
+
+		strcpy(gms->charname, this->GetName());
+		strcpy(gms->gmname, this->GetName());
+
+		gms->x = (sint32) x;
+		gms->y = (sint32) y;
+		gms->z = (sint32) z;
+
+		gms->zoneID = zoneID;
+		
+	} else {*/
+		outapp = new EQZonePacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
+		RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
+		
+		gmg->zone_id = zoneID;
+		gmg->x = x;
+		gmg->y = y;
+		gmg->z = z;
+		gmg->heading = 0;
+		gmg->type = 0x01;	//an observed value, not sure of meaning
+		
+	//}
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);
 }

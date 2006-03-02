@@ -38,6 +38,33 @@ extern Database database;
 
 //#define FACTIONS_DEBUG 5
 
+const char *FactionValueToString(FACTION_VALUE fv) {
+	switch(fv) {
+	case FACTION_ALLY:
+		return("Ally");
+	case FACTION_WARMLY:
+		return("Warmly");
+	case FACTION_KINDLY:
+		return("Kindly");
+	case FACTION_AMIABLE:
+		return("Amiable");
+    case FACTION_INDIFFERENT:
+    	return("Indifferent");
+    case FACTION_APPREHENSIVE:
+    	return("Apprehensive");
+    case FACTION_DUBIOUS:
+    	return("Dubious");
+    case FACTION_THREATENLY:
+    	return("Threatenly");
+    case FACTION_SCOWLS:
+    	return("Scowls, ready to attack.");
+    default:
+    	break;
+    }
+    return("Unknown Faction Con");
+}
+
+
 //o--------------------------------------------------------------
 //| Name: CalculateFaction; rembrant, Dec. 16, 2001
 //o--------------------------------------------------------------
@@ -224,15 +251,16 @@ FACTION_VALUE NPC::CheckNPCFactionAlly(sint32 other_faction) {
 
 
 bool NPC::IsFactionListAlly(uint32 other_faction) {
-	list<struct NPCFaction*>::iterator cur,end;
+/*	list<struct NPCFaction*>::iterator cur,end;
 	cur = faction_list.begin();
 	end = faction_list.end();
 	for(; cur != end; cur++) {
 		struct NPCFaction* fac = *cur;
-		if (fac->factionID == other_faction && fac->value_mod <= 0)
+		if (fac->factionID == other_faction && fac->npc_value > 0)
 			return(true);
 	}
-	return(false);
+	return(false);*/
+	return(CheckNPCFactionAlly(other_faction) == FACTION_ALLY);
 }
 
 FACTION_VALUE Mob::GetSpecialFactionCon(Mob* iOther) {
@@ -660,6 +688,17 @@ bool Database::LoadFactionValues_result(MYSQL_RES* result, LinkedList<FactionVal
 //o--------------------------------------------------------------
 char* BuildFactionMessage(sint32 tmpvalue, sint32 faction_id, sint32 totalvalue)
 {
+/*
+
+This should be replaced to send string-ID based messages using:
+#define FACTION_WORST 469 //Your faction standing with %1 could not possibly get any worse.
+#define FACTION_WORSE 470 //Your faction standing with %1 got worse.
+#define FACTION_BEST 471 //Your faction standing with %1 could not possibly get any better.
+#define FACTION_BETTER 472 //Your faction standing with %1 got better.
+
+some day.
+
+*/
 	//tmpvalue is the change as best I can tell.
 	char *faction_message = 0;
 

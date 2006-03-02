@@ -32,7 +32,7 @@
 void Object::HandleAugmentation(Client* user, const AugmentItem_Struct* in_augment, Object *worldo)
 {
 	if (!user || !in_augment) {
-		LogFile->write(EQEMuLog::Error, "Client or AugmentItem_Struct not set in Object::HandleCombine");
+		LogFile->write(EQEMuLog::Error, "Client or AugmentItem_Struct not set in Object::HandleAugmentation");
 		return;
 	}
 	
@@ -63,7 +63,7 @@ void Object::HandleAugmentation(Client* user, const AugmentItem_Struct* in_augme
 			tobe_auged->PutAugment(slot,*auged_with);
 			user->PushItemOnCursor(*tobe_auged,true);
 			container->Clear();
-			APPLAYER* outapp = new APPLAYER(OP_ClearObject,0);
+			EQZonePacket* outapp = new EQZonePacket(OP_ClearObject,0);
 			user->QueuePacket(outapp);
 			safe_delete(outapp);
 			database.DeleteWorldContainer(worldo->m_id, zone->GetZoneID());
@@ -82,7 +82,7 @@ void Object::HandleAugmentation(Client* user, const AugmentItem_Struct* in_augme
 		if (old_aug)
 			user->PushItemOnCursor(*old_aug,true);
 		container->Clear();
-		APPLAYER* outapp = new APPLAYER(OP_ClearObject,0);
+		EQZonePacket* outapp = new EQZonePacket(OP_ClearObject,0);
 		user->QueuePacket(outapp);
 		safe_delete(outapp);
 		database.DeleteWorldContainer(worldo->m_id, zone->GetZoneID());
@@ -118,13 +118,13 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 		inst = user_inv.GetItem(in_combine->container_slot);
 		if (inst) {
 			const Item_Struct* item = inst->GetItem();
-			if (item && inst->IsType(ItemTypeContainer)) {
-				tradeskill = item->Container.PackType;
+			if (item && inst->IsType(ItemClassContainer)) {
+				tradeskill = item->Container.BagType;
 			}
 		}
 	}
 	
-	if (!inst || !inst->IsType(ItemTypeContainer)) {
+	if (!inst || !inst->IsType(ItemClassContainer)) {
 		user->Message(13, "Error: Server does not recognize specified tradeskill container");
 		return;
 	}
@@ -211,7 +211,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	DBTradeskillRecipe_Struct spec;
 	if (!database.GetTradeRecipe(container, passtype, tradeskill, &spec)) {
 		user->Message_StringID(4,TRADESKILL_NOCOMBINE);
-		APPLAYER* outapp = new APPLAYER(OP_TradeSkillCombine, 0);
+		EQZonePacket* outapp = new EQZonePacket(OP_TradeSkillCombine, 0);
 		user->QueuePacket(outapp);
 		safe_delete(outapp);
 		return;
@@ -221,14 +221,14 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	bool success = user->TradeskillExecute(&spec, tradeskill);
 	
 	// Send acknowledgement packets to client
-	APPLAYER* outapp = new APPLAYER(OP_TradeSkillCombine, 0);
+	EQZonePacket* outapp = new EQZonePacket(OP_TradeSkillCombine, 0);
 	user->QueuePacket(outapp);
 	safe_delete(outapp);
 	
 	//now clean out the containers.
 	if(worldcontainer){
 		container->Clear();
-		outapp = new APPLAYER(OP_ClearObject,0);
+		outapp = new EQZonePacket(OP_ClearObject,0);
 		user->QueuePacket(outapp);
 		safe_delete(outapp);
 		database.DeleteWorldContainer(worldo->m_id, zone->GetZoneID());
@@ -253,7 +253,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 void Object::HandleAutoCombine(Client* user, const RecipeAutoCombine_Struct* rac) {
 	
 	//get our packet ready, gotta send one no matter what...
-	APPLAYER* outapp = new APPLAYER(OP_RecipeAutoCombine, sizeof(RecipeAutoCombine_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_RecipeAutoCombine, sizeof(RecipeAutoCombine_Struct));
 	RecipeAutoCombine_Struct *outp = (RecipeAutoCombine_Struct *)outapp->pBuffer;
 	outp->object_type = rac->object_type;
 	outp->some_id = rac->some_id;
@@ -409,7 +409,7 @@ uint32 Object::TypeToSkill(uint32 type) {
 		case OT_FORGE:
 		case OT_TEIRDALFORGE:
 		case OT_OGGOKFORGE:
-		case OT_FIERDALF:
+		case OT_FIERDALFFORGE:
 		case OT_STORMGUARDF: {
 			tradeskill = BLACKSMITHING;
 			break;
@@ -480,7 +480,7 @@ void Client::TradeskillSearchResults(const char *query, unsigned long qlen,
 	}
 	
 	uint8 r;
-	//I could prolly get away with allocating a single APPLAYER, and
+	//I could prolly get away with allocating a single EQZonePacket, and
 	//just re-using it, but this is safe, and im not sure.
 	for(r = 0; r < qcount; r++) {
 		row = mysql_fetch_row(result);
@@ -489,7 +489,7 @@ void Client::TradeskillSearchResults(const char *query, unsigned long qlen,
 		uint32 trivial = (uint32) atoi(row[2]);
 		uint32 comp_count = (uint32) atoi(row[3]);
 		
-		APPLAYER* outapp = new APPLAYER(OP_RecipeReply, sizeof(RecipeReply_Struct));
+		EQZonePacket* outapp = new EQZonePacket(OP_RecipeReply, sizeof(RecipeReply_Struct));
 		RecipeReply_Struct *reply = (RecipeReply_Struct *) outapp->pBuffer;
 		
 		reply->object_type = objtype;
@@ -513,7 +513,7 @@ void Client::SendTradeskillDetails(unsigned long recipe_id) {
 	unsigned long recipe_id;	//backwards byte order from the Reply
 	//dynamic part...
 	// there are as many as 10 0xFFFFFFFF here in a row..
-	// there are 10 - component count of them...
+	// there are (10 - component count) of them...
 	
 	//then one of these for each component:
 	// unsigned long item_id;	//in backwards byte order
@@ -555,7 +555,7 @@ void Client::SendTradeskillDetails(unsigned long recipe_id) {
 	
 	//biggest this packet can ever be:
 	// 64 * 10 + 8 * 10 + 4 + 4 * 10 = 764
-	char *buf = new char[775];	//dynamic so we can just give it to APPLAYER
+	char *buf = new char[775];	//dynamic so we can just give it to EQZonePacket
 	uint8 r,k;
 	
 	unsigned long *header = (unsigned long *) buf;
@@ -631,7 +631,7 @@ void Client::SendTradeskillDetails(unsigned long recipe_id) {
 	
 	uint32 total = sizeof(unsigned long) + dist + datalen;
 	
-	APPLAYER* outapp = new APPLAYER(OP_RecipeDetails);
+	EQZonePacket* outapp = new EQZonePacket(OP_RecipeDetails);
 	outapp->size = total;
 	outapp->pBuffer = (uchar*) buf;
 	QueuePacket(outapp);
@@ -729,7 +729,7 @@ bool Database::GetTradeRecipe(const ItemContainerInst* container, uint8 c_type, 
 	//dunno why I have to cast this up to call GetItem
 	const Item_Struct *istruct = ((const ItemInst *) container)->GetItem();
 	if(c_type == 0 && istruct) {
-		type = istruct->ItemNumber;
+		type = istruct->ID;
 	}
 	
 	buf2[0] = '\0';
@@ -742,15 +742,15 @@ bool Database::GetTradeRecipe(const ItemContainerInst* container, uint8 c_type, 
 	for (i=0; i<10; i++) {
 		const ItemInst* inst = container->GetItem(i);
 		if (inst) {
-			const Item_Struct* item = GetItem(inst->GetItem()->ItemNumber);
+			const Item_Struct* item = GetItem(inst->GetItem()->ID);
 			if (item) {
 				if(first) {
-					pos += snprintf(pos, 19, "%d", item->ItemNumber);
+					pos += snprintf(pos, 19, "%d", item->ID);
 					first = false;
 				} else {
-					pos += snprintf(pos, 19, ",%d", item->ItemNumber);
+					pos += snprintf(pos, 19, ",%d", item->ID);
 				}
-				sum += item->ItemNumber;
+				sum += item->ID;
 				count++;
 			}
 		}

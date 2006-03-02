@@ -6,10 +6,12 @@ Mob *  T_PTROBJ
 Group *  T_PTROBJ
 Corpse *  T_PTROBJ
 EntityList *  T_PTROBJ
+PerlPacket *  T_PTROBJ
 Const_char *		T_PV
 
 #our int types
 FACTION_VALUE T_IV
+EmuAppearance T_UV
 Mob::eStandingPetOrder T_IV
 int32	T_UV
 int16	T_UV
@@ -20,6 +22,8 @@ uint8	T_UV
 sint32	T_IV
 sint16	T_IV
 sint8	T_IV
+
+int *	T_INTARRAY
 
 # basic C types
 int			T_IV
@@ -84,22 +88,22 @@ T_SVREF
 	if (SvROK($arg))
 	    $var = (SV*)SvRV($arg);
 	else
-	    Perl_croak(aTHX_ \"$var is not a reference\")
+	    Perl_croak(aTHX_ \"$var is not a reference\");
 T_AVREF
 	if (SvROK($arg) && SvTYPE(SvRV($arg))==SVt_PVAV)
 	    $var = (AV*)SvRV($arg);
 	else
-	    Perl_croak(aTHX_ \"$var is not an array reference\")
+	    Perl_croak(aTHX_ \"$var is not an array reference\");
 T_HVREF
 	if (SvROK($arg) && SvTYPE(SvRV($arg))==SVt_PVHV)
 	    $var = (HV*)SvRV($arg);
 	else
-	    Perl_croak(aTHX_ \"$var is not a hash reference\")
+	    Perl_croak(aTHX_ \"$var is not a hash reference\");
 T_CVREF
 	if (SvROK($arg) && SvTYPE(SvRV($arg))==SVt_PVCV)
 	    $var = (CV*)SvRV($arg);
 	else
-	    Perl_croak(aTHX_ \"$var is not a code reference\")
+	    Perl_croak(aTHX_ \"$var is not a code reference\");
 T_SYSRET
 	$var NOT IMPLEMENTED
 T_UV
@@ -142,28 +146,34 @@ T_PTRREF
 	    $var = INT2PTR($type,tmp);
 	}
 	else
-	    Perl_croak(aTHX_ \"$var is not a reference\")
+	    Perl_croak(aTHX_ \"$var is not a reference\");
+	if($var == NULL)
+	    Perl_croak(aTHX_ \"$var is NULL, avoiding crash.\");
 T_REF_IV_REF
 	if (sv_isa($arg, \"${ntype}\")) {
 	    IV tmp = SvIV((SV*)SvRV($arg));
 	    $var = *INT2PTR($type *, tmp);
 	}
 	else
-	    Perl_croak(aTHX_ \"$var is not of type ${ntype}\")
+	    Perl_croak(aTHX_ \"$var is not of type ${ntype}\");
 T_REF_IV_PTR
 	if (sv_isa($arg, \"${ntype}\")) {
 	    IV tmp = SvIV((SV*)SvRV($arg));
 	    $var = INT2PTR($type, tmp);
 	}
 	else
-	    Perl_croak(aTHX_ \"$var is not of type ${ntype}\")
+	    Perl_croak(aTHX_ \"$var is not of type ${ntype}\");
+	if($var == NULL)
+	    Perl_croak(aTHX_ \"$var is NULL, avoiding crash.\");
 T_PTROBJ
 	if (sv_derived_from($arg, \"${ntype}\")) {
 	    IV tmp = SvIV((SV*)SvRV($arg));
 	    $var = INT2PTR($type,tmp);
 	}
 	else
-	    Perl_croak(aTHX_ \"$var is not of type ${ntype}\")
+	    Perl_croak(aTHX_ \"$var is not of type ${ntype}\");
+	if($var == NULL)
+	    Perl_croak(aTHX_ \"$var is NULL, avoiding crash.\");
 T_PTRDESC
 	if (sv_isa($arg, \"${ntype}\")) {
 	    IV tmp = SvIV((SV*)SvRV($arg));
@@ -171,21 +181,27 @@ T_PTRDESC
 	    $var = ${type}_desc->ptr;
 	}
 	else
-	    Perl_croak(aTHX_ \"$var is not of type ${ntype}\")
+	    Perl_croak(aTHX_ \"$var is not of type ${ntype}\");
+	if($var == NULL)
+	    Perl_croak(aTHX_ \"$var is NULL, avoiding crash.\");
 T_REFREF
 	if (SvROK($arg)) {
 	    IV tmp = SvIV((SV*)SvRV($arg));
 	    $var = *INT2PTR($type,tmp);
 	}
 	else
-	    Perl_croak(aTHX_ \"$var is not a reference\")
+	    Perl_croak(aTHX_ \"$var is not a reference\");
+	if($var == NULL)
+	    Perl_croak(aTHX_ \"$var is NULL, avoiding crash.\");
 T_REFOBJ
 	if (sv_isa($arg, \"${ntype}\")) {
 	    IV tmp = SvIV((SV*)SvRV($arg));
 	    $var = *INT2PTR($type,tmp);
 	}
 	else
-	    Perl_croak(aTHX_ \"$var is not of type ${ntype}\")
+	    Perl_croak(aTHX_ \"$var is not of type ${ntype}\");
+	if($var == NULL)
+	    Perl_croak(aTHX_ \"$var is NULL, avoiding crash.\");
 T_OPAQUE
 	$var = *($type *)SvPV_nolen($arg)
 T_OPAQUEPTR
@@ -205,6 +221,23 @@ T_ARRAY
 	}
         /* this is the number of elements in the array */
         ix_$var -= $argoff
+T_INTARRAY
+	AV *av_$var;
+	if (SvROK($arg) && SvTYPE(SvRV($arg))==SVt_PVAV)
+	    av_$var = (AV*)SvRV($arg);
+	else
+	    Perl_croak(aTHX_ \"$var is not an array reference\");
+	I32 len_$var = av_len(av_$var) + 1;
+	I32 ix_$var;
+	$var = new $ntype\[len_$var\];
+	for(ix_$var = 0; ix_$var < len_$var; ix_$var ++) {
+		SV **tmp = av_fetch(av_$var, ix_$var, 0);
+		if(tmp == NULL || *tmp == NULL) {
+			$var\[ix_$var\] = 0;
+			continue;
+		}
+		$var\[ix_$var\] = ($ntype)SvIV(*tmp);
+	}
 T_STDIO
 	$var = PerlIO_findFILE(IoIFP(sv_2io($arg)))
 T_IN

@@ -11,3 +11,5 @@ fi
 ./convert npc.h NPC
 ./convert PlayerCorpse.h Corpse
 ./convert groups.h Group
+./convert perlpacket.h PerlPacket
+

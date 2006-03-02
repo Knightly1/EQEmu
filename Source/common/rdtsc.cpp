@@ -1,16 +1,27 @@
 #include "rdtsc.h"
+#include "types.h"
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/time.h>
+
+#ifdef WIN32
+	#include <windows.h>
+	#include <winsock.h>
+	#include <sys/timeb.h>
+	#include "../common/timer.h"
+#else
+	#include <unistd.h>
+	#include <sys/time.h>
+#endif
 
 #ifdef i386
 #define USE_RDTSC
 #else
-#warning RDTSC_Timer cannot use rdtsc on a non-intel platform, using gettimeofday
+	#ifndef WIN32
+		#warning RDTSC_Timer cannot use rdtsc on a non-intel platform, using gettimeofday
+	#endif
 #endif
 
 bool RDTSC_Timer::_inited = false;
-unsigned long long RDTSC_Timer::_ticsperms = 0;
+sint64 RDTSC_Timer::_ticsperms = 0;
 
 RDTSC_Timer::RDTSC_Timer() {
 	if(!_inited) {
@@ -34,8 +45,8 @@ RDTSC_Timer::RDTSC_Timer(bool start_it) {
 	}
 }
 
-unsigned long long RDTSC_Timer::rdtsc() {
-	unsigned long long res;
+sint64 RDTSC_Timer::rdtsc() {
+	sint64 res;
 #ifdef USE_RDTSC
 
 #ifdef WIN32
@@ -46,7 +57,7 @@ unsigned long long RDTSC_Timer::rdtsc() {
 		mov high, edx
 		mov low, eax
 	}
-	res = ((unsigned long long)high)<<32 | low;
+	res = ((sint64)high)<<32 | low;
 #else
 	//gnu version
 	__asm__ __volatile__ ("rdtsc" : "=A" (res));
@@ -55,14 +66,14 @@ unsigned long long RDTSC_Timer::rdtsc() {
 	//fall back to get time of day
 	timeval t;
 	gettimeofday(&t, NULL);
-	res = ((unsigned long long)t.tv_sec) * 1000 + t.tv_usec;
+	res = ((sint64)t.tv_sec) * 1000 + t.tv_usec;
 #endif
 	return(res);
 }
 
 void RDTSC_Timer::init() {
 #ifdef USE_RDTSC
-	unsigned long long before, after, sum;
+	sint64 before, after, sum;
 	
 	int r;
 	sum = 0;

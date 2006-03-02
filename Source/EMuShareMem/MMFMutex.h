@@ -13,7 +13,7 @@
 #include "MMF.h"
 
 // the manuals say you have to define this struct your self. 
-#ifndef FREEBSD  // for freeBSD
+#if !defined FREEBSD || defined __NetBSD__  // for BSDs
 union semun
 {
     int val;

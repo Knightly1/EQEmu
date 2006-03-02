@@ -48,6 +48,7 @@ using namespace std;
 #include "petitions.h"
 #include "../common/packet_functions.h"
 #include "../common/md5.h"
+#include "../common/files.h"
 #include "StringIDs.h"
 
 #ifdef GUILDWARS
@@ -126,7 +127,7 @@ void WorldServer::Process() {
 	if (!Connected()) {
 		pConnected = tcpc->Connected();
 		if (pConnected) {
-			cout << "Connected to worldserver: " << net.GetWorldAddress() << ":" << PORT << endl;
+			cout << "Connected to worldserver: " << net.GetWorldAddress() << ":" << WORLDSERVER_PORT << endl;
 			char tmp[100];
 			if (database.GetVariable("ZSPassword", tmp, sizeof(tmp))) {
 				ServerPacket* pack = new ServerPacket(ServerOP_ZAAuth, 16);
@@ -244,11 +245,11 @@ void WorldServer::Process() {
 				if(entity == 0)
 					break;
 
-				APPLAYER *outapp;
-				outapp = new APPLAYER(OP_ZoneChange,sizeof(ZoneChange_Struct));
+				EQZonePacket *outapp;
+				outapp = new EQZonePacket(OP_ZoneChange,sizeof(ZoneChange_Struct));
 				ZoneChange_Struct* zc2=(ZoneChange_Struct*)outapp->pBuffer;
 
-			adverrornum = 352;
+				adverrornum = 352;
 
 				if(ztz->response <= 0) {
 					zc2->success = ZONE_ERROR_NOTREADY;
@@ -263,17 +264,16 @@ void WorldServer::Process() {
 					entity->CastToMob()->SetZone(ztz->requested_zone_id);
 
 					if(ztz->ignorerestrictions == 3)
-						entity->CastToClient()->MovePC(ztz->requested_zone_id,-1,-1,-1);
+						entity->CastToClient()->GoToSafeCoords(ztz->requested_zone_id);
 				}
 
-			adverrornum = 353;
+				adverrornum = 353;
 
-				outapp->Deflate();
 				outapp->priority = 6;
 				entity->CastToClient()->QueuePacket(outapp);
 				safe_delete(outapp);
 
-			adverrornum = 354;
+				adverrornum = 354;
 
 				switch(ztz->response)
 				{
@@ -323,9 +323,8 @@ void WorldServer::Process() {
 					if(pack->size==64)//no results
 						client->Message_StringID(0,WHOALL_NO_RESULTS);
 					else{
-					APPLAYER* outapp = new APPLAYER(OP_WhoAllResponse, pack->size);
+					EQZonePacket* outapp = new EQZonePacket(OP_WhoAllResponse, pack->size);
 					memcpy(outapp->pBuffer, pack->pBuffer, pack->size);
-					outapp->Deflate();
 					client->QueuePacket(outapp);
 					//DumpPacket(outapp);
 					}
@@ -577,7 +576,7 @@ void WorldServer::Process() {
 				if (pack->pBuffer[4] == 1) {
 					// @merth: Guilds not yet fully functional
 					/*
-					APPLAYER* outapp = new APPLAYER(OP_GuildUpdate, sizeof(GuildUpdate_Struct));
+					EQZonePacket* outapp = new EQZonePacket(OP_GuildUpdate, sizeof(GuildUpdate_Struct));
 					GuildUpdate_Struct* gu = (GuildUpdate_Struct*) outapp->pBuffer;
 					gu->guildID = guildeqid;
 					gu->entry.guildID = guildeqid;
@@ -673,7 +672,7 @@ void WorldServer::Process() {
 				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s has another pending guild invite.", client->GetName());
 			else {
 				client->PendingGuildInvite = sgc->guilddbid;
-				APPLAYER* outapp = new APPLAYER(OP_GuildInvite);
+				EQZonePacket* outapp = new EQZonePacket(OP_GuildInvite);
 				outapp->size = sizeof(GuildCommand_Struct);
 				outapp->pBuffer = new uchar[outapp->size];
 				memset(outapp->pBuffer, 0, outapp->size);
@@ -681,7 +680,7 @@ void WorldServer::Process() {
 				gc->guildeqid = sgc->guildeqid;
 				strcpy(gc->othername, sgc->target);
 				strcpy(gc->myname, sgc->from);
-				client->QueuePacket(outapp);
+				client->FastQueuePacket(&outapp);
 				/*				
 				if (client->SetGuild(sgc->guilddbid, GUILD_MAX_RANK))
 				worldserver.SendEmoteMessage(0, sgc->guilddbid, MT_Guild, "%s has joined the guild. Rank: %s.", client->GetName(), guilds[sgc->guildeqid].rank[GUILD_MAX_RANK].rankname);
@@ -840,7 +839,7 @@ void WorldServer::Process() {
 			ServerMultiLineMsg_Struct* mlm = (ServerMultiLineMsg_Struct*) pack->pBuffer;
 			Client* client = entity_list.GetClientByName(mlm->to);
 			if (client) {
-				APPLAYER* outapp = new APPLAYER(OP_MultiLineMsg, strlen(mlm->message));
+				EQZonePacket* outapp = new EQZonePacket(OP_MultiLineMsg, strlen(mlm->message));
 				strcpy((char*) outapp->pBuffer, mlm->message);
 				client->QueuePacket(outapp);
 				safe_delete(outapp);
@@ -919,14 +918,14 @@ void WorldServer::Process() {
                     szp->adminrank = 0;//entity_list.GetClientByName(rezz->rezzer_name)->Admin();
                     szp->ignorerestrictions = 2;
                     strcpy(szp->name, srs->rez.your_name);
-                    strcpy(szp->zone, srs->rez.zone);
+                    strcpy(szp->zone, database.GetZoneName(srs->rez.zone_id));
                     szp->x_pos = srs->rez.x;
                     szp->y_pos = srs->rez.y;
                     szp->z_pos = srs->rez.z;
                     worldserver.SendPacket(pack);
                     safe_delete(pack);
                     
-					//APPLAYER* outapp = new APPLAYER(srs->rezzopcode, sizeof(Resurrect_Struct));
+					//EQZonePacket* outapp = new EQZonePacket(srs->rezzopcode, sizeof(Resurrect_Struct));
 					//memcpy(outapp->pBuffer,srs->packet, sizeof(srs->packet));
 					//client->QueuePacket(outapp);
 					//safe_delete(outapp);
@@ -974,7 +973,7 @@ void WorldServer::Process() {
 				cout << "Received Message SyncWorldTime" << endl;
 				eqTimeOfDay* newtime = (eqTimeOfDay*) pack->pBuffer;
 				zone->zone_time.setEQTimeOfDay(newtime->start_eqtime, newtime->start_realtime);
-				APPLAYER* outapp = new APPLAYER(OP_TimeOfDay);
+				EQZonePacket* outapp = new EQZonePacket(OP_TimeOfDay);
 				outapp->size = sizeof(TimeOfDay_Struct);
 				outapp->pBuffer = new uchar[outapp->size];
 				memset(outapp->pBuffer, 0, outapp->size);
@@ -1164,7 +1163,7 @@ bool WorldServer::SendEmoteMessage(const char* to, int32 to_guilddbid, sint16 to
 	return ret;
 }
 
-bool WorldServer::RezzPlayer(APPLAYER* rpack,int32 rezzexp, int16 opcode) {
+bool WorldServer::RezzPlayer(EQZonePacket* rpack,int32 rezzexp, int16 opcode) {
 	ServerPacket* pack = new ServerPacket(ServerOP_RezzPlayer, sizeof(RezzPlayer_Struct));
 	RezzPlayer_Struct* sem = (RezzPlayer_Struct*) pack->pBuffer;
 	sem->rezzopcode = opcode;
@@ -1183,12 +1182,12 @@ bool WorldServer::RezzPlayer(APPLAYER* rpack,int32 rezzexp, int16 opcode) {
 
 void WorldServer::AsyncConnect() {
 	if (tcpc->ConnectReady())
-		tcpc->AsyncConnect(net.GetWorldAddress(), PORT);
+		tcpc->AsyncConnect(net.GetWorldAddress(), WORLDSERVER_PORT);
 }
 		
 bool WorldServer::Connect() {
 	char errbuf[TCPConnection_ErrorBufferSize];
-	if (tcpc->Connect(net.GetWorldAddress(), PORT, errbuf)) {	
+	if (tcpc->Connect(net.GetWorldAddress(), WORLDSERVER_PORT, errbuf)) {	
 		return true;
 	}
 	else {

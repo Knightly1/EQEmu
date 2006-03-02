@@ -15,7 +15,7 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 	
-	client_process.cpp:
+	client_packet.cpp:
 	Handles client login sequence and packets sent from client to zone
 */
 #include "../common/debug.h"
@@ -47,6 +47,7 @@
 #include "../common/packet_functions.h"
 #include "../common/packet_dump.h"
 #include "worldserver.h"
+#include "../common/rdtsc.h"
 #include "../common/packet_dump_file.h"
 #include "../common/MiscFunctions.h"
 #include "spdat.h"
@@ -60,6 +61,8 @@
 #include "../common/crc32.h"
 #include "StringIDs.h"
 #include "map.h"
+#include "titles.h"
+#include "pets.h"
 using namespace std;
 
 #ifdef GUILDWARS
@@ -86,10 +89,10 @@ extern bool spells_loaded;
 extern PetitionList petition_list;
 extern EntityList entity_list;
 
-typedef void (Client::*ClientPacketProc)(const APPLAYER *app);
+typedef void (Client::*ClientPacketProc)(const EQZonePacket *app);
 
 //Use a map for connecting opcodes since it dosent get used a lot and is sparse
-map<uint16, ClientPacketProc> ConnectingOpcodes;
+map<uint32, ClientPacketProc> ConnectingOpcodes;
 //Use a static array for connected, for speed
 ClientPacketProc ConnectedOpcodes[_maxEmuOpcode];
 
@@ -99,11 +102,10 @@ void MapOpcodes() {
 	
 	//Now put all the opcodes into their home...
 	//Begin Connecting opcodes:
-	ConnectingOpcodes[OP_SetDataRate] = &Client::Handle_Connect_OP_SetDataRate;
+//	ConnectingOpcodes[OP_SetDataRate] = &Client::Handle_Connect_OP_SetDataRate;
 	ConnectingOpcodes[OP_ZoneEntry] = &Client::Handle_Connect_OP_ZoneEntry;
 	ConnectingOpcodes[OP_SetServerFilter] = &Client::Handle_Connect_OP_SetServerFilter;
 	ConnectingOpcodes[OP_SendAATable] = &Client::Handle_Connect_OP_SendAATable;
-	ConnectingOpcodes[OP_0x037f] = &Client::Handle_Connect_0x037f;
 	ConnectingOpcodes[OP_ReqClientSpawn] = &Client::Handle_Connect_OP_ReqClientSpawn;
 	ConnectingOpcodes[OP_SendExpZonein] = &Client::Handle_Connect_OP_SendExpZonein;
 	ConnectingOpcodes[OP_ZoneComplete] = &Client::Handle_Connect_OP_ZoneComplete;
@@ -114,13 +116,20 @@ void MapOpcodes() {
 	ConnectingOpcodes[OP_ClientError] = &Client::Handle_Connect_OP_ClientError;
 	ConnectingOpcodes[OP_ApproveZone] = &Client::Handle_Connect_OP_ApproveZone;
 	ConnectingOpcodes[OP_TGB] = &Client::Handle_Connect_OP_TGB;
+	ConnectingOpcodes[OP_SendTributes] = &Client::Handle_Connect_OP_SendTributes;
+	ConnectingOpcodes[OP_SendGuildTributes] = &Client::Handle_Connect_OP_SendGuildTributes;
+	ConnectingOpcodes[OP_SendGuildTributes] = &Client::Handle_Connect_OP_SendGuildTributes;
+	ConnectingOpcodes[OP_SendAAStats] = &Client::Handle_Connect_OP_SendAAStats;
+	ConnectingOpcodes[OP_ClientReady] = &Client::Handle_Connect_OP_ClientReady;
+//temporary hack:
+	ConnectingOpcodes[OP_GetGuildsList] = &Client::Handle_OP_GetGuildsList;
 
 	//Begin Connected opcodes:
 	ConnectedOpcodes[OP_ClientUpdate] = &Client::Handle_OP_ClientUpdate;
 	ConnectedOpcodes[OP_AutoAttack] = &Client::Handle_OP_AutoAttack;
 	ConnectedOpcodes[OP_AutoAttack2] = &Client::Handle_OP_AutoAttack2;
 	ConnectedOpcodes[OP_Consent] = &Client::Handle_OP_Consent;
-	ConnectedOpcodes[OP_Deny] = &Client::Handle_OP_Deny;
+	ConnectedOpcodes[OP_ConsentDeny] = &Client::Handle_OP_ConsentDeny;
 	ConnectedOpcodes[OP_TargetMouse] = &Client::Handle_OP_TargetMouse;
 	ConnectedOpcodes[OP_TargetCommand] = &Client::Handle_OP_TargetCommand;
 	ConnectedOpcodes[OP_Shielding] = &Client::Handle_OP_Shielding;
@@ -172,8 +181,8 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_LootItem] = &Client::Handle_OP_LootItem;
 	ConnectedOpcodes[OP_GuildDelete] = &Client::Handle_OP_GuildDelete;
 	ConnectedOpcodes[OP_GuildPublicNote] = &Client::Handle_OP_GuildPublicNote;
-	ConnectedOpcodes[OP_GetGuildMOTD] = &Client::Handle_OP_GetGuildMOTD;
-	ConnectedOpcodes[OP_GuildMOTD] = &Client::Handle_OP_GuildMOTD;
+	ConnectedOpcodes[OP_GetGuildsList] = &Client::Handle_OP_GetGuildsList;
+	ConnectedOpcodes[OP_SetGuildMOTD] = &Client::Handle_OP_SetGuildMOTD;
 	ConnectedOpcodes[OP_GuildPeace] = &Client::Handle_OP_GuildPeace;
 	ConnectedOpcodes[OP_GuildWar] = &Client::Handle_OP_GuildWar;
 	ConnectedOpcodes[OP_GuildLeader] = &Client::Handle_OP_GuildLeader;
@@ -185,7 +194,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_MemorizeSpell] = &Client::Handle_OP_MemorizeSpell;
 	ConnectedOpcodes[OP_SwapSpell] = &Client::Handle_OP_SwapSpell;
 	ConnectedOpcodes[OP_CastSpell] = &Client::Handle_OP_CastSpell;
-	ConnectedOpcodes[OP_ConsumeAmmo] = &Client::Handle_OP_ConsumeAmmo;
+	ConnectedOpcodes[OP_DeleteItem] = &Client::Handle_OP_DeleteItem;
 	ConnectedOpcodes[OP_CombatAbility] = &Client::Handle_OP_CombatAbility;
 	ConnectedOpcodes[OP_Taunt] = &Client::Handle_OP_Taunt;
 	ConnectedOpcodes[OP_InstillDoubt] = &Client::Handle_OP_InstillDoubt;
@@ -222,7 +231,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_ItemName] = &Client::Handle_OP_ItemName;
 	ConnectedOpcodes[OP_AugmentItem] = &Client::Handle_OP_AugmentItem;
 	ConnectedOpcodes[OP_ClickDoor] = &Client::Handle_OP_ClickDoor;
-	ConnectedOpcodes[OP_CreateObject] = &Client::Handle_OP_CreateObject;
+	ConnectedOpcodes[OP_GroundSpawn] = &Client::Handle_OP_CreateObject;
 	ConnectedOpcodes[OP_FaceChange] = &Client::Handle_OP_FaceChange;
 	ConnectedOpcodes[OP_GroupInvite] = &Client::Handle_OP_GroupInvite;
 	ConnectedOpcodes[OP_GroupInvite2] = &Client::Handle_OP_GroupInvite2;
@@ -251,7 +260,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_PetitionRefresh] = &Client::Handle_OP_PetitionRefresh;
 	ConnectedOpcodes[OP_ReadBook] = &Client::Handle_OP_ReadBook;
 	ConnectedOpcodes[OP_Emote] = &Client::Handle_OP_Emote;
-	ConnectedOpcodes[OP_EmoteAnim] = &Client::Handle_OP_EmoteAnim;
+	ConnectedOpcodes[OP_Animation] = &Client::Handle_OP_Animation;
 	ConnectedOpcodes[OP_SetServerFilter] = &Client::Handle_OP_SetServerFilter;
 	ConnectedOpcodes[OP_GMDelCorpse] = &Client::Handle_OP_GMDelCorpse;
 	ConnectedOpcodes[OP_GMKick] = &Client::Handle_OP_GMKick;
@@ -286,6 +295,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_TributeUpdate] = &Client::Handle_OP_TributeUpdate;
 	ConnectedOpcodes[OP_TributeToggle] = &Client::Handle_OP_TributeToggle;
 	ConnectedOpcodes[OP_TributeNPC] = &Client::Handle_OP_TributeNPC;
+	ConnectedOpcodes[OP_ConfirmDelete] = &Client::Handle_OP_ConfirmDelete;
 	ConnectedOpcodes[OP_CrashDump] = &Client::Handle_OP_CrashDump;
 	ConnectedOpcodes[OP_ControlBoat] = &Client::Handle_OP_ControlBoat;
 	ConnectedOpcodes[OP_DumpName] = &Client::Handle_OP_DumpName;
@@ -294,10 +304,17 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_Heartbeat] = &Client::Handle_OP_Heartbeat;
 	ConnectedOpcodes[OP_SafePoint] = &Client::Handle_OP_SafePoint;
 	ConnectedOpcodes[OP_FindPersonRequest] = &Client::Handle_OP_FindPersonRequest;
+	ConnectedOpcodes[OP_BankerChange] = &Client::Handle_OP_BankerChange;
+	ConnectedOpcodes[OP_LeadershipExpToggle] = &Client::Handle_OP_LeadershipExpToggle;
+	ConnectedOpcodes[OP_PurchaseLeadershipAA] = &Client::Handle_OP_PurchaseLeadershipAA;
+	ConnectedOpcodes[OP_SetTitle] = &Client::Handle_OP_SetTitle;
+	ConnectedOpcodes[OP_SenseHeading] = &Client::Handle_OP_Ignore;
+	ConnectedOpcodes[OP_FloatListThing] = &Client::Handle_OP_Ignore;
+	ConnectedOpcodes[OP_WorldUnknown001] = &Client::Handle_OP_Ignore;
 	
 }
 
-int Client::HandlePacket(const APPLAYER *app)
+int Client::HandlePacket(const EQZonePacket *app)
 {
 	_ZP(Client_HandlePacket);
 	
@@ -322,7 +339,8 @@ int Client::HandlePacket(const APPLAYER *app)
 	switch(client_state) {
 	case CLIENT_CONNECTING: {
 		if(ConnectingOpcodes.count(opcode) != 1) {
-			LogFile->write(EQEMuLog::Error, "HandlePacket() Opcode error: Unexpected packet during CLIENT_CONNECTING: opcode: %s (0x%04x), size: %i", OpcodeNames[opcode], opcode, app->size);
+//TODO: replace this 0 with the EQ opcode
+			LogFile->write(EQEMuLog::Error, "HandlePacket() Opcode error: Unexpected packet during CLIENT_CONNECTING: opcode: %s (#%d eq=0x%04x), size: %i", OpcodeNames[opcode], opcode, 0, app->size);
 #if EQDEBUG >= 9
 			cout << "Unexpected packet during CLIENT_CONNECTING: OpCode: 0x" << hex << setw(4) << setfill('0') << opcode << dec << ", size: " << app->size << endl;
 			DumpPacket(app);
@@ -345,9 +363,10 @@ int Client::HandlePacket(const APPLAYER *app)
 	}
 	case CLIENT_CONNECTED: {
 		ClientPacketProc p;
-		p = ConnectedOpcodes[opcode & 0x0FFF];		//mask just in case..?
+		p = ConnectedOpcodes[opcode];
 		if(p == NULL) {
-			LogFile->write(EQEMuLog::Error, "Unknown opcode: %s (0x%04x), size: %i, Client: %s", OpcodeNames[opcode], opcode, app->size, GetName());
+//TODO: replace this 0 with the EQ opcode
+			LogFile->write(EQEMuLog::Error, "Unhandled incoming opcode: %s (#%d, eq=0x%04x), size: %i, Client: %s", OpcodeNames[opcode], opcode, 0, app->size, GetName());
 			if(app->size<1000)
 				DumpPacket(app->pBuffer, app->size);
 			else{
@@ -375,34 +394,41 @@ int Client::HandlePacket(const APPLAYER *app)
 
 
 
-void Client::Handle_Connect_OP_SetDataRate(const APPLAYER *app)
+/*void Client::Handle_Connect_OP_SetDataRate(const EQZonePacket *app)
 {
 	// Set client datarate
-	if (app->size != sizeof(float)) {
-		LogFile->write(EQEMuLog::Error,"Wrong size on OP_SetDatarate. Got: %i, Expected: %i", app->size, sizeof(float));
-		return;
-	}
-	LogFile->write(EQEMuLog::Debug, "HandlePacket() OP_SetDataRate request : %f",  *(float*) app->pBuffer);
-	float tmpDR = *(float*) app->pBuffer;
-	if (tmpDR <= 0.0f) {
-		LogFile->write(EQEMuLog::Error,"HandlePacket() OP_SetDataRate INVALID request : %f <= 0", tmpDR);
-		LogFile->write(EQEMuLog::Normal,"WARNING: Setting datarate for client to 5.0 expect a client lock up =(");
-		tmpDR = 5.0f;
-	}
-	if (tmpDR > 25.0f)
-		tmpDR = 25.0f;
-	eqnc->SetDataRate(tmpDR);
+	//if (app->size != sizeof(float)) {
+		//LogFile->write(EQEMuLog::Error,"Wrong size on OP_SetDatarate. Got: %i, Expected: %i", app->size, sizeof(float));
+		//return;
+	//}
+	//LogFile->write(EQEMuLog::Debug, "HandlePacket() OP_SetDataRate request : %f",  *(float*) app->pBuffer);
+	//float tmpDR = *(float*) app->pBuffer;
+	//if (tmpDR <= 0.0f) {
+		//LogFile->write(EQEMuLog::Error,"HandlePacket() OP_SetDataRate INVALID request : %f <= 0", tmpDR);
+		//LogFile->write(EQEMuLog::Normal,"WARNING: Setting datarate for client to 5.0 expect a client lock up =(");
+		//tmpDR = 5.0f;
+	//}
+	//if (tmpDR > 25.0f)
+		//tmpDR = 25.0f;
+	//eqs->SetDataRate(tmpDR);
 	return;
-}
+}*/
 
-void Client::Handle_Connect_OP_ZoneEntry(const APPLAYER *app)
+void Client::Handle_Connect_OP_ZoneEntry(const EQZonePacket *app)
 {
+	if(app->size != sizeof(ClientZoneEntry_Struct))
+		return;
+	ClientZoneEntry_Struct *cze = (ClientZoneEntry_Struct *) app->pBuffer;
+	
+	if(strlen(cze->char_name) > 63)
+		return;
+	
+	conn_state = ReceivedZoneEntry;
+	
 	// Quagmire - Antighost code
 	// tmp var is so the search doesnt find this object
-	char tmp[64] = {0};
-	snprintf(tmp, 64, "%s", (char*)&app->pBuffer[4]);
-	Client* client = entity_list.GetClientByName(tmp);
-	if (!zone->GetAuth(ip, tmp, &WID, &account_id, &character_id, &admin, lskey, &tellsoff)) {
+	Client* client = entity_list.GetClientByName(cze->char_name);
+	if (!zone->GetAuth(ip, cze->char_name, &WID, &account_id, &character_id, &admin, lskey, &tellsoff)) {
 		LogFile->write(EQEMuLog::Error, "GetAuth() returned false kicking client");
 		if (client != 0)
 		{
@@ -414,10 +440,10 @@ void Client::Handle_Connect_OP_ZoneEntry(const APPLAYER *app)
 		return;
 	}
 	
-	strcpy(name, tmp);
+	strcpy(name, cze->char_name);
 	if (client != 0) {
 		struct in_addr ghost_addr;
-		ghost_addr.s_addr = eqnc->GetrIP();
+		ghost_addr.s_addr = eqs->GetrIP();
 		
 		LogFile->write(EQEMuLog::Error,"Ghosting client: Account ID:%i Name:%s Character:%s IP:%s",
 							client->AccountID(), client->AccountName(), client->GetName(), inet_ntoa(ghost_addr));
@@ -431,7 +457,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const APPLAYER *app)
 	workpt.w2_3() = GetID();
 	workpt.b1() = DBA_b1_Entity_Client_InfoForLogin;
 	DBAsyncWork* dbaw = new DBAsyncWork(MTdbafq, workpt, DBAsync::Read);
-	dbaw->AddQuery(1, &query, MakeAnyLenString(&query, "SELECT status,name,lsaccount_id,gmspeed,revoked FROM account WHERE id=%i", account_id));
+	dbaw->AddQuery(1, &query, MakeAnyLenString(&query, "SELECT status,name,lsaccount_id,gmspeed,revoked,hideme FROM account WHERE id=%i", account_id));
 	dbaw->AddQuery(2, &query, MakeAnyLenString(&query, "SELECT id,profile,zonename,x,y,z,guild,guildrank,extprofile FROM character_ WHERE id=%i", character_id));
 	dbaw->AddQuery(3, &query, MakeAnyLenString(&query, "SELECT faction_id,current_value FROM faction_values WHERE char_id = %i", character_id));
 	if (!(pDBAsyncWorkID = dbasync->AddWork(&dbaw))) {
@@ -443,14 +469,19 @@ void Client::Handle_Connect_OP_ZoneEntry(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_Connect_OP_SetServerFilter(const APPLAYER *app)
+void Client::Handle_Connect_OP_SetServerFilter(const EQZonePacket *app)
 {
+	if(app->size != sizeof(SetServerFilter_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Received invalid sized OP_SetServerFilter");
+		DumpPacket(app);
+		return;
+	}
 	SetServerFilter_Struct* filter=(SetServerFilter_Struct*)app->pBuffer;
 	ServerFilter(filter);
 	return;
 }
 
-void Client::Handle_Connect_OP_SendAATable(const APPLAYER *app)
+void Client::Handle_Connect_OP_SendAATable(const EQZonePacket *app)
 {
 	for(int a=0; a < MAX_PP_AA_ARRAY; a++){
 		aa[a] = &m_pp.aa_array[a];
@@ -464,25 +495,44 @@ void Client::Handle_Connect_OP_SendAATable(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_Connect_0x037f(const APPLAYER *app)
+void Client::Handle_Connect_OP_SendTributes(const EQZonePacket *app)
 {
-	APPLAYER* outapp = new APPLAYER(OP_0x0380, sizeof(int32));
+	SendTributes();
+	return;
+}
+
+void Client::Handle_Connect_OP_SendGuildTributes(const EQZonePacket *app)
+{
+	SendGuildTributes();
+	return;
+}
+
+void Client::Handle_Connect_OP_SendAAStats(const EQZonePacket *app)
+{
+	SendAATimers();
+	EQZonePacket* outapp = new EQZonePacket(OP_SendAAStats, 0);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	return;
 }
 
-void Client::Handle_Connect_OP_ReqClientSpawn(const APPLAYER *app)
-{
-	
-	//Send Tribute info
-	SendTribute();
+//void Client::Handle_Connect_0x3e33(const EQZonePacket *app)
+//{
+/*OP_0x0380 = 0x642c*/
+	//EQZonePacket* outapp = new EQZonePacket(OP_0x0380, sizeof(int32)); // Dunno
+	//QueuePacket(outapp);
+	//safe_delete(outapp);
+	//return;
+//}
 
-	APPLAYER* outapp = new APPLAYER;
+void Client::Handle_Connect_OP_ReqClientSpawn(const EQZonePacket *app)
+{
+	conn_state = ClientSpawnRequested;
+	
+	EQZonePacket* outapp = new EQZonePacket;
 	
 	// Send Zone Doors
 	if (entity_list.MakeDoorSpawnPacket(outapp)) {
-		//outapp->Deflate();
 		//DumpPacket(outapp);
 		QueuePacket(outapp);
 	}
@@ -494,7 +544,7 @@ void Client::Handle_Connect_OP_ReqClientSpawn(const APPLAYER *app)
 	// Send Zone Points
 	if (zone->numzonepoints > 0) {
 		int32 zpsize = sizeof(ZonePoints) + ((zone->numzonepoints+1) * sizeof(ZonePoint_Entry));
-		APPLAYER* outapp = new APPLAYER(OP_SendZonepoints,zpsize);
+		EQZonePacket* outapp = new EQZonePacket(OP_SendZonepoints,zpsize);
 		ZonePoints* zp = (ZonePoints*)outapp->pBuffer;
 		memset(zp, 0, zpsize);
 		LinkedListIterator<ZonePoint*> iterator(zone->zone_point_list);
@@ -506,21 +556,25 @@ void Client::Handle_Connect_OP_ReqClientSpawn(const APPLAYER *app)
 		{
 			ZonePoint* data = iterator.GetData();
 			zp->zpe[count].iterator = data->number;
-			zp->zpe[count].x = data->target_y;
-			zp->zpe[count].y = data->target_x; //Backwards to convert to eqlives standard..
+			zp->zpe[count].x = data->target_x;
+			zp->zpe[count].y = data->target_y;
 			zp->zpe[count].z = data->target_z;
 			zp->zpe[count].heading=data->target_heading;
-			zp->zpe[count].zoneid = database.GetZoneID((const char*)data->target_zone);
+			zp->zpe[count].zoneid = data->target_zone_id;
 			iterator.Advance();
 			count++;
 		}
-		//outapp->Deflate();
 		QueuePacket(outapp);
 		safe_delete(outapp);
 	}
 	
+	// Live does this - Doodman
+	outapp = new EQZonePacket(OP_SendAAStats, 0);
+	QueuePacket(outapp);
+	safe_delete(outapp);
+
 	// Tell client they can continue we're done
-	outapp = new APPLAYER(OP_SendExpZonein, 0);
+	outapp = new EQZonePacket(OP_SendExpZonein, 0);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 
@@ -532,20 +586,47 @@ void Client::Handle_Connect_OP_ReqClientSpawn(const APPLAYER *app)
 			SendAdventureRequestData(entity_list.GetGroupByClient(this),false,true);
 		}
 		else if(zone->GetZoneID() == ai.zonedungeonid && 
-			database.GetLDoNDungeon(zone->GetZoneID()) == true ){
+			database.IsLDoNDungeon(zone->GetZoneID()) ){
 			SendAdventureRequestData(entity_list.GetGroupByClient(this),true,false);
 		}
 		else
 			SendAdventureRequestData(NULL,false,false,true);
 	}
+	
+	conn_state = ZoneContentsSent;
+	
 	return;
 }
 
-void Client::Handle_Connect_OP_SendExpZonein(const APPLAYER *app)
+void Client::Handle_Connect_OP_ReqNewZone(const EQZonePacket *app)
+{
+	conn_state = NewZoneRequested;
+	
+	EQZonePacket* outapp;
+	
+	/////////////////////////////////////
+	// New Zone Packet
+	outapp = new EQZonePacket(OP_NewZone, sizeof(NewZone_Struct));
+	NewZone_Struct* nz = (NewZone_Struct*)outapp->pBuffer;
+	memcpy(outapp->pBuffer, &zone->newzone_data, sizeof(NewZone_Struct));
+	strcpy(nz->char_name, m_pp.name);
+	FastQueuePacket(&outapp);
+	
+	/////////////////////////////////////
+	// Titles Packet
+	//this is where live is sending titles... im not sure why
+	outapp = title_manager.MakeTitlesPacket(this);
+	if(outapp != NULL)
+		FastQueuePacket(&outapp);
+	
+	return;
+}
+
+void Client::Handle_Connect_OP_SendExpZonein(const EQZonePacket *app)
 {
 	//////////////////////////////////////////////////////
 	// Spawn Appearance Packet
-	APPLAYER* outapp = new APPLAYER(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
 	SpawnAppearance_Struct* sa = (SpawnAppearance_Struct*)outapp->pBuffer;
 	sa->type = AT_SpawnID;			// Is 0x10 used to set the player id?
 	sa->parameter = GetID();	// Four bytes for this parameter...
@@ -554,15 +635,19 @@ void Client::Handle_Connect_OP_SendExpZonein(const APPLAYER *app)
 	safe_delete(outapp);
 	
 	// Inform the world about the client
-	outapp = new APPLAYER();
+	outapp = new EQZonePacket();
 	
 	CreateSpawnPacket(outapp);
 	outapp->priority = 6;
 	entity_list.QueueClients(this, outapp, true);
 	safe_delete(outapp);
 	
+	//Send AA Exp packet:
+	if(GetLevel() >= 51)
+		SendAAStats();
+	
 	// Send exp packets
-	outapp = new APPLAYER(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
+	outapp = new EQZonePacket(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
 	ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
 	int32 tmpxp1 = GetEXPForLevel(GetLevel()+1);
 	int32 tmpxp2 = GetEXPForLevel(GetLevel());
@@ -579,105 +664,89 @@ void Client::Handle_Connect_OP_SendExpZonein(const APPLAYER *app)
 	if(GetLevel() >= 51)
 		SendAATimers();
 
-	outapp = new APPLAYER(OP_SendExpZonein, 0);
+	outapp = new EQZonePacket(OP_SendExpZonein, 0);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 
-	outapp = new APPLAYER(OP_ZoneInSendName, sizeof(ZoneInSendName_Struct));
+	outapp = new EQZonePacket(OP_RaidUpdate, sizeof(ZoneInSendName_Struct));
 	ZoneInSendName_Struct* zonesendname=(ZoneInSendName_Struct*)outapp->pBuffer;
 	strcpy(zonesendname->name,m_pp.name);
 	strcpy(zonesendname->name2,m_pp.name);
 	zonesendname->unknown0=0x0A;
-	outapp->Deflate();
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	
 	/* this is actually the guild MOTD
-	outapp = new APPLAYER(OP_ZoneInSendName2, sizeof(ZoneInSendName_Struct2));
+	outapp = new EQZonePacket(OP_ZoneInSendName2, sizeof(ZoneInSendName_Struct2));
 	ZoneInSendName_Struct2* zonesendname2=(ZoneInSendName_Struct2*)outapp->pBuffer;
 	strcpy(zonesendname2->name,m_pp.name);
-	outapp->Deflate();
 	QueuePacket(outapp);
 	safe_delete(outapp);*/
 	
 	int32 guildid = GuildDBID();
 	if(guildid!=0 && guildid!=0xFFFFFFFF) {
-		SendGuildMembers(guildid);
+		SendGuildMembers(guildid, true);
 		
-		outapp = new APPLAYER(OP_GuildMOTD, sizeof(GuildMOTD_Struct));
+		outapp = new EQZonePacket(OP_GuildMOTD, sizeof(GuildMOTD_Struct));
 		GuildMOTD_Struct *motd = (GuildMOTD_Struct *) outapp->pBuffer;
 		motd->unknown0 = 0;
 		strncpy(motd->name, m_pp.name, 64);
-		strncpy(motd->setby_name, "NotImplementedYet", 64);
-		strncpy(motd->motd, database.GetGuildMOTD(guildid), 512);
+		string motd_str = database.GetGuildMOTD(guildid);
+		strncpy(motd->motd, motd_str.c_str(), 512);
 		
-		QueuePacket(outapp);
-		safe_delete(outapp);
+		FastQueuePacket(&outapp);
 	} else {
 		//No idea why live sends this if were not in a guild
-		outapp = new APPLAYER(OP_GuildMOTD, sizeof(GuildMOTD_Struct));
+		outapp = new EQZonePacket(OP_GuildMOTD, sizeof(GuildMOTD_Struct));
 		GuildMOTD_Struct *motd = (GuildMOTD_Struct *) outapp->pBuffer;
 		motd->unknown0 = 0;
 		strncpy(motd->name, m_pp.name, 64);
-		motd->setby_name[0] = '\0';
+		//motd->setby_name[0] = '\0';
 		motd->motd[0] = '\0';	//just to be sure
 		
-		QueuePacket(outapp);
-		safe_delete(outapp);
+		FastQueuePacket(&outapp);
 	}
 	
 	
 	return;
 }
 
-void Client::Handle_Connect_OP_ZoneComplete(const APPLAYER *app)
+void Client::Handle_Connect_OP_ZoneComplete(const EQZonePacket *app)
 {
-	APPLAYER* outapp = new APPLAYER(OP_0x0347, 0);
+	EQZonePacket* outapp = new EQZonePacket(OP_0x0347, 0);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	return;
 }
 
-void Client::Handle_Connect_OP_ReqNewZone(const APPLAYER *app)
-{
-	APPLAYER* outapp;
-	
-	/////////////////////////////////////
-	// New Zone Packet
-	outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
-	NewZone_Struct* nz = (NewZone_Struct*)outapp->pBuffer;
-	memcpy(outapp->pBuffer, &zone->newzone_data, sizeof(NewZone_Struct));
-	strcpy(nz->char_name, m_pp.name);
-	QueuePacket(outapp);
-	safe_delete(outapp);
-	return;
-}
-
-void Client::Handle_Connect_OP_SpawnAppearance(const APPLAYER *app)
+void Client::Handle_Connect_OP_SpawnAppearance(const EQZonePacket *app)
 {
 	return;
 }
 
-void Client::Handle_Connect_OP_WearChange(const APPLAYER *app)
+void Client::Handle_Connect_OP_WearChange(const EQZonePacket *app)
 {
-	if(app->size==9 && (app->pBuffer[8]==6 || app->pBuffer[8]==5)) {
-		CompleteConnect();
-		SendHPUpdate();
-	}
+	//not sure what these are supposed to mean to us.
 	return;
 }
 
-void Client::Handle_Connect_OP_ClientUpdate(const APPLAYER *app)
+void Client::Handle_Connect_OP_ClientUpdate(const EQZonePacket *app)
 {
 	//Once we get this, the client thinks it is connected
 	//So give it the benefit of the doubt and move to connected
-	//this is because some chars dont get the expected stream of 
-	//OP_WearChange that we are expecting above...
+	
+	Handle_Connect_OP_ClientReady(app);
+}
+
+void Client::Handle_Connect_OP_ClientReady(const EQZonePacket *app)
+{
+	conn_state = ClientReadyReceived;
+	
 	CompleteConnect();
 	SendHPUpdate();
 }
 
-void Client::Handle_Connect_OP_ClientError(const APPLAYER *app)
+void Client::Handle_Connect_OP_ClientError(const EQZonePacket *app)
 {
 	// Client reporting error to server
 	ClientError_Struct* error = (ClientError_Struct*)app->pBuffer;
@@ -690,7 +759,7 @@ void Client::Handle_Connect_OP_ClientError(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_Connect_OP_ApproveZone(const APPLAYER *app)
+void Client::Handle_Connect_OP_ApproveZone(const EQZonePacket *app)
 {
 	ApproveZone_Struct* azone =(ApproveZone_Struct*)app->pBuffer;
 	azone->approve=1;
@@ -698,24 +767,46 @@ void Client::Handle_Connect_OP_ApproveZone(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_Connect_OP_TGB(const APPLAYER *app)
+void Client::Handle_Connect_OP_TGB(const EQZonePacket *app)
 {
 	OPTGB(app);
 	return;
 }
 
-void Client::Handle_OP_ClientUpdate(const APPLAYER *app)
+void Client::Handle_OP_ClientUpdate(const EQZonePacket *app)
 {
 	if (IsAIControlled())
 		return;
 	
-	if (app->size != sizeof(PlayerPositionUpdateClient_Struct)) {
+	//currently accepting two sizes, one has an extra byte on the end
+	if (app->size != sizeof(PlayerPositionUpdateClient_Struct)
+	&& app->size != (sizeof(PlayerPositionUpdateClient_Struct)+1)
+	) {
 		LogFile->write(EQEMuLog::Error, "OP size error: OP_ClientUpdate expected:%i got:%i", sizeof(PlayerPositionUpdateClient_Struct), app->size);
 		return;
 	}
-
 	PlayerPositionUpdateClient_Struct* ppu = (PlayerPositionUpdateClient_Struct*)app->pBuffer;
-
+	
+	if(ppu->spawn_id != GetID())
+		return;
+	
+	
+	float dist = 0;
+	float tmp;
+	tmp = x_pos - ppu->x_pos;
+	dist += tmp*tmp;
+	tmp = y_pos - ppu->y_pos;
+	dist += tmp*tmp;
+	tmp = z_pos - ppu->z_pos;
+	dist += tmp*tmp;
+	if(dist > 50.0f*50.0f) {
+		printf("%s: Large position change: %f units\n", GetName(), sqrt(dist));
+		printf("Coords: (%.4f, %.4f, %.4f) -> (%.4f, %.4f, %.4f)\n",
+			x_pos, y_pos, z_pos, ppu->x_pos, ppu->y_pos, ppu->z_pos);
+		printf("Deltas: (%.2f, %.2f, %.2f) -> (%.2f, %.2f, %.2f)\n",
+			delta_x, delta_y, delta_z, ppu->delta_x, ppu->delta_y, ppu->delta_z);
+	}
+	
 	// solar: a very low chance to improve at sense heading, since
 	// the client doesn't send an opcode for the key anymore, ever
 	// since they made it useless on live
@@ -739,8 +830,8 @@ void Client::Handle_OP_ClientUpdate(const APPLAYER *app)
 	}
 
 	// Update internal state
-	delta_y			= ppu->delta_y;
 	delta_x			= ppu->delta_x;
+	delta_y			= ppu->delta_y;
 	delta_z			= ppu->delta_z;
 	delta_heading	= ppu->delta_heading;
 	heading			= EQ19toFloat(ppu->heading);
@@ -749,10 +840,11 @@ void Client::Handle_OP_ClientUpdate(const APPLAYER *app)
 		if(MakeRandomFloat(0, 100) < 70)//should be good
 			CheckIncreaseSkill(TRACKING,-10);
 	}
-	y_pos			= ppu->y_pos;
 	x_pos			= ppu->x_pos;
+	y_pos			= ppu->y_pos;
 	z_pos			= ppu->z_pos;
 	animation		= ppu->animation;
+	
 #ifdef GUILDWARS
 	if(animation > 65 && admin<80 && CheckCheat()){
 		if(cheater || cheatcount>0){
@@ -775,65 +867,63 @@ void Client::Handle_OP_ClientUpdate(const APPLAYER *app)
 	cheat_x=x_pos;
 	cheat_y=y_pos;
 #endif
+	
 		//printf("animation: %i\n",ppu->animation);
 	// Outgoing client packet
 	if (ppu->y_pos != y_pos || ppu->x_pos != x_pos || ppu->heading != heading || ppu->animation != animation)
 	{
-		APPLAYER* outapp = new APPLAYER(OP_ClientUpdate, sizeof(PlayerPositionUpdateServer_Struct));
+		EQZonePacket* outapp = new EQZonePacket(OP_ClientUpdate, sizeof(PlayerPositionUpdateServer_Struct));
 		PlayerPositionUpdateServer_Struct* ppu = (PlayerPositionUpdateServer_Struct*)outapp->pBuffer;
 		MakeSpawnUpdate(ppu);
 		if (gmhideme)
 			entity_list.QueueClientsStatus(this,outapp,true,Admin(),250);
 		else
 #ifdef PACKET_UPDATE_MANAGER
-			entity_list.QueueManaged(this,outapp,true);
+			entity_list.QueueManaged(this,outapp,true,false);
 #else
-			entity_list.QueueCloseClients(this,outapp,true,300);
+			entity_list.QueueCloseClients(this,outapp,true,300,NULL,false);
 #endif
 		safe_delete(outapp);
 	}
 	return;
 }
 
-void Client::Handle_OP_AutoAttack(const APPLAYER *app)
+void Client::Handle_OP_AutoAttack(const EQZonePacket *app)
 {
-	if (app->size == 4)	{
-		if (app->pBuffer[0] == 0) {
-			auto_attack = false;
-			if (IsAIControlled())
-				return;
-			attack_timer.Disable();
-			attack_dw_timer.Disable();
-			SetAttackTimer();
-		}
-		else if (app->pBuffer[0] == 1) {
-			auto_attack = true;
-			if (IsAIControlled())
-				return;
-			attack_timer.Enable();
-			attack_dw_timer.Enable();
-			SetAttackTimer();
-		}
-	}
-	else {
+	if (app->size != 4) {
 		LogFile->write(EQEMuLog::Error, "OP size error: OP_AutoAttack expected:4 got:%i", app->size);
+		return;
 	}
-	return;
+	
+	if (app->pBuffer[0] == 0) {
+		auto_attack = false;
+		if (IsAIControlled())
+			return;
+		attack_timer.Disable();
+		ranged_timer.Disable();
+		attack_dw_timer.Disable();
+	}
+	else if (app->pBuffer[0] == 1) {
+		auto_attack = true;
+		if (IsAIControlled())
+			return;
+		SetAttackTimer();
+	}
 }
 
-void Client::Handle_OP_AutoAttack2(const APPLAYER *app)
+void Client::Handle_OP_AutoAttack2(const EQZonePacket *app)
 {
 	return;
 }
 
-void Client::Handle_OP_Consent(const APPLAYER *app)
+void Client::Handle_OP_Consent(const EQZonePacket *app)
 {
 	if(app->size<64){
-		char* c_name = (char*)app->pBuffer;
-		Client* client = entity_list.GetClientByName(c_name);
+		Consent_Struct* c = (Consent_Struct*)app->pBuffer;
+		Client* client = entity_list.GetClientByName(c->name);
 		if(client && client!=this){
 			consent_list.push_back(client);
-			APPLAYER* outapp = new APPLAYER(OP_ConsentResponse, sizeof(ConsentResponse_Struct));
+			EQZonePacket* outapp = new EQZonePacket(OP_ConsentResponse, sizeof(ConsentResponse_Struct));
 			ConsentResponse_Struct* crs = (ConsentResponse_Struct*)outapp->pBuffer;
 			strcpy(crs->grantname,client->GetName());
 			strcpy(crs->ownername,GetName());
@@ -851,14 +941,14 @@ void Client::Handle_OP_Consent(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Deny(const APPLAYER *app)
+void Client::Handle_OP_ConsentDeny(const EQZonePacket *app)
 {
 	if(app->size<64){
-		char* c_name = (char*)app->pBuffer;
-		Client* client = entity_list.GetClientByName(c_name);
+		Consent_Struct* c = (Consent_Struct*)app->pBuffer;
+		Client* client = entity_list.GetClientByName(c->name);
 		if(client){
 			consent_list.remove(client);
-			APPLAYER* outapp = new APPLAYER(OP_ConsentResponse, sizeof(ConsentResponse_Struct));
+			EQZonePacket* outapp = new EQZonePacket(OP_ConsentResponse, sizeof(ConsentResponse_Struct));
 			ConsentResponse_Struct* crs = (ConsentResponse_Struct*)outapp->pBuffer;
 			strcpy(crs->grantname,client->GetName());
 			strcpy(crs->ownername,GetName());
@@ -874,12 +964,12 @@ void Client::Handle_OP_Deny(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TargetMouse(const APPLAYER *app)
+void Client::Handle_OP_TargetMouse(const EQZonePacket *app)
 {
 	Handle_OP_TargetCommand(app);
 }
 
-void Client::Handle_OP_TargetCommand(const APPLAYER *app)
+void Client::Handle_OP_TargetCommand(const EQZonePacket *app)
 {
 	if (app->size != sizeof(ClientTarget_Struct)) {
 		LogFile->write(EQEMuLog::Error, "OP size error: OP_TargetMouse expected:%i got:%i", sizeof(ClientTarget_Struct), app->size);
@@ -894,16 +984,20 @@ void Client::Handle_OP_TargetCommand(const APPLAYER *app)
 	if (!IsAIControlled())
 		target = entity_list.GetMob(ct->new_target);
 	
+	//ensure LOS to the target (image)
+	if((Admin() < 80) && (target != this && !CheckLosFN(target)))
+		return;
+	
 	// For /target, send reject or success packet
 	if (app->GetOpcode() == OP_TargetCommand) {
-		if (target && !target->CastToMob()->IsInvisible(this) && Dist(*target) <= TARGETING_RANGE) {
+		if (target && !target->CastToMob()->IsInvisible(this) && DistNoRoot(*target) <= TARGETING_RANGE*TARGETING_RANGE) {
 			QueuePacket(app);
-			APPLAYER hp_app;
+			EQZonePacket hp_app;
 			target->IsTargeted(true);
 			target->CreateHPPacket(&hp_app);
 			QueuePacket(&hp_app, false);
 		} else {
-			APPLAYER* outapp = new APPLAYER(OP_TargetReject, sizeof(TargetReject_Struct));
+			EQZonePacket* outapp = new EQZonePacket(OP_TargetReject, sizeof(TargetReject_Struct));
 			outapp->pBuffer[0] = 0x2f;
 			outapp->pBuffer[1] = 0x01;
 			outapp->pBuffer[4] = 0x0d;
@@ -920,7 +1014,7 @@ void Client::Handle_OP_TargetCommand(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Shielding(const APPLAYER *app)
+void Client::Handle_OP_Shielding(const EQZonePacket *app)
 {
 	if (shield_target)
 	{
@@ -943,7 +1037,7 @@ void Client::Handle_OP_Shielding(const APPLAYER *app)
 	if (inst)
 	{
 		const Item_Struct* shield = inst->GetItem();
-		if (shield && shield->Common.ItemUse == ItemUseShield)
+		if (shield && shield->Common.ItemType == ItemTypeShield)
 		{
 			for (int x = 0; x < 2; x++)
 			{
@@ -993,7 +1087,7 @@ void Client::Handle_OP_Shielding(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Jump(const APPLAYER *app)
+void Client::Handle_OP_Jump(const EQZonePacket *app)
 {
 	// neotokyo: here we could reduce fatigue, if we knew how
 	/*
@@ -1004,19 +1098,19 @@ void Client::Handle_OP_Jump(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_AdventureInfoRequest(const APPLAYER *app)
+void Client::Handle_OP_AdventureInfoRequest(const EQZonePacket *app)
 {
 	SendAdventureInfoRequest(app);
 	return;
 }
 
-void Client::Handle_OP_AdventureRequest(const APPLAYER *app)
+void Client::Handle_OP_AdventureRequest(const EQZonePacket *app)
 {
 	SendAdventureRequest();
 	return;
 }
 
-void Client::Handle_OP_LDoNButton(const APPLAYER *app)
+void Client::Handle_OP_LDoNButton(const EQZonePacket *app)
 {
 	bool* p=(bool*)app->pBuffer;
 	if(*p == true ) {
@@ -1028,27 +1122,27 @@ void Client::Handle_OP_LDoNButton(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_LeaveAdventure(const APPLAYER *app)
+void Client::Handle_OP_LeaveAdventure(const EQZonePacket *app)
 {
 	uchar lol[4]={0x3F,0x2A,0x00,0x00};
-	APPLAYER* outapp=new APPLAYER(OP_0x02e4,4);
+	EQZonePacket* outapp=new EQZonePacket(OP_AdventureFinish,4); // Doodman: Dunno if this is right or now
 	uchar* x=(uchar*)outapp->pBuffer;
 	memcpy(x,lol,4);
 	QueuePacket(outapp);
 	safe_delete(outapp);
-	//Cofruben: lol2 for message,lol for leave confirmation.
-	uchar lol2[12]={0x0F,0x14,0x00,0x00,0x0D,0x00,0x00,0x00,0x01,0x00,0x00,0x00};
-	APPLAYER* outapp2=new APPLAYER(OP_0x01d7,12);
-	uchar* xx=(uchar*) outapp2->pBuffer;
-	memcpy(xx,lol2,12);
-	QueuePacket(outapp2);
-	safe_delete(outapp2);
+
+	EQZonePacket* outapp2=new EQZonePacket(OP_SimpleMessage,sizeof(SimpleMessage_Struct));
+	SimpleMessage_Struct *msg=(SimpleMessage_Struct *)outapp->pBuffer;
+	msg->string_id=5135;
+	msg->color=0x000d;
+	FastQueuePacket(&outapp2);
+
 	SendAdventureFinish(0,0);
 	return;
 
 }
 
-void Client::Handle_OP_Consume(const APPLAYER *app)
+void Client::Handle_OP_Consume(const EQZonePacket *app)
 {
 	if (app->size != sizeof(Consume_Struct))
 	{
@@ -1070,6 +1164,8 @@ void Client::Handle_OP_Consume(const APPLAYER *app)
 #endif
 		m_pp.hunger_level += eat_item->Common.CastTime*30; //roughly 1 item per 10 minutes
 		DeleteItemInInventory(pcs->slot, 1, false);
+		
+		entity_list.MessageClose_StringID(this, true, 50, 0, EATING_MESSAGE, GetName(), eat_item->Name);
 	}
 	else if (pcs->type == 0x02) {
 #if EQDEBUG >= 1
@@ -1079,6 +1175,8 @@ void Client::Handle_OP_Consume(const APPLAYER *app)
 		//m_pp.thirst_level += 1000;
 		m_pp.thirst_level += eat_item->Common.CastTime*30; //roughly 1 item per 10 minutes
 		DeleteItemInInventory(pcs->slot, 1, false);
+		
+		entity_list.MessageClose_StringID(this, true, 50, 0, DRINKING_MESSAGE, GetName(), eat_item->Name);
 	}
 	else {
 		LogFile->write(EQEMuLog::Error, "OP_Consume: unknown type, type:%i", (int)pcs->type);
@@ -1088,8 +1186,8 @@ void Client::Handle_OP_Consume(const APPLAYER *app)
 		m_pp.hunger_level = 6000;
 	if (m_pp.thirst_level > 6000)
 		m_pp.thirst_level = 6000;
-	APPLAYER *outapp;
-	outapp = new APPLAYER(OP_Stamina, sizeof(Stamina_Struct));
+	EQZonePacket *outapp;
+	outapp = new EQZonePacket(OP_Stamina, sizeof(Stamina_Struct));
 	Stamina_Struct* sta = (Stamina_Struct*)outapp->pBuffer;
 	sta->food = m_pp.hunger_level;
 	sta->water = m_pp.thirst_level;
@@ -1099,161 +1197,177 @@ void Client::Handle_OP_Consume(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_AdventureMerchantRequest(const APPLAYER *app)
+void Client::Handle_OP_AdventureMerchantRequest(const EQZonePacket *app)
 {
+	if (app->size != sizeof(AdventureMerchant_Struct))
+	{
+		LogFile->write(EQEMuLog::Error, "OP size error: OP_AdventureMerchantRequest expected:%i got:%i", sizeof(AdventureMerchant_Struct), app->size);
+		return;
+	}
+	
 	// Packet contains entity id
-	char msg[16000];
+	char *msg = new char[16000];
+	char *cursor = msg;
 	memset(msg,0,16000);
 	int8 count = 0;
-	EntityId_Struct* eid = (EntityId_Struct*)app->pBuffer;
+	AdventureMerchant_Struct* eid = (AdventureMerchant_Struct*)app->pBuffer;
 	int32 merchantid = 0;
 	//DumpPacket(app);
 
 	Mob* tmp = entity_list.GetMob(eid->entity_id);
-	if (tmp != 0)
-	{
-		merchantid=tmp->CastToNPC()->MerchantType;
-		tmp->CastToNPC()->FaceTarget(this->CastToMob());
-	}
-	else
+	if (tmp == 0 || !tmp->IsNPC() || tmp->GetClass() != ADVENTUREMERCHANT)
 		return;
+	
+	//you have to be somewhat close to them to be properly using them
+	if(DistNoRoot(*tmp) > USE_NPC_RANGE2)
+		return;
+	
+	merchantid=tmp->CastToNPC()->MerchantType;
+	tmp->CastToNPC()->FaceTarget(this->CastToMob());
 
 	const Item_Struct *item = 0;
 	std::list<MerchantList> merlist = zone->merchanttable[merchantid];
 	std::list<MerchantList>::const_iterator itr;
 	for(itr = merlist.begin();itr != merlist.end() && count<80;itr++){
-		MerchantList ml = *itr;
+		const MerchantList &ml = *itr;
 		item = database.GetItem(ml.item);
 		if(item)
 		{
-			sprintf(msg,"%s^%s,%i,%i,%i,0,1,32767,32767",msg,item->Name,item->ItemNumber,item->Common.ldonpointcost,item->Common.ldonpointtheme);
+			//its possible that the 0 and 1 in here are supposed to be 'count'
+			cursor += sprintf(cursor,"^%s|%i|%i|%i|0|1|%d|%d",
+				item->Name,item->ID,item->Common.LDoNPrice,item->Common.LDoNTheme,
+				item->Common.Races,item->Common.Classes);
 			count++;
 		}
 	}
 	//Count
-	//^Item Name,Item ID,Cost in Points,Theme (0=none),0,1,32767,32767
-	APPLAYER* outapp = new APPLAYER(OP_AdventureMerchantResponse,strlen(msg)+2);
+	//^Item Name,Item ID,Cost in Points,Theme (0=none),0,1,races bit map,classes bitmap
+	EQZonePacket* outapp = new EQZonePacket(OP_AdventureMerchantResponse,strlen(msg)+2);
 	outapp->pBuffer[0] = count;
 	strncpy((char*)&outapp->pBuffer[1],msg,strlen(msg));
 	//DumpPacket(outapp);
-	//outapp->Deflate();
-	QueuePacket(outapp);
-	safe_delete(outapp);
+	FastQueuePacket(&outapp);
+	safe_delete_array(msg);
 }
 
-void Client::Handle_OP_AdventureMerchantPurchase(const APPLAYER *app)
+void Client::Handle_OP_AdventureMerchantPurchase(const EQZonePacket *app)
 {
+	if (app->size != sizeof(Adventure_Purchase_Struct))
+	{
+		LogFile->write(EQEMuLog::Error, "OP size error: OP_AdventureMerchantPurchase expected:%i got:%i", sizeof(Adventure_Purchase_Struct), app->size);
+		return;
+	}
+	
 	Adventure_Purchase_Struct* aps = (Adventure_Purchase_Struct*)app->pBuffer;
 /*
 	Get item apc->itemid (can check NPC if thats necessary), ldon point theme check only if theme is not 0 (I am not sure what 1-5 are though for themes)
-	if(ldon_available_points >= item ldonpointcost)
+	if(ldon_points_available >= item ldonpointcost)
 	{
 	give item (67 00 00 00 for the packettype using opcode 0x02c5)
-	ldon_available_points -= ldonpointcost;
+	ldon_points_available -= ldonpointcost;
 	}
 */
 	int32 merchantid = 0;
 	Mob* tmp = entity_list.GetMob(aps->npcid);
-	if (tmp != 0)
-		merchantid = tmp->CastToNPC()->MerchantType;
-	else
+	if (tmp == 0 || !tmp->IsNPC() || tmp->GetClass() != ADVENTUREMERCHANT)
 		return;
+	
+	//you have to be somewhat close to them to be properly using them
+	if(DistNoRoot(*tmp) > USE_NPC_RANGE2)
+		return;
+	
+	merchantid = tmp->CastToNPC()->MerchantType;
 
-	const Item_Struct* item = 0;
+	const Item_Struct* item = NULL;
+	bool found = false;
 	std::list<MerchantList> merlist = zone->merchanttable[merchantid];
 	std::list<MerchantList>::const_iterator itr;
 
 	for(itr = merlist.begin();itr != merlist.end();itr++){
 		MerchantList ml = *itr;
 	    item = database.GetItem(ml.item);
-		if(item && item->ItemNumber == aps->itemid) //This check to make sure that the item is actually on the NPC, people attempt to inject packets to get items summoned...
+	    if(!item)
+	    	continue;
+		if(item->ID == aps->itemid) { //This check to make sure that the item is actually on the NPC, people attempt to inject packets to get items summoned...
+			found = true;
 			break;
-		else if(item && item->ItemNumber != aps->itemid)
-			item = 0;
+		}
 	}
-	if (!item) {
+	if (!item || !found) {
 		Message(13, "Error: The item you purchased does not exist!");
 		return;
 	}
-/*
-ldon_avaliable_points needs to be rediscovered.
-	if(m_pp.ldon_available_points >= item->Common.ldonpointcost)
-	{
-		sint8 charges=1;
-			charges=item->Common.MaxCharges;
-		ItemInst* inst = ItemInst::Create(item,charges);
-		if (inst) {
-			sint16 openslot = m_inv.FindFreeSlot(false,true, item->Size);
-			if(openslot == SLOT_INVALID)
-				return;
-			sint32 requiredpts = (sint32)item->Common.ldonpointcost*-1;
-			if(!UpdateLDoNPoints(requiredpts,item->Common.ldonpointtheme))
-				return;
-			if(charges > 0)
-				inst->SetCharges(charges);
-			else
-				inst->SetCharges(1);
-			SendItemPacket(openslot, inst, ItemPacketTrade);
-			PutItemInInventory(openslot,*inst);
-			safe_delete(inst);
-		}
+	
+	if(m_pp.ldon_points_available < item->Common.LDoNPrice) {
+		Message(13, "You cannot afford that item.");
+		return;
 	}
-*/
-	//DumpPacket(app);
+	
+	sint32 requiredpts = (sint32)item->Common.LDoNPrice*-1;
+	if(!UpdateLDoNPoints(requiredpts,item->Common.LDoNPrice))
+		return;
+	
+	sint8 charges=1;
+	if(item->Common.MaxCharges != 0)
+		charges = item->Common.MaxCharges;
+	SummonItem(aps->itemid, charges);
 }
 
-void Client::Handle_OP_ConsiderCorpse(const APPLAYER *app)
+void Client::Handle_OP_ConsiderCorpse(const EQZonePacket *app)
 {
-	if (app->size == sizeof(Consider_Struct))
+	if (app->size != sizeof(Consider_Struct))
 	{
-		Consider_Struct* conin = (Consider_Struct*)app->pBuffer;
-		Corpse* tcorpse = entity_list.GetCorpseByID(conin->targetid);
-		if (tcorpse && tcorpse->IsNPCCorpse()) {
-			Message(10, "This corpse regards you sadly. Noone asked what i wanted my tombstone to say!");
-			int32 min; int32 sec; int32 ttime;
-			if ((ttime = tcorpse->GetDecayTime()) != 0) {
-				sec = (ttime/1000)%60; // Total seconds
-				min = (ttime/60000)%60; // Total seconds / 60 drop .00
-				//Message(10,  "This corpse will decay in %i minutes, %i seconds.", min, sec);
-				char val1[20]={0};
-				char val2[20]={0};
-				Message_StringID(10,CORPSE_DECAY1,ConvertArray(min,val1),ConvertArray(sec,val2));
-			}
-			else {
-				Message_StringID(10,CORPSE_DECAY_NOW);
-				//Message(10,  "This corpse is waiting to expire.");
-			}
-		}
-		else if (tcorpse && tcorpse->IsPlayerCorpse()) {
-			Message(10, "This corpse glares at you threateningly! I told you that wasn't going to work");
-			int32 min; int32 sec; int32 ttime;
-			if ((ttime = tcorpse->GetDecayTime()) != 0) {
-				sec = (ttime/1000)%60; // Total seconds
-				min = (ttime/60000)%60; // Total seconds / 60 drop .00
-				//Message(10,  "This corpse will decay in %i minutes, %i seconds.", min, sec);
-				char val1[20]={0};
-				char val2[20]={0};
-				Message_StringID(10,CORPSE_DECAY1,ConvertArray(min,val1),ConvertArray(sec,val2));
-			}
-			else {
-				//Message(10,  "This corpse is waiting to expire.");
-				Message_StringID(10,CORPSE_DECAY_NOW);
-			}
-		}
-	}
-	else {
 		LogFile->write(EQEMuLog::Debug, "Size mismatch in Consider corpse expected %i got %i", sizeof(Consider_Struct), app->size);
+		return;
 	}
-	return;
+	Consider_Struct* conin = (Consider_Struct*)app->pBuffer;
+	Corpse* tcorpse = entity_list.GetCorpseByID(conin->targetid);
+	if (tcorpse && tcorpse->IsNPCCorpse()) {
+		Message(10, "This corpse regards you sadly. Noone asked what i wanted my tombstone to say!");
+		int32 min; int32 sec; int32 ttime;
+		if ((ttime = tcorpse->GetDecayTime()) != 0) {
+			sec = (ttime/1000)%60; // Total seconds
+			min = (ttime/60000)%60; // Total seconds / 60 drop .00
+			//Message(10,  "This corpse will decay in %i minutes, %i seconds.", min, sec);
+			char val1[20]={0};
+			char val2[20]={0};
+			Message_StringID(10,CORPSE_DECAY1,ConvertArray(min,val1),ConvertArray(sec,val2));
+		}
+		else {
+			Message_StringID(10,CORPSE_DECAY_NOW);
+			//Message(10,  "This corpse is waiting to expire.");
+		}
+	}
+	else if (tcorpse && tcorpse->IsPlayerCorpse()) {
+		Message(10, "This corpse glares at you threateningly! I told you that wasn't going to work");
+		int32 min; int32 sec; int32 ttime;
+		if ((ttime = tcorpse->GetDecayTime()) != 0) {
+			sec = (ttime/1000)%60; // Total seconds
+			min = (ttime/60000)%60; // Total seconds / 60 drop .00
+			//Message(10,  "This corpse will decay in %i minutes, %i seconds.", min, sec);
+			char val1[20]={0};
+			char val2[20]={0};
+			Message_StringID(10,CORPSE_DECAY1,ConvertArray(min,val1),ConvertArray(sec,val2));
+		}
+		else {
+			//Message(10,  "This corpse is waiting to expire.");
+			Message_StringID(10,CORPSE_DECAY_NOW);
+		}
+	}
 }
 
-void Client::Handle_OP_Consider(const APPLAYER *app)
+void Client::Handle_OP_Consider(const EQZonePacket *app)
 {
+	if (app->size != sizeof(Consider_Struct))
+	{
+		LogFile->write(EQEMuLog::Debug, "Size mismatch in Consider expected %i got %i", sizeof(Consider_Struct), app->size);
+		return;
+	}
 	Consider_Struct* conin = (Consider_Struct*)app->pBuffer;
 	Mob* tmob = entity_list.GetMob(conin->targetid);
 	if (tmob == 0)
 		return;
-	APPLAYER* outapp = new APPLAYER(OP_Consider, sizeof(Consider_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_Consider, sizeof(Consider_Struct));
 	Consider_Struct* con = (Consider_Struct*)outapp->pBuffer;
 	con->playerid = GetID();
 	con->targetid = conin->targetid;
@@ -1279,7 +1393,7 @@ void Client::Handle_OP_Consider(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Begging(const APPLAYER *app)
+void Client::Handle_OP_Begging(const EQZonePacket *app)
 {
 	if(GetSkill(BEGGING)>0){
 	int ran=MakeRandomInt(0,100);
@@ -1298,7 +1412,7 @@ void Client::Handle_OP_Begging(const APPLAYER *app)
 
 	if(ran<chancetobeg)
 	{
-		APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct)); 
+		EQZonePacket* outapp = new EQZonePacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct)); 
 		moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer; 
 		d->copper=MakeRandomInt(1,3);
 		d->silver=MakeRandomInt(1,1);
@@ -1319,56 +1433,17 @@ void Client::Handle_OP_Begging(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TestBuff(const APPLAYER *app)
+void Client::Handle_OP_TestBuff(const EQZonePacket *app)
 {
-#ifdef GUILDWARS
-	int32 ClassItemTable[16][10] = {
-							0,0,0,0,0,0,0,0,0,0,
-		/*Warrior*/			20301, 20302, 20303, 20304, 20305, 20306, 20298, 0, 0, 0,
-		/*Cleric*/			20308, 20309, 20310, 20311, 20312, 20313, 20314, 20330, 0, 0,
-		/*Paladin*/			20315, 20316, 20317, 20318, 20319, 20320, 20321, 20329, 0, 0,
-		/*Ranger*/			27509, 27510, 27511, 27512, 27513, 27514, 27515, 27532, 0, 0,
-		/*ShadowKnight*/	4968, 4969, 4970, 4971, 4972, 4973, 4974, 4975, 5121, 0,
-		/*Druid*/			27516, 27517, 27518, 27519, 27520, 27521, 27522, 27531, 0, 0,
-		/*Monk*/			9879, 9880, 9881, 9882, 9883, 9884, 9885, 0, 0, 0,
-		/*Bard*/			27523, 27524, 27525, 27526, 27527, 27528, 27529, 27533, 0, 0,
-		/*Rogue*/			24412, 24414, 24417, 24418, 24419, 24420, 24421, 27530, 0, 0,
-		/*Shaman*/			51069, 51070, 51071, 51072, 51073, 51074, 51075, 51095, 0, 0,
-		/*Necromancer*/		20322, 20324, 20325, 20326, 20327, 20328, 20332, 19911, 19913, 20323,
-		/*Wizard*/			20322, 20324, 20325, 20326, 20327, 20328, 20332, 19911, 19913, 20323,
-		/*Magician*/		20322, 20324, 20325, 20326, 20327, 20328, 20332, 19911, 19913, 20323,
-		/*Enchanter*/		20322, 20324, 20325, 20326, 20327, 20328, 20332, 19911, 19913, 20323
-	};
-
-	if(GetClass() > 14)
-		return;
-
-		for(int i=0;i<10;i++)
-		{
-		sint16 slot = m_inv.FindFreeSlot(false,false);
-		if(slot == SLOT_INVALID)
-		slot = m_inv.FindFreeSlot(false,true);
-
-		if(ClassItemTable[GetClass()][i] != 0 && (slot != SLOT_INVALID) 
-			&& (m_inv.HasItem(ClassItemTable[GetClass()][i], 1, invWhereWorn|invWherePersonal) == SLOT_INVALID))
-		{
-		const Item_Struct* item = database.GetItem(ClassItemTable[GetClass()][i]);
-		ItemInst* inst = ItemInst::Create(item, 1);
-
-		if(item)
-		{
-		SendItemPacket(slot, inst, ItemPacketTrade);
-		PutItemInInventory(slot,*inst,true);
-		}
-		safe_delete(inst);
-		}
-		}
-#endif
-	return;
 }
 
-void Client::Handle_OP_Surname(const APPLAYER *app)
+void Client::Handle_OP_Surname(const EQZonePacket *app)
 {
+	if (app->size != sizeof(Surname_Struct))
+	{
+		LogFile->write(EQEMuLog::Debug, "Size mismatch in Surname expected %i got %i", sizeof(Surname_Struct), app->size);
+		return;
+	}
 	Surname_Struct* surname = (Surname_Struct*) app->pBuffer;
 	char *c = surname->lastname;
 	int found_bad_char = 0;
@@ -1401,7 +1476,7 @@ void Client::Handle_OP_Surname(const APPLAYER *app)
 	}
 	ChangeLastName(surname->lastname);
 	
-	APPLAYER* outapp = new APPLAYER(OP_GMLastName, sizeof(GMLastName_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_GMLastName, sizeof(GMLastName_Struct));
 	GMLastName_Struct* lnc = (GMLastName_Struct*) outapp->pBuffer;
 	strcpy(lnc->name, surname->name);
 	strcpy(lnc->lastname, surname->lastname);
@@ -1411,21 +1486,20 @@ void Client::Handle_OP_Surname(const APPLAYER *app)
 	entity_list.QueueClients(this, outapp, false);
 	safe_delete(outapp);
 	
-	outapp = app->Copy();
+	outapp = app->CopyZonePacket();
 	surname = (Surname_Struct*) outapp->pBuffer;
 	surname->unknown0064=1;
-	//outapp->Deflate();
 	FastQueuePacket(&outapp);
 	return;
 }
 
-void Client::Handle_OP_YellForHelp(const APPLAYER *app)
+void Client::Handle_OP_YellForHelp(const EQZonePacket *app)
 {
 	entity_list.QueueCloseClients(this,app, true, 100.0);
 	return;
 }
 
-void Client::Handle_OP_Assist(const APPLAYER *app)
+void Client::Handle_OP_Assist(const EQZonePacket *app)
 {
 	if (app->size != sizeof(EntityId_Struct)) {
 		LogFile->write(EQEMuLog::Debug, "Size mismatch in OP_Assist expected %i got %i", sizeof(EntityId_Struct), app->size);
@@ -1435,7 +1509,7 @@ void Client::Handle_OP_Assist(const APPLAYER *app)
 	EntityId_Struct* eid = (EntityId_Struct*)app->pBuffer;
 	Entity* entity = entity_list.GetID(eid->entity_id);
 	
-	APPLAYER* outapp = app->Copy();
+	EQZonePacket* outapp = app->CopyZonePacket();
 	eid = (EntityId_Struct*)outapp->pBuffer;
 	eid->entity_id = GetID();
 	if(entity && entity->IsMob())
@@ -1461,7 +1535,7 @@ void Client::Handle_OP_Assist(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMTraining(const APPLAYER *app)
+void Client::Handle_OP_GMTraining(const EQZonePacket *app)
 {
 	if (app->size != sizeof(GMTrainee_Struct)) {
 		LogFile->write(EQEMuLog::Debug, "Size mismatch in OP_GMTraining expected %i got %i", sizeof(GMTrainee_Struct), app->size);
@@ -1472,7 +1546,7 @@ void Client::Handle_OP_GMTraining(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMEndTraining(const APPLAYER *app)
+void Client::Handle_OP_GMEndTraining(const EQZonePacket *app)
 {
 	if (app->size != sizeof(GMTrainEnd_Struct)) {
 		LogFile->write(EQEMuLog::Debug, "Size mismatch in OP_GMEndTraining expected %i got %i", sizeof(GMTrainEnd_Struct), app->size);
@@ -1483,7 +1557,7 @@ void Client::Handle_OP_GMEndTraining(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMTrainSkill(const APPLAYER *app)
+void Client::Handle_OP_GMTrainSkill(const EQZonePacket *app)
 {
 	if (app->size != sizeof(GMSkillChange_Struct)) {
 		LogFile->write(EQEMuLog::Debug, "Size mismatch in OP_GMTrainSkill expected %i got %i", sizeof(GMSkillChange_Struct), app->size);
@@ -1494,7 +1568,7 @@ void Client::Handle_OP_GMTrainSkill(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_DuelResponse(const APPLAYER *app)
+void Client::Handle_OP_DuelResponse(const EQZonePacket *app)
 {
 	if(app->size != sizeof(DuelResponse_Struct))
 		return;
@@ -1515,7 +1589,7 @@ void Client::Handle_OP_DuelResponse(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_DuelResponse2(const APPLAYER *app)
+void Client::Handle_OP_DuelResponse2(const EQZonePacket *app)
 {
 	if(app->size != sizeof(Duel_Struct))
 		return;
@@ -1525,7 +1599,7 @@ void Client::Handle_OP_DuelResponse2(const APPLAYER *app)
 	Entity* initiator = entity_list.GetID(ds->duel_initiator);
 	
 	if (entity && initiator && entity == this && initiator->IsClient()) {
-		APPLAYER* outapp = new APPLAYER(OP_RequestDuel, sizeof(Duel_Struct));
+		EQZonePacket* outapp = new EQZonePacket(OP_RequestDuel, sizeof(Duel_Struct));
 		Duel_Struct* ds2 = (Duel_Struct*) outapp->pBuffer;
 		
 		ds2->duel_initiator = entity->GetID();
@@ -1551,12 +1625,12 @@ void Client::Handle_OP_DuelResponse2(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_RequestDuel(const APPLAYER *app)
+void Client::Handle_OP_RequestDuel(const EQZonePacket *app)
 {
 	if(app->size != sizeof(Duel_Struct))
 		return;
 	
-	APPLAYER* outapp = app->Copy();
+	EQZonePacket* outapp = app->CopyZonePacket();
 	Duel_Struct* ds = (Duel_Struct*) outapp->pBuffer;
 	int32 duel = ds->duel_initiator;
 	ds->duel_initiator = ds->duel_target;
@@ -1584,7 +1658,7 @@ void Client::Handle_OP_RequestDuel(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_SpawnAppearance(const APPLAYER *app)
+void Client::Handle_OP_SpawnAppearance(const EQZonePacket *app)
 {
 	if (app->size != sizeof(SpawnAppearance_Struct)) {
 		cout << "Wrong size on OP_SpawnAppearance. Got: " << app->size << ", Expected: " << sizeof(SpawnAppearance_Struct) << endl;
@@ -1604,14 +1678,14 @@ void Client::Handle_OP_SpawnAppearance(const APPLAYER *app)
 		if (IsAIControlled())
 			return;
 		if (sa->parameter == ANIM_STAND) {
-			SetAppearance(0);
+			SetAppearance(eaStanding);
 			playeraction = 0;
 			SetFeigned(false);
 			BindWound(this, false, true);
 			camp_timer.Disable();
 		}
 		else if (sa->parameter == ANIM_SIT) {
-			SetAppearance(1);
+			SetAppearance(eaSitting);
 			playeraction = 1;
 			if(!UseBardSpellLogic())
 				InterruptSpell();
@@ -1621,19 +1695,19 @@ void Client::Handle_OP_SpawnAppearance(const APPLAYER *app)
 		else if (sa->parameter == ANIM_CROUCH) {
 			if(!UseBardSpellLogic())
 				InterruptSpell();
-			SetAppearance(2);
+			SetAppearance(eaCrouching);
 			playeraction = 2;
 			SetFeigned(false);
 			StopSong();
 		}
 		else if (sa->parameter == ANIM_DEATH) { // feign death too
-			SetAppearance(3);
+			SetAppearance(eaDead);
 			playeraction = 3;
 			InterruptSpell();
 			StopSong();
 		}
 		else if (sa->parameter == ANIM_LOOT) {
-			SetAppearance(4);
+			SetAppearance(eaLooting);
 			playeraction = 4;
 			SetFeigned(false);
 		}
@@ -1714,7 +1788,7 @@ void Client::Handle_OP_SpawnAppearance(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_BazaarInspect(const APPLAYER *app)
+void Client::Handle_OP_BazaarInspect(const EQZonePacket *app)
 {
 	if (app->size != sizeof(BazaarInspect_Struct)) {
 		LogFile->write(EQEMuLog::Error, "Invalid size for BazaarInspect_Struct: Expected %i, Got %i",
@@ -1739,7 +1813,7 @@ void Client::Handle_OP_BazaarInspect(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Death(const APPLAYER *app)
+void Client::Handle_OP_Death(const EQZonePacket *app)
 {
 	if(app->size != sizeof(Death_Struct))
 		return;
@@ -1754,7 +1828,7 @@ void Client::Handle_OP_Death(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_MoveCoin(const APPLAYER *app)
+void Client::Handle_OP_MoveCoin(const EQZonePacket *app)
 {
 	if(app->size != sizeof(MoveCoin_Struct)){
 		LogFile->write(EQEMuLog::Error, "Wrong size on OP_MoveCoin.  Got: %i, Expected: %i", app->size, sizeof(MoveCoin_Struct));
@@ -1765,7 +1839,7 @@ void Client::Handle_OP_MoveCoin(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_ItemLinkClick(const APPLAYER *app)
+void Client::Handle_OP_ItemLinkClick(const EQZonePacket *app)
 {
 	if(app->size != sizeof(ItemViewRequest_Struct)){
 		LogFile->write(EQEMuLog::Error, "Wrong size on OP_ItemLinkClick.  Got: %i, Expected: %i", app->size, sizeof(ItemViewRequest_Struct));
@@ -1789,7 +1863,7 @@ void Client::Handle_OP_ItemLinkClick(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_MoveItem(const APPLAYER *app)
+void Client::Handle_OP_MoveItem(const EQZonePacket *app)
 {
 	if(this->CharacterID()==0)
 		return;
@@ -1803,29 +1877,35 @@ void Client::Handle_OP_MoveItem(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Camp(const APPLAYER *app)
+void Client::Handle_OP_Camp(const EQZonePacket *app)
 {
 	//LogFile->write(EQEMuLog::Debug, "%s sent a camp packet.", GetName());
-	if(GetAdventureID()>0)DeleteCharInAdventure(CharacterID(),GetAdventureID());
+	if(GetAdventureID() > 0)
+		DeleteCharInAdventure(CharacterID(), GetAdventureID());
 	Save();
 	LeaveGroup();
 	if (GetGM()) {
-		Disconnect();
+		OnDisconnect(true);
 	}
-	camp_timer.Start(30000);
+	camp_timer.Start(29000,true);
 	return;
 }
 
-void Client::Handle_OP_Logout(const APPLAYER *app)
+void Client::Handle_OP_Logout(const EQZonePacket *app)
 {
 	//LogFile->write(EQEMuLog::Debug, "%s sent a logout packet.", GetName());
-	Save();
+	//we will save when we get destroyed soon anyhow
+	//Save();
+	
+	EQZonePacket *outapp = new EQZonePacket(OP_LogoutReply);
+	FastQueuePacket(&outapp);
+	
 	Disconnect();
 	return;
 }
 
 #if 0	//solar: this isn't used anymore, the client doesn't send a packet
-void Client::Handle_OP_SenseHeading(const APPLAYER *app)
+void Client::Handle_OP_SenseHeading(const EQZonePacket *app)
 {
 	if (rand()%100 <= 15 && (GetSkill(SENSE_HEADING) < 200) && (GetSkill(SENSE_HEADING) < this->GetLevel()*5+5)) {
 		this->SetSkill(SENSE_HEADING, GetRawSkill(SENSE_HEADING) + 1);
@@ -1834,7 +1914,7 @@ void Client::Handle_OP_SenseHeading(const APPLAYER *app)
 }
 #endif
 
-void Client::Handle_OP_FeignDeath(const APPLAYER *app)
+void Client::Handle_OP_FeignDeath(const EQZonePacket *app)
 {
 	if(GetClass() != MONK)
 		return;
@@ -1847,13 +1927,13 @@ void Client::Handle_OP_FeignDeath(const APPLAYER *app)
 	{
 		case 1:
 			reuse = 9;
-			return;
+			break;
 		case 2:
 			reuse = 7;
-			return;
+			break;
 		case 3:
 			reuse = 5;
-			return;
+			break;
 	}
 	p_timers.Start(pTimerFeignDeath, reuse-1);
 	
@@ -1886,7 +1966,7 @@ void Client::Handle_OP_FeignDeath(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Sneak(const APPLAYER *app)
+void Client::Handle_OP_Sneak(const EQZonePacket *app)
 {
 	if(GetSkill(SNEAK) < 1) {
 		return; //You cannot sneak if you do not have sneak
@@ -1910,7 +1990,7 @@ void Client::Handle_OP_Sneak(const APPLAYER *app)
 	if(!was && random < hidechance) {
 		sneaking = true;
 	}
-	APPLAYER* outapp = new APPLAYER(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
 	SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
 	sa_out->spawn_id = GetID();
 	sa_out->type = 0x0F;
@@ -1918,25 +1998,21 @@ void Client::Handle_OP_Sneak(const APPLAYER *app)
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	if(GetClass() == ROGUE){
+		outapp = new EQZonePacket(OP_SimpleMessage,12);
+		SimpleMessage_Struct *msg=(SimpleMessage_Struct *)outapp->pBuffer;
+		msg->color=0x010E;
 		if (sneaking){
-			outapp = new APPLAYER(OP_0x0202,12);
-			uint8 rawData0[12] = { 0x5B, 0x01, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-			memcpy(outapp->pBuffer,rawData0,12);
-			QueuePacket(outapp);
-			safe_delete(outapp)
+			msg->string_id=347;
 		}
 		else {
-			outapp = new APPLAYER(OP_0x0202,12);
-			uint8 rawData0[12] = { 0x5C, 0x01, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-			memcpy(outapp->pBuffer,rawData0,12);
-			QueuePacket(outapp);
-			safe_delete(outapp)
+			msg->string_id=348;
 		}
+		FastQueuePacket(&outapp);
 	}
 	return;
 }
 
-void Client::Handle_OP_Hide(const APPLAYER *app)
+void Client::Handle_OP_Hide(const EQZonePacket *app)
 {
 	if(GetSkill(HIDE) < 1) {
 		return; //You cannot hide if you do not have hide
@@ -1953,7 +2029,7 @@ void Client::Handle_OP_Hide(const APPLAYER *app)
 	float random = MakeRandomFloat(0, 100);
 	CheckIncreaseSkill(HIDE,15);					
 	if (random < hidechance) {
-		APPLAYER* outapp = new APPLAYER(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+		EQZonePacket* outapp = new EQZonePacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
 		SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
 		sa_out->spawn_id = GetID();
 		sa_out->type = 0x03;
@@ -1964,33 +2040,30 @@ void Client::Handle_OP_Hide(const APPLAYER *app)
 		invisible = true;
 	}
 	if(GetClass() == ROGUE){
+		EQZonePacket *outapp = new EQZonePacket(OP_SimpleMessage,sizeof(SimpleMessage_Struct));
+		SimpleMessage_Struct *msg=(SimpleMessage_Struct *)outapp->pBuffer;
+		msg->color=0x010E;
 		if (!auto_attack && entity_list.Fighting(this)) {
 			if (MakeRandomInt(0, 300) < (int)GetSkill(HIDE)) {
-				Message(0,"You momentarily duck out of combat.");
+				msg->string_id=343;
 				entity_list.RemoveFromHateLists(this,true);
 			} else {
-				Message(0,"Your attempts to duck out of combat fail.");
+				msg->string_id=344;
+			}
+		} else {
+			if (invisible){
+				msg->string_id=347;
+			}
+			else {
+				msg->string_id=348;
 			}
 		}
-		if (invisible){
-			APPLAYER* outapp = new APPLAYER(OP_0x0202,12);
-			uint8 rawData0[12] = { 0x5A, 0x01, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-			memcpy(outapp->pBuffer,rawData0,12);
-			QueuePacket(outapp);
-			safe_delete(outapp)
-		}
-		else {
-			APPLAYER* outapp = new APPLAYER(OP_0x0202,12);
-			uint8 rawData0[12] = { 0x59, 0x01, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-			memcpy(outapp->pBuffer,rawData0,12);
-			QueuePacket(outapp);
-			safe_delete(outapp)
-		}
+		FastQueuePacket(&outapp);
 	}
 	return;
 }
 
-void Client::Handle_OP_ChannelMessage(const APPLAYER *app)
+void Client::Handle_OP_ChannelMessage(const EQZonePacket *app)
 {
 	ChannelMessage_Struct* cm=(ChannelMessage_Struct*)app->pBuffer;
 	
@@ -2003,11 +2076,11 @@ void Client::Handle_OP_ChannelMessage(const APPLAYER *app)
 		return;
 	}
 	
-	ChannelMessageReceived(cm->chan_num, cm->language, &cm->message[0], cm->targetname);
+	ChannelMessageReceived(cm->chan_num, cm->language, cm->message, cm->targetname);
 	return;
 }
 
-void Client::Handle_OP_WearChange(const APPLAYER *app)
+void Client::Handle_OP_WearChange(const EQZonePacket *app)
 {
 	if (app->size != sizeof(WearChange_Struct)) {
 		cout << "Wrong size: OP_WearChange, size=" << app->size << ", expected " << sizeof(WearChange_Struct) << endl;
@@ -2026,301 +2099,16 @@ void Client::Handle_OP_WearChange(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_ZoneChange(const APPLAYER *app)
-{
-	zoning = true;
-	if (app->size != sizeof(ZoneChange_Struct)) {
-		cout << "Wrong size: OP_ZoneChange, size=" << app->size << ", expected " << sizeof(ZoneChange_Struct) << endl;
-		return;
-	}
-	
-#if EQDEBUG >= 5
-	LogFile->write(EQEMuLog::Debug, "Zone request from %s", GetName());
-	DumpPacket(app);
-#endif
-	ZoneChange_Struct* zc=(ZoneChange_Struct*)app->pBuffer;
-	
-	
-#ifdef GUILDWARS
-	if(zc->zoneID == 186)	// hateplaneb
-		zc->zoneID = 76;		// hateplane
-	if(Admin() == 0 && (zone->GetZoneID() == 183 || zone->GetZoneID() == 184))
-		return;
-#endif
-	
-	strcpy(zc->char_name, GetName()); // Stops packets from being inserted to make other clients zone					
-	
-	float tarx = -1, tary = -1, tarz = -1,tarheading=999;
-	sint16 minstatus = 0;
-	int8 minlevel = 0;
-	sint8 myerror=ZONE_ERROR_NOTREADY;
-	char target_zone[32] = {0};
-	
-	
-#ifdef GUILDWARS
-	if (zc->zoneID != 0 && dead)
-	{
-	if(animation > 65 && admin<80 && CheckCheat()){
-		if(cheater || cheatcount>0){
-			Message(15,"Cheater log updated...yup your busted,its not nice to cheat.");
-			char descript[50]={0};
-			sprintf(descript,"%s: %i","Death zone cheat");
-			database.logevents(this->AccountName(),this->AccountID(),admin,this->GetName(),"none","Death zone cheat",descript,15);
-			if(cheater==false){
-				worldserver.SendEmoteMessage(0,0,0,13,"<Cheater Locator> We have found a cheater.  %s (Acct: %s) was just caught hacking, please show them what we think of hackers...",this->GetName(),this->AccountName());
-				cheater=true;
-			}
-			cheatcount=0;
-		}
-		else
-			cheatcount++;
-	}
-	}
-#endif
+//in zoning.cpp
+//void Client::Handle_OP_ZoneChange(const EQZonePacket *app) {
+//}
 
-	if (zc->zoneID == 0)
-	{
-		if(strlen(zonesummon_name)==0)//Player Died
-			strcpy(target_zone, zone->GetShortName());
-		else
-			strcpy(target_zone, zonesummon_name);
-	}
-	else if (database.GetZoneName(zc->zoneID))
-			strcpy(target_zone, database.GetZoneName(zc->zoneID));
-	else
-		target_zone[0] = 0;
-
-	
-	// this both loads the safe points and does a sanity check on zone name
-	if (!database.GetSafePoints(target_zone, &tarx, &tary, &tarz, &minstatus, &minlevel))
-	{
-		target_zone[0] = 0;
-	}
-	int8 tmpzonesummon_ignorerestrictions = zonesummon_ignorerestrictions;
-	if (zonesummon_ignorerestrictions)
-	{
-		minstatus = 0;
-		minlevel = 0;
-	}
-	zonesummon_ignorerestrictions = 0;
-	
-	ZonePoint* zone_point = zone->GetClosestZonePoint(x_pos, y_pos, z_pos, zc->zoneID);
-		
-// vesuvias - zone processing fix
-	//zone debugging
-	ZonePoint* zp = zone_point;										
-
-	tarx=zonesummon_x;
-	tary=zonesummon_y;
-	tarz=zonesummon_z;
-	if(zp && zc->zoneID==0) {
-		strcpy(target_zone,zp->target_zone);
-		zc->zoneID = database.GetZoneID(target_zone);
-		tarheading = zp->target_heading;
-	}
-	
-	// -1, -1, -1 = code for zone safe point
-	if ((x_pos == -1 && y_pos == -1 && (z_pos == -1 || z_pos == -10)) ||
-		(zonesummon_x == -1 && zonesummon_y == -1 && (zonesummon_z == -1 || zonesummon_z == -10))) {
-		cout << "Zoning to safe coords: " << target_zone << " (" << database.GetZoneID(target_zone) << ")" << endl;
-		tarx=database.GetSafePoint(target_zone, "x");
-		tary=database.GetSafePoint(target_zone, "y");
-		tarz=database.GetSafePoint(target_zone, "z");
-		zonesummon_x = -2;
-		zonesummon_y = -2;
-		zonesummon_z = -2;
-	}
-	// -3 -3 -3 = bind point
-// vesuvias - zone processing fix
-	else if (zonesummon_x == -3 && zonesummon_y == -3 && (zonesummon_z == -3 || zonesummon_z == -30)) {						
-		if (database.GetZoneName(m_pp.bind_zone_id)){
-			//zoneing to bind point
-			strcpy(target_zone, database.GetZoneName(m_pp.bind_zone_id));
-			tarx = m_pp.bind_x[0];
-			tary = m_pp.bind_y[0];
-			tarz = m_pp.bind_z[0];
-			
-		} //else bind point isn't set and we will zone to the zone safe point
-
-		zonesummon_x = -2;
-		zonesummon_y = -2;
-		zonesummon_z = -2;
-		minstatus = 0;
-		minlevel = 0;
-	}
-	else if (zone_point != 0) {
-		if(zone_point->target_x==999999)
-			tarx=GetX();
-		else
-			tarx = zone_point->target_x;
-		if(zone_point->target_y==999999)
-			tary=GetY();
-		else
-			tary = zone_point->target_y;
-		if(zone_point->target_z==999999)
-			tarz=GetZ();
-		else
-			tarz = zone_point->target_z;
-		tarheading = zone_point->target_heading;
-		//strcpy(target_zone,zone_point->target_zone);
-	}
-
-	// if not -2 -2 -2, zone to these coords. -2, -2, -2 = not a zonesummon zonerequest
-	else if (!(zonesummon_x == -2 && zonesummon_y == -2 && (zonesummon_z == -2 || zonesummon_z == -20))) {
-		tarx = zonesummon_x;
-		tary = zonesummon_y;
-		tarz = zonesummon_z;
-		zonesummon_x = -2;
-		zonesummon_y = -2;
-		zonesummon_z = -2;
-	}
-	else {
-		cout << "WARNING: No target coords for this zone in DB found" << endl;
-		cout << "Zoning to safe coords: " << target_zone << " (" << database.GetZoneID(target_zone) << ")" << ", x=" << tarx << ", y=" << tary << ", z=" << tarz << endl;
-// vesuvias - zone processing fix
-		//tarx=-1;
-		//tary=-1;
-		//tarz=-1;
-
-		zonesummon_x = -2;
-		zonesummon_y = -2;
-		zonesummon_z = -2;
-	}
-	
-#ifdef GUILDWARS
-// image/solar: GW hack to forze dead clients into nexus on death
-	if(dead && !IsBecomeNPC() && Admin() == 0)
-	{
-		printf("player %s appears to be dead, zoning to nexus\n", GetName());
-		m_pp.zone_id = 152;
-		database.MoveCharacterToZone(CharacterID(),database.GetZoneName(m_pp.zone_id));
-		tarx = 10;
-		tary = 10;
-		tarz = -30;
-		zonesummon_x = -2;
-		zonesummon_y = -2;
-		zonesummon_z = -2;
-		strcpy(target_zone,"nexus");
-	}
-#endif
-	
-	if (admin < minstatus || GetLevel() < minlevel)
-		myerror = ZONE_ERROR_NOEXPERIENCE;
-
-	bool RAZone = true;
-#ifdef RAIDADDICTS
-	if (!raidaddicts.ZoneInCheck(zc->zoneID, this)) {
-		myerror = ZONE_ERROR_NOEXPERIENCE;
-		RAZone = false;
-	}
-#endif
-	if(GetAdventureID()>0){
-		AdventureInfo ai=database.GetAdventureInfo(GetAdventureID());
-		if(zc->zoneID != ai.zonedungeonid && database.GetLDoNDungeon(zc->zoneID) == true){
-			Message(0,"You are not allowed to enter this dungeon!");
-			strcpy(target_zone,zone->GetShortName());
-			tarx = GetX();
-			tary = GetY();
-			tarz = GetZ();
-			zonesummon_x = 0;
-			zonesummon_y = 0;
-			zonesummon_z = 0;
-		}
-	}
-	else if(database.GetLDoNDungeon(zc->zoneID) == true){
-			Message(0,"You are not allowed to enter this dungeon!");
-			strcpy(target_zone,zone->GetShortName());
-			tarx = GetX();
-			tary = GetY();
-			tarz = GetZ();
-			zonesummon_x = 0;
-			zonesummon_y = 0;
-			zonesummon_z = 0;
-	}
-	APPLAYER* outapp = NULL;
-	if (target_zone[0] != 0 && admin >= minstatus && GetLevel() >= minlevel && RAZone) {
-		//dont clear aggro until the zone is successful
-		entity_list.ClearFeignAggro(this);
-		
-		LogFile->write(EQEMuLog::Status, "Zoning '%s' to: %s (%i) x=%f, y=%f, z=%f",
-			m_pp.name, target_zone, database.GetZoneID(target_zone),
-			tarx, tary, tarz);
-		
-		
-		x_pos = tarx; // Hmm, these coordinates will now be saved when ~client is called
-		y_pos = tary;
-		z_pos = tarz;
-		if(tarheading!=999)
-			m_pp.heading=tarheading;
-		else
-			m_pp.heading=heading;
-		
-		m_pp.zone_id = database.GetZoneID(target_zone);
-		
-		Save();
-		
-		if (m_pp.zone_id == zone->GetZoneID()) {
-			// No need to ask worldserver if we're zoning to ourselves (most
-			// likely to a bind point), also fixes a bug since the default response was failure
-			APPLAYER* outapp = new APPLAYER(OP_ZoneChange,sizeof(ZoneChange_Struct));
-			ZoneChange_Struct* zc2 = (ZoneChange_Struct*) outapp->pBuffer;
-			strcpy(zc2->char_name, GetName());
-			zc2->zoneID = m_pp.zone_id;
-			zc2->success = 1;
-			outapp->Deflate();
-			outapp->priority = 6;
-			QueuePacket(outapp);
-			safe_delete(outapp);
-			zone->StartShutdownTimer(AUTHENTICATION_TIMEOUT * 1000);
-		}
-		else {
-		// vesuvias - zoneing to another zone so we need to the let the world server
-		//handle things with the client for a while
-			ServerPacket* pack = new ServerPacket(ServerOP_ZoneToZoneRequest, sizeof(ZoneToZone_Struct));
-			ZoneToZone_Struct* ztz = (ZoneToZone_Struct*) pack->pBuffer;
-			ztz->response = 0;
-			ztz->current_zone_id = zone->GetZoneID();
-			ztz->requested_zone_id = database.GetZoneID(target_zone);
-			ztz->admin = admin;
-			ztz->ignorerestrictions = tmpzonesummon_ignorerestrictions;
-			strcpy(ztz->name, GetName());
-			ztz->guild_id = GuildDBID();
-			worldserver.SendPacket(pack);
-			safe_delete(pack);
-		}
-	}
-	else {
-// vesuvias - zone processing fix
-		LogFile->write(EQEMuLog::Error, "Zone %i is not available because target wasn't found or character insufficent level", zc->zoneID);
-		
-		outapp = new APPLAYER(OP_ZoneChange, sizeof(ZoneChange_Struct));
-		ZoneChange_Struct *zc2 = (ZoneChange_Struct*)outapp->pBuffer;
-		strcpy(zc2->char_name, zc->char_name);
-		zc2->zoneID = zc->zoneID;
-		zc2->success = myerror;
-		outapp->priority = 6;
-		QueuePacket(outapp);
-		safe_delete(outapp);
-
-//this is a combined packet, and is malformed, so until somebody figures out
-//what it really is, it gets to be commented out.		
- /*		int8 stuffdata[16] = {0xE6, 0x02, 0x10, 0x00, 0x00, 0x00, 0x68, 0x42, 0x00, 0x00, 0xDB, 0xC3, 0xFA, 0xFE, 0x00, 0xC2};
-		outapp = new APPLAYER(OP_0x0120|FLAG_COMBINED, sizeof(stuffdata));
-		memcpy(outapp->pBuffer, stuffdata, sizeof(stuffdata));
-		outapp->priority = 6;
-		QueuePacket(outapp);
-		safe_delete(outapp);
-*/
-	}
-	return;
-}
-
-void Client::Handle_OP_DeleteSpawn(const APPLAYER *app)
+void Client::Handle_OP_DeleteSpawn(const EQZonePacket *app)
 {
 	// The client will send this with his id when he zones, maybe when he disconnects too?
 	RemoveData(); // Flushing the queue of packet data to allow for proper zoning -Kasai
 	
-	APPLAYER* outapp = new APPLAYER(OP_DeleteSpawn, sizeof(EntityId_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_DeleteSpawn, sizeof(EntityId_Struct));
 	EntityId_Struct* eid = (EntityId_Struct*)outapp->pBuffer;
 	eid->entity_id = GetID();
 	
@@ -2333,19 +2121,19 @@ void Client::Handle_OP_DeleteSpawn(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_SaveOnZoneReq(const APPLAYER *app)
+void Client::Handle_OP_SaveOnZoneReq(const EQZonePacket *app)
 {
 	Handle_OP_Save(app);
 }
 
-void Client::Handle_OP_Save(const APPLAYER *app)
+void Client::Handle_OP_Save(const EQZonePacket *app)
 {
 	// The payload is 192 bytes - Not sure what is contained in payload
 	Save();
 	return;
 }
 
-void Client::Handle_OP_WhoAllRequest(const APPLAYER *app)
+void Client::Handle_OP_WhoAllRequest(const EQZonePacket *app)
 {
 	if (app->size != sizeof(Who_All_Struct)) {
 		cout << "Wrong size on OP_WhoAll. Got: " << app->size << ", Expected: " << sizeof(Who_All_Struct) << endl;
@@ -2357,7 +2145,7 @@ void Client::Handle_OP_WhoAllRequest(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMZoneRequest(const APPLAYER *app)
+void Client::Handle_OP_GMZoneRequest(const EQZonePacket *app)
 {
 	if (app->size != sizeof(GMZoneRequest_Struct)) {
 		cout << "Wrong size on OP_GMZoneRequest. Got: " << app->size << ", Expected: " << sizeof(GMZoneRequest_Struct) << endl;
@@ -2375,19 +2163,21 @@ void Client::Handle_OP_GMZoneRequest(const APPLAYER *app)
 	sint16 minstatus = 0;
 	int8 minlevel = 0;
 	char tarzone[32];
+	uint16 zid = gmzr->zone_id;
 	if (gmzr->zone_id == 0)
-		strcpy(tarzone, zonesummon_name);
-	else if (database.GetZoneName(gmzr->zone_id))
-		strcpy(tarzone, database.GetZoneName(gmzr->zone_id));
-	else
+		zid = zonesummon_id;
+	const char * zname = database.GetZoneName(zid);
+	if(zname == NULL)
 		tarzone[0] = 0;
+	else
+		strcpy(tarzone, zname);
 	
 	// this both loads the safe points and does a sanity check on zone name
 	if (!database.GetSafePoints(tarzone, &tarx, &tary, &tarz, &minstatus, &minlevel)) {
 		tarzone[0] = 0;
 	}
 	
-	APPLAYER* outapp = new APPLAYER(OP_GMZoneRequest, sizeof(GMZoneRequest_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_GMZoneRequest, sizeof(GMZoneRequest_Struct));
 	GMZoneRequest_Struct* gmzr2 = (GMZoneRequest_Struct*) outapp->pBuffer;
 	strcpy(gmzr2->charname, this->GetName());
 	gmzr2->zone_id = gmzr->zone_id;
@@ -2407,17 +2197,20 @@ void Client::Handle_OP_GMZoneRequest(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMZoneRequest2(const APPLAYER *app)
+void Client::Handle_OP_GMZoneRequest2(const EQZonePacket *app)
 {
-	int32 zonereq = (int32)*app->pBuffer;
-	if(zonereq == zone->GetZoneID())
-		this->MovePC(zonereq, zone->safe_x(), zone->safe_y(), zone->safe_z(), 0, false);
-	else
-		this->MovePC(zonereq, -1, -1, -1, 0, false);
+	if (this->Admin() < minStatusToBeGM) {
+		Message(13, "Your account has been reported for hacking.");
+		database.SetHackerFlag(this->account_name, this->name, "/zone");
+		return;
+	}
+	
+	int32 zonereq = *((int32 *)app->pBuffer);
+	GoToSafeCoords(zonereq);
 	return;
 }
 
-void Client::Handle_OP_EndLootRequest(const APPLAYER *app)
+void Client::Handle_OP_EndLootRequest(const EQZonePacket *app)
 {
 	if (app->size != sizeof(int32)) {
 		cout << "Wrong size: OP_EndLootRequest, size=" << app->size << ", expected " << sizeof(int32) << endl;
@@ -2442,7 +2235,7 @@ void Client::Handle_OP_EndLootRequest(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_LootRequest(const APPLAYER *app)
+void Client::Handle_OP_LootRequest(const EQZonePacket *app)
 {
 	if (app->size != sizeof(int32)) {
 		cout << "Wrong size: OP_LootRequest, size=" << app->size << ", expected " << sizeof(int32) << endl;
@@ -2467,7 +2260,7 @@ void Client::Handle_OP_LootRequest(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Dye(const APPLAYER *app)
+void Client::Handle_OP_Dye(const EQZonePacket *app)
 {
 	if(app->size!=sizeof(DyeStruct))
 		printf("Wrong size of DyeStruct, Got: %i, Expected: %i\n",app->size,sizeof(DyeStruct));
@@ -2478,7 +2271,11 @@ void Client::Handle_OP_Dye(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_LootItem(const APPLAYER *app)
+void Client::Handle_OP_ConfirmDelete(const EQZonePacket* app){
+	return;
+}
+
+void Client::Handle_OP_LootItem(const EQZonePacket *app)
 {
 	if (app->size != sizeof(LootingItem_Struct)) {
 		LogFile->write(EQEMuLog::Error, "Wrong size: OP_LootItem, size=%i, expected %i", app->size, sizeof(LootingItem_Struct));
@@ -2492,11 +2289,11 @@ void Client::Handle_OP_LootItem(const APPLAYER *app)
 	**	Also fixed a few UI lock ups that would occur.
 	*/
 	
-	APPLAYER* outapp = 0;
+	EQZonePacket* outapp = 0;
 	Entity* entity = entity_list.GetID(*((int16*)app->pBuffer));
 	if (entity == 0) {
 		Message(13, "Error: OP_LootItem: Corpse not found (ent = 0)");
-		outapp = new APPLAYER(OP_LootComplete, 0);
+		outapp = new EQZonePacket(OP_LootComplete, 0);
 		QueuePacket(outapp);
 		safe_delete(outapp);
 		return;
@@ -2514,7 +2311,7 @@ void Client::Handle_OP_LootItem(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GuildDelete(const APPLAYER *app)
+void Client::Handle_OP_GuildDelete(const EQZonePacket *app)
 {
 	if(GuildRank() != 2 || GuildDBID() == 0)
 		Message(0,"You are not a guild leader or not in a guild.");
@@ -2536,19 +2333,33 @@ void Client::Handle_OP_GuildDelete(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GuildPublicNote(const APPLAYER *app)
+void Client::Handle_OP_GuildPublicNote(const EQZonePacket *app)
 {
 	GuildUpdate_PublicNote* gpn=(GuildUpdate_PublicNote*)app->pBuffer;
 	database.SetPublicNote(guilddbid,gpn->target,gpn->note);
+	SendGuildMembers(guilddbid, true);
 	return;
 }
 
-void Client::Handle_OP_GetGuildMOTD(const APPLAYER *app)
+void Client::Handle_OP_GetGuildsList(const EQZonePacket *app)
 {
-	Handle_OP_GuildMOTD(app);
+	EQZonePacket *outapp;
+	outapp = new EQZonePacket(OP_GuildsList, sizeof(GuildsList_Struct));
+	memset(outapp->pBuffer,0,sizeof(GuildsList_Struct));
+	GuildsList_Struct* gl = (GuildsList_Struct*) outapp->pBuffer;
+	uint32 max_id=database.GetMaxGuildID();
+	const char *ptr;
+	
+	strcpy((char *)gl->head,GetName());
+	for (uint32 i=1; i <= max_id; i++) {
+		if ((ptr=database.GetGuild(i))!=NULL) {
+			strcpy(gl->Guilds[i].name, ptr);
+		}
+	}
+	FastQueuePacket(&outapp);
 }
 
-void Client::Handle_OP_GuildMOTD(const APPLAYER *app)
+void Client::Handle_OP_SetGuildMOTD(const EQZonePacket *app)
 {
 	char tmp[600]={0};
 	if (app->size !=sizeof(GuildMOTD_Struct)) {
@@ -2562,30 +2373,43 @@ void Client::Handle_OP_GuildMOTD(const APPLAYER *app)
 		if (!database.SetGuildMOTD(guilddbid, tmp)) {
 			Message(0, "Motd update failed.");
 		}
-		worldserver.SendEmoteMessage(0, guilddbid, MT_Guild, "Guild MOTD: %s", tmp);
+		else{
+			EQZonePacket *outapp = new EQZonePacket(OP_GuildMOTD, sizeof(GuildMOTD_Struct));
+			GuildMOTD_Struct *motd = (GuildMOTD_Struct *) outapp->pBuffer;
+			motd->unknown0 = 0;
+			strncpy(motd->name, m_pp.name, 64);
+			string motd_str = database.GetGuildMOTD(GuildDBID());
+			strncpy(motd->motd, motd_str.c_str(), 512);
+			entity_list.QueueClientsGuild(this, outapp, false, GuildEQID());
+		}
+		
+		//worldserver.SendEmoteMessage(0, guilddbid, MT_Guild, "Guild MOTD: %s", tmp);
+		
 	}
 	else {
-		strcpy(tmp,database.GetGuildMOTD(guilddbid));
-		if (strlen(tmp) != 0)
-			Message_StringID(MT_Guild,GENERIC_STRING,tmp);
+		/*string str = database.GetGuildMOTD(guilddbid);
+		if (str.length() > 0)
+			Message_StringID(MT_Guild,GENERIC_STRING,str.c_str());
 			//Message(MT_Guild, "Guild MOTD: %s", tmp);
 		//Message(MT_Guild, "Guild MOTD Disabled for now");
+		*/
+		//Handle_OP_GetGuildMOTD(app);
 	}
 	
 	return;
 }
 
-void Client::Handle_OP_GuildPeace(const APPLAYER *app)
+void Client::Handle_OP_GuildPeace(const EQZonePacket *app)
 {
 	return;
 }
 
-void Client::Handle_OP_GuildWar(const APPLAYER *app)
+void Client::Handle_OP_GuildWar(const EQZonePacket *app)
 {
 	return;
 }
 
-void Client::Handle_OP_GuildLeader(const APPLAYER *app)
+void Client::Handle_OP_GuildLeader(const EQZonePacket *app)
 {
 	if (app->size <= 1)
 		return;
@@ -2614,10 +2438,11 @@ void Client::Handle_OP_GuildLeader(const APPLAYER *app)
 		else
 			Message(0,"Failed to change leader, could not find target.");
 	}
+	SendGuildMembers(guilddbid, true);
 	return;
 }
 
-void Client::Handle_OP_GuildDemote(const APPLAYER *app)
+void Client::Handle_OP_GuildDemote(const EQZonePacket *app)
 {
 	if(app->size==sizeof(GuildDemoteStruct)){
 		GuildDemoteStruct* demote = (GuildDemoteStruct*)app->pBuffer;
@@ -2632,10 +2457,11 @@ void Client::Handle_OP_GuildDemote(const APPLAYER *app)
 		}
 		Message(0,"Successfully demoted %s.",demote->target);
 	}
+	SendGuildMembers(guilddbid, true);
 	return;
 }
 
-void Client::Handle_OP_GuildInvite(const APPLAYER *app)
+void Client::Handle_OP_GuildInvite(const EQZonePacket *app)
 {
 	if (app->size != sizeof(GuildCommand_Struct)) {
 		cout << "Wrong size: OP_GuildInvite, size=" << app->size << ", expected " << sizeof(GuildCommand_Struct) << endl;
@@ -2670,10 +2496,11 @@ void Client::Handle_OP_GuildInvite(const APPLAYER *app)
 		else
 			Message(0,"You must be in the same zone as the person you are inviting.");
 	}
+	SendGuildMembers(guilddbid, true);
 	return;
 }
 
-void Client::Handle_OP_GuildRemove(const APPLAYER *app)
+void Client::Handle_OP_GuildRemove(const EQZonePacket *app)
 {
 	if (app->size != sizeof(GuildCommand_Struct)) {
 		cout << "Wrong size: OP_GuildRemove, size=" << app->size << ", expected " << sizeof(GuildCommand_Struct) << endl;
@@ -2694,7 +2521,7 @@ void Client::Handle_OP_GuildRemove(const APPLAYER *app)
 			return;
 		}
 		if(database.SetGuild(gc->othername,0,0) || client){
-			APPLAYER* outapp = new APPLAYER(OP_GuildManageRemove,sizeof(GuildManageRemove_Struct));
+			EQZonePacket* outapp = new EQZonePacket(OP_GuildManageRemove,sizeof(GuildManageRemove_Struct));
 			GuildManageRemove_Struct* gm=(GuildManageRemove_Struct*)outapp->pBuffer;
 			gm->guildeqid=GuildEQID();
 			strcpy(gm->member,gc->othername);
@@ -2707,10 +2534,11 @@ void Client::Handle_OP_GuildRemove(const APPLAYER *app)
 		else
 			Message(0,"Unable to remove %s from your guild.",gc->othername);
 	}
+	SendGuildMembers(guilddbid, true);
 	return;
 }
 
-void Client::Handle_OP_GuildInviteAccept(const APPLAYER *app)
+void Client::Handle_OP_GuildInviteAccept(const EQZonePacket *app)
 {
 	if (app->size != sizeof(GuildInviteAccept_Struct)) {
 		cout << "Wrong size: OP_GuildInviteAccept, size=" << app->size << ", expected " << sizeof(GuildJoin_Struct) << endl;
@@ -2728,19 +2556,19 @@ void Client::Handle_OP_GuildInviteAccept(const APPLAYER *app)
 			Message(0, "Error: World server disconnected");
 		else {
 			if(gj->guildeqid==GuildEQID()){//already in guild, need to promote or demote
-				/*APPLAYER* outapp = new APPLAYER(OP_GuildManageRemove,sizeof(GuildManageRemove_Struct));
+				/*EQZonePacket* outapp = new EQZonePacket(OP_GuildManageRemove,sizeof(GuildManageRemove_Struct));
 				GuildManageRemove_Struct* gm=(GuildManageRemove_Struct*)outapp->pBuffer;
 				gm->guildeqid=GuildEQID();
 				strcpy(gm->member,GetName());
 				entity_list.QueueClientsGuild(this,outapp,false,GuildEQID());
 				safe_delete(outapp);*/
 				if(gj->response<2){
-					GuildChangeRank(GuildEQID(),0,1);
 					SetGuild(guilddbid,1);
+					GuildChangeRank(GuildEQID(),0,1);
 				}
 				else{
-					GuildChangeRank(GuildEQID(),1,0);
 					SetGuild(guilddbid,0);
+					GuildChangeRank(GuildEQID(),1,0);
 				}
 				return;
 			}
@@ -2756,14 +2584,14 @@ void Client::Handle_OP_GuildInviteAccept(const APPLAYER *app)
 			else
 				SetGuild(guilds[gj->guildeqid].databaseID,gj->response);
 			worldserver.SendGuildJoin(gj2);
-			SendGuildMembers(guilds[gj->guildeqid].databaseID);
+			SendGuildMembers(guilds[gj->guildeqid].databaseID, true);
 			safe_delete(gj2);
 		}
 	}
 	return;
 }
 
-void Client::Handle_OP_ManaChange(const APPLAYER *app)
+void Client::Handle_OP_ManaChange(const EQZonePacket *app)
 {
 	if(app->size == 0) {
 		// i think thats the sign to stop the songs
@@ -2779,13 +2607,13 @@ void Client::Handle_OP_ManaChange(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_MemorizeSpell(const APPLAYER *app)
+void Client::Handle_OP_MemorizeSpell(const EQZonePacket *app)
 {
 	OPMemorizeSpell(app);
 	return;
 }
 
-void Client::Handle_OP_SwapSpell(const APPLAYER *app)
+void Client::Handle_OP_SwapSpell(const EQZonePacket *app)
 {
 	if (app->size != sizeof(SwapSpell_Struct)) {
 		cout << "Wrong size on OP_SwapSpell. Got: " << app->size << ", Expected: " << sizeof(SwapSpell_Struct) << endl;
@@ -2805,7 +2633,7 @@ void Client::Handle_OP_SwapSpell(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_CastSpell(const APPLAYER *app)
+void Client::Handle_OP_CastSpell(const EQZonePacket *app)
 {
 	if (app->size != sizeof(CastSpell_Struct)) {
 		cout << "Wrong size: OP_CastSpell, size=" << app->size << ", expected " << sizeof(CastSpell_Struct) << endl;
@@ -2845,29 +2673,29 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d, inv
 		{
 			const ItemInst* inst = m_inv[castspell->inventoryslot]; //@merth: slot values are sint16, need to check packet on this field
 			//bool cancast = true;
-			if (inst && inst->IsType(ItemTypeCommon))
+			if (inst && inst->IsType(ItemClassCommon))
 			{
 				const Item_Struct* item = inst->GetItem();
-				if(item->Common.SpellId != (sint32)castspell->spell_id)
+				if(item->Common.Click.Effect != (int32)castspell->spell_id)
 				{
 					InterruptSpell(castspell->spell_id);	//CHEATER!!
 					return;
 				}
 				//delete a charge from the item
-				APPLAYER* outapp = new APPLAYER(OP_TraderDelItem,sizeof(TraderDelItem_Struct));
+				EQZonePacket* outapp = new EQZonePacket(OP_TraderDelItem,sizeof(TraderDelItem_Struct));
 				TraderDelItem_Struct* tdi = (TraderDelItem_Struct*)outapp->pBuffer;
 				tdi->quantity=0xFFFFFFFF;
 				tdi->unknown=0xFFFFFFFF;
 				tdi->slotid=castspell->slot;
 				QueuePacket(outapp);
 				safe_delete(outapp);
-				if ((item->Common.EffectType == ET_ClickEffect) || (item->Common.EffectType == ET_Expendable) || (item->Common.EffectType == ET_EquipClick) || (item->Common.EffectType == ET_ClickEffect2))
+				if ((item->Common.Click.Type == ET_ClickEffect) || (item->Common.Click.Type == ET_Expendable) || (item->Common.Click.Type == ET_EquipClick) || (item->Common.Click.Type == ET_ClickEffect2))
 				{
-					CastSpell(item->Common.SpellId, castspell->target_id, castspell->slot, item->Common.CastTime, 0, 0, castspell->inventoryslot);
+					CastSpell(item->Common.Click.Effect, castspell->target_id, castspell->slot, item->Common.CastTime, 0, 0, castspell->inventoryslot);
 				}
 				else
 				{
-					Message(0, "Error: unknown item->Common.EffectType (0x%02x)", item->Common.EffectType);
+					Message(0, "Error: unknown item->Common.Click.Type (0x%02x)", item->Common.Click.Type);
 				}
 			}
 			else
@@ -2963,36 +2791,35 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d, inv
 	return;
 }
 
-void Client::Handle_OP_ConsumeAmmo(const APPLAYER *app)
+void Client::Handle_OP_DeleteItem(const EQZonePacket *app)
 {
-	if (app->size != sizeof(CombatAbility_Struct)) {
-		cout << "Wrong size on OP_ConsumeAmmo. Got: " << app->size << ", Expected: " << sizeof(CombatAbility_Struct) << endl;
+	if (app->size != sizeof(DeleteItem_Struct)) {
+		cout << "Wrong size on OP_DeleteItem. Got: " << app->size << ", Expected: " << sizeof(DeleteItem_Struct) << endl;
 		return;
 	}
 	
-	// @merth: Need to figure out which slot to delete from .. or maybe m_id is the slot?
-	CombatAbility_Struct* ca_atk = (CombatAbility_Struct*) app->pBuffer;
-	const ItemInst *inst = GetInv().GetItem(ca_atk->m_id);
-	if (inst && inst->GetItem()->Common.ItemUse == ItemUseAlcohol) {
+	DeleteItem_Struct* alc = (DeleteItem_Struct*) app->pBuffer;
+	const ItemInst *inst = GetInv().GetItem(alc->from_slot);
+	if (inst && inst->GetItem()->Common.ItemType == ItemTypeAlcohol) {
 		//TODO: grant alcohol bonuses..?
 		CheckIncreaseSkill(ALCOHOL_TOLERANCE,200);
 	}
-	DeleteItemInInventory(ca_atk->m_id, 1);
+	DeleteItemInInventory(alc->from_slot, 1);
 	
 	return;
 }
 
-void Client::Handle_OP_CombatAbility(const APPLAYER *app)
+void Client::Handle_OP_CombatAbility(const EQZonePacket *app)
 {
 	if (app->size != sizeof(CombatAbility_Struct)) {
 		cout << "Wrong size on OP_CombatAbility. Got: " << app->size << ", Expected: " << sizeof(CombatAbility_Struct) << endl;
 		return;
-	}		
+	}
 	OPCombatAbility(app);			
 	return;
 }
 
-void Client::Handle_OP_Taunt(const APPLAYER *app)
+void Client::Handle_OP_Taunt(const EQZonePacket *app)
 {
 	if (app->size != sizeof(ClientTarget_Struct)) {
 		cout << "Wrong size on OP_Taunt. Got: " << app->size << ", Expected: "<< sizeof(ClientTarget_Struct) << endl;
@@ -3012,20 +2839,27 @@ void Client::Handle_OP_Taunt(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_InstillDoubt(const APPLAYER *app)
+void Client::Handle_OP_InstillDoubt(const EQZonePacket *app)
 {
 	//packet is empty as of 12/14/04
+	
+	if(!p_timers.Expired(pTimerInstillDoubt, false)) {
+				Message(13,"Ability recovery time not yet met.");
+				return;
+	}
+	p_timers.Start(pTimerInstillDoubt, InstillDoubtReuseTime-1);
+	
 	InstillDoubt(target);
 	return;
 }
 
-void Client::Handle_OP_RezzAnswer(const APPLAYER *app)
+void Client::Handle_OP_RezzAnswer(const EQZonePacket *app)
 {
 	OPRezzAnswer(app);
 	return;
 }
 
-void Client::Handle_OP_GMSummon(const APPLAYER *app)
+void Client::Handle_OP_GMSummon(const EQZonePacket *app)
 {
 	if (app->size != sizeof(GMSummon_Struct)) {
 		cout << "Wrong size on OP_GMSummon. Got: " << app->size << ", Expected: " << sizeof(GMSummon_Struct) << endl;
@@ -3035,7 +2869,7 @@ void Client::Handle_OP_GMSummon(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TradeRequest(const APPLAYER *app)
+void Client::Handle_OP_TradeRequest(const EQZonePacket *app)
 {
 	// Client requesting a trade session from an npc/client
 	// Trade session not started until OP_TradeRequestAck is sent
@@ -3051,7 +2885,7 @@ void Client::Handle_OP_TradeRequest(const APPLAYER *app)
 	}
 	else if (with) {
 		//npcs always accept
-		APPLAYER* outapp = new APPLAYER(OP_TradeRequestAck, sizeof(TradeRequest_Struct));
+		EQZonePacket* outapp = new EQZonePacket(OP_TradeRequestAck, sizeof(TradeRequest_Struct));
 		TradeRequest_Struct* acc = (TradeRequest_Struct*) outapp->pBuffer;
 		acc->from_mob_id = msg->to_mob_id;
 		acc->to_mob_id = msg->from_mob_id;
@@ -3061,7 +2895,7 @@ void Client::Handle_OP_TradeRequest(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TradeRequestAck(const APPLAYER *app)
+void Client::Handle_OP_TradeRequestAck(const EQZonePacket *app)
 {
 	// Trade request recipient is acknowledging they are able to trade
 	// After this, the trade session has officially started
@@ -3075,7 +2909,7 @@ void Client::Handle_OP_TradeRequestAck(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_CancelTrade(const APPLAYER *app)
+void Client::Handle_OP_CancelTrade(const EQZonePacket *app)
 {
 	Mob* with = trade->With();
 	if (with && with->IsClient()) {
@@ -3101,11 +2935,12 @@ void Client::Handle_OP_CancelTrade(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TradeAcceptClick(const APPLAYER *app)
+void Client::Handle_OP_TradeAcceptClick(const EQZonePacket *app)
 {
 	Mob* with = trade->With();
 	trade->state = TradeAccepted;
 	if (with && with->IsClient()) {
+		//finish trade...
 		// Have both accepted?
 		Client* other = with->CastToClient();
 		other->QueuePacket(app);
@@ -3134,22 +2969,24 @@ void Client::Handle_OP_TradeAcceptClick(const APPLAYER *app)
 				trade->Reset();
 			}
 			// All done
-			APPLAYER* outapp = new APPLAYER(OP_FinishTrade, 0);
+			EQZonePacket* outapp = new EQZonePacket(OP_FinishTrade, 0);
 			other->QueuePacket(outapp);
 			this->FastQueuePacket(&outapp);
 		}
 	}
 	else if(with){
-		APPLAYER* outapp = new APPLAYER(OP_FinishTrade,0);
+		//trading with an NPC
+		EQZonePacket* outapp = new EQZonePacket(OP_FinishTrade,0);
 		QueuePacket(outapp);
 		safe_delete(outapp);
 		FinishTrade(with->CastToNPC());						
+		trade->Reset();
 	}
 	
 	return;
 }
 
-void Client::Handle_OP_BoardBoat(const APPLAYER *app)
+void Client::Handle_OP_BoardBoat(const EQZonePacket *app)
 {
 	char *boatname;
 	this->IsOnBoat=true;
@@ -3165,13 +3002,13 @@ void Client::Handle_OP_BoardBoat(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_LeaveBoat(const APPLAYER *app)
+void Client::Handle_OP_LeaveBoat(const EQZonePacket *app)
 {
 	this->IsOnBoat=false;
 	return;
 }
 
-void Client::Handle_OP_RandomReq(const APPLAYER *app)
+void Client::Handle_OP_RandomReq(const EQZonePacket *app)
 {
 	const RandomReq_Struct* rndq = (const RandomReq_Struct*) app->pBuffer;
 	uint32 randLow=rndq->low > rndq->high?rndq->high:rndq->low;
@@ -3185,7 +3022,7 @@ void Client::Handle_OP_RandomReq(const APPLAYER *app)
 	}
 	randResult=MakeRandomInt(randLow, randHigh);
 
-	APPLAYER* outapp = new APPLAYER(OP_RandomReply, sizeof(RandomReply_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_RandomReply, sizeof(RandomReply_Struct));
 	RandomReply_Struct* rr = (RandomReply_Struct*)outapp->pBuffer;
 	rr->low=randLow;
 	rr->high=randHigh;
@@ -3196,7 +3033,7 @@ void Client::Handle_OP_RandomReq(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Buff(const APPLAYER *app)
+void Client::Handle_OP_Buff(const EQZonePacket *app)
 {
 	if (app->size != sizeof(SpellBuffFade_Struct))
 	{
@@ -3214,7 +3051,7 @@ void Client::Handle_OP_Buff(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMHideMe(const APPLAYER *app)
+void Client::Handle_OP_GMHideMe(const EQZonePacket *app)
 {
 	int reqlevel = database.CommandRequirement("!gm");
 	reqlevel = reqlevel == 255 ? minStatusToUseGMCommands : reqlevel;
@@ -3229,7 +3066,7 @@ void Client::Handle_OP_GMHideMe(const APPLAYER *app)
 
 }
 
-void Client::Handle_OP_GMNameChange(const APPLAYER *app)
+void Client::Handle_OP_GMNameChange(const EQZonePacket *app)
 {
 	const GMName_Struct* gmn = (const GMName_Struct *)app->pBuffer;
 	if(this->Admin() < minStatusToUseGMCommands){
@@ -3260,7 +3097,7 @@ void Client::Handle_OP_GMNameChange(const APPLAYER *app)
 	if(gmn->badname==1) {
 		database.AddToNameFilter(gmn->oldname);
 	}
-	APPLAYER* outapp = app->Copy();
+	EQZonePacket* outapp = app->CopyZonePacket();
 	GMName_Struct* gmn2 = (GMName_Struct*) outapp->pBuffer;
 	gmn2->unknown[0] = 1;
 	gmn2->unknown[1] = 1;
@@ -3271,7 +3108,7 @@ void Client::Handle_OP_GMNameChange(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMKill(const APPLAYER *app)
+void Client::Handle_OP_GMKill(const EQZonePacket *app)
 {
 	if(this->Admin() < minStatusToUseGMCommands) {
 		Message(13, "Your account has been reported for hacking.");
@@ -3308,7 +3145,7 @@ void Client::Handle_OP_GMKill(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMLastName(const APPLAYER *app)
+void Client::Handle_OP_GMLastName(const EQZonePacket *app)
 {
 	if (app->size != sizeof(GMLastName_Struct)) {
 		cout << "Wrong size on OP_GMLastName. Got: " << app->size << ", Expected: " << sizeof(GMLastName_Struct) << endl;
@@ -3342,10 +3179,10 @@ void Client::Handle_OP_GMLastName(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMToggle(const APPLAYER *app)
+void Client::Handle_OP_GMToggle(const EQZonePacket *app)
 {
-	if (app->size != 68) {
-		cout << "Wrong size on OP_GMToggle. Got: " << app->size << ", Expected: " << 36 << endl;
+	if (app->size != sizeof(GMToggle_Struct)) {
+		cout << "Wrong size on OP_GMToggle. Got: " << app->size << ", Expected: " << sizeof(GMToggle_Struct) << endl;
 		return;
 	}
 	if (this->Admin() < minStatusToUseGMCommands) {
@@ -3353,12 +3190,13 @@ void Client::Handle_OP_GMToggle(const APPLAYER *app)
 		database.SetHackerFlag(this->account_name, this->name, "/toggle");
 		return;
 	}
-	if (app->pBuffer[64] == 0) {
+	GMToggle_Struct *ts = (GMToggle_Struct *) app->pBuffer;
+	if (ts->toggle == 0) {
 		this->Message_StringID(0,TOGGLE_OFF);
 		//Message(0, "Turning tells OFF");
 		tellsoff = true;
 	}
-	else if (app->pBuffer[64] == 1) {
+	else if (ts->toggle == 1) {
 		//Message(0, "Turning tells ON");
 		this->Message_StringID(0,TOGGLE_ON);
 		tellsoff = false;
@@ -3370,7 +3208,7 @@ void Client::Handle_OP_GMToggle(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_LFGCommand(const APPLAYER *app)
+void Client::Handle_OP_LFGCommand(const EQZonePacket *app)
 {
 	if (app->size != sizeof(LFG_Struct)) {
 		cout << "Wrong size on OP_LFGCommand. Got: " << app->size << ", Expected: " << sizeof(LFG_Struct) << endl;
@@ -3391,7 +3229,7 @@ void Client::Handle_OP_LFGCommand(const APPLAYER *app)
 	UpdateWho();
 	
 	// Issue outgoing packet to notify other clients
-	APPLAYER* outapp = new APPLAYER(OP_LFGAppearance, sizeof(LFG_Appearance_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_LFGAppearance, sizeof(LFG_Appearance_Struct));
 	LFG_Appearance_Struct* lfga = (LFG_Appearance_Struct*)outapp->pBuffer;
 	lfga->spawn_id = this->GetID();
 	lfga->lfg = (uint8)LFG;
@@ -3401,7 +3239,7 @@ void Client::Handle_OP_LFGCommand(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMGoto(const APPLAYER *app)
+void Client::Handle_OP_GMGoto(const EQZonePacket *app)
 {
 	if (app->size != sizeof(GMSummon_Struct)) {
 		cout << "Wrong size on OP_GMGoto. Got: " << app->size << ", Expected: " << sizeof(GMSummon_Struct) << endl;
@@ -3414,8 +3252,8 @@ void Client::Handle_OP_GMGoto(const APPLAYER *app)
 	}
 	GMSummon_Struct* gmg = (GMSummon_Struct*) app->pBuffer;
 	Mob* gt = entity_list.GetMob(gmg->charname);
-	if (gt != 0) {
-		this->MovePC((char*) 0, gt->GetX(), gt->GetY(), gt->GetZ());
+	if (gt != NULL) {
+		this->MovePC(zone->GetZoneID(), gt->GetX(), gt->GetY(), gt->GetZ());
 	}
 	else if (!worldserver.Connected())
 		Message(0, "Error: World server disconnected.");
@@ -3435,58 +3273,56 @@ void Client::Handle_OP_GMGoto(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TraderShop(const APPLAYER *app)
+void Client::Handle_OP_TraderShop(const EQZonePacket *app)
 {
 	TraderClick_Struct* tcs= (TraderClick_Struct*)app->pBuffer;
-	if(app->size==sizeof(TraderClick_Struct)){
-		APPLAYER* outapp = new APPLAYER(OP_TraderShop, sizeof(TraderClick_Struct));
-		TraderClick_Struct* outtcs=(TraderClick_Struct*)outapp->pBuffer;
-		Client* tmp = entity_list.GetClientByID(tcs->traderid);
-		if (tmp)
-			outtcs->approval=tmp->WithCustomer();
-		else
-			return;
-		outtcs->traderid=tcs->traderid;
-		QueuePacket(outapp);
-		if(outtcs->approval)
-			this->BulkSendTraderInventory(tmp->CharacterID());
-		safe_delete(outapp);
-	}
+	if(app->size!=sizeof(TraderClick_Struct))
+		return;
+	
+	EQZonePacket* outapp = new EQZonePacket(OP_TraderShop, sizeof(TraderClick_Struct));
+	TraderClick_Struct* outtcs=(TraderClick_Struct*)outapp->pBuffer;
+	Client* tmp = entity_list.GetClientByID(tcs->traderid);
+	if (tmp)
+		outtcs->approval=tmp->WithCustomer();
+	else
+		return;
+	outtcs->traderid=tcs->traderid;
+	QueuePacket(outapp);
+	if(outtcs->approval)
+		this->BulkSendTraderInventory(tmp->CharacterID());
+	safe_delete(outapp);
 	return;
 }
 
-void Client::Handle_OP_ShopRequest(const APPLAYER *app)
+void Client::Handle_OP_ShopRequest(const EQZonePacket *app)
 {
 	// this works
 	Merchant_Click_Struct* mc=(Merchant_Click_Struct*)app->pBuffer;
 	if (app->size != sizeof(Merchant_Click_Struct))
 		return;
 	// Send back opcode OP_ShopRequest - tells client to open merchant window.
-	//APPLAYER* outapp = new APPLAYER(OP_ShopRequest, sizeof(Merchant_Click_Struct));
+	//EQZonePacket* outapp = new EQZonePacket(OP_ShopRequest, sizeof(Merchant_Click_Struct));
 	//Merchant_Click_Struct* mco=(Merchant_Click_Struct*)outapp->pBuffer;
-
 	int merchantid=0;
 	Mob* tmp = entity_list.GetMob(mc->npcid);
-	if (tmp != 0)
-		merchantid=tmp->CastToNPC()->MerchantType;
-	else
+	
+	if (tmp == 0 || !tmp->IsNPC() || tmp->GetClass() != MERCHANT)
 		return;
+	
+	//you have to be somewhat close to them to be properly using them
+	if(DistNoRoot(*tmp) > USE_NPC_RANGE2)
+		return;
+	
+	merchantid=tmp->CastToNPC()->MerchantType;
 
 	int action = 1;
-	if(merchantid == 0)
-	{
-		APPLAYER* outapp = new APPLAYER(OP_ShopRequest, sizeof(Merchant_Click_Struct));
+	if(merchantid == 0) {
+		EQZonePacket* outapp = new EQZonePacket(OP_ShopRequest, sizeof(Merchant_Click_Struct));
 		Merchant_Click_Struct* mco=(Merchant_Click_Struct*)outapp->pBuffer;
 		mco->npcid = mc->npcid;
 		mco->playerid = 0;
-		mco->unknown[0] = 0;
-		mco->unknown[1] = 0x00;
-		mco->unknown[2] = 0x00;
-		mco->unknown[3] = 0x00;
-		mco->unknown[4] = 0xE0;
-		mco->unknown[5] = 0xCB;
-		mco->unknown[6] = 0x90;
-		mco->unknown[7] = 0x3F;
+		mco->command = 1;		//open...
+		mco->rate = 1.0;
 		QueuePacket(outapp);
 		safe_delete(outapp);
 		return;
@@ -3511,19 +3347,13 @@ void Client::Handle_OP_ShopRequest(const APPLAYER *app)
 		action = 0;
 	}
 
-	APPLAYER* outapp = new APPLAYER(OP_ShopRequest, sizeof(Merchant_Click_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_ShopRequest, sizeof(Merchant_Click_Struct));
 	Merchant_Click_Struct* mco=(Merchant_Click_Struct*)outapp->pBuffer;
 
 	mco->npcid = mc->npcid;
 	mco->playerid = 0;
-	mco->unknown[0] = action; // Merchant command 0x01 = open
-	mco->unknown[1] = 0x00;
-	mco->unknown[2] = 0x00;
-	mco->unknown[3] = 0x00;
-	mco->unknown[4] = 0xE0;
-	mco->unknown[5] = 0xCB; // 32
-	mco->unknown[6] = 0x90; // 139
-	mco->unknown[7] = 0x3F; // 63
+	mco->command = action; // Merchant command 0x01 = open
+	mco->rate = 1.6;	//dosent currently work
 
 	outapp->priority = 6;
 	QueuePacket(outapp);
@@ -3535,7 +3365,7 @@ void Client::Handle_OP_ShopRequest(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Bazaar(const APPLAYER *app)
+void Client::Handle_OP_Bazaar(const EQZonePacket *app)
 {
 	if (app->size==sizeof(BazaarSearch_Struct)) {
 		BazaarSearch_Struct* bss= (BazaarSearch_Struct*)app->pBuffer;
@@ -3551,8 +3381,10 @@ void Client::Handle_OP_Bazaar(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_ShopPlayerBuy(const APPLAYER *app)
+void Client::Handle_OP_ShopPlayerBuy(const EQZonePacket *app)
 {
+	RDTSC_Timer t1;
+	t1.start();
 	Merchant_Sell_Struct* mp=(Merchant_Sell_Struct*)app->pBuffer;
 #if EQDEBUG >= 5
 		LogFile->write(EQEMuLog::Debug, "%s, purchase item..", GetName());
@@ -3562,10 +3394,16 @@ void Client::Handle_OP_ShopPlayerBuy(const APPLAYER *app)
 	int merchantid;
 	bool tmpmer_used = false;
 	Mob* tmp = entity_list.GetMob(mp->npcid);
-	if (tmp != 0)
-		merchantid=tmp->CastToNPC()->MerchantType;
-	else
+	
+	if (tmp == 0 || !tmp->IsNPC() || tmp->GetClass() != MERCHANT)
 		return;
+	
+	//you have to be somewhat close to them to be properly using them
+	if(DistNoRoot(*tmp) > USE_NPC_RANGE2)
+		return;
+	
+	merchantid=tmp->CastToNPC()->MerchantType;
+	
 	uint32 item_id = 0;
 	std::list<MerchantList> merlist = zone->merchanttable[merchantid];
 	std::list<MerchantList>::const_iterator itr;
@@ -3596,7 +3434,7 @@ void Client::Handle_OP_ShopPlayerBuy(const APPLAYER *app)
 	if (!item){
 		//error finding item, client didnt get the update packet for whatever reason, roleplay a tad
 		Message(15,"%s tells you 'Sorry, that item is for display purposes only.' as they take the item off the shelf.",tmp->GetCleanName());						
-		APPLAYER* delitempacket = new APPLAYER(OP_ShopDelItem, sizeof(Merchant_DelItem_Struct));
+		EQZonePacket* delitempacket = new EQZonePacket(OP_ShopDelItem, sizeof(Merchant_DelItem_Struct));
 		Merchant_DelItem_Struct* delitem = (Merchant_DelItem_Struct*)delitempacket->pBuffer;
 		delitem->itemslot = mp->itemslot;
 		delitem->npcid = mp->npcid;
@@ -3611,8 +3449,10 @@ void Client::Handle_OP_ShopPlayerBuy(const APPLAYER *app)
 		Message(15,"You can only have one of a lore item.");
 		return;
 	}
+	if(tmpmer_used && (mp->quantity > prevcharges))
+		mp->quantity = prevcharges;
 	
-	APPLAYER* outapp = new APPLAYER(OP_ShopPlayerBuy, sizeof(Merchant_Sell_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_ShopPlayerBuy, sizeof(Merchant_Sell_Struct));
 	Merchant_Sell_Struct* mpo=(Merchant_Sell_Struct*)outapp->pBuffer;
 	mpo->quantity = mp->quantity;
 	mpo->playerid = mp->playerid;
@@ -3636,7 +3476,7 @@ void Client::Handle_OP_ShopPlayerBuy(const APPLAYER *app)
 		}
 	}
 	
-	mpo->price = (item->Cost*127/100)*mp->quantity;
+	mpo->price = (item->Price*127/100)*mp->quantity;
 	if(freeslotid == SLOT_INVALID || !TakeMoneyFromPP(mpo->price))
 	{
 		safe_delete(outapp);
@@ -3645,9 +3485,7 @@ void Client::Handle_OP_ShopPlayerBuy(const APPLAYER *app)
 	}
 
 	string packet;
-	if(tmpmer_used && (mp->quantity > prevcharges))
-		mp->quantity = prevcharges;
-	else if(mp->quantity==1 && item->Common.MaxCharges>0 && item->Common.MaxCharges<255)
+	if(mp->quantity==1 && item->Common.MaxCharges>0 && item->Common.MaxCharges<255)
 		mp->quantity=item->Common.MaxCharges;
 	
 	if (!stacked && inst) {
@@ -3663,7 +3501,7 @@ void Client::Handle_OP_ShopPlayerBuy(const APPLAYER *app)
 		sint32 new_charges = prevcharges - mp->quantity;
 		zone->SaveTempItem(merchantid, tmp->GetNPCTypeID(),item_id,new_charges);
 		if(new_charges<=0){
-			APPLAYER* delitempacket = new APPLAYER(OP_ShopDelItem, sizeof(Merchant_DelItem_Struct));
+			EQZonePacket* delitempacket = new EQZonePacket(OP_ShopDelItem, sizeof(Merchant_DelItem_Struct));
 			Merchant_DelItem_Struct* delitem = (Merchant_DelItem_Struct*)delitempacket->pBuffer;
 			delitem->itemslot = mp->itemslot;
 			delitem->npcid = mp->npcid;
@@ -3705,13 +3543,25 @@ void Client::Handle_OP_ShopPlayerBuy(const APPLAYER *app)
 				LogMerchant(this,tmp,mpo,item,true);	
 		}
 	}
+	t1.stop();
+	cout << "At 1: " << t1.getDuration() << endl;
 	return;
 }
 
-void Client::Handle_OP_ShopPlayerSell(const APPLAYER *app)
+void Client::Handle_OP_ShopPlayerSell(const EQZonePacket *app)
 {
+	RDTSC_Timer t1(true);
 	Merchant_Purchase_Struct* mp=(Merchant_Purchase_Struct*)app->pBuffer;
+	
 	Mob* vendor = entity_list.GetMob(mp->npcid);
+	
+	if (vendor == 0 || !vendor->IsNPC() || vendor->GetClass() != MERCHANT)
+		return;
+	
+	//you have to be somewhat close to them to be properly using them
+	if(DistNoRoot(*vendor) > USE_NPC_RANGE2)
+		return;
+	
 	int32 price=0;
 	int32 itemid = GetItemIDAt(mp->itemslot);
 	if(itemid == 0)
@@ -3726,7 +3576,7 @@ void Client::Handle_OP_ShopPlayerSell(const APPLAYER *app)
 		return;
 
 	if (item){
-		price=(int)((item->Cost*mp->quantity)*.884);
+		price=(int)((item->Price*mp->quantity)*.884);
 		AddMoneyToPP(price,false);
 		if (zone->merchantvar!=0){
 			if (zone->merchantvar==7) {
@@ -3780,8 +3630,8 @@ void Client::Handle_OP_ShopPlayerSell(const APPLAYER *app)
 		charges = inst->GetCharges();
 	if((freeslot = zone->SaveTempItem(vendor->CastToNPC()->MerchantType, vendor->GetNPCTypeID(),itemid,charges,true)) > 0){
 		ItemInst* inst2 = inst->Clone();
-		inst2->SetPrice(item->Cost*127/100);
-		inst2->SetMerchantSlot(freeslot+84);
+		inst2->SetPrice(item->Price*127/100);
+		inst2->SetMerchantSlot(freeslot);
 		if(inst2->IsStackable())
 			inst2->SetCharges(mp->quantity);
 		SendItemPacket(freeslot-1, inst2, ItemPacketMerchant);
@@ -3794,7 +3644,7 @@ void Client::Handle_OP_ShopPlayerSell(const APPLAYER *app)
 	else
 		this->DeleteItemInInventory(mp->itemslot,mp->quantity,false);
 	
-	APPLAYER* outapp = new APPLAYER(OP_ShopPlayerSell, sizeof(Merchant_Purchase_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_ShopPlayerSell, sizeof(Merchant_Purchase_Struct));
 	Merchant_Purchase_Struct* mco=(Merchant_Purchase_Struct*)outapp->pBuffer;
 	mco->npcid = vendor->GetID();
 	mco->itemslot=mp->itemslot;
@@ -3802,27 +3652,29 @@ void Client::Handle_OP_ShopPlayerSell(const APPLAYER *app)
 	mco->price=price;
 	QueuePacket(outapp);
 	safe_delete(outapp);
-	Save();	
+	t1.start();
+	Save(1);	
+	t1.stop();
+	cout << "Save took: " << t1.getDuration() << endl;
 	return;
 }
 
-void Client::Handle_OP_ShopEnd(const APPLAYER *app)
+void Client::Handle_OP_ShopEnd(const EQZonePacket *app)
 {
-	APPLAYER* outapp = new APPLAYER(OP_ShopEndConfirm, 2);
-	outapp->pBuffer[0] = 0x0a;
-	outapp->pBuffer[1] = 0x66;
-	QueuePacket(outapp);
-	safe_delete(outapp);
-	Save();
+	//EQZonePacket* outapp = new EQZonePacket(OP_ShopEndConfirm, 2);
+	//outapp->pBuffer[0] = 0x0a;
+	//outapp->pBuffer[1] = 0x66;
+	//QueuePacket(outapp);
+	//safe_delete(outapp);
+	//Save();
 	return;
 }
 
-void Client::Handle_OP_CloseContainer(const APPLAYER *app)
+void Client::Handle_OP_CloseContainer(const EQZonePacket *app)
 {
 	if (app->size != sizeof(CloseContainer_Struct)) {
 		LogFile->write(EQEMuLog::Error, "Invalid size on CloseContainer_Struct: Expected %i, Got %i",
 			sizeof(CloseContainer_Struct), app->size);
-DumpPacket(app);
 		return;
 	}
 
@@ -3837,7 +3689,7 @@ DumpPacket(app);
 	return;
 }
 
-void Client::Handle_OP_ClickObject(const APPLAYER *app)
+void Client::Handle_OP_ClickObject(const EQZonePacket *app)
 {
 	if (app->size != sizeof(ClickObject_Struct)) {
 		LogFile->write(EQEMuLog::Error, "Invalid size on ClickObject_Struct: Expected %i, Got %i",
@@ -3847,6 +3699,7 @@ void Client::Handle_OP_ClickObject(const APPLAYER *app)
 	
 	ClickObject_Struct* click_object = (ClickObject_Struct*)app->pBuffer;
 	Entity* entity = entity_list.GetID(click_object->drop_id);
+	//TODO: should enforce range checking here.
 	if (entity && entity->IsObject()) {
 		Object* object = entity->CastToObject();
 		object->HandleClick(this, click_object);
@@ -3854,7 +3707,7 @@ void Client::Handle_OP_ClickObject(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_RecipesFavorite(const APPLAYER *app)
+void Client::Handle_OP_RecipesFavorite(const EQZonePacket *app)
 {
 	if (app->size != sizeof(TradeskillFavorites_Struct)) {
 		LogFile->write(EQEMuLog::Error, "Invalid size for TradeskillFavorites_Struct: Expected: %i, Got: %i",
@@ -3883,10 +3736,10 @@ char *query = 0;
 			break;	//assume the first 0 is the end...
 		
 		if(first) {
-			pos += snprintf(pos, 10, "%lu", tsf->favorite_recipes[r]);
+			pos += snprintf(pos, 10, "%u", tsf->favorite_recipes[r]);
 			first = false;
 		} else {
-			pos += snprintf(pos, 10, ",%lu", tsf->favorite_recipes[r]);
+			pos += snprintf(pos, 10, ",%u", tsf->favorite_recipes[r]);
 		}
 	}
 	
@@ -3908,7 +3761,7 @@ char *query = 0;
 	return;
 }
 
-void Client::Handle_OP_RecipesSearch(const APPLAYER *app)
+void Client::Handle_OP_RecipesSearch(const EQZonePacket *app)
 {
 	if (app->size != sizeof(RecipesSearch_Struct)) {
 		LogFile->write(EQEMuLog::Error, "Invalid size for RecipesSearch_Struct: Expected: %i, Got: %i",
@@ -3953,7 +3806,7 @@ char *query = 0;
 	return;
 }
 
-void Client::Handle_OP_RecipeDetails(const APPLAYER *app)
+void Client::Handle_OP_RecipeDetails(const EQZonePacket *app)
 {
 	if(app->size != sizeof(unsigned long)) {
 		LogFile->write(EQEMuLog::Error, "Invalid size for RecipeDetails Request: Expected: %i, Got: %i",
@@ -3967,7 +3820,7 @@ void Client::Handle_OP_RecipeDetails(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_RecipeAutoCombine(const APPLAYER *app)
+void Client::Handle_OP_RecipeAutoCombine(const EQZonePacket *app)
 {
 	if (app->size != sizeof(RecipeAutoCombine_Struct)) {
 		LogFile->write(EQEMuLog::Error, "Invalid size for RecipeAutoCombine_Struct: Expected: %i, Got: %i",
@@ -3981,7 +3834,7 @@ void Client::Handle_OP_RecipeAutoCombine(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TradeSkillCombine(const APPLAYER *app)
+void Client::Handle_OP_TradeSkillCombine(const EQZonePacket *app)
 {
 	if (app->size != sizeof(NewCombine_Struct)) {
 		LogFile->write(EQEMuLog::Error, "Invalid size for NewCombine_Struct: Expected: %i, Got: %i",
@@ -4001,7 +3854,7 @@ void Client::Handle_OP_TradeSkillCombine(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_ItemName(const APPLAYER *app)
+void Client::Handle_OP_ItemName(const EQZonePacket *app)
 {
 	if (app->size != sizeof(ItemNamePacket_Struct)) {
 		LogFile->write(EQEMuLog::Error, "Invalid size for ItemNamePacket_Struct: Expected: %i, Got: %i",
@@ -4011,7 +3864,7 @@ void Client::Handle_OP_ItemName(const APPLAYER *app)
 	ItemNamePacket_Struct *p = (ItemNamePacket_Struct*)app->pBuffer;
 	const Item_Struct *item = 0;
 	if ((item = database.GetItem(p->item_id))!=NULL) {
-		APPLAYER* outapp=new APPLAYER(OP_ItemName,sizeof(ItemNamePacket_Struct));
+		EQZonePacket* outapp=new EQZonePacket(OP_ItemName,sizeof(ItemNamePacket_Struct));
 		p=(ItemNamePacket_Struct*)outapp->pBuffer;
 		memset(p, 0, sizeof(ItemNamePacket_Struct));
 		strcpy(p->name,item->Name);
@@ -4020,7 +3873,7 @@ void Client::Handle_OP_ItemName(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_AugmentItem(const APPLAYER *app)
+void Client::Handle_OP_AugmentItem(const EQZonePacket *app)
 {
 	if (app->size != sizeof(AugmentItem_Struct)) {
 		LogFile->write(EQEMuLog::Error, "Invalid size for AugmentItem_Struct: Expected: %i, Got: %i",
@@ -4040,57 +3893,34 @@ void Client::Handle_OP_AugmentItem(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_ClickDoor(const APPLAYER *app)
+void Client::Handle_OP_ClickDoor(const EQZonePacket *app)
 {
-                                        ClickDoor_Struct* cd = (ClickDoor_Struct*)app->pBuffer;
-                                        Doors* currentdoor = entity_list.FindDoor(cd->doorid);
-                                        if(!currentdoor)
-                                        {
-                                        	Message(0,"Unable to find door, please notify a GM (DoorID: %i).",cd->doorid);
-                                                return;
-                                        }
+	ClickDoor_Struct* cd = (ClickDoor_Struct*)app->pBuffer;
+	Doors* currentdoor = entity_list.FindDoor(cd->doorid);
+	if(!currentdoor)
+	{
+		Message(0,"Unable to find door, please notify a GM (DoorID: %i).",cd->doorid);
+	        return;
+	}
 
-	#ifdef GUILDWARS
-                                        if (IsSettingGuildDoor){
-                                                        if (database.SetGuildDoor(cd->doorid,SetGuildDoorID,zone->GetShortName())){
-                                                                cout << SetGuildDoorID << endl;
-                                                                if (SetGuildDoorID){
-                                                                        Message(0,"This is now a guilddoor of '%s'",guilds[SetGuildDoorID].name);
-                                                                        currentdoor->SetGuildID(SetGuildDoorID);
-                                                                }
-                                                                else{
-                                                                                        Message(0,"Guildoor deleted");
-                                                                                        currentdoor->SetGuildID(0);
-                                                                }
-                                                        }
-                                                        else
-                                                                Message(0,"Failed to edit guilddoor!");
-                                                        IsSettingGuildDoor = false;
-                                                        return;
-                                                }
-                                                if (cd->doorid >= 128){
-                                                        if(!database.CheckGuildDoor(cd->doorid,GuildEQID(),zone->GetShortName())){
-                                                                // heh hope grammer on this is right lol
-                                                                this->Message(0,"A magic barrier protects this hall against intruders!");
-
-                                                                return;
-                                                        }
-                                                        else
-                                                                this->Message(0,"The magic barrier disappears and you open the door!");
-                                        }
-	#endif
-                        		currentdoor->HandleClick(this);
+	currentdoor->HandleClick(this);
 	return;
 }
 
-void Client::Handle_OP_CreateObject(const APPLAYER *app)
+void Client::Handle_OP_CreateObject(const EQZonePacket *app)
 {
 	DropItem(SLOT_CURSOR);
 	return;
 }
 
-void Client::Handle_OP_FaceChange(const APPLAYER *app)
+void Client::Handle_OP_FaceChange(const EQZonePacket *app)
 {
+	if (app->size != sizeof(FaceChange_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Invalid size for OP_FaceChange: Expected: %i, Got: %i",
+			sizeof(FaceChange_Struct), app->size);
+		return;
+	}
+	
 	// Notify other clients in zone
 	entity_list.QueueClients(this, app, false);
 	
@@ -4111,20 +3941,36 @@ void Client::Handle_OP_FaceChange(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GroupInvite(const APPLAYER *app)
+void Client::Handle_OP_GroupInvite(const EQZonePacket *app)
 {
+	//this seems to be the initial invite to form a group
 	Handle_OP_GroupInvite2(app);
 }
 
-void Client::Handle_OP_GroupInvite2(const APPLAYER *app)
+void Client::Handle_OP_GroupInvite2(const EQZonePacket *app)
 {
+	if (app->size != sizeof(GroupInvite_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Invalid size for OP_GroupInvite: Expected: %i, Got: %i",
+			sizeof(GroupInvite_Struct), app->size);
+		return;
+	}
+	
+	//this seems to be used for any subsequent invites into an
+	//allready existing group
+	
+	if (app->size != sizeof(GroupInvite_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Invalid size for group invite: Expected: %i, Got: %i",
+			sizeof(GroupInvite_Struct), app->size);
+		return;
+	}
+	
 	if(this->GetTarget() != 0 && this->GetTarget()->IsClient()) {
 		this->GetTarget()->CastToClient()->QueuePacket(app);
 		return;
 	}
 	/*if(this->GetTarget() != 0 && this->GetTarget()->IsNPC() && this->GetTarget()->CastToNPC()->IsInteractive()) {
 		if(!this->GetTarget()->CastToNPC()->IsGrouped()) {
-			APPLAYER* outapp = new APPLAYER(OP_GroupUpdate,sizeof(GroupUpdate_Struct));
+			EQZonePacket* outapp = new EQZonePacket(OP_GroupUpdate,sizeof(GroupUpdate_Struct));
 			GroupUpdate_Struct* gu = (GroupUpdate_Struct*) outapp->pBuffer;
 			gu->action = 9;
 			strcpy(gu->membername,GetName());
@@ -4144,14 +3990,20 @@ void Client::Handle_OP_GroupInvite2(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GroupAcknowledge(const APPLAYER *app)
+void Client::Handle_OP_GroupAcknowledge(const EQZonePacket *app)
 {
 	return;
 }
 
-void Client::Handle_OP_GroupCancelInvite(const APPLAYER *app)
+void Client::Handle_OP_GroupCancelInvite(const EQZonePacket *app)
 {
-	GroupGeneric_Struct* gf = (GroupGeneric_Struct*) app->pBuffer;
+	if (app->size != sizeof(GroupCancel_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Invalid size for OP_GroupCancelInvite: Expected: %i, Got: %i",
+			sizeof(GroupCancel_Struct), app->size);
+		return;
+	}
+	
+	GroupCancel_Struct* gf = (GroupCancel_Struct*) app->pBuffer;
 	Mob* inviter = entity_list.GetClientByName(gf->name1);
 	
 	if(inviter != NULL && inviter->IsClient())
@@ -4161,13 +4013,18 @@ void Client::Handle_OP_GroupCancelInvite(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GroupFollow(const APPLAYER *app)
+void Client::Handle_OP_GroupFollow(const EQZonePacket *app)
 {
 	Handle_OP_GroupFollow2(app);
 }
 
-void Client::Handle_OP_GroupFollow2(const APPLAYER *app)
+void Client::Handle_OP_GroupFollow2(const EQZonePacket *app)
 {
+	if (app->size != sizeof(GroupGeneric_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Invalid size for OP_GroupFollow: Expected: %i, Got: %i",
+			sizeof(GroupGeneric_Struct), app->size);
+		return;
+	}
 	GroupGeneric_Struct* gf = (GroupGeneric_Struct*) app->pBuffer;
 	Mob* inviter = entity_list.GetClientByName(gf->name1);
 	
@@ -4195,11 +4052,13 @@ void Client::Handle_OP_GroupFollow2(const APPLAYER *app)
 			database.SetGroupID(inviter->GetName(), group->GetID());
 			
 			//Invite the inviter into the group first.....dont ask
-			APPLAYER* outapp=new APPLAYER(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+			EQZonePacket* outapp=new EQZonePacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 			GroupJoin_Struct* outgj=(GroupJoin_Struct*)outapp->pBuffer;
 			strcpy(outgj->membername, inviter->GetName());
 			strcpy(outgj->yourname, inviter->GetName());
 			outgj->action = 9;
+printf("Initial group invite:\n");
+DumpPacket(outapp);
 			inviter->CastToClient()->QueuePacket(outapp);
 			safe_delete(outapp);
 		}
@@ -4211,15 +4070,22 @@ void Client::Handle_OP_GroupFollow2(const APPLAYER *app)
 		if(!group->AddMember(this))
 			return;
 		group->SendUpdate(7,this);
-		group->SendHPPackets(this);
+		group->SendUpdate(7,inviter);
+		group->SendHPPacketsTo(this);
 		
 	}
 	return;
 }
 
-void Client::Handle_OP_GroupDisband(const APPLAYER *app)
+void Client::Handle_OP_GroupDisband(const EQZonePacket *app)
 {
-	printf("Member Disband Request\n");
+	if (app->size != sizeof(GroupGeneric_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Invalid size for GroupGeneric_Struct: Expected: %i, Got: %i",
+			sizeof(GroupGeneric_Struct), app->size);
+		return;
+	}
+	
+LogFile->write(EQEMuLog::Debug, "Member Disband Request from %s\n", GetName());
 	
 	GroupGeneric_Struct* gd = (GroupGeneric_Struct*) app->pBuffer;
 	Group* group = GetGroup();
@@ -4235,8 +4101,9 @@ void Client::Handle_OP_GroupDisband(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GroupDelete(const APPLAYER *app)
+void Client::Handle_OP_GroupDelete(const EQZonePacket *app)
 {
+//should check for leader, only they should be able to do this..
 	printf("Group Delete Request\n");
 	Group* group = GetGroup();
 	if (group)
@@ -4244,7 +4111,7 @@ void Client::Handle_OP_GroupDelete(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMEmoteZone(const APPLAYER *app)
+void Client::Handle_OP_GMEmoteZone(const EQZonePacket *app)
 {
 	if(this->Admin() < minStatusToUseGMCommands) {
 		Message(13, "Your account has been reported for hacking.");
@@ -4262,7 +4129,7 @@ void Client::Handle_OP_GMEmoteZone(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_InspectRequest(const APPLAYER *app)
+void Client::Handle_OP_InspectRequest(const EQZonePacket *app)
 {
 	Inspect_Struct* ins = (Inspect_Struct*) app->pBuffer;
 	Mob* tmp = entity_list.GetMob(ins->TargetID);
@@ -4272,11 +4139,11 @@ void Client::Handle_OP_InspectRequest(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_InspectAnswer(const APPLAYER *app)
+void Client::Handle_OP_InspectAnswer(const EQZonePacket *app)
 {
 	//Cofruben: Fills the app sent from client.
 	Inspect_Struct* ins = (Inspect_Struct*) app->pBuffer;
-	APPLAYER* outapp = app->Copy();
+	EQZonePacket* outapp = app->CopyZonePacket();
 	InspectResponse_Struct* insr = (InspectResponse_Struct*) outapp->pBuffer;
 	Mob* tmp = entity_list.GetMob(ins->TargetID);
 	const Item_Struct* item = NULL;
@@ -4285,7 +4152,7 @@ void Client::Handle_OP_InspectAnswer(const APPLAYER *app)
 		item = (inst) ? inst->GetItem() : NULL;
 		if(item>0){
 			strcpy(insr->itemnames[L],item->Name);
-			insr->itemicons[L]=item->IconNumber;
+			insr->itemicons[L]=item->Icon;
 		}
 		else
 			insr->itemicons[L]=0xFFFFFFFF;	
@@ -4297,7 +4164,7 @@ void Client::Handle_OP_InspectAnswer(const APPLAYER *app)
 
 #if 0	// solar: i dont think there's an op for this now, and we check this
 			// when the client is sitting
-void Client::Handle_OP_Medding(const APPLAYER *app)
+void Client::Handle_OP_Medding(const EQZonePacket *app)
 {
 	if (app->pBuffer[0])
 		medding = true;
@@ -4307,12 +4174,12 @@ void Client::Handle_OP_Medding(const APPLAYER *app)
 }
 #endif
 
-void Client::Handle_OP_DeleteSpell(const APPLAYER *app)
+void Client::Handle_OP_DeleteSpell(const EQZonePacket *app)
 {
 	if(app->size != sizeof(DeleteSpell_Struct))
 		return;
 
-	APPLAYER* outapp = app->Copy();
+	EQZonePacket* outapp = app->CopyZonePacket();
 	DeleteSpell_Struct* dss = (DeleteSpell_Struct*) outapp->pBuffer;
 	
 	if(dss->spell_slot < 0 || dss->spell_slot > MAX_PP_SPELLBOOK)
@@ -4329,7 +4196,7 @@ void Client::Handle_OP_DeleteSpell(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionBug(const APPLAYER *app)
+void Client::Handle_OP_PetitionBug(const EQZonePacket *app)
 {
 	if(app->size!=sizeof(PetitionBug_Struct))
 		printf("Wrong size of BugStruct! Expected: %i, Got: %i\n",sizeof(PetitionBug_Struct),app->size);
@@ -4340,7 +4207,7 @@ void Client::Handle_OP_PetitionBug(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Bug(const APPLAYER *app)
+void Client::Handle_OP_Bug(const EQZonePacket *app)
 {
 	if(app->size!=sizeof(BugStruct))
 		printf("Wrong size of BugStruct!\n");
@@ -4351,7 +4218,7 @@ void Client::Handle_OP_Bug(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Petition(const APPLAYER *app)
+void Client::Handle_OP_Petition(const EQZonePacket *app)
 {
 	if (app->size <= 1)
 		return;
@@ -4388,7 +4255,7 @@ void Client::Handle_OP_Petition(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionCheckIn(const APPLAYER *app)
+void Client::Handle_OP_PetitionCheckIn(const EQZonePacket *app)
 {
 	Petition_Struct* inpet = (Petition_Struct*) app->pBuffer;
 
@@ -4405,14 +4272,14 @@ void Client::Handle_OP_PetitionCheckIn(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionResolve(const APPLAYER *app)
+void Client::Handle_OP_PetitionResolve(const EQZonePacket *app)
 {
 	Handle_OP_PetitionDelete(app);
 }
 
-void Client::Handle_OP_PetitionDelete(const APPLAYER *app)
+void Client::Handle_OP_PetitionDelete(const EQZonePacket *app)
 {
-	APPLAYER* outapp = new APPLAYER(OP_PetitionUpdate,sizeof(PetitionUpdate_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_PetitionUpdate,sizeof(PetitionUpdate_Struct));
 	PetitionUpdate_Struct* pet = (PetitionUpdate_Struct*) outapp->pBuffer;
 	pet->petnumber = *((int*) app->pBuffer);
 	pet->color = 0x00;
@@ -4433,7 +4300,7 @@ void Client::Handle_OP_PetitionDelete(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_PetCommands(const APPLAYER *app)
+void Client::Handle_OP_PetCommands(const EQZonePacket *app)
 {
 	char val1[20]={0};		
 	PetCommand_Struct* pet = (PetCommand_Struct*) app->pBuffer;
@@ -4560,7 +4427,7 @@ void Client::Handle_OP_PetCommands(const APPLAYER *app)
 	}
 }
 
-void Client::Handle_OP_PetitionUnCheckout(const APPLAYER *app)
+void Client::Handle_OP_PetitionUnCheckout(const EQZonePacket *app)
 {
 	if (app->size != sizeof(int32)) {
 		cout << "Wrong size: OP_PetitionUnCheckout, size=" << app->size << ", expected " << sizeof(int32) << endl;
@@ -4581,7 +4448,7 @@ void Client::Handle_OP_PetitionUnCheckout(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionQue(const APPLAYER *app)
+void Client::Handle_OP_PetitionQue(const EQZonePacket *app)
 {
 #ifdef _EQDEBUG
 		printf("%s looking at petitions..\n",this->GetName());
@@ -4589,7 +4456,7 @@ void Client::Handle_OP_PetitionQue(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_PDeletePetition(const APPLAYER *app)
+void Client::Handle_OP_PDeletePetition(const EQZonePacket *app)
 {
 	if(petition_list.DeletePetitionByCharName((char*)app->pBuffer))
 		Message_StringID(0,PETITION_DELETED);	
@@ -4598,7 +4465,7 @@ void Client::Handle_OP_PDeletePetition(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionCheckout(const APPLAYER *app)
+void Client::Handle_OP_PetitionCheckout(const EQZonePacket *app)
 {
 	if (app->size != sizeof(int32)) {
 		cout << "Wrong size: OP_PetitionCheckout, size=" << app->size << ", expected " << sizeof(int32) << endl;
@@ -4621,7 +4488,7 @@ void Client::Handle_OP_PetitionCheckout(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionRefresh(const APPLAYER *app)
+void Client::Handle_OP_PetitionRefresh(const EQZonePacket *app)
 {
 	// This is When Client Asks for Petition Again and Again...
 	// break is here because it floods the zones and causes lag if it
@@ -4629,15 +4496,18 @@ void Client::Handle_OP_PetitionRefresh(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_ReadBook(const APPLAYER *app)
+void Client::Handle_OP_ReadBook(const EQZonePacket *app)
 {
 	BookRequest_Struct* book = (BookRequest_Struct*) app->pBuffer;
 	ReadBook(book);
 	return;
 }
 
-void Client::Handle_OP_Emote(const APPLAYER *app)
+void Client::Handle_OP_Emote(const EQZonePacket *app)
 {
+	if(app->size != sizeof(Emote_Struct))
+		return;
+	
 	// Calculate new packet dimensions
 	Emote_Struct* in	= (Emote_Struct*)app->pBuffer;
 	const char* name	= GetName();
@@ -4647,7 +4517,7 @@ void Client::Handle_OP_Emote(const APPLAYER *app)
 						+ strlen(in->message) + 1;
 	
 	// Construct outgoing packet
-	APPLAYER* outapp = new APPLAYER(OP_Emote, len_packet);
+	EQZonePacket* outapp = new EQZonePacket(OP_Emote, len_packet);
 	Emote_Struct* out = (Emote_Struct*)outapp->pBuffer;
 	out->unknown01 = in->unknown01;
 	memcpy(out->message, name, len_name);
@@ -4680,22 +4550,37 @@ void Client::Handle_OP_Emote(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_EmoteAnim(const APPLAYER *app)
+void Client::Handle_OP_Animation(const EQZonePacket *app)
 {
-	// Someone animation an emote (i.e., waving arm to say hello)
-	entity_list.QueueCloseClients(this, app, true);
+	if(app->size != sizeof(Animation_Struct))
+		return;
+	
+	Animation_Struct *s = (Animation_Struct *) app->pBuffer;
+	
+	//might verify spawn ID, but it wouldent affect anything
+	
+	// an emote (i.e., waving arm to say hello)
+	DoAnim(s->value, s->action);
+	
 	return;
 }
 
-void Client::Handle_OP_SetServerFilter(const APPLAYER *app)
+void Client::Handle_OP_SetServerFilter(const EQZonePacket *app)
 {
+	if(app->size != sizeof(SetServerFilter_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Received invalid sized OP_SetServerFilter");
+		DumpPacket(app);
+		return;
+	}
 	SetServerFilter_Struct* filter=(SetServerFilter_Struct*)app->pBuffer;
 	ServerFilter(filter);
 	return;
 }
 
-void Client::Handle_OP_GMDelCorpse(const APPLAYER *app)
+void Client::Handle_OP_GMDelCorpse(const EQZonePacket *app)
 {
+	if(app->size != sizeof(GMDelCorpse_Struct))
+		return;
 	if(this->Admin() < commandEditPlayerCorpses) {
 		Message(13, "Your account has been reported for hacking.");
 		database.SetHackerFlag(this->account_name, this->name, "/delcorpse");
@@ -4715,8 +4600,10 @@ void Client::Handle_OP_GMDelCorpse(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMKick(const APPLAYER *app)
+void Client::Handle_OP_GMKick(const EQZonePacket *app)
 {
+	if(app->size != sizeof(GMKick_Struct))
+		return;
 	if(this->Admin() < minStatusToKick) {
 		Message(13, "Your account has been reported for hacking.");
 		database.SetHackerFlag(this->account_name, this->name, "/kick");
@@ -4748,7 +4635,7 @@ void Client::Handle_OP_GMKick(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMServers(const APPLAYER *app)
+void Client::Handle_OP_GMServers(const EQZonePacket *app)
 {
 	if (!worldserver.Connected())
 		Message(0, "Error: World server disconnected");
@@ -4766,7 +4653,7 @@ void Client::Handle_OP_GMServers(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Illusion(const APPLAYER *app)
+void Client::Handle_OP_Illusion(const EQZonePacket *app)
 {
 	Illusion_Struct* bnpc = (Illusion_Struct*)app->pBuffer;
 	// @merth: these need to be implemented
@@ -4782,7 +4669,7 @@ void Client::Handle_OP_Illusion(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMBecomeNPC(const APPLAYER *app)
+void Client::Handle_OP_GMBecomeNPC(const EQZonePacket *app)
 {
 	if(this->Admin() < minStatusToUseGMCommands) {
 		Message(13, "Your account has been reported for hacking.");
@@ -4807,7 +4694,7 @@ void Client::Handle_OP_GMBecomeNPC(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Fishing(const APPLAYER *app)
+void Client::Handle_OP_Fishing(const EQZonePacket *app)
 {
 	if(!p_timers.Expired(pTimerFishing, false)) {
 		Message(13,"Ability recovery time not yet met.");
@@ -4821,9 +4708,8 @@ void Client::Handle_OP_Fishing(const APPLAYER *app)
 // forage for.
 }
 
-void Client::Handle_OP_Forage(const APPLAYER *app)
+void Client::Handle_OP_Forage(const EQZonePacket *app)
 {
-	// @merth: This needs to be redone with new item classes
 	
 	if(!p_timers.Expired(pTimerForaging, false)) {
 		Message(13,"Ability recovery time not yet met.");
@@ -4836,7 +4722,7 @@ void Client::Handle_OP_Forage(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Mend(const APPLAYER *app)
+void Client::Handle_OP_Mend(const EQZonePacket *app)
 {
 	if(GetClass() != MONK)
 		return;
@@ -4882,7 +4768,7 @@ void Client::Handle_OP_Mend(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_EnvDamage(const APPLAYER *app)
+void Client::Handle_OP_EnvDamage(const EQZonePacket *app)
 {
 	EnvDamage2_Struct* ed = (EnvDamage2_Struct*)app->pBuffer;
 	if(admin >= minStatusToAvoidFalling && GetGM()){
@@ -4936,7 +4822,7 @@ void Client::Handle_OP_EnvDamage(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Damage(const APPLAYER *app)
+void Client::Handle_OP_Damage(const EQZonePacket *app)
 {
 	// Broadcast to other clients
 	CombatDamage_Struct* damage = (CombatDamage_Struct*)app->pBuffer;
@@ -4945,7 +4831,7 @@ void Client::Handle_OP_Damage(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_AAAction(const APPLAYER *app)
+void Client::Handle_OP_AAAction(const EQZonePacket *app)
 {
 	//DumpPacket(app);
 	if(app->size!=sizeof(AA_Action)){
@@ -4960,22 +4846,26 @@ void Client::Handle_OP_AAAction(const APPLAYER *app)
 		BuyAA(action);
 	}
 	else if(action->action == aaActionDisableEXP){ //Turn Off AA Exp
-		m_pp.perAA = 0;
+		if(m_epp.perAA > 0)
+			Message_StringID(0, 119);	//119 Alternate Experience is *OFF*.
+		m_epp.perAA = 0;
 		SendAAStats();
 	} else if(action->action == aaActionSetEXP) {
-		m_pp.perAA = action->exp_value;
-		if (m_pp.perAA<0 || m_pp.perAA>100) m_pp.perAA=0;	// stop exploit with sanity check
+		if(m_epp.perAA == 0)
+			Message_StringID(0, 121);	//121 Alternate Experience is *ON*.
+		m_epp.perAA = action->exp_value;
+		if (m_epp.perAA<0 || m_epp.perAA>100) m_epp.perAA=0;	// stop exploit with sanity check
 		// send an update
 		SendAAStats();
 		SendAATable();
 	} else {
-		printf("Unknown AA action: %lu %lu 0x%x %d\n", action->action, action->ability, action->unknown08, action->exp_value);
+		printf("Unknown AA action: %u %u 0x%x %d\n", action->action, action->ability, action->unknown08, action->exp_value);
 	}
 	
 	return;
 }
 
-void Client::Handle_OP_TraderBuy(const APPLAYER *app)
+void Client::Handle_OP_TraderBuy(const EQZonePacket *app)
 {
 	if(app->size==sizeof(TraderBuy_Struct)){
 		TraderBuy_Struct* tbs = (TraderBuy_Struct*)app->pBuffer;
@@ -4986,7 +4876,7 @@ void Client::Handle_OP_TraderBuy(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_Trader(const APPLAYER *app)
+void Client::Handle_OP_Trader(const EQZonePacket *app)
 {
 	if(app->size==sizeof(Trader_ShowItems_Struct)){ //Show Items
 		Trader_ShowItems_Struct* sis = (Trader_ShowItems_Struct*)app->pBuffer;
@@ -5027,7 +4917,7 @@ void Client::Handle_OP_Trader(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_GMFind(const APPLAYER *app)
+void Client::Handle_OP_GMFind(const EQZonePacket *app)
 {
 	if (this->Admin() < minStatusToUseGMCommands) {
 		Message(13, "Your account has been reported for hacking.");
@@ -5037,7 +4927,7 @@ void Client::Handle_OP_GMFind(const APPLAYER *app)
 	//Break down incoming
 	GMSummon_Struct* request=(GMSummon_Struct*)app->pBuffer;
 	//Create a new outgoing
-	APPLAYER *outapp = new APPLAYER(OP_GMFind, sizeof(GMSummon_Struct));
+	EQZonePacket *outapp = new EQZonePacket(OP_GMFind, sizeof(GMSummon_Struct));
 	GMSummon_Struct* foundplayer=(GMSummon_Struct*)outapp->pBuffer;
 	//Copy the constants
 	strcpy(foundplayer->charname,request->charname);
@@ -5057,7 +4947,7 @@ void Client::Handle_OP_GMFind(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_PickPocket(const APPLAYER *app)
+void Client::Handle_OP_PickPocket(const EQZonePacket *app)
 {
 	if (app->size != sizeof(PickPocket_Struct)){
 		LogFile->write(EQEMuLog::Error, "Size mismatch for Pick Pocket packet");
@@ -5065,7 +4955,7 @@ void Client::Handle_OP_PickPocket(const APPLAYER *app)
 	}
 	PickPocket_Struct* pick_in = (PickPocket_Struct*) app->pBuffer;
 
-	//APPLAYER* outapp = new APPLAYER(OP_PickPocket, sizeof(sPickPocket_Struct));
+	//EQZonePacket* outapp = new EQZonePacket(OP_PickPocket, sizeof(sPickPocket_Struct));
 	//sPickPocket_Struct* pick_out = (sPickPocket_Struct*) outapp->pBuffer;
 	Mob* victim = entity_list.GetMob(pick_in->to);
 	if (!victim)
@@ -5079,173 +4969,9 @@ void Client::Handle_OP_PickPocket(const APPLAYER *app)
 	else
 		Message(0,"Stealing from clients not yet supported.");
 	//safe_delete(outapp);
-
-/*
-	APPLAYER* outapp = new APPLAYER(OP_PickPocket, sizeof(sPickPocket_Struct));
-	sPickPocket_Struct* pick_out = (sPickPocket_Struct*) outapp->pBuffer;
-	Mob* victim = entity_list.GetMob(pick_in->to);
-	if (!victim)
-		return;
-	if (pick_in->myskill == 0) {
-		LogFile->write(EQEMuLog::Debug,
-			"Client pick pocket response");
-		DumpPacket(app);
-		safe_delete(outapp);
-		return;
-	}
-	uint8 success = 0;
-	if (RandomTimer(1,900) >= (GetSkill(PICK_POCKETS)+GetDEX())){
-		success = RandomTimer(1,5);
-		if (GetSkill(PICK_POCKETS) >=200)
-			success += 1;
-	}
-	if ( (victim->IsNPC() && victim->CastToNPC()->IsInteractive()) || (victim->IsClient()) ) {
-		if (EQDEBUG>=5) LogFile->write(EQEMuLog::Debug, "PickPocket picking ipc/client");
-		pick_out->to   = pick_in->from;
-		pick_out->from = pick_in->to;
-		if (victim->IsClient() && !success){
-				victim->CastToClient()->QueuePacket(app);
-		}
-		else if (victim->IsNPC()
-		&& victim->CastToNPC()->IsInteractive()
-		&& GetPVP() 
-		&& (GetPVP() == victim->CastToClient()->GetPVP())
-		&& !success
-
-		) {
-		int16 hate = RandomTimer(1,503);
-		int16 tmpskill = (GetSkill(PICK_POCKETS)+GetDEX());
-		if( hate >= tmpskill ){
-			victim->AddToHateList(this, 1, 0);
-			entity_list.MessageClose(victim, true, 200, 0, "%s says, your not as quick as you thought you were thief!", victim->GetName());
-		}
-	}
-	if(!success){
-		// Failed
-		QueuePacket(outapp);
-	}
-	else if (success) {
-		pick_out->to   = pick_in->from;
-		pick_out->from = pick_in->to;
-
-		pick_out->type = success;
-		pick_out->coin = (RandomTimer(1,RandomTimer(2,10)));
-		switch (success){
-			case 1:
-				AddMoneyToPP(0,0,0,pick_out->coin, false);
-				return;
-			case 2:
-				AddMoneyToPP(0,0,pick_out->coin,0, false);
-				return;
-			case 3:
-				AddMoneyToPP(0,pick_out->coin,0,0, false);
-				return;
-			case 4:
-				AddMoneyToPP(pick_out->coin,0,0,0, false);
-				return;
-			case 5:
-			case 6: {
-				// Item
-				// @merth: This needs to be redone with new item classes
-				
-				APPLAYER* outapp2 = new APPLAYER(OP_PickPocket, sizeof(sItem_PickPocket_Struct));
-				sItem_PickPocket_Struct* pick_out2 = (sItem_PickPocket_Struct*) outapp2->pBuffer;
-				pick_out2->to   = pick_in->from;
-				pick_out2->from = pick_in->to;
-				pick_out2->type = success;
-				// FIXME: This should search the npc inventory for an item of fail the Pickpocket attempt
-				const Item_Struct* temp_item = 0;
-				while (!temp_item) {
-					temp_item = database.GetItem(RandomTimer(1001,32768));
-				}
-				//Inventory[30] = temp_item->ItemNumber;
-				PutItemInInventory(30, temp_item);
-				memcpy(&pick_out2->item, temp_item, sizeof(Item_Struct));
-				pick_out2->item.CurrentEquipSlot = 30;
-				QueuePacket(outapp2);
-				safe_delete(outapp2);
-				
-				return;
-			}
 }
 
-void Client::Handle_default(const APPLAYER *app)
-{
-				LogFile->write(EQEMuLog::Error,"Unknown success in OP_PickPocket %i", __LINE__); return;
-		}
-		if (success!=5)
-			QueuePacket(outapp);
-	}
-	else {
-		LogFile->write(EQEMuLog::Error, "Unknown error in OP_PickPocket");
-	}
-else {
-	if (EQDEBUG>=5)
-		LogFile->write(EQEMuLog::Debug, "PickPocket picking npc");
-	if (success) {
-		pick_out->to   = pick_in->from;
-		pick_out->from = pick_in->to;
-		pick_out->type = success;
-		pick_out->coin = (RandomTimer(1,RandomTimer(2,10)));
-		switch (success){
-			case 1:
-				AddMoneyToPP(0,0,0,pick_out->coin, false);
-				return;
-			case 2:
-				AddMoneyToPP(0,0,pick_out->coin,0, false);
-				return;
-			case 3:
-				AddMoneyToPP(0,pick_out->coin,0,0, false);
-				return;
-			case 4:
-				AddMoneyToPP(pick_out->coin,0,0,0, false);
-				return;
-			case 5:
-			case 6: {
-				// Item
-				// @merth: This needs to be redone with new item classes
-				
-				APPLAYER* outapp2 = new APPLAYER(OP_PickPocket, sizeof(sItem_PickPocket_Struct));
-				sItem_PickPocket_Struct* pick_out2 = (sItem_PickPocket_Struct*) outapp2->pBuffer;
-				pick_out2->to   = pick_in->from;
-				pick_out2->from = pick_in->to;
-				pick_out2->type = success;
-				// FIXME: This should search the npc inventory for an item of fail the Pickpocket attempt
-				const Item_Struct* temp_item = 0;
-				while (!temp_item) {
-					temp_item = database.GetItem(RandomTimer(1001,32768));
-				}
-				memcpy(&pick_out2->item, temp_item, sizeof(Item_Struct));
-				pick_out2->item.CurrentEquipSlot = 30;
-				QueuePacket(outapp2);
-				safe_delete(outapp2);
-				return;
-				
-			}
-}
-
-void Client::Handle_default(const APPLAYER *app)
-{
-				LogFile->write(EQEMuLog::Error,"Unknown success in OP_PickPocket %i", __LINE__); return;
-		}
-		if (success!=5)
-			QueuePacket(outapp);
-	}
-	else {
-		int16 hate = RandomTimer(1,503);
-		int16 tmpskill = (GetSkill(PICK_POCKETS)+GetDEX());
-		if( hate >= tmpskill ){
-			victim->AddToHateList(this, 1, 0);
-				entity_list.MessageClose(victim, true, 200, 0, "%s says, your not as quick as you thought you were thief!", victim->GetName());
-		}
-		QueuePacket(outapp);
-	}
-	safe_delete(outapp);
-	return;
-*/
-}
-
-void Client::Handle_OP_Bind_Wound(const APPLAYER *app)
+void Client::Handle_OP_Bind_Wound(const EQZonePacket *app)
 {
 	if (app->size != sizeof(BindWound_Struct)){
 		LogFile->write(EQEMuLog::Error, "Size mismatch for Bind wound packet");
@@ -5261,14 +4987,14 @@ void Client::Handle_OP_Bind_Wound(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TrackTarget(const APPLAYER *app)
+void Client::Handle_OP_TrackTarget(const EQZonePacket *app)
 {
 	// Looks like an entityid should probably do something with it.
 	IsTracking=(IsTracking==false);
 	return;
 }
 
-void Client::Handle_OP_Track(const APPLAYER *app)
+void Client::Handle_OP_Track(const EQZonePacket *app)
 {
 	IsTracking=false;
 	if(GetClass() != RANGER && GetClass() != DRUID && GetClass() != BARD)
@@ -5289,13 +5015,13 @@ void Client::Handle_OP_Track(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TrackUnknown(const APPLAYER *app)
+void Client::Handle_OP_TrackUnknown(const EQZonePacket *app)
 {
 	// size 0 send right after OP_Track
 	return;
 }
 
-void Client::Handle_0x0193(const APPLAYER *app)
+void Client::Handle_0x0193(const EQZonePacket *app)
 {
 	// Not sure what this opcode does.  It started being sent when OP_ClientUpdate was
 	// changed to pump OP_ClientUpdate back out instead of OP_MobUpdate
@@ -5303,7 +5029,7 @@ void Client::Handle_0x0193(const APPLAYER *app)
 }
 
 #if 0	// solar: disabled 2/13/04
-void Client::Handle_0x01e7(const APPLAYER *app)
+void Client::Handle_0x01e7(const EQZonePacket *app)
 {
 	// Dunno what this opcode does but client needs an answer
 	if(app->size==8){
@@ -5317,7 +5043,7 @@ void Client::Handle_0x01e7(const APPLAYER *app)
 }
 #endif
 
-void Client::Handle_OP_ClientError(const APPLAYER *app)
+void Client::Handle_OP_ClientError(const EQZonePacket *app)
 {
 	ClientError_Struct* error = (ClientError_Struct*)app->pBuffer;
 	LogFile->write(EQEMuLog::Error, "Client error: %s", error->character_name);
@@ -5327,20 +5053,20 @@ void Client::Handle_OP_ClientError(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_ReloadUI(const APPLAYER *app)
+void Client::Handle_OP_ReloadUI(const EQZonePacket *app)
 {
 	if(guilddbid>0 && guilddbid<0xFFFFFFFF)
 		SendGuildMembers(guilddbid);
 	return;
 }
 
-void Client::Handle_OP_TGB(const APPLAYER *app)
+void Client::Handle_OP_TGB(const EQZonePacket *app)
 {
 	OPTGB(app);
 	return;
 }
 
-void Client::Handle_OP_Split(const APPLAYER *app)
+void Client::Handle_OP_Split(const EQZonePacket *app)
 {
 	// solar: the client removes the money on its own, but we have to
 	// update our state anyway, and make sure they had enough to begin
@@ -5370,7 +5096,7 @@ void Client::Handle_OP_Split(const APPLAYER *app)
 
 }
 
-void Client::Handle_OP_SenseTraps(const APPLAYER *app)
+void Client::Handle_OP_SenseTraps(const EQZonePacket *app)
 {
 	if (!CanUseSkill(SENSE_TRAPS))
 		return;
@@ -5429,7 +5155,7 @@ void Client::Handle_OP_SenseTraps(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_DisarmTraps(const APPLAYER *app)
+void Client::Handle_OP_DisarmTraps(const EQZonePacket *app)
 {
 	if (!CanUseSkill(DISARM_TRAPS))
 		return;
@@ -5474,7 +5200,7 @@ void Client::Handle_OP_DisarmTraps(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_StartTribute(const APPLAYER *app)
+void Client::Handle_OP_StartTribute(const EQZonePacket *app)
 {
 	if(app->size != sizeof(StartTribute_Struct))
 		printf("Error in OP_StartTribute.  Expected size of: %i, but got: %i\n",sizeof(StartTribute_Struct),app->size);
@@ -5482,7 +5208,8 @@ void Client::Handle_OP_StartTribute(const APPLAYER *app)
 		//Opens the tribute master window
 		StartTribute_Struct* st = (StartTribute_Struct*)app->pBuffer;
 		Mob* tribmast = entity_list.GetMob(st->tribute_master_id);
-		if(tribmast && tribmast->GetClass()==TRIBUTE_MASTER) {
+		if(tribmast && tribmast->IsNPC() && tribmast->GetClass()==TRIBUTE_MASTER
+			&& DistNoRoot(*tribmast) <= USE_NPC_RANGE2) {
 			st->response = 1;
 			QueuePacket(app);
 			tribute_master_id = st->tribute_master_id;
@@ -5495,7 +5222,7 @@ void Client::Handle_OP_StartTribute(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TributeItem(const APPLAYER *app)
+void Client::Handle_OP_TributeItem(const EQZonePacket *app)
 {
 	//player donates an item...
 	if(app->size != sizeof(TributeItem_Struct))
@@ -5503,9 +5230,13 @@ void Client::Handle_OP_TributeItem(const APPLAYER *app)
 	else {
 		TributeItem_Struct* t = (TributeItem_Struct*)app->pBuffer;
 		
-		//Dunno why we would need this 
 		tribute_master_id = t->tribute_master_id;
-		//Mob* tribmast = entity_list.GetMob(t->tribute_master_id);
+		//make sure they are dealing with a valid tribute master
+		Mob* tribmast = entity_list.GetMob(t->tribute_master_id);
+		if(!tribmast || !tribmast->IsNPC() || tribmast->GetClass() != TRIBUTE_MASTER)
+			return;
+		if(DistNoRoot(*tribmast) > USE_NPC_RANGE2)
+			return;
 		
 		t->tribute_points = TributeItem(t->slot, t->quantity);
 		
@@ -5514,7 +5245,7 @@ void Client::Handle_OP_TributeItem(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TributeMoney(const APPLAYER *app)
+void Client::Handle_OP_TributeMoney(const EQZonePacket *app)
 {
 	//player donates money
 	if(app->size != sizeof(TributeMoney_Struct))
@@ -5522,9 +5253,13 @@ void Client::Handle_OP_TributeMoney(const APPLAYER *app)
 	else {
 		TributeMoney_Struct* t = (TributeMoney_Struct*)app->pBuffer;
 		
-		//Dunno why we would need this 
 		tribute_master_id = t->tribute_master_id;
-		//Mob* tribmast = entity_list.GetMob(t->tribute_master_id);
+		//make sure they are dealing with a valid tribute master
+		Mob* tribmast = entity_list.GetMob(t->tribute_master_id);
+		if(!tribmast || !tribmast->IsNPC() || tribmast->GetClass() != TRIBUTE_MASTER)
+			return;
+		if(DistNoRoot(*tribmast) > USE_NPC_RANGE2)
+			return;
 		
 		t->tribute_points = TributeMoney(t->platinum);
 		
@@ -5533,8 +5268,10 @@ void Client::Handle_OP_TributeMoney(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_SelectTribute(const APPLAYER *app)
+void Client::Handle_OP_SelectTribute(const EQZonePacket *app)
 {
+	//we should enforce being near a real tribute master to change this
+	//but im not sure how I wanna do that right now.
 	if(app->size != sizeof(SelectTributeReq_Struct))
 		LogFile->write(EQEMuLog::Error, "Invalid size on OP_SelectTribute packet");
 	else {
@@ -5544,7 +5281,7 @@ void Client::Handle_OP_SelectTribute(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TributeUpdate(const APPLAYER *app)
+void Client::Handle_OP_TributeUpdate(const EQZonePacket *app)
 {
 	//sent when the client changes their tribute settings...
 	if(app->size != sizeof(TributeInfo_Struct))
@@ -5556,7 +5293,7 @@ void Client::Handle_OP_TributeUpdate(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TributeToggle(const APPLAYER *app)
+void Client::Handle_OP_TributeToggle(const EQZonePacket *app)
 {
 	if(app->size != sizeof(int32))
 		LogFile->write(EQEMuLog::Error, "Invalid size on OP_TributeToggle packet");
@@ -5567,40 +5304,44 @@ void Client::Handle_OP_TributeToggle(const APPLAYER *app)
 	return;
 }
 
-void Client::Handle_OP_TributeNPC(const APPLAYER *app)
+void Client::Handle_OP_TributeNPC(const EQZonePacket *app)
 {
 	return;
 }
 
-void Client::Handle_OP_CrashDump(const APPLAYER *app)
+void Client::Handle_OP_CrashDump(const EQZonePacket *app)
 {
 }
 
-void Client::Handle_OP_ControlBoat(const APPLAYER *app)
+void Client::Handle_OP_ControlBoat(const EQZonePacket *app)
 {
 }
 
-void Client::Handle_OP_DumpName(const APPLAYER *app)
+void Client::Handle_OP_DumpName(const EQZonePacket *app)
 {
 }
 
-void Client::Handle_OP_SetRunMode(const APPLAYER *app)
+void Client::Handle_OP_SetRunMode(const EQZonePacket *app)
 {
 }
 
-void Client::Handle_OP_SafeFallSuccess(const APPLAYER *app)
+void Client::Handle_OP_SafeFallSuccess(const EQZonePacket *app)
 {
 }
 
-void Client::Handle_OP_Heartbeat(const APPLAYER *app)
+void Client::Handle_OP_Heartbeat(const EQZonePacket *app)
 {
 }
 
-void Client::Handle_OP_SafePoint(const APPLAYER *app)
+void Client::Handle_OP_SafePoint(const EQZonePacket *app)
 {
 }
 
-void Client::Handle_OP_FindPersonRequest(const APPLAYER *app)
+void Client::Handle_OP_Ignore(const EQZonePacket *app)
+{
+}
+
+void Client::Handle_OP_FindPersonRequest(const EQZonePacket *app)
 {
 	if(app->size != sizeof(FindPersonRequest_Struct))
 		printf("Error in FindPersonRequest_Struct.  Expected size of: %i, but got: %i\n",sizeof(FindPersonRequest_Struct),app->size);
@@ -5614,7 +5355,7 @@ void Client::Handle_OP_FindPersonRequest(const APPLAYER *app)
 		
 		if(target == NULL) {
 			//empty length packet == not found.
-			APPLAYER outapp(OP_FindPersonReply, 0);
+			EQZonePacket outapp(OP_FindPersonReply, 0);
 			QueuePacket(&outapp);
 			return;
 		}
@@ -5648,8 +5389,9 @@ void Client::DBAWComplete(int8 workpt_b1, DBAsyncWork* dbaw) {
 			int32 affected_rows = 0;
 			DBAsyncQuery* dbaq = dbaw->PopAnswer();
 			if (dbaq->GetAnswer(errbuf, 0, &affected_rows) && affected_rows == 1) {
-				if (dbaq->QPT())
+				if (dbaq->QPT()) {
 					SaveBackup();
+				}
 			}
 			else {
 				cout << "Async client save failed. '" << errbuf << "'" << endl;
@@ -5670,7 +5412,7 @@ void Client::DBAWComplete(int8 workpt_b1, DBAsyncWork* dbaw) {
 bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	uint32 pplen = 0;
 	DBAsyncQuery* dbaq = 0;
-	APPLAYER* outapp = 0;
+	EQZonePacket* outapp = 0;
 	MYSQL_RES* result = 0;
 	bool loaditems = 0;
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -5687,7 +5429,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 			return false;
 		}
 		if (dbaq->QPT() == 1) {
-			database.GetAccountInfoForLogin_result(result, 0, account_name, &lsaccountid, &gmspeed, &revoked);
+			database.GetAccountInfoForLogin_result(result, 0, account_name, &lsaccountid, &gmspeed, &revoked, &gmhideme);
 		}
 		else if (dbaq->QPT() == 2) {
 			loaditems = database.GetCharacterInfoForLogin_result(result, 0, 0, &m_pp, &m_inv, &m_epp, &pplen, &guilddbid, &guildrank);
@@ -5700,6 +5442,8 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 			return false;
 		}
 	}
+	
+	conn_state = PlayerProfileLoaded;
 	
 	char temp1[64];
 	if (database.GetVariable("Max_AAXP", temp1, sizeof(temp1)-1)) {
@@ -5850,63 +5594,17 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 			m_pp.skills[sk] = cap;
 	}
 	
+	//validate adventure points, this cap is arbitrary
+	if(m_pp.ldon_points_guk < 0 || m_pp.ldon_points_guk > 0xFFFF) m_pp.ldon_points_guk = 0;
+	if(m_pp.ldon_points_mir < 0 || m_pp.ldon_points_mir > 0xFFFF) m_pp.ldon_points_mir = 0;
+	if(m_pp.ldon_points_mmc < 0 || m_pp.ldon_points_mmc > 0xFFFF) m_pp.ldon_points_mmc = 0;
+	if(m_pp.ldon_points_ruj < 0 || m_pp.ldon_points_ruj > 0xFFFF) m_pp.ldon_points_ruj = 0;
+	if(m_pp.ldon_points_tak < 0 || m_pp.ldon_points_tak > 0xFFFF) m_pp.ldon_points_tak = 0;
+	if(m_pp.ldon_points_available < 0 || m_pp.ldon_points_available > 0xFFFF) m_pp.ldon_points_available = 0;
+	
 	if(GetSkill(SWIMMING) < 100)
 		SetSkill(SWIMMING,100);
-#ifdef GUILDWARS
-	m_pp.ldon_guk_points = 0;
-	m_pp.ldon_mirugal_points = 0;
-	m_pp.ldon_mistmoore_points = 0;
-	m_pp.ldon_rujarkian_points = 0;
-	m_pp.ldon_takish_points = 0;
-	m_pp.ldon_available_points = 0;
-	permitflag = false;
-	if(m_pp.pvp)
-		m_pp.pvp = false;
-	if(m_pp.anon && Admin() == 0)
-		m_pp.anon = 0;
-	profit = 0;
-	if(GuildDBID() != 0 && GuildRank() == 2)
-	{
-	GuildLocation* gl = 0;
-	gl = location_list.FindClosestLocationByClient(this);
-	if(gl != 0 && gl->GetLocationType() == CITY && gl->GetGuildOwner() == GuildDBID())
-	{
-	if(gl->GetProfit() > 0)
-	{
-	m_pp.platinum_bank += gl->GetProfit()/1000;
-	profit = gl->GetProfit()/1000;
-	gl->SetProfit(0);
-	database.SetLocationProfit(gl->GetLocationID(),0);
-	}
-	}
-	}
-	if(GuildDBID() != 0)
-	{
-	this->castpercentbonus = location_list.GetCasterAttackBonus(GuildDBID());
-	this->meleepercentbonus = location_list.GetMeleeAttackBonus(GuildDBID());
-	}
-					sint32 availpts = database.GetAvailablePoints(CharacterID(),0);
-#ifdef GWDEBUG
-					printf("Available points: %i for %s\n",availpts,GetName());
-#endif
-					if(availpts == -9999999)
-					{
-#ifdef GWDEBUG
-					printf("Setting up points table for %s\n",GetName());
-#endif
-						database.SetupPointsTable(CharacterID(),0,GetName());
-						availpts = 0;
-					}
-					if(availpts < 0)
-					availpts = 0;
-
-					m_pp.ldon_available_points = (int32)availpts;
-
-						guildwars.SetCurrentUsers(numclients);
-						if(guildwars.GetCurrentUsers() > guildwars.GetMaxUsers())
-							guildwars.SetMaxUsers(numclients);
-#endif
-
+	
 	if (spells_loaded)
 	{
 		for(int z=0;z<MAX_PP_MEMSPELL;z++)
@@ -5927,6 +5625,9 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 			if (m_pp.buffs[i].spellid <= (int32)SPDAT_RECORDS && m_pp.buffs[i].spellid != 0 && m_pp.buffs[i].duration > 0) {
 				if(m_pp.buffs[i].level == 0 || m_pp.buffs[i].level > 100)
 					m_pp.buffs[i].level = 1;
+				if(m_pp.buffs[i].duration < 3)	//make em last till they get in
+					m_pp.buffs[i].duration = 3;
+				m_pp.buffs[i].slotid = (i+1);
 				buffs[i].spellid			= m_pp.buffs[i].spellid;
 				buffs[i].ticsremaining		= m_pp.buffs[i].duration;
 				buffs[i].casterlevel		= m_pp.buffs[i].level;
@@ -5971,7 +5672,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 		
 		//Validity check for memorized
 		if(Admin() < minStatusToHaveInvalidSpells) {
-			for (int mem = 0; mem < 8; mem++)
+			for (int mem = 0; mem < MAX_PP_MEMSPELL; mem++)
 			{
 				if (m_pp.mem_spells[mem] < 1 || m_pp.mem_spells[mem] >= (unsigned int)SPDAT_RECORDS || spells[m_pp.mem_spells[mem]].classes[GetClass()-1] < 1 || spells[m_pp.mem_spells[mem]].classes[GetClass()-1] > GetLevel())
 					m_pp.mem_spells[mem] = SPELLBOOK_UNKNOWN;
@@ -5999,16 +5700,10 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	m_pp.zone_change_count++;
 	
 	int32 groupid = database.GetGroupID(GetName());
-#ifdef _EQDEBUG
-		printf("Loaded group id %lu from DB.\n", groupid);
-#endif
 	Group* group = NULL;
 	if(groupid > 0){
 		group = entity_list.GetGroupByID(groupid);
 		if(!group) {	//nobody from our is here... start a new group
-#ifdef _EQDEBUG
-			printf("Nobody in group is in this zone, making new group object.");
-#endif
 			group = new Group(groupid);
 			if(group->GetID() != 0)
 				entity_list.AddGroup(group, groupid);
@@ -6076,7 +5771,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	if (database.GetVariable("Expansions", val, 20))
 		m_pp.expansion = atoi(val);
 	else
-		m_pp.expansion = 0xFF;
+		m_pp.expansion = 0x1FF;
 	
 	p_timers.SetCharID(CharacterID());
 	if(!p_timers.Load()) {
@@ -6095,12 +5790,11 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	if(zone->IsPVPZone())
 		m_pp.pvp=1;
 	CRC32::SetEQChecksum((unsigned char*)&m_pp, sizeof(PlayerProfile_Struct)-4);
-	outapp = new APPLAYER(OP_PlayerProfile,sizeof(PlayerProfile_Struct));
+	outapp = new EQZonePacket(OP_PlayerProfile,sizeof(PlayerProfile_Struct));
 #ifdef SOLAR
 	printf("PP size: %d\n", sizeof(PlayerProfile_Struct));
 #endif
 	memcpy(outapp->pBuffer,&m_pp,outapp->size);
-	outapp->Deflate();
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);
 
@@ -6122,17 +5816,16 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	
 	////////////////////////////////////////////////////////////
 	// Server Zone Entry Packet
-	outapp = new APPLAYER(OP_ZoneEntry, sizeof(ServerZoneEntry_Struct));
+	outapp = new EQZonePacket(OP_ZoneEntry, sizeof(ServerZoneEntry_Struct));
 	ServerZoneEntry_Struct* sze = (ServerZoneEntry_Struct*)outapp->pBuffer;
 
 	FillSpawnStruct(&sze->player,CastToMob());
-	sze->player.spawn.cur_hp=1;
-	sze->player.spawn.npc=0;
-	sze->player.spawn.unknown367[0]=0xFFFFFFFF;
-	sze->player.spawn.unknown367[1]=0xFFFFFFFF;
+	sze->player.spawn.curHp=1;
+	sze->player.spawn.NPC=0;
 	sze->player.spawn.z += 6;	//arbitrary lift, seems to help spawning under zone.
-	QueuePacket(outapp);
-	safe_delete(outapp);
+	outapp->priority = 6;
+	FastQueuePacket(&outapp);
+	//safe_delete(outapp);
 	
 	////////////////////////////////////////////////////////////
 	// Zone Spawns Packet
@@ -6144,30 +5837,57 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	
 	////////////////////////////////////////////////////////////
 	// Time of Day packet
-	outapp = new APPLAYER(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
+	outapp = new EQZonePacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
 	TimeOfDay_Struct* tod = (TimeOfDay_Struct*)outapp->pBuffer;
 	zone->zone_time.getEQTimeOfDay(time(0), tod);
 	outapp->priority = 6;
-	QueuePacket(outapp);
-	safe_delete(outapp);
+	FastQueuePacket(&outapp);
+	//safe_delete(outapp);
 	
-	uchar blah[]={0x00,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF};
-	outapp = new APPLAYER(OP_0x02f2,sizeof(blah));
-	memcpy(outapp->pBuffer,blah,sizeof(blah));
-	QueuePacket(outapp);
-	safe_delete(outapp);
+	//I think this should happen earlier, not sure
+	if(GetHideMe())
+		SetHideMe(true);
+	
+	
+	////////////////////////////////////////////////////////////
+	// Tribute Packets
+	DoTributeUpdate();
+	if(m_pp.tribute_active) {
+		//restart the tribute timer where we left off
+		tribute_timer.Start(m_pp.tribute_time_remaining);
+	}
 	
 	////////////////////////////////////////////////////////////
 	// Character Inventory Packet
-	if (loaditems) //dont load if a length error occurs
+	//this is not quite where live sends inventory, they do it after tribute
+	if (loaditems) {//dont load if a length error occurs
 		BulkSendInventoryItems();
+		
+		// Send stuff on the cursor which isnt sent in bulk
+		iter_queue it;
+		for (it=m_inv.cursor_begin();it!=m_inv.cursor_end();it++) {
+			// First item cursor is sent in bulk inventory packet
+			if (it==m_inv.cursor_begin())
+				continue;
+			const ItemInst *inst=*it;
+			SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
+		}
+	}
+	
+	
+	////////////////////////////////////////////////////////////
+	// Task Packets
+	//TODO: send active tasks here
+	//TODO: send task history here
+	EQZonePacket *taskpack = new EQZonePacket(OP_CompletedTasks, 4);
+	FastQueuePacket(&taskpack);
 	
 	
 	//////////////////////////////////////
 	// Weather Packet
-	outapp = new APPLAYER(OP_Weather, 12);
+	// This shouldent be moved, this seems to be what the client
+	// uses to advance to the next state (sending ReqNewZone)
+	outapp = new EQZonePacket(OP_Weather, 12);
 	if (zone->zone_weather == 1)
 		outapp->pBuffer[4] = 0x31; // Rain
 	if (zone->zone_weather == 2)
@@ -6178,7 +5898,12 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	outapp->priority = 6;
 	QueuePacket(outapp);
 	safe_delete(outapp);
+	
+	
 	SetAttackTimer();
+	
+	conn_state = ZoneInfoSent;
+	
 	return true;
 }
 
@@ -6190,33 +5915,11 @@ void Client::CompleteConnect()
 //	database.UpdateTimersClientConnected(CharacterID());
 	client_state = CLIENT_CONNECTED;
 	
-#ifdef COMBINED
-	//dont start combining things until were connected
-	//to prevent strange zoning behavior
-	eqnc->EnableCombining();
-#endif
-	
-	
 	hpupdate_timer.Start();
 	position_timer.Start();
 	SetDuelTarget(0);
 	SetDueling(false);
 	
-	
-	DoTributeUpdate();
-	if(m_pp.tribute_active) {
-		//restart the tribute timer where we left off
-		tribute_timer.Start(m_pp.tribute_time_remaining);
-	}
-
-	iter_queue it;
-	for (it=m_inv.cursor_begin();it!=m_inv.cursor_end();it++) {
-		// First item cursor is sent in bulk inventory packet
-		if (it==m_inv.cursor_begin())
-			continue;
-		const ItemInst *inst=*it;
-		SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
-	}
 
 #ifdef GUILDWARS
 	guildwars.EnteringMessages(this);
@@ -6247,7 +5950,7 @@ void Client::CompleteConnect()
 		else
 			aa_points[id] = aa[a]->value;
 	}
-	SendAATable();
+	//SendAATable();
 	
 	//reapply some buffs
 	for (uint32 j1=0; j1 < BUFF_COUNT; j1++) {
@@ -6326,8 +6029,131 @@ void Client::CompleteConnect()
 			pet->SendWearChange(x);
 	}
 	zoneinpacket_timer.Start();
+	
+	conn_state = ClientConnectFinished;
 }
 
 
+void Client::Handle_OP_LeadershipExpToggle(const EQZonePacket *app) {
+	if(app->size != 1) {
+		LogFile->write(EQEMuLog::Debug, "Size mismatch in OP_LeadershipExpToggle expected %i got %i", 1, app->size);
+		DumpPacket(app);
+		return;
+	}
+	uint8 *mode = (uint8 *) app->pBuffer;
+	if(*mode) {
+		//TODO: enable leadership EXP
+	} else {
+		//TODO: disable leadership EXP
+	}
+}
 
 
+void Client::Handle_OP_PurchaseLeadershipAA(const EQZonePacket *app) {
+	if(app->size != sizeof(uint32)) {
+		LogFile->write(EQEMuLog::Debug, "Size mismatch in OP_LeadershipExpToggle expected %i got %i", 1, app->size);
+		DumpPacket(app);
+		return;
+	}
+	uint32 aaid = *((uint32 *) app->pBuffer);
+	
+	if(aaid >= _maxLeaderAA)
+		return;
+	
+	uint32 current_rank = m_pp.leader_abilities.ranks[aaid];
+	if(current_rank >= MAX_LEADERSHIP_TIERS) {
+		Message(13, "This ability can be trained no further.");
+		return;
+	}
+	
+	int8 cost = LeadershipAACosts[aaid][current_rank];
+	if(cost == 0) {
+		Message(13, "This ability can be trained no further.");
+		return;
+	}
+	
+	//TODO: we need to enforce prerequisits
+	
+	if(aaid >= raidAAMarkNPC) {
+		//it is a raid ability.
+		if(cost > m_pp.raid_leadership_points) {
+			Message(13, "You do not have enough points to purchase this ability.");
+			return;
+		}
+		
+		//sell them the ability.
+		m_pp.raid_leadership_points -= cost;
+		m_pp.leader_abilities.ranks[aaid]++;
+	} else {
+		//it is a group ability.
+		if(cost > m_pp.group_leadership_points) {
+			Message(13, "You do not have enough points to purchase this ability.");
+			return;
+		}
+		
+		//sell them the ability.
+		m_pp.group_leadership_points -= cost;
+		m_pp.leader_abilities.ranks[aaid]++;
+	}
+	
+	//success, send them an update
+	/*EQZonePacket *outapp = new EQZonePacket(OP_UpdateLeadershipAA, sizeof(UpdateLeadershipAA_Struct));
+	UpdateLeadershipAA_Struct *u = (UpdateLeadershipAA_Struct *) outapp->pBuffer;
+	u->ability_id = aaid;
+	u->new_rank = m_pp.leader_abilities.ranks[aaid];
+	FastQueuePacket(&outapp);*/
+}
+
+void Client::Handle_OP_SetTitle(const EQZonePacket *app) {
+	m_pp.title[0] = '\0';
+	//TODO: send some sort of update struct to everybody.
+}
+
+void Client::Handle_OP_RequestTitles(const EQZonePacket *app) {
+	//zero length request
+	//TODO: get the titles from somewhere, and ship em off
+	
+}
+
+void Client::Handle_OP_BankerChange(const EQZonePacket *app)
+{
+	if(app->size != sizeof(BankerChange_Struct)) {
+		LogFile->write(EQEMuLog::Debug, "Size mismatch in OP_BankerChange expected %i got %i", sizeof(BankerChange_Struct), app->size);
+		DumpPacket(app);
+		return;
+	}
+	
+	EQZonePacket *outapp=new EQZonePacket(OP_BankerChange,NULL,sizeof(BankerChange_Struct));
+	BankerChange_Struct *bc=(BankerChange_Struct *)outapp->pBuffer;
+	uint32 cp=m_pp.copper+(m_pp.silver*10)+(m_pp.gold*100)+(m_pp.platinum*1000);
+	m_pp.copper=cp%10;
+	cp/=10;
+	m_pp.silver=cp%10;
+	cp/=10;
+	m_pp.gold=cp%10;
+	cp/=10;
+	m_pp.platinum=cp;
+
+	cp=m_pp.copper_bank+(m_pp.silver_bank*10)+(m_pp.gold_bank*100)+(m_pp.platinum_bank*1000);
+	m_pp.copper_bank=cp%10;
+	cp/=10;
+	m_pp.silver_bank=cp%10;
+	cp/=10;
+	m_pp.gold_bank=cp%10;
+	cp/=10;
+	m_pp.platinum_bank=cp;
+
+	bc->copper=m_pp.copper;
+	bc->silver=m_pp.silver;
+	bc->gold=m_pp.gold;
+	bc->platinum=m_pp.platinum;
+
+	bc->copper_bank=m_pp.copper_bank;
+	bc->silver_bank=m_pp.silver_bank;
+	bc->gold_bank=m_pp.gold_bank;
+	bc->platinum_bank=m_pp.platinum_bank;
+
+	FastQueuePacket(&outapp);
+
+	return;
+}

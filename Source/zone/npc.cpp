@@ -142,6 +142,9 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	grid = 0;
 	wp_m = 0;
 	spawn_group = 0;
+// for quest signal() command
+	signaled = false;
+	signal_id = 0;
 	//Wandering
    /* for (int l=0;l<50;l++)
 	{
@@ -167,7 +170,28 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	//Trumpcard:  Gives low end monsters no regen if set to 0 in database. Should make low end monsters killable
 	//Might want to lower this to /5 rather than 10.
 	if(hp_regen == 0)
-		hp_regen = (int)( moblevel / 10 );
+	{
+		if(GetLevel() <= 6)  
+            hp_regen = 1;  
+       else if(GetLevel() > 6 && GetLevel() <= 10)  
+            hp_regen = 2;  
+       else if(GetLevel() > 10 && GetLevel() <= 15)  
+            hp_regen = 3;  
+       else if(GetLevel() > 15 && GetLevel() <= 20)  
+            hp_regen = 5;  
+       else if(GetLevel() > 20 && GetLevel() <= 30)  
+            hp_regen = 7;  
+       else if(GetLevel() > 30 && GetLevel() <= 35)  
+            hp_regen = 9;  
+       else if(GetLevel() > 35 && GetLevel() <= 40)  
+            hp_regen = 12;  
+       else if(GetLevel() > 40 && GetLevel() <= 45)  
+            hp_regen = 18;  
+       else if(GetLevel() > 45 && GetLevel() <= 50)  
+            hp_regen = 21;  
+       else if(GetLevel() > 50)  
+            hp_regen = 30;
+	}
 	
     CalcMaxMana();
     SetMana(GetMaxMana());
@@ -203,39 +227,8 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	delaytimer = false;
     feign_memory = "0";
 	forgetchance = 0;
-	attack_event = 0;
+	attack_event = false;
 	attack_speed = d->attack_speed;
-
-#ifdef GUILDWARS
-	if(respawn2 != 0)
-	{
-	if(database.GetNPC(respawn2->GetID()))
-	{
-	if(guildlocationid = database.GetNPCLocationID(respawn2->GetID()))
-	{
-#ifdef GWDEBUG
-		printf("LocationID found: %i (NPC Information: (%i;%i;%i)\n",guildlocationid,respawn2->GetID(),respawn2->SpawnGroupID(),respawn2->CurrentNPCID());
-#endif
-	INT = 70;
-	GuildLocation* loc = location_list.FindLocationByID(GetGuildLocationID());
-#ifdef GWDEBUG
-		printf("FindLocationByID()\n",guildlocationid);
-#endif
-	if(loc != 0)
-	{
-	memcpy(name,guildwars.GetRandomName(),64);
-	if(in_respawn && in_respawn->CurrentNPCID() < 180190 && in_respawn->CurrentNPCID() > 180192)
-	race = loc->GetRaceIDForZone();
-
-	loc->AddNPC(this);
-#ifdef GWDEBUG
-		printf("Location Inserted\n",guildlocationid);
-#endif
-	}
-	}
-	}
-	}
-#endif
 
 	EntityList::RemoveNumbers(name);
 #ifdef IPC
@@ -252,15 +245,15 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
     PR = d->PR;
 
     if (!MR)
-        MR = (int)( moblevel * 1.1f);
+        MR = (moblevel * 11)/10;
     if (!CR)
-        CR = (int)( moblevel * 1.1f);
+        CR = (moblevel * 11)/10;
     if (!DR)
-        DR = (int)( moblevel * 1.1f);
+        DR = (moblevel * 11)/10;
     if (!FR)
-        FR = (int)( moblevel * 1.1f);
+        FR = (moblevel * 11)/10;
     if (!PR)
-        PR = (int)( moblevel * 1.1f);
+        PR = (moblevel * 11)/10;
 
 	npc_aggro = d->npc_aggro;
 
@@ -320,10 +313,13 @@ NPC::~NPC()
 }
 
 void NPC::SetTarget(Mob* mob) {
+	if(mob == target)		//dont bother if they are allready our target
+		return;
+	
 	if (mob) {
 		SetAttackTimer();
-	}
-	else {
+	} else {
+		ranged_timer.Disable();
 		attack_timer.Disable();
 		attack_dw_timer.Disable();
 	}
@@ -385,7 +381,7 @@ void NPC::QueryLoot(Client* to) {
 	for(; cur != end; cur++) {
 		const Item_Struct* item = database.GetItem((*cur)->item_id);
 		if (item)
-		    to->Message(0, "  %d: %s", item->ItemNumber, item->Name);
+		    to->Message(0, "  %d: %s", item->ID, item->Name);
 		else
 		    LogFile->write(EQEMuLog::Error, "Database error, invalid item");
 		x++;
@@ -417,28 +413,11 @@ void NPC::RemoveCash() {
 bool NPC::Process()
 {
 	_ZP(NPC_Process);
-    if (attacked_timer.Check() && attack_event == 1)
+    if (attack_event && attacked_timer.Check())
 	{
-		attack_event = 0;
+		attack_event = false;
 	}
-#ifdef IPC
-    if(IsInteractive())
-	{
-	    if(IsEngaged() && CurrentPosition() != 0)
-		    TakenAction(0,0);
-
-        if(interactive_timer.Check())
-        {
-		    tired++;
-			if(tired >= tiredmax && CurrentPosition() != 1 && !IsEngaged())
-			{
-			    TakenAction(1,0);
-            }
-			if(tired >= tiredmax)
-			    tired = 0;
-		}
-    }
-#endif
+	
     adverrorinfo = 1;
 	if (IsStunned() && stunned_timer.Check())
     {
@@ -464,7 +443,7 @@ bool NPC::Process()
     SpellProcess();
     
     if (tic_timer.Check()) {
-        TicProcess();
+        BuffProcess();
 	    #ifdef IPC
         if(IsInteractive() )
 		    SendPosUpdate();
@@ -536,359 +515,6 @@ bool NPC::Process()
 	adverrorinfo = 0;
     return true;
 
-/*
-
-    adverrorinfo = 3;
-
-    // neotokyo: moved the call for selfbuffing after mez and stun
-    if( !IsEngaged() )
-	    this->CheckSelfBuffs();
-
-    if (scanarea_timer.Check() &&(!zone->AggroLimitReached()))
-    {
-		if(entity_list.AddHateToCloseMobs(this))
-            zone->AddAggroMob();
-        entity_list.CheckSupportCloseMobs(this);
-    }
-
-    // neotokyo: check frenzy
-    this->hate_list.CheckFrenzyHate();
-
-    adverrorinfo = 4;
-	if(IsEngaged())
-	    SetTarget(hate_list.GetTop());
-    else
-    {
-        target = 0;
-    }
-		  
-    if (gohome_timer.Check())
-    {	
-	    gohome_timer.Disable();
-        if (!IsEngaged())
-	        ismovinghome = true;
-    }
-
-    adverrorinfo = 5;	
-    if (IsEngaged())
-    {
-        if(banishcapability != 101 && (GetHateTop()->GetLevel() >= banishcapability) && (banishcapability != 0) && GetHateTop()->IsClient())
-        {
-            GetHateTop()->Message(4,"I shall not fight you, but I shall banish you!");
-            GetHateTop()->GoToBind();
-            this->RemoveFromHateList(GetHateTop());
-            }
-        }
-        adverrorinfo = 15;
-        if(rooted && IsEngaged())
-        {
-            int disttest = (int)(this->GetSize() * 2);
-            if(disttest <= 9)
-            {
-                disttest = 10;
-            }
-            if(this->GetRace() == 49)
-            {
-                disttest = 85;
-            }
-
-			  if (DistNoRootNoZ(GetHateTop()) > disttest * 40)
-			  {
-				  Mob* closehate = hate_list.GetClosest(this->CastToMob());
-				  if(closehate != 0 && closehate != target)
-					  SetTarget(closehate);
-				  if(closehate != 0 && closehate == target)
-				  {
-					  SetTarget(closehate);
-					  evader = true;
-				  }
-			  }
-		  }
-		  
-		  if(evader == true && !rooted && !IsEngaged())
-			  evader = false;
-		  
-		  adverrorinfo = 6;
-		  if((spells_timer.Check() || (IsEngaged() && spells_timer.GetRemainingTime() > 14000)) && !(gohome_timer.Enabled()||ismovinghome))
-		  {
-			  if(!IsEngaged()) {
-				  spells_timer.Start(RandomTimer(100000,240000), true);
-				  CheckFriendlySpellStatus();
-			  }
-			  if(IsEngaged()) {
-				  if(target->GetHPRatio() <= 25 || evader == true)
-					  spells_timer.Start(RandomTimer(5000,10000), true);
-				  else
-					  spells_timer.Start(RandomTimer(7000,14000), true);
-				  
-				  if(GetHPRatio() < 60 && RandomTimer(0,7) == 0)
-					  CheckFriendlySpellStatus();
-				  else
-					  CheckEnemySpellStatus();
-			  }
-		  }
-		  
-		  adverrorinfo = 7;	
-		  if (target == 0 && this->ownerid != 0) {
-			  Mob* obc = entity_list.GetMob(this->ownerid);
-			  if(obc == 0)
-				  return false;
-			  
-			  SetTarget(obc);
-		  }
-		  adverrorinfo = 14;
-		  if (casting_spell_id == 0) {
-#define NPC_MOVEMENT_PER_TIC		10
-			  //		bool pvp_protection=0;
-			  if (target != 0)
-			  {
-				  if (GetOwnerID() != target->GetID() && !IsAttackAllowed(target))
-				  {
-					  if(IsInteractive())
-					  {
-						  RemoveFromHateList(target);
-						  return true;
-					  }
-					  
-					  char temp[200];
-					  snprintf(temp, 200, "%s says, 'That is not a legal target master.'", this->GetName());
-					  entity_list.MessageClose(this, 1, 200, 10, temp);
-					  RemoveFromHateList(target);
-					  return true;
-				  }
-				  
-				  if(this->IsEngaged() && GetOwner() != 0 && GetOwner()->IsNPC() && GetOwnerID() != target->GetID())
-				  {
-					  if(GetOwner()->CastToNPC()->hate_list.GetEntHate(GetHateTop()) == 0)
-						  GetOwner()->CastToNPC()->AddToHateList(GetHateTop(),1);
-				  }
-				  
-				  
-				  if (movement_timer.Check() && !rooted) 
-				  {
-					  adverrorinfo = 8;
-					  //			movement_timer.Start();
-					  // NPC can move per "think", this number should be an EQ distance squared				
-					  float total_move_dist = (float) DistNoRootNoZ(target);
-					  appearance = 0;
-					  if (total_move_dist > 75) 
-					  {
-						  appearance = 5; 
-						  total_move_dist -= 50;
-						  if (total_move_dist > NPC_MOVEMENT_PER_TIC)
-							  total_move_dist = NPC_MOVEMENT_PER_TIC;
-						  float x2 = (float) pow(target->GetX() - x_pos, 2);
-						  float y2 = (float) pow(target->GetY() - y_pos, 2);
-						  // divide by zero "should" be impossible here because of the DistNoRootNoZ check
-						  float x_move = (float) (total_move_dist * ((double)x2/(x2+y2))); // should be already abs()'d from the square
-						  float y_move = (float) (total_move_dist - x_move);
-						  x_pos += (float) sqrt((double)x_move) * sign(target->GetX() - x_pos);
-						  y_pos += (float) sqrt((double)y_move) * sign(target->GetY() - y_pos);
-						  // since we don't use maps, we don't know the correct z nut this should do for now
-						  
-                          // lets try this and see how it works for pets
-                          // neotokyo: 14. Dec. 2002
-                          z_pos = (z_pos + target->GetZ()) / 2;
-                          
-                          //if (this->IsEngaged())
-							//  z_pos = this->GetHateTop()->GetZ();
-						  pLastChange = Timer::GetCurrentTime();
-					  }
-					  FaceTarget();
-					  
-				  }
-				  if (target->GetID() != this->ownerid && attack_timer.Check() && this->GetHPRatio() > 0) 
-				  {
-					  adverrorinfo = 9;
-					  if(GetHPRatio() >= 51) {
-						  if(SpecialNPCAttacks[1] == 2)
-						  {
-							  SpecialNPCAttacks[1] = 1;
-							  SpecialNPCCounts[1] = 0;
-						  }
-						  if(SpecialNPCAttacks[2] == 2)
-						  {
-							  SpecialNPCAttacks[2] = 1;
-							  SpecialNPCCounts[2] = 0;
-						  }
-						  if(SpecialNPCAttacks[3] == 2)
-						  {
-							  SpecialNPCAttacks[3] = 1;
-							  SpecialNPCCounts[3] = 0;
-							  SpecialNPCCountstwo[3] = 0;
-						  }
-					  }
-					  
-					  if(GetHPRatio() <= 49  && GetHPRatio() > 0 && target->GetID() != this->GetID()) {
-						  if(SpecialNPCAttacks[1] == 1)
-						  {
-							  SpecialNPCCounts[1] += 1;
-							  if(SpecialNPCCounts[1] >= 2)
-							  {
-								  HateSummon();
-								  SpecialNPCCounts[1] = 0;
-							  }
-						  }
-					  }
-					  
-					  if(GetHPRatio() <= 35 && GetHPRatio() > 0 && target->GetID() != this->GetID()) {
-						  if(SpecialNPCAttacks[3] == 1)
-						  {
-							  if(SpecialNPCCountstwo[3] == 0)
-							  {
-								  entity_list.MessageClose(this,true,800,13,"%s Rampages!",this->GetName());
-							  }
-							  SpecialNPCCounts[3] = 1;
-							  if(SpecialNPCCounts[3] == 1)
-							  {
-								  Attack(hate_list.GetRandom());
-								  SpecialNPCCountstwo[3] += 1;
-							  }
-						  }
-						  if(SpecialNPCCountstwo[3] >= 15)
-						  {
-							  entity_list.MessageClose(this,true,800,13,"%s loses the rampage.",this->GetName());
-							  SpecialNPCAttacks[3] = 2;
-							  SpecialNPCCountstwo[3] = 0;
-						  }
-					  }
-					  
-					  if(GetHPRatio() <= 17 && GetHPRatio() > 0 && target->GetID() != this->GetID()) {
-						  if(SpecialNPCAttacks[2] == 1)
-						  {
-							  if(SpecialNPCCounts[2] == 0)
-							  {
-								  SpecialNPCAttacks[2] = 1;
-								  entity_list.MessageClose(this,true,800,13,"%s is filled with enragement.",this->GetName());
-							  }
-							  SpecialNPCCounts[2] += 1;
-							  if(SpecialNPCCounts[2] >= 24)
-							  {
-								  entity_list.MessageClose(this,true,800,13,"%s enragement subsides.",this->GetName());
-								  SpecialNPCAttacks[2] = 2;
-							  }
-						  }
-					  }
-					  
-					  adverrorinfo = 10;
-					  if(target != 0 && target->GetID() != this->GetOwnerID())
-					  {
-						  Attack(target);
-						  if(evader == true)
-							  evader = false;
-						  
-						  if(IsInteractive())
-						  {
-							  tired = 0;
-						  }
-						  ishome = false;
-					  }
-					  pLastChange = Timer::GetCurrentTime();
-				  }
-		}
-		else if (ismovinghome)//Go back to bindpoint.. wonder why SendTo don't work for this? - Merkur
-		{
-			adverrorinfo = 11;
-			if (movement_timer.Check()) 
-			{
-				if (reallygohome) {
-					//	cout << "Really Go Home Code exec" << endl;
-					float total_move_dist = (float) (org_x-x_pos)*(org_x-x_pos)+(org_y-y_pos)*(org_y-y_pos);
-					appearance = 0;
-					if (total_move_dist > 75)  {
-						appearance = 5;
-						total_move_dist -= 50;
-						if (total_move_dist > NPC_MOVEMENT_PER_TIC/2) // go a bit slower
-							total_move_dist = NPC_MOVEMENT_PER_TIC/2;
-						float x2 = (float) pow(org_x - x_pos, 2);
-						float y2 = (float) pow(org_y - y_pos, 2);
-						float x_move = (float) (total_move_dist * ((double)x2/(x2+y2))); // should be already abs()'d from the square
-						float y_move = (float) (total_move_dist - x_move);
-						x_pos += (float) sqrt((double)x_move) * sign(org_x - x_pos);
-						y_pos += (float) sqrt((double)y_move) * sign(org_y - y_pos);
-						z_pos = org_z;
-						float angle;
-						if (org_x-x_pos > 0)
-							angle = - 90 + atan((double)(org_y-y_pos) / (double)(org_x-x_pos)) * 180 / M_PI;
-						else {
-							if (org_x-x_pos < 0)	
-								angle = + 90 + atan((double)(org_y-y_pos) / (double)(org_x-x_pos)) * 180 / M_PI;
-							else { // Added?
-								if (org_y-y_pos > 0)
-									angle = 0;
-								else
-									angle = 180;
-							}
-						}
-						if (angle < 0)
-							angle += 360;
-						if (angle > 360	)
-							angle -= 360;
-						
-						heading	= 256*(360-angle)/360.0f;
-						pLastChange = Timer::GetCurrentTime();
-					} // if total_move_distance
-					else {
-						appearance = 0;			
-						ismovinghome = false;
-						ishome = true;
-						pLastChange = Timer::GetCurrentTime();
-					}
-				} // if !reallygohome
-				else {
-					//				cout << "Not Really Going Home Code exec" << endl;
-					float delta_x = (rand()%100) - 50;
-					float delta_y = (rand()%100) - 50;
-					SendTo(org_x + delta_x, org_y + delta_y);
-				}
-			} // if movemement_timer
-			
-		} // if !ismovinghome
-		else { 
-						float delta_x = (rand()%100) - 50;
-		float delta_y = (rand()%100) - 50;
-		float total_move_dist = (float) (delta_x-x_pos)*(delta_x-x_pos)+(delta_y-y_pos)*(delta_y-y_pos);
-		appearance = 0;
-		if (total_move_dist > 10)  {
-		appearance = 5;
-		total_move_dist -= 50;
-		if (total_move_dist > NPC_MOVEMENT_PER_TIC/2) // go a bit slower
-		total_move_dist = NPC_MOVEMENT_PER_TIC/2;
-		float x2 = (float) pow(delta_x - x_pos, 2);
-		float y2 = (float) pow(delta_y - y_pos, 2);
-		float x_move = (float) (total_move_dist * ((double)x2/(x2+y2))); // should be already abs()'d from the square
-		float y_move = (float) (total_move_dist - x_move);
-		x_pos += (float) sqrt((double)x_move) * sign(delta_x - x_pos);
-		y_pos += (float) sqrt((double)y_move) * sign(delta_y - y_pos);
-		z_pos = z_pos;
-		float angle;
-		if (delta_x-x_pos > 0)
-		angle = - 90 + atan((double)(delta_y-y_pos) / (double)(delta_x-x_pos)) * 180 / M_PI;
-		else {
-		if (delta_x-x_pos < 0)	
-		angle = + 90 + atan((double)(delta_y-y_pos) / (double)(delta_x-x_pos)) * 180 / M_PI;
-		else { // Added?
-		if (delta_y-y_pos > 0)
-								angle = 0;
-								else
-								angle = 180;
-								}
-								}
-								if (angle < 0)
-								angle += 360;
-								if (angle > 360	)
-								angle -= 360;
-								
-								  heading	= 256*(360-angle)/360.0f;
-								  pLastChange = Timer::GetCurrentTime();
-								  } // if total_move_distance
-								  //			if (walking_timer && walking_timer.Check()) {
-								  //				float delta_x = (rand()%100) - 50;
-								  //				float delta_y = (rand()%100) - 50;
-								  //				SendTo(org_x + delta_x, org_y + delta_y);
-			//			}
-		}
-	}*/
 	adverrorinfo = 0;
     return true;
 }
@@ -1157,238 +783,6 @@ NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z,
 }
 
 
-
-/*Interactive NPC Stuff*/
-#ifdef IPC
-void NPC::InteractiveChat(int8 chan_num, int8 language, const char * message, const char* targetname,Mob* sender)
-{
-	char* tmp = new char[strlen(message)+1];
-	strcpy(tmp,message);
-	strupr(tmp);
-
-	if(sender == 0 || sender == this)
-		return;
-    LogFile->write(EQEMuLog::Debug,
-        "InteractiveChat(chan_num:%i, language:%i, message:\"%s\", targetname:\"%s\",sender:%p:%s)",
-                chan_num, language, message, targetname, sender, sender->GetName());
-	
-	
-	switch(chan_num)
-	{
-	case 2:
-		{
-			Group* group = entity_list.GetGroupByMob(this);
-			if(group == 0)
-				return;
-			char* _GetName = new char[strlen(GetName())+1];
-			strcpy(_GetName, GetName());
-			if ( !strstr(tmp, strupr(_GetName)) )
-				return;
-			
-			if(strstr(tmp,"HELP ME ATTACK"))
-			{
-				SetTarget(sender->GetTarget());
-				if(target != 0)
-				{
-					AddToHateList(target,1);
-					group->GroupMessage(this,"Im helping ya!");
-				}
-			}
-			else if( strstr(tmp,"HEAL ME") )
-			{
-			   if (IsCasting())
-			         break;
-               if(AICastSpell(sender, 100, 2))
-					group->GroupMessage(this,"Healing, ya.");
-			   else
-					group->GroupMessage(this,"lom, medding or something.");
-			}
-			else if( strstr(tmp,"PVP") )
-			{
-				this->CastToClient()->SetPVP(true);
-			}
-			else if( strstr(tmp, "FOLLOW ME") ) {
-				SetFollowID(sender->GetID());
-				group->GroupMessage(this, "Right behind ya.");
-			}
-			else if( strstr(tmp, "WAIT HERE") ){
-				SaveGuardSpot(true);
-				SetFollowID(0);
-				group->GroupMessage(this, "Waiting.");
-			}
-			else if( strstr(tmp, "EVAC") ){
-			   cout<<"IPC evac requested by "<<sender->GetName()<<endl;
-			   if (IsCasting())
-			         break;
-			    if(AICastSpell(sender, 100, 16))
-			           group->GroupMessage(this,"Evacing!");
-                else {
-                       group->GroupMessage(this,"Sissy!");
-                       entity_list.ChannelMessage(this,1,0,"To the death then!");                       
-                }
-                       
-			}
-			else if( strstr(tmp, "BUFF ") ){
-			   if (IsCasting())
-			         break;
-			   if ( strstr(tmp, "ME") && AICastSpell(sender, 100, 8) ) {
-			         group->GroupMessage(this, "Buffs inc, stay in range.");
-               }
-               else if ( strstr(tmp, "TARGET") && sender->GetTarget() && AICastSpell(sender->GetTarget(), 100, 8) ) {
-			         group->GroupMessage(this, "Buffs inc, stay in range.");
-               }
-			}
-			else {
-				group->GroupMessage(this, "Try: help me attack, heal me, pvp, follow me, wait here, evac, buff me, buff target");
-			}
-			break;
-		}
-	case 8:
-		{
-			if(strstr(tmp,"HAIL") && sender->GetTarget() == this) {
-				entity_list.ChannelMessage(this,1,0,"Hail, %s", sender->GetName());
-			}
-			else if (strstr(tmp,"GROUP ME") && sender->GetTarget() == this) {
-			      Group* group = entity_list.GetGroupByMob(this->CastToMob());
-			      if (group && group->members[0] != NULL && group->members[0] != this) {
-                           //group->AddMember(sender);
-                           entity_list.ChannelMessage(this,1,0,"%s, has lead", group->members[0]->GetName());
-                  }
-                  else if (group && group->members[0] != NULL && group->members[0] == this) {
-                           group->AddMember(sender);
-                  }
-                  else if (group && group->members[0] == NULL) {
-			               entity_list.ChannelMessage(this,1,0,"I'm group bugged, try again");
-			               group->DisbandGroup();
-                  }
-			      else if (!group) {
-			               entity_list.ChannelMessage(this,1,0,"I'm not grouped. Maybe you should Invite..");
-                  }
-                  else {
-                           LogFile->write(EQEMuLog::Error,
-                           "InteractiveChat(chan_num:%i, language:%i, message:\"%s\", targetname:\"%s\",sender:%p:%s)",
-                           chan_num, language, message, targetname, sender, sender->GetName());
-                  }
-			}
-			
-			break;
-		}
-	}
-	
-	delete tmp;
-}
-
-void NPC::TakenAction(int8 action,Mob* actiontaker)
-{
-    LogFile->write(EQEMuLog::Debug, "TakenAction(%i, %s)", action, (actiontaker) ? actiontaker->GetName():"none");
-	switch(action)
-	{
-	case 0:
-		{
-			tired = 0;
-			position = 0;
-			SendAppearancePacket(AT_Anim, ANIM_STAND);
-			break;
-		}
-	case 1:
-		{
-			position = 1;
-			if(GetHPRatio() <= 80 && actiontaker != this && !AICastSpell(this, 100, 2)) {
-				entity_list.ChannelMessage(this,1,0,"I need to get some HP back, im going to sit.");
-			
-			//if(actiontaker != this && GetHPRatio() > 80)
-			//	entity_list.ChannelMessage(this,1,0,"Im tired...");
-			SendAppearancePacket(AT_Anim, ANIM_SIT);
-			}
-			break;
-		}
-	case 2:
-		{
-			position = 2;
-			SendAppearancePacket(AT_Anim, ANIM_CROUCH);
-			break;
-		}
-	case 3:
-		{
-			position = 3;
-			SendAppearancePacket(AT_Anim, ANIM_STAND);
-			break;
-		}
-	case 4:
-		{
-			position = 4;
-			SendAppearancePacket(AT_Anim, ANIM_LOOT);
-			break;
-		}
-	case 20: // Inspected
-		{
-			if(CurrentPosition() == 1)
-				FaceTarget(actiontaker);
-			break;
-		}
-	case 21: // Healed
-		{
-			if(IsEngaged())
-				return;
-			
-			if(CurrentPosition() != 1)
-			{
-				TakenAction(0,0);
-			}
-#if 0
-			if (actiontaker != this) {
-			    FaceTarget(actiontaker);
-			    entity_list.ChannelMessage(this,1,0,"Thanks for the heal!");
-			}
-#endif
-			if(GetHPRatio() < 100)
-				TakenAction(1,this);
-			break;
-		}
-	case 22://groupinvite
-		{
-			Group* group = entity_list.GetGroupByMob(this->CastToMob());
-			if(group != 0 && actiontaker != 0)
-			{
-				isgrouped = true;
-				group->GroupMessage(this,"Hey hey! Thanks for the invite :D");
-				ownerid = actiontaker->GetID();
-				SetTarget(actiontaker);
-			}
-			else {
-			   entity_list.ChannelMessage(this,1,0,"Sorry I am already grouped");
-			}
-			break;
-		}
-	case 23://groupdisband
-		{
-			Group* group = entity_list.GetGroupByMob(this);
-			if(group == 0) {
-                 LogFile->write(EQEMuLog::Error, "IPC: group disband called but IPC not grouped");
-			}
-			else if (!actiontaker || actiontaker == this) {
-				target = 0;
-				isgrouped = false;
-				ownerid = 0;
-				SaveGuardSpot(true);
-				SetFollowID(0);
-				LogFile->write(EQEMuLog::Debug, "IPC: leaving group");
-			}
-			else {
-			   LogFile->write(EQEMuLog::Debug, "IPC: player leaving group");
-			   entity_list.ChannelMessage(this,1,0,"Safe travels.");			   
-			}
-            if (GetFollowID()) {
-                SaveGuardSpot(true);
-			    SetFollowID(0);
-            }
-			break;
-		}
-	}
-}
-#endif
-
-
 int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn, int32 extra) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
@@ -1506,7 +900,7 @@ int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn
 			break;
 		}
 		case 3: { // delete spawn from spawning - khuong
-			if (RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND x>'%.3f' AND x<'%.3f' AND y>'%.3f' AND y<'%.3f'", zone, spawn->GetSpawnX()-0.01f, spawn->GetSpawnX()+0.01f,spawn->GetSpawnY()-0.01f,spawn->GetSpawnY()+0.01f), errbuf, &result)) {
+			if (!RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND spawngroupID=%i", zone, spawn->GetSp2()), errbuf, &result)) {
 				safe_delete_array(query);
 				return 0;
 			}
@@ -1541,7 +935,7 @@ int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn
 			break;
 		}
 		case 4: { //delete spawn from DB (including npc_type) - khuong
-			if (RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND x>'%.3f' AND x<'%.3f' AND y>'%.3f' AND y<'%.3f'", zone, spawn->GetSpawnX()-0.01f, spawn->GetSpawnX()+0.01f,spawn->GetSpawnY()-0.01f,spawn->GetSpawnY()+0.01f), errbuf, &result)) {
+			if (!RunQuery(query, MakeAnyLenString(&query, "SELECT id,spawngroupID from spawn2 where zone='%s' AND spawngroupID=%i", zone, spawn->GetSp2()), errbuf, &result)) {
 				safe_delete_array(query);
 				return(0);
 			}
@@ -1667,12 +1061,12 @@ void NPC::PickPocket(Client* thief) {
 			{
 				inst = ItemInst::Create(item, citem->charges);
 				int slot_id = thief->GetInv().FindFreeSlot(false, true, inst->GetItem()->Size);
-				if (/*!Equipped(item->ItemNumber) &&*/
-					 !item->loreflag && !item->Common.Magic && item->NoDrop != 0 && !inst->IsType(ItemTypeContainer) && slot_id != SLOT_INVALID 
+				if (/*!Equipped(item->ID) &&*/
+					 !item->LoreFlag && !item->Common.Magic && item->NoDrop != 0 && !inst->IsType(ItemClassContainer) && slot_id != SLOT_INVALID 
 					/*&& steal_skill > item->Common.StealSkill*/ )
 				{
 					slot[x] = slot_id;
-					steal_items[x] = item->ItemNumber;
+					steal_items[x] = item->ID;
 					if (inst->IsStackable())
 						charges[x] = 1;
 					else
@@ -1684,15 +1078,15 @@ void NPC::PickPocket(Client* thief) {
 		if (x > 0)
 		{
 			int random = MakeRandomInt(0, x-1);
-			const Item_Struct* item = database.GetItem(steal_items[random]);
-			inst = ItemInst::Create(item,charges[random]);
+			inst = ItemInst::Create(steal_items[random], charges[random]);
+			const Item_Struct* item = inst->GetItem();
 
 			if (/*item->Common.StealSkill || */steal_skill >= stealchance)
 			{
 				thief->Message_StringID(0,12903,item->Name,0);
 				thief->PutItemInInventory(slot[random], *inst);
 				thief->SendItemPacket(slot[random], inst, ItemPacketTrade);
-				RemoveItem(item->ItemNumber);
+				RemoveItem(item->ID);
 			}
 			else
 			{
@@ -1867,4 +1261,34 @@ void Mob::NPCSpecialAttacks(const char* parse, int permtag) {
 		}
 	}
 }
+
+void NPC::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
+{
+	Mob::FillSpawnStruct(ns, ForWho);
+	
+	if(GetOwnerID()) {
+		ns->spawn.is_pet = 1;
+	} else {
+		ns->spawn.is_pet = 0;
+	}
+	ns->spawn.is_npc = 1;
+	
+	//not sure what this is, but all 'useable' npcs seem to have it set to 3 on live
+	if(GetClass() >= WARRIORGM) {
+		ns->spawn.unknown0167 = 3;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 

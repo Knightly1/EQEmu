@@ -145,7 +145,7 @@ bool EQEMuLog::write(LogIDs id, const char *fmt, ...) {
 	}
 	va_end(argptr);
     if (dofile)
-	fprintf(fp[id], "\n");
+		fprintf(fp[id], "\n");
     if (pLogStatus[id] & 2) {
 		if (pLogStatus[id] & 8)
 			fprintf(stderr, "\n");

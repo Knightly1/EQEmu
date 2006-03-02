@@ -23,7 +23,7 @@
 using namespace std;
 
 #include "packet_dump.h"
-#include "EQNetwork.h"
+#include "EQStream.h"
 #include "../common/servertalk.h"
 
 void DumpPacketAscii(const uchar* buf, int32 size, int32 cols, int32 skip) {
@@ -51,7 +51,7 @@ void DumpPacketAscii(const uchar* buf, int32 size, int32 cols, int32 skip) {
 }
 
 void DumpPacketHex(const uchar* buf, int32 size, int32 cols, int32 skip) {
-	if (size == 0 || size > 32565)
+	if (size == 0 || size > 39565)
 		return;
 	// Output as HEX
 	char output[4];
@@ -90,29 +90,10 @@ void DumpPacketHex(const uchar* buf, int32 size, int32 cols, int32 skip) {
 	safe_delete_array(ascii);
 }
 
-void DumpPacketHex(const APPLAYER* app)
-{
-	DumpPacketHex(app->pBuffer, app->size);
-}
-
-void DumpPacketAscii(const APPLAYER* app)
-{
-	DumpPacketAscii(app->pBuffer, app->size);
-}
-
 void DumpPacket(const uchar* buf, int32 size)
 {
 	DumpPacketHex(buf, size);
 //	DumpPacketAscii(buf,size);
-}
-
-void DumpPacket(const APPLAYER* app, bool iShowInfo) {
-	if (iShowInfo) {
-		cout << "Dumping Applayer: 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec;
-		cout << " size:" << app->size << endl;
-	}
-	DumpPacketHex(app->pBuffer, app->size);
-//	DumpPacketAscii(app->pBuffer, app->size);
 }
 
 void DumpPacket(const ServerPacket* pack, bool iShowInfo) {
@@ -121,10 +102,6 @@ void DumpPacket(const ServerPacket* pack, bool iShowInfo) {
 		cout << " size:" << pack->size << endl;
 	}
 	DumpPacketHex(pack->pBuffer, pack->size);
-}
-
-void DumpPacketBin(const APPLAYER* app) {
-	DumpPacketBin(app->pBuffer, app->size);
 }
 
 void DumpPacketBin(const ServerPacket* pack) {

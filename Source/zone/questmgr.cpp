@@ -1,5 +1,5 @@
 /*  EQEMu:  Everquest Server Emulator
-    Copyright (C) 2001-2004  EQEMu Development Team (http://eqemulator.net)
+    Copyright (C) 2001-2005  EQEMu Development Team (http://eqemulator.net)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -449,7 +449,7 @@ bool QuestManager::isdisctome(int item_id) {
 		return(false);
 	}
 	
-	if(item->ItemClass != ItemTypeCommon || item->Common.ItemUse != ItemUseSpell) {
+	if(item->ItemClass != ItemClassCommon || item->Common.ItemType != ItemTypeSpell) {
 		return(false);
 	}
 	
@@ -476,7 +476,7 @@ bool QuestManager::isdisctome(int item_id) {
 		return(false);
 	}
 	
-	int32 spell_id = item->Common.SpellId;
+	int32 spell_id = item->Common.Scroll.Effect;
 	if(!IsValidSpell(spell_id)) {
 		return(false);
 	}
@@ -497,12 +497,12 @@ bool QuestManager::isdisctome(int item_id) {
 
 void QuestManager::safemove() {
 	if (initiator && initiator->IsClient())
-		initiator->MovePC(zone->GetShortName(),database.GetSafePoint(zone->GetShortName(),"x"),database.GetSafePoint(zone->GetShortName(),"y"),database.GetSafePoint(zone->GetShortName(),"z"));
+		initiator->GoToSafeCoords(zone->GetZoneID());
 }
 
 void QuestManager::rain(int weather) {
 	zone->zone_weather = weather;
-	APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
+	EQZonePacket* outapp = new EQZonePacket(OP_Weather, 8);
 	*((int32*) &outapp->pBuffer[4]) = (int32) weather; // Why not just use 0x01/2/3?
 	entity_list.QueueClients(npc, outapp);
 	safe_delete(outapp);
@@ -510,7 +510,7 @@ void QuestManager::rain(int weather) {
 
 void QuestManager::snow(int weather) {
 	zone->zone_weather = weather + 1;
-	APPLAYER* outapp = new APPLAYER(OP_Weather, 8);
+	EQZonePacket* outapp = new EQZonePacket(OP_Weather, 8);
 	outapp->pBuffer[0] = 0x01;
 	*((int32*) &outapp->pBuffer[4]) = (int32)weather;
 	entity_list.QueueClients(initiator, outapp);
@@ -568,7 +568,7 @@ void QuestManager::scribespells() {
 }
 
 void QuestManager::givecash(int copper, int silver, int gold, int platinum) {
-	APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct)); 
+	EQZonePacket* outapp = new EQZonePacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct)); 
 	moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer; 
 	d->response      = 1; 
 	d->unknown1      = 0x5a; 
@@ -662,7 +662,7 @@ void QuestManager::movegrp(int zoneid, float x, float y, float z) {
 			g->TeleportGroup(initiator, zoneid, x, y, z);
 		}
 		else {
-			if (initiator) initiator->MovePC(zoneid, x, y, z);
+			initiator->MovePC(zoneid, x, y, z);
 		}
 	}
 }
@@ -697,13 +697,28 @@ void QuestManager::setallskill(int value) {
 
 void QuestManager::attack(const char *client_name) {
 	Client* getclient = entity_list.GetClientByName(client_name);
-	if(getclient && npc->IsAttackAllowed(getclient))
-	{
+	if(getclient && npc->IsAttackAllowed(getclient)) {
 		npc->AddToHateList(getclient,1);
-	}
-	else
-	{
+	} else {
 		npc->Say("I am unable to attack %s.", client_name);
+	}
+}
+
+void QuestManager::attacknpc(int npc_entity_id) {
+	Mob *it = entity_list.GetMob(npc_entity_id);
+	if(it && npc->IsAttackAllowed(it)) {
+		npc->AddToHateList(it,1);
+	} else {
+		npc->Say("I am unable to attack %s.", it->GetName());
+	}
+}
+
+void QuestManager::attacknpctype(int npc_type_id) {
+	Mob *it = entity_list.GetMobByNpcTypeID(npc_type_id);
+	if(it && npc->IsAttackAllowed(it)) {
+		npc->AddToHateList(it,1);
+	} else {
+		npc->Say("I am unable to attack %s.", it->GetName());
 	}
 }
 
@@ -732,7 +747,7 @@ void QuestManager::faction(int faction_id, int faction_value) {
 void QuestManager::setsky(uint8 new_sky) {
 	if (zone)
 		zone->newzone_data.sky = new_sky;
-	APPLAYER* outapp = new APPLAYER(OP_NewZone, sizeof(NewZone_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_NewZone, sizeof(NewZone_Struct));
 	memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 	entity_list.QueueClients(initiator, outapp);
 	safe_delete(outapp);
@@ -799,11 +814,11 @@ Code:
 sprintf(hashstr, "%d%s%d%d", id, name, weight, booktype); 
 */
 
-// MYRA - added itemlink(ItemNumber) command
+// MYRA - added itemlink(ID) command
 	const Item_Struct* item = 0; 
 	int16 itemid = item_id; 
 	item = database.GetItem(itemid); 
-	initiator->Message(0, "%s tells you, '%c00%i %s%c",npc->GetName(),0x12, item->ItemNumber, item->Name, 0x12);
+	initiator->Message(0, "%s tells you, '%c00%i %s%c",npc->GetName(),0x12, item->ID, item->Name, 0x12);
 }
 
 void QuestManager::signalwith(int npc_id, int signal_id, int wait_ms) {
@@ -834,7 +849,6 @@ void QuestManager::setglobal(const char *varname, const char *newvalue, int opti
 	// setglobal(varname,value,options,duration)
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
-	MYSQL_RES *result;
 	//MYSQL_ROW row;
 	int qgZoneid=zone->GetZoneID();
 	int qgCharid=0;
@@ -879,29 +893,20 @@ void QuestManager::setglobal(const char *varname, const char *newvalue, int opti
 	// clean up expired vars and get rid of the one we're going to set if there
 	database.RunQuery(query, MakeAnyLenString(&query, 
 		"DELETE FROM quest_globals WHERE expdate < %i || (name='%s' && (charid=0 || (npcid=%i && charid=%i && zoneid=%i)))"
-		,Timer::GetCurrentTime(),varname,qgNpcid,qgCharid,qgZoneid), errbuf, &result);
-	if (query)
-	{
-		safe_delete_array(query);
-		query=0;
-	}
-	mysql_free_result(result);
+		,Timer::GetCurrentTime(),varname,qgNpcid,qgCharid,qgZoneid), errbuf);
+	safe_delete_array(query);
+	
 	//NOTE: this should be escaping the contents of arglist
 	//npcwise a malicious script can arbitrarily alter the DB
 	if (!database.RunQuery(query, MakeAnyLenString(&query, 
 	  "INSERT INTO quest_globals (charid,npcid,zoneid,name,value,expdate) VALUES (%i,%i,%i,'%s','%s',unix_timestamp(now())+%i)",
 	  qgCharid,qgNpcid,qgZoneid,varname,newvalue,
 	  QGexpdate(varname,duration)
-	  ), errbuf, &result)) 
+	  ), errbuf)) 
 	{
 		cerr << "setglobal error inserting " << varname << " : " << errbuf << endl;
 	}
-	if (query)
-	{
-		safe_delete_array(query);
-		query=0;
-	}
-	mysql_free_result(result);
+	safe_delete_array(query);
 
 }
 
@@ -1126,7 +1131,9 @@ void QuestManager::clear_proximity() {
 void QuestManager::setanim(int npc_type, int animnum) {
 	//Cisyouc: adds appearance changes
 	Mob* thenpc = entity_list.GetMobByNpcTypeID(npc_type);
-	thenpc->SetAppearance(animnum);
+	if(animnum < 0 || animnum >= _eaMaxAppearance)
+		return;
+	thenpc->SetAppearance(EmuAppearance(animnum));
 }
 
 

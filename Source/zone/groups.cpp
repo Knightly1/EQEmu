@@ -54,7 +54,10 @@ members array.
 
 */
 
-Group::Group(int32 gid) {
+//create a group which should allready exist in the database
+Group::Group(int32 gid) 
+: GroupIDConsumer(gid)
+{
 	memset(members,0,sizeof(Mob*) * MAX_GROUP_MEMBERS);
 	int i;
 	for(i=0;i<MAX_GROUP_MEMBERS;i++)
@@ -64,14 +67,15 @@ Group::Group(int32 gid) {
 		link[i] = 0;
 	}
 #endif
-	id = gid;
-	if(id != 0) {
+	if(gid != 0) {
 		if(!LearnMembers())
-			id = 0;
+			SetID(0);
 	}
 }
 
+//creating a new group
 Group::Group(Mob* leader)
+: GroupIDConsumer()
 {
 	memset(members,0,sizeof(Mob*) * MAX_GROUP_MEMBERS);
 	members[0] = leader;
@@ -97,7 +101,7 @@ void Group::SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinu
 		return;
   
   //I could not get MoneyOnCorpse to work
-  APPLAYER* outapp = new APPLAYER(OP_MoneyUpdate,sizeof(MoneyUpdate_Struct));
+  EQZonePacket* outapp = new EQZonePacket(OP_MoneyUpdate,sizeof(MoneyUpdate_Struct));
   MoneyUpdate_Struct* mus= (MoneyUpdate_Struct*)outapp->pBuffer;  
 	
   int i;
@@ -216,7 +220,7 @@ bool Group::AddMember(Mob* newmember)
 	int x=1;
 	
 	//build the template join packet	
-	APPLAYER* outapp = new APPLAYER(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 	GroupJoin_Struct* gj = (GroupJoin_Struct*) outapp->pBuffer;	
 	strcpy(gj->membername, newmember->GetName());
 	gj->action = 0;
@@ -254,7 +258,7 @@ bool Group::AddMember(Mob* newmember)
 	return true;
 }
 
-void Group::QueuePacket(const APPLAYER *app, bool ack_req)
+void Group::QueuePacket(const EQZonePacket *app, bool ack_req)
 {
 	for(int i = 0; i < MAX_GROUP_MEMBERS; i++)
 		if(members[i] && members[i]->IsClient())
@@ -264,9 +268,9 @@ void Group::QueuePacket(const APPLAYER *app, bool ack_req)
 // solar: sends the rest of the group's hps to member.  this is useful when
 // someone first joins a group, but otherwise there shouldn't be a need to
 // call it
-void Group::SendHPPackets(Mob *member)
+void Group::SendHPPacketsTo(Mob *member)
 {
-	APPLAYER hpapp;
+	EQZonePacket hpapp;
 	int i;
 
 	if(!member || !member->IsClient())
@@ -280,6 +284,19 @@ void Group::SendHPPackets(Mob *member)
 			member->CastToClient()->QueuePacket(&hpapp, false);
 		}
 	}
+}
+
+void Group::SendHPPacketsFrom(Mob *member)
+{
+	EQZonePacket hp_app;
+	if(!member)
+		return;
+
+ 	member->CreateHPPacket(&hp_app);
+
+	for(int i = 0; i < MAX_GROUP_MEMBERS; i++)
+		if(members[i] && members[i] != member && members[i]->IsClient())
+			members[i]->CastToClient()->QueuePacket(&hp_app);
 }
 
 //updates a group member's client pointer when they zone in
@@ -342,7 +359,7 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 		  	//handle leader quitting group gracefully
 			if (oldmember == GetLeader() && GroupCount() > 2)
 			{
-				APPLAYER* outapp = new APPLAYER(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+				EQZonePacket* outapp = new EQZonePacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 
 				GroupJoin_Struct* gu = (GroupJoin_Struct*) outapp->pBuffer;
 				gu->action = 8;
@@ -368,7 +385,7 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 		  }
 	 }
 	 memset(membername[i],0,64);
-	APPLAYER* outapp = new APPLAYER(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 
 	GroupJoin_Struct* gu = (GroupJoin_Struct*) outapp->pBuffer;
 	gu->action = groupActLeave;
@@ -609,7 +626,7 @@ int32 Group::GetTotalGroupDamage(Mob* other) {
 }
 
 void Group::DisbandGroup() {
-	APPLAYER* outapp = new APPLAYER(OP_GroupUpdate,sizeof(GroupUpdate_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_GroupUpdate,sizeof(GroupUpdate_Struct));
 
 	GroupUpdate_Struct* gu = (GroupUpdate_Struct*) outapp->pBuffer;
 	gu->action = groupActDisband;
@@ -625,7 +642,6 @@ void Group::DisbandGroup() {
 			
 			strncpy(sgl->member_name, membername[i], 64);
 			
-			pack->Deflate();
 			worldserver.SendPacket(pack);
 			safe_delete(pack);
 			continue;
@@ -640,9 +656,9 @@ void Group::DisbandGroup() {
 		membername[i][0] = '\0';
 	}
 	
-	entity_list.RemoveGroup(id);
-	if(id != 0)
-		 database.ClearGroup(id);
+	entity_list.RemoveGroup(GetID());
+	if(GetID() != 0)
+		 database.ClearGroup(GetID());
 
 	safe_delete(outapp);
 }
@@ -658,7 +674,7 @@ bool Group::Process() {
 void Group::SendUpdate(int32 type, Mob* member){
 	if(!member->IsClient())
 		return;
-	APPLAYER* outapp = new APPLAYER(OP_GroupUpdate,sizeof(GroupUpdate2_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_GroupUpdate,sizeof(GroupUpdate2_Struct));
 	GroupUpdate2_Struct* gu = (GroupUpdate2_Struct*)outapp->pBuffer;	
 	gu->action = type;
 	strcpy(gu->yourname,member->GetName());
@@ -670,6 +686,7 @@ void Group::SendUpdate(int32 type, Mob* member){
 			if(IsLeader(members[i])){
 				strcpy(gu->leadersname,members[i]->GetName());
 				strcpy(gu->membername[x],members[i]->GetName());
+				((Client *)members[i])->GetGroupAAs(&gu->leader_aas);
 				x++;
 			}
 			else{
@@ -697,7 +714,7 @@ int8 Group::GroupCount() {
 
 int32 Group::GetHighestLevel()
 {
-int32 level = 0;
+int32 level = 1;
 	for (int i = 0; i < MAX_GROUP_MEMBERS; i++)
 	 {
 		if (members[i])
@@ -852,7 +869,7 @@ void Group::TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z)
 		  if (members[i] != NULL && members[i]->IsClient() && members[i] != sender)
 	 #endif
 	 	{
-		  members[i]->CastToClient()->MovePC(zoneID, x, y, z);
+			members[i]->CastToClient()->MovePC(zoneID, x, y, z);
 		}
 	}	
 }
@@ -862,11 +879,11 @@ bool Group::LearnMembers() {
     char* query = 0;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
-	if (database.RunQuery(query,MakeAnyLenString(&query, "SELECT name FROM character_ WHERE groupid=%lu", id),errbuf,&result)){
+	if (database.RunQuery(query,MakeAnyLenString(&query, "SELECT name FROM character_ WHERE groupid=%lu", GetID()),errbuf,&result)){
 		safe_delete_array(query);
 		if(mysql_num_rows(result) < 1) {	//could prolly be 2
 			mysql_free_result(result);
-			LogFile->write(EQEMuLog::Error, "Error getting group members for group %lu: %s", id, errbuf);
+			LogFile->write(EQEMuLog::Error, "Error getting group members for group %lu: %s", GetID(), errbuf);
 			return(false);
 		}
 		int i = 0;
@@ -903,7 +920,7 @@ LogFile->write(EQEMuLog::Debug, "Group %lu: Verify %d: Empty.\n", id, i);
 		Mob *them = entity_list.GetMob(membername[i]);
 		if(them == NULL && members[i] != NULL) {	//they arnt here anymore....
 #if EQDEBUG >= 6
-		LogFile->write(EQEMuLog::Debug, "Member of group %lu named '%s' has disappeared!!", id, membername[i]);
+		LogFile->write(EQEMuLog::Debug, "Member of group %lu named '%s' has disappeared!!", GetID(), membername[i]);
 #endif
 			membername[i][0] = '\0';
 			members[i] = NULL;
@@ -912,14 +929,27 @@ LogFile->write(EQEMuLog::Debug, "Group %lu: Verify %d: Empty.\n", id, i);
 		
 		if(them != NULL && members[i] != them) {	//our pointer is out of date... not so good.
 #if EQDEBUG >= 5
-		LogFile->write(EQEMuLog::Debug, "Member of group %lu named '%s' had an out of date pointer!!", id, membername[i]);
+		LogFile->write(EQEMuLog::Debug, "Member of group %lu named '%s' had an out of date pointer!!", GetID(), membername[i]);
 #endif
 			members[i] = them;
 			continue;
 		}
 #if EQDEBUG >= 8
-		LogFile->write(EQEMuLog::Debug, "Member of group %lu named '%s' is valid.", id, membername[i]);
+		LogFile->write(EQEMuLog::Debug, "Member of group %lu named '%s' is valid.", GetID(), membername[i]);
 #endif
+	}
+}
+
+
+void Group::GroupMessage_StringID(Mob* sender, int32 type, int32 string_id, const char* message,const char* message2,const char* message3,const char* message4,const char* message5,const char* message6,const char* message7,const char* message8,const char* message9, int32 distance) {
+	for (int i = 0; i < MAX_GROUP_MEMBERS; i++) {
+		if(members[i] == NULL)
+			continue;
+		
+		if(members[i] == sender)
+			continue;
+		
+		members[i]->Message_StringID(type, string_id, message, message2, message3, message4, message5, message6, message7, message8, message9, 0);
 	}
 }
 

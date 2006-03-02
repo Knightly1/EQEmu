@@ -20,7 +20,10 @@ SF= .obj/EQPacket.o .obj/EQStream.o .obj/EQStreamFactory.o .obj/CRC16.o \
    ../common/rdtsc.o ../common/extprofile.o horse.o exp.o pathing.o \
    fearpath.o special_attacks.o ../common/timeoutmgr.o ../common/Condition.o \
    .obj/opcodemgr.o .obj/emu_opcodes.o ../common/SharedLibrary.o zoning.o \
-   titles.o
+   titles.o perlpacket.o perl_perlpacket.o \
+   ../common/EQWorldPacket.o ../common/EQZonePacket.o ../common/EQLoginPacket.o \
+   ../common/EQChatPacket.o ../common/EQMailPacket.o
+
 
 
 all: $(APP)

@@ -1,6 +1,6 @@
-# Generated automatically from Makefile.in by configure.
+#all common .o files must be built in .obj so they get -fPIC
 APP=libEMuShareMem.so
-SF=MMFMutex.o Doors.o Items.o Spells.o NPCFactionLists.o MMF.o Loot.o ../common/timer.o ../common/unix.o ../common/EMuShareMem.o
+SF=MMFMutex.o Doors.o Items.o Spells.o NPCFactionLists.o MMF.o Loot.o .obj/timer.o .obj/unix.o .obj/EMuShareMem.o Opcodes.o GuildList.o
 
 CC=gcc
 LD=ld
@@ -13,9 +13,9 @@ LD=ld
 #For Linux, and defaults that don't need to be overwritten.
 MYSQL_CFLAGS=`mysql_config --cflags`
 MYSQL_LIBS=`mysql_config --libs`
-DFLAGS=-DDEBUG=1 -DSHAREMEM -DCATCH_CRASH -DEMUSHAREMEM
+DFLAGS=-DDEBUG=1 -DCATCH_CRASH
 
-WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual -Wstrict-prototypes -Wno-deprecated -Wcomment -Wcast-align
+WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual -Wno-deprecated -Wcomment -Wcast-align
 COPTS=$(WFLAGS) $(DFLAGS) -g -fPIC -O2 -D_GNU_SOURCE -DINVERSEXY -DFX $(MYSQL_CFLAGS)
 LINKOPTS=-L. -lstdc++ $(MYSQL_LIBS)
 
@@ -32,7 +32,6 @@ clean:
 %.o: %.cpp
 	$(CC) $(COPTS) -c $< -o $@
 
-.obj/debug.o: ../common/debug.h ../common/debug.cpp
+.obj/%.o: ../common/%.cpp ../common/%.h
 	mkdir -p .obj
-	$(CC) $(COPTS) -c ../common/debug.cpp -o .obj/debug.o
-
+	$(CC) $(COPTS) -c $< -o $@

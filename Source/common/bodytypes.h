@@ -19,7 +19,6 @@
 #define BODYTYPES_H
 
 typedef enum {
-	BT_Client			= 0,
 	BT_Humanoid			= 1,
 	BT_Lycanthrope		= 2,
 	BT_Undead			= 3,
@@ -56,6 +55,7 @@ typedef enum {
 	//					...
 	BT_SwarmPet			= 63,	//is this valid, or made up?
 	//					...
+	BT_InvisMan			= 66,	//seen on 'InvisMan'
 	BT_Special			= 67
 } bodyType;
 /* bodytypes above 64 make the mob not show up */

@@ -15,11 +15,11 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-#include "../common/debug.h"
+#include <fstream>
 #include <iostream>
 #include <iomanip>
+#include "../common/debug.h"
 #include <stdio.h>
-#include <fstream>
 //#ifdef _CRTDBG_MAP_ALLOC
 //	#undef new
 //	#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
@@ -36,7 +36,7 @@
 	#include <stdarg.h>
 #endif
 
-#include "EQNetwork.h"
+#include "EQStream.h"
 #include "packet_dump_file.h"
 
 using namespace std;
@@ -130,12 +130,12 @@ void FileDumpPacketHex(const char* filename, const uchar* buf, int32 size, int32
 	delete ascii;
 }
 
-void FileDumpPacketHex(const char* filename, const APPLAYER* app)
+void FileDumpPacketHex(const char* filename, const EQApplicationPacket* app)
 {
 	FileDumpPacketHex(filename, app->pBuffer, app->size);
 }
 
-void FileDumpPacketAscii(const char* filename, const APPLAYER* app)
+void FileDumpPacketAscii(const char* filename, const EQApplicationPacket* app)
 {
 	FileDumpPacketAscii(filename, app->pBuffer, app->size);
 }
@@ -147,7 +147,7 @@ void FileDumpPacket(const char* filename, const uchar* buf, int32 size)
 //	FileDumpPacketAscii(filename, buf,size);
 }
 
-void FileDumpPacket(const char* filename, const APPLAYER* app)
+void FileDumpPacket(const char* filename, const EQApplicationPacket* app)
 {
 	FilePrintLine(filename, true, "Size: %5i, OPCode: 0x%04x", app->size, app->GetOpcode());
 	FileDumpPacketHex(filename, app->pBuffer, app->size);

@@ -46,13 +46,13 @@ extern WorldServer worldserver;
 extern npcDecayTimes_Struct npcCorpseDecayTimes[100];
 
 void Corpse::SendEndLootErrorPacket(Client* client) {
-	APPLAYER* outapp = new APPLAYER(OP_LootComplete, 0);
+	EQZonePacket* outapp = new EQZonePacket(OP_LootComplete, 0);
 	client->QueuePacket(outapp);
 	safe_delete(outapp);
 }
 
 void Corpse::SendLootReqErrorPacket(Client* client, int8 response) {
-	APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
+	EQZonePacket* outapp = new EQZonePacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
 	moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer;
 	d->response		= response;
 	d->unknown1		= 0x5a;
@@ -111,7 +111,7 @@ Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname
 // Mongrel: added see_invis and see_invis_undead
 Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, const NPCType** in_npctypedata, int32 in_decaytime)
 // vesuvias - appearence fix
- : Mob("Unnamed_Corpse","",0,0,in_npc->GetGender(),in_npc->GetRace(),in_npc->GetClass(),BT_Client//bodytype added
+ : Mob("Unnamed_Corpse","",0,0,in_npc->GetGender(),in_npc->GetRace(),in_npc->GetClass(),BT_Humanoid//bodytype added
        ,in_npc->GetDeity(),in_npc->GetLevel(),in_npc->GetNPCTypeID(),0,in_npc->GetSize(),0,0,in_npc->GetHeading(),in_npc->GetX(),in_npc->GetY(),in_npc->GetZ(),0,0,in_npc->GetTexture(),in_npc->GetHelmTexture(),0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,1,0,0,0,0,0),
 	corpse_decay_timer(in_decaytime),
 	corpse_delay_timer(in_decaytime/2)
@@ -168,7 +168,7 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 	client->GetGender(),
 	client->GetRace(),
 	client->GetClass(), 
-	BT_Client, // bodytype added
+	BT_Humanoid, // bodytype added
 	client->GetDeity(),
 	client->GetLevel(),
 	0,
@@ -286,8 +286,8 @@ void Corpse::MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot)
 	sint16 interior_slot;
 	ItemInst *interior_item;
 
-	AddItem(item->GetItem()->ItemNumber, item->GetCharges(),  equipslot, item->GetAugmentItemID(0), item->GetAugmentItemID(1), item->GetAugmentItemID(2), item->GetAugmentItemID(3), item->GetAugmentItemID(4));
-	if(item->IsType(ItemTypeContainer))
+	AddItem(item->GetItem()->ID, item->GetCharges(),  equipslot, item->GetAugmentItemID(0), item->GetAugmentItemID(1), item->GetAugmentItemID(2), item->GetAugmentItemID(3), item->GetAugmentItemID(4));
+	if(item->IsType(ItemClassContainer))
 	{
 		for(bagindex = 0; bagindex <= 10; bagindex++)
 		{
@@ -295,7 +295,7 @@ void Corpse::MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot)
 			interior_item = client->GetInv().GetItem(interior_slot);
 			if(interior_item)
 			{
-				AddItem(interior_item->GetItem()->ItemNumber, interior_item->GetCharges(), interior_slot, interior_item->GetAugmentItemID(0), interior_item->GetAugmentItemID(1), interior_item->GetAugmentItemID(2), interior_item->GetAugmentItemID(3), interior_item->GetAugmentItemID(4));
+				AddItem(interior_item->GetItem()->ID, interior_item->GetCharges(), interior_slot, interior_item->GetAugmentItemID(0), interior_item->GetAugmentItemID(1), interior_item->GetAugmentItemID(2), interior_item->GetAugmentItemID(3), interior_item->GetAugmentItemID(4));
 				client->DeleteItemInInventory(interior_slot, interior_item->GetCharges(), false);
 			}
 		}
@@ -307,7 +307,7 @@ void Corpse::MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot)
 // Mongrel: added see_invis and see_invis_undead
 Corpse::Corpse(int32 in_dbid, int32 in_charid, char* in_charname, ItemList* in_itemlist, int32 in_copper, int32 in_silver, int32 in_gold, int32 in_plat, float in_x, float in_y, float in_z, float in_heading, float in_size, int8 in_gender, int16 in_race, int8 in_class, int8 in_deity, int8 in_level, int8 in_texture, int8 in_helmtexture,int32 in_rezexp)
 // vesuvias - appearence fix
- : Mob("Unnamed_Corpse","",0,0,in_gender, in_race, in_class, BT_Client, in_deity, in_level,0,0, in_size, 0, 0, in_heading, in_x, in_y, in_z,0,0,in_texture,in_helmtexture,0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,1,0,0,0,0,0),
+ : Mob("Unnamed_Corpse","",0,0,in_gender, in_race, in_class, BT_Humanoid, in_deity, in_level,0,0, in_size, 0, 0, in_heading, in_x, in_y, in_z,0,0,in_texture,in_helmtexture,0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,1,0,0,0,0,0),
 	corpse_decay_timer(1800000),
 	corpse_delay_timer(600000)
 {
@@ -639,7 +639,7 @@ void Corpse::AllowMobLoot(Mob *them, int8 slot)
 }
 
 // @merth: this function needs some work
-void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
+void Corpse::MakeLootRequestPackets(Client* client, const EQZonePacket* app) {
 	// Added 12/08.  Started compressing loot struct on live.
 	char tmp[10];
 	if(p_depop)
@@ -693,7 +693,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 	if (tCanLoot >= 2 || (tCanLoot == 1 && client->Admin() >= 100 && client->GetGM()))
 	{
 		this->BeingLootedBy = client->GetID();
-		APPLAYER* outapp = new APPLAYER(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
+		EQZonePacket* outapp = new EQZonePacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
 		moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer;
 		
 		d->response		= 1;
@@ -754,7 +754,8 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 		client->QueuePacket(outapp); 
 		safe_delete(outapp);
 		if(tCanLoot==5){
-			const Item_Struct* item = database.GetItem(GetPKItem());
+			int pkitem = GetPKItem();
+			const Item_Struct* item = database.GetItem(pkitem);
 			ItemInst* inst = ItemInst::Create(item, item->Common.MaxCharges);
 			if (inst)
 			{
@@ -806,8 +807,11 @@ void Corpse::MakeLootRequestPackets(Client* client, const APPLAYER* app) {
 	client->QueuePacket(app);
 }
 
-void Corpse::LootItem(Client* client, const APPLAYER* app)
+void Corpse::LootItem(Client* client, const EQZonePacket* app)
 {
+	//this gets sent out no matter what as a sort of 'ack', so send it here.
+	client->QueuePacket(app);
+	
 	LootingItem_Struct* lootitem = (LootingItem_Struct*)app->pBuffer;
 
 	if (this->BeingLootedBy != client->GetID()) {
@@ -851,6 +855,10 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 	if (item != 0)
 	{
 		inst = ItemInst::Create(item, item_data?item_data->charges:0, item_data->aug1, item_data->aug2, item_data->aug3, item_data->aug4, item_data->aug5);
+		if(item->Common.MaxCharges == -1)
+			inst->SetCharges(1);
+		else
+			inst->SetCharges(item->Common.MaxCharges);
 	}
 
 	if (client && inst)
@@ -915,7 +923,7 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 		// now remove it from the corpse
 		RemoveItem(item_data->lootslot);
 		// remove bag contents too
-		if (item->ItemClass == ItemTypeContainer && (GetPKItem()!=-1 || GetPKItem()!=1))
+		if (item->ItemClass == ItemClassContainer && (GetPKItem()!=-1 || GetPKItem()!=1))
 		{
 			for (int i=0; i < 10; i++)
 			{
@@ -925,8 +933,22 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 				}
 			}
 		}
+		
 		if(GetPKItem()!=-1)
 			SetPKItem(0);
+		
+		//now send messages to all interested parties
+		string link;
+		//TODO: generat a link... too lazy to find the format.. I have the hash algo though
+		//http://eqitems.13th-floor.org/phpBB2/viewtopic.php?t=70&postdays=0&postorder=asc
+		link = item->Name;
+		client->Message_StringID(MT_LootMessages, LOOTED_MESSAGE, link.c_str());
+		if(!IsPlayerCorpse()) {
+			Group *g = client->GetGroup();
+			if(g != NULL) {
+				g->GroupMessage_StringID(client, MT_LootMessages, OTHER_LOOTED_MESSAGE, client->GetName(), link.c_str());
+			}
+		}
 	}
 	else
 	{
@@ -940,12 +962,10 @@ void Corpse::LootItem(Client* client, const APPLAYER* app)
 		client->SendItemLink(inst, true);
 
 	safe_delete(inst);
-	
-	client->QueuePacket(app);
 }
 
-void Corpse::EndLoot(Client* client, const APPLAYER* app) {
-	APPLAYER* outapp = new APPLAYER;
+void Corpse::EndLoot(Client* client, const EQZonePacket* app) {
+	EQZonePacket* outapp = new EQZonePacket;
 	outapp->SetOpcode(OP_LootComplete);
 	outapp->size = 0;
 	client->QueuePacket(outapp);
@@ -963,10 +983,12 @@ void Corpse::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 {
 	Mob::FillSpawnStruct(ns, ForWho);
 	
+	ns->spawn.max_hp = 120;
+	
 	if (IsPlayerCorpse())
-		ns->spawn.npc = 3;
+		ns->spawn.NPC = 3;
 	else
-		ns->spawn.npc = 2;
+		ns->spawn.NPC = 2;
 }
 
 void Corpse::QueryLoot(Client* to) {
@@ -980,7 +1002,7 @@ void Corpse::QueryLoot(Client* to) {
 		ServerLootItem_Struct* sitem = *cur;
 		const Item_Struct* item = database.GetItem(sitem->item_id);
 		if (item)
-			to->Message(0, "  %d: %s", item->ItemNumber, item->Name);
+			to->Message(0, "  %d: %s", item->ID, item->Name);
 		else
 			to->Message(0, "  Error: 0x%04x", sitem->item_id);
 		x++;
@@ -1189,13 +1211,8 @@ void Corpse::AddLooter(Mob* who)
 	}
 }
 
-void Corpse::CastRezz(int16 spellid, Mob* Caster){
 /*
-	if (!rezzexp) {
-		Caster->Message(4, "You cannot resurrect this corpse");
-		return;
-	}
-*/
+void Corpse::CastRezz(int16 spellid, Mob* Caster){
 	if(Rezzed()){
 		if(Caster && Caster->IsClient())
 			Caster->Message(13,"This character has already been resurrected.");
@@ -1216,6 +1233,7 @@ void Corpse::CastRezz(int16 spellid, Mob* Caster){
 	//DumpPacket(outapp);
 	safe_delete(outapp);
 }
+*/
 
 
 

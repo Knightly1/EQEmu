@@ -28,8 +28,6 @@
 #include "../common/TCPConnection.h"
 #include "mob.h"
 
-const int PORT = 9000;
-
 #define WSCS_Construction	0
 #define WSCS_Ready			1
 #define WSCS_Connecting		2
@@ -51,7 +49,7 @@ public:
 	void SetZone(int32 iZoneID);
 	void SetConnectInfo();
 	int32 SendGroupIdRequest();
-	bool RezzPlayer(APPLAYER* rpack,int32 rezzexp, int16 opcode);
+	bool RezzPlayer(EQZonePacket* rpack,int32 rezzexp, int16 opcode);
 	int32	GetIP()		{ return tcpc->GetrIP(); }
 	int16	GetPort()	{ return tcpc->GetrPort(); }
 	bool	Connected()	{ return (pConnected && tcpc->Connected()); }

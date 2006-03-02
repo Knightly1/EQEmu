@@ -21,9 +21,10 @@ class Client;
 
 #include "../common/timer.h"
 #include "../common/ptimer.h"
-#include "../common/eq_opcodes.h"
+#include "../common/emu_opcodes.h"
 #include "../common/eq_packet_structs.h"
-#include "../common/EQNetwork.h"
+#include "../common/EQStream.h"
+#include "../common/EQZonePacket.h"
 #include "../common/linked_list.h"
 #include "../common/database.h"
 #include "errno.h"
@@ -37,6 +38,7 @@ class Client;
 #include "../common/seperator.h"
 #include "../common/Item.h"
 #include "updatemgr.h"
+#include <float.h>
 
 #define ITEM_MAX_STACK 20
 
@@ -50,7 +52,7 @@ class CLIENTPACKET
 public:
     CLIENTPACKET();
     ~CLIENTPACKET();
-    APPLAYER *app;
+    EQZonePacket *app;
     bool ack_req;
 };
 
@@ -136,6 +138,15 @@ typedef enum {	//disciplines for disc_inuse
 	discLeechCurse		= 27
 };
 
+//Modes for the zoning state of the client.
+typedef enum {
+	ZoneToSafeCoords,
+	ZoneSummoned,		//might be eliminated using solicited
+	ZoneToBindPoint,
+	ZoneSolicited,  //we told the client to zone.
+	ZoneUnsolicited
+} ZoneMode;
+
 
 class Client : public Mob
 {
@@ -144,7 +155,7 @@ public:
 	#include "client_packet.h"
 	
 	PRange_Struct* pr;
-	Client(EQNetworkConnection* ieqnc);
+	Client(EQStream* ieqs);
     ~Client();
 	
 //	void	Discipline(ClientDiscipline_Struct* disc_in, Mob* tar);
@@ -184,8 +195,8 @@ public:
 	int16	FindTraderItem(int32 item_id,int16 quantity);
 	void	FindAndNukeTraderItem(int32 item_id,int16 quantity,Client* customer,int16 traderslot);
 	void	NukeTraderItem(int16 slot,int16 charges,int16 quantity,Client* customer,int16 traderslot);
-	void	ReturnTraderReq(const APPLAYER* app,int16 traderitemcharges);
-	void	BuyTraderItem(TraderBuy_Struct* tbs,Client* trader,const APPLAYER* app);
+	void	ReturnTraderReq(const EQZonePacket* app,int16 traderitemcharges);
+	void	BuyTraderItem(TraderBuy_Struct* tbs,Client* trader,const EQZonePacket* app);
 	void	TraderUpdate(int16 slot_id,int32 trader_id);
 	void	FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho);
 	virtual bool Process();
@@ -194,24 +205,24 @@ public:
 	void	LogMerchant(Client* player, Mob* merchant, Merchant_Sell_Struct* mp, const Item_Struct* item, bool buying);
 	void	LogMerchant(Client* player, Mob* merchant, Merchant_Purchase_Struct* mp, const Item_Struct* item, bool buying);
 	void	SendPacketQueue(bool Block = true);
-	void	QueuePacket(const APPLAYER* app, bool ack_req = true, CLIENT_CONN_STATUS = CLIENT_CONNECTINGALL,int8 filter=0);
-	void	FastQueuePacket(APPLAYER** app, bool ack_req = true, CLIENT_CONN_STATUS = CLIENT_CONNECTINGALL);
+	void	QueuePacket(const EQZonePacket* app, bool ack_req = true, CLIENT_CONN_STATUS = CLIENT_CONNECTINGALL, FilterType filter=FilterNone);
+	void	FastQueuePacket(EQZonePacket** app, bool ack_req = true, CLIENT_CONN_STATUS = CLIENT_CONNECTINGALL);
 	void	ChannelMessageReceived(int8 chan_num, int8 language, const char* message, const char* targetname=NULL);
 	void	ChannelMessageSend(const char* from, const char* to, int8 chan_num, int8 language, const char* message, ...);
-	void	Message(uint32 type, const char* message, ...);
-	void	operator<<(const char* message)		{ Message(0, "%s", message); }
+	void	Message(int32 type, const char* message, ...);
+//	void	operator<<(const char* message)		{ Message(0, "%s", message); }
 	void	SendSound();
 
-	int32   GetAdventureID(){return m_pp.adventure_id; }
-	void    SetAdventureID(int32 i){ m_pp.adventure_id=i; }
+	int32   GetAdventureID(){return 0/*m_pp.adventure_id*/; }
+	void    SetAdventureID(int32 i){ /*m_pp.adventure_id=i;*/ }
 	void	SendAdventureFinish(uint32 state=0,uint32 points=0,bool grouptoo=false);
-	void	SendAdventureInfoRequest(const APPLAYER* app);
+	void	SendAdventureInfoRequest(const EQZonePacket* app);
 	void	SendAdventureUpdate();
 	void	SendAdventureRequestData(Group* group = NULL,bool EnteredDungeon=false,bool EnteredZone=false,bool Zoned=false);
 	void	SendAdventureRequest();
 	void	DeleteCharInAdventure(int32 id,int32 qid);
 
-	APPLAYER*	ReturnItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type);
+	EQZonePacket*	ReturnItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type);
 	
 	bool	GetRevoked() { return revoked; }
 	void	SetRevoked(bool rev) { revoked = rev; }
@@ -220,6 +231,7 @@ public:
 	void	SetHideMe(bool hm);
 	inline int16	GetPort()		{ return port; }
 	bool	berserk;
+	bool	IsDead() const { return(dead); }
 	bool	dead;
 	
 	virtual bool	Save() { return Save(0); }
@@ -230,7 +242,7 @@ public:
 	inline bool	Connected()		{ return (client_state == CLIENT_CONNECTED); }
 	inline bool	InZone()		{ return (client_state == CLIENT_CONNECTED || client_state == CLIENT_LINKDEAD); }
 	inline void	Kick()			{ client_state = CLIENT_KICKED; }
-	inline void	Disconnect()	{ eqnc->Close(); client_state = DISCONNECTED; }
+	inline void	Disconnect()	{ eqs->Close(); client_state = DISCONNECTED; }
 	inline bool IsLD()			{ return (bool) (client_state == CLIENT_LINKDEAD); }
 	void	WorldKick();
 	inline int8	GetAnon()		{  return m_pp.anon; }
@@ -246,7 +258,6 @@ public:
 	char * strreplace(const char* searchstring, const char* searchquery, const char* replacement);
 	void LogLoot(Client* player,Corpse* corpse,const Item_Struct* item);
 	bool	AutoAttackEnabled() { return auto_attack; }
-	bool	AttackFlag() { return attack_flag; }
 	bool	Attack(Mob* other, int Hand = 13, bool bRiposte = false);	// 13 = Primary (default), 14 = secondary
 	void	Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill = 0x04, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false);
 	void	Death(Mob* other, sint32 damage, int16 spell_id = 0xFFFF, int8 attack_skill = 0x04);
@@ -290,7 +301,7 @@ public:
 	inline float ProximityX() { return(proximity_x); }
 	inline float ProximityY() { return(proximity_y); }
 	inline float ProximityZ() { return(proximity_z); }
-	inline void ClearAllProximities() { entity_list.ProcessMove(this, 1000e99, 1000e99, 1000e99); proximity_x = 1000e99; proximity_y = 1000e99; proximity_z = 1000e99; }
+	inline void ClearAllProximities() { entity_list.ProcessMove(this, FLT_MAX, FLT_MAX, FLT_MAX); proximity_x = FLT_MAX; proximity_y = FLT_MAX; proximity_z = FLT_MAX; }
 	
 	/*
 		Begin client modifiers
@@ -378,19 +389,29 @@ public:
 	
 	
 	bool	UpdateLDoNPoints(sint32 points, int32 theme);
-
+	
 	void	AddEXP(uint32 add_exp, int8 conlevel = 0xFF, bool resexp = false);
 	void	SetEXP(uint32 set_exp, uint32 set_aaxp, bool resexp=false);
+	void	SetLeadershipEXP(uint32 group_exp, uint32 raid_exp);
+	void	AddLeadershipEXP(uint32 group_exp, uint32 raid_exp);
+	void	SendLeadershipEXPUpdate();
+	uint32  GetRaidPoints() { return(m_pp.raid_leadership_points); }
+	uint32  GetGroupPoints() { return(m_pp.group_leadership_points); }
+	uint32  GetRaidEXP() { return(m_pp.raid_leadership_exp); }
+	uint32  GetGroupEXP() { return(m_pp.group_leadership_exp); }
 	virtual void SetLevel(uint8 set_level, bool command = false);
 	void	SendLevelAppearance();
 	void	GoToBind();
+	void	GoToSafeCoords(uint16 zone_id);
 	void	Gate();
 	void	SetBindPoint(int to_zone = -1, float new_x = 0.0f, float new_y = 0.0f, float new_z = 0.0f);
-	void	MovePC(const char* zonename, float x, float y, float z, int8 ignorerestrictions = 0, bool summoned = false);
-	void	MovePC(int32 zoneID, float x, float y, float z, int8 ignorerestrictions = 0, bool summoned = false);
+	void	MovePC(const char* zonename, float x, float y, float z, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
+	void	MovePC(int32 zoneID, float x, float y, float z, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
+	void	MovePC(float x, float y, float z, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
 	void	WhoAll();
 	bool	CheckLoreConflict(const Item_Struct* item);
 	void	ChangeLastName(const char* in_lastname);
+	void	GetGroupAAs(GroupLeadershipAA_Struct *into) const;
 	
 	FACTION_VALUE	GetReverseFactionCon(Mob* iOther);
     FACTION_VALUE   GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race, int32 p_class, int32 p_deity, sint32 pFaction, Mob* tnpc);
@@ -421,7 +442,7 @@ public:
 	void	GuildChangeRank(int32 guildid,int32 oldrank,int32 newrank);
 	void	GuildChangeRank(const char* name,int32 guildid,int32 oldrank,int32 newrank);
 	void	SendManaUpdatePacket();
-	void	SendGuildMembers(int32 guildid);
+	void	SendGuildMembers(int32 guildid, bool sendtoall=false);
     // Disgrace: currently set from database.CreateCharacter. 
 	// Need to store in proper position in PlayerProfile...
 	int8	GetFace()		{ return m_pp.face; } 
@@ -444,17 +465,16 @@ public:
 	void	OnDisconnect(bool hard_disconnect);
 	int16	GetSkillPoints() {return m_pp.points;}
 	void	SetSkillPoints(int inp) {m_pp.points = inp;}
-	void	IncreaseSkill(int skill_id, int value = 1) { if (skill_id <= HIGHEST_SKILL) { m_pp.skills[skill_id + 1] += value; } }
+	void	IncreaseSkill(int skill_id, int value = 1) { if (skill_id <= HIGHEST_SKILL) { m_pp.skills[skill_id] += value; } }
 	void	IncreaseLanguageSkill(int skill_id, int value = 1) { if (skill_id < 26) { m_pp.languages[skill_id] += value; } }
-	uint32		GetSkill(int skill_id) { if (skill_id <= HIGHEST_SKILL) { return((itembonuses.skillmod[skill_id] > 0)? m_pp.skills[skill_id + 1]*(100 + itembonuses.skillmod[skill_id])/100 : m_pp.skills[skill_id + 1]); } return 0; }
-	uint32		GetRawSkill(int skill_id) { if (skill_id <= HIGHEST_SKILL) { return(m_pp.skills[skill_id + 1]); } return 0; }
+	uint32		GetSkill(int skill_id) { if (skill_id <= HIGHEST_SKILL) { return((itembonuses.skillmod[skill_id] > 0)? m_pp.skills[skill_id]*(100 + itembonuses.skillmod[skill_id])/100 : m_pp.skills[skill_id]); } return 0; }
+	uint32		GetRawSkill(int skill_id) { if (skill_id <= HIGHEST_SKILL) { return(m_pp.skills[skill_id]); } return 0; }
 	
 	//Father Nitwit's Tradeskill Rework:
 	void TradeskillSearchResults(const char *query, unsigned long qlen, unsigned long objtype, unsigned long someid);
 	void SendTradeskillDetails(unsigned long  recipe_id);
 	bool TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskill);
 	
-	void	SetZoneSummonCoords(float x, float y, float z) {zonesummon_x = x; zonesummon_y = y; zonesummon_z = z;}
 	int32	pendingrezzexp;
 	void	GMKill();
 	inline bool	IsMedding()	{return medding;}
@@ -462,13 +482,6 @@ public:
 	inline bool	IsDueling() { return duelaccepted; }
 	inline void	SetDuelTarget(int16 set_id) { duel_target=set_id; }
 	inline void	SetDueling(bool duel) { duelaccepted = duel; }
-	void  SendAAList();
-	void  ResetAA();
-	void  SendAA(int32 id, int seq=1);
-	void  SendPreviousAA(int32 id, int seq=1);
-	void  BuyAA(AA_Action* action);
-	// solar: this function is used by some AA stuff
-	void MemorizeSpell(int32 slot,int32 spellid,int32 scribing);
 	// use this one instead
 	void MemSpell(int16 spell_id, int slot, bool update_client = true);
 	void UnmemSpell(int slot, bool update_client = true);
@@ -484,10 +497,10 @@ public:
 	inline void	SetBecomeNPCLevel(int8 level) { npclevel = level; }
 	bool	LootToStack(uint32 itemid);
 	void	SetFeigned(bool in_feigned);
-	inline bool    GetFeigned()	{ return(appearance != 3 ? false : feigned); }
-	EQNetworkConnection* Connection() { return eqnc; }
+	inline bool    GetFeigned()	{ return(GetAppearance() != eaDead ? false : feigned); }
+	EQStream* Connection() { return eqs; }
 #ifdef PACKET_PROFILER
-	void DumpPacketProfile() { if(eqnc) eqnc->DumpPacketProfile(); }
+	void DumpPacketProfile() { if(eqs) eqs->DumpPacketProfile(); }
 #endif
 	int8	guildchange;
 	int16	otherleaderid;
@@ -519,7 +532,8 @@ public:
 	bool BindWound(Mob* bindmob, bool start, bool fail = false);
 	void SetTradeskillObject(Object* object) { m_tradeskill_object = object; }
 	Object* GetTradeskillObject() { return m_tradeskill_object; }
-	void	SendTribute();
+	void	SendTributes();
+	void	SendGuildTributes();
 	void	DoTributeUpdate();
 	void	SendTributeDetails(int32 client_id, uint32 tribute_id);
 	sint32	TributeItem(int32 slot, int32 quantity);
@@ -533,6 +547,13 @@ public:
 	inline PTimerList &GetPTimers() { return(p_timers); }
 	
 	//AA Methods
+	void  SendAAList();
+	void  ResetAA();
+	void  SendAA(int32 id, int seq=1);
+	void  SendPreviousAA(int32 id, int seq=1);
+	void  BuyAA(AA_Action* action);
+	// solar: this function is used by some AA stuff
+	void MemorizeSpell(int32 slot,int32 spellid,int32 scribing);
 	void	SetAATitle(const char *txt) { strncpy(m_pp.title, txt, 48); }
 	inline int32	GetMaxAAXP(void) { return max_AAXP; }
 	inline uint32  GetAAXP()   { return m_pp.expAA; }
@@ -548,6 +569,7 @@ public:
 	int32 GetAA(int32 aa_id);
 	bool SetAA(int32 aa_id, int32 new_value);
 	void TemporaryPets(int16 spell_id);
+	
 	
 	sint16 acmod();
 	
@@ -573,8 +595,8 @@ public:
 	
 	int8 guildfaction; // 0 = Peace, 1 = War
 	Client* guildtarget;
-	int8	GetFilter(int8 filter_id) { return ClientFilters[filter_id]; }
-	void	SetFilter(int8 filter_id,int8 value) { ClientFilters[filter_id]=value; }
+	FilterMode	GetFilter(FilterType filter_id) const { return ClientFilters[filter_id]; }
+	void	SetFilter(FilterType filter_id, FilterMode value) { ClientFilters[filter_id]=value; }
 
 	void	BreakInvis();
 	Group*	GetGroup() { return entity_list.GetGroupByClient(this); }
@@ -585,7 +607,6 @@ public:
 	
 	bool	CheckTradeLoreConflict(Client* other);
 	void	LinkDead();
-	int16	GetInstrumentMod(int16 spell_id);
 	bool	CanUseSkill(uint8 skillid) { if (GetSkill(skillid) < 254) return true; return false; }
 	void	Insight(int32 t_id);
 	bool	CheckDoubleAttack(bool AAadd = false, bool Triple = false);
@@ -638,24 +659,24 @@ protected:
 	sint16	GetFocusEffect(focusType type, int16 spell_id);
 	sint16	CalcFocusEffect(focusType type, int16 focus_id, int16 spell_id);
 private:
-	int8 ClientFilters[21];
-	sint32	HandlePacket(const APPLAYER *app);
-	void	OPTGB(const APPLAYER *app);
-	void	OPRezzAnswer(const APPLAYER *app);
-	void	OPMemorizeSpell(const APPLAYER *app);
-	void	OPMoveCoin(const APPLAYER* app);
+	FilterMode ClientFilters[_FilterCount];
+	sint32	HandlePacket(const EQZonePacket *app);
+	void	OPTGB(const EQZonePacket *app);
+	void	OPRezzAnswer(const EQZonePacket *app);
+	void	OPMemorizeSpell(const EQZonePacket *app);
+	void	OPMoveCoin(const EQZonePacket* app);
 	void	MoveItemCharges(ItemInst &from, sint16 to_slot, int8 type);
-	void	OPGMTraining(const APPLAYER *app);
-	void	OPGMEndTraining(const APPLAYER *app);
-	void	OPGMTrainSkill(const APPLAYER *app);
-	void	OPGMSummon(const APPLAYER *app);
-	void	OPCombatAbility(const APPLAYER *app);
+	void	OPGMTraining(const EQZonePacket *app);
+	void	OPGMEndTraining(const EQZonePacket *app);
+	void	OPGMTrainSkill(const EQZonePacket *app);
+	void	OPGMSummon(const EQZonePacket *app);
+	void	OPCombatAbility(const EQZonePacket *app);
 
 	int32 pLastUpdate;
 	int32 pLastUpdateWZ;
 	int8  playeraction;
 	
-	EQNetworkConnection* eqnc;
+	EQStream* eqs;
 	
 	int32				ip;
 	int16				port;
@@ -676,7 +697,6 @@ private:
 	bool				LFG;
 	bool				AFK;
 	bool				auto_attack;
-	bool				attack_flag;
 	int8				gmspeed;
 	bool				medding;
 	int16				horseId;
@@ -689,22 +709,29 @@ private:
 	PlayerProfile_Struct		m_pp;
 	ExtendedProfile_Struct		m_epp;
 	Inventory					m_inv;
-	ServerSideFilters_Struct	ssfs;
+//	ServerSideFilters_Struct	ssfs;
 	Object*						m_tradeskill_object;
 	
 	void NPCSpawn(const Seperator* sep);
 	uint32 GetEXPForLevel(uint16 level);
 	
-    bool    AddPacket(const APPLAYER *, bool);
-    bool    AddPacket(APPLAYER**, bool);
+    bool    AddPacket(const EQZonePacket *, bool);
+    bool    AddPacket(EQZonePacket**, bool);
     bool    SendAllPackets();
 	LinkedList<CLIENTPACKET *> clientpackets;
 	
-	char	zonesummon_name[32];
+	//Zoning related stuff
+	void SendZoneCancel(ZoneChange_Struct *zc);
+	void SendZoneError(ZoneChange_Struct *zc, sint8 err);
+	void DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, float dest_x, float dest_y, float dest_z, float dest_h, sint8 ignore_r);
+//	char	zonesummon_name[32];
 	float	zonesummon_x;
 	float	zonesummon_y;
 	float	zonesummon_z;
+	uint16	zonesummon_id;
 	int8	zonesummon_ignorerestrictions;
+	ZoneMode zone_mode;
+	
 	
 	Timer	position_timer;
 	int8	position_timer_counter;
@@ -758,6 +785,25 @@ private:
 	bool zoning;
 	bool tgb;
 	bool instalog;
+	
+	
+
+	//Connecting debug code.
+	enum { //connecting states, used for debugging only
+		NoPacketsReceived,		//havent gotten anything
+		//this is the point where the client changes to the loading screen
+		ReceivedZoneEntry,		//got the first packet, loading up PP
+		PlayerProfileLoaded,	//our DB work is done, sending it
+		ZoneInfoSent,		//includes PP, tributes, tasks, spawns, time and weather
+		//this is the point where the client shows a status bar zoning in
+		NewZoneRequested,	//received and sent new zone request
+		ClientSpawnRequested,	//client sent ReqClientSpawn
+		ZoneContentsSent,		//objects, doors, zone points
+		ClientReadyReceived,	//client told us its ready, send them a bunch of crap like guild MOTD, etc
+		//this is the point where the client releases the mouse
+		ClientConnectFinished	//client finally moved to finished state, were done here
+	} conn_state;
+	void ReportConnectingState();
 };
 
 #include "parser.h"

@@ -363,8 +363,8 @@ void Client::CheckQuests(const char* zonename, const char * message, int32 npc_i
 		}
 		else if (strstr(command,"RAIN") != NULL) {
 			zone->zone_weather = atoi(sep.arg[1]);
-			APPLAYER* outapp = new APPLAYER;
-			outapp = new APPLAYER;
+			EQZonePacket* outapp = new EQZonePacket;
+			outapp = new EQZonePacket;
 			outapp->SetOpcode(OP_Weather);
 			outapp->pBuffer = new uchar[8];
 			memset(outapp->pBuffer, 0, 8);
@@ -376,8 +376,8 @@ void Client::CheckQuests(const char* zonename, const char * message, int32 npc_i
 		}
 		else if (strstr(command,"SNOW") != NULL) {
 			zone->zone_weather = atoi(sep.arg[1]) + 1;
-			APPLAYER* outapp = new APPLAYER;
-			outapp = new APPLAYER;
+			EQZonePacket* outapp = new EQZonePacket;
+			outapp = new EQZonePacket;
 			outapp->SetOpcode(OP_Weather);
 			outapp->pBuffer = new uchar[8];
 			memset(outapp->pBuffer, 0, 8);

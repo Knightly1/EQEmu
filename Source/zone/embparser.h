@@ -54,7 +54,7 @@ public:
 	~PerlembParser();
 	Embperl * getperl(void) { return perl; };
 	//todo, consider making the following two methods static (need to check for perl!=null, first, then)
-	bool isloaded(const char *packagename) const { return perl->geti(std::string("$").append(packagename).append("::isloaded").c_str()); }
+	bool isloaded(const char *packagename) const;
 //	bool isdefault(const char *packagename) const { return perl->geti(std::string("$").append(packagename).append("::isdefault").c_str()); }
 	void Event(QuestEventID event, int32 npcid, const char * data, NPC* npcmob, Mob* mob);
 	int LoadScript(int npcid, const char * zone, Mob* activater=0);
@@ -75,7 +75,7 @@ public:
 	//call the appropriate perl handler. afterwards, parse and dispatch the command queue
 	//SendCommands("qst1234", "EVENT_SAY") would trigger sub EVENT_SAY() from the qst1234.pl file
 	virtual void SendCommands(const char * pkgprefix, const char *event, int32 npcid, NPC* other, Mob* mob);
-	void ReloadQuests();
+	virtual void ReloadQuests();
 	
 	int	HasQuestFile(int32 npcid);
 	

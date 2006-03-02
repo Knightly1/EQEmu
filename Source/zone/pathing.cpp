@@ -21,7 +21,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include <string.h>
 
 #include "../common/files.h"
-#include "../common/eq_opcodes.h"
+#include "../common/emu_opcodes.h"
 #include "../common/eq_packet_structs.h"
 #include "client.h"
 #include "zone_profile.h"
@@ -849,7 +849,7 @@ else {
 void Client::SendPathPacket(vector<FindPerson_Point> &points) {
 	if(points.size() < 2) {
 		//empty length packet == not found.
-		APPLAYER outapp(OP_FindPersonReply, 0);
+		EQZonePacket outapp(OP_FindPersonReply, 0);
 		QueuePacket(&outapp);
 		return;
 	}
@@ -857,7 +857,7 @@ void Client::SendPathPacket(vector<FindPerson_Point> &points) {
 	printf("Sending a path packet with %d nodes.\n", points.size());
 	
 	int len = sizeof(FindPersonResult_Struct) + (points.size()+1) * sizeof(FindPerson_Point);
-	APPLAYER *outapp = new APPLAYER(OP_FindPersonReply, len);
+	EQZonePacket *outapp = new EQZonePacket(OP_FindPersonReply, len);
 	FindPersonResult_Struct* fpr=(FindPersonResult_Struct*)outapp->pBuffer;
 	
 printf("%d*%d + %d = %d\n", points.size(), sizeof(FindPerson_Point), sizeof(FindPersonResult_Struct), len);

@@ -15,6 +15,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "EQExtractor"=.\eqextractor\EQExtractor.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "World"=.\World\World.dsp - Package Owner=<4>
 
 Package=<5>
@@ -28,6 +40,42 @@ Package=<4>
 ###############################################################################
 
 Project: "Zone"=.\Zone\Zone.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "charmove"=.\UTILS\charmove\charmove.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pf2text"=.\eqextractor\pf2text.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "ppconvert"=.\UTILS\ppconvert\ppconvert.dsp - Package Owner=<4>
 
 Package=<5>
 {{{

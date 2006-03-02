@@ -35,6 +35,7 @@ EXTERN_C XS(boot_Client);
 EXTERN_C XS(boot_Corpse);
 EXTERN_C XS(boot_EntityList);
 EXTERN_C XS(boot_Group);
+EXTERN_C XS(boot_PerlPacket);
 /*XS(XS_Client_new);
 //XS(XS_Mob_new);
 XS(XS_NPC_new);
@@ -79,6 +80,7 @@ EXTERN_C void xs_init(pTHX)
 //	newXS(strcpy(buf, "Client::new"), XS_Client_new, file);
 	newXS(strcpy(buf, "EntityList::boot_EntityList"), boot_EntityList, file);
 //	newXS(strcpy(buf, "EntityList::new"), XS_EntityList_new, file);
+	newXS(strcpy(buf, "PerlPacket::boot_PerlPacket"), boot_PerlPacket, file);
 	newXS(strcpy(buf, "Group::boot_Group"), boot_Group, file);
 #endif
 #endif
@@ -94,33 +96,39 @@ Embperl::Embperl()
 {
 	in_use = true;	//in case one of these files generates an event
 	//arguments for interpreter start
-	char *args[] = { "", "-e", "0" };
+	char *args[] = { "",
+#ifdef EMBPERL_IO_CAPTURE
+		"-w", "-W",		//only useful if the IO goes somewhere
+#endif
+		"-e", "0", NULL };
 	
 	//setup perl...
 	my_perl = perl_alloc();
 	if(!my_perl)
 		throw "Failed to init Perl (perl_alloc)";
 	perl_construct(my_perl);
-	if(perl_parse(my_perl, xs_init, 3, args, NULL))
+	if(perl_parse(my_perl, xs_init,
+#ifdef EMBPERL_IO_CAPTURE
+		5,
+#else
+		3,
+#endif
+		args, NULL))
 		throw "perl_parse failed";
 	perl_run(my_perl);
 	
 	//a little routine we use a lot.
-	eval_pv("sub my_eval {eval $_[0];}",TRUE);
+	eval_pv("sub my_eval {eval $_[0];}", TRUE);	//dies on error
 	
-	//ruin the perl exit command:
+	//ruin the perl exit and command:
 	eval_pv("sub my_exit {}",TRUE);
-	if(gv_stashpv("CORE::GLOBAL", FALSE)) {
-		GV *exitgp = gv_fetchpv("CORE::GLOBAL::exit", TRUE, SVt_PVCV);
-		GvCV(exitgp) = perl_get_cv("my_exit", TRUE);
-		GvIMPORTED_CV_on(exitgp);
-	}
-	
-	//ruin the perl sleep command:
 	eval_pv("sub my_sleep {}",TRUE);
 	if(gv_stashpv("CORE::GLOBAL", FALSE)) {
+		GV *exitgp = gv_fetchpv("CORE::GLOBAL::exit", TRUE, SVt_PVCV);
+		GvCV(exitgp) = perl_get_cv("my_exit", TRUE);	//dies on error
+		GvIMPORTED_CV_on(exitgp);
 		GV *sleepgp = gv_fetchpv("CORE::GLOBAL::sleep", TRUE, SVt_PVCV);
-		GvCV(sleepgp) = perl_get_cv("my_sleep", TRUE);
+		GvCV(sleepgp) = perl_get_cv("my_sleep", TRUE);	//dies on error
 		GvIMPORTED_CV_on(sleepgp);
 	}
 	
@@ -136,32 +144,47 @@ Embperl::Embperl()
 	}
 	
 #ifdef EMBPERL_IO_CAPTURE
+	LogFile->write(EQEMuLog::Quest, "Tying perl output to eqemu logs");
 	//make a tieable class to capture IO and pass it into EQEMuLog
-	eval("package EQEmuIO; "
+	eval_pv(
+		"package EQEmuIO; "
 //			"&boot_EQEmuIO;"
- 			"sub TIEHANDLE { bless {}, $_[0]; } "
+ 			"sub TIEHANDLE { my $me = bless {}, $_[0]; $me->PRINT('Creating '.$me); return($me); } "
+  			"sub WRITE {  } "
   			"sub PRINTF { my $me = shift; $me->PRINT(sprintf(@_)); } "
-  			"package quest;"
-  			"tie *STDOUT, 'EQEmuIO';"
-  			"tie *STDERR, 'EQEmuIO';"
-  		);
+  			"sub CLOSE { my $me = shift; $me->PRINT('Closing '.$me); } "
+  			"sub DESTROY { my $me = shift; $me->PRINT('Destroying '.$me); } "
+//this ties us for all packages, just do it in quest since thats kinda 'our' package
+  		"package quest;"
+  		"	if(tied *STDOUT) { untie(*STDOUT); }"
+  		"	if(tied *STDERR) { untie(*STDERR); }"
+  		"	tie *STDOUT, 'EQEmuIO';"
+  		"	tie *STDERR, 'EQEmuIO';"
+  		,FALSE);
 #endif //EMBPERL_IO_CAPTURE
 	
 #ifdef EMBPERL_PLUGIN
+	eval_pv(
+		"package plugin; "
+		,FALSE
+	);
+#ifdef EMBPERL_EVAL_COMMANDS
 	try {
-		eval(
-			"package plugin; "
+		eval_pv(
 			"use IO::Scalar;"
 			"$plugin::printbuff='';"
-			"tie *PLUGIN,'IO::Scalar',\\$plugin::printbuff;");
+			"tie *PLUGIN,'IO::Scalar',\\$plugin::printbuff;"
+		,FALSE);
 	}
 	catch(const char *err) {
 		throw "failed to install plugin printhook, do you lack IO::Scalar?";
 	}
+#endif
+	
 	LogFile->write(EQEMuLog::Quest, "Loading perlemb plugins.");
 	try
 	{
-		eval_file("plugin", "plugin.pl");
+		eval_pv("main::eval_file('plugin', 'plugin.pl');", FALSE);
 	}
 	catch(const char *err)
 	{ 
@@ -171,7 +194,7 @@ Embperl::Embperl()
 	{
 		//should probably read the directory in c, instead, so that
 		//I can echo filenames as I do it, but c'mon... I'm lazy and this 1 line reads in all the plugins
-		eval(
+		eval_pv(
 			"if(opendir(D,'plugins')) { "
 			"	my @d = readdir(D);"
 			"	closedir(D);"
@@ -179,7 +202,7 @@ Embperl::Embperl()
 			"		main::eval_file('plugin','plugins/'.$_)if/\\.pl$/;"
 			"	}"
 			"}"
-		);
+		,FALSE);
 	}
 	catch(const char *err)
 	{ 
@@ -190,8 +213,11 @@ Embperl::Embperl()
 	LogFile->write(EQEMuLog::Quest, "Loading perl commands...");
 	try
 	{
-		eval_file("commands", "commands.pl");
-		dosub("commands::commands_init");
+		eval_pv(
+			"package commands;"
+			"main::eval_file('commands', 'commands.pl');"
+			"&commands::commands_init();"
+		, FALSE);
 	}
 	catch(const char *err)
 	{ 
@@ -203,46 +229,48 @@ Embperl::Embperl()
 
 Embperl::~Embperl()
 {
+	in_use = true;
 #ifdef EMBPERL_IO_CAPTURE
-	//clean up our handles so perl dosent puke its guts out
-	eval(
-  			"package quest;"
-  			"untie *STDOUT;"
-  			"untie *STDERR;"
-  	);
+	//removed to try to stop perl from exploding on reload, we'll see
+/*	eval_pv(
+		"package quest;"
+		"	untie *STDOUT;"
+		"	untie *STDERR;"
+  	,FALSE);
+*/
 #endif
 	perl_destruct(my_perl);
+//I am commenting this out in the veign hope that it will help with crashes
+//under the assumption that we are not leaking a ton of memory and that this
+//will not be a regular part of a production server's activity, only when debugging
 	perl_free(my_perl);
 }
 
 void Embperl::init_eval_file(void)
-{//ala perlembed
-	eval(
+{
+	eval_pv(
 		"our %Cache;"
 		"use Symbol qw(delete_package);"
 		"sub eval_file {"
 			"my($package, $filename) = @_;"
-#ifdef EMBPERL_IO_CAPTURE
-  			"tie *STDOUT, 'EQEmuIO';"
-  			"tie *STDERR, 'EQEmuIO';"
-#endif
 			"$filename=~s/\'//g;"
+			"if(! -r $filename) { print \"Unable to read perl file '$filename'\\n\"; return; }"
 			"my $mtime = -M $filename;"
-			"if(defined $Cache{$package}{mtime}&&$Cache{$package}{mtime} <= $mtime && !($package eq 'plugin')){ return; }"
-
-			"else {"
-				"local *FH;open FH, $filename or die \"open '$filename' $!\";"
+			"if(defined $Cache{$package}{mtime}&&$Cache{$package}{mtime} <= $mtime && !($package eq 'plugin')){"
+			"	return;"
+			"} else {"
+			//we 'my' $filename,$mtime,$package,$sub to prevent them from changing our state up here.
+			"	eval(\"package $package; my(\\$filename,\\$mtime,\\$package,\\$sub); \\$isloaded = 1; require '$filename'; \");"
+/*				"local *FH;open FH, $filename or die \"open '$filename' $!\";"
 				"local($/) = undef;my $sub = <FH>;close FH;"
 				"my $eval = qq{package $package; sub handler { $sub; }};"
 				"{ my($filename,$mtime,$package,$sub); eval $eval; }"
 				"die $@ if $@;"
 				"$Cache{$package}{mtime} = $mtime; ${$package.'::isloaded'} = 1;}"
+*/
 			"}"
-#ifdef EMBPERL_IO_CAPTURE
-  			"untie *STDOUT;"
-  			"untie *STDERR;"
-#endif
-		);
+		"}"
+		,FALSE);
  }
 
 void Embperl::eval_file(const char * packagename, const char * filename)
@@ -308,6 +336,14 @@ bool Embperl::SubExists(const char *package, const char *sub) {
 		return(false);
 	int len = strlen(sub);
 	return(hv_exists(stash, sub, len));
+}
+
+bool Embperl::VarExists(const char *package, const char *var) {
+	HV *stash = gv_stashpv(package, false);
+	if(!stash)
+		return(false);
+	int len = strlen(var);
+	return(hv_exists(stash, var, len));
 }
 
 

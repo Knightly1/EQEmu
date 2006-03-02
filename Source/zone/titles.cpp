@@ -62,8 +62,8 @@ bool TitleManager::LoadTitles() {
 	return(true);
 }
 
-EQApplicationPacket *TitleManager::MakeTitlesPacket(Client *who) {
-	EQApplicationPacket *outapp = NULL;
+EQZonePacket *TitleManager::MakeTitlesPacket(Client *who) {
+	EQZonePacket *outapp = NULL;
 	vector<TitleEntry>::iterator cur,end;
 	vector< vector<TitleEntry>::iterator > avaliable;
 	uint32 len = 0;
@@ -75,19 +75,19 @@ EQApplicationPacket *TitleManager::MakeTitlesPacket(Client *who) {
 		if(v < cur->skill_value)
 			continue;	//not high enough
 		avaliable.push_back(cur);
-		len += cur->title.length() + 1;
+		len += cur->title.length();
 	}
 
 	uint32 count = avaliable.size();
 	if(count == 0) {
 		//no titles avaliable...
-		outapp = new EQApplicationPacket(OP_CustomTitles, 4);
+		outapp = new EQZonePacket(OP_CustomTitles, 4);
 		return(outapp);
 	}
 	
 	uint32 pos = 0;
 	uint32 total_len = sizeof(Titles_Struct) + sizeof(TitleEntry_Struct)*count + len;
-	outapp = new EQApplicationPacket(OP_CustomTitles, total_len);
+	outapp = new EQZonePacket(OP_CustomTitles, total_len);
 	
 	Titles_Struct *header = (Titles_Struct *) outapp->pBuffer;
 	header->title_count = count;
@@ -105,8 +105,8 @@ EQApplicationPacket *TitleManager::MakeTitlesPacket(Client *who) {
 		//fill out the packet
 		e->skill_id = cur->skill_id;
 		e->skill_value = cur->skill_value;
-		len = cur->title.length()+1;
-		strncpy(e->title, cur->title.c_str(), len);
+		len = cur->title.length();
+		strncpy(e->title, cur->title.c_str(), len+1);
 		
 		//advance our position in the buffer
 		pos += sizeof(TitleEntry_Struct) + len;

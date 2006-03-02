@@ -13,13 +13,6 @@ using namespace std;
 	#define EmuLibName "EMuShareMem"
 #else
 	#define EmuLibName "libEMuShareMem.so"
-
-	#include "../common/unix.h"
-	#include <dlfcn.h>
-    #define GetProcAddress(a,b) dlsym(a,b)
-	#define LoadLibrary(a) dlopen(a, RTLD_NOW) 
-	#define  FreeLibrary(a) dlclose(a)
-	#define GetLastError() dlerror()
 #endif
 
 LoadEMuShareMemDLL EMuShareMemDLL;
@@ -29,7 +22,6 @@ int32 LoadEMuShareMemDLL::refCount = 0;
 #endif
 
 LoadEMuShareMemDLL::LoadEMuShareMemDLL() {
-	hDLL = 0;
 	ClearFunc();
 #ifndef WIN32
     refCountU();
@@ -47,121 +39,212 @@ LoadEMuShareMemDLL::~LoadEMuShareMemDLL() {
 }
 
 bool LoadEMuShareMemDLL::Load() {
-#ifdef WIN32
-	DWORD load_error = 0;
-	SetLastError(0);
-#else
-	const char* load_error = 0;
-#endif
-	if (Loaded())
-	{
-		return true;
-	}
-	hDLL = LoadLibrary(EmuLibName);
-#ifdef WIN32
-	if(!hDLL) {
-		load_error = GetLastError();
-		LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to load library '%s'.  Error=%i", EmuLibName, load_error);
-	    return false;
-	}
-    else { SetLastError(0); } // Clear the win9x error
-#else
-	if(!hDLL || ((load_error = GetLastError()) != NULL) ) {
-		LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to load library '%s'.  Error=%s", EmuLibName, load_error?load_error:"Null Return, no error");
-	    return false;
-	}
-#endif
+	if(!SharedLibrary::Load(EmuLibName))
+		return(false);
 	
 	if (Loaded()) {
-		Items.GetItem = (DLLFUNC_GetItem) GetProcAddress(hDLL, "GetItem");
-		Items.IterateItems = (DLLFUNC_IterateItems) GetProcAddress(hDLL, "IterateItems");
-		Items.cbAddItem = (DLLFUNC_AddItem) GetProcAddress(hDLL, "AddItem");
-		Items.DLLLoadItems = (DLLFUNC_DLLLoadItems) GetProcAddress(hDLL, "DLLLoadItems");
-		Doors.GetDoor = (DLLFUNC_GetDoor) GetProcAddress(hDLL, "GetDoor");
-		Doors.cbAddDoor = (DLLFUNC_AddDoor) GetProcAddress(hDLL, "AddDoor");
-		Doors.DLLLoadDoors = (DLLFUNC_DLLLoadDoors) GetProcAddress(hDLL, "DLLLoadDoors");
-		Spells.DLLLoadSPDat = (DLLFUNC_DLLLoadSPDat) GetProcAddress(hDLL, "DLLLoadSPDat");
-		NPCFactionList.DLLLoadNPCFactionLists = (DLLFUNC_DLLLoadNPCFactionLists) GetProcAddress(hDLL, "DLLLoadNPCFactionLists");
-		NPCFactionList.GetNPCFactionList = (DLLFUNC_GetNPCFactionList) GetProcAddress(hDLL, "GetNPCFactionList");
-		NPCFactionList.cbAddNPCFactionList = (DLLFUNC_AddNPCFactionList) GetProcAddress(hDLL, "AddNPCFactionList");
-		NPCFactionList.cbSetFaction = (DLLFUNC_SetFaction) GetProcAddress(hDLL, "SetNPCFaction");
-		Loot.DLLLoadLoot = (DLLFUNC_DLLLoadLoot) GetProcAddress(hDLL, "DLLLoadLoot");
-		Loot.cbAddLootTable = (DLLFUNC_AddLootTable) GetProcAddress(hDLL, "AddLootTable");
-		Loot.cbAddLootDrop = (DLLFUNC_AddLootDrop) GetProcAddress(hDLL, "AddLootDrop");
-		Loot.GetLootTable = (DLLFUNC_GetLootTable) GetProcAddress(hDLL, "GetLootTable");
-		Loot.GetLootDrop = (DLLFUNC_GetLootDrop) GetProcAddress(hDLL, "GetLootDrop");
-		Opcodes.GetEQOpcode = (DLLFUNC_GetEQOpcode) GetProcAddress(hDLL, "GetEQOpcode");
-		Opcodes.GetEmuOpcode = (DLLFUNC_GetEmuOpcode) GetProcAddress(hDLL, "GetEmuOpcode");
-		Opcodes.SetOpcodePair = (DLLFUNC_SetOpcodePair) GetProcAddress(hDLL, "SetOpcodePair");
-		Opcodes.DLLLoadOpcodes = (DLLFUNC_DLLLoadOpcodes) GetProcAddress(hDLL, "DLLLoadOpcodes");
-		Opcodes.ClearEQOpcodes = (DLLFUNC_ClearEQOpcodes) GetProcAddress(hDLL, "ClearEQOpcodes");
-		if ((!Items.GetItem)
-			|| (!Items.IterateItems)
-			|| (!Items.cbAddItem)
-			|| (!Items.DLLLoadItems)
-			|| (!Doors.GetDoor)
-			|| (!Doors.cbAddDoor)
-			|| (!Doors.DLLLoadDoors)
-			|| (!Spells.DLLLoadSPDat)
-			|| (!NPCFactionList.DLLLoadNPCFactionLists)
-			|| (!NPCFactionList.GetNPCFactionList)
-			|| (!NPCFactionList.cbAddNPCFactionList)
-			|| (!NPCFactionList.cbSetFaction)
-			|| (!Loot.DLLLoadLoot)
-			|| (!Loot.cbAddLootTable)
-			|| (!Loot.cbAddLootDrop)
-			|| (!Loot.GetLootTable)
-			|| (!Loot.GetLootDrop)
-			|| (!Opcodes.GetEQOpcode)
-			|| (!Opcodes.GetEmuOpcode)
-			|| (!Opcodes.SetOpcodePair)
-			|| (!Opcodes.DLLLoadOpcodes)
-			|| (!Opcodes.ClearEQOpcodes)
-#ifndef WIN32
-			|| ((load_error = GetLastError()) != NULL)
-#else
-			&& ((load_error = GetLastError()) != 0)
-#endif
-			) {
-#ifdef WIN32
-			load_error = GetLastError();
-#endif
+		Items.GetItem = (DLLFUNC_GetItem) GetSym("GetItem");
+		Items.GetItemSerialization = (DLLFUNC_GetItemSerialization) GetSym("GetItemSerialization");
+		Items.IterateItems = (DLLFUNC_IterateItems) GetSym("IterateItems");
+		Items.cbAddItem = (DLLFUNC_AddItem) GetSym("AddItem");
+		Items.DLLLoadItems = (DLLFUNC_DLLLoadItems) GetSym("DLLLoadItems");
+		Doors.GetDoor = (DLLFUNC_GetDoor) GetSym("GetDoor");
+		Doors.cbAddDoor = (DLLFUNC_AddDoor) GetSym("AddDoor");
+		Doors.DLLLoadDoors = (DLLFUNC_DLLLoadDoors) GetSym("DLLLoadDoors");
+		Spells.DLLLoadSPDat = (DLLFUNC_DLLLoadSPDat) GetSym("DLLLoadSPDat");
+		NPCFactionList.DLLLoadNPCFactionLists = (DLLFUNC_DLLLoadNPCFactionLists) GetSym("DLLLoadNPCFactionLists");
+		NPCFactionList.GetNPCFactionList = (DLLFUNC_GetNPCFactionList) GetSym("GetNPCFactionList");
+		NPCFactionList.cbAddNPCFactionList = (DLLFUNC_AddNPCFactionList) GetSym("AddNPCFactionList");
+		NPCFactionList.cbSetFaction = (DLLFUNC_SetFaction) GetSym("SetNPCFaction");
+		Loot.DLLLoadLoot = (DLLFUNC_DLLLoadLoot) GetSym("DLLLoadLoot");
+		Loot.cbAddLootTable = (DLLFUNC_AddLootTable) GetSym("AddLootTable");
+		Loot.cbAddLootDrop = (DLLFUNC_AddLootDrop) GetSym("AddLootDrop");
+		Loot.GetLootTable = (DLLFUNC_GetLootTable) GetSym("GetLootTable");
+		Loot.GetLootDrop = (DLLFUNC_GetLootDrop) GetSym("GetLootDrop");
+		Opcodes.GetEQOpcode = (DLLFUNC_GetEQOpcode) GetSym("GetEQOpcode");
+		Opcodes.GetEmuOpcode = (DLLFUNC_GetEmuOpcode) GetSym("GetEmuOpcode");
+		Opcodes.SetOpcodePair = (DLLFUNC_SetOpcodePair) GetSym("SetOpcodePair");
+		Opcodes.DLLLoadOpcodes = (DLLFUNC_DLLLoadOpcodes) GetSym("DLLLoadOpcodes");
+		Opcodes.ClearEQOpcodes = (DLLFUNC_ClearEQOpcodes) GetSym("ClearEQOpcodes");
+		GuildList.GetGuild = (DLLFUNC_GetGuild) GetSym("GetGuild");
+		GuildList.GetMaxGuildID = (DLLFUNC_GetMaxGuildID) GetSym("GetMaxGuildID");
+		GuildList.cbAddGuild = (DLLFUNC_AddGuild) GetSym("AddGuild");
+		GuildList.DLLLoadGuildList = (DLLFUNC_DLLLoadGuildList) GetSym("DLLLoadGuildList");
+		if(Items.GetItem == NULL) {
 			Unload();
-			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach a function.  Error=%i", load_error);
-			return false;
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Items.GetItem");
+			return(false);
+		}
+
+		if(Items.GetItemSerialization == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Items.GetItemSerialization");
+			return(false);
+		}
+
+		if(Items.IterateItems == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Items.IterateItems");
+			return(false);
+		}
+
+		if(Items.cbAddItem == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Items.cbAddItem");
+			return(false);
+		}
+
+		if(Items.DLLLoadItems == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Items.DLLLoadItems");
+			return(false);
+		}
+
+		if(Doors.GetDoor == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Doors.GetDoor");
+			return(false);
+		}
+
+		if(Doors.cbAddDoor == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Doors.cbAddDoor");
+			return(false);
+		}
+
+		if(Doors.DLLLoadDoors == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Doors.DLLLoadDoors");
+			return(false);
+		}
+
+		if(Spells.DLLLoadSPDat == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Spells.DLLLoadSPDat");
+			return(false);
+		}
+
+		if(NPCFactionList.DLLLoadNPCFactionLists == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach NPCFactionList.DLLLoadNPCFactionLists");
+			return(false);
+		}
+
+		if(NPCFactionList.GetNPCFactionList == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach NPCFactionList.GetNPCFactionList");
+			return(false);
+		}
+
+		if(NPCFactionList.cbAddNPCFactionList == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach NPCFactionList.cbAddNPCFactionList");
+			return(false);
+		}
+
+		if(NPCFactionList.cbSetFaction == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach NPCFactionList.cbSetFaction");
+			return(false);
+		}
+
+		if(Loot.DLLLoadLoot == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Loot.DLLLoadLoot");
+			return(false);
+		}
+
+		if(Loot.cbAddLootTable == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Loot.cbAddLootTable");
+			return(false);
+		}
+
+		if(Loot.cbAddLootDrop == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Loot.cbAddLootDrop");
+			return(false);
+		}
+
+		if(Loot.GetLootTable == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Loot.GetLootTable");
+			return(false);
+		}
+
+		if(Loot.GetLootDrop == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Loot.GetLootDrop");
+			return(false);
+		}
+
+		if(Opcodes.GetEQOpcode == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Opcodes.GetEQOpcode");
+			return(false);
+		}
+
+		if(Opcodes.GetEmuOpcode == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Opcodes.GetEmuOpcode");
+			return(false);
+		}
+
+		if(Opcodes.SetOpcodePair == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Opcodes.SetOpcodePair");
+			return(false);
+		}
+
+		if(Opcodes.DLLLoadOpcodes == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Opcodes.DLLLoadOpcodes");
+			return(false);
+		}
+
+		if(Opcodes.ClearEQOpcodes == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Opcodes.ClearEQOpcodes");
+			return(false);
+		}
+		if(GuildList.GetGuild == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach GuildList.GetGuild");
+			return(false);
+		}
+		if(GuildList.GetMaxGuildID == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach GuildList.GetMaxGuildID");
+			return(false);
+		}
+		if(GuildList.cbAddGuild == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach GuildList.cbAddGuild");
+			return(false);
+		}
+		if(GuildList.DLLLoadGuildList == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach GuildList.DLLLoadGuildList");
+			return(false);
 		}
 		
 		LogFile->write(EQEMuLog::Status, "%s loaded", EmuLibName);
 		return true;
 	}
 	else {
-#ifdef WIN32
-		if ((load_error = GetLastError()) != 0)
-#else
-		if ((load_error = GetLastError()) != NULL)
-#endif 
-			LogFile->write(EQEMuLog::Error, "LoadLibrary() FAILED!  Error=%i", load_error);
-		else
-			LogFile->write(EQEMuLog::Error, "LoadLibrary() FAILED!  Error=(unknown)", load_error);
+		LogFile->write(EQEMuLog::Error, "%s was not loaded, but did not report an error.", EmuLibName);
 	}
 	return false;
 }
 
 void LoadEMuShareMemDLL::Unload() {
 	ClearFunc();
-	if (this->hDLL) {
-		FreeLibrary(this->hDLL);
-#ifndef WIN32
-		const char* error;
-		if ((error = GetLastError()) != NULL)
-			LogFile->write(EQEMuLog::Error, "FreeLibrary() error = %s", error);
-#endif
-	}
-	hDLL = 0;
+	SharedLibrary::Unload();
 }
 
 void LoadEMuShareMemDLL::ClearFunc() {
 	Items.GetItem = 0;
+	Items.GetItemSerialization = 0;
 	Items.IterateItems = 0;
 	Items.cbAddItem = 0;
 	Items.DLLLoadItems = 0;
@@ -182,4 +265,8 @@ void LoadEMuShareMemDLL::ClearFunc() {
 	Opcodes.SetOpcodePair = NULL;
 	Opcodes.DLLLoadOpcodes = NULL;
 	Opcodes.ClearEQOpcodes = NULL;
+	GuildList.GetMaxGuildID = NULL;
+	GuildList.GetGuild = 0;
+	GuildList.cbAddGuild = 0;
+	GuildList.DLLLoadGuildList = 0;
 }

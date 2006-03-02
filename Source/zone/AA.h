@@ -50,6 +50,83 @@ typedef enum {	//AA Effect IDs
 	aaEffectFrostArrows
 } aaEffectType;
 
+
+enum {	//leadership AA indexes
+	groupAAMarkNPC = 0,
+	groupAANPCHealth,
+	groupAADelegateMainAssist,
+	groupAADelegateMarkNPC,
+	groupAA4,
+	groupAA5,
+	groupAAInspectBuffs,
+	groupAA7,
+	groupAASpellAwareness,
+	groupAAOffenseEnhancement,
+	groupAAManaEnhancement,
+	groupAAHealthEnhancement,
+	groupAAHealthRegeneration,
+	groupAAFindPathToPC,
+	groupAAHealthOfTargetsTarget,
+	groupAA15,
+	
+	raidAAMarkNPC,	//0x10, things assume this is the first raid ability
+	raidAANPCHealth,
+	raidAADelegateMainAssist,
+	raidAADelegateMarkNPC,
+	raidAA4,
+	raidAA5,
+	raidAA6,
+	raidAASpellAwareness,
+	raidAAOffenseEnhancement,
+	raidAAManaEnhancement,
+	raidAAHealthEnhancement,
+	raidAAHealthRegeneration,
+	raidAAFindPathToPC,
+	raidAAHealthOfTargetsTarget,
+	raidAA14,
+	raidAA15,
+	
+	_maxLeaderAA	//=32
+};
+
+#define MAX_LEADERSHIP_TIERS 6
+//each progression should be 0 terminated to mark it as the end.
+static const int8 LeadershipAACosts[_maxLeaderAA][MAX_LEADERSHIP_TIERS] = { 
+{ 1, 2, 3, 0, 0, 0 },	//groupAAMarkNPC
+{ 2, 0, 0, 0, 0, 0 },	//groupAANPCHealth
+{ 4, 0, 0, 0, 0, 0 },	//groupAADelegateMainAssist
+{ 4, 0, 0, 0, 0, 0 },	//groupAADelegateMarkNPC
+{ 0, 0, 0, 0, 0, 0 },	//groupAA4
+{ 0, 0, 0, 0, 0, 0 },	//groupAA5
+{ 4, 6, 0, 0, 0, 0 },	//groupAAInspectBuffs
+{ 0, 0, 0, 0, 0, 0 },	//groupAA7
+{ 6, 0, 0, 0, 0, 0 },	//groupAASpellAwareness
+{ 4, 5, 6, 7, 8, 0 },	//groupAAOffenseEnhancement
+{ 4, 6, 8, 0, 0, 0 },	//groupAAManaEnhancement
+{ 4, 6, 8, 0, 0, 0 },	//groupAAHealthEnhancement
+{ 4, 6, 8, 0, 0, 0 },	//groupAAHealthRegeneration
+{ 4, 0, 0, 0, 0, 0 },	//groupAAFindPathToPC
+{ 7, 0, 0, 0, 0, 0 },	//groupAAHealthOfTargetsTarget
+{ 0, 0, 0, 0, 0, 0 },	//groupAA15
+	
+{ 5, 99, 99, 0, 0, 0 },	//raidAAMarkNPC	//0x10
+{ 4, 0, 0, 0, 0, 0 },	//raidAANPCHealth
+{ 6, 99, 99, 0, 0, 0 },	//raidAADelegateMainAssist
+{ 6, 99, 99, 0, 0, 0 },	//raidAADelegateMarkNPC
+{ 0, 0, 0, 0, 0, 0 },	//raidAA4
+{ 0, 0, 0, 0, 0, 0 },	//raidAA5
+{ 0, 0, 0, 0, 0, 0 },	//raidAA6
+{ 8, 0, 0, 0, 0, 0 },	//raidAASpellAwareness
+{ 6, 99, 99, 99, 99, 0 },	//raidAAOffenseEnhancement
+{ 6, 99, 99, 0, 0, 0 },	//raidAAManaEnhancement
+{ 6, 99, 99, 0, 0, 0 },	//raidAAHealthEnhancement
+{ 6, 99, 99, 0, 0, 0 },	//raidAAHealthRegeneration
+{ 5, 0, 0, 0, 0, 0 },	//raidAAFindPathToPC
+{ 9, 0, 0, 0, 0, 0 },	//raidAAHealthOfTargetsTarget
+{ 0, 0, 0, 0, 0, 0 },	//raidAA14
+{ 0, 0, 0, 0, 0, 0 },	//raidAA15
+};
+
 typedef enum {	//AA IDs
 	aaUnknown0 = 0,
 	aaInnateStrength = 2,			//works
@@ -392,87 +469,14 @@ extern map<int16, AA_SwarmPet> AA_SwarmPets;	//key=spell_id
 
 #define AA_Choose3(val, v1, v2, v3) (val==1?v1:(val==2?v2:v3))
 
-struct AltAdvStats_Struct {
-/*000*/  uint32 experience;
-/*004*/  uint16 unspent;
-/*006*/  uint16	unknown006;
-/*008*/  int8	percentage;
-/*009*/  int8	unknown009[3];
-};
-
-struct UseAA_Struct {
-	int32 begin;
-	int32 ability;
-	int32 end;
-};
-
-struct AA_Ability {
-/*00*/	int32 skill_id;
-/*04*/	int32 increase_amt;
-/*08*/	int32 unknown08;
-/*12*/	int32 last_level;
-};
-
-struct SendAA_Struct {
-/*0000*/	int32 id;
-/*0004*/	int32 hotkey_sid;
-/*0008*/	int32 hotkey_sid2;
-/*0012*/	int32 title_sid;
-/*0016*/	int32 desc_sid;
-/*0020*/	int32 class_type;
-/*0024*/	int32 cost;
-/*0028*/	int32 seq;
-/*0032*/	int32 current_level; //1s
-/*0036*/	int32 prereq_skill;
-/*0040*/	int32 prereq_minpoints; //min points in the prereq
-/*0044*/	int32 type;
-/*0048*/	int32 spellid;
-/*0052*/	int32 spell_type;
-/*0056*/	int32 spell_refresh;
-/*0060*/	int16 classes;
-/*0062*/	int16 berserker; //seems to be 1 if its a berserker ability
-/*0064*/	int32 max_level;
-/*0068*/	int32 last_id;
-/*0072*/	int32 next_id;
-/*0076*/	int32 cost2;
-/*0080*/	int32 unknown80[2]; //0s
-/*0084*/	int32 total_abilities;
-/*0088*/	AA_Ability abilities[0];
-};
 extern map<int32,SendAA_Struct*>aas_send;
 
-struct AA_List {
-	SendAA_Struct* aa[0];
-};
 
 enum {	//values of AA_Action.action
 	aaActionActivate = 0,
 	aaActionSetEXP = 1,
 	aaActionDisableEXP = 2,
 	aaActionBuy = 3
-};
-
-struct AA_Action {
-/*00*/	int32	action;
-/*04*/	int32	ability;
-/*08*/	int32	unknown08;
-/*12*/	int32	exp_value;
-};
-
-//  New Alternate Advancement table.  holds all the skill levels for the AA skills.
-//  Length: 309 Bytes
-//  OpCode: 1422
-struct AA_Skills {
-/*00*/	int32	aa_skill; 
-/*04*/	int32	aa_value;
-};
-
-struct PlayerAA_Struct {
-	AA_Skills aa_list[MAX_PP_AA_ARRAY];
-};
-
-struct AATable_Struct {
-	AA_Skills aa_list[MAX_PP_AA_ARRAY];
 };
 
 #endif

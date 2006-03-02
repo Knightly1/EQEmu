@@ -19,23 +19,6 @@
 #define EQ_CONSTANTS_H 
 
 /*
-** Item packet types
-**
-*/
-enum ItemPacketType
-{
-	ItemPacketViewLink			= 0x00,
-	ItemPacketTradeView			= 0x65,
-	ItemPacketLoot				= 0x66,
-	ItemPacketTrade				= 0x67,
-	ItemPacketCharInventory		= 0x69,
-	ItemPacketSummonItem		= 0x6A,
-	ItemPacketTributeItem		= 0x6C,
-	ItemPacketMerchant			= 0x64,
-	ItemPacketWorldContainer	= 0x6B
-};
-
-/*
 ** Item attributes
 **
 */
@@ -55,64 +38,77 @@ enum ItemAttrib
 ** Item types
 **
 */
-enum ItemType
+enum ItemClass
 {
-	ItemTypeCommon		= 0,
-	ItemTypeContainer	= 1,
-	ItemTypeBook		= 2
+	ItemClassCommon		= 0,
+	ItemClassContainer	= 1,
+	ItemClassBook		= 2
 };
 
 /*
 ** Item uses
 **
 */
-enum ItemUses
+enum ItemTypes
 {
-	ItemUse1HS			= 0,
-	ItemUse2HS			= 1,
-	ItemUsePierce		= 2,
-	ItemUse1HB			= 3,
-	ItemUse2HB			= 4,
-	ItemUseBow			= 5,
-	ItemUseThrowing		= 7,
-	ItemUseShield		= 8,
-	ItemUseArmor		= 10,
-	ItemUseUnknon		= 11,	//A lot of random crap has this item use.
-	ItemUseLockPick		= 12,
-	ItemUseFood			= 14,
-	ItemUseDrink		= 15,
-	ItemUseLightSource	= 16,
-	ItemUseStackable	= 17,	//Not all stackable items are this use...
-	ItemUseBandage		= 18,
-	ItemUseThrowingv2	= 19,
-	ItemUseSpell		= 20,	//spells and tomes
-	ItemUsePotion		= 21,
-	ItemUseWindInstr	= 23,
-	ItemUseStringInstr	= 24,
-	ItemUseBrassInstr	= 25,
-	ItemUseDrumInstr	= 26,
-	ItemUseArrow		= 27,
-	ItemUseStackable2	= 28,
-	ItemUseJewlery		= 29,
-	ItemUseSkull		= 30,
-	ItemUseTome			= 31,
-	ItemUseNote			= 32,
-	ItemUseKey			= 33,
-	ItemUse2HPierce		= 35,
-	ItemUseCoin			= 34,
-	ItemUseFishingPole	= 36,
-	ItemUseFishingBait	= 37,
-	ItemUseAlcohol		= 38,
-	ItemUseCompass		= 40,
-	ItemUsePoison		= 42,	//might be wrong, but includes poisons
-	ItemUseHand2Hand	= 45,
-	ItemUseAllInstruments=51,
+	ItemType1HS			= 0,
+	ItemType2HS			= 1,
+	ItemTypePierce		= 2,
+	ItemType1HB			= 3,
+	ItemType2HB			= 4,
+	ItemTypeBow			= 5,
+	//6
+	ItemTypeThrowing		= 7,
+	ItemTypeShield		= 8,
+	//9
+	ItemTypeArmor		= 10,
+	ItemTypeUnknon		= 11,	//A lot of random crap has this item use.
+	ItemTypeLockPick		= 12,
+	ItemTypeFood			= 14,
+	ItemTypeDrink		= 15,
+	ItemTypeLightSource	= 16,
+	ItemTypeStackable	= 17,	//Not all stackable items are this use...
+	ItemTypeBandage		= 18,
+	ItemTypeThrowingv2	= 19,
+	ItemTypeSpell		= 20,	//spells and tomes
+	ItemTypePotion		= 21,
+	ItemTypeWindInstr	= 23,
+	ItemTypeStringInstr	= 24,
+	ItemTypeBrassInstr	= 25,
+	ItemTypeDrumInstr	= 26,
+	ItemTypeArrow		= 27,
+	ItemTypeJewlery		= 29,
+	ItemTypeSkull		= 30,
+	ItemTypeTome			= 31,
+	ItemTypeNote			= 32,
+	ItemTypeKey			= 33,
+	ItemTypeCoin			= 34,
+	ItemType2HPierce		= 35,
+	ItemTypeFishingPole	= 36,
+	ItemTypeFishingBait	= 37,
+	ItemTypeAlcohol		= 38,
+	ItemTypeCompass		= 40,
+	ItemTypePoison		= 42,	//might be wrong, but includes poisons
+	ItemTypeHand2Hand	= 45,
 	ItemUseSinging		= 50,
-	ItemUseCharm		= 52,
-	ItemUseAugment		= 54,
-	ItemUseAugmentSolvent=55,
-	ItemUseAugmentDistill=56
+	ItemUseAllInstruments	= 51,
+	ItemTypeCharm		= 52,
+	ItemTypeAugment		= 54,
+	ItemTypeAugmentSolvent	= 55,
+	ItemTypeAugmentDistill	= 56
 };
+
+/*
+	Bag types
+*/
+enum {
+	bagTypeSmallBag		= 0,
+	bagTypeLargeBag		= 1,
+	bagTypeQuiver		= 2,
+	bagTypeBeltPouch	= 3 
+	//... there are 50 types
+};
+
 
 /*
 ** Item Effect Types
@@ -125,9 +121,11 @@ enum {
 	ET_Expendable = 3,
 	ET_EquipClick = 4,
 	ET_ClickEffect2 = 5,	//name unknown
-	ET_Focus = 6
+	ET_Focus = 6,
+	ET_Scroll = 7
 };
 
+//SpawnAppearance types:
 #define AT_Die				0	// this causes the client to keel over and zone to bind point
 #define AT_WhoLevel		1	// the level that shows up on /who
 #define AT_Invis			3	// 0 = visible, 1 = invisible
@@ -156,6 +154,15 @@ enum {
 #define	ANIM_CROUCH		0x6f
 #define	ANIM_DEATH		0x73
 #define ANIM_LOOT		0x69
+
+typedef enum {
+	eaStanding = 0,
+	eaSitting,		//1
+	eaCrouching,	//2
+	eaDead,			//3
+	eaLooting,		//4
+	_eaMaxAppearance
+} EmuAppearance;
 
 /* 
 ** Diety List
@@ -267,26 +274,63 @@ enum {
 #define ZONE_ERROR_NOEXPERIENCE -7
 
 
-#define FILTER_DAMAGESHIELD 0
-#define FILTER_NPCSPELLS	1
-#define FILTER_PCSPELLS		2
-#define FILTER_BARDSONGS	3
-#define FILTER_GUILDSAY		4
-#define FILTER_SOCIALS		5
-#define FILTER_GROUP		6
-#define FILTER_SHOUT		7
-#define FILTER_AUCTION		8
-#define FILTER_OOC			9
-#define FILTER_MYMISSES		10
-#define FILTER_OTHERMISSES	11
-#define FILTER_OTHERHITS	12
-#define FILTER_ATKMISSESME	13
-#define FILTER_CRITSPELLS	14
-#define FILTER_CRITMELEE	15
-#define FILTER_SPELLDAMAGE	16
-#define FILTER_DOTDAMAGE	17
-#define FILTER_MYPETHITS	18
-#define FILTER_MYPETMISSES	19
+typedef enum {
+	FilterNone = 0,
+	FilterGuildChat = 1,		//0=hide, 1=show
+	FilterSocials = 2,			//0=hide, 1=show
+	FilterGroupChat = 3,		//0=hide, 1=show
+	FilterShouts = 4,			//0=hide, 1=show
+	FilterAuctions = 5,			//0=hide, 1=show
+	FilterOOC = 6,				//0=hide, 1=show
+	FilterBadWords = 7,			//0=hide, 1=show
+	FilterPCSpells = 8,			//0=show, 1=hide, 2=group only
+	FilterNPCSpells = 9,		//0=show, 1=hide
+	FilterBardSongs = 10,		//0=show, 1=mine only, 2=group only, 3=hide
+	FilterSpellCrits = 11,		//0=show, 1=mine only, 2=hide
+	FilterMeleeCrits = 12,		//0=show, 1=hide
+	FilterSpellDamage = 13,		//0=show, 1=mine only, 2=hide
+	FilterMyMisses = 14,		//0=hide, 1=show
+	FilterOthersMiss = 15,		//0=hide, 1=show
+	FilterOthersHit = 16,		//0=hide, 1=show
+	FilterMissedMe = 17,		//0=hide, 1=show
+	FilterDamageShields = 18,	//0=show, 1=hide
+	FilterDOT = 19,				//0=show, 1=hide
+	FilterPetHits = 20,			//0=show, 1=hide
+	FilterPetMisses = 21,		//0=show, 1=hide
+	FilterFocusEffects = 22,	//0=show, 1=hide
+	FilterPetSpells = 23,		//0=show, 1=hide
+	FilterHealOverTime = 24,	//0=show, 1=hide
+	_FilterCount
+} FilterType;
+
+typedef enum {
+	FilterHide,
+	FilterShow,
+	FilterShowGroupOnly,
+	FilterShowSelfOnly
+} FilterMode;
+
+//im lazy today, dont wanna find/replace these
+#define FILTER_DAMAGESHIELD FilterDamageShields
+#define FILTER_NPCSPELLS	FilterNPCSpells
+#define FILTER_PCSPELLS		FilterPCSpells
+#define FILTER_BARDSONGS	FilterBardSongs
+#define FILTER_GUILDSAY		FilterGuildChat
+#define FILTER_SOCIALS		FilterSocials
+#define FILTER_GROUP		FilterGroupChat
+#define FILTER_SHOUT		FilterShouts
+#define FILTER_AUCTION		FilterAuctions
+#define FILTER_OOC			FilterAuctions
+#define FILTER_MYMISSES		FilterMyMisses
+#define FILTER_OTHERMISSES	FilterOthersMiss
+#define FILTER_OTHERHITS	FilterOthersHit
+#define FILTER_ATKMISSESME	FilterMissedMe
+#define FILTER_CRITSPELLS	FilterSpellCrits
+#define FILTER_CRITMELEE	FilterMeleeCrits
+#define FILTER_SPELLDAMAGE	FilterSpellDamage
+#define FILTER_DOTDAMAGE	FilterDOT
+#define FILTER_MYPETHITS	FilterPetHits
+#define FILTER_MYPETMISSES	FilterPetMisses
 
 
 

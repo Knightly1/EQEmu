@@ -8,20 +8,23 @@
 #include "../common/eq_packet_structs.h"
 #include "../zone/zonedump.h"
 #include "../zone/loottable.h"
+#include "SharedLibrary.h"
 
 ////////////
 // Items //
 ///////////
 typedef bool(*CALLBACK_DBLoadItems)(sint32, int32);
 
-typedef bool(*DLLFUNC_DLLLoadItems)(const CALLBACK_DBLoadItems, int32, sint32*, int32*);
+typedef bool(*DLLFUNC_DLLLoadItems)(const CALLBACK_DBLoadItems, int32, sint32*, int32*, int32*);
 typedef const Item_Struct*(*DLLFUNC_GetItem)(uint32);
+typedef const unsigned char *(*DLLFUNC_GetItemSerialization)(uint32);
 typedef const Item_Struct*(*DLLFUNC_IterateItems)(uint32*);
-typedef bool(*DLLFUNC_AddItem)(int32, const Item_Struct*);
+typedef bool(*DLLFUNC_AddItem)(int32, const Item_Struct*, const unsigned char *);
 
 struct ItemsDLLFunc_Struct {
 	DLLFUNC_DLLLoadItems DLLLoadItems;
 	DLLFUNC_GetItem GetItem;
+	DLLFUNC_GetItemSerialization GetItemSerialization;
 	DLLFUNC_IterateItems IterateItems;
 	DLLFUNC_AddItem cbAddItem;
 };
@@ -118,17 +121,31 @@ struct OpcodeDLLFunc_Struct {
 	DLLFUNC_ClearEQOpcodes ClearEQOpcodes;
 };
 
+////////////////
+// GuildList ///
+////////////////
+typedef bool(*CALLBACK_DBLoadGuildList)();
+
+typedef bool(*DLLFUNC_DLLLoadGuildList)(const CALLBACK_DBLoadGuildList, int32);
+typedef const char*(*DLLFUNC_GetGuild)(int32);
+typedef uint32(*DLLFUNC_GetMaxGuildID)();
+typedef bool(*DLLFUNC_AddGuild)(int32, const char*);
+struct GuildListDLLFunc_Struct {
+	DLLFUNC_DLLLoadGuildList DLLLoadGuildList;
+	DLLFUNC_GetGuild GetGuild;
+	DLLFUNC_GetMaxGuildID GetMaxGuildID;
+	DLLFUNC_AddGuild cbAddGuild;
+};
 
 
-class LoadEMuShareMemDLL {
+class LoadEMuShareMemDLL : public SharedLibrary {
 public:
 	LoadEMuShareMemDLL();
 	~LoadEMuShareMemDLL();
 
-	inline bool	Loaded() { return ((hDLL != NULL) && !(hDLL <= 0)); }
-	bool	Load();
-	void	Unload();
-
+	bool Load();
+	void Unload();
+	
 	ItemsDLLFunc_Struct				Items;
 	//NPCTypesDLLFunc_Struct			NPCTypes;
 	DoorsDLLFunc_Struct				Doors;
@@ -136,13 +153,12 @@ public:
 	NPCFactionListDLLFunc_Struct	NPCFactionList;
 	LootDLLFunc_Struct				Loot;
 	OpcodeDLLFunc_Struct			Opcodes;
+	GuildListDLLFunc_Struct			GuildList;
 private:
 	void ClearFunc();
 
 #ifdef WIN32
-	HINSTANCE hDLL;
 #else
-	void* hDLL;
 	static int32  refCount;
 	static int32  refCountU() { return ++refCount; };
 	static int32  refCountD() { return --refCount; };

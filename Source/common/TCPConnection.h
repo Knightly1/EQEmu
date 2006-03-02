@@ -40,17 +40,17 @@
 	#include <fcntl.h>
 	#define INVALID_SOCKET -1
 	#define SOCKET_ERROR -1
-	#include "../common/unix.h"
+	#include "unix.h"
 
 #endif
 
-#include "../common/types.h"
-#include "../common/Mutex.h"
-#include "../common/linked_list.h"
-#include "../common/queue.h"
-#include "../common/servertalk.h"
-#include "../common/timer.h"
-#include "../common/MiscFunctions.h"
+#include "types.h"
+#include "Mutex.h"
+#include "linked_list.h"
+#include "queue.h"
+#include "servertalk.h"
+#include "timer.h"
+#include "MiscFunctions.h"
 
 class TCPServer;
 

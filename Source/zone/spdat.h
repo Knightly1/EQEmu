@@ -174,7 +174,7 @@ enum RESISTTYPE
 #define SE_AntiGate					105	// Translocational Anchor
 #define SE_SummonBSTPet				106	// neotokyo: added BST pet support
 #define SE_Familiar					108
-#define SE_SummonItem2				109	// Summon Jewelry Bag - summons stuff into container
+#define SE_SummonItemIntoBag		109	// Summon Jewelry Bag - summons stuff into container
 #define SE_ResistAll				111
 #define SE_CastingLevel				112
 #define	SE_SummonHorse				113
@@ -221,6 +221,7 @@ enum RESISTTYPE
 #define SE_SpellDamageShield		157	// Petrad's Protection
 #define SE_Reflect					158
 #define SE_AllStats					159	// Aura of Destruction
+#define SE_MakeDrunk				160
 #define SE_MeleeMitigation			168
 #define SE_CriticalHitChance		169
 #define SE_CrippBlowChance			171
@@ -257,6 +258,7 @@ enum RESISTTYPE
 #define SE_NoCombatSkills			311
 #define SE_DefensiveProc			323	//not implemented
 #define SE_CriticalDamageMob		330	//not implemented
+#define SE_BardAEDot				334	//needs a better name (spell id 703 and 730)
 
 #define DF_Permanent		50
 
@@ -272,7 +274,7 @@ struct SPDat_Spell_Struct
 /* 000 */	int			id;	// not used
 /* 001 */	char		name[32]; // Name of the spell
 /* 002 */	char		player_1[32]; // "PLAYER_1"
-/* 003 */	char		teleport_zone[32];	// Teleport zone, or item summoned
+/* 003 */	char		teleport_zone[32];	// Teleport zone, pet name summoned, or item summoned
 /* 004 */	char		you_cast[64]; // Message when you cast
 /* 005 */	char		other_casts[64]; // Message when other casts
 /* 006 */	char		cast_on_you[64]; // Message when spell is cast on you 
@@ -301,14 +303,14 @@ struct SPDat_Spell_Struct
 											// If it is a valid itemid it means this item is a focus as well
 /* 070 */	int16		formula[EFFECT_COUNT]; // Spell's value formula
 /* 082 */	int			LightType; // probaly another effecttype flag
-/* 083 */	int			goodEffect; // 1= very good ;) 2 = Translocate etc unknown4[1]
+/* 083 */	int			goodEffect; //0=detrimental, 1=Beneficial, 2=Beneficial, Group Only
 /* 084 */	int			Activated; // probaly another effecttype flag	
 /* 085 */	int			resisttype;
 /* 086 */	int			effectid[EFFECT_COUNT];	// Spell's effects
 /* 098 */	int			targettype;	// Spell's Target
 /* 099 */	int			basediff; // base difficulty fizzle adjustment
 /* 100 */	int			skill;
-/* 101 */	sint16		zonetype;
+/* 101 */	sint16		zonetype;	// 01=Outdoors, 02=dungeons, ff=Any 
 /* 102 */	int16		EnvironmentType;
 /* 103 */	int			TimeOfDay;
 /* 104 */	int8		classes[PLAYER_CLASS_COUNT]; // Classes, and their min levels
@@ -324,8 +326,16 @@ struct SPDat_Spell_Struct
 /* 155 */	int			descnum; // eqstr of description of spell
 /* 156 */	int			typedescnum; // eqstr of type description
 /* 157 */	int			effectdescnum; // eqstr of effect description
-/* 158 */	int			Spacing5[17];		
+/* 158 */	int			Spacing5[17];
 /* 175 */	// last field is 174
+/*
+Some fields which should be in here somewhere (MQ2):
+Deletable
+PvPResistBase
+PvPResistCalc
+PvPResistCap
+CanMGB
+*/
 };
 
 #ifdef NEW_LoadSPDat

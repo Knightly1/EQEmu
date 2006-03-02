@@ -1,6 +1,5 @@
+	void SignalNPC(int _signal_id);
 	FACTION_VALUE CheckNPCFactionAlly(sint32 other_faction);
-	FACTION_VALUE GetFactionCon(Mob* iOther);
-	void	GoToBind()	{ GMMove(org_x, org_y, org_z, org_heading); }
 	void	AddItem(int32 itemid, int8 charges, int8 slot = 0);
 	void	AddLootTable();
 	bool	IsRanger() { return rangerstance; }
@@ -25,9 +24,6 @@
 	int16 GetWaypointMax(){ return wp_m; }
 	sint16 GetGrid(){ return grid; }
 	int32 GetSp2(){ return spawn_group; }
-	void	Depop(bool StartSpawnTimer = true);
-	void	Stun(int duration);
-	inline bool	IsStunned() { return stunned; }
    inline bool	IsPVP() { return pvp; }
 	inline int8	CurrentPosition() { return position; }
 	inline int8	HasBanishCapability() { return banishcapability; }

@@ -16,7 +16,8 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 #ifdef WIN32
-	#include <winsock2.h>
+	#include <windows.h>
+	#include <winsock.h>
 #endif
 #include "debug.h"
 #include <string>
@@ -37,6 +38,11 @@
 	#include <arpa/inet.h>
 #endif
 #include "EQPacket.h"
+#include "EQLoginPacket.h"
+#include "EQChatPacket.h"
+#include "EQMailPacket.h"
+#include "EQWorldPacket.h"
+#include "EQZonePacket.h"
 #include "EQStream.h"
 #include "EQStreamFactory.h"
 #include "misc.h"
@@ -44,13 +50,9 @@
 #include "op_codes.h"
 #include "CRC16.h"
 
+uint16 EQStream::MaxWindowSize=2048;
 
 void EQStream::init() {
-	State=CLOSED;
-	StreamType=UnknownStream;
-	compressed=true;
-	encoded=false;
-	app_opcode_size=2;
 	active_users = 0;
 	Session=0;
 	Key=0;
@@ -68,6 +70,69 @@ void EQStream::init() {
 	oversize_length=0;
 	oversize_offset=0;
 	Factory = NULL;
+	RateThreshold=RATEBASE/250;
+	DecayRate=DECAYBASE/250;
+	BytesWritten=0;
+}
+
+EQApplicationPacket *EQStream::MakeApplicationPacket(EQProtocolPacket *p)
+{
+EQApplicationPacket *ap=NULL;
+	switch (StreamType) {
+		case LoginStream:
+			ap = p->MakeLoginPacket();
+			break;
+		case WorldStream:
+			ap = p->MakeWorldPacket();
+			break;
+		case ZoneStream:
+			ap = p->MakeZonePacket();
+			break;
+		case ChatStream:
+			ap = p->MakeChatPacket();
+			break;
+		case MailStream:
+			ap = p->MakeMailPacket();
+			break;
+		case UnknownStream:
+		case ChatOrMailStream:
+#ifdef EQN_DEBUG
+			cout << "*** Stream type undetermined, packet ignored" << endl;
+#endif
+			break;
+	}
+
+	return ap;
+}
+
+EQApplicationPacket *EQStream::MakeApplicationPacket(const unsigned char *buf, uint32 len)
+{
+EQApplicationPacket *ap=NULL;
+	switch (StreamType) {
+		case LoginStream:
+			ap = new EQLoginPacket(buf,len);
+			break;
+		case WorldStream:
+			ap = new EQWorldPacket(buf,len);
+			break;
+		case ZoneStream:
+			ap = new EQZonePacket(buf,len);
+			break;
+		case ChatStream:
+			ap = new EQChatPacket(buf,len);
+			break;
+		case ChatOrMailStream:
+		case MailStream:
+			ap = new EQMailPacket(buf,len);
+			break;
+		case UnknownStream:
+#ifdef EQN_DEBUG
+			cout << "*** Stream type undetermined, packet ignored" << endl;
+#endif
+			break;
+	}
+
+	return ap;
 }
 
 void EQStream::ProcessPacket(EQProtocolPacket *p)
@@ -77,8 +142,9 @@ uint32 processed=0,subpacket_length=0;
 		// Raw Application packet
 		if (p->opcode > 0xff) {
 			p->opcode = htons(p->opcode);  //byte order is backwards in the protocol packet
-			EQApplicationPacket *ap = p->MakeApplicationPacket(app_opcode_size);
-			InboundQueuePush(ap);
+			EQApplicationPacket *ap=MakeApplicationPacket(p);
+			if (ap)
+				InboundQueuePush(ap);
 			return;
 		}
 
@@ -106,84 +172,132 @@ uint32 processed=0,subpacket_length=0;
 			case OP_AppCombined: {
 				processed=0;
 				while(processed<p->size) {
-					EQApplicationPacket *ap;
+					EQApplicationPacket *ap=NULL;
 					if ((subpacket_length=(unsigned char)*(p->pBuffer+processed))!=0xff) {
-						ap=new EQApplicationPacket(p->pBuffer+processed+1,subpacket_length,app_opcode_size);
+						ap=MakeApplicationPacket(p->pBuffer+processed+1,subpacket_length);
 						processed+=subpacket_length+1;
 					} else {
 						subpacket_length=ntohs(*(uint16 *)(p->pBuffer+processed+1));
-						ap=new EQApplicationPacket(p->pBuffer+processed+3,subpacket_length,app_opcode_size);
+						ap=MakeApplicationPacket(p->pBuffer+processed+3,subpacket_length);
 						processed+=subpacket_length+3;
 					}
-					ap->copyInfo(p);
-					InboundQueuePush(ap);
+					if (ap) {
+						ap->copyInfo(p);
+						InboundQueuePush(ap);
+					}
 				}
 			}
 			break;
 			case OP_Packet: {
 				uint16 seq=ntohs(*(uint16 *)(p->pBuffer));
-				if (seq>=NextInSeq) {
-					if (seq>NextInSeq) {
-#ifdef COLLECTOR
-						PacketQueue[seq]=p->Copy();
-#else
-						SendOutOfOrderAck(seq);
+				sint8 check=CompareSequence(NextInSeq,seq);
+				if (check>0) {
+#ifdef EQN_DEBUG
+					cout << "*** Future packet: Expecting Seq=" << NextInSeq << ", but got Seq=" << seq << endl;
+					p->DumpRawHeader(seq);
+					cout << endl;
 #endif
-					} else {
-						SetNextAckToSend(seq);
-						NextInSeq++;
-						EQProtocolPacket *subp=new EQProtocolPacket(p->pBuffer+2,p->size-2);
-						subp->copyInfo(p);
-						ProcessPacket(subp);
-						delete subp;
-					}
-				} else {
+#ifdef COLLECTOR
+					PacketQueue[seq]=p->Copy();
+#ifdef EQN_DEBUG
+					cout << "     Queue size=" << PacketQueue.size() << endl;
+#endif
+#else
+					SendOutOfOrderAck(seq);
+#endif
+				} else if (check<0) {
 #ifdef EQN_DEBUG
 					cout << "*** Duplicate packet: Expecting Seq=" << NextInSeq << ", but got Seq=" << seq << endl;
 					p->DumpRawHeader(seq);
 					cout << endl;
 #endif
+				} else {
+#ifdef COLLECTOR
+					// In case we did queue one before as well.
+					EQProtocolPacket *qp=RemoveQueue(seq);
+					if (qp) {
+						delete qp;
+					}
+#endif
+					SetNextAckToSend(seq);
+					NextInSeq++;
+					// Check for a embedded OP_AppCombinded (protocol level 0x19)
+					if (*(p->pBuffer+2)==0x00 && *(p->pBuffer+3)==0x19) {
+						EQProtocolPacket *subp=new EQProtocolPacket(p->pBuffer+2,p->size-2);
+						subp->copyInfo(p);
+						ProcessPacket(subp);
+						delete subp;
+					} else {
+						EQApplicationPacket *ap=MakeApplicationPacket(p->pBuffer+2,p->size-2);
+						if (ap) {
+							ap->copyInfo(p);
+							InboundQueuePush(ap);
+						}
+					}
 				}
 			}
 			break;
 			case OP_Fragment: {
 				uint16 seq=ntohs(*(uint16 *)(p->pBuffer));
-				if (seq>=NextInSeq) {
-					if (seq>NextInSeq) {
-#ifdef COLLECTOR
-						PacketQueue[seq]=p->Copy();
-#else
-						SendOutOfOrderAck(seq);
+				sint8 check=CompareSequence(NextInSeq,seq);
+				if (check>0) {
+#ifdef EQN_DEBUG
+					cout << "*** Future packet: Expecting Seq=" << NextInSeq << ", but got Seq=" << seq << endl;
+					p->DumpRawHeader(seq);
+					cout << endl;
 #endif
-					} else {
-						SetNextAckToSend(seq);
-						NextInSeq++;
-						if (oversize_buffer) {
-							memcpy(oversize_buffer+oversize_offset,p->pBuffer+2,p->size-2);
-							oversize_offset+=p->size-2;
-							//cout << "Oversized is " << oversize_offset << "/" << oversize_length << " (" << (p->size-2) << ") Seq=" << seq << endl;
-							if (oversize_offset==oversize_length) {
-								EQApplicationPacket *ap=new EQApplicationPacket(oversize_buffer,oversize_offset,app_opcode_size);
-								ap->copyInfo(p);
-								InboundQueuePush(ap);
-								delete[] oversize_buffer;
-								oversize_buffer=NULL;
-								oversize_offset=0;
-							}
-						} else if (!oversize_buffer) {
-							oversize_length=ntohl(*(uint32 *)(p->pBuffer+2));
-							oversize_buffer=new unsigned char[oversize_length];
-							memcpy(oversize_buffer,p->pBuffer+6,p->size-6);
-							oversize_offset=p->size-6;
-							//cout << "Oversized is " << oversize_offset << "/" << oversize_length << " (" << (p->size-6) << ") Seq=" << seq << endl;
-						}
-					}
-				} else {
+#ifdef COLLECTOR
+					PacketQueue[seq]=p->Copy();
+#ifdef EQN_DEBUG
+					cout << "     Queue size=" << PacketQueue.size() << endl;
+#endif
+#else
+					SendOutOfOrderAck(seq);
+#endif
+				} else if (check<0) {
 #ifdef EQN_DEBUG
 					cout << "*** Duplicate packet: Expecting Seq=" << NextInSeq << ", but got Seq=" << seq << endl;
 					p->DumpRawHeader(seq);
 					cout << endl;
 #endif
+				} else {
+#ifdef COLLECTOR
+					// In case we did queue one before as well.
+					EQProtocolPacket *qp=RemoveQueue(seq);
+					if (qp) {
+						delete qp;
+					}
+#endif
+					SetNextAckToSend(seq);
+					NextInSeq++;
+					if (oversize_buffer) {
+						memcpy(oversize_buffer+oversize_offset,p->pBuffer+2,p->size-2);
+						oversize_offset+=p->size-2;
+						//cout << "Oversized is " << oversize_offset << "/" << oversize_length << " (" << (p->size-2) << ") Seq=" << seq << endl;
+						if (oversize_offset==oversize_length) {
+							if (*(p->pBuffer+2)==0x00 && *(p->pBuffer+3)==0x19) {
+								EQProtocolPacket *subp=new EQProtocolPacket(oversize_buffer,oversize_offset);
+								subp->copyInfo(p);
+								ProcessPacket(subp);
+								delete subp;
+							} else {
+								EQApplicationPacket *ap=MakeApplicationPacket(oversize_buffer,oversize_offset);
+								if (ap) {
+									ap->copyInfo(p);
+									InboundQueuePush(ap);
+								}
+							}
+							delete[] oversize_buffer;
+							oversize_buffer=NULL;
+							oversize_offset=0;
+						}
+					} else if (!oversize_buffer) {
+						oversize_length=ntohl(*(uint32 *)(p->pBuffer+2));
+						oversize_buffer=new unsigned char[oversize_length];
+						memcpy(oversize_buffer,p->pBuffer+6,p->size-6);
+						oversize_offset=p->size-6;
+						//cout << "Oversized is " << oversize_offset << "/" << oversize_length << " (" << (p->size-6) << ") Seq=" << seq << endl;
+					}
 				}
 			}
 			break;
@@ -199,6 +313,12 @@ uint32 processed=0,subpacket_length=0;
 			}
 			break;
 			case OP_SessionRequest: {
+#ifndef COLLECTOR
+				if (GetState()==ESTABLISHED) {
+					SendDisconnect();
+					break;
+				}
+#endif
 				//cout << "Got OP_SessionRequest" << endl;
 				init();
 				SessionRequest *Request=(SessionRequest *)p->pBuffer;
@@ -225,15 +345,17 @@ uint32 processed=0,subpacket_length=0;
 				encoded=(Response->Format&FLAG_ENCODED);
 
 				// Kinda kludgy, but trie for now
-				if (compressed) {
-					if (remote_port==9000 || (remote_port==0 && p->src_port==9000))
-						SetStreamType(WorldStream);
+				if (StreamType==UnknownStream) {
+					if (compressed) {
+						if (remote_port==9000 || (remote_port==0 && p->src_port==9000))
+							SetStreamType(WorldStream);
+						else
+							SetStreamType(ZoneStream);
+					} else if (encoded)
+						SetStreamType(ChatOrMailStream);
 					else
-						SetStreamType(ZoneStream);
-				} else if (encoded)
-					SetStreamType(ChatOrMailStream);
-				else
-					SetStreamType(LoginStream);
+						SetStreamType(LoginStream);
+				}
 			}
 			break;
 			case OP_SessionDisconnect: {
@@ -244,7 +366,7 @@ uint32 processed=0,subpacket_length=0;
 			case OP_OutOfOrderAck: {
 #ifndef COLLECTOR
 				uint16 seq=ntohs(*(uint16 *)(p->pBuffer));
-				if (seq>GetMaxAckReceived()  && seq < NextOutSeq) {
+				if (CompareSequence(GetMaxAckReceived(),seq)>0 && CompareSequence(NextOutSeq,seq) < 0) {
 					SetLastSeqSent(GetMaxAckReceived());
 				}
 #endif
@@ -257,6 +379,7 @@ uint32 processed=0,subpacket_length=0;
 				Stats->packets_recieved=Stats->packets_sent;
 				Stats->packets_sent=x;
 				NonSequencedPush(new EQProtocolPacket(OP_SessionStatResponse,p->pBuffer,p->size));
+				AdjustRates(ntohl(Stats->average_delta));
 #endif
 			}
 			break;
@@ -267,8 +390,9 @@ uint32 processed=0,subpacket_length=0;
 			}
 			break;
 			default:
-				EQApplicationPacket *ap = p->MakeApplicationPacket(app_opcode_size);
-				InboundQueuePush(ap);
+				EQApplicationPacket *ap = MakeApplicationPacket(p);
+				if (ap)
+					InboundQueuePush(ap);
 				break;
 		}
 	}
@@ -276,15 +400,35 @@ uint32 processed=0,subpacket_length=0;
 
 void EQStream::QueuePacket(const EQApplicationPacket *p, bool ack_req)
 {
+	if(p == NULL)
+		return;
+	
 	EQApplicationPacket *newp = p->Copy();
 
-	FastQueuePacket(&newp, ack_req);
+	if (newp != NULL)
+		FastQueuePacket(&newp, ack_req);
 }
 
 void EQStream::FastQueuePacket(EQApplicationPacket **p, bool ack_req)
 {
-EQApplicationPacket *pack=*p;
-	*p=0;
+	EQApplicationPacket *pack=*p;
+	*p = NULL;		//clear caller's pointer.. effectively takes ownership
+	
+	if(pack == NULL)
+		return;
+	
+	//make sure this packet is compatible with this stream
+	if(StreamType == UnknownStream || StreamType == ChatOrMailStream) {
+#ifdef EQN_DEBUG
+			cout << "*** Stream type undetermined, packet ignored" << endl;
+#endif
+		return;
+	}
+	if(pack->GetPacketType() != StreamType) {
+		cout << "Trying to queue a packet of type " << pack->GetPacketType() << " into a stream of type " << StreamType << ", dropping it." << endl;
+		return;
+	}
+	
 	if (!ack_req) {
 		NonSequencedPush(new EQProtocolPacket(pack->opcode,pack->pBuffer,pack->size));
 		delete pack;
@@ -293,6 +437,7 @@ EQApplicationPacket *pack=*p;
 	}
 	return;
 
+/*	we are combining at send time now, so we don't need this here
 	MCombinedAppPacket.lock();
 	if (!CombinedAppPacket)
 		CombinedAppPacket=pack;
@@ -313,10 +458,7 @@ EQApplicationPacket *pack=*p;
 		}
 	}
 	MCombinedAppPacket.unlock();
-#ifndef COLLECTOR
-	if (Factory)
-		Factory->SignalWriter();
-#endif
+*/
 }
 
 void EQStream::SendPacket(EQApplicationPacket *p)
@@ -370,8 +512,6 @@ void EQStream::SequencedPush(EQProtocolPacket *p)
 	SequencedQueue[NextOutSeq]=p;
 	NextOutSeq++;
 	MOutboundQueue.unlock();
-	if (Factory)
-		Factory->SignalWriter();
 #endif
 }
 
@@ -381,8 +521,6 @@ void EQStream::NonSequencedPush(EQProtocolPacket *p)
 	MOutboundQueue.lock();
 	NonSequencedQueue.push_back(p);
 	MOutboundQueue.unlock();
-	if (Factory)
-		Factory->SignalWriter();
 #endif
 }
 
@@ -406,6 +544,15 @@ long maxack;
 bool SeqEmpty=false,NonSeqEmpty=false;
 map<uint16, EQProtocolPacket *>::iterator sitr;
 vector<EQProtocolPacket *>::iterator nsitr;
+
+	// Check our rate to make sure we can send more
+	MRate.lock();
+	sint32 threshold=RateThreshold;
+	MRate.unlock();
+	if (BytesWritten > threshold) {
+		//cout << "Over threshold: " << BytesWritten << " > " << threshold << endl;
+		return;
+	}
 
 	MCombinedAppPacket.lock();
 	EQApplicationPacket *CombPack=CombinedAppPacket;
@@ -442,7 +589,6 @@ vector<EQProtocolPacket *>::iterator nsitr;
 	// Get the first non-sequenced packet in the list
 	nsitr=NonSequencedQueue.begin();
 
-	int count=0;
 	// Loop until both are empty or MaxSends is reached
 	while(!SeqEmpty || !NonSeqEmpty)  {
 
@@ -459,8 +605,8 @@ vector<EQProtocolPacket *>::iterator nsitr;
 			} else if (!p->combine(*nsitr)) {
 				// Tryint to combine this packet with the base didn't work (too big maybe)
 				// So just send the base packet (we'll try this packet again later)
-				++count;
 				ReadyToSend.push_back(p);
+				BytesWritten+=p->size;
 				p=NULL;
 			} else {
 				// Combine worked, so just remove this packet and it's spot in the queue
@@ -473,7 +619,7 @@ vector<EQProtocolPacket *>::iterator nsitr;
 			NonSeqEmpty=true;
 		}
 
-		if (ReadyToSend.size()>=MaxSends) {
+		if (BytesWritten > threshold) {
 			// Sent enough this round, lets stop to be fair
 			break;
 		}
@@ -488,8 +634,8 @@ vector<EQProtocolPacket *>::iterator nsitr;
 			} else if (!p->combine(sitr->second)) {
 				// Trying to combine this packet with the base didn't work (too big maybe)
 				// So just send the base packet (we'll try this packet again later)
-				++count;
 				ReadyToSend.push_back(p);
+				BytesWritten+=p->size;
 				p=NULL;
 			} else {
 				// Combine worked
@@ -501,7 +647,7 @@ vector<EQProtocolPacket *>::iterator nsitr;
 			SeqEmpty=true;
 		}
 
-		if (ReadyToSend.size()>=MaxSends) {
+		if (BytesWritten > threshold) {
 			// Sent enough this round, lets stop to be fair
 			break;
 		}
@@ -512,6 +658,7 @@ vector<EQProtocolPacket *>::iterator nsitr;
 	// We have a packet still, must have run out of both seq and non-seq, so send it
 	if (p) {
 		ReadyToSend.push_back(p);
+		BytesWritten+=p->size;
 	}
 
 	// Send all the packets we "made"
@@ -751,14 +898,13 @@ void EQStream::Process(const unsigned char *buffer, const uint32 length)
 static unsigned char newbuffer[2048];
 uint32 newlength=0;
 	if (EQProtocolPacket::ValidateCRC(buffer,length,Key)) {
-		if (encoded) {
-			EQProtocolPacket::ChatDecode(newbuffer,newlength-(newlength>8?2:0),Key);
+		if (compressed) {
+			newlength=EQProtocolPacket::Decompress(buffer,length,newbuffer,2048);
 		} else {
 			memcpy(newbuffer,buffer,length);
 			newlength=length;
-		}
-		if (compressed) {
-			newlength=EQProtocolPacket::Decompress(buffer,length,newbuffer,2048);
+			if (encoded)
+				EQProtocolPacket::ChatDecode(newbuffer,newlength-2,Key);
 		}
 		if (buffer[1]!=0x01 && buffer[1]!=0x02 && buffer[1]!=0x1d)
 			newlength-=2;
@@ -767,7 +913,7 @@ uint32 newlength=0;
 	} else {
 #ifdef EQN_DEBUG
 		cout << "Incoming packet failed checksum:" <<endl;
-		dump_message_column(const_cast<unsigned char *>(buffer),length,"CRC failed: ");
+		dump_message_column(const_cast<unsigned char *>(buffer),length,"CRC failed: ", stderr);
 #endif
 	}
 }
@@ -802,6 +948,7 @@ long EQStream::GetLastAckSent()
 void EQStream::SetMaxAckReceived(uint32 seq)
 {
 map<unsigned short, EQProtocolPacket *>::iterator itr;
+
 	MAcks.lock();
 	MaxAckReceived=seq;
 	MAcks.unlock();
@@ -814,7 +961,6 @@ map<unsigned short, EQProtocolPacket *>::iterator itr;
 		SequencedQueue.erase(itr);
 	}
 	MOutboundQueue.unlock();
-
 }
 
 void EQStream::SetNextAckToSend(uint32 seq)
@@ -822,10 +968,6 @@ void EQStream::SetNextAckToSend(uint32 seq)
 	MAcks.lock();
 	NextAckToSend=seq;
 	MAcks.unlock();
-#ifndef COLLECTOR
-	if (Factory)
-		Factory->SignalWriter();
-#endif
 }
 
 void EQStream::SetLastAckSent(uint32 seq)
@@ -846,16 +988,23 @@ void EQStream::SetLastSeqSent(uint32 seq)
 void EQStream::ProcessQueue()
 {
 	if (PacketQueue.size()) {
-		map<unsigned short,EQProtocolPacket *>::iterator head;
-		while((head=PacketQueue.begin()) != PacketQueue.end() && head->first <= NextInSeq) {
-			EQProtocolPacket *qp=head->second;
-			if ( head->first == NextInSeq) {
-				ProcessPacket(qp);
-			}
-			PacketQueue.erase(head);
+		EQProtocolPacket *qp=NULL;
+		while((qp=RemoveQueue(NextInSeq))!=NULL) {
+			ProcessPacket(qp);
 			delete qp;
 		}
 	}
+}
+
+EQProtocolPacket *EQStream::RemoveQueue(uint16 seq)
+{
+map<unsigned short,EQProtocolPacket *>::iterator itr;
+EQProtocolPacket *qp=NULL;
+	if ((itr=PacketQueue.find(seq))!=PacketQueue.end()) {
+		qp=itr->second;
+		PacketQueue.erase(itr);
+	}
+	return qp;
 }
 #endif
 
@@ -913,3 +1062,38 @@ string EQStream::StreamTypeString(EQStreamType t)
 	return "UnknownType";
 }
 
+sint8 EQStream::CompareSequence(uint16 expected_seq , uint16 seq)
+{
+	if (expected_seq==seq) {
+		// Curent
+		return 0;
+	}  else if ((seq > expected_seq && (uint32)seq < ((uint32)expected_seq + EQStream::MaxWindowSize)) || seq < (expected_seq - EQStream::MaxWindowSize)) {
+		// Future
+		return 1;
+	} else {
+		// Past
+		return -1;
+	}
+}
+
+void EQStream::Decay()
+{
+	MRate.lock();
+	uint32 rate=DecayRate;
+	MRate.unlock();
+	if (BytesWritten>0) {
+		BytesWritten-=rate;
+		if (BytesWritten<0)
+			BytesWritten=0;
+	}
+}
+
+void EQStream::AdjustRates(uint32 average_delta)
+{
+	if (average_delta) {
+		MRate.lock();
+		RateThreshold=RATEBASE/average_delta;
+		DecayRate=DECAYBASE/average_delta;
+		MRate.unlock();
+	}
+}

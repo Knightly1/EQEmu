@@ -8,9 +8,13 @@
 #include <map>
 #include <iostream>
 #include <zlib.h>
+#ifndef WIN32
+#include <sys/time.h>
+#endif
 #include <time.h>
 #include "misc.h"
 #include "types.h"
+
 using namespace std;
 
 #define ENC(c) (((c) & 0x3f) + ' ')
@@ -19,7 +23,7 @@ using namespace std;
 map<int,string> DBFieldNames;
 
 #ifndef WIN32
-#ifdef FREEBSD
+#if defined(FREEBSD) || defined(__CYGWIN__)
 int print_stacktrace()
 {
 	printf("Insert stack trace here...\n");
@@ -74,12 +78,13 @@ bool ItemParse(const char *data, int length, map<int,map<int,string> > &items, i
 {
 int i;
 char *end,*ptr;
-char temp[256];
 map<int,string> field;
 static char *buffer=NULL;
 static int buffsize=0;
+static char *temp=NULL;
 	if (!buffsize || buffsize<(length+1)) {
 		buffer=(char *)realloc(buffer,length+1);
+		temp=(char *)realloc(temp,length+1);
 		buffsize=length+1;
 	}
 	memcpy(buffer,data,length);
@@ -110,7 +115,7 @@ static int buffsize=0;
 		return false;
 	}
 	ptr++;
-
+	
 	for(i=(name_pos-1);i<(max_field-1);i++) {
 		end=ptr-1;
 		while((end=strchr(end+1,'|'))!=NULL) {
@@ -174,7 +179,6 @@ static int buffsize=0;
 		}
 
 	}
-
 	return true;
 }
 
@@ -459,29 +463,29 @@ int i;
 	}
 }
 
-
-
-void dump_message_column(unsigned char *buffer, unsigned long length, string leader)
+void dump_message_column(unsigned char *buffer, unsigned long length, string leader, FILE *to)
 {
 unsigned long i,j;
 unsigned long rows,offset=0;
 	rows=(length/16)+1;
 	for(i=0;i<rows;i++) {
-		printf("%s0x%04lx: ",leader.c_str(),i*16);
+		fprintf(to, "%s%05ld: ",leader.c_str(),i*16);
 		for(j=0;j<16;j++) {
+			if(j == 8)
+				fprintf(to, "- ");
 			if (offset+j<length)
-				printf("%02x ",*(buffer+offset+j));
+				fprintf(to, "%02x ",*(buffer+offset+j));
 			else
-				printf("   ");
+				fprintf(to, "   ");
 		}
-		printf("| ");
+		fprintf(to, "| ");
 		for(j=0;j<16;j++,offset++) {
 			if (offset<length) {
 				char c=*(buffer+offset);
-				printf("%c",isprint(c) ? c : '.');
+				fprintf(to, "%c",isprint(c) ? c : '.');
 			}
 		}
-		printf("\n");
+		fprintf(to, "\n");
 	}
 }
 
@@ -496,11 +500,6 @@ union { unsigned long ip; struct { unsigned char a,b,c,d; } octet;} ipoctet;
 	return string(temp);
 }
 
-string timestamp(time_t now)
-{
-	return string_from_time("[%Y%m%d.%H%M%S] ",now);
-}
-
 string string_from_time(string pattern, time_t now)
 {
 struct tm *now_tm;
@@ -513,4 +512,101 @@ char time_string[51];
 	strftime(time_string,51,pattern.c_str(),now_tm);
 
 	return string(time_string);
+}
+
+string timestamp(time_t now)
+{
+	return string_from_time("[%Y%m%d.%H%M%S] ",now);
+}
+
+
+string pop_arg(string &s, string seps, bool obey_quotes)
+{
+string ret;
+unsigned long i;
+bool in_quote=false;
+
+	unsigned long length=s.length();
+	for(i=0;i<length;i++) {
+		char c=s[i];
+		if (c=='"' && obey_quotes) {
+			in_quote=!in_quote;
+		}
+		if (in_quote)
+			continue;
+		if (seps.find(c)!=string::npos) { 
+			break;
+		}
+	}
+
+	if (i==length) {
+		ret=s;
+		s="";
+	} else {
+		ret=s.substr(0,i);
+		s.erase(0,i+1);
+	}
+
+
+	return ret;
+}
+
+int EQsprintf(char *buffer, const char *pattern, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5, const char *arg6, const char *arg7, const char *arg8, const char *arg9)
+{
+const char *args[9],*ptr;
+char *bptr;
+	args[0]=arg1;
+	args[1]=arg2;
+	args[2]=arg3;
+	args[3]=arg4;
+	args[4]=arg5;
+	args[5]=arg6;
+	args[6]=arg7;
+	args[7]=arg8;
+	args[8]=arg9;
+	for(ptr=pattern,bptr=buffer;*ptr;) {
+		switch (*ptr) {
+			case '%':
+				ptr++;
+				switch (*ptr) {
+					case '1':
+					case '2':
+					case '3':
+					case '4':
+					case '5':
+					case '6':
+					case '7':
+					case '8':
+					case '9':
+						strcpy(bptr,args[*ptr-'0'-1]);
+						bptr+=strlen(args[*ptr-'0'-1]);
+						break;
+				}
+				break;
+			default:
+				*bptr=*ptr;
+				bptr++;
+		}
+		ptr++;
+	}
+
+	*bptr=0;
+	return (bptr-buffer);
+}
+
+string generate_key(int length)
+{
+string key;
+//TODO: write this for win32...
+#ifndef WIN32
+int i;
+timeval now;
+	static const char *chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	for(i=0;i<length;i++) {
+		gettimeofday(&now,NULL);
+		srand(now.tv_sec^now.tv_usec);
+		key+=(char)chars[(int) (36.0*rand()/(RAND_MAX+1.0))];
+	}
+#endif
+	return key;
 }

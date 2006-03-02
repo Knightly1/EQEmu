@@ -42,7 +42,8 @@ struct ZonePoint {
 	float target_y;
 	float target_z;
 	float target_heading;
-	char  target_zone[16];
+	//char  target_zone[16];
+	int16 target_zone_id;
 };
 struct ZoneClientAuth_Struct {
 	int32	ip;			// client's IP address
@@ -96,9 +97,9 @@ public:
 	bool	LoadGroundSpawns();
 	
 	int32	CountSpawn2();
-	ZonePoint* GetClosestZonePoint(float x, float y, float z, const char* to_name);
-	ZonePoint* GetClosestZonePoint(float x, float y, float z, int32	to);
-	ZonePoint* GetClosestZonePointWithoutZone(float x, float y, float z);
+	ZonePoint* GetClosestZonePoint(float x, float y, float z, const char* to_name, float max_distance = 40000.0f);
+	ZonePoint* GetClosestZonePoint(float x, float y, float z, int32	to, float max_distance = 40000.0f);
+	ZonePoint* GetClosestZonePointWithoutZone(float x, float y, float z, float max_distance = 40000.0f);
 	SpawnGroupList spawn_group_list;
 
 	bool RemoveSpawnEntry(uint32 spawnid);
@@ -147,6 +148,7 @@ public:
 	int8	zone_weather;
 
 	SpawnConditionManager spawn_conditions;
+	
 	EQTime	zone_time;
 	void	GetTimeSync();
 	void	SetDate(int16 year, int8 month, int8 day, int8 hour, int8 minute);

@@ -28,9 +28,22 @@
 	virtual Const_char * GetName();
 	void Depop(bool StartSpawnTimer = true);
 	
+	int8	MaxSkill(int16 skillid);
+	void	RogueAssassinate(Mob* other);
+	bool	BehindMob(Mob* other = 0, float playerx = 0.0f, float playery = 0.0f);
+	void SetLevel(uint8 in_level, bool command = false);
+	
 	void SetSkill(int in_skill_num, int8 in_skill_value);
 	uint32 GetSkill(int skill_num);
+	void SendWearChange(int8 material_slot);
+	sint32 GetEquipment(int8 material_slot);	// returns item id
+	sint32 GetEquipmentMaterial(int8 material_slot);
+	sint32 GetEquipmentColor(int8 material_slot);
+	bool IsMoving();
+	void GoToBind();
 	void Gate();
+	bool Attack(Mob* other, int Hand = 13, bool FromRiposte = false)
+	void Damage(Mob* from, sint32 damage, int16 spell_id, int8 attack_skill = 0x04, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false);
 	void Heal();
 	void SetMaxHP();
 	int32 GetLevelCon(int8 iOtherLevel);
@@ -40,10 +53,9 @@
 	void GMMove(float x, float y, float z, float heading = 0.01);
 	void SendPosUpdate(int8 iSendToSelf = 0);
 	void SendPosition();
-	bool Rezzed();
 	bool HasProcs();
 	//bool CheckLos(Mob* other);
-	bool IsInvisible();
+	bool IsInvisible(Mob *other = 0);
 	void SetInvisible(bool state);
 	bool FindBuff(int16 spellid);
 	bool	FindType(int8 type, bool bOffensive = false, int16 threshold = 100);
@@ -138,9 +150,9 @@
 	inline bool	IsCasting();
 	int16	CastingSpellID();
 
-	void	SetAppearance(int8 app, bool iIgnoreSelf = true);
+	void	SetAppearance(EmuAppearance app, bool iIgnoreSelf = true);
 
-	inline const int8&	GetAppearance();
+	inline EmuAppearance	GetAppearance();
 	inline const int8&	GetRunAnimSpeed();
 	inline void			SetRunAnimSpeed(sint8 in);
 
@@ -187,7 +199,7 @@
 	void				ResumeWandering();
 	void				PauseWandering(int pausetime);
 	void				MoveTo(float mtx, float mty, float mtz);
-	FACTION_VALUE GetFactionCon(Mob* iOther);
+	FACTION_VALUE GetReverseFactionCon(Mob* iOther);
 	inline const bool&	IsAIControlled();
 	inline const float&	GetGuardX();
 	inline const float&	GetGuardY();
@@ -252,7 +264,7 @@
 	int32	GetLevelHP(int8 tlevel);
 	int16	CheckAggroAmount(int16 spellid);
 	int16	CheckHealAggroAmount(int16 spellid);
-	virtual uint16 GetAA(uint8 aa_id);
+	virtual int32 GetAA(int32 aa_id);
 	bool DivineAura();
 	
 //END MOB METHODS

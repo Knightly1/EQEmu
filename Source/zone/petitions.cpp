@@ -36,7 +36,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "../common/packet_functions.h"
 #include "../common/packet_dump.h"
 #include "../common/packet_dump_file.h"
-#include "../common/eq_opcodes.h"
+#include "../common/emu_opcodes.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/servertalk.h"
 #include "entity.h"
@@ -51,7 +51,7 @@ extern WorldServer worldserver;
 
 
 void Petition::SendPetitionToPlayer(Client* clientto) {
-	APPLAYER* outapp = new APPLAYER(OP_PetitionCheckout,sizeof(Petition_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_PetitionCheckout,sizeof(Petition_Struct));
 	Petition_Struct* pet = (Petition_Struct*) outapp->pBuffer;
 	strcpy(pet->accountid,this->GetAccountName());
 	strcpy(pet->lastgm,this->GetLastGM());

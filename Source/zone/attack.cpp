@@ -69,56 +69,56 @@ bool Mob::AttackAnimation(int &attack_skill, int16 &skillinuse, int Hand, const 
 {
 	// Determine animation
 	int type = 0;
-	if (weapon && weapon->IsType(ItemTypeCommon)) {
+	if (weapon && weapon->IsType(ItemClassCommon)) {
 		const Item_Struct* item = weapon->GetItem();
 #if EQDEBUG >= 11
-			LogFile->write(EQEMuLog::Debug, "Weapon skill:%i", item->Common.ItemUse);
+			LogFile->write(EQEMuLog::Debug, "Weapon skill:%i", item->Common.ItemType);
 #endif		
-		switch (item->Common.ItemUse)
+		switch (item->Common.ItemType)
 		{
-		case ItemUse1HS: // 1H Slashing
+		case ItemType1HS: // 1H Slashing
 		{
 			attack_skill = 1;
 			skillinuse = _1H_SLASHING;
 			type = anim1HWeapon;
 			break;
 		}
-		case ItemUse2HS: // 2H Slashing
+		case ItemType2HS: // 2H Slashing
 		{
 			attack_skill = 1;
 			skillinuse = _2H_SLASHING;
 			type = anim2HSlashing;
 			break;
 		}
-		case ItemUsePierce: // Piercing
+		case ItemTypePierce: // Piercing
 		{
 			attack_skill = 36;
 			skillinuse = PIERCING;
 			type = animPiercing;
 			break;
 		}
-		case ItemUse1HB: // 1H Blunt
+		case ItemType1HB: // 1H Blunt
 		{
 			attack_skill = 0;
 			skillinuse = _1H_BLUNT;
 			type = anim1HWeapon;
 			break;
 		}
-		case ItemUse2HB: // 2H Blunt
+		case ItemType2HB: // 2H Blunt
 		{
 			attack_skill = 0;
 			skillinuse = _2H_BLUNT;
 			type = anim2HWeapon;
 			break;
 		}
-		case ItemUse2HPierce: // 2H Piercing
+		case ItemType2HPierce: // 2H Piercing
 		{
 			attack_skill = 36;
 			skillinuse = PIERCING;
 			type = anim2HWeapon;
 			break;
 		}
-		case ItemUseHand2Hand:
+		case ItemTypeHand2Hand:
 		{
 			attack_skill = 4;
 			skillinuse = HAND_TO_HAND;
@@ -288,7 +288,10 @@ bool Mob::CheckHitChance(Mob* other, int8 attack_skill, int Hand, int16 skillinu
 #endif*/
 	
 	//I dont think this is 100% correct, but at least it does something...
-	chancetohit += attacker->spellbonuses.MeleeSkillCheck + attacker->itembonuses.MeleeSkillCheck;
+	if(attacker->spellbonuses.MeleeSkillCheckSkill == attack_skill || attacker->spellbonuses.MeleeSkillCheckSkill == 255)
+		chancetohit += attacker->spellbonuses.MeleeSkillCheck;
+	if(attacker->itembonuses.MeleeSkillCheckSkill == attack_skill || attacker->itembonuses.MeleeSkillCheckSkill == 255)
+		chancetohit += attacker->itembonuses.MeleeSkillCheck;
 	
 	
 	//add in our hit chance bonuses if we are using the right skill
@@ -330,8 +333,16 @@ bool Mob::CheckHitChance(Mob* other, int8 attack_skill, int Hand, int16 skillinu
 	return(true);
 }
 
-// solar: called when a mob is attacked, does the checks to see if it's a hit
-// and does other mitigation checks.  'this' is the mob being attacked.
+/* solar: called when a mob is attacked, does the checks to see if it's a hit
+ *  and does other mitigation checks.  'this' is the mob being attacked.
+ * 
+ * special return values:
+ *    -1 - block
+ *    -2 - parry
+ *    -3 - riposte
+ *    -4 - dodge
+ * 
+ */
 bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 {
 	float skill;
@@ -377,11 +388,13 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 		}
 		
 		//handle damage increase diciplines + items
-		int mod = attacker->spellbonuses.DamageModifier + attacker->itembonuses.DamageModifier;
+		//this is completely wrong, and needs to account for both attacker and defenders modifieres
+		/*int mod = attacker->spellbonuses.DamageModifier + attacker->itembonuses.DamageModifier;
 		if(mod < -99)
 			damage = 0;	//all absorbed, should this be legal?
 		else
 			damage = damage * (100 + mod) / 100;
+		*/
 	}
 	
 #if ATTACK_DEBUG>=15
@@ -605,8 +618,11 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		weapon = GetInv().GetItem(SLOT_SECONDARY);
 	
 	const Item_Struct *weapon_item = NULL;
-	if(weapon != NULL)
+	if(weapon != NULL) {
+		if (!weapon->IsWeapon())
+			return(false);
 		weapon_item = weapon->GetItem();
+	}
 	
 	// calculate attack_skill and skillinuse depending on hand and weapon
 	// also send Packet to near clients
@@ -625,118 +641,121 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	if (skillinuse == HIGHEST_SKILL+1) { // the fallthru, only do 1 damage
 		damage = 1;
 	}
-	else
-	{
-		if ( damage >= 0 ) {
-			CheckIncreaseSkill(skillinuse, -10);
-			CheckIncreaseSkill(OFFENSE, -10);
-
-			if(skillinuse == 28 || !weapon) // weapon is hand-to-hand
-			{
-				//dont some weapons use the hand to hand skill?
-				if(GetClass() == MONK || GetClass() == BEASTLORD)
-					weapon_damage = GetMonkHandToHandDamage();	// Damage changes based on level
-				else
-					weapon_damage = 2; // This isn't quite right, something more like level/10 is more appropriate
-			}
-			else //not hand to hand and we have a weapon
-			{
-				if (weapon->IsWeapon()) {
-					weapon_damage = weapon->GetItem()->Common.Damage;
-					if (weapon_damage < 1)
-						weapon_damage = 1;
-				} else {
-					weapon_damage = 1;
-				}
-			}
-			
-			/*#if 0 // Racial bane damage
-						if (weapon && weapon->Common.BaneDmgAmt && weapon->Common.BaneDmgRace && other && other->GetRace() == weapon->common.BaneDMGRace) {
-							weapon_damage += weapon->common.BaneDMG;
-						}
-			#endif // Racial bane damage*/
-			
-			/*#if 0 // Body bane damage
-						if (weapon && weapon->Common.BaneDmgAmt && weapon->Common.bBaneDMGBody && other && other->GetBodyType() == weapon->common.BaneDMGBody) {
-							weapon_damage += weapon->common.BaneDMG;
-						}
-			#endif // Body bane damage*/
-			
-			min_hit = 1;
-			max_hit = (int) (weapon_damage * (( ((float)GetSTR()*2) + (float)GetSkill(skillinuse)*1.5+ (float)mylevel) / 100));	// Apply damage formula
-			/*#if 0 // Weighted MDF type damage
-				int magic_number = 0;
-				int weighted = 0;
-				if (GetLevel() >= 25) {
-					max_hit =  (int)(weapon_damage * (( ((float)GetSTR()) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100));	// Apply damage formula
-					min_hit = (GetLevel()-25)/3; // FIXME Brutal hack for Damage bonus this is here somewhere but
-					if (Hand != 13)
-						min_hit = 1;
-					magic_number = 2* weapon_damage + (level-25)/3;
-					weighted = (int)(0.9 * (weapon_damage+min_hit) + 0.1 * max_hit);
-				}
-			#endif // Weighted MDF type damage*/
-			
-			// Only apply the damage bonus to the main hand
-			if(Hand == 13)	// Kaiyodo - If we're not using the DWDA stuff, will always be the primary hand
-			{
-				int damage_bonus = GetWeaponDamageBonus(weapon_item);	// Can be NULL, will then assume fists
-				min_hit += damage_bonus;
-				max_hit += damage_bonus;
-			}
-			
-			min_hit = min_hit * (100 + itembonuses.MinDamageModifier + spellbonuses.MinDamageModifier) / 100;
+	else if ( damage >= 0 ) {
+		CheckIncreaseSkill(skillinuse, -10);
+		CheckIncreaseSkill(OFFENSE, -10);
 		
-			if(max_hit <= min_hit)
-				damage = min_hit;
+		/*
+			Hand to hand weapons are treated just like any other weapon
+			and monks gain no advantage from using them. I dont know
+			if this is
+		*/
+		
+		if(!weapon)		//we have no weapon, use fists
+		{
+			if(GetClass() == MONK || GetClass() == BEASTLORD)
+				weapon_damage = GetMonkHandToHandDamage();	// Damage changes based on level
 			else
-				damage = (int32)min_hit + MakeRandomInt(0, max_hit - min_hit + 1);
-			
-			//this still isnt the right place for this...
-			//also, is this damage supposed to be seperate??
-			// Elemental damage
-			if(weapon_item && weapon_item->Common.ElemDmg) {
-				float resist = other->ResistSpell(weapon_item->Common.ElemDmgType, 0, this);
-				if(resist > 0) {
-					damage += (int)( weapon_item->Common.ElemDmg * resist / 100.0f);
-				} //else: print message?
+				weapon_damage = 2; // This isn't quite right, something more like level/10 is more appropriate
+		
+		} else { //we have a weapon
+			weapon_damage = weapon->GetItem()->Common.Damage;
+			if (weapon_damage < 1)
+				weapon_damage = 1;
+		}
+		
+		/*#if 0 // Racial bane damage
+					if (weapon && weapon->Common.BaneDmgAmt && weapon->Common.BaneDmgRace && other && other->GetRace() == weapon->common.BaneDMGRace) {
+						weapon_damage += weapon->common.BaneDMG;
+					}
+		#endif // Racial bane damage*/
+		
+		/*#if 0 // Body bane damage
+					if (weapon && weapon->Common.BaneDmgAmt && weapon->Common.bBaneDMGBody && other && other->GetBodyType() == weapon->common.BaneDMGBody) {
+						weapon_damage += weapon->common.BaneDMG;
+					}
+		#endif // Body bane damage*/
+		
+		//berserker damage bonus
+		if(berserk && GetClass() == BERSERKER) {
+			int bonus = 3 + GetLevel()/10;		//unverified
+			weapon_damage = weapon_damage * (100+bonus) / 100;
+		}
+		
+		min_hit = 1;
+		max_hit = (int) (weapon_damage * (( ((float)GetSTR()*2) + (float)GetSkill(skillinuse)*1.5+ (float)mylevel) / 100));	// Apply damage formula
+		/*#if 0 // Weighted MDF type damage
+			int magic_number = 0;
+			int weighted = 0;
+			if (GetLevel() >= 25) {
+				max_hit =  (int)(weapon_damage * (( ((float)GetSTR()) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100));	// Apply damage formula
+				min_hit = (GetLevel()-25)/3; // FIXME Brutal hack for Damage bonus this is here somewhere but
+				if (Hand != 13)
+					min_hit = 1;
+				magic_number = 2* weapon_damage + (level-25)/3;
+				weighted = (int)(0.9 * (weapon_damage+min_hit) + 0.1 * max_hit);
 			}
+		#endif // Weighted MDF type damage*/
+		
+		// Only apply the damage bonus to the main hand
+		if(Hand == 13)	// Kaiyodo - If we're not using the DWDA stuff, will always be the primary hand
+		{
+			int damage_bonus = GetWeaponDamageBonus(weapon_item);	// Can be NULL, will then assume fists
+			min_hit += damage_bonus;
+			max_hit += damage_bonus;
+		}
+		
+		min_hit = min_hit * (100 + itembonuses.MinDamageModifier + spellbonuses.MinDamageModifier) / 100;
+	
+		if(max_hit <= min_hit)
+			damage = min_hit;
+		else
+			damage = (int32)min_hit + MakeRandomInt(0, max_hit - min_hit + 1);
+		
+		//this still isnt the right place for this...
+		//also, is this damage supposed to be seperate??
+		// Elemental damage
+		if(weapon_item && weapon_item->Common.ElemDmgAmt) {
+			float resist = other->ResistSpell(weapon_item->Common.ElemDmgType, 0, this);
+			if(resist > 0) {
+				damage += (int)( weapon_item->Common.ElemDmgAmt * resist / 100.0f);
+			} //else: print message?
+		}
 
-			/*#if 0 // Weighted MDF type damage
-				float hml = (float) ((float)rand()/(float)RAND_MAX);
-				if(GetLevel()>=25){
-					if (hml <= 0.10f){ // Low
-						damage = (int32) (min_hit + (rand()%(weighted-min_hit)));
-						if(damage > min_hit || damage > weighted || damage < min_hit) {
-							damage = min_hit;
-						}
+		/*#if 0 // Weighted MDF type damage
+			float hml = (float) ((float)rand()/(float)RAND_MAX);
+			if(GetLevel()>=25){
+				if (hml <= 0.10f){ // Low
+					damage = (int32) (min_hit + (rand()%(weighted-min_hit)));
+					if(damage > min_hit || damage > weighted || damage < min_hit) {
+						damage = min_hit;
 					}
-					else if (hml >= 0.11f && hml <= 0.89f){ // Middle
-						damage = (int32) (weighted + (rand()%(magic_number-weighted)+1));
-						if(damage > magic_number || damage < weighted) {
-							damage = magic_number;
-						}
-					}
-					else { // High
-						damage = (int32) (magic_number + (rand()%(max_hit-magic_number)+1));
-						if(damage < magic_number || damage >max_hit) {
-							damage = magic_number;
-						}
-					}
-#if EQDEBUG>=11 
-						LogFile->write(EQEMuLog::Debug,"%s::Attack(): min_hit:%i max_hit:%i weapon_damage:%i damage:%i mod:%f MN:%i WN:%i HML:%f",
-							GetName(), min_hit, max_hit, weapon_damage, damage, (( ((float)GetSTR()) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100), magic_number, weighted , hml);
-#endif
 				}
-			#endif // Weighted MDF type damage*/
-		} // End (damage >= 0)
+				else if (hml >= 0.11f && hml <= 0.89f){ // Middle
+					damage = (int32) (weighted + (rand()%(magic_number-weighted)+1));
+					if(damage > magic_number || damage < weighted) {
+						damage = magic_number;
+					}
+				}
+				else { // High
+					damage = (int32) (magic_number + (rand()%(max_hit-magic_number)+1));
+					if(damage < magic_number || damage >max_hit) {
+						damage = magic_number;
+					}
+				}
+#if EQDEBUG>=11 
+					LogFile->write(EQEMuLog::Debug,"%s::Attack(): min_hit:%i max_hit:%i weapon_damage:%i damage:%i mod:%f MN:%i WN:%i HML:%f",
+						GetName(), min_hit, max_hit, weapon_damage, damage, (( ((float)GetSTR()) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100), magic_number, weighted , hml);
+#endif
+			}
+		#endif // Weighted MDF type damage*/
+	} // End (damage >= 0)
 
 #if EQDEBUG>=11 
-			LogFile->write(EQEMuLog::Debug,"Client::Attack(): min_hit:%i max_hit:%i weapon_damage:%i damage:%i mod:%f",
-				min_hit, max_hit, weapon_damage, damage, (( ((float)GetSTR()*2) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100) );
+		LogFile->write(EQEMuLog::Debug,"Client::Attack(): min_hit:%i max_hit:%i weapon_damage:%i damage:%i mod:%f",
+			min_hit, max_hit, weapon_damage, damage, (( ((float)GetSTR()*2) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100) );
 #endif
-
-	} // End skill set?
+	
 	if (damage > 0) {
 	
 			//check to see if we hit..
@@ -882,17 +901,15 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	////////  PROC CODE
 	////////  Kaiyodo - Check for proc on weapon based on DEX
 	///////////////////////////////////////////////////////////
-	if(other && (other->GetHP() > -10)) {
-		TryWeaponProc(weapon_item, other);
+	if(other->GetHP() > -10) {
+		TryWeaponProc(weapon, other);
 	}
-   	if (damage <= 0) {
-		return false;
-	}
-	if( other && other->IsNPC() && (other->IsEnraged() || damage == -3) && !BehindMob(other, GetX(), GetY()) )
-	{
+	
+	//handle riposet, ensuring they are in front is checked in AvoidDamage
+	//this used to test IsNPC, preventing riposte attacks in PvP
+	if( damage == -3 ) {
 		//other->CastToNPC()->FaceTarget(); //Causes too much lag?? Disabled. -image
 		other->Attack(this, 13, true);
-        	return false;
 	}
 	
 	if (damage > 0)
@@ -901,228 +918,33 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		return false;
 }
 
-// solar: this is only used by #heal
+//used by complete heal and #heal
 void Mob::Heal()
 {
 	SetMaxHP();
 	SendHPUpdate();
-	LogFile->write(EQEMuLog::Normal,"%s healed via #heal", name);
-}
-
-void NPC::Heal() {
-	SetMaxHP();
-	SendHPUpdate();
-	LogFile->write(EQEMuLog::Normal,"%s healed via #heal", name);
 }
 
 void Client::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, bool avoidable, sint8 buffslot, bool iBuffTic)
 {
+	if(dead || IsCorpse())
+		return;
+	
 	if(spell_id==0)
 		spell_id = SPELL_UNKNOWN;
-	adverrorinfo = 411;
-#ifdef GUILDWARS
-	if(other && other->IsClient() && other->CastToClient()->GuildDBID() != 0)
-	{
-		float percent = 0;
-		if(spell_id != 0)
-		{
-			percent = location_list.GetCasterAttackBonus(other->CastToClient()->GuildDBID());
-		}
-		else
-		{
-			percent = location_list.GetMeleeAttackBonus(other->CastToClient()->GuildDBID());
-		}
-		if(percent != 0)
-			damage += (damage*percent);
-	}
-#endif
-
-	attack_flag = true;
-
-    if(other && IsAIControlled()) {
-        if (attack_skill == ARCHERY)
-	        AddToHateList(other, 1, damage, iBuffTic); // almost no aggro for archery
-        else if (spell_id != SPELL_UNKNOWN)
-	        AddToHateList(other, damage / 2 , damage, iBuffTic); // half aggro for spells
-        else
-	        AddToHateList(other, damage, damage, iBuffTic);   // normal aggro for everything else
-    }
-    // if we got a pet, thats not already fighting something send it into battle
-    Mob *pet = GetPet();
-    if (other && pet && !pet->IsEngaged() && other->GetID() != GetID())
-    {
-        if (pet)
-            pet->AddToHateList(other, 1, 0,true,false,iBuffTic);
-        else
-        {
-            // todo: do whatever is necessary for clients as pets
-        }
-        pet->SetTarget(other);
-		char mypetname[64]={0};
-		strncpy(mypetname,pet->GetName(),strlen(pet->GetName())-2);
-		char pettarget[64]={0};
-		if(other->IsClient())
-			strcpy(pettarget,other->GetName());
-		else
-			strncpy(pettarget,other->GetName(),strlen(other->GetName())-2);
-		Message_StringID(10,PET_ATTACKING,mypetname,pettarget);
-        //Message(10,"%s tells you, 'Attacking %s, Master.'", pet->GetName(), other->GetName());
-    }
 	
-	if( spell_id != SPELL_UNKNOWN || other == NULL )
-        avoidable = false;
-	
-    if (GetInvul() || DivineAura())
-        damage=-5;
-	
-    // damage shield calls this function with spell_id set, so its unavoidable
-	if (other && damage > 0 && spell_id == SPELL_UNKNOWN) {
-		this->DamageShield(other);
-	}
-
-/*
-    if ((spell_id != 0xFFFF || (attack_skill>200 && attack_skill<250)) && damage>0) {
-			// todo: exchange that for EnvDamage-Packets when we know how to do it
-			char val1[20]={0};
-			Message_StringID(4,OTHER_HIT_NONMELEE,GetName(),ConvertArray(damage,val1));
-			//Message(4,"%s was hit by non-melee for %d points of damage.", GetName(), damage);
-    }
-*/
-	// if spell is lifetap add hp to the caster
-	if (other && IsLifetapSpell( spell_id ))
-	{
-		int32 healedhp;
-
-		// check if healing would be greater than max hp
-		// use temp var to store actual healing value
-		if ( other && other->GetHP() + damage > other->GetMaxHP())
-		{
-			healedhp = other->GetMaxHP() - other->GetHP();
-			other->SetHP(other->GetMaxHP());
-		}
-		else
-		{
-			healedhp = damage;
-			if(other != 0)
-    			other->SetHP(other->GetHP() + damage);
-		}
-
-
-		// if client was casting the spell there need to be some messages
-		if (other->IsClient())
-		{
-			other->CastToClient()->Message(4,"You have been healed for %d points of damage.", healedhp);
-		}
+	// cut all PVP spell damage to 2/3 -solar
+	if(other && other->IsClient() && this != other && damage > 0)
+		damage = (damage * 67) / 100;
 			
-		// emote goes with every one ... even npcs
-		
-		entity_list.MessageClose(this, true, 300, MT_Emote, "%s beams a smile at %s", other->GetName(), this->GetName() );
-	}
-
+	//do a majority of the work...
+	CommonDamage(other, damage, spell_id, attack_skill, avoidable, buffslot, iBuffTic);
 	
 	if (damage > 0) {
-		//only if this is damage:
-		
-		if (GetRune() > 0)
-			damage = ReduceDamage(damage, GetRune());
-		if (sneaking){
-			sneaking = false;
-			// FIXME Break sneak packet goes here.
-		}
-		if ( (GetHP() - damage) <= -10){
-			Death(other, damage, spell_id, attack_skill);
-			return;
-		}
-		else
-			SetHP(GetHP()-damage);
-		
 		//if the other is not green, and this is not a spell
 		if (other && other->IsNPC() && GetLevelCon(other->GetLevel()) != CON_GREEN
-			&& (spell_id == 0xFFFF || spell_id == 0))
+			&& (spell_id == SPELL_UNKNOWN))
 			CheckIncreaseSkill(DEFENSE, -10);
-	}
-
-
-	APPLAYER* outapp = new APPLAYER(OP_Damage, sizeof(CombatDamage_Struct));
-	
-	//outapp->pBuffer = new uchar[outapp->size];
-	//memset(outapp->pBuffer, 0, outapp->size);
-	CombatDamage_Struct* a = (CombatDamage_Struct*)outapp->pBuffer;
-	adverrorinfo = 412;
-	a->target = GetID();
-	
-	if (other == 0)
-		a->source = 0;
-	else if (other->IsClient() && other->CastToClient()->GMHideMe())
-		a->source = 0;
-	else
-		a->source = other->GetID();
-		
-	a->type = attack_skill;
-	a->spellid = spell_id;
-	a->damage = damage;
-
-	if(damage>0){//this for for server side filters
-		if(spell_id == SPELL_UNKNOWN || GetFilter(FILTER_SPELLDAMAGE)!=0) {
-			if(iBuffTic) {	//send new HPs instead of damage packet
-							//this lets you sit down while DOTed
-				SendHPUpdate();
-			} else {
-				QueuePacket(outapp);
-			}
-		}
-			
-		if(spell_id == SPELL_UNKNOWN)
-			entity_list.QueueCloseClients(this, outapp, true, 200, other,true,FILTER_OTHERHITS);
-		else if(!iBuffTic)	//only send damage packet if not a DOT..
-							//this lets you sit down while DOTed
-			entity_list.QueueCloseClients(this, outapp, true, 200, other,true,FILTER_SPELLDAMAGE);
-	}
-	else if(damage==-5){//invulnerable sent regardless of filters
-		entity_list.QueueCloseClients(this, outapp, false, 200, other);
-	}
-	else{
-		QueuePacket(outapp,true,CLIENT_CONNECTINGALL,FILTER_ATKMISSESME);
-		entity_list.QueueCloseClients(this, outapp, true, 200, other,true,FILTER_OTHERMISSES);
-	}
-	if (other && other->IsClient() && other!=this && !iBuffTic){
-		//dont send to the player if they caused the damage, its already sent above
-		//also, nobody should get DOT damage except the target
-		if(damage>0 || damage==-5){
-			if(damage>0 && spell_id != SPELL_UNKNOWN)
-				other->CastToClient()->QueuePacket(outapp,true,CLIENT_CONNECTINGALL,FILTER_SPELLDAMAGE);
-			else
-				other->CastToClient()->QueuePacket(outapp); //my hits cant be filtered
-		}
-		else
-			other->CastToClient()->QueuePacket(outapp,true,CLIENT_CONNECTINGALL,FILTER_MYMISSES);
-	}
-	
-	safe_delete(outapp);
-	
-	adverrorinfo = 413;
-	if(IsFullHP==false || cur_hp<max_hp)
-		SendHPUpdate();
-	if (damage != 0) {
-		if (IsMezzed())
-			this->BuffFadeByEffect(SE_Mez);
-		if (attack_skill == BASH && GetLevel() < 56) {
-			if((itembonuses.StunResist+spellbonuses.StunResist) <= 0 || rand()%101 >= (itembonuses.StunResist+spellbonuses.StunResist))
-				Stun(0);
-		}
-		if (IsRooted() && spell_id != 0xFFFF) { // neotoyko: only spells cancel root
-			if ((float)rand()/RAND_MAX > 0.8f)
-				this->BuffFadeByEffect(SE_Root, buffslot); // buff slot is passed through so a root w/ dam doesnt cancel itself
-		}
-		if(this->casting_spell_id != 0 && spell_id == 0xFFFF) { //shouldnt interrupt on regular spell damage
-			attacked_count++;
-			isattacked = true;
-		}
-		
-#if EQDEBUG >= 11
-    LogFile->write(EQEMuLog::Debug," %s hit for %i, %i left", name, damage, GetHP());
-#endif
-		adverrorinfo = 41;
 	}
 }
 
@@ -1139,19 +961,20 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	// #1: Send death packet to everyone
 	//
 
-	if(!spell) spell = 0xffff;
+	if(!spell) spell = SPELL_UNKNOWN;
+	
 	// make death packet
-	APPLAYER app(OP_Death, sizeof(Death_Struct));
+	EQZonePacket app(OP_Death, sizeof(Death_Struct));
 	Death_Struct* d = (Death_Struct*)app.pBuffer;
 	d->spawn_id = GetID();
 	d->killer_id = other ? other->GetID() : 0;
-	d->unknown12 = 1;
-	d->spell_id = spell == 0xffff ? 0xffffffff : spell;
-	d->attack_skill = spell != 0xffff ? 0xe7 : attack_skill;
+	//d->unknown12 = 1;
+	d->bindzoneid = m_pp.bind_zone_id;
+	d->spell_id = spell == SPELL_UNKNOWN ? 0xffffffff : spell;
+	d->attack_skill = spell != SPELL_UNKNOWN ? 0xe7 : attack_skill;
 	d->damage = damage;
 	app.priority = 6;
 	entity_list.QueueClients(this, &app);
-
 
 	//
 	// #2: figure out things that affect the player dying and mark them dead
@@ -1234,7 +1057,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	if(!GetGM() && GetLevel() > 9)
 	{
 		if(exploss > 0) {
-			uint32 newexp = GetEXP();
+			sint32 newexp = GetEXP();
 			if(exploss > newexp) {
 				//lost more than we have... wtf..
 				newexp = 1;
@@ -1242,9 +1065,10 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 				newexp -= exploss;
 			}
 			SetEXP(newexp, GetAAXP());
-			m_pp.perAA = 0;	//reset to no AA exp on death.
+			//m_epp.perAA = 0;	//reset to no AA exp on death.
 		}
 
+		//this generates a lot of 'updates' to the client that the client does not need
 		BuffFadeAll();
 		UnmemSpellAll(false);
 
@@ -1256,6 +1080,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 		{
 			// creating the corpse takes the cash/items off the player too
 			Corpse *new_corpse = new Corpse(this, exploss);
+			
 			database.GetVariable("ServerType", tmp, 9);
 			if(atoi(tmp)==1 && other->IsClient()){
 				char tmp2[10] = {0};
@@ -1284,7 +1109,17 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 					}
 				}
 			}
+			
 			entity_list.AddCorpse(new_corpse, GetID());
+	
+			//become a corpse, live sends this before OP_Death, but it works better for us here
+			EQZonePacket app2(OP_BecomeCorpse, sizeof(BecomeCorpse_Struct));
+			BecomeCorpse_Struct* bc = (BecomeCorpse_Struct*)app2.pBuffer;
+			bc->spawn_id = GetID();
+			bc->x = GetX();
+			bc->y = GetY();
+			bc->z = GetZ();
+			entity_list.QueueClients(this, &app2, true);
 		}
 
 //		if(!IsLD())//Todo: make it so an LDed client leaves corpse if its enabled
@@ -1408,10 +1243,14 @@ other = tempkiller;
 
 	m_pp.zone_id = m_pp.bind_zone_id;
 	database.MoveCharacterToZone(this->CharacterID(), database.GetZoneName(m_pp.zone_id));
-
+	
+	//treat this like we sent them a zone request message
 	zonesummon_x = m_pp.bind_x[0];
 	zonesummon_y = m_pp.bind_y[0];
 	zonesummon_z = m_pp.bind_z[0];
+	zonesummon_id = m_pp.bind_zone_id;
+	zone_mode = ZoneToBindPoint;
+	
 	heading = 0;
 
 	Save();
@@ -1423,46 +1262,20 @@ other = tempkiller;
 	}
 }
 
-#if 0 // solar: old code
-void Client::MakeCorpse(int32 exploss)
-{
-	if (this->GetID() == 0)
-		return;
-	
-	if ( (!GetGM() && m_pp.level > 9) || IsBecomeNPC())
-	{
-		// Check to see if we are suppose to make a corpse
-		// Via the database setting (anything in leavecorpses)
-		char tmp[20];
-		memset(tmp,0,sizeof(tmp));
-		database.GetVariable("leavecorpses", tmp, 20);
-		int leavecorpses = atoi(tmp);
-		if (tmp2 >= 1) {
-#if EQDEBUG >= 5
-				LogFile->write(EQEMuLog::Debug,"Creating corpse for %s at x=%f y=%f z=%f h=%f", GetName(), GetX(), GetY(), GetZ(), GetHeading());
-#endif
-			entity_list.AddCorpse(new Corpse(this, &m_pp, exploss, tmp2), this->GetID());
-			this->SetID(0);
-		}
-	}
-}
-#endif
-
 bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base function has changed prototype, need to update overloaded version
 {
 	_ZP(NPC_Attack);
 	int damage = 0;
 	
-	if (!other)
-	{
-    	SetTarget(NULL);
-    	return false;
+	if (!other) {
+		SetTarget(NULL);
+		return false;
 	}
 	
-	if (!target)
-    	SetTarget(other);
+	if (!target && GetTarget() != other)
+		SetTarget(other);
 	
-	SetAttackTimer();
+//	SetAttackTimer();
 	float calcheading=CalculateHeadingToTarget(target->GetX(), target->GetY());
 	if((calcheading)!=GetHeading()){
 		SetHeading(calcheading);
@@ -1482,153 +1295,152 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 			RemoveFromHateList(other);
 		return false;
 	}
-	else
-	{
-		int16 skillinuse;
-		int attack_skill;
-		
-		const Item_Struct* weapon = NULL;
-		if (Hand == 13 && equipment[7] > 0)
-		    weapon = database.GetItem(equipment[7]);
-		else if (equipment[8])
-		    weapon = database.GetItem(equipment[8]);
+	
+	int16 skillinuse;
+	int attack_skill;
+	
+	const Item_Struct* weapon = NULL;
+	if (Hand == 13 && equipment[7] > 0)
+	    weapon = database.GetItem(equipment[7]);
+	else if (equipment[8])
+	    weapon = database.GetItem(equipment[8]);
 
-		if (Hand == 14 && weapon && weapon->Common.ItemUse == ItemUseShield)
-			return false; // <Rogean> Cant Dual Wield with Shields
-		
-		ItemCommonInst weapon_inst(weapon,0);
-		AttackAnimation(attack_skill, skillinuse, Hand, &weapon_inst);
-		
-		int8 otherlevel = other->GetLevel();
-		int8 mylevel = this->GetLevel();
-		
-		otherlevel = otherlevel ? otherlevel : 1;
-		mylevel = mylevel ? mylevel : 1;
+	if (Hand == 14 && weapon && weapon->Common.ItemType == ItemTypeShield)
+		return false; // <Rogean> Cant Dual Wield with Shields
+	
+	sint16 charges = 0;
+	ItemCommonInst weapon_inst(weapon, charges);
+	AttackAnimation(attack_skill, skillinuse, Hand, &weapon_inst);
+	
+	int8 otherlevel = other->GetLevel();
+	int8 mylevel = this->GetLevel();
+	
+	otherlevel = otherlevel ? otherlevel : 1;
+	mylevel = mylevel ? mylevel : 1;
 
-		float dmgbonusmod = 0;
-		float clmod = (float)GetClassLevelFactor()/22;
-		float basedamage;
-		int AC_adjust=12;	// value to adjust default because of AC being added
-		//float basedefend = 0;
-		//float currenthit = 0;
-		
-		// set min_dmg max_dmg here based on level if they are not set already
-		// FIXME database cache lookup fancy like stuff needed here
-		float level_mod = 1.5f;
-		if (mylevel >= 66) {
-		    level_mod = 4.5f; // mod4
-		    if (min_dmg==0)
-		    min_dmg = 220;
-		    if (max_dmg==0)
-			max_dmg = (int16)((((220*level_mod)*(mylevel-64))/4.0f)*AC_adjust/10);
+	float dmgbonusmod = 0;
+	float clmod = (float)GetClassLevelFactor()/22;
+	float basedamage;
+	int AC_adjust=12;	// value to adjust default because of AC being added
+	//float basedefend = 0;
+	//float currenthit = 0;
+	
+	// set min_dmg max_dmg here based on level if they are not set already
+	// FIXME database cache lookup fancy like stuff needed here
+	float level_mod = 1.5f;
+	if (mylevel >= 66) {
+	    level_mod = 4.5f; // mod4
+	    if (min_dmg==0)
+	    min_dmg = 220;
+	    if (max_dmg==0)
+		max_dmg = (int16)((((220*level_mod)*(mylevel-64))/4.0f)*AC_adjust/10);
 //			max_dmg = (int16)(((220*level_mod)*(mylevel-64))/4.0f);
-			// 66 = 495, 67 = 742, 68 = 990, 69 = 1237, 70 = 1485
-		}
-		else if (mylevel >= 60 && mylevel <= 65){
-		    level_mod = 4.25f;
-		    if(min_dmg==0)
-		    min_dmg = (mylevel+(mylevel/3));
-		    if(max_dmg==0)
-		    max_dmg = (mylevel*3)*AC_adjust/10;
+		// 66 = 495, 67 = 742, 68 = 990, 69 = 1237, 70 = 1485
+	}
+	else if (mylevel >= 60 && mylevel <= 65){
+	    level_mod = 4.25f;
+	    if(min_dmg==0)
+	    min_dmg = (mylevel+(mylevel/3));
+	    if(max_dmg==0)
+	    max_dmg = (mylevel*3)*AC_adjust/10;
 //		    max_dmg = (mylevel*3);
-		    // 60 = 180, 65 = 195
-		}
-		else if (mylevel >= 51 && mylevel <= 59){
-		    level_mod = 3.75f;
-		    if(min_dmg==0)
-		    min_dmg = (mylevel+(mylevel/3));
-		    // 51 = 68, 59 = 78
-		    if(max_dmg==0)
-		    max_dmg = (mylevel*3)*AC_adjust/10;
+	    // 60 = 180, 65 = 195
+	}
+	else if (mylevel >= 51 && mylevel <= 59){
+	    level_mod = 3.75f;
+	    if(min_dmg==0)
+	    min_dmg = (mylevel+(mylevel/3));
+	    // 51 = 68, 59 = 78
+	    if(max_dmg==0)
+	    max_dmg = (mylevel*3)*AC_adjust/10;
 //		    max_dmg = (mylevel*3);
-		    // 51 = 153, 59 = 177
-		}
-		else if (mylevel >= 40 && mylevel <= 50) {
-			if (min_dmg==0)
-				min_dmg = mylevel;
-			if(max_dmg==0)
-				max_dmg = (mylevel*3)*AC_adjust/10;
+	    // 51 = 153, 59 = 177
+	}
+	else if (mylevel >= 40 && mylevel <= 50) {
+		if (min_dmg==0)
+			min_dmg = mylevel;
+		if(max_dmg==0)
+			max_dmg = (mylevel*3)*AC_adjust/10;
 //				max_dmg = (mylevel*3);
-		    // 40 = 120 , 50 = 150
-		}
-		else if (mylevel >= 28 && mylevel <= 39) {
-		    if (min_dmg==0)
-			min_dmg = mylevel / 2; // 14-17
-		    if (max_dmg==0)
-			max_dmg = ((mylevel*2)+2)*AC_adjust/10;
-		    // 28 = 58, 39 = 80
-		}
-		else if (mylevel <= 27) {
-		    if (min_dmg==0)
-			min_dmg=1;
-		    if (max_dmg==0)
-			max_dmg = (mylevel*2)*AC_adjust/10;
-		    // 1 = 2, 27 = 54
-		}
-		
-		if(max_dmg != 0 && min_dmg <= max_dmg) {
-			basedamage = RandomTimer(min_dmg,max_dmg)*((clmod >= 1.0f) ? clmod:1.0f);  // npc only get bonus for class no negatives
-		}
-		else if (other->GetOwnerID()!=0) {
-			// FIXME Shouldn't nerf the damage of charmed pets
-			basedamage = mylevel*1.9f*clmod;
-		}
-		else { // Default calculation
-			basedamage = mylevel*level_mod*clmod;
-		}
-		
-		dmgbonusmod += (float)(this->itembonuses.STR + this->spellbonuses.STR)/3;
-		dmgbonusmod += (float)(this->spellbonuses.ATK + this->itembonuses.ATK)/5;
-		basedamage += (float)basedamage/100*dmgbonusmod;
-		
-		damage = (int)basedamage;
-		
-		if(other->IsClient() && min_dmg != 0 && damage == min_dmg && dmgbonusmod > 0)
-		    damage += (int)dmgbonusmod;
-		if(min_dmg != 0 && damage < min_dmg)
-		    damage = min_dmg;
-		if(max_dmg != 0 && damage > max_dmg)
-		    damage = max_dmg;
-		
-		//THIS IS WHERE WE CHECK TO SEE IF WE HIT:
-		if (other) {
-			if(!other->CheckHitChance(this, attack_skill, Hand, skillinuse))
-				damage = 0;	//miss
-			else	//hit, check for damage avoidance
-				other->AvoidDamage(this, damage);
-		}
-		
-		
-		if(other->IsClient() && other->CastToClient()->IsSitting())
-			damage = max_dmg;
-		if(other->IsClient() && GetOwnerID()!=0 && GetOwner()->IsClient()) //pets do half damage to clients in pvp
-			damage=damage/2;
-		
-		//cant riposte a riposte
+	    // 40 = 120 , 50 = 150
+	}
+	else if (mylevel >= 28 && mylevel <= 39) {
+	    if (min_dmg==0)
+		min_dmg = mylevel / 2; // 14-17
+	    if (max_dmg==0)
+		max_dmg = ((mylevel*2)+2)*AC_adjust/10;
+	    // 28 = 58, 39 = 80
+	}
+	else if (mylevel <= 27) {
+	    if (min_dmg==0)
+		min_dmg=1;
+	    if (max_dmg==0)
+		max_dmg = (mylevel*2)*AC_adjust/10;
+	    // 1 = 2, 27 = 54
+	}
+			
+	if(max_dmg != 0 && min_dmg <= max_dmg) {
+		basedamage = RandomTimer(min_dmg,max_dmg)*((clmod >= 1.0f) ? clmod:1.0f);  // npc only get bonus for class no negatives
+	}
+	else if (other->GetOwnerID()!=0) {
+		// FIXME Shouldn't nerf the damage of charmed pets
+		basedamage = mylevel*1.9f*clmod;
+	}
+	else { // Default calculation
+		basedamage = mylevel*level_mod*clmod;
+	}
+	
+	dmgbonusmod += (float)(this->itembonuses.STR + this->spellbonuses.STR)/3;
+	dmgbonusmod += (float)(this->spellbonuses.ATK + this->itembonuses.ATK)/5;
+	basedamage += (float)basedamage/100*dmgbonusmod;
+	
+	damage = (int)basedamage;
+	
+	if(other->IsClient() && min_dmg != 0 && damage == min_dmg && dmgbonusmod > 0)
+	    damage += (int)dmgbonusmod;
+	if(min_dmg != 0 && damage < min_dmg)
+	    damage = min_dmg;
+	if(max_dmg != 0 && damage > max_dmg)
+	    damage = max_dmg;
+	
+	//THIS IS WHERE WE CHECK TO SEE IF WE HIT:
+	if(!other->CheckHitChance(this, attack_skill, Hand, skillinuse))
+		damage = 0;	//miss
+	else	//hit, check for damage avoidance
+		other->AvoidDamage(this, damage);
+	
+	
+	if(other->IsClient() && other->CastToClient()->IsSitting())
+		damage = max_dmg;
+	if(other->IsClient() && GetOwnerID()!=0 && GetOwner()->IsClient()) //pets do half damage to clients in pvp
+		damage=damage/2;
+	
+	//cant riposte a riposte
 		if (bRiposte && damage == -3)
 		    return false;
 		
 		adverrorinfo = 1292;
-		if(other != 0 && this != 0 && GetHP() > 0 && other->GetHP() >= -11){
+		if(GetHP() > 0 && other->GetHP() >= -11){
 #if EQDEBUG >= 11
 				LogFile->write(EQEMuLog::Debug,"NPC::Attack() basedamage:%f basedefend:%f dmgbonusmod:%f clmod:%f currenthit:%f damage:%i", basedamage, basedefend, dmgbonusmod, clmod, currenthit, damage);
 #endif
 		    other->Damage(this, damage, 0xffff, attack_skill, false); // Not avoidable client already had thier chance to Avoid
-	    }
-		adverrorinfo = 1293;
-	}
+    }
+	adverrorinfo = 1293;
+	
+	//I doubt this works...
 	if (!target) return true; //We killed them
+	
 	// Kaiyodo - Check for proc on weapon based on DEX
-	if( other && other->GetHP() > 0 ) {
-		TryWeaponProc(NULL, other);	//no weapon
+	if( other->GetHP() > 0 ) {
+		TryWeaponProc((const Item_Struct*) NULL, other);	//no weapon
 	}
 	
 	// now check ripostes
-	if (other && damage == -3) // riposting
+	if (damage == -3) // riposting
 	{
 	    other->Attack(this, 13, true);
     	// todo: double riposte
-		return false;
 	}
 	
 	if (damage > 0)
@@ -1638,193 +1450,29 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 }
 
 void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, bool avoidable, sint8 buffslot, bool iBuffTic) {
-    // now add done damage to the hate list
-    if (!other)
-      return;
-	if (attack_event == 0)
-	{
-		parse->Event(EVENT_ATTACK, this->GetNPCTypeID(), 0, this, other);
-	}
-	attack_event = 1;
-	attacked_timer.Start(12000,true);
-
-#ifdef GUILDWARS
-	if(other->IsClient() && other->CastToClient()->GuildDBID() != 0)
-	{
-		float percent = 0;
-		if(spell_id != 0)
-		{
-			percent = location_list.GetCasterAttackBonus(other->CastToClient()->GuildDBID());
-		}
-		else
-		{
-			percent = location_list.GetMeleeAttackBonus(other->CastToClient()->GuildDBID());
-		}
-		if(percent != 0)
-			damage += (damage*percent);
-	}
-#endif
-
-	if(other) {
-        if (attack_skill == ARCHERY)
-	        AddToHateList(other, 1, damage,true,false,iBuffTic); // almost no aggro for archery
-        else if (spell_id != SPELL_UNKNOWN)
-	        AddToHateList(other, damage / 2 , damage,true,false, iBuffTic); // half aggro for spells
-        else
-	        AddToHateList(other, damage, damage,true,false, iBuffTic);   // normal aggro for everything else
-    }
-    
-	if(SpecAttacks[IMMUNE_MEELE]) {
+	if(spell_id==0)
+		spell_id = SPELL_UNKNOWN;
+	
+	if(SpecAttacks[IMMUNE_MEELE])
 		damage = -5;
-	}
-
-    // only apply DS if physical damage (no spell damage)
-    if (other && damage > 0 && spell_id == SPELL_UNKNOWN) {
-		this->DamageShield(other);
-	}
-	if ((spell_id != SPELL_UNKNOWN || (attack_skill>200 && attack_skill<250)) && damage>0)
-    {
-        // todo: exchange that for EnvDamage-Packets when we know how to do it
-		char val1[20]={0};
-		if (other && other->IsClient())
-			other->Message_StringID(4,OTHER_HIT_NONMELEE,GetName(),ConvertArray(damage,val1));
-			//other->CastToClient()->Message(4,"%s was hit by non-melee for %d points of damage.", this->GetName(), damage);
-    }
-
-	// if spell is lifetap add hp to the caster
-	if (other && IsLifetapSpell( spell_id ))
-	{
-		int32 healedhp;
-
-		// check if healing would be greater than max hp
-		// use temp var to store actual healing value
-		if ( other && other->GetHP() + damage > other->GetMaxHP())
-		{
-			healedhp = other->GetMaxHP() - other->GetHP();
-			other->SetHP(other->GetMaxHP());
-		}
-		else
-		{
-			healedhp = damage;
-			if(other != 0)
-    			other->SetHP(other->GetHP() + damage);
-		}
-
-
-		// if client was casting the spell there need to be some messages
-		if (other->IsClient())
-		{
-			other->CastToClient()->Message(4,"You have been healed for %d points of damage.", healedhp);
-		}
-			
-		// emote goes with every one ... even npcs
-		
-		entity_list.MessageClose(this, true, 300, MT_Emote, "%s beams a smile at %s", other->GetName(), this->GetName() );
-	}
-
-    if (damage > 0 && GetRune() > 0)
-	{
-		damage = ReduceDamage(damage, GetRune());
-	}
-	//unsigned char test[sizeof(Action_Struct)];
-	//memset(test,0x0,sizeof(Action_Struct));
-	if (damage >= GetHP())
-	{
-		SetHP(-100);
-		Death(other, damage, spell_id, attack_skill);
-		return;
-	}
-	APPLAYER* outapp = new APPLAYER(OP_Damage, sizeof(CombatDamage_Struct));
-	//outapp->pBuffer = new uchar[outapp->size];
-	//memset(outapp->pBuffer, 0, sizeof(CombatDamage_Struct));
-	CombatDamage_Struct* a = (CombatDamage_Struct*)outapp->pBuffer;
-	adverrorinfo = 412;
-	a->target = GetID();
-	if (other == 0)
-		a->source = 0;
-	else if (other->IsClient() && other->CastToClient()->GMHideMe())
-		a->source = 0;
-	else
-		a->source = other->GetID();
-		
-    a->type = attack_skill; // was 0x1c
-    if (attack_skill == 231)
-   		a->spellid = 0xFFFF;
-    else
-   		a->spellid = spell_id;
-	a->damage = damage;		
-	outapp->priority = 5;
-	if (other && other->GetOwnerID()) { // let pet owners see their pet's damage
-		Mob* owner = other->GetOwner();
-		if (owner && owner->IsClient()){
-			if(damage>0){
-				if(spell_id!=0xFFFF)
-					owner->CastToClient()->QueuePacket(outapp,true,CLIENT_CONNECTINGALL,FILTER_SPELLDAMAGE);
-				else
-					owner->CastToClient()->QueuePacket(outapp,true,CLIENT_CONNECTINGALL,FILTER_MYPETHITS);
-			}
-			else if(damage==-5)//cant filter invulnerable
-				owner->CastToClient()->QueuePacket(outapp);
-			else
-				owner->CastToClient()->QueuePacket(outapp,true,CLIENT_CONNECTINGALL,FILTER_MYPETMISSES);
-		}
-		entity_list.QueueCloseClients(owner, outapp, true, 200, other);//make owner send the packet so we can skip them
-	}
-	else{//not a pet
-		if(damage>0){
-			if(spell_id!=0xFFFF)
-				entity_list.QueueCloseClients(this, outapp, false, 200, other,true,FILTER_SPELLDAMAGE);
-			else
-				entity_list.QueueCloseClients(this, outapp, false, 200, other,true,FILTER_OTHERHITS);
-		}
-		else if(damage==-5)//invulnerable, cant be filtered
-			entity_list.QueueCloseClients(this, outapp, false, 200, other);
-		else
-			entity_list.QueueCloseClients(this, outapp, false, 200, other,true,FILTER_OTHERMISSES);
-	}
-
-	if (other && other->IsClient()){
-		if(damage>0 || damage==-5) //cant be filtered
-			other->CastToClient()->QueuePacket(outapp);
-		else
-			other->CastToClient()->QueuePacket(outapp,true,CLIENT_CONNECTINGALL,FILTER_MYMISSES);
-	}
-	safe_delete(outapp);
 	
 	
-		
-	SetHP(GetHP() - damage);
+	//handle EVENT_ATTACK. Resets after we have not been attacked for 12 seconds
+	if (!attack_event) {
+		parse->Event(EVENT_ATTACK, this->GetNPCTypeID(), 0, this, other);
+		attack_event = true;
+	}
+	attacked_timer.Start(12000,true);
+    
+	//do a majority of the work...
+	CommonDamage(other, damage, spell_id, attack_skill, avoidable, buffslot, iBuffTic);
 
 	if (!IsEngaged())
-        zone->AddAggroMob();
-    if (other && damage > 0)
-        AddRampage(other);
-			
-	if (damage > 0)
-	{
-		if (IsMezzed()) {
-			this->BuffFadeByEffect(SE_Mez);
-		}
-		
-		if (attack_skill == BASH && GetLevel() < 56) {
-			int stun_resist = itembonuses.StunResist+spellbonuses.StunResist;
-			if(stun_resist <= 0 || MakeRandomInt(0,99) >= stun_resist)
-				Stun(0);
-		}
-		if (IsRooted() && spell_id != SPELL_UNKNOWN) // neotoyko: only spells cancel root
-		{
-			if (MakeRandomInt(0, 99) < 20)
-				BuffFadeByEffect(SE_Root, buffslot);
-		}
-		if(casting_spell_id != 0)
-		{
-			attacked_count++;
-			isattacked = true;
-		}
-	}
-	if(!IsFullHP || cur_hp<max_hp) {
-		other->SendHPUpdate();
-		
+		zone->AddAggroMob();
+	
+	if(damage > 0) {
+	    if (other)
+	        AddRampage(other);
 #ifdef FLEE_HP_RATIO
 		//see if we are gunna start fleeing
 		CheckFlee();
@@ -1853,11 +1501,12 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 
 	BuffFadeAll();
 	
-	APPLAYER* app= new APPLAYER(OP_Death,sizeof(Death_Struct));
+	EQZonePacket* app= new EQZonePacket(OP_Death,sizeof(Death_Struct));
 	Death_Struct* d = (Death_Struct*)app->pBuffer;
 	d->spawn_id = GetID();
 	d->killer_id = other ? other->GetID() : 0;
-	d->unknown12 = 1;
+//	d->unknown12 = 1;
+	d->bindzoneid = 0;
 	d->spell_id = spell == SPELL_UNKNOWN ? 0xffffffff : spell;
 	d->attack_skill = spell != SPELL_UNKNOWN ? 0xe7 : attack_skill;
 	d->damage = damage;
@@ -1981,7 +1630,8 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	*/
 #endif // End Raid Addicts
 	
-	if (class_ != 32 && this->ownerid == 0 && this->flag[3]!=3 && CastToNPC()->MerchantType == 0 && killer && (killer->IsClient() || (killer->GetOwner() != 0 && killer->GetOwner()->IsClient())) ) {
+	if (!HasOwner() && class_ != MERCHANT && class_ != ADVENTUREMERCHANT 
+		&& MerchantType == 0 && killer && (killer->IsClient() || (killer->HasOwner() && killer->GetOwner()->IsClient())) ) {
 		Corpse* corpse = new Corpse(this, &itemlist, GetNPCTypeID(), &NPCTypedata);
 		entity_list.AddCorpse(corpse, this->GetID());
 		this->SetID(0);
@@ -2010,49 +1660,10 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	
 	this->WhipeHateList();
 	p_depop = true;
-	if(other) other->SetTarget(0);
+	if(other)
+		other->SetTarget(NULL);
 }
 
-// solar: (notes to self) hmm this is called in a few spots..
-// CurrentHP and HealOverTime from bufftics, CurrentHP in SpellEffect,
-// and DS/DSRev from DamageShield
-bool Mob::ChangeHP(Mob* other, sint32 amount, int16 spell_id, sint8 buffslot, bool iBuffTic)
-{
-	//dont bother if nothing changed...
-	if(amount == 0)
-		return(true);
-	
-	if (IsCorpse())
-		return false;
-
-	if (amount < 0)
-	{
-		// cut all PVP spell damage to 2/3 -solar
-		if(other && IsClient() && other->IsClient() && this != other)
-			amount = amount * 67 / 100;
-		
-		if(amount < 0)
-			amount = 0 - amount;
-		
-		Damage(other, amount, spell_id, 231, false, buffslot, iBuffTic);
-		return true;
-	}
-	else
-	{
-		int curhp=GetHP(),maxhp=GetMaxHP();
-		if (curhp!=maxhp) {
-			if ((curhp+amount)>maxhp)
-				curhp=maxhp;
-			else
-				curhp+=amount;
-			SetHP(curhp);
-
-			SendHPUpdate();
-		}
-	}
-
-	return false;
-}
 
 void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHelp, bool bFrenzy, bool iBuffTic) {
     assert(other != NULL);
@@ -2096,7 +1707,7 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 // a reverse ds causes damage to the wearer whenever it attack someone
 // given this, a reverse ds must be checked each time the wearer is attacking
 // and not when they're attacked
-void Mob::DamageShield(Mob* other)
+void Mob::DamageShield(Mob* attacker)
 {
 	int DS = 0;
 //	int DSRev = 0;
@@ -2111,9 +1722,9 @@ void Mob::DamageShield(Mob* other)
 			{
 				if(IsBlankSpellEffect(buffs[i].spellid, z))
 					continue;
-
-				effect_value = CalcSpellEffectValue(buffs[i].spellid, z, buffs[i].casterlevel);
-
+				
+				effect_value = CalcSpellEffectValue(buffs[i].spellid, z, buffs[i].casterlevel, this);
+				
 				switch(spells[buffs[i].spellid].effectid[z])
 				{
 					case SE_DamageShield:
@@ -2138,16 +1749,15 @@ void Mob::DamageShield(Mob* other)
 	}
 	// there's somewhat of an issue here that the last (slot wise) damage shield
 	// will be the one whose spellid is set here
-	if (DS)
-	{
-		other->ChangeHP(this, DS, spellid);
-		// todo: send EnvDamage packet to the other
-		//entity_list.MessageClose(other, 0, 200, 10, "%s takes %d damage from %s's damage shield (%s)", other->GetName(), -spells[buffs[i].spellid].base[1], this->GetName(), spells[buffs[i].spellid].name);
+	if (DS) {
+		attacker->Damage(this, DS, spellid, SPELL_ATTACK_SKILL, false);
+		// todo: send EnvDamage packet to the attacker
+		//entity_list.MessageClose(attacker, 0, 200, 10, "%s takes %d damage from %s's damage shield (%s)", attacker->GetName(), -spells[buffs[i].spellid].base[1], this->GetName(), spells[buffs[i].spellid].name);
 	}
 /*
 	if (DSRev)
 	{
-		this->ChangeHP(other, DSRev, spellid);
+		this->ChangeHP(attacker, DSRev, spellid);
 	}
 */
 }
@@ -2164,14 +1774,16 @@ int Mob::GetWeaponDamageBonus(const Item_Struct* Weapon)
 	
 	int BasicBonus = ((GetLevel() - 25) / 3) + 1;
 	
+	if(!Weapon)
+		return(BasicBonus);
+	
 	// If we have no weapon, or only a single handed weapon, just return the default
 	// damage bonus of (Level - 25) / 3
-	ItemCommonInst inst(Weapon);
-	if (!inst.IsType(ItemTypeCommon))
+	if (Weapon->ItemClass == ItemClassCommon)
 		return BasicBonus;
 	
 	const ItemCommon_Struct& common = Weapon->Common;
-	if ((common.ItemUse == ItemUse1HS) || (common.ItemUse == ItemUsePierce) || (common.ItemUse == ItemUse1HB))
+	if ((common.ItemType == ItemType1HS) || (common.ItemType == ItemTypePierce) || (common.ItemType == ItemType1HB))
 		return BasicBonus;
 	
 	// Things get more complicated with 2 handers, the bonus is based on the delay of
@@ -2254,15 +1866,17 @@ int Mob::GetMonkHandToHandDelay(void)
 }
 
 
-// neotokyo 14-Nov-02
-
-
-sint16 Mob::ReduceMagicalDamage(sint16 damage, int16 in_rune)
-
-{
-	if (in_rune >= abs(damage))
+sint16 Mob::ReduceMagicalDamage(sint16 damage) {
+	if(damage < 0)
+		return(damage);
+	
+	int16 in_rune = GetMagicRune();
+	if(in_rune == 0)
+		return(damage);
+	
+	if (in_rune >= damage)
 	{
-		in_rune -= abs(damage);
+		in_rune -= damage;
 		damage = 0;
 	}
 	else
@@ -2277,8 +1891,14 @@ sint16 Mob::ReduceMagicalDamage(sint16 damage, int16 in_rune)
 	return damage;
 }
 
-sint16 Mob::ReduceDamage(sint16 damage, int16 in_rune)
-{
+sint16 Mob::ReduceDamage(sint16 damage){
+	if(damage < 0)
+		return(damage);
+	
+	int16 in_rune = GetRune();
+	if(in_rune == 0)
+		return(damage);
+	
 	if (in_rune >= damage)
 	{
 		in_rune -= damage;
@@ -2300,7 +1920,7 @@ sint16 Mob::ReduceDamage(sint16 damage, int16 in_rune)
 bool Mob::HasProcs()
 {
     for (int i = 0; i < MAX_PROCS; i++)
-        if (PermaProcs[i].spellID != 0xFFFF || SpellProcs[i].spellID != 0xFFFF)
+        if (PermaProcs[i].spellID != SPELL_UNKNOWN || SpellProcs[i].spellID != SPELL_UNKNOWN)
             return true;
     return false;
 }
@@ -2375,4 +1995,253 @@ bool Client::CheckDoubleAttack(bool AAadd, bool Triple) {
 	}
 	return false;
 }
+
+void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, const int8 attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic) {
+	if(damage == 0)
+		return;
+       
+	if (GetInvul() || DivineAura())
+		damage = -5;
+	
+	if( spell_id != SPELL_UNKNOWN || attacker == NULL )
+		avoidable = false;
+	
+    // only apply DS if physical damage (no spell damage)
+    // damage shield calls this function with spell_id set, so its unavoidable
+	if (attacker && damage > 0 && spell_id == SPELL_UNKNOWN) {
+		this->DamageShield(attacker);
+	}
+	
+/*	not sure what this was all about
+    if ((spell_id != SPELL_UNKNOWN || (attack_skill>200 && attack_skill<250)) && damage>0) {
+			// todo: exchange that for EnvDamage-Packets when we know how to do it
+			char val1[20]={0};
+			Message_StringID(4,attacker_HIT_NONMELEE,GetName(),ConvertArray(damage,val1));
+			//Message(4,"%s was hit by non-melee for %d points of damage.", GetName(), damage);
+    }
+*/
+    
+    //if there is some damage being done and theres anattacker person involved
+	if(attacker && damage > 0) {
+		// now add done damage to the hate list
+		if (attack_skill == ARCHERY)
+			AddToHateList(attacker, 1, damage,true,false,iBuffTic); // almost no aggro for archery
+		else if (spell_id != SPELL_UNKNOWN)
+			AddToHateList(attacker, damage / 2 , damage,true,false, iBuffTic); // half aggro for spells
+		else
+			AddToHateList(attacker, damage, damage,true,false, iBuffTic);   // normal aggro for everything else
+		
+		// if spell is lifetap add hp to the caster
+		if (spell_id != SPELL_UNKNOWN && IsLifetapSpell( spell_id )) {
+			int32 healedhp;
+	
+			// check if healing would be greater than max hp
+			// use temp var to store actual healing value
+			if ( (attacker->GetHP() + damage) > attacker->GetMaxHP()) {
+				healedhp = attacker->GetMaxHP() - attacker->GetHP();
+				attacker->SetHP(attacker->GetMaxHP());
+			} else {
+				healedhp = damage;
+	    		attacker->SetHP(attacker->GetHP() + damage);
+			}
+			
+			// if client was casting the spell there need to be some messages
+			attacker->Message(4,"You have been healed for %d points of damage.", healedhp);
+				
+			// emote goes with every one ... even npcs
+			entity_list.MessageClose(this, true, 300, MT_Emote, "%s beams a smile at %s", attacker->GetName(), this->GetName() );
+		}
+		
+	    // if we got a pet, thats not already fighting something send it into battle
+	    Mob *pet = GetPet();
+	    if (attacker && pet && !pet->IsEngaged() && attacker != this) {
+			pet->AddToHateList(attacker, 1, 0,true,false,iBuffTic);
+			pet->SetTarget(attacker);
+			Message_StringID(10, PET_ATTACKING, pet->GetCleanName(), attacker->GetCleanName());
+	        //Message(10,"%s tells you, 'Attacking %s, Master.'", pet->GetName(), attacker->GetName());
+	    }
+		
+	}	//end `if there is some damage being done and theres anattacker person involved`
+	
+	//see if any runes want to reduce this damage
+	if(damage > 0) {
+		if(spell_id == SPELL_UNKNOWN)
+			damage = ReduceDamage(damage);
+		else {
+			sint32 origdmg = damage;
+			damage = ReduceMagicalDamage(damage);
+			if (origdmg != damage && attacker && attacker->IsClient()) {
+				if(attacker->CastToClient()->GetFilter(FILTER_DAMAGESHIELD))
+					attacker->Message(15, "The Spellshield absorbed %d of %d points of damage", origdmg - damage, origdmg);
+			}
+		}
+		
+		if (sneaking){
+			sneaking = false;
+			// FIXME Break sneak packet goes here.
+		}
+	}
+	
+	//final damage has been determined.
+	
+	//check for death conditions
+	if(IsClient()) {
+		if((GetHP() - damage) <= -10) {
+			Death(attacker, damage, spell_id, attack_skill);
+			return;
+		}
+	} else {
+		if (damage >= GetHP()) {
+			//killed...
+			SetHP(-100);
+			Death(attacker, damage, spell_id, attack_skill);
+			return;
+		}
+	}
+	
+	//not killed. Apply the damage
+	SetHP(GetHP() - damage);
+	
+    //send damage packet...
+   	if(!iBuffTic) { //buff ticks do not send damage, instead they just call SendHPUpdate(), which is done below
+		EQZonePacket* outapp = new EQZonePacket(OP_Damage, sizeof(CombatDamage_Struct));
+		CombatDamage_Struct* a = (CombatDamage_Struct*)outapp->pBuffer;
+		a->target = GetID();
+		if (attacker == 0)
+			a->source = 0;
+		else if (attacker->IsClient() && attacker->CastToClient()->GMHideMe())
+			a->source = 0;
+		else
+			a->source = attacker->GetID();
+	    a->type = attack_skill; // was 0x1c
+		a->damage = damage;
+//		if (attack_skill != 231)
+//			a->spellid = SPELL_UNKNOWN;
+//		else
+			a->spellid = spell_id;
+		
+		//Note: if players can become pets, they will not receive damage messages of their own
+		//this was done to simplify the code here (since we can only effectively skip one mob on queue)
+		FilterType filter;
+		Mob *skip = attacker;
+		if(attacker && attacker->GetOwnerID()) {
+			//attacker is a pet, let pet owners see their pet's damage
+			Mob* owner = attacker->GetOwner();
+			if (owner && owner->IsClient()) {
+				if ((spell_id != SPELL_UNKNOWN || (attack_skill>200 && attack_skill<250)) && damage>0) {
+					//special crap for spell damage, looks hackish to me
+					char val1[20]={0};
+					owner->Message_StringID(4,OTHER_HIT_NONMELEE,GetName(),ConvertArray(damage,val1));
+			    } else {
+			    	if(damage > 0) {
+						if(spell_id != SPELL_UNKNOWN)
+							filter = iBuffTic ? FilterDOT : FilterSpellDamage;
+						else
+							filter = FILTER_MYPETHITS;
+					} else if(damage == -5)
+						filter = FilterNone;	//cant filter invulnerable
+					else
+						filter = FILTER_MYPETMISSES;
+					owner->CastToClient()->QueuePacket(outapp,true,CLIENT_CONNECTED,filter);
+				}
+			}
+			skip = owner;
+		} else {
+			//attacker is not a pet, send to the attacker
+			
+			//if the attacker is a client, try them with the correct filter
+			if(attacker->IsClient()) {
+				if ((spell_id != SPELL_UNKNOWN || (attack_skill>200 && attack_skill<250)) && damage>0) {
+					//special crap for spell damage, looks hackish to me
+					char val1[20]={0};
+					attacker->Message_StringID(4,OTHER_HIT_NONMELEE,GetName(),ConvertArray(damage,val1));
+			    } else {
+			    	if(damage > 0) {
+						if(spell_id != SPELL_UNKNOWN)
+							filter = iBuffTic ? FilterDOT : FilterSpellDamage;
+						else
+							filter = FilterNone;	//cant filter our own hits
+					} else if(damage == -5)
+						filter = FilterNone;	//cant filter invulnerable
+					else
+						filter = FILTER_MYMISSES;
+					attacker->CastToClient()->QueuePacket(outapp, true, CLIENT_CONNECTED, filter);
+				}
+			}
+			skip = attacker;
+		}
+		
+		//send damage to all clients around except the specified skip mob (attacker or the attacker's owner) and ourself
+		if(damage > 0) {
+			if(spell_id != SPELL_UNKNOWN)
+				filter = iBuffTic ? FilterDOT : FilterSpellDamage;
+			else
+				filter = FILTER_OTHERHITS;
+		} else if(damage == -5)
+			filter = FilterNone;	//cant filter invulnerable
+		else
+			filter = FILTER_OTHERMISSES;
+		//make attacker (the attacker) send the packet so we can skip them and the owner
+		//this call will send the packet to `this` as well (using the wrong filter) (will not happen until PC charm works)
+LogFile->write(EQEMuLog::Debug, "Queue damage to all except %s with filter %d (%d), type %d", skip->GetName(), filter, IsClient()?CastToClient()->GetFilter(filter):-1, a->type);
+		entity_list.QueueCloseClients(this, outapp, true, 200, skip, true, filter);
+		
+		//send the damage to ourself if we are a client
+		if(IsClient()) {
+			//I dont think any filters apply to damage affecting us
+			CastToClient()->QueuePacket(outapp);
+		}
+		
+		safe_delete(outapp);
+	} //end packet sending
+    
+    if(damage > 0) {
+    	//fade mez if we are mezzed
+		if (IsMezzed())
+			BuffFadeByEffect(SE_Mez);
+    	
+    	//check stun chances if bashing
+		if (attack_skill == BASH && GetLevel() < 56) {
+			int stun_resist = itembonuses.StunResist+spellbonuses.StunResist;
+			if(stun_resist <= 0 || MakeRandomInt(0,99) >= stun_resist)
+				Stun(0);
+		}
+		
+		//see if root will break
+		if (IsRooted() && spell_id != SPELL_UNKNOWN) { // neotoyko: only spells cancel root
+			if (MakeRandomInt(0, 99) < 20)
+				BuffFadeByEffect(SE_Root, buffslot); // buff slot is passed through so a root w/ dam doesnt cancel itself
+		}
+		
+		//increment chances of interrupting
+		if(IsCasting() && spell_id == SPELL_UNKNOWN) { //shouldnt interrupt on regular spell damage
+			attacked_count++;
+			isattacked = true;
+		}
+		
+		//send an HP update if we are hurt
+		if(GetHP() < GetMaxHP())
+			SendHPUpdate();
+    } //end `if damage was done`
+}
+
+
+void Mob::HealDamage(uint32 amount) {
+	uint32 curhp = GetHP();
+	uint32 maxhp = GetMaxHP();
+	if (curhp < maxhp) {
+		if ((curhp+amount)>maxhp)
+			curhp=maxhp;
+		else
+			curhp+=amount;
+		SetHP(curhp);
+
+		SendHPUpdate();
+	}
+}
+
+
+
+
+
 

@@ -1,3 +1,4 @@
+#define DONT_SHARED_OPCODES
 /*  EQEMu:  Everquest Server Emulator
 Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 
@@ -68,7 +69,8 @@ extern volatile bool ZoneLoaded;
 
 #include "../common/queue.h"
 #include "../common/timer.h"
-#include "../common/EQNetwork.h"
+#include "../common/EQStream.h"
+#include "../common/EQStreamFactory.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/Mutex.h"
 #include "../common/version.h"
@@ -88,6 +90,7 @@ extern volatile bool ZoneLoaded;
 #include "perlparser.h"
 #include "client_logs.h"
 #include "questmgr.h"
+#include "titles.h"
 
 #ifdef GUILDWARS
 #include "../GuildWars/GuildWars.h"
@@ -105,8 +108,10 @@ GuildRanks_Struct	guilds[512];
 char errorname[32];
 int16 adverrornum = 0;
 extern Zone* zone;
-EQNetworkServer eqns;
+EQStreamFactory eqsf(ZoneStream);
 npcDecayTimes_Struct npcCorpseDecayTimes[100];
+TitleManager title_manager;
+
 
 bool zoneprocess;
 
@@ -141,7 +146,7 @@ void Shutdown();
 extern void MapOpcodes();
 
 //bool ZoneBootup(int32 iZoneID, bool iStaticZone = false);
-char *strsep(char **stringp, const char *delim);
+//char *strsep(char **stringp, const char *delim);
 
 #ifdef ADDONCMD
 #include "addoncmd.h"
@@ -200,16 +205,16 @@ int main(int argc, char** argv) {
 	
 	LogFile->write(EQEMuLog::Status, "Loading opcodes..");
 #ifdef DONT_SHARED_OPCODES
-	EQNetworkOpcodeManager = new RegularOpcodeManager();
+	ZoneOpcodeManager = new RegularOpcodeManager();
 #else
-	EQNetworkOpcodeManager = new SharedOpcodeManager();
+	ZoneOpcodeManager = new SharedOpcodeManager();
 #endif
-	if(!EQNetworkOpcodeManager->LoadOpcodes(OPCODES_FILE)) {
+	if(!ZoneOpcodeManager->LoadOpcodes(OPCODES_FILE)) {
 		LogFile->write(EQEMuLog::Error, "Loading opcodes failed. I cant live like this!");
 		return(1);
 	}
 	
-	LogFile->write(EQEMuLog::Status, "Mapping Opcodes");
+	LogFile->write(EQEMuLog::Status, "Mapping Incoming Opcodes");
 	MapOpcodes();
 	LogFile->write(EQEMuLog::Status, "Loading Variables");
 	database.LoadVariables();
@@ -242,18 +247,21 @@ int main(int argc, char** argv) {
 		CheckEQEMuErrorAndPause();
 		return 0;
 	}
-#ifdef SHAREMEM
 	LogFile->write(EQEMuLog::Status, "Loading doors");
 	database.LoadDoors();
-#endif
+	
 	LoadSPDat();
 
 	// New Load function.  keeping it commented till I figure out why its not working correctly in linux. Trump.
 	// NewLoadSPDat();
 	LogFile->write(EQEMuLog::Status, "Loading guilds");
 	database.LoadGuilds(guilds);
+	LogFile->write(EQEMuLog::Status, "Loading guild list");
+	database.LoadGuildList();
 	LogFile->write(EQEMuLog::Status, "Loading factions");
 	database.LoadFactionData();
+	LogFile->write(EQEMuLog::Status, "Loading titles");
+	title_manager.LoadTitles();
 	LogFile->write(EQEMuLog::Status, "Loading AA effects");
 	database.LoadAAEffects();
 	LogFile->write(EQEMuLog::Status, "Loading swarm spells");
@@ -264,7 +272,6 @@ int main(int argc, char** argv) {
 	database.GetDecayTimes(npcCorpseDecayTimes);
 	LogFile->write(EQEMuLog::Status, "Loading what ever is left");
 	database.ExtraOptions();
-/* solar: new command system */
 	LogFile->write(EQEMuLog::Status, "Loading commands");
 	int retval=command_init();
 	if(retval<0)
@@ -275,26 +282,32 @@ int main(int argc, char** argv) {
 
 #ifdef EMBPERL
 #ifdef EMBPERL_XS
-       LogFile->write(EQEMuLog::Status, "Loading embedded perl XS");
-       AutoDelete<PerlXSParser> ADparse;
-       try {
+	LogFile->write(EQEMuLog::Status, "Loading embedded perl XS");
+ 	AutoDelete<PerlXSParser> ADparse;
+	try {
 		ADparse.init((PerlXSParser **)(&parse), new PerlXSParser);
 	}
 #else //old EMBPERL
-       LogFile->write(EQEMuLog::Status, "Loading embedded perl");
-       AutoDelete<PerlembParser> ADparse;
-       try {
+	LogFile->write(EQEMuLog::Status, "Loading embedded perl");
+	AutoDelete<PerlembParser> ADparse;
+	try {
 		ADparse.init((PerlembParser **)(&parse), new PerlembParser);
 	}
 #endif
-       catch(const char *err)
-       {//this should never happen, so if it does, it is something really serious (like a bad perl install), so we'll shutdown.
-               LogFile->write(EQEMuLog::Status, "Fatal error initializing perl: %s", err);
-               return EXIT_FAILURE;
-       }
+	catch(const char *err)
+	{//this should never happen, so if it does, it is something really serious (like a bad perl install), so we'll shutdown.
+		LogFile->write(EQEMuLog::Status, "Fatal error initializing perl: %s", err);
+		ADparse.ReallyClearIt();
+		return EXIT_FAILURE;
+	}
 #else	//old .qst
 	AutoDelete<Parser> ADparse(&parse, new Parser);
 #endif //EMBPERL
+	
+	//now we have our parser, load the quests
+	LogFile->write(EQEMuLog::Status, "Loading quests");
+	parse->ReloadQuests();
+	
 
 #ifdef ADDONCMD	
 	LogFile->write(EQEMuLog::Status, "Looding addon commands from dll");
@@ -308,6 +321,15 @@ int main(int argc, char** argv) {
 #endif
 	if (!worldserver.Connect()) {
 		LogFile->write(EQEMuLog::Error, "worldserver.Connect() FAILED!");
+	}
+	
+	LogFile->write(EQEMuLog::Status, "Starting EQ Network server.");
+	//start up the network server
+	if (!eqsf.Open(net.GetZonePort())) {
+		safe_delete(zone);
+		cerr << "eqsf.Open failed" << endl;
+		worldserver.SetZone(0);
+		return false;
 	}
 	
 	if (strcmp(zone_name, ".") == 0 || strcasecmp(zone_name, "sleep") == 0) {
@@ -327,26 +349,17 @@ int main(int argc, char** argv) {
 	Timer quest_timers(1000);	//highest resolution quest timer is 1 second
 	UpdateWindowTitle();
 	bool worldwasconnected = worldserver.Connected();
-	EQNetworkConnection* eqnc;
+	EQStream* eqs;
 	Timer temp_timer(10);
 	temp_timer.Start();
 	while(RunLoops) {
 		{	//profiler block to omit the sleep from times
 		_ZP(net_main);
+		
+		//Advance the timer to our current point in time
 		Timer::SetCurrentTime();
 		
-		//look for new connections
-		while ((eqnc = eqns.NewQueuePop())) {
-			struct in_addr	in;
-			in.s_addr = eqnc->GetrIP();
-			LogFile->write(EQEMuLog::Status, "%i New client from ip:%s port:%i", Timer::GetCurrentTime(), inet_ntoa(in), ntohs(eqnc->GetrPort()));
-			Client* client = new Client(eqnc);
-			entity_list.AddClient(client);
-		}
-		
-		//check for timeouts in other threads
-		timeout_manager.CheckTimeouts();
-		
+		//process stuff from world
 #ifdef CATCH_CRASH
 		try{
 #endif
@@ -359,7 +372,20 @@ int main(int argc, char** argv) {
 			worldserver.Disconnect();
 			worldwasconnected = false;
 		}
-#endif			
+#endif
+		
+		//look for new connections
+		while ((eqs = eqsf.Pop())) {
+			struct in_addr	in;
+			in.s_addr = eqs->GetrIP();
+			LogFile->write(EQEMuLog::Status, "%i New client from ip:%s port:%i", Timer::GetCurrentTime(), inet_ntoa(in), ntohs(eqs->GetrPort()));
+			Client* client = new Client(eqs);
+			entity_list.AddClient(client);
+		}
+		
+		//check for timeouts in other threads
+		timeout_manager.CheckTimeouts();
+		
 		if (worldserver.Connected()) {
 			worldwasconnected = true;
 		}
@@ -527,7 +553,7 @@ int main(int argc, char** argv) {
 		)
 		Zone::Shutdown(true);
 	//Fix for Linux world server problem.
-	eqns.Close();
+	eqsf.Close();
 	worldserver.Disconnect();
 	dbasync->CommitWrites();
 	dbasync->StopThread();
@@ -793,11 +819,13 @@ This is hanging on freebsd for me, not sure why...
 		*/
 		
 	while(!feof(sf)) {
-		fgets(spell_line, sizeof(spell_line), sf);
-		Seperator sep(spell_line, '^', 200, 100, false, 0, 0, false);
-		
-		if(spell_line[0]=='\0')
+		if(fgets(spell_line, sizeof(spell_line), sf) == NULL)
 			break;
+		if(spell_line[0]=='\0')
+			continue;
+		
+		Seperator sep(spell_line, '^', 220, 100, false, 0, 0, false);
+		
 		
 		tempid = atoi(sep.arg[0]);
 		if (tempid > iMaxSpellID) {

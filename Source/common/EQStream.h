@@ -1,6 +1,5 @@
-#ifndef _EQPROTOCOL_H
-
-#define _EQPROTOCOL_H
+#ifndef _EQSTREAM_H
+#define _EQSTREAM_H
 
 #include <string>
 #include <vector>
@@ -9,6 +8,7 @@
 #ifndef WIN32
 #include <netinet/in.h>
 #endif
+#include "EQStreamType.h"
 #include "EQPacket.h"
 #include "Mutex.h"
 #include "../common/opcodemgr.h"
@@ -25,6 +25,9 @@ typedef enum {
 
 #define FLAG_COMPRESSED	0x01
 #define FLAG_ENCODED	0x04
+
+#define RATEBASE	1048576 // 1 MB
+#define DECAYBASE	78642	// RATEBASE/10
 
 #pragma pack(1)
 struct SessionRequest {
@@ -62,16 +65,6 @@ class OpcodeManager;
 extern OpcodeManager *EQNetworkOpcodeManager;
 
 class EQStreamFactory;
-
-typedef enum {
-	UnknownStream=0,
-	LoginStream,
-	WorldStream,
-	ZoneStream,
-	ChatOrMailStream,
-	ChatStream,
-	MailStream
-} EQStreamType;
 
 class EQStream {
 	protected:
@@ -128,15 +121,26 @@ class EQStream {
 		vector<EQApplicationPacket *> InboundQueue;
 		Mutex MInboundQueue;
 
+		static uint16 MaxWindowSize;
+
+		sint32 BytesWritten;
+
+		Mutex MRate;
+		sint32 RateThreshold;
+		sint32 DecayRate;
+
 #ifdef COLLECTOR
 		map<unsigned short,EQProtocolPacket *> PacketQueue;
 #endif
 
 		EQStreamFactory *Factory;
 
+		EQApplicationPacket *MakeApplicationPacket(EQProtocolPacket *p);
+		EQApplicationPacket *MakeApplicationPacket(const unsigned char *buf, uint32 len);
+
 	public:
-		EQStream() { init(); remote_ip = 0; remote_port = 0; }
-		EQStream(sockaddr_in addr) { init(); remote_ip=addr.sin_addr.s_addr; remote_port=addr.sin_port; }
+		EQStream() { init(); remote_ip = 0; remote_port = 0; State=CLOSED; StreamType=UnknownStream; compressed=true; encoded=false; app_opcode_size=2; }
+		EQStream(sockaddr_in addr) { init(); remote_ip=addr.sin_addr.s_addr; remote_port=addr.sin_port; State=CLOSED; StreamType=UnknownStream; compressed=true; encoded=false; app_opcode_size=2; }
 		virtual ~EQStream() { RemoveData(); }
 		inline void SetFactory(EQStreamFactory *f) { Factory=f; }
 		void init();
@@ -199,6 +203,7 @@ class EQStream {
 
 
 		static EQProtocolPacket *Read(int eq_fd, sockaddr_in *from);
+		static sint8 CompareSequence(uint16 expected_seq , uint16 seq);
 
 		void Close() { SendDisconnect(); }
 		bool CheckActive() { return GetState()==ESTABLISHED; }
@@ -208,8 +213,12 @@ class EQStream {
 		inline const EQStreamType GetStreamType() const { return StreamType; }
 		static string EQStream::StreamTypeString(EQStreamType t);
 
+		void EQStream::Decay();
+		void EQStream::AdjustRates(uint32 average_delta);
+
 #ifdef COLLECTOR
 		void ProcessQueue();
+		EQProtocolPacket *RemoveQueue(uint16 seq);
 #endif
 };
 

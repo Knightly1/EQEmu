@@ -87,10 +87,11 @@ void Mob::ResumeWandering()
 		}
 		if (cur_wp_x == GetX() && cur_wp_y == GetY()) 
 		{	// are we we at a waypoint? if so, trigger event and start to next
-			char temp[100]; 
-			parse->Event(EVENT_WAYPOINT,this->GetNPCTypeID(), itoa(cur_wp,temp,10), CastToNPC(), NULL); 
+			char temp[100];
+			itoa(cur_wp,temp,10);	//do this before updating to next waypoint
 			CalculateNewWaypoint(); 
-	        SetAppearance(0, false); 
+	        SetAppearance(eaStanding, false); 
+			parse->Event(EVENT_WAYPOINT,this->GetNPCTypeID(), temp, CastToNPC(), NULL); 
 		}	// if not currently at a waypoint, we continue on to the one we were headed to before the stop
 	}
 	else
@@ -456,7 +457,7 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 	delta_heading=0;
 	
 	SendPosUpdate();
-	SetAppearance(0, false);
+	SetAppearance(eaStanding, false);
     pLastChange = Timer::GetCurrentTime();
     return true;
 }
@@ -542,7 +543,7 @@ bool Mob::CalculateNewPosition(float x, float y, float z, float speed, bool chec
 	tar_ndx++;
 	
     // now get new heading
-	SetAppearance(0, false); // make sure they're standing
+	SetAppearance(eaStanding, false); // make sure they're standing
     pLastChange = Timer::GetCurrentTime();
     return true;
 }

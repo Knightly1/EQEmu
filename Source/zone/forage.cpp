@@ -244,7 +244,7 @@ void Client::GoFish()
 	
 	//make sure we still have a fishing pole on:
 	const ItemInst* Pole = m_inv[SLOT_PRIMARY];
-	sint32 bslot = m_inv.HasItemByUse(ItemUseFishingBait, 1, invWhereWorn|invWherePersonal);
+	sint32 bslot = m_inv.HasItemByUse(ItemTypeFishingBait, 1, invWhereWorn|invWherePersonal);
 	const ItemInst* Bait = NULL;
 	if(bslot != SLOT_INVALID)
 		Bait = m_inv.GetItem(bslot);
@@ -254,12 +254,12 @@ void Client::GoFish()
 		return;
 	}
 	
-	if(!Pole->IsType(ItemTypeCommon) || Pole->GetItem()->Common.ItemUse != ItemUseFishingPole) {
+	if(!Pole->IsType(ItemClassCommon) || Pole->GetItem()->Common.ItemType != ItemTypeFishingPole) {
 		Message(0, "You do not have a fishing pole equipped.");
 		return;
 	}
 	
-	if(!Bait->IsType(ItemTypeCommon) || Bait->GetItem()->Common.ItemUse != ItemUseFishingBait) {
+	if(!Bait->IsType(ItemClassCommon) || Bait->GetItem()->Common.ItemType != ItemTypeFishingBait) {
 		Message(0, "You do not have any bait.");
 		return;
 	}

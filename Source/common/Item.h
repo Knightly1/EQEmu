@@ -44,6 +44,16 @@ typedef map<sint16, ItemInst*>::const_iterator			iter_inst;
 typedef map<uint8, ItemCommonInst*>::const_iterator		iter_augment;
 typedef map<uint8, ItemInst*>::const_iterator			iter_bag;
 
+namespace ItemField {
+	enum {
+		serialization=0,
+#define F(x) x,
+#include "item_fieldlist.h"
+#undef F
+		updated
+	};
+};
+
 // Indexing positions into item material arrays
 #define MATERIAL_HEAD		0
 #define MATERIAL_CHEST		1
@@ -69,6 +79,7 @@ typedef map<uint8, ItemInst*>::const_iterator			iter_bag;
 #define IDX_TRADE		3000
 #define IDX_TRADE_BAG	3031
 #define IDX_TRADESKILL	4000
+#define MAX_ITEMS_PER_BAG 10
 
 // Specifies usage type for item inside ItemInst
 enum ItemUseType
@@ -135,8 +146,11 @@ enum InventorySlot
 	////////////////////////
 	// All other slots
 	////////////////////////
+	SLOT_PERSONAL_BEGIN = 22,
+	SLOT_PERSONAL_END = 29,
 	
 	SLOT_CURSOR		= 30,
+	
 	SLOT_CURSOR_END	= (sint16)0xFFFE,	// Last item on cursor queue
 	// Cursor bag slots are 331->340 (10 slots)
 	
@@ -202,6 +216,7 @@ protected:
 //	Character inventory
 class Inventory
 {
+	friend class ItemInst;
 public:
 	///////////////////////////////
 	// Public Methods
@@ -300,25 +315,31 @@ public:
 	/////////////////////////
 	
 	// Constructors/Destructor
-	ItemInst(const Item_Struct* item = NULL, sint16 charges = 0) {
+	ItemInst(const Item_Struct* item = NULL, const unsigned char* item_s = NULL, sint16 charges = 0) {
 		m_use_type = ItemUseNormal;
 		m_item = item;
+		m_item_serialization = item_s;
 		m_charges = charges;
 		m_price = 0;
+		m_instnodrop = false;
 		m_merchantslot = 0;
-		if(m_item &&m_item->ItemClass == ItemTypeCommon)
+		if(m_item &&m_item->ItemClass == ItemClassCommon)
 			m_color = m_item->Common.Color;
 		else
 			m_color = 0;
 	}
+	
+	ItemInst(const Item_Struct* item = NULL, sint16 charges = 0);
 	
 	ItemInst(uint32 item_id, sint16 charges = 0);
 	
 	ItemInst(ItemUseType use_type) {
 		m_use_type = use_type;
 		m_item = NULL;
+		m_item_serialization = NULL;
 		m_charges = 0;
 		m_price = 0;
+		m_instnodrop = false;
 		m_merchantslot = 0;
 		m_color = 0;
 	}
@@ -326,14 +347,11 @@ public:
 	virtual ~ItemInst() {}
 	
 	// Query item type
-	virtual bool IsType(ItemType item_type) const;
-	
-	// Query Attribute of item
-	virtual bool IsAttrib(ItemAttrib attribs) const;
+	virtual bool IsType(ItemClass item_class) const;
 	
 	// Can item be stacked?
 	virtual bool IsStackable() const;
-	
+
 	// Can item be equipped by/at?
 	virtual bool IsEquipable(int16 race, int16 class_) const;
 	virtual bool IsEquipable(sint16 slot_id) const;
@@ -348,7 +366,7 @@ public:
 	virtual string Serialize(sint16 slot_id) const;
 	
 	// Accessors
-	const uint32 GetID() const { return m_item->ItemNumber; }
+	const uint32 GetID() const { return m_item->ID; }
 	const Item_Struct* GetItem() const		{ return m_item; }
 	void SetItem(const Item_Struct* item)	{ m_item = item; }
 	
@@ -364,8 +382,15 @@ public:
 	uint32 GetMerchantSlot() const				{ return m_merchantslot; }
 	void SetMerchantSlot(uint32 slot)		{ m_merchantslot = slot; }
 
+	sint32 GetMerchantCount() const				{ return m_merchantcount; }
+	void SetMerchantCount(sint32 count)		{ m_merchantcount = count; }
+
 	sint16 GetCurrentSlot() const			{ return m_currentslot; }
 	void SetCurrentSlot(sint16 curr_slot)   { m_currentslot = curr_slot; }
+
+	// Is this item already attuned?
+	bool IsInstNoDrop() const { return m_instnodrop; }
+	void SetInstNoDrop(bool flag) { m_instnodrop=flag; }
 
 	// Allows treatment of this object as though it were a pointer to m_item
 	operator bool() const { return (m_item != NULL); }
@@ -381,7 +406,7 @@ public:
 	static ItemInst* Create(uint32 item_id, sint16 charges=0, uint32 aug1=0, uint32 aug2=0, uint32 aug3=0, uint32 aug4=0, uint32 aug5=0);
 	static ItemInst* Create(const Item_Struct* item, sint16 charges=0, uint32 aug1=0, uint32 aug2=0, uint32 aug3=0, uint32 aug4=0, uint32 aug5=0);
 	
-	
+	bool IsSlotAllowed(sint16 slot_id) const;
 protected:
 	//////////////////////////
 	// Protected Members
@@ -389,11 +414,14 @@ protected:
 	
 	ItemUseType			m_use_type;	// Usage type for item
 	const Item_Struct*	m_item;		// Ptr to item data
+	const unsigned char*	m_item_serialization;		// Ptr to item serialization
 	sint16				m_charges;	// # of charges for chargeable items
 	uint32				m_price;	// Bazaar /trader price
 	uint32				m_color;
 	uint32				m_merchantslot;
 	sint16				m_currentslot;
+	bool 				m_instnodrop;
+	sint32				m_merchantcount;		//number avaliable on the merchant, -1=unlimited
 };
 
 
@@ -411,6 +439,7 @@ public:
 	
 	// Constructors/Destructor
 	ItemCommonInst(const Item_Struct* item = NULL, sint16 charges = 0, uint32 aug1 = 0, uint32 aug2 = 0, uint32 aug3 = 0, uint32 aug4 = 0, uint32 aug5 = 0);
+	ItemCommonInst(const Item_Struct* item = NULL, const unsigned char* item_s = NULL, sint16 charges = 0, uint32 aug1 = 0, uint32 aug2 = 0, uint32 aug3 = 0, uint32 aug4 = 0, uint32 aug5 = 0);
 	ItemCommonInst(uint32 item_id, sint16 charges = 0, uint32 aug1 = 0, uint32 aug2 = 0, uint32 aug3 = 0, uint32 aug4 = 0, uint32 aug5 = 0);
 	ItemCommonInst(const ItemCommonInst& copy);
 	virtual ~ItemCommonInst();
@@ -425,7 +454,7 @@ public:
 	// Augements
 	inline bool IsAugmentable() const { return m_item->Common.AugSlotType[0]!=0; }
 	sint8 AvailableAugmentSlot(sint32 augtype) const;
-	inline sint32 GetAugmentType() const { return m_item->Common.augtype; }
+	inline sint32 GetAugmentType() const { return m_item->Common.AugType; }
 	
 	// Has attack/delay?
 	virtual bool IsWeapon() const;
@@ -454,6 +483,8 @@ public:
 	
 	// Clone current item
 	virtual ItemInst* Clone() const;
+
+	bool IsSlotAllowed(sint16 slot_id);
 	
 	
 protected:
@@ -466,7 +497,9 @@ protected:
 	
 	// Put new augment, regardless of whether something exists there or not
 	void _PutAugment(uint8 slot, ItemCommonInst* inst)	{ m_augments[slot] = inst; }
-	friend sint16 Inventory::_PutItem(sint16, ItemInst*);
+//GCC dosent like this cause its protected
+//	friend sint16 Inventory::_PutItem(sint16, ItemInst*);
+	friend class Inventory;
 	
 	map<uint8, ItemCommonInst*>	m_augments;	// LDoN augments on this item
 	
@@ -489,6 +522,7 @@ public:
 	/////////////////////////
 	
 	// Constructors/Destructor
+	ItemContainerInst(const Item_Struct* item = NULL, const unsigned char* item_s = NULL, sint16 charges = 0) : ItemInst(item, item_s, charges) {}
 	ItemContainerInst(const Item_Struct* item = NULL, sint16 charges = 0) : ItemInst(item, charges) {}
 	ItemContainerInst(uint32 item_id, sint16 charges = 0) : ItemInst(item_id, charges) {}
 	ItemContainerInst(ItemUseType use_type) : ItemInst(use_type) {}
@@ -520,13 +554,15 @@ public:
 	//Remove items based on their flags
 	//the three flag types (nodrop, norent, flags) are ORed
 	//but all the flags in flags_set must be set to match that
-	void ClearByFlags(byFlagSetting is_nodrop, byFlagSetting is_norent, byFlagSetting is_flags = byFlagIgnore, ItemAttrib flags_set = ItemAttribUnknown);
+	void ClearByFlags(byFlagSetting is_nodrop, byFlagSetting is_norent);
 	
 	// Query item type
-	virtual bool IsType(ItemType item_type) const;
+	virtual bool IsType(ItemClass item_class) const;
 	
 	// Clone current item
 	virtual ItemInst* Clone() const;
+
+	uint8 FirstOpenSlot() const;
 	
 	
 protected:
@@ -536,16 +572,20 @@ protected:
 	
 	iter_bag _begin()		{ return m_contents.begin(); }
 	iter_bag _end()			{ return m_contents.end(); }
+
+/*	GCC 4 dosent like this cause they are protected
 	friend sint16 Inventory::_HasItem(map<sint16, ItemInst*>& bucket, const Item_Struct* item, uint8 quantity);
 	friend sint16 Inventory::_HasItem(ItemInstQueue& queue, const Item_Struct* item, uint8 quantity);
 	friend sint16 Inventory::_HasItemByUse(map<sint16, ItemInst*>& bucket, uint8 use, uint8 quantity);
 	friend sint16 Inventory::_HasItemByUse(ItemInstQueue& queue, uint8 use, uint8 quantity);
+*/
+	friend class Inventory;
 
 	friend void Inventory::dumpInventory();
 	
 	// Add pre-allocated item to container .. container now owns this memory
 	void _PutItem(uint8 index, ItemInst* inst) { m_contents[index] = inst; }
-	friend sint16 Inventory::_PutItem(sint16, ItemInst*);
+// GCC4	friend sint16 Inventory::_PutItem(sint16, ItemInst*);
 	
 	// Items inside of this container
 	map<uint8, ItemInst*> m_contents; // Zero-based index: min=0, max=9
@@ -565,6 +605,7 @@ public:
 	/////////////////////////
 	
 	// Constructors/Destructor
+	ItemBookInst(const Item_Struct* item = NULL, const unsigned char* item_s = NULL, sint16 charges = 0) : ItemInst(item, item_s, charges) {}
 	ItemBookInst(const Item_Struct* item = NULL, sint16 charges = 0) : ItemInst(item, charges) {}
 	ItemBookInst(uint32 item_id, sint16 charges = 0) : ItemInst(item_id, charges) {}
 	virtual ~ItemBookInst() {}

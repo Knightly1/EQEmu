@@ -34,6 +34,30 @@ typedef const char Const_char;
 
 #include "npc.h"
 
+XS(XS_NPC_SignalNPC); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_SignalNPC)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: NPC::SignalNPC(THIS, _signal_id)");
+	{
+		NPC *		THIS;
+		int		_signal_id = (int)SvIV(ST(1));
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->SignalNPC(_signal_id);
+	}
+	XSRETURN_EMPTY;
+}
+
 XS(XS_NPC_CheckNPCFactionAlly); /* prototype to pass -Wmissing-prototypes */
 XS(XS_NPC_CheckNPCFactionAlly)
 {
@@ -52,64 +76,13 @@ XS(XS_NPC_CheckNPCFactionAlly)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->CheckNPCFactionAlly(other_faction);
 		XSprePUSH; PUSHi((IV)RETVAL);
 	}
 	XSRETURN(1);
-}
-
-XS(XS_NPC_GetReverseFactionCon); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_GetReverseFactionCon)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: NPC::GetReverseFactionCon(THIS, iOther)");
-	{
-		NPC *		THIS;
-		FACTION_VALUE		RETVAL;
-		dXSTARG;
-		Mob*		iOther;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-
-		if (sv_derived_from(ST(1), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(1)));
-			iOther = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "iOther is not of type Mob");
-
-		RETVAL = THIS->GetReverseFactionCon(iOther);
-		XSprePUSH; PUSHi((IV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_NPC_GoToBind); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_GoToBind)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: NPC::GoToBind(THIS)");
-	{
-		NPC *		THIS;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-
-		THIS->GoToBind();
-	}
-	XSRETURN_EMPTY;
 }
 
 XS(XS_NPC_AddItem); /* prototype to pass -Wmissing-prototypes */
@@ -130,6 +103,8 @@ XS(XS_NPC_AddItem)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 4)
 			slot = 0;
@@ -157,6 +132,8 @@ XS(XS_NPC_AddLootTable)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->AddLootTable();
 	}
@@ -179,6 +156,8 @@ XS(XS_NPC_IsRanger)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsRanger();
 		ST(0) = boolSV(RETVAL);
@@ -205,6 +184,8 @@ XS(XS_NPC_RemoveItem)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 3)
 			quantity = 0;
@@ -238,6 +219,8 @@ XS(XS_NPC_ClearItemList)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->ClearItemList();
 	}
@@ -263,6 +246,8 @@ XS(XS_NPC_AddCash)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->AddCash(in_copper, in_silver, in_gold, in_platinum);
 	}
@@ -284,6 +269,8 @@ XS(XS_NPC_RemoveCash)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->RemoveCash();
 	}
@@ -307,6 +294,8 @@ XS(XS_NPC_CountLoot)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->CountLoot();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -331,6 +320,8 @@ XS(XS_NPC_GetLoottableID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetLoottableID();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -354,6 +345,8 @@ XS(XS_NPC_SetPetType)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetPetType(in_type);
 	}
@@ -377,6 +370,8 @@ XS(XS_NPC_GetCopper)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetCopper();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -401,6 +396,8 @@ XS(XS_NPC_GetSilver)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetSilver();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -425,6 +422,8 @@ XS(XS_NPC_GetGold)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetGold();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -449,6 +448,8 @@ XS(XS_NPC_GetPlatinum)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetPlatinum();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -472,6 +473,8 @@ XS(XS_NPC_SetCopper)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetCopper(amt);
 	}
@@ -494,6 +497,8 @@ XS(XS_NPC_SetSilver)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetSilver(amt);
 	}
@@ -516,6 +521,8 @@ XS(XS_NPC_SetGold)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetGold(amt);
 	}
@@ -538,6 +545,8 @@ XS(XS_NPC_SetPlatinum)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetPlatinum(amt);
 	}
@@ -560,6 +569,8 @@ XS(XS_NPC_SetGrid)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetGrid(grid_);
 	}
@@ -582,6 +593,8 @@ XS(XS_NPC_SetSp2)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetSp2(sg2);
 	}
@@ -605,6 +618,8 @@ XS(XS_NPC_GetWaypointMax)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetWaypointMax();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -629,6 +644,8 @@ XS(XS_NPC_GetGrid)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetGrid();
 		XSprePUSH; PUSHi((IV)RETVAL);
@@ -653,83 +670,11 @@ XS(XS_NPC_GetSp2)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetSp2();
 		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_NPC_Depop); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_Depop)
-{
-	dXSARGS;
-	if (items < 1 || items > 2)
-		Perl_croak(aTHX_ "Usage: NPC::Depop(THIS, StartSpawnTimer= true)");
-	{
-		NPC *		THIS;
-		bool		StartSpawnTimer;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-
-		if (items < 2)
-			StartSpawnTimer = true;
-		else {
-			StartSpawnTimer = (bool)SvTRUE(ST(1));
-		}
-
-		THIS->Depop(StartSpawnTimer);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_NPC_Stun); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_Stun)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: NPC::Stun(THIS, duration)");
-	{
-		NPC *		THIS;
-		int		duration = (int)SvIV(ST(1));
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-
-		THIS->Stun(duration);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_NPC_IsStunned); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_IsStunned)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: NPC::IsStunned(THIS)");
-	{
-		NPC *		THIS;
-		bool		RETVAL;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-
-		RETVAL = THIS->IsStunned();
-		ST(0) = boolSV(RETVAL);
-		sv_2mortal(ST(0));
 	}
 	XSRETURN(1);
 }
@@ -750,6 +695,8 @@ XS(XS_NPC_IsPVP)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsPVP();
 		ST(0) = boolSV(RETVAL);
@@ -775,6 +722,8 @@ XS(XS_NPC_CurrentPosition)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->CurrentPosition();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -799,6 +748,8 @@ XS(XS_NPC_HasBanishCapability)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->HasBanishCapability();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -823,6 +774,8 @@ XS(XS_NPC_GetNPCFactionID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetNPCFactionID();
 		XSprePUSH; PUSHi((IV)RETVAL);
@@ -847,6 +800,8 @@ XS(XS_NPC_GetPrimaryFaction)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetPrimaryFaction();
 		XSprePUSH; PUSHi((IV)RETVAL);
@@ -870,6 +825,8 @@ XS(XS_NPC_GetIgnoreTarget)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetIgnoreTarget();
 		ST(0) = sv_newmortal();
@@ -894,6 +851,8 @@ XS(XS_NPC_SetIgnoreTarget)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(1), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(1)));
@@ -901,6 +860,8 @@ XS(XS_NPC_SetIgnoreTarget)
 		}
 		else
 			Perl_croak(aTHX_ "mob is not of type Mob");
+		if(mob == NULL)
+			Perl_croak(aTHX_ "mob is NULL, avoiding crash.");
 
 		THIS->SetIgnoreTarget(mob);
 	}
@@ -925,6 +886,8 @@ XS(XS_NPC_GetNPCHate)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(1), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(1)));
@@ -932,6 +895,8 @@ XS(XS_NPC_GetNPCHate)
 		}
 		else
 			Perl_croak(aTHX_ "in_ent is not of type Mob");
+		if(in_ent == NULL)
+			Perl_croak(aTHX_ "in_ent is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetNPCHate(in_ent);
 		XSprePUSH; PUSHi((IV)RETVAL);
@@ -956,6 +921,8 @@ XS(XS_NPC_IsOnHatelist)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(1), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(1)));
@@ -963,6 +930,8 @@ XS(XS_NPC_IsOnHatelist)
 		}
 		else
 			Perl_croak(aTHX_ "p is not of type Mob");
+		if(p == NULL)
+			Perl_croak(aTHX_ "p is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsOnHatelist(p);
 		ST(0) = boolSV(RETVAL);
@@ -987,6 +956,8 @@ XS(XS_NPC_SetNPCFactionID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetNPCFactionID(in);
 	}
@@ -1009,6 +980,8 @@ XS(XS_NPC_SetFeignMemory)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetFeignMemory(num);
 	}
@@ -1032,6 +1005,8 @@ XS(XS_NPC_GetFeignMemory)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetFeignMemory();
 		sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG;
@@ -1056,6 +1031,8 @@ XS(XS_NPC_GetMaxDMG)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetMaxDMG();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1079,6 +1056,8 @@ XS(XS_NPC_IsAnimal)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsAnimal();
 		ST(0) = boolSV(RETVAL);
@@ -1104,6 +1083,8 @@ XS(XS_NPC_GetPetSpellID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetPetSpellID();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1127,6 +1108,8 @@ XS(XS_NPC_SetPetSpellID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetPetSpellID(amt);
 	}
@@ -1151,6 +1134,8 @@ XS(XS_NPC_GetMaxDamage)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetMaxDamage(tlevel);
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1174,6 +1159,8 @@ XS(XS_NPC_SetTaunting)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetTaunting(tog);
 	}
@@ -1196,6 +1183,8 @@ XS(XS_NPC_PickPocket)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(1), "Client")) {
 			IV tmp = SvIV((SV*)SvRV(ST(1)));
@@ -1203,6 +1192,8 @@ XS(XS_NPC_PickPocket)
 		}
 		else
 			Perl_croak(aTHX_ "thief is not of type Client");
+		if(thief == NULL)
+			Perl_croak(aTHX_ "thief is NULL, avoiding crash.");
 
 		THIS->PickPocket(thief);
 	}
@@ -1225,6 +1216,8 @@ XS(XS_NPC_StartSwarmTimer)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->StartSwarmTimer(duration);
 	}
@@ -1247,6 +1240,8 @@ XS(XS_NPC_DoClassAttacks)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(1), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(1)));
@@ -1254,6 +1249,8 @@ XS(XS_NPC_DoClassAttacks)
 		}
 		else
 			Perl_croak(aTHX_ "target is not of type Mob");
+		if(target == NULL)
+			Perl_croak(aTHX_ "target is NULL, avoiding crash.");
 
 		THIS->DoClassAttacks(target);
 	}
@@ -1281,9 +1278,8 @@ XS(boot_NPC)
 
 	XS_VERSION_BOOTCHECK ;
 
+		newXSproto(strcpy(buf, "SignalNPC"), XS_NPC_SignalNPC, file, "$$");
 		newXSproto(strcpy(buf, "CheckNPCFactionAlly"), XS_NPC_CheckNPCFactionAlly, file, "$$");
-		newXSproto(strcpy(buf, "GetReverseFactionCon"), XS_NPC_GetReverseFactionCon, file, "$$");
-		newXSproto(strcpy(buf, "GoToBind"), XS_NPC_GoToBind, file, "$");
 		newXSproto(strcpy(buf, "AddItem"), XS_NPC_AddItem, file, "$$$;$");
 		newXSproto(strcpy(buf, "AddLootTable"), XS_NPC_AddLootTable, file, "$");
 		newXSproto(strcpy(buf, "IsRanger"), XS_NPC_IsRanger, file, "$");
@@ -1307,9 +1303,6 @@ XS(boot_NPC)
 		newXSproto(strcpy(buf, "GetWaypointMax"), XS_NPC_GetWaypointMax, file, "$");
 		newXSproto(strcpy(buf, "GetGrid"), XS_NPC_GetGrid, file, "$");
 		newXSproto(strcpy(buf, "GetSp2"), XS_NPC_GetSp2, file, "$");
-		newXSproto(strcpy(buf, "Depop"), XS_NPC_Depop, file, "$;$");
-		newXSproto(strcpy(buf, "Stun"), XS_NPC_Stun, file, "$$");
-		newXSproto(strcpy(buf, "IsStunned"), XS_NPC_IsStunned, file, "$");
 		newXSproto(strcpy(buf, "IsPVP"), XS_NPC_IsPVP, file, "$");
 		newXSproto(strcpy(buf, "CurrentPosition"), XS_NPC_CurrentPosition, file, "$");
 		newXSproto(strcpy(buf, "HasBanishCapability"), XS_NPC_HasBanishCapability, file, "$");

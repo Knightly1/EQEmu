@@ -59,9 +59,13 @@ char *CleanMobName(const char *in, char *out);
 const char *ConvertArray(int input, char *returnchar);
 const char *ConvertArrayF(float input, char *returnchar);
 float EQ13toFloat(int d);
+float NewEQ13toFloat(int d);
 float EQ19toFloat(int d);
+float EQHtoFloat(int d);
 int FloatToEQ13(float d);
+int NewFloatToEQ13(float d);
 int FloatToEQ19(float d);
+int FloatToEQH(float d);
 
 
 
@@ -85,7 +89,7 @@ public:
 	AutoDelete(T** iVar, T* iSetTo = 0) {
 		init(iVar, iSetTo);
 	}
-	AutoDelete() {}
+	AutoDelete() { pVar = NULL; }
 	void init(T** iVar, T* iSetTo = 0)
 	{
 		pVar = iVar;
@@ -93,7 +97,11 @@ public:
 			*pVar = iSetTo;
 	}
 	~AutoDelete() {
-		safe_delete(*pVar);
+		if(pVar != NULL)
+			safe_delete(*pVar);
+	}
+	void ReallyClearIt() {
+		pVar = NULL;
 	}
 private:
 	T** pVar;

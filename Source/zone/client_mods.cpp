@@ -175,7 +175,7 @@ sint32 Client::LevelRegen()
 	if (GetAA(aaNaturalHealing) >= 1){
 		hp += GetAA(aaNaturalHealing);
 	}
-	if (GetAppearance() == 3) {	//stunned/mezzed
+	if (GetAppearance() == eaDead) {	//stunned/mezzed
 		hp /= 4;
 	}
 	
@@ -207,7 +207,7 @@ sint32 Client::CalcBaseHP()
 	int8 multiplier=GetClassLevelFactor();
 
 	if (multiplier == 0) {
-		cerr << "Multiplier == 0 in Client::CalcBaseHP, Using Generic..." << endl;
+		LogFile->write(EQEMuLog::Debug, "Multiplier == 0 in Client::CalcBaseHP, Using Generic...");;
 		multiplier=12;
 	}
 
@@ -217,6 +217,15 @@ sint32 Client::CalcBaseHP()
 int16 sta = GetSTA();
 if(sta > 305)
 sta = 305;
+	/*
+	
+	Something is wrong with this formula at higher levels.
+	the 'multiplier' is used for both level and sta increases.
+	A lvl 70 warrior has the wrong base HP. but the multiplier
+	value is correct for how many HP the war should get for each sta
+	point.
+	
+	*/
 	base_hp = 5+multiplier*GetLevel()+multiplier*GetLevel()*sta/300;
 	return base_hp;
 }
@@ -227,7 +236,7 @@ sint16 Client::GetRawItemAC() {
 	
 	for (sint16 slot_id=0; slot_id<21; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
-		if (inst && inst->IsType(ItemTypeCommon)) {
+		if (inst && inst->IsType(ItemClassCommon)) {
 			Total += inst->GetItem()->Common.AC;
 		}
 	}
@@ -674,7 +683,7 @@ sint32 Client::CalcMaxMana()
 			break;
 		}
 		default: {
-			cerr << "Invalid Class in CalcMaxMana" << endl;
+			LogFile->write(EQEMuLog::Debug, "Invalid Class '%c' in CalcMaxMana", GetCasterClass());
 			max_mana = 0;
 			break;
 		}
@@ -721,8 +730,8 @@ int16 Client::CalcCurrentWeight() {
 					bagslot += 1;
 			}
 			ItemInst* baginst = GetInv().GetItem(bagslot);
-			if (baginst && baginst->GetItem() && baginst->IsType(ItemTypeContainer))
-				reduction = baginst->GetItem()->Container.WeightReduction;
+			if (baginst && baginst->GetItem() && baginst->IsType(ItemClassContainer))
+				reduction = baginst->GetItem()->Container.BagWR;
 			if (reduction > 0)
 				TmpWeight -= TmpWeight*reduction/100;
 			Total += TmpWeight;
@@ -1192,46 +1201,62 @@ int16  Client::CalcATK() {
 	return(ATK);
 }
 
-int16 Client::GetInstrumentMod(int16 spell_id) {
-
+int16 Mob::GetInstrumentMod(int16 spell_id) {
+	if(GetClass() != BARD)
+		return(10);
+	
 	int16 effectmod = 0;
 	
 	//this should never use spell modifiers...
 	//if a spell grants better modifers, they are copied into the item mods
 	//because the spells are supposed to act just like having the intrument.
 	
-	if(CheckDiscipline(discPuretone)) {
-		//not sure of exact value, 37 is highest item I can find
-		effectmod = 37;
-		if(spells[spell_id].skill == SINGING)
-			effectmod += 20*GetAA(aaSingingMastery);
-		else
-			effectmod += 20*GetAA(aaInstrumentMastery);
-	} else {
-		//item mods are in 10ths of percent increases
-		switch(spells[spell_id].skill) {
-			case PERCUSSION_INSTRUMENTS:
-				effectmod += itembonuses.percussionMod + 20*GetAA(aaInstrumentMastery);
-				break;
-			case STRINGED_INSTRUMENTS:
-				effectmod += itembonuses.stringedMod + 20*GetAA(aaInstrumentMastery);
-				break;
-			case WIND_INSTRUMENTS:
-				effectmod += itembonuses.windMod + 20*GetAA(aaInstrumentMastery);
-				break;
-			case BRASS_INSTRUMENTS:
-				effectmod += itembonuses.brassMod + 20*GetAA(aaInstrumentMastery);
-				break;
-			case SINGING:
-				effectmod += itembonuses.singingMod + 20*GetAA(aaSingingMastery);
-				break;
-			default:
-				break;
-		}
+	//item mods are in 10ths of percent increases
+	switch(spells[spell_id].skill) {
+		case PERCUSSION_INSTRUMENTS:
+			if(itembonuses.percussionMod > spellbonuses.percussionMod)
+				effectmod = itembonuses.percussionMod;
+			else
+				effectmod = spellbonuses.percussionMod;
+			break;
+		case STRINGED_INSTRUMENTS:
+			if(itembonuses.stringedMod > spellbonuses.stringedMod)
+				effectmod = itembonuses.stringedMod;
+			else
+				effectmod = spellbonuses.stringedMod;
+			break;
+		case WIND_INSTRUMENTS:
+			if(itembonuses.windMod > spellbonuses.windMod)
+				effectmod = itembonuses.windMod;
+			else
+				effectmod = spellbonuses.windMod;
+			break;
+		case BRASS_INSTRUMENTS:
+			if(itembonuses.brassMod > spellbonuses.brassMod)
+				effectmod = itembonuses.brassMod;
+			else
+				effectmod = spellbonuses.brassMod;
+			break;
+		case SINGING:
+			if(itembonuses.singingMod > spellbonuses.singingMod)
+				effectmod = itembonuses.singingMod;
+			else
+				effectmod = spellbonuses.singingMod;
+			break;
+		default:
+			break;
 	}
 	
+	if(spells[spell_id].skill == SINGING)
+		effectmod += 20*GetAA(aaSingingMastery);
+	else
+		effectmod += 20*GetAA(aaInstrumentMastery);
+	
+	if(effectmod < 10)
+		effectmod = 10;
+	
 	#if EQDEBUG >= 5
-		LogFile->write(EQEMuLog::Debug, "%s::GetInstrumentMod() spell=%d mod=%d\n", GetName(), spell_id, effectmod);
+//		LogFile->write(EQEMuLog::Debug, "%s::GetInstrumentMod() spell=%d mod=%d\n", GetName(), spell_id, effectmod);
 	#endif
 	return(effectmod);
 }

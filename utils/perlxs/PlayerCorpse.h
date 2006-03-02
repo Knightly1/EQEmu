@@ -15,7 +15,6 @@
 	void	RemoveCash();
 	int32	CountItems();
 	void	Delete();
-	virtual void	Depop(bool StartSpawnTimer = true);
 	uint32	GetCopper()		{ return copper; }
 	uint32	GetSilver()		{ return silver; }
 	uint32	GetGold()		{ return gold; }

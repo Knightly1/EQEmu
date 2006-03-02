@@ -1,4 +1,4 @@
-#include "../common/database.h"
+#include "guilds.h"
 
 extern GuildRanks_Struct guilds[512];
 

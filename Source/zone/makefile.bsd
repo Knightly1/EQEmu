@@ -1,24 +1,3 @@
-APP=zone
-SF=.obj/EQNetwork.o \
-   ../common/timer.o  ../common/packet_dump.o ../common/packet_functions.o \
-   ../common/unix.o ../common/packet_dump_file.o ../common/Mutex.o ../common/MiscFunctions.o \
-   zone.o entity.o mob.o client.o client_process.o npc.o net.o spawn2.o attack.o hate_list.o \
-   ../common/serverinfo.o ../common/moremath.o worldserver.o spells.o spawngroup.o loottables.o \
-   faction.o Map.o PlayerCorpse.o petitions.o MobAI.o Object.o ../common/eqtime.o \
-   groups.o ../common/classes.o ../common/races.o ../common/TCPConnection.o forage.o \
-   ../common/crc32.o ../common/guilds.o ../common/md5.o ../common/dbcore.o \
-   ../common/dbasync.o zonedbasync.o parser.o embperl.o embparser.o \
-   ../common/EMuShareMem.o ../common/EQEMuError.o ../common/ptimer.o \
-   .obj/debug.o .obj/database.o .obj/Item.o .obj/misc.o exp.o \
-   doors.o command.o beacon.o embxs.o AA.o trap.o ../common/extprofile.o \
-   bonuses.o trading.o spdat.o  spell_effects.o aggro.o guilds.o \
-   inventory.o client_mods.o tradeskills.o waypoints.o pets.o \
-   effects.o questmgr.o perlparser.o client_logs.o special_attacks.o \
-   perl_client.o perl_entity.o perl_mob.o perl_npc.o perl_PlayerCorpse.o \
-   perl_groups.o client_packet.o tribute.o horse.o fearpath.o \
-   ../common/rdtsc.o zone_profile.o updatemgr.o pathing.o \
-   ../common/timeoutmgr.o ../common/Condition.o ../common/emu_opcodes.o \
-   .obj/opcodemgr.o
 
 CC=ccache gcc
 LINKER=gcc
@@ -27,8 +6,7 @@ LINKER=gcc
 #MYSQL_LIB=`mysql_config --libs`
 MYSQL_FLAGS=-I'/usr/local/include/mysql'
 
-DFLAGS=-DEQDEBUG=5 -DNO_PIDLOG -DSHAREMEM -DSPELL_EFFECT_SPAM -DFIELD_ITEMS 
-DFLAGS+=-DFREEBSD -DEQPROFILE -DCOMBINED
+DFLAGS=-DEQDEBUG=5 -DNO_PIDLOG -DSHAREMEM -DSPELL_EFFECT_SPAM -DFIELD_ITEMS -DFREEBSD -DCOMBINED -Di386
 #try commenting out the following three lines to disable embedded perl
 
 PERL_FLAGS=perl -MExtUtils::Embed -e ccopts
@@ -58,30 +36,13 @@ LINKOPTS=-rdynamic -L. -llthread -llstdc++ -llsupc++ -llgcc_r $(MYSQL_LIB)
 #profile friendly (from `perl -MExtUtils::Embed -e ldopts`):
 #PERL_LIB=echo -Wl,-R/usr/local/lib/perl5/5.8.2/mach/CORE -Wl,-E  -L/usr/local/lib /usr/local/lib/perl5/5.8.2/mach/auto/DynaLoader/DynaLoader.a -L/usr/local/lib/perl5/5.8.2/mach/CORE -lperl -lutil_p -lc_p -lm_p -lcrypt_p
 
-COPTS+=-fno-inline -fno-default-inline
-
-all: $(APP)
+all: zone
 
 include .depend
 
-$(APP): $(SF)
-	$(LINKER) $(COPTS) $(OBJS) $^ $(LINKOPTS) `$(PERL_LIB)` -o $@
-
-
-import_raw_items: import_raw_items.o
-	$(LINKER) $(COPTS) $^ $(LINKOPTS) `$(PERL_LIB)` -o $@
-
-clean:
-	rm -f $(SF) $(APP) import_raw_items.o import_raw_items
-
-%.o: %.cpp
-	$(CC) -c $(COPTS) `$(PERL_FLAGS)` $< -o $@
-
-
-.obj/%.o: ../common/%.cpp ../common/%.h
-	mkdir -p .obj
-	$(CC) $(COPTS) -c $< -o $@
+include makefile.common
 
 .depend depend:
 	echo $(SF) "" | sed -e 's#.obj/#../common/#g' -e 's/\.o/.cpp/g' | \
 	xargs mkdep $(COPTS) `$(PERL_FLAGS)`
+

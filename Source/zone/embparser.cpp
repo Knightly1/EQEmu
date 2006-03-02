@@ -22,6 +22,10 @@
 #ifndef EMBPARSER_CPP
 #define EMBPARSER_CPP
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 #ifdef EMBPERL
 
 #include "masterentity.h"
@@ -59,13 +63,13 @@ PerlembParser::PerlembParser(void) : Parser()
 {
 	perl = NULL;
 	eventQueueProcessing = false;
-	ReloadQuests();
+	//do not call ReloadQuests here...
+//	ReloadQuests();
 }
 
 PerlembParser::~PerlembParser()
 {
-	if(perl)
-		delete perl;
+	safe_delete(perl);
 }
 
 void PerlembParser::ExportVar(const char * pkgprefix, const char * varname, const char * value) const
@@ -190,8 +194,9 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 	const char *sub_name = QuestEventSubroutines[event];
 	
 	//make sure the sub we need even exists before we even do all this crap.
-	if(!perl->SubExists(packagename.c_str(), sub_name))
+	if(!perl->SubExists(packagename.c_str(), sub_name)) {
 		return;
+	}
 	
 	
 //	packagename = GetPkgPrefix(npcid);
@@ -364,9 +369,7 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 			break;
 		}
 		case EVENT_WAYPOINT: {
-			std::string temp = "wp";
-				temp += itoa(npcid);
-			ExportVar(packagename.c_str(), temp.c_str(), data);
+			ExportVar(packagename.c_str(), "wp", data);
 			break;
 		}
 		case EVENT_HP: {
@@ -442,6 +445,7 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 	string filename= "quests/", packagename = GetPkgPrefix(npcid);
 	//each package name is of the form qstxxxx where xxxx = npcid (since numbers alone are not valid package names)
 	questMode curmode = questDefault;
+	FILE *tmpf;
 //LogFile->write(EQEMuLog::Debug, "LoadScript(%d, %s):\n", npcid, zone);
 	if(!npcid || !zone)
 	{
@@ -469,7 +473,6 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 		char tmpname[64];
 		int count0 = 0;
 		bool filefound = false;
-		FILE *tmpf;
 		tmpf = fopen(filename.c_str(), "r");
 		if(tmpf != NULL) {
 			fclose(tmpf);
@@ -563,7 +566,25 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 #endif //QUEST_SCRIPTS_BYNAME
 
 	}
-
+	
+	//check for existance of quest file before trying to make perl load it.
+	tmpf = fopen(filename.c_str(), "r");
+	if(tmpf == NULL) {
+		//the npc has no qst file, attach the defaults
+		std::string setdefcmd = "$";
+			setdefcmd += packagename;
+			setdefcmd += "::isdefault = 1;";
+		perl->eval(setdefcmd.c_str());
+		setdefcmd = "$";
+			setdefcmd += packagename;
+			setdefcmd += "::isloaded = 1;";
+		perl->eval(setdefcmd.c_str());
+		hasQuests[npcid] = questDefault;
+		return(1);
+	} else {
+		fclose(tmpf);
+	}
+	
 //LogFile->write(EQEMuLog::Debug, "	finally settling on '%s'", filename.c_str());
 //	LogFile->write(EQEMuLog::Status, "Looking for quest file: '%s'", filename.c_str());
 
@@ -579,8 +600,8 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 	{
 		//try to reduce some of the console spam... 
 		//todo: tweak this to be more accurate at deciding what to filter (we don't want to gag legit errors)
-		if(!strstr(err,"No such file or directory"))
-			LogFile->write(EQEMuLog::Status, "WARNING: error compiling quest file %s: %s (reverting to default questfile)", filename.c_str(), err);
+//		if(!strstr(err,"No such file or directory"))
+			LogFile->write(EQEMuLog::Quest, "WARNING: error compiling quest file %s: %s (reverting to default questfile)", filename.c_str(), err);
 	}
 	//todo: change this to just read eval_file's %cache - duh!
 	if(!isloaded(packagename.c_str()))
@@ -600,6 +621,15 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 	hasQuests[npcid] = curmode;
 	return(1);
 }
+
+bool PerlembParser::isloaded(const char *packagename) const {
+	char buffer[120];
+	snprintf(buffer, 120, "$%s::isloaded", packagename);
+	if(!perl->VarExists(packagename, "isloaded"))
+		return(false);
+	return perl->geti(buffer);
+}
+
 
 //this function does NOT consider the default to be a quest 
 int PerlembParser::HasQuestFile(int32 npcid) {

@@ -1,3 +1,7 @@
+#ifdef WIN32
+#include <windows.h>
+#endif
+#include "../common/debug.h"
 #include <iostream>
 using namespace std;
 #include "entity.h"

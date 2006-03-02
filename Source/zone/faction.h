@@ -72,6 +72,7 @@ sint8 npc_value;
 //bool primary;    
 }; 
 
+const char *FactionValueToString(FACTION_VALUE fv);
 char* BuildFactionMessage(sint32 tmpvalue, sint32 faction_id, sint32 totalvalue);
 FACTION_VALUE CalculateFaction(FactionMods* fm, sint32 tmpCharacter_value);
 #endif

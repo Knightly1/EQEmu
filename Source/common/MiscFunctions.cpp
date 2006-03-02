@@ -342,12 +342,17 @@ const char * itoa(int num, char* a,int b) {
  */
 int MakeRandomInt(int low, int high)
 {
+	if(low == high)
+		return(low);
 	return (int)MakeRandomFloat((double)low, (double)high + 0.999);
 }
 
 double MakeRandomFloat(double low, double high)
 {
 	_CP(MakeRandomFloat);
+	if(low == high)
+		return(low);
+	
 	static bool seeded=0;
 	double diff = high - low;
   
@@ -404,16 +409,42 @@ float EQ13toFloat(int d)
 	return ( float(d)/float(1<<2));
 }
 
+float NewEQ13toFloat(int d)
+{
+	return ( float(d)/float(1<<6));
+}
+
 float EQ19toFloat(int d)
 {
 	return ( float(d)/float(1<<3));
 }
+
 int FloatToEQ13(float d)
 {
 	return int(d*float(1<<2));
 }
+
+int NewFloatToEQ13(float d)
+{
+	return int(d*float(1<<6));
+}
+
 int FloatToEQ19(float d)
 {
 	return int(d*float(1<<3));
+}
+
+/*
+	Heading of 0 points in the pure positive Y direction
+
+*/
+int FloatToEQH(float d)
+{
+	return(int((360.0f - d) * float(1<<11)) / 360);
+}
+
+float EQHtoFloat(int d)
+{
+	return(360.0f - float((d * 360) >> 11));
 }
 

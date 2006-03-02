@@ -99,6 +99,8 @@ public:
 	virtual void	SendCommands(const char * event, int32 npcid, NPC* npcmob, Mob* mob);
 
 	int	HasQuestFile(int32 npcid);
+	
+	virtual void ReloadQuests();
 
 private:
 

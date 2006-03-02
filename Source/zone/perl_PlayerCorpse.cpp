@@ -49,6 +49,8 @@ XS(XS_Corpse_GetCharID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetCharID();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -73,6 +75,8 @@ XS(XS_Corpse_GetDecayTime)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetDecayTime();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -95,6 +99,8 @@ XS(XS_Corpse_Lock)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->Lock();
 	}
@@ -116,6 +122,8 @@ XS(XS_Corpse_UnLock)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->UnLock();
 	}
@@ -138,6 +146,8 @@ XS(XS_Corpse_IsLocked)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsLocked();
 		ST(0) = boolSV(RETVAL);
@@ -161,6 +171,8 @@ XS(XS_Corpse_ResetLooter)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->ResetLooter();
 	}
@@ -184,6 +196,8 @@ XS(XS_Corpse_GetDBID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetDBID();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -208,6 +222,8 @@ XS(XS_Corpse_GetOwnerName)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetOwnerName();
 		sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG;
@@ -231,6 +247,8 @@ XS(XS_Corpse_SetDecayTimer)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetDecayTimer(decaytime);
 	}
@@ -253,6 +271,8 @@ XS(XS_Corpse_IsEmpty)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsEmpty();
 		ST(0) = boolSV(RETVAL);
@@ -279,6 +299,8 @@ XS(XS_Corpse_AddItem)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 4)
 			slot = 0;
@@ -309,6 +331,8 @@ XS(XS_Corpse_GetWornItem)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetWornItem(equipSlot);
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -332,6 +356,8 @@ XS(XS_Corpse_RemoveItem)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->RemoveItem(lootslot);
 	}
@@ -357,6 +383,8 @@ XS(XS_Corpse_AddCash)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->AddCash(in_copper, in_silver, in_gold, in_platinum);
 	}
@@ -378,6 +406,8 @@ XS(XS_Corpse_RemoveCash)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->RemoveCash();
 	}
@@ -401,6 +431,8 @@ XS(XS_Corpse_CountItems)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->CountItems();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -423,36 +455,10 @@ XS(XS_Corpse_Delete)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->Delete();
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Corpse_Depop); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Corpse_Depop)
-{
-	dXSARGS;
-	if (items < 1 || items > 2)
-		Perl_croak(aTHX_ "Usage: Corpse::Depop(THIS, StartSpawnTimer= true)");
-	{
-		Corpse *		THIS;
-		bool		StartSpawnTimer;
-
-		if (sv_derived_from(ST(0), "Corpse")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Corpse *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Corpse");
-
-		if (items < 2)
-			StartSpawnTimer = true;
-		else {
-			StartSpawnTimer = (bool)SvTRUE(ST(1));
-		}
-
-		THIS->Depop(StartSpawnTimer);
 	}
 	XSRETURN_EMPTY;
 }
@@ -474,6 +480,8 @@ XS(XS_Corpse_GetCopper)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetCopper();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -498,6 +506,8 @@ XS(XS_Corpse_GetSilver)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetSilver();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -522,6 +532,8 @@ XS(XS_Corpse_GetGold)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetGold();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -546,6 +558,8 @@ XS(XS_Corpse_GetPlatinum)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetPlatinum();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -570,6 +584,8 @@ XS(XS_Corpse_Summon)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(1), "Client")) {
 			IV tmp = SvIV((SV*)SvRV(ST(1)));
@@ -577,6 +593,8 @@ XS(XS_Corpse_Summon)
 		}
 		else
 			Perl_croak(aTHX_ "client is not of type Client");
+		if(client == NULL)
+			Perl_croak(aTHX_ "client is NULL, avoiding crash.");
 
 		THIS->Summon(client, spell);
 	}
@@ -600,6 +618,8 @@ XS(XS_Corpse_CastRezz)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(2), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(2)));
@@ -607,6 +627,8 @@ XS(XS_Corpse_CastRezz)
 		}
 		else
 			Perl_croak(aTHX_ "Caster is not of type Mob");
+		if(Caster == NULL)
+			Perl_croak(aTHX_ "Caster is NULL, avoiding crash.");
 
 		THIS->CastRezz(spellid, Caster);
 	}
@@ -628,6 +650,8 @@ XS(XS_Corpse_CompleteRezz)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->CompleteRezz();
 	}
@@ -651,6 +675,8 @@ XS(XS_Corpse_CanMobLoot)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->CanMobLoot(charid);
 		ST(0) = boolSV(RETVAL);
@@ -676,6 +702,8 @@ XS(XS_Corpse_AllowMobLoot)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(1), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(1)));
@@ -683,6 +711,8 @@ XS(XS_Corpse_AllowMobLoot)
 		}
 		else
 			Perl_croak(aTHX_ "them is not of type Mob");
+		if(them == NULL)
+			Perl_croak(aTHX_ "them is NULL, avoiding crash.");
 
 		THIS->AllowMobLoot(them, slot);
 	}
@@ -705,6 +735,8 @@ XS(XS_Corpse_AddLooter)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(1), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(1)));
@@ -712,34 +744,12 @@ XS(XS_Corpse_AddLooter)
 		}
 		else
 			Perl_croak(aTHX_ "who is not of type Mob");
+		if(who == NULL)
+			Perl_croak(aTHX_ "who is NULL, avoiding crash.");
 
 		THIS->AddLooter(who);
 	}
 	XSRETURN_EMPTY;
-}
-
-XS(XS_Corpse_Rezzed); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Corpse_Rezzed)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Corpse::Rezzed(THIS)");
-	{
-		Corpse *		THIS;
-		bool		RETVAL;
-
-		if (sv_derived_from(ST(0), "Corpse")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Corpse *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Corpse");
-
-		RETVAL = THIS->Rezzed();
-		ST(0) = boolSV(RETVAL);
-		sv_2mortal(ST(0));
-	}
-	XSRETURN(1);
 }
 
 XS(XS_Corpse_IsRezzed); /* prototype to pass -Wmissing-prototypes */
@@ -758,6 +768,8 @@ XS(XS_Corpse_IsRezzed)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Corpse");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsRezzed();
 		ST(0) = boolSV(RETVAL);
@@ -804,7 +816,6 @@ XS(boot_Corpse)
 		newXSproto(strcpy(buf, "RemoveCash"), XS_Corpse_RemoveCash, file, "$");
 		newXSproto(strcpy(buf, "CountItems"), XS_Corpse_CountItems, file, "$");
 		newXSproto(strcpy(buf, "Delete"), XS_Corpse_Delete, file, "$");
-		newXSproto(strcpy(buf, "Depop"), XS_Corpse_Depop, file, "$;$");
 		newXSproto(strcpy(buf, "GetCopper"), XS_Corpse_GetCopper, file, "$");
 		newXSproto(strcpy(buf, "GetSilver"), XS_Corpse_GetSilver, file, "$");
 		newXSproto(strcpy(buf, "GetGold"), XS_Corpse_GetGold, file, "$");
@@ -815,7 +826,6 @@ XS(boot_Corpse)
 		newXSproto(strcpy(buf, "CanMobLoot"), XS_Corpse_CanMobLoot, file, "$$");
 		newXSproto(strcpy(buf, "AllowMobLoot"), XS_Corpse_AllowMobLoot, file, "$$$");
 		newXSproto(strcpy(buf, "AddLooter"), XS_Corpse_AddLooter, file, "$$");
-		newXSproto(strcpy(buf, "Rezzed"), XS_Corpse_Rezzed, file, "$");
 		newXSproto(strcpy(buf, "IsRezzed"), XS_Corpse_IsRezzed, file, "$");
 	XSRETURN_YES;
 }

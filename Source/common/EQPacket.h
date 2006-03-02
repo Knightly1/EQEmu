@@ -20,20 +20,26 @@
 
 #include "types.h"
 #include <stdio.h>
+#include <string.h>
+#include <string>
 
 #ifdef WIN32
 	#include <time.h>
-	#include <winsock2.h>
+	#include <windows.h>
+	#include <winsock.h>
 #else
 	#include <sys/time.h>
 	#include <netinet/in.h>
 #endif
 
+#include "EQStreamType.h"
 #include "emu_opcodes.h"
 #include "op_codes.h"
 
+using namespace std;
+
 class OpcodeManager;
-extern OpcodeManager *EQOpcodeManager;
+extern OpcodeManager *RawOpcodeManager;
 
 class EQStream;
 
@@ -47,7 +53,7 @@ public:
 	uint32 priority;
 	timeval timestamp;
 
-	~EQPacket();
+	virtual ~EQPacket();
 	void DumpRawHeader(uint16 seq=0xffff, FILE *to = stdout) const;
 	void DumpRawHeaderNoTime(uint16 seq=0xffff, FILE *to = stdout) const;
 	void DumpRaw(FILE *to = stdout) const;
@@ -63,24 +69,39 @@ public:
 	uint16 GetRawOpcode() const { return(opcode); }
 #endif	
 
+	void SetOpcode(EmuOpcode op);
+	const EmuOpcode GetOpcode() const;
+
 	inline bool operator<(const EQPacket &rhs) {
 		return (timestamp.tv_sec < rhs.timestamp.tv_sec || (timestamp.tv_sec==rhs.timestamp.tv_sec && timestamp.tv_usec < rhs.timestamp.tv_usec));
 	}
 	
 protected:
+	//this is just a cache so we dont look it up several times on Get()
+	//and it is mutable so we can store the cached copy even on a const object
+	mutable EmuOpcode emu_opcode;
+
+	//this is a pointer to a pointer to make it less likely that a packet will
+	//reference an invalid opcode manager when they are being reloaded.
+	OpcodeManager **OpMgr;
+
 	uint16 opcode;
 
-	EQPacket(const uint16 op, const unsigned char *buf, const uint32 len);
-	EQPacket(const EQPacket &p) { }
-	EQPacket() { opcode=0; pBuffer=NULL; size=0; }
+	EQPacket(OpcodeManager **om, const uint16 op, const unsigned char *buf, const uint32 len);
+	EQPacket(const EQPacket &p) { OpMgr=p.OpMgr; }
+	EQPacket(OpcodeManager **om=NULL) { opcode=0; pBuffer=NULL; size=0; OpMgr=om; }
 
 };
 
-class EQApplicationPacket;
+class EQLoginPacket;
+class EQChatPacket;
+class EQMailPacket;
+class EQWorldPacket;
+class EQZonePacket;
 
 class EQProtocolPacket : public EQPacket {
 public:
-	EQProtocolPacket(uint16 op, const unsigned char *buf, uint32 len) : EQPacket(op,buf,len) { } 
+	EQProtocolPacket(uint16 op, const unsigned char *buf, uint32 len) : EQPacket(&RawOpcodeManager,op,buf,len) { } 
 	EQProtocolPacket(const unsigned char *buf, uint32 len);
 	bool combine(const EQProtocolPacket *rhs);
 	uint32 serialize (unsigned char *dest) const;
@@ -90,53 +111,46 @@ public:
 	static void ChatDecode(unsigned char *buffer, int size, int DecodeKey);
 	static void ChatEncode(unsigned char *buffer, int size, int EncodeKey);
 	EQProtocolPacket *Copy() { return new EQProtocolPacket(opcode,pBuffer,size); }
-	EQApplicationPacket *MakeApplicationPacket(uint8 opcode_size=0) const;
+	EQLoginPacket *MakeLoginPacket() const;
+	EQChatPacket *MakeChatPacket() const;
+	EQMailPacket *MakeMailPacket() const;
+	EQWorldPacket *MakeWorldPacket() const;
+	EQZonePacket *MakeZonePacket() const;
 	
 private:
-	EQProtocolPacket(const EQProtocolPacket &p) { }
+	EQProtocolPacket(const EQProtocolPacket &p) { OpMgr=p.OpMgr; }
 };
 
 class EQApplicationPacket : public EQPacket {
-	friend class EQProtocolPacket;
+//	friend class EQProtocolPacket;
 	friend class EQStream;
 public:
-	EQApplicationPacket() : EQPacket(0,NULL,0) { emu_opcode = OP_Unknown; app_opcode_size=default_opcode_size; }
-	EQApplicationPacket(const EmuOpcode op) : EQPacket(0,NULL,0) { SetOpcode(op); app_opcode_size=default_opcode_size; }
-	EQApplicationPacket(const EmuOpcode op, const uint32 len) : EQPacket(0,NULL,len) { SetOpcode(op); app_opcode_size=default_opcode_size; }
-	EQApplicationPacket(const EmuOpcode op, const unsigned char *buf, const uint32 len) : EQPacket(0,buf,len) { SetOpcode(op); app_opcode_size=default_opcode_size; }
+	EQApplicationPacket(OpcodeManager **om) : EQPacket(om,0,NULL,0) { }
+	EQApplicationPacket(OpcodeManager **om, const EmuOpcode op) : EQPacket(om, op,NULL,0) { SetOpcode(op); }
+	EQApplicationPacket(OpcodeManager **om, const EmuOpcode op, const uint32 len) : EQPacket(om,op,NULL,len) { SetOpcode(op); }
+	EQApplicationPacket(OpcodeManager **om, const EmuOpcode op, const unsigned char *buf, const uint32 len) : EQPacket(om,op,buf,len) { SetOpcode(op); }
 	bool combine(const EQApplicationPacket *rhs);
 	uint32 serialize (unsigned char *dest) const;
 	uint32 Size() const { return size+app_opcode_size; }
-	EQApplicationPacket *Copy() const {
-		EQApplicationPacket *it = new EQApplicationPacket;
-		it->pBuffer= new unsigned char[size];
-		memcpy(it->pBuffer,pBuffer,size);
-		it->size=size;
-		it->opcode = opcode;
-		it->emu_opcode = emu_opcode;
-		return(it);
-	}
 	
-	void SetOpcodeSize(uint8 s) { app_opcode_size=s; }
-	void SetOpcode(EmuOpcode op);
-	const EmuOpcode GetOpcodeConst() const;
-	inline const EmuOpcode GetOpcode() const { return(GetOpcodeConst()); }
-	//caching version of get
-	inline const EmuOpcode GetOpcode() { EmuOpcode r = GetOpcodeConst(); emu_opcode = r; return(r); }
-
-	static uint8 default_opcode_size;
-
+	virtual EQApplicationPacket *Copy() const = 0;
+	virtual EQStreamType GetPacketType() const = 0;
+	
 protected:
-	//this is just a cache so we dont look it up several times on Get()
-	EmuOpcode emu_opcode;
+	int8 app_opcode_size;
 
 private:
-	//this constructor should only be used by EQProtocolPacket, as it
-	//assumes the first two bytes of buf are the opcode.
-	EQApplicationPacket(const unsigned char *buf, uint32 len, uint8 opcode_size=0);
-	EQApplicationPacket(const EQApplicationPacket &p) { emu_opcode = OP_Unknown; app_opcode_size=default_opcode_size; }
 
-	uint8 app_opcode_size;
+	//this constructor should only be used by subclasses, as it
+	//assumes the first two bytes of buf are the opcode.
+	EQApplicationPacket(const EQApplicationPacket &p) { OpMgr=p.OpMgr; emu_opcode = p.emu_opcode; }
+
 };
+
+void DumpPacketHex(const EQApplicationPacket* app);
+void DumpPacketAscii(const EQApplicationPacket* app);
+void DumpPacket(const EQApplicationPacket* app, bool iShowInfo = false);
+void DumpPacketBin(const EQApplicationPacket* app);
+
 
 #endif

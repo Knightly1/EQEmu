@@ -48,8 +48,8 @@ Horse::Horse(Client *_owner, int16 spell_id, float x, float y, float z, float he
 void Horse::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 	NPC::FillSpawnStruct(ns, ForWho);
 	
-	ns->spawn.mount_color = NPCTypedata->mount_color;
-	ns->spawn.pet_owner_id = 0;
+//	ns->spawn.texture = NPCTypedata->mount_color;
+	ns->spawn.petOwnerId = 0;
 	
 	//dunno why we do these, they should allready be set right.
 	ns->spawn.walkspeed = NPCTypedata->walkspeed;
@@ -317,7 +317,7 @@ const NPCType *Horse::BuildHorseType(int16 spell_id) {
 			return(NULL);
 			break;
 	}
-	npc_type->mount_color = mount_color;
+	npc_type->texture = mount_color;
 
 	npc_type->light = 0;
 	npc_type->fixedZ = 1;
@@ -357,11 +357,11 @@ void Client::SummonHorse(int16 spell_id) {
 	// Okay, lets say they have a horse now.
 	
 	
-	APPLAYER outapp;
+	EQZonePacket outapp;
 	horse->CreateHorseSpawnPacket(&outapp, GetName(), GetID());
 /*	// Doodman: Kludged in here instead of adding a field to PCType. FIXME!
 	NewSpawn_Struct* ns=(NewSpawn_Struct*)outapp->pBuffer;
-	ns->spawn.mount_color=mount_color;
+	ns->spawn.texture=mount_color;
 	ns->spawn.pet_owner_id=0;
 	ns->spawn.walkspeed=npc_type->walkspeed;
 	ns->spawn.runspeed=npc_type->runspeed;
@@ -391,7 +391,7 @@ void Client::SetHorseId(int16 horseid_in) {
 	horseId = horseid_in;
 }
 
-void Mob::CreateHorseSpawnPacket(APPLAYER* app, const char* ownername, uint16 ownerid, Mob* ForWho) {
+void Mob::CreateHorseSpawnPacket(EQZonePacket* app, const char* ownername, uint16 ownerid, Mob* ForWho) {
 	app->SetOpcode(OP_NewSpawn);
 	app->pBuffer = new uchar[sizeof(NewSpawn_Struct)];
 	app->size = sizeof(NewSpawn_Struct);

@@ -483,12 +483,12 @@ bool Client::CheckAAEffect(aaEffectType type) {
 }
 
 void Client::SendAAStats() {
-	APPLAYER* outapp = new APPLAYER(OP_SendAAStats, sizeof(AltAdvStats_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_AAExpUpdate, sizeof(AltAdvStats_Struct));
 	AltAdvStats_Struct *aps = (AltAdvStats_Struct *)outapp->pBuffer;
 	aps->experience = m_pp.expAA;
 	aps->experience = (int32)(((float)330.0f * (float)m_pp.expAA) / (float)max_AAXP);
 	aps->unspent = m_pp.aapoints;
-	aps->percentage = m_pp.perAA;
+	aps->percentage = m_epp.perAA;
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
@@ -543,7 +543,7 @@ void Client::BuyAA(AA_Action* action){
 }
 
 void Client::SendAATimer(int32 ability, int32 begin, int32 end) {
-	APPLAYER* outapp = new APPLAYER(OP_AAAction,sizeof(UseAA_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_AAAction,sizeof(UseAA_Struct));
 	UseAA_Struct* uaaout = (UseAA_Struct*)outapp->pBuffer;
 	uaaout->ability = ability;
 	uaaout->begin = begin;
@@ -554,8 +554,8 @@ void Client::SendAATimer(int32 ability, int32 begin, int32 end) {
 
 //sends all AA timers.
 void Client::SendAATimers() {
-	//we dont use SendAATimer because theres no reason to allocate the APPLAYER every time
-	APPLAYER* outapp = new APPLAYER(OP_AAAction,sizeof(UseAA_Struct));
+	//we dont use SendAATimer because theres no reason to allocate the EQZonePacket every time
+	EQZonePacket* outapp = new EQZonePacket(OP_AAAction,sizeof(UseAA_Struct));
 	UseAA_Struct* uaaout = (UseAA_Struct*)outapp->pBuffer;
 	
 	PTimerList::iterator c,e;
@@ -576,14 +576,13 @@ void Client::SendAATimers() {
 }
 
 void Client::SendAATable() {
-    APPLAYER* outapp = new APPLAYER(OP_RespondAA, sizeof(AATable_Struct));
+    EQZonePacket* outapp = new EQZonePacket(OP_RespondAA, sizeof(AATable_Struct));
     
     AATable_Struct* aa2 = (AATable_Struct *)outapp->pBuffer;
 	for(int i=0;i < MAX_PP_AA_ARRAY;i++){
 		aa2->aa_list[i].aa_skill = aa[i]->AA;
 		aa2->aa_list[i].aa_value = aa[i]->value;
 	}
-	outapp->Deflate();
     QueuePacket(outapp);
     safe_delete(outapp);
 }
@@ -600,7 +599,7 @@ void Client::SendPreviousAA(int32 id, int seq){
 	uchar* buffer = new uchar[size];
 	SendAA_Struct* saa=(SendAA_Struct*)buffer;
 	value = GetAA(saa2->id);
-	APPLAYER* outapp = new APPLAYER(OP_SendAATable);
+	EQZonePacket* outapp = new EQZonePacket(OP_SendAATable);
 	outapp->size=size;
 	outapp->pBuffer=(uchar*)saa;
 	value--;
@@ -665,7 +664,7 @@ void Client::SendAA(int32 id, int seq) {
 		if(saa->type==1) //general ability
 			saa->abilities[0].increase_amt*=value;
 	}
-	APPLAYER* outapp = new APPLAYER(OP_SendAATable);
+	EQZonePacket* outapp = new EQZonePacket(OP_SendAATable);
 	outapp->size=size;
 	outapp->pBuffer=(uchar*)saa;
 	if(id==0 && value && (orig_val < saa->max_level)) //send previous AA only on zone in
@@ -808,7 +807,7 @@ bool Database::LoadSwarmSpells() {
 		mysql_free_result(result);
 	}
 	else {
-		LogFile->write(EQEMuLog::Error, "Error in LoadSwarmSpells query '%s': %s", query, errbuf);;
+		LogFile->write(EQEMuLog::Error, "Error in LoadSwarmSpells query '%s': %s", query, errbuf);
 		//safe_delete_array(query);
 		return false;
 	}
@@ -840,6 +839,7 @@ char errbuf[MYSQL_ERRMSG_SIZE];
 	}
 	return total;
 }
+
 int32 Database::CountAAs(){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
@@ -849,11 +849,14 @@ int32 Database::CountAAs(){
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(title_sid) from altadv_vars"), errbuf, &result)) {
 		if((row = mysql_fetch_row(result))!=NULL)
 			count = atoi(row[0]);
+		mysql_free_result(result);
+	} else {
+		LogFile->write(EQEMuLog::Error, "Error in Database::CountAAs query '%s': %s", query, errbuf);		
 	}
 	safe_delete_array(query);
-	mysql_free_result(result);
 	return count;
 }
+
 int32 Database::CountAALevels(){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
@@ -863,8 +866,10 @@ int32 Database::CountAALevels(){
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(id) from aa_levels"), errbuf, &result)) {
 		if((row = mysql_fetch_row(result))!=NULL){
 			count = atoi(row[0]);
-			mysql_free_result(result);
 		}
+		mysql_free_result(result);
+	} else {
+		LogFile->write(EQEMuLog::Error, "Error in Database::CountAALevels query '%s': %s", query, errbuf);		
 	}
 	safe_delete_array(query);
 	return count;
@@ -875,6 +880,7 @@ int32 Database::GetSizeAA(){
 		size+=CountAALevels()*sizeof(AA_Ability);
 	return size;
 }
+
 void Database::LoadAAs(AA_List* load){
 	if(!load)
 		return;
@@ -890,10 +896,13 @@ void Database::LoadAAs(AA_List* load){
 			load->aa[ndx]->seq=ndx+1;
 			ndx++;
 		}
+		mysql_free_result(result);
+	} else {
+		LogFile->write(EQEMuLog::Error, "Error in Database::LoadAAs query '%s': %s", query, errbuf);		
 	}
 	safe_delete_array(query);
-	mysql_free_result(result);
 }
+
 void Database::RetrieveAALevels(SendAA_Struct* aa_struct){
 	if(!aa_struct)
 		return;
@@ -909,9 +918,11 @@ void Database::RetrieveAALevels(SendAA_Struct* aa_struct){
 			aa_struct->abilities[ndx].last_level=atoi(row[2]);
 			ndx++;
 		}
+		mysql_free_result(result);
+	} else {
+		LogFile->write(EQEMuLog::Error, "Error in Database::RetrieveAALevels query '%s': %s", query, errbuf);		
 	}
 	safe_delete_array(query);
-	mysql_free_result(result);
 }
 
 SendAA_Struct* Database::GetAASkillVars(int32 skill_id)

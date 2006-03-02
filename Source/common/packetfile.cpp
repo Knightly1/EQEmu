@@ -203,7 +203,7 @@ bool OldPacketFileReader::OpenFile(const char *name) {
 	
 	uint32 now = time(NULL);
 	if(head.packet_file_stamp > now) {
-		fprintf(stderr, "Error: invalid timestamp in file. Your clock or the collector's is wrong.");
+		fprintf(stderr, "Error: invalid timestamp in file. Your clock or the collector's is wrong (%d sec ahead).\n", head.packet_file_stamp-now);
 		fclose(in);
 		return(false);
 	}
@@ -316,7 +316,7 @@ bool NewPacketFileReader::OpenFile(const char *name) {
 	
 	uint32 now = time(NULL);
 	if(head.packet_file_stamp > now) {
-		fprintf(stderr, "Error: invalid timestamp in file. Your clock or the collector's is wrong.");
+		fprintf(stderr, "Error: invalid timestamp in file. Your clock or the collector's is wrong (%d sec ahead).\n", head.packet_file_stamp-now);
 		fclose(in);
 		return(false);
 	}

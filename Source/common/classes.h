@@ -58,6 +58,7 @@
 #define ADVENTURERECRUITER 60
 #define ADVENTUREMERCHANT 61
 #define TRIBUTE_MASTER	63
+#define GUILD_TRIBUTE_MASTER	64	//not sure
 #define warrior_1 1
 #define monk_1 64
 #define paladin_1 4

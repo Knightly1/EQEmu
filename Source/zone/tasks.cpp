@@ -85,7 +85,7 @@ void TaskManager::MakeTaskDescriptions(uint32 task_id, EQStream *into) {
 }
 
 //build a task history packet for this client state
-EQApplicationPacket *TaskManager::MakeHistoryPacket(ClientTaskState *state) {
+EQZonePacket *TaskManager::MakeHistoryPacket(ClientTaskState *state) {
 	map<uint32, uint32>::iterator cur_ct, end_ct;
 	map<uint32, Task>::iterator task, task_end;
 	
@@ -103,8 +103,8 @@ EQApplicationPacket *TaskManager::MakeHistoryPacket(ClientTaskState *state) {
 	}
 }
 
-EQApplicationPacket *TitleManager::MakeTitlesPacket(Client *who) {
-	EQApplicationPacket *outapp = NULL;
+EQZonePacket *TitleManager::MakeTitlesPacket(Client *who) {
+	EQZonePacket *outapp = NULL;
 	vector<TitleEntry>::iterator cur,end;
 	vector< vector<TitleEntry>::iterator > avaliable;
 	uint32 len;
@@ -122,13 +122,13 @@ EQApplicationPacket *TitleManager::MakeTitlesPacket(Client *who) {
 	uint32 count = avaliable.size();
 	if(count == 0) {
 		//no titles avaliable...
-		outapp = new EQApplicationPacket(OP_Titles,4);
+		outapp = new EQZonePacket(OP_Titles,4);
 		return(outapp);
 	}
 	
 	uint32 pos = 0;
 	uint32 total_len = sizeof(Titles_Struct) + sizeof(TitleEntry_Struct)*count + len;
-	outapp = new EQApplicationPacket(OP_Titles, total_len);
+	outapp = new EQZonePacket(OP_Titles, total_len);
 	
 	Titles_Struct *header = (Titles_Struct *) outapp->pBuffer;
 	header->title_count = count;

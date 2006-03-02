@@ -23,14 +23,14 @@ using namespace std;
 
 #include "../common/types.h"
 
-class APPLAYER;
+class EQApplicationPacket;
 
 void FileDumpPacketAscii(const char* filename, const uchar* buf, int32 size, int32 cols=16, int32 skip=0);
 void FileDumpPacketHex(const char* filename, const uchar* buf, int32 size, int32 cols=16, int32 skip=0);
-void FileDumpPacketHex(const char* filename, const APPLAYER* app);
-void FileDumpPacketAscii(const char* filename, const APPLAYER* app);
+void FileDumpPacketHex(const char* filename, const EQApplicationPacket* app);
+void FileDumpPacketAscii(const char* filename, const EQApplicationPacket* app);
 void FileDumpPacket(const char* filename, const uchar* buf, int32 size);
-void FileDumpPacket(const char* filename, const APPLAYER* app);
+void FileDumpPacket(const char* filename, const EQApplicationPacket* app);
 void FilePrintLine(const char* filename, bool prefix_timestamp = false, const char* text = 0, ...);
 void FilePrint(const char* filename, bool newline = true, bool prefix_timestamp = false, const char* text = 0, ...);
 #endif

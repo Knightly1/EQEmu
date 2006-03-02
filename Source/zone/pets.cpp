@@ -25,6 +25,7 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemu.org)
 #include "../common/skills.h"
 #include "../common/bodytypes.h"
 #include "../common/classes.h"
+#include "pets.h"
 #include <math.h>
 #include <assert.h>
 #ifndef WIN32
@@ -146,7 +147,7 @@ int CalcPetHp(int levelb, int classb, int STA)
 
 	if (multiplier == 0)
 	{
-		cerr << "Multiplier == 0 in CalcPetHp,using Generic...." << endl;
+		LogFile->write(EQEMuLog::Error, "Multiplier == 0 in CalcPetHp,using Generic....");;
 		multiplier=12;
 	}
 
@@ -454,7 +455,7 @@ void Mob::MakePet(int16 spell_id, const char* pettype, const char *petname) {
 			database.MakePet(&petstruct,40,3);
 			break;
 	    default:
-			cout << "Unknown pettype: " << tmp<< " : Generating default type." << endl;
+			LogFile->write(EQEMuLog::Debug, "Unknown pettype: %d: Generating default type.", tmp);
 			MakePet(spell_id, 24, WARRIOR, 42, 0, 40, 7, 3, 0, 0, petname);
 			return;
 		}
@@ -466,7 +467,7 @@ void Mob::MakePet(int16 spell_id, const char* pettype, const char *petname) {
 		int mat=0;
         float size_mod = 1;
 		#ifdef _EQDEBUG
-			cout << "Setting stats for BL Pet for Race: " << crace << endl;
+			LogFile->write(EQEMuLog::Debug, "Setting stats for BL Pet for Race: %d", crace);
 		#endif
 
 		switch ( crace ) {
@@ -492,12 +493,12 @@ void Mob::MakePet(int16 spell_id, const char* pettype, const char *petname) {
 			break;
 		default:
 #ifdef _EQDEBUG
-			cout << "No pet type modifications defined for race: " << crace << endl;
+			LogFile->write(EQEMuLog::Debug, "No pet type modifications defined for race: %d", crace);
 #endif
 			break;
 		}
 #ifdef _EQDEBUG
-			cout << "Summoning BeastLord Pet: " << (int)ptype << endl;
+			LogFile->write(EQEMuLog::Debug, "Summoning BeastLord Pet: %d", (int)ptype);
 #endif
 		switch ( ptype ) {
 		case 51:
@@ -538,7 +539,7 @@ void Mob::MakePet(int16 spell_id, const char* pettype, const char *petname) {
 			break;
 		default:
 			MakePet(spell_id, 10, 1, prace, mat, 125, 2*size_mod, 5, 0, 0, petname);
-	        cout << "ptype not found: Making default BL pet." << endl;
+	        LogFile->write(EQEMuLog::Debug, "ptype %d not found: Making default BL pet.", ptype);
 			break;
 		}
 		petstruct.race = prace;
@@ -594,7 +595,7 @@ void Mob::MakePet(int16 spell_id, const char* pettype, const char *petname) {
 			break;
 		default:
 			MakePet(spell_id, 1, WARRIOR, 127, 0, 46, 6, 2, 0, 0, petname);
-			cout << "ptype not found: Making default animation pet." << endl;
+	        LogFile->write(EQEMuLog::Debug, "ptype %d not found: Making default animation pet.", ptype);
 			return;
 		}
     } else if (strncmp(pettype, "SumSword", 8) == 0) { //Baron-Sprite: This Pettype is reserved to 18.
@@ -856,7 +857,7 @@ void Mob::MakePet(int16 spell_id, int8 in_level, int8 in_class, int16 in_race,
 		npc_type->max_dmg = pet.max_dmg;
 	}
 	else{
-			cout << "Fallthrough case for Shaman Pet." << endl;
+			LogFile->write(EQEMuLog::Debug, "Fallthrough case for Shaman Pet.");
 			npc_type->max_hp = 25;
 			npc_type->cur_hp = 25;
 			npc_type->min_dmg = 1;

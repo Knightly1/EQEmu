@@ -1,55 +1,30 @@
-APP=zone
-SF=.obj/EQNetwork.o \
-   ../common/timer.o  ../common/packet_dump.o ../common/packet_functions.o \
-   ../common/unix.o ../common/packet_dump_file.o ../common/Mutex.o ../common/MiscFunctions.o \
-   zone.o entity.o mob.o client.o client_process.o npc.o net.o spawn2.o attack.o hate_list.o \
-   ../common/serverinfo.o ../common/moremath.o worldserver.o spells.o spawngroup.o loottables.o \
-   faction.o Map.o PlayerCorpse.o petitions.o MobAI.o Object.o ../common/eqtime.o \
-   groups.o ../common/classes.o ../common/races.o ../common/TCPConnection.o forage.o \
-   ../common/crc32.o ../common/md5.o ../common/dbcore.o \
-   ../common/dbasync.o zonedbasync.o parser.o beacon.o\
-   ../common/EMuShareMem.o ../common/EQEMuError.o ../common/ptimer.o \
-   .obj/debug.o .obj/database.o .obj/Item.o .obj/misc.o \
-   doors.o command.o AA.o client_packet.o tribute.o zone_profile.o \
-   bonuses.o trading.o spdat.o  spell_effects.o aggro.o guilds.o \
-   inventory.o client_mods.o tradeskills.o waypoints.o pets.o \
-   effects.o trap.o perl_client.o perl_entity.o perl_mob.o perl_npc.o \
-   perl_PlayerCorpse.o perl_groups.o questmgr.o client_logs.o perlparser.o \
-   ../common/rdtsc.o ../common/extprofile.o horse.o exp.o fearpath.o \
-   special_attacks.o ../common/timeoutmgr.o ../common/Condition.o pathing.o
 
+HCC=$(shell ccache -V 2>/dev/null)
+ifneq (,$(findstring version,$(HCC)))
+	CC=ccache gcc
+else
+	CC=gcc
+endif
 
-CC=gcc
 LINKER=gcc
-MYSQL_FLAGS=`mysql_config --cflags`
-MYSQL_LIB=`mysql_config --libs`
-DFLAGS=-DEQDEBUG=5 -DNO_PIDLOG -DSHAREMEM -DSPELL_EFFECT_SPAM -DFIELD_ITEMS
-WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -Wno-deprecated  -Wcomment -Wcast-align
-COPTS=$(WFLAGS) -O2 -ggdb -pthread -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
+MYSQL_FLAGS=-I/usr/include/mysql
+MYSQL_LIB=-L/usr/include/mysql -lmysqlclient -lz -lcrypt -lnsl -lm -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv
+DFLAGS=-DEQDEBUG=5 -DCATCH_CRASH -DNO_PIDLOG -DSHAREMEM -DSPELL_EFFECT_SPAM -DFIELD_ITEMS -DCOMBINED -DAPP_OPCODE_SIZE=2 -Di386
+#try commenting out the following three lines to disable embedded perl
+PERL_FLAGS=perl -MExtUtils::Embed -e ccopts
+PERL_LIB=perl -MExtUtils::Embed -e ldopts
+DFLAGS+=-DEMBPERL -DEMBPERL_PLUGIN -DHAS_UNION_SEMUN
+WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual -Wno-deprecated  -Wcomment -Wcast-align
+COPTS=$(WFLAGS) -O -g -pg -march=i686 -pthread -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
 LINKOPTS=-rdynamic -L. -lstdc++ -ldl $(MYSQL_LIB)
 
-#include .depend
+all: zone
 
-all: $(APP)
+include .depend
 
-
-$(APP): $(SF)
-	$(LINKER) $(COPTS) $(OBJS) $^ $(LINKOPTS) -o $@
-
-
-import_raw_items: import_raw_items.o
-	$(LINKER) $(COPTS) $^ $(LINKOPTS) -o $@
-
-clean:
-	rm -f $(SF) $(APP) import_raw_items.o import_raw_items
-
-%.o: %.cpp
-	$(CC) -c $(COPTS) $< -o $@
-
-.obj/%.o: ../common/%.cpp ../common/%.h
-	mkdir -p .obj
-	$(CC) $(COPTS) -c $< -o $@
+include makefile.common
 
 .depend depend:
 	echo $(SF) "" | sed -e 's#.obj/#../common/#g' -e 's/\.o/.cpp/g' | \
-	xargs mkdep $(COPTS) `$(PERL_FLAGS)`
+	xargs gcc -MM $(COPTS) `$(PERL_FLAGS)` >.depend
+

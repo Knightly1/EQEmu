@@ -26,6 +26,8 @@ alter table character_ add column (guild int(11) default 0, guildrank tinyint(2)
 #ifndef GUILD_H
 #define GUILD_H
 
+#include "types.h"
+
 #define GUILD_NONE		0xFFFFFFFF // user has no guild
 
 #define GUILD_MAX_RANK  2   // 0-2 - some places in the code assume a single digit, dont go above 9

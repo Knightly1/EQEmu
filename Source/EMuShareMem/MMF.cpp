@@ -11,6 +11,7 @@ using namespace std;
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #ifdef WIN32
 	#define snprintf	_snprintf
 	#define vsnprintf	_vsnprintf
@@ -144,7 +145,7 @@ bool MMF::Open(const char* iName, int32 iSize) {
 	return true;
 #else //else, NOT WINDOWS
 	int load_share;
-	int max_share = 7;
+	//int max_share = 7;
 	key_t share_key;
 	switch (MMFname[16]) {
 		case 'I': load_share = 0;  break;
@@ -155,6 +156,8 @@ bool MMF::Open(const char* iName, int32 iSize) {
 		case 'L': load_share = 5;  break;
 		case 'M': load_share = 6;  break;
 		case 'O': load_share = 7;  break;
+		case 'Z': load_share = 8;  break;
+		case 'G': load_share = 9;  break;
 #ifdef CATCH_CRASH
 		default:
 		    cerr<<"Failed to load shared memory segment="<<MMFname<<" ("<<MMFname[16]<<")"<<endl;
@@ -182,6 +185,10 @@ bool MMF::Open(const char* iName, int32 iSize) {
 		case 6: share_key = ftok(".", 'M'); break;
 		// Opcodes
 		case 7: share_key = ftok(".", 'O'); break;
+		// Item Serialization
+		case 8: share_key = ftok(".", 'Z'); break;
+		// ERROR Fatal
+		case 9: share_key = ftok(".", 'G'); break;
 		// ERROR Fatal
 		default: cerr<<"Opps!"<<endl; share_key = 0xFF; break;
 	}
@@ -192,13 +199,18 @@ bool MMF::Open(const char* iName, int32 iSize) {
 	//if (!tmpSize) {
 		int share_id = shmget(share_key, tmpSize, IPC_CREAT|IPC_EXCL|SHM_R|SHM_W);
 		if ( share_id <= 0) {
-			share_id = shmget(share_key, tmpSize, 0400);
+			share_id = shmget(share_key, tmpSize, IPC_CREAT|IPC_NOWAIT);
 			if (share_id <= 0) {
 			    shmid_ds mem_size;
-			    share_id = shmget(share_key, 0, 0400);
-			    lpvMem = shmat(share_id, NULL,SHM_RDONLY);
+			    share_id = shmget(share_key, 1, IPC_CREAT|IPC_NOWAIT|SHM_R|SHM_W);
+			    if(share_id == -1) {
+				    cerr << "failed to get 0-length shared mem: " << strerror(errno) << endl;
+			    }
+			    if ((lpvMem = shmat(share_id, NULL,SHM_RDONLY)) == (void *)-1) {
+				    cerr << "shmat failed! " << strerror(errno) << endl;
+			    }
 			    if( (shmctl(share_id, IPC_STAT, &mem_size)) == 0){
-				  if (mem_size.shm_segsz != tmpSize){
+				  if (mem_size.shm_segsz != int(tmpSize)){
 					cout<<"[Warning] requested shared memory of size:"<<tmpSize<<" but that Key is already in use with size:"<< mem_size.shm_segsz<<endl;
 					shmid_ds mem_users;
 					if( (shmctl(share_id, IPC_STAT, &mem_users)) == 0 && mem_users.shm_nattch == 1){
@@ -207,18 +219,20 @@ bool MMF::Open(const char* iName, int32 iSize) {
 					    shmdt(lpvMem);
 					    if ((share_id = shmget(share_key, tmpSize, IPC_CREAT|IPC_EXCL|SHM_R|SHM_W)) <= 0) {
 						// Failed proceed on malloc
+					    	cerr<<"[Error] Failed to resize" << strerror(errno) <<endl;
 					    }
 					    else{
-						// Success
-						lpvMem = shmat(share_id, NULL, SHM_R|SHM_W);
-						memset(lpvMem, 0, sizeof(MMF_Struct));
-						pCanWrite = true;
-						SharedMemory = (MMF_Struct*) lpvMem;
-						SharedMemory->Loaded = false;
-						SharedMemory->datasize = iSize;
-						pMMFMutex->Release(this);
-						delete pMMFMutex;
-						return true;
+					    	cerr<<"[Error] Resize successful." << endl;
+							// Success
+							lpvMem = shmat(share_id, NULL, SHM_R|SHM_W);
+							memset(lpvMem, 0, sizeof(MMF_Struct));
+							pCanWrite = true;
+							SharedMemory = (MMF_Struct*) lpvMem;
+							SharedMemory->Loaded = false;
+							SharedMemory->datasize = iSize;
+							pMMFMutex->Release(this);
+							delete pMMFMutex;
+							return true;
 					    }
 					}
 					else{
@@ -227,7 +241,7 @@ bool MMF::Open(const char* iName, int32 iSize) {
 				  }
 			    }
 			    // Can not attatch to shared memory we'll malloc it here
-				if (!lpvMem && (lpvMem = malloc(tmpSize))) {
+				if ((lpvMem == 0 || lpvMem == (void *)-1) && (lpvMem = malloc(tmpSize))) {
 					cout<<"[Warning] Could not attach to shared memory proceeding on isolated memory (share_id <= 0)"<<endl;
 					// Success!
 					m_alloc = true;
@@ -249,7 +263,7 @@ bool MMF::Open(const char* iName, int32 iSize) {
 				pCanWrite = false;
 				SharedMemory = (MMF_Struct*) lpvMem;
 				if (SharedMemory->datasize != iSize) {
-					cerr<<"SharedMemory->datasize != iSize, We can rebuild him faster better STRONGER!"<<endl;
+					cerr<<"SharedMemory->datasize("<<SharedMemory->datasize<<") != iSize("<<iSize<<"), We can rebuild him faster better STRONGER!"<<endl;
 					cerr<<"Or not.. restart all servers on this machine"<<endl;
 					shmctl(share_id, IPC_RMID, 0);
 					pMMFMutex->Release(this);
@@ -284,8 +298,9 @@ bool MMF::Open(const char* iName, int32 iSize) {
 			lpvMem = shmat(share_id, NULL,SHM_RDONLY);
 			pCanWrite = false;
 			SharedMemory = (MMF_Struct*) lpvMem;
-			if (SharedMemory->datasize != iSize) {
-			    cerr<<"SharedMemory->datasize != iSize, We can rebuild him faster better STRONGER!"<<endl;
+			//cerr << "lpvMem=" << (int)lpvMem << endl;
+			if (lpvMem==(void *)-1 || SharedMemory->datasize != iSize) {
+			    cerr<<"SharedMemory->datasize("<<SharedMemory->datasize<<") != iSize("<<iSize<<"), or "<<((void *)lpvMem)<<"==-1, We can rebuild him faster better STRONGER!"<<endl;
 			    cerr<<"Or not.. restart all servers on this machine"<<endl;
 			    shmctl(share_id, IPC_RMID, 0);
 			    pMMFMutex->Release(this);

@@ -93,13 +93,13 @@ const char *__cp_names[CommonProfiler::MaxCommonProfilerId] = {
 		"DBAsync_DispatchWork",
 		"DBAsyncLoop_loop",
 		
-		"EQNetworkServer_Process",
+		"EQStreamServer_Process",
 		
-		"EQNetworkConnection_Process",
+		"EQStream_Process",
 		
-		"EQNetworkServerLoop",
-		"EQNetworkConnectionInLoop",
-		"EQNetworkConnectionOutLoop",
+		"EQStreamServerLoop",
+		"EQStreamInLoop",
+		"EQStreamOutLoop",
 		"TCPServerLoop",
 		"TCPConnectionLoop",
 		

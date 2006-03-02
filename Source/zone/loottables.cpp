@@ -430,6 +430,7 @@ void Database::AddLootTableToNPC(NPC* npc,int32 loottable_id, ItemList* itemlist
 			cash = (rand() % (lts->maxcash - lts->mincash)) + lts->mincash;
 		if (cash != 0) {
 			if (lts->avgcoin != 0) {
+				//this is some crazy ass stuff... and makes very little sense... dont use it, k?
 				int32 mincoin = (int32) (lts->avgcoin * 0.75 + 1);
 				int32 maxcoin = (int32) (lts->avgcoin * 1.25 + 1);
 				*copper = (rand() % (maxcoin - mincoin)) + mincoin - 1;
@@ -437,7 +438,7 @@ void Database::AddLootTableToNPC(NPC* npc,int32 loottable_id, ItemList* itemlist
 				*gold = (rand() % (maxcoin - mincoin)) + mincoin - 1;
 				cash -= *copper;
 				cash -= *silver * 10;
-				cash -= *gold * 10;
+				cash -= *gold * 100;
 			}
 			*plat = cash / 1000;
 			cash -= *plat * 1000;
@@ -585,19 +586,19 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 	
 	ServerLootItem_Struct* item = new ServerLootItem_Struct;
 #if EQDEBUG>=11
-		LogFile->write(EQEMuLog::Debug, "Adding drop to npc: %s, Item: %i", GetName(), item2->ItemNumber);
+		LogFile->write(EQEMuLog::Debug, "Adding drop to npc: %s, Item: %i", GetName(), item2->ID);
 #endif
 	
-	APPLAYER* outapp = NULL;
+	EQZonePacket* outapp = NULL;
 	WearChange_Struct* wc = NULL;
 	if(wearchange) {
-		outapp = new APPLAYER(OP_WearChange, sizeof(WearChange_Struct));
+		outapp = new EQZonePacket(OP_WearChange, sizeof(WearChange_Struct));
 		wc = (WearChange_Struct*)outapp->pBuffer;
 		wc->spawn_id = GetID();
 		wc->material=0;
 	}
 	 			
-	item->item_id = item2->ItemNumber;
+	item->item_id = item2->ID;
 	item->charges = charges;
 	item->aug1 = 0;
 	item->aug2 = 0;
@@ -614,7 +615,7 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 		// @merth: IDFile size has been increased, this needs to change
 		uint8 emat;
 		if(item2->Common.Material <= 0
-			|| item2->EquipSlots & (1 << SLOT_PRIMARY | 1 << SLOT_SECONDARY)) {
+			|| item2->Slots & (1 << SLOT_PRIMARY | 1 << SLOT_SECONDARY)) {
 			memset(newid, 0, sizeof(newid));
 			for(int i=0;i<7;i++){
 				if (!isalpha(item2->IDFile[i])){
@@ -627,49 +628,49 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 			emat = item2->Common.Material;
 		}
 
-		if ((item2->EquipSlots & (1 << SLOT_PRIMARY)) && (equipment[MATERIAL_PRIMARY]==0)) {
+		if ((item2->Slots & (1 << SLOT_PRIMARY)) && (equipment[MATERIAL_PRIMARY]==0)) {
 			
 			d_meele_texture1 = atoi(newid);
-			if (item2->Common.SpellId != 0)
-				CastToMob()->AddProcToWeapon(item2->Common.SpellId, true);
+			if (item2->Common.Proc.Effect != 0)
+				CastToMob()->AddProcToWeapon(item2->Common.Proc.Effect, true);
 			
 			eslot = MATERIAL_PRIMARY;
 		}
-		else if (item2->EquipSlots & (1 << SLOT_SECONDARY) && (equipment[MATERIAL_SECONDARY]==0) 
+		else if (item2->Slots & (1 << SLOT_SECONDARY) && (equipment[MATERIAL_SECONDARY]==0) 
 			&& (GetOwner() != NULL || (GetLevel() >= 13 && MakeRandomInt(0,99) < NPC_DW_CHANCE) || (item2->Common.Damage==0)))
 		{
 			d_meele_texture2 = atoi(newid);
-			if (item2->Common.SpellId!=0)
-				CastToMob()->AddProcToWeapon(item2->Common.SpellId, true);
+			if (item2->Common.Proc.Effect!=0)
+				CastToMob()->AddProcToWeapon(item2->Common.Proc.Effect, true);
 			
 			eslot = MATERIAL_SECONDARY;
 		}
-		else if ((item2->EquipSlots & (1 << SLOT_HEAD)) && (equipment[MATERIAL_HEAD]==0)) {
+		else if ((item2->Slots & (1 << SLOT_HEAD)) && (equipment[MATERIAL_HEAD]==0)) {
 			eslot = MATERIAL_HEAD;
 		}
-		else if ((item2->EquipSlots & (1 << SLOT_CHEST)) && (equipment[MATERIAL_CHEST]==0)) {
+		else if ((item2->Slots & (1 << SLOT_CHEST)) && (equipment[MATERIAL_CHEST]==0)) {
 			eslot = MATERIAL_CHEST;
 		}
-		else if ((item2->EquipSlots & (1 << SLOT_ARMS)) && (equipment[MATERIAL_ARMS]==0)) {
+		else if ((item2->Slots & (1 << SLOT_ARMS)) && (equipment[MATERIAL_ARMS]==0)) {
 			eslot = MATERIAL_ARMS;
 		}
-		else if (item2->EquipSlots & ((1 << SLOT_BRACER01)|(1 << SLOT_BRACER02)) && (equipment[MATERIAL_BRACER]==0)) {
+		else if (item2->Slots & ((1 << SLOT_BRACER01)|(1 << SLOT_BRACER02)) && (equipment[MATERIAL_BRACER]==0)) {
 			eslot = MATERIAL_BRACER;
 		}
-		else if ((item2->EquipSlots & (1 << SLOT_HANDS)) && (equipment[MATERIAL_HANDS]==0)) {
+		else if ((item2->Slots & (1 << SLOT_HANDS)) && (equipment[MATERIAL_HANDS]==0)) {
 			eslot = MATERIAL_HANDS;
 		}
-		else if ((item2->EquipSlots & (1 << SLOT_LEGS)) && (equipment[MATERIAL_LEGS]==0)) {
+		else if ((item2->Slots & (1 << SLOT_LEGS)) && (equipment[MATERIAL_LEGS]==0)) {
 			eslot = MATERIAL_LEGS;
 		}
-		else if ((item2->EquipSlots & (1 << SLOT_FEET)) && (equipment[MATERIAL_FEET]==0)) {
+		else if ((item2->Slots & (1 << SLOT_FEET)) && (equipment[MATERIAL_FEET]==0)) {
 			eslot = MATERIAL_FEET;
 		}
 		
 		/*
 		what was this about???
 		
-		if (((npc->GetRace()==127) && (npc->CastToMob()->GetOwnerID()!=0)) && (item2->EquipSlots==24576) || (item2->EquipSlots==8192) || (item2->EquipSlots==16384)){
+		if (((npc->GetRace()==127) && (npc->CastToMob()->GetOwnerID()!=0)) && (item2->Slots==24576) || (item2->Slots==8192) || (item2->Slots==16384)){
 			npc->d_meele_texture2=atoi(newid);
 			wc->wear_slot_id=8;
 			if (item2->Common.Material >0)
@@ -685,17 +686,17 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 		//if we found an open slot it goes in...
 		if(eslot != 0xFF) {
 			//equip it...
-			equipment[eslot] = item2->ItemNumber;
+			equipment[eslot] = item2->ID;
 			AC += item2->Common.AC;
-			STR += item2->Common.STR;
-			INT += item2->Common.INT;
+			STR += item2->Common.AStr;
+			INT += item2->Common.AInt;
 			
 			if(wearchange) {
 				wc->wear_slot_id = eslot;
 				wc->material = emat;
 			}
 		}
-		item->equipSlot = item2->EquipSlots;
+		item->equipSlot = item2->Slots;
 	}
 	
 	if(itemlist != NULL)
@@ -727,5 +728,4 @@ void NPC::AddLootTable() {
 	  database.AddLootTableToNPC(this,loottable_id, &itemlist, &copper, &silver, &gold, &platinum);
 	}
 }
-
 

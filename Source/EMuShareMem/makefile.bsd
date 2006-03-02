@@ -1,6 +1,5 @@
-# Generated automatically from Makefile.in by configure.
 APP=libEMuShareMem.so
-SF=MMFMutex.o Doors.o Items.o Spells.o NPCFactionLists.o MMF.o Loot.o ../common/timer.o ../common/unix.o ../common/EMuShareMem.o Opcodes.o
+SF=MMFMutex.o Doors.o Items.o Spells.o NPCFactionLists.o MMF.o Loot.o .obj/timer.o .obj/unix.o .obj/EMuShareMem.o Opcodes.o GuildList.o
 
 CC=gcc
 LD=ld
@@ -43,7 +42,7 @@ clean:
 %.o: %.cpp
 	$(CC) $(COPTS) -c $< -o $@
 
-.obj/debug.o: ../common/debug.h ../common/debug.cpp
+.obj/%.o: ../common/%.cpp ../common/%.h
 	mkdir -p .obj
-	$(CC) $(COPTS) -c ../common/debug.cpp -o .obj/debug.o
+	$(CC) $(COPTS) -c $< -o $@
 

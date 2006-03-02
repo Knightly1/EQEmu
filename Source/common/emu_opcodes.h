@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #define EMU_OPCODES_H
 
 //this is the highest opcode possibly used in the regular EQ protocol
-#define MAX_EQ_OPCODE 0x0FFF
+#define MAX_EQ_OPCODE 0xFFFF
 
 
 /*
@@ -38,7 +38,15 @@ typedef enum { //EQEmu internal opcodes list
 
 //a preprocessor hack so we dont have to maintain two lists
 #define N(x) x
-#include "emu_oplist.h"
+#if !defined(LOGIN) && !defined(CHAT) && !defined(MAIL) && !defined(MINILOGIN)
+	#include "emu_oplist.h"
+#endif
+#ifdef LOGIN
+	#include "login_oplist.h"
+#endif
+#ifdef MINILOGIN
+	#include "../../Private/MiniLogin/login_oplist.h"
+#endif
 #undef N
 
 	_maxEmuOpcode

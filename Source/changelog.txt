@@ -1,118 +1,213 @@
-EQEMu 0.5.3+ Changelog (Started on Sept 24, 2003 15:50)
+EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
-==03/31/2005
+
+==11/05/2005
+FatherNitwit: Fixed the broken server side filters (reworked entirely).
+FatherNitwit: Refactored damage code to be more consistent between PCs and NPCs.
+FatherNitwit: Changed spell damage mechanism slightly to better utilize runes.
+FatherNitwit: Tweaked a bit of illusion code to be more versitile.
+
+==11/03/2005
+FatherNitwit: Fixed AA storage in the player profile.
+
+==10/28/2005
+FatherNitwit: Fixed a lot of GCC 4.0 and 64 bit problems. Should build under both better now.
+
+==10/24/2005
+FatherNitwit: Fixed mob int loading.
+
+==10/23/2005
+FatherNitwit: Fixed Client->NPC->Client riposte.
+
+==09/28/2005
+FatherNitwit: added quest::attacknpc and quest::attacknpctype
+FatherNitwit: Cleaned up usage of Appearance in the code
+FatherNitwit: Fixed faction ally checking for npc->npc faction
+FatherNitwit: Removed some stupid rules reguarding npc aggro
+FatherNitwit: Fixed some faction issues with aggro, guards should work reliably now.
+
+==09/25/2005
+FatherNitwit: Fixed incorrect usage of EXPMod variable.
+
+==09/24/2005
+FatherNitwit: Hopefully fixed bard instruments.
+FatherNitwit: Fixed crash when loading DoD+ spells_us.txt file
+FatherNitwit: Rewrote a ton of the perl parser internals to suck less.
+FatherNitwit: Reworked a bit of netcode to minimize chances of #opcode crashing.
+FatherNitwit: Actually loaded luclin attributes from DB.
+FatherNitwit: Added npc stats to npc_types and use them.
+ALTER TABLE npc_types ADD STR MEDIUMINT UNSIGNED NOT NULL DEFAULT '75';
+ALTER TABLE npc_types ADD STA MEDIUMINT UNSIGNED NOT NULL DEFAULT '75';
+ALTER TABLE npc_types ADD DEX MEDIUMINT UNSIGNED NOT NULL DEFAULT '75';
+ALTER TABLE npc_types ADD AGI MEDIUMINT UNSIGNED NOT NULL DEFAULT '75';
+ALTER TABLE npc_types ADD _INT MEDIUMINT UNSIGNED NOT NULL DEFAULT '75';
+ALTER TABLE npc_types ADD WIS MEDIUMINT UNSIGNED NOT NULL DEFAULT '75';
+ALTER TABLE npc_types ADD CHA MEDIUMINT UNSIGNED NOT NULL DEFAULT '75';
+	
+==09/23/2005
+FatherNitwit: Inverted XY coordinates on in zone objects and ground spawns.
+FatherNitwit: Maybe fixed quests setting a waypoint in EVENT_WAYPOINT
+ALTER TABLE ground_spawns ADD temp_x float NOT NULL;
+UPDATE ground_spawns SET temp_x=min_x;
+UPDATE ground_spawns SET min_x=min_y;
+UPDATE ground_spawns SET min_y=temp_x;
+UPDATE ground_spawns SET temp_x=max_x;
+UPDATE ground_spawns SET max_x=max_y;
+UPDATE ground_spawns SET max_y=temp_x;
+ALTER TABLE ground_spawns DROP temp_x;
+ALTER TABLE object ADD temp_x float NOT NULL;
+UPDATE object SET temp_x=xpos;
+UPDATE object SET xpos=ypos;
+UPDATE object SET ypos=temp_x;
+ALTER TABLE object DROP temp_x;
+
+
+==09/22/2005
+FatherNitwit: Reworked quest signaling implementation to be less dumb. Also exported SignalNPC to perl.
+FatherNitwit: Implemented a missing bard AE DOT spell type.
+
+==09/21/2005
+FatherNitwit: Fixing a few issues with windows compiles and corpses.
+
+==09/19/2005
+FatherNitwit: Added missing packet for player death to create a corpse.
+
+==09/16/2005
+FatherNitwit: Fixed loot error case client hang, reported by Yablargo
+
+==09/15/2005
+FatherNitwit: Fixed coin trading bug reported by Windcatcher
+
+==09/12/2005
+FatherNitwit: Fixed adventure merchants
+
+==09/11/2005
+FatherNitwit: Made temp merchant lists clear on world boot.
+FatherNitwit: Fixed some shared memory issues on windows.
+FatherNitwit: exported some more mob methods to perl.
+
+==08/26/2005
+Doodman: Found most of the missing guild opcodes, except the manage ones.
+Doodman: Moved guildlist to shared mem (ick) since zone now sends it too.
+Doodman: Need to implement a way to recover the functionality of dynamicly
+	  adding/removing guilds with the shared mem solution
+
+==08/23/2005
+FatherNitwit: Added range check for all combat abilities (reported by LoOsEr)
+
+==08/21/2005
+FatherNitwit: Fixed gaining AA exp (buying still broken)
+FatherNitwit: Fixed weapon procs
+FatherNitwit: Added looting messages (links to come later)
+FatherNitwit: Fixed instant spells acting like DoTs
+
+--- Version Changed to 0.6.2DR1 ---
+
+==08/05/2005
+FatherNitwit: Adding database support for both eye colors and beard type.
+Required SQL:
+ALTER TABLE npc_types ADD luclin_eyecolor2 int(10) unsigned NOT NULL default '1' AFTER luclin_eyecolor;
+ALTER TABLE npc_types ADD luclin_beard int(10) unsigned NOT NULL default '0' AFTER luclin_beardcolor;
+
+==08/03/2005
+FatherNitwit: Work on eqextractor to support the newest patch.
+FatherNitwit: Worked on spawn struct to identify the remaining missing fields.
+
+==08/02/2005
+FatherNitwit: Added initial fix for the shared bank dupe.
+
+==07/28/2005
+FatherNitwit: Fixed $wp in EVENT_WAYPOINT
+FatherNitwit: added #aggro to query aggro checking info for mobs.
+FatherNitwit: fixed a couple strange things in the aggro code.
+
+==07/07/2005
+FatherNitwit: Untested fix for zone point wildcards in GetClosestZone*
+
+==05/09/2005
+FatherNitwit: Fix some stuff related to zoning process.
+update zone set min_status=0 where min_status is null;
+update zone set min_level=0 where min_level is null;
+alter table zone change min_status min_status tinyint(3) unsigned default 0 NOT NULL;
+alter table zone change min_level min_level tinyint(3) unsigned default 0 NOT NULL;
+alter table zone change long_name long_name text NOT NULL DEFAULT '';
+
+==05/05/2005
+FatherNitwit: Theoretically fixed a no-drop trading bug.
+
+... Lots of work on 5/12/05 patch ...
+
+==05/05/2005
+FatherNitwit: A bunch of work on ranged attacks and attack timers.
+FatherNitwit: Fixed issue with the first time a new char gains exp.
+FatherNitwit: Fixed delete character at char select.
+FatherNitwit: Fixed fizzle messages.
+FatherNitwit: Fixed /goto and other cross-zone player teleporting.
+FatherNitwit: Initial work on making arrows show up when shot.
+
+==04/23/2005
+LethalEncounter: Fixed compile errors on Windows
+LethalEncounter: Fixed guild crash bug while logging in
+LethalEncounter: Fixed most of the guild commands
+
+==04/13/2005
 Cofruben: Fixed possible crashes using #npscpawn command.
 Cofruben: Added a few more cheat locators.
 
-==03/21/2005
-FatherNitwit: Merged RangerDown's mob summon fix.
-FatherNitwit: Rewrote netcode to support dynamic opcodes using an emu internal representation.
-FatherNitwit: Opcodes now read from opcodes.conf
-FatherNitwit: Added reloadops command to both zone and world.
-FatherNitwit: Updated cleanipc to remove opcodes, remember to recompile it.
-FatherNitwit: Re-arranged combining code to be cleaner.
-FatherNitwit: Moved some rez stuff from mob to corpse.
-FatherNitwit: Cleaned up exp code. Fixed AA message on death.
+==04/10/2005
+FatherNitwit: Reworked zone in code to make it more closely match live's ordering.
+FatherNitwit: Fixed up stream factory problem with dynamic zones.
+FatherNitwit: Added detailed connecting debugging.
+FatherNitwit: Work on custom titles.
 
-==02/28/2005
-FatherNitwit: Bumpped version number to 0.6.0-DR3
+==04/08/2005
+FatherNitwit: Completely rewrote zoning code to make sense.
+FatherNitwit: Fixed some discipline related effects
+FatherNitwit: Fixed archery hit chance cap (was 47%)
+FatherNitwit: Initial title system implementation
+FatherNitwit: Gave berserkers some of their special abilities
+FatherNitwit: Initial work on raid system, lots to do still.
+FatherNitwit: Found leadership AAs in the player profile and update packet
+FatherNitwit: Enforce attack timer constraints on ranged weapons
+FatherNitwit: (seq) Located crystal counters in the player profile
+FatherNitwit: (image) Many of the following changes were written or inspired by GuildWars code
+FatherNitwit: Enforce reuse timers for combat abilities & instill doubt
+FatherNitwit: Enforce class and range checks on service providing NPCs
+FatherNitwit: Enforce item slots containing proper items
+FatherNitwit: Enforce range checking on ranged weapons better
+FatherNitwit: Made /hideme persistent across zoning
+FatherNitwit: Finally fixed no drop items in tradeskill containers for real this time I hope.
+Required SQL (added to upgrade.sql):
+ALTER TABLE account ADD hideme TINYINT NOT NULL DEFAULT 0;
 
-==02/28/2005
-FatherNitwit: Oops, fixed my faction changes to not break aggro
-FatherNitwit: Made NPCs attack their target when they are chasing them.
-FatherNitwit: Added check for illegal item with ID 0.
-FatherNitwit: Merged mollymillions' bind wounds changes.
-FatherNitwit: Renamed GetFactionCon to GetReverseFactionCon to make its use more clear.
+==04/04/2005
+FatherNitwit: Fixed guild member list struct, identified more fields of it (showeq)
+FatherNitwit: (bUri) Fixed attack code with non-weapons and h2h weapons.
+FatherNitwit: Split zone fog types into seperate DB fields.
+FatherNitwit: Differentiated between guild and player tributes.
+Required SQL: utils/0.6.1-upgrade.sql  (will be updated until release)
 
-==02/27/2005
-FatherNitwit: Fixed conditions to compile on windows. They are a total hack
-  though, since windows dosent support conditions natively. (fix me some day)
-
-==02/26/2005
-Cofruben: On perl questing, if you hail an NPC that is moving by a waypoint, it will stop
-          for 5 seconds.
-FatherNitwit: Rewrote attack delay to better handle all weapon configs.
-FatherNitwit: Added attack_speed float to npc_types. This is a percentage increase 
-  or decrease in a mobs attack speed. (-50 == 2X as fast, 200 = 3X as slow...)
-FatherNitwit: Added findable flag to npc_types to toggle there appearance in the find window
-FatherNitwit: Implemented an initial version of the find command with bad pathing.
-FatherNitwit: Adjusted some spell formulas to match lucy.
-FatherNitwit: Fixed AA titles, and changed #title to allow you to assign them.
-FatherNitwit: Turned fear path manager into a general pathing manager.
-FatherNitwit: Major changes to apathing. Its still not doing pathing yet.
-FatherNitwit: Implemented mob fleeing at low health (FLEE_HP_RATIO...)
-FatherNitwit: Added flee immunity flag (f) to NPC special attacks.
-FatherNitwit: Implemented (broken) general 'find path from A to B' code.
-FatherNitwit: Wrote new packet combining code (-DCOMBINED)
-FatherNitwit: Made network code automatically compress large packets
-FatherNitwit: Fixed client error reporting packet offsets.
-FatherNitwit: Reorganized backstab code, not tested
-FatherNitwit: Reorganized dual weild code, not tested
-FatherNitwit: Added all the newer npc type fields to #npcedit
-FatherNitwit: Added spawn conditions code and quest commands
-FatherNitwit: Added spawn events and inter-zone event notification
-FatherNitwit: Fixed crash with repoping NPCs
-FatherNitwit: Fixed strangeness with delayed signals setting other delayed signals
-FatherNitwit: Fixed quest::stoptimer in XS
-FatherNitwit: Fixed proximities when zoneing in/out
-FatherNitwit: Added signal IDs to signal system. and new quest::signal_with()
-FatherNitwit: Fixed eaten/tributed items coming back after zoning
-Cofruben: Fixed client cast error in quest code.
-FatherNitwit: Fixed berserker skills... they have them now.
-FatherNitwit: Changed dbasync to use a condition instead of busy waiting
-FatherNitwit: Increased sleep time between packet send/recv 1->5ms
-FatherNitwit: Tweaks to assist code, hopefully is works all the time now.
-
-FatherNitwit: Required SQL:
-  ALTER TABLE npc_types ADD attack_speed FLOAT NOT NULL DEFAULT '0';
-  ALTER TABLE npc_types ADD findable TINYINT NOT NULL DEFAULT '0';
-  ALTER TABLE spawn2 ADD condition MEDIUMINT UNSIGNED NOT NULL DEFAULT '0';
-  ALTER TABLE spawn2 ADD cond_value MEDIUMINT NOT NULL DEFAULT '1';
-  source in spawn_conditions.sql and spawn_events.sql
-
-==02/24/2005
-Cofruben: Fixed #npcspawn remove and delete commands.
-
-==02/09/2005
-FatherNitwit: Fixed quest::unique_spawn
-FatherNitwit: Fixed some bugs from opcode convert.
-FatherNitwit: (mollymillions) Adjusted skill caps for hide/sneak/safe fall/intimidate
-FatherNitwit: Fixed stupid typo causing discipline training crash.
-FatherNitwit: Fixed crash with faction messages for invalid high faction ids.
-FatherNitwit: Tweaks to world console reguarding permissions.
-FatherNitwit: Moved world console permissions settings into console.h
-FatherNitwit: Rewrote NPCType management to conserve memory
-FatherNitwit: Added HEAL_ON_LEVEL in features.h to toggle that effect.
-FatherNitwit: Fixed horses, they should zone and appear properly to all players.
-FatherNitwit: Added #qglobal command to edit npc's qglobal (idea/some code from Cisyouc)
-FatherNitwit: added '#npcedit limit' command to edit an npc's spawn limit
-FatherNitwit: Fixed quest::setglobal to properly use the npc_type id.
-FatherNitwit: Fixed quest::delglobal to not request a result from a DELETE.
-FatherNitwit: Made AE effects not hit un-targetable mobs.
-FatherNitwit: Fixed faction hits when killing merchants
-FatherNitwit: BigPull: fixed level 66-70 spells in spell book.
-FatherNitwit: BigPull: added minStatusToHaveInvalidSpells to allow GMs to have invalid spells.
-FatherNitwit: New LOS algorithm, much faster. Seems to behave better too.
-FatherNitwit: Fixed minor crash bug in LOS code.
-FatherNitwit: Improved zone makefile to use mkdep and better rules
-FatherNitwit: Added fear grid creation utility
-FatherNitwit: Fixed fear pathing to work in wide-open zones without paths.
-FatherNitwit: Added new fear pathing based on path files (ENABLE_FEAR_PATHING)
+==01/15/2005
+Doodman: Fixed charges/quantity
+Doodman: Fixed IsStackable()
+Doodman: Fixed some empty Handle() functons.
+Doodman: Added instance level nodrop.
+Required SQL:
+alter table inventory add instnodrop tinyint(1) unsigned default 0 not null;
 
 ==01/13/2005
-Doodman: Fixed up EQNetwork's connection pair management
-
-==01/17/2005
-FatherNitwit: Fixed special foraging for zones.
-FatherNitwit: Added an optional delay argument on quest::signal() to 
-  allow more natural event programming.
-FatherNitwit: Aded a new quest function quest::signalwith(npc_type, signal_id[, wait])
-  which passes the second argumne to the other mobs in $signal.
-FatherNitwit: Made quest::faction print out a faction message like normal.
-FatherNitwit: Added quest::unique_spawn... just like spawn, except only spawns
-  if there is only none of the npc type in the zone.
-FatherNitwit: Fixed replace-container combines.
-
+Doodman: Merged source (FNW changes) in to LiveCompat
+Doodman: SendItemPacket's are now sent deflated (speeds up merchants)
+Doodman: Combining is now turned on in makefile.perl for zone
+Doodman: Fixed world to notice zone drops immediately
+Doodman: Guild_MOTD and bulk door packets are now sent deflated
+Doodman: New item structure is in:
+	Items are preserialized in the database (utils/serialize_items.pl)
+	Item fields names in item struct exactly match the dn
+	Item fields now match the dump from (utils/load_13thfloor_items.pl)
+		eqitems.13th-floor.org
+	Item table convert script: utils/items-0.6.0-DR2-0.6.1-DR1-convert.sql
+	
 ==01/10/2005
 FatherNitwit: Disable sleep() in perl, it is bad news.
 FatherNitwit: Fixed guild MOTD at login (hopefully).
@@ -140,6 +235,9 @@ FatherNitwit: Implemented the snare fix from the forums (edited spell calc formu
 Required Queries:
 ALTER TABLE spawnentry ADD spawn_limit TINYINT NOT NULL DEFAULT '0';
 ALTER TABLE npc_types  ADD spawn_limit TINYINT NOT NULL DEFAULT '0';
+
+==01/04/2004
+Doodman: opcode/struct changes to allw zoning in on live.
 
 ==12/29/2204
 Doodman: Fixed leak in Separator

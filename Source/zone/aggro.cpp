@@ -24,6 +24,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "spdat.h"
 #include "../common/skills.h"
 #include "StringIDs.h"
+#include <iostream>
 
 //#define LOSDEBUG 6
 
@@ -38,17 +39,199 @@ void EntityList::CheckClientAggro(Client *around) {
 		if(mob->IsClient())	//also ensures that mob != around
 			continue;
 		
-		//there are prolly other constraints we need to check here...
-		//or that could generally increase our speed...
-		if(mob->IsEngaged())
-			continue;
-		
 		if(mob->CheckWillAggro(around)) {
 			mob->AddToHateList(around);
 		}
 	}
 }
 
+void EntityList::DescribeAggro(Client *towho, NPC *from_who, float d, bool verbose) {
+	float d2 = d*d;
+	
+	towho->Message(0, "Describing aggro for %s", from_who->GetName());
+	
+	bool engaged = from_who->IsEngaged();
+	if(engaged) {
+		Mob *top = from_who->GetHateTop();
+		towho->Message(0, ".. I am currently fighting with %s", top == NULL?"(NULL)":top->GetName());
+	}
+	bool check_npcs = from_who->WillAggroNPCs();
+	
+	if(verbose) {
+		char namebuf[256];
+		
+		int my_primary = from_who->GetPrimaryFaction();
+		Mob *own = from_who->GetOwner();
+		if(own != NULL)
+			my_primary = own->GetPrimaryFaction();
+		
+		if(my_primary == 0) {
+			strcpy(namebuf, "(No faction)");
+		} else if(my_primary < 0) {
+			strcpy(namebuf, "(Special faction)");
+		} else {
+			if(!database.GetFactionName(my_primary, namebuf, sizeof(namebuf)))
+				strcpy(namebuf, "(Unknown)");
+		}
+		towho->Message(0, ".. I am on faction %s (%d)\n", namebuf, my_primary);
+	}
+	
+	LinkedListIterator<Mob*> iterator(mob_list);
+	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance()) {
+		Mob* mob = iterator.GetData();
+		if(mob->IsClient())	//also ensures that mob != around
+			continue;
+		
+		if(mob->DistNoRoot(*from_who) > d2)
+			continue;
+		
+		if(engaged) {
+			int32 amm = from_who->GetHateAmount(mob);
+			if(amm == 0) {
+				towho->Message(0, "... %s is not on my hate list.", mob->GetName());
+			} else {
+				towho->Message(0, "... %s is on my hate list with value %lu", mob->GetName(), amm);
+			}
+		} else if(!check_npcs && mob->IsNPC()) {
+				towho->Message(0, "... %s is an NPC and my npc_aggro is disabled.", mob->GetName());
+		} else {
+			from_who->DescribeAggro(towho, mob, verbose);
+		}
+	}
+}
+
+void NPC::DescribeAggro(Client *towho, Mob *mob, bool verbose) {
+	//this logic is duplicated from below, try to keep it up to date.
+	float iAggroRange = GetAggroRange();
+	
+	float t1, t2, t3;
+	t1 = mob->GetX() - GetX();
+	t2 = mob->GetY() - GetY();
+	t3 = mob->GetZ() - GetZ();
+	//Cheap ABS()
+	if(t1 < 0)
+		t1 = 0 - t1;
+	if(t2 < 0)
+		t2 = 0 - t2;
+	if(t3 < 0)
+		t3 = 0 - t3;
+	if(   ( t1 > iAggroRange)
+	   || ( t2 > iAggroRange)
+	   || ( t3 > iAggroRange) ) {
+	   towho->Message(0, "...%s is out of range (fast). distances (%.3f,%.3f,%.3f), range %.3f", mob->GetName(),
+	   t1, t2, t3, iAggroRange);
+	   return;
+	}
+	
+	if(mob->IsInvisible(this)) {
+	   towho->Message(0, "...%s is invisible to me. ", mob->GetName());
+	   return;
+	}
+	if((mob->IsClient() &&
+	       (!mob->CastToClient()->Connected()
+	  	    || mob->CastToClient()->IsLD()
+	        || mob->CastToClient()->IsBecomeNPC()
+	        || mob->CastToClient()->GetGM()
+	       )   
+	   ))
+	{
+	   towho->Message(0, "...%s is my owner. ", mob->GetName());
+	   return;
+	}
+	
+	
+	if(mob == GetOwner()) {
+	   towho->Message(0, "...%s a GM or is not connected. ", mob->GetName());
+	   return;
+	}
+
+	float dist2  = mob->DistNoRoot(*this);
+	float iAggroRange2 = iAggroRange*iAggroRange;
+	if( dist2 > iAggroRange2 ) {
+	   towho->Message(0, "...%s is out of range. %.3f > %.3f ", mob->GetName(),
+	   dist2, iAggroRange2);
+	   return;
+	}
+	
+	if(GetINT() > 75 && mob->GetLevelCon(GetLevel()) == CON_GREEN ) {
+	   towho->Message(0, "...%s is red to me (basically)", mob->GetName(),
+	   dist2, iAggroRange2);
+	   return;
+	}
+	
+	if(verbose) {
+		int my_primary = GetPrimaryFaction();
+		int mob_primary = mob->GetPrimaryFaction();
+		Mob *own = GetOwner();
+		if(own != NULL)
+			my_primary = own->GetPrimaryFaction();
+		own = mob->GetOwner();
+		if(mob_primary > 0 && own != NULL)
+			mob_primary = own->GetPrimaryFaction();
+		
+		if(mob_primary == 0) {
+			towho->Message(0, "...%s has no primary faction", mob->GetName());
+		} else if(mob_primary < 0) {
+			towho->Message(0, "...%s is on special faction %d", mob->GetName(), mob_primary);
+		} else {
+			char namebuf[256];
+			if(!database.GetFactionName(mob_primary, namebuf, sizeof(namebuf)))
+				strcpy(namebuf, "(Unknown)");
+			list<struct NPCFaction*>::iterator cur,end;
+			cur = faction_list.begin();
+			end = faction_list.end();
+			bool res = false;
+			for(; cur != end; cur++) {
+				struct NPCFaction* fac = *cur;
+				if ((sint32)fac->factionID == mob_primary) {
+					if (fac->npc_value > 0) {
+						towho->Message(0, "...%s is on ALLY faction %s (%d) with %d", mob->GetName(), namebuf, mob_primary, fac->npc_value);
+						res = true;
+						break;
+					} else if (fac->npc_value < 0) {
+						towho->Message(0, "...%s is on ENEMY faction %s (%d) with %d", mob->GetName(), namebuf, mob_primary, fac->npc_value);
+						res = true;
+						break;
+					} else {
+						towho->Message(0, "...%s is on NEUTRAL faction %s (%d) with 0", mob->GetName(), namebuf, mob_primary);
+						res = true;
+						break;
+					}
+				}
+			}
+			if(!res) {
+				towho->Message(0, "...%s is on faction %s (%d), which I have no entry for.", mob->GetName(), namebuf, mob_primary);
+			}
+		}
+	}
+	
+	FACTION_VALUE fv = mob->GetReverseFactionCon(this);
+	
+	if(!(
+			fv == FACTION_SCOWLS
+			||
+			(mob->GetPrimaryFaction() != GetPrimaryFaction() && mob->GetPrimaryFaction() == -4 && GetOwner() == NULL)
+			||
+			fv == FACTION_THREATENLY
+		)) {
+	   towho->Message(0, "...%s faction not low enough. value='%s'", mob->GetName(), FactionValueToString(fv));
+	   return;
+	}
+	if(fv == FACTION_THREATENLY) {
+	   towho->Message(0, "...%s threatening to me, so they only have a %d chance per check of attacking.", mob->GetName());
+	}
+	
+	if(!CheckLosFN(mob)) {
+	   towho->Message(0, "...%s is out of sight.", mob->GetName());		
+	}
+	
+	towho->Message(0, "...%s meets all conditions, I should be attacking them.", mob->GetName());	
+}
+
+/*
+	If you change this function, you should update the above function
+	to keep the #aggro command accurate.
+*/
 bool Mob::CheckWillAggro(Mob *mob) {
 	_ZP(Mob_CheckWillAggro);
 	
@@ -90,7 +273,8 @@ bool Mob::CheckWillAggro(Mob *mob) {
 	//im not sure I understand this..
 	//if I have an owner and it is not this mob, then I cannot
 	//aggro this mob...???
-	if(GetOwnerID() != 0 && mob != GetOwner()) {
+	//changed to be 'if I have an owner and this is it'
+	if(mob == GetOwner()) {
 		return(false);
 	}
 
@@ -115,6 +299,11 @@ bool Mob::CheckWillAggro(Mob *mob) {
 	(
 	//old InZone check taken care of above by !mob->CastToClient()->Connected()
 	(
+		( GetINT() <= 75 )
+		||( mob->GetLevelCon(GetLevel()) != CON_GREEN )
+	)
+	&&
+	(
 		(
 			fv == FACTION_SCOWLS
 			||
@@ -125,11 +314,6 @@ bool Mob::CheckWillAggro(Mob *mob) {
 				&& MakeRandomInt(0,99) < THREATENLY_ARRGO_CHANCE
 			)
 		)
-	) //Image: Do not tamper with this random code, it is optimized!
-	&&
-	(
-		( GetINT() <= 75 )
-		||( mob->GetLevelCon(GetLevel()) != CON_GREEN )
 	)
 	)
 	{
@@ -234,328 +418,6 @@ to see how the decision is made.  Yea, it could be condensed and made
 faster, but I'm doing it this way to make it readable and easy to modify
 */
 
-///////////////////////////////////////////////////////////////////////////////
-//////////// real one is below this function, this is all ifdef'd GW //////////
-///////////////////////////////////////////////////////////////////////////////
-#ifdef GUILDWARS
-bool Mob::IsAttackAllowed(Mob *target)
-{
-	if(!target)
-        return 0;
-	if(target->IsNPC() && target->CastToNPC()->GetOwner() != 0 && this == target->CastToNPC()->GetOwner())
-		return false; // People killing charmed pets for XP
-	if(target->IsClient() && target->CastToClient()->GetOwner() != 0 && this == target->CastToClient()->GetOwner())
-		return false; // People killing charmed pets for XP
-
-	/* self */
-#ifdef GUILDWARS
-	if((target->IsClient() && target->CastToClient()->GetGM()) || this == target) {
-		return false; // GMs cant get attacked
-
-	}
-#else
-	if(this == target) {
-		return true; // Quag: sure, you can attack yourself, why not?
-	}
-#endif
-	if (this->IsCorpse() || target->IsCorpse())
-		return false;
-
-//Begin of GuildWars rules
-#ifndef GUILDWARS
-goto normalrules;
-#endif
-
-#ifdef GUILDWARS
-
-if(guildwars.GetPVPAbility() == 1)
-return false;
-else if(guildwars.GetPVPAbility() == 2 && ((_CLIENT(this) && _CLIENT(target)) || (_CLIENT(this) && _CLIENTPET(target)) || (_CLIENTPET(this) && _CLIENT(target)) || (_CLIENTPET(this) && _CLIENTPET(target))))
-return false;
-else if(guildwars.GetPVPAbility() == 3)
-return guildwars.SpecialAttackPrivs(this,target);
-else if(target->IsClient() && target->CastToClient()->GuildDBID() == 0 && IsClient() && target->CastToClient()->GuildDBID() == 0)
-goto normalrules;
-#endif
-
-#ifdef GUILDWARS
-	if(_CLIENT(this))
-	{
-		if(_CLIENT(target))
-		{
-		if(CastToClient()->GuildDBID() != target->CastToClient()->GuildDBID())
-			return true;
-		}
-		else if(_CLIENTPET(target))
-		{
-		if(CastToClient()->GuildDBID() != target->GetOwner()->CastToClient()->GuildDBID())
-			return true;
-		}
-	}
-	else if(_CLIENTPET(this)) {
-		if(_CLIENT(target))
-		{
-		if(GetOwner()->CastToClient()->GuildDBID() != target->CastToClient()->GuildDBID())
-			return true;
-		}
-		else if(_CLIENTPET(target)) {
-		if(GetOwner()->CastToClient()->GuildDBID() != target->GetOwner()->CastToClient()->GuildDBID())
-			return true;
-		}
-	}
-#endif
-//End of Guildwars rules
-
-normalrules:
-	if(_CLIENT(this))
-	{
-		if(_CLIENT(target))
-		{
-			if(this->CastToClient()->GetPVP() != target->CastToClient()->GetPVP())
-				return false;
-			else if(this->CastToClient()->GetPVP() && target->CastToClient()->GetPVP())
-				return true;
-			else if(this->CastToClient()->GetDuelTarget() == target->GetID() && target->CastToClient()->GetDuelTarget() == GetID() && target->CastToClient()->IsDueling() && this->CastToClient()->IsDueling())
-				return true;
-		}
-		else if(_NPC(target))
-		{
-			#ifdef IPC
-			if(target->CastToNPC()->IsInteractive() && (!target->CastToNPC()->IsPVP() || !this->CastToClient()->GetPVP()))
-				return false;
-			#endif
-				return true;
-		}
-		else if(_BECOMENPC(target))
-		{
-			if(this->CastToClient()->GetLevel() > target->CastToClient()->GetBecomeNPCLevel())
-				return false;
-			else
-				return true;
-		}
-		else if(_CLIENTPET(target))
-		{
-			if(this->CastToClient()->GetDuelTarget() == target->CastToMob()->GetOwner()->GetID() && target->CastToMob()->GetOwner()->CastToClient()->GetDuelTarget() == GetID() && target->CastToMob()->GetOwner()->CastToClient()->IsDueling() && this->CastToClient()->IsDueling())
-				return true;
-			else if(this->CastToClient()->GetPVP() != target->CastToMob()->GetOwner()->CastToClient()->GetPVP())
-				return false;
-			else if(this->CastToClient()->GetPVP() && target->CastToMob()->GetOwner()->CastToClient()->GetPVP())
-				return true;
-		}
-		else if(_NPCPET(target))
-		{
-			return true;
-		}
-		else if(_BECOMENPCPET(target))
-		{
-			if(this->CastToClient()->GetLevel() > target->CastToMob()->GetOwner()->CastToClient()->GetBecomeNPCLevel())
-				return false;
-			else
-				return true;
-		}
-		else
-		{
-			goto nocase;
-		}
-	}
-	else if(_NPC(this))
-	{
-		if(_CLIENT(target))
-		{
-			#ifdef IPC
-			if(CastToNPC()->IsInteractive() && (!CastToNPC()->IsPVP() || !target->CastToClient()->GetPVP()))
-				return false;
-			#endif
-			return true;
-		}
-		else if(_NPC(target))
-		{
-			if(target->CastToNPC()->GetPrimaryFaction() != 0 && target->CastToNPC()->GetPrimaryFaction() == CastToNPC()->GetPrimaryFaction())
-				return false;
-			if(CastToNPC()->GetPrimaryFaction() != 0 && target->CastToNPC()->GetPrimaryFaction() != 0 && CastToNPC()->GetPrimaryFaction() == target->CastToNPC()->GetPrimaryFaction() || CastToNPC()->IsFactionListAlly(target->CastToNPC()->GetPrimaryFaction()))
-				return false;
-
-
-			return 1;
-		}
-		else if(_BECOMENPC(target))
-		{
-
-			return 1;
-		}
-		else if(_CLIENTPET(target))
-		{
-			return 1;
-		}
-		else if(_NPCPET(target))
-		{
-			return 1;
-		}
-		else if(_BECOMENPCPET(target))
-		{
-			return 1;
-		}
-		else
-		{
-			goto nocase;
-		}
-	}
-	else if(_BECOMENPC(this))
-	{
-		if(_CLIENT(target))
-		{
-			if(target->CastToClient()->GetLevel() > this->CastToClient()->GetBecomeNPCLevel())
-				return 0;
-			else
-				return 1;
-		}
-		else if(_NPC(target))
-		{
-			return 1;
-		}
-		else if(_BECOMENPC(target))
-		{
-			return 1;
-		}
-		else if(_CLIENTPET(target)) {
-			if(target->CastToMob()->GetOwner()->CastToClient()->GetLevel() > this->CastToClient()->GetBecomeNPCLevel())
-				return 0;
-			else
-				return 1;
-		}
-		else if(_NPCPET(target)) {
-			return 1;
-		}
-		else if(_BECOMENPCPET(target)) {
-			return 1;
-		}
-		else {
-			goto nocase;
-		}
-	}
-	else if(_CLIENTPET(this)) {
-		if(_CLIENT(target)) {
-			if(this->CastToMob()->GetOwner()->CastToClient()->IsDueling() && this->CastToMob()->GetOwner()->CastToClient()->GetDuelTarget() == target->GetID() && target->CastToClient()->IsDueling() && target->CastToClient()->GetDuelTarget() == this->CastToMob()->GetOwner()->GetID())
-				return 1;
-			else if(this->CastToMob()->GetOwner()->CastToClient()->GetPVP() != target->CastToClient()->GetPVP())
-				return 0;
-			else if(this->CastToMob()->GetOwner()->CastToClient()->GetPVP() && target->CastToClient()->GetPVP())
-				return 1;
-		}
-		else if(_NPC(target)) {
-			return 1;
-
-		}
-		else if(_BECOMENPC(target)) {
-			if(this->CastToMob()->GetOwner()->CastToClient()->GetLevel() > target->CastToClient()->GetBecomeNPCLevel())
-				return 0;
-			else
-				return 1;
-		}
-		else if(_CLIENTPET(target)) {
-			if(this->CastToMob()->GetOwner()->CastToClient()->IsDueling() && this->CastToMob()->GetOwner()->CastToClient()->GetDuelTarget() == target->CastToMob()->GetOwner()->GetID() && target->CastToMob()->GetOwner()->CastToClient()->IsDueling() && target->CastToMob()->GetOwner()->CastToClient()->GetDuelTarget() == this->CastToMob()->GetOwner()->GetID())
-				return 1;
-			else if(this->CastToMob()->GetOwner()->CastToClient()->GetPVP() != target->CastToMob()->GetOwner()->CastToClient()->GetPVP())
-				return 0;
-			else if(this->CastToMob()->GetOwner()->CastToClient()->GetPVP() && target->CastToMob()->GetOwner()->CastToClient()->GetPVP())
-				return 1;
-		}
-		else if(_NPCPET(target))
-		{
-			return 1;
-		}
-		else if(_BECOMENPCPET(target))
-		{
-			if(this->CastToMob()->GetOwner()->CastToClient()->GetLevel() > target->CastToMob()->GetOwner()->CastToClient()->GetBecomeNPCLevel())
-				return 0;
-			else
-				return 1;
-		}
-		else
-		{
-			goto nocase;
-		}
-	}
-	else if(_NPCPET(this))
-	{
-		if(_CLIENT(target))
-		{
-			return 1;
-		}
-		else if(_NPC(target))
-		{
-			return 1;
-		}
-		else if(_BECOMENPC(target))
-		{
-			return 1;
-		}
-		else if(_CLIENTPET(target))
-		{
-			return 1;
-		}
-		else if(_NPCPET(target))
-		{
-			return 1;
-
-		}
-		else if(_BECOMENPCPET(target))
-		{
-			return 1;
-		}
-
-
-
-		else
-		{
-			goto nocase;
-		}
-	}
-	else if(_BECOMENPCPET(this))
-	{
-		if(_CLIENT(target))
-		{
-			if(target->CastToClient()->GetLevel() > this->CastToMob()->GetOwner()->CastToClient()->GetBecomeNPCLevel())
-				return 0;
-			else
-				return 1;
-		}
-		else if(_NPC(target))
-		{
-			return 1;
-		}
-		else if(_BECOMENPC(target))
-		{
-			return 1;
-		}
-		else if(_CLIENTPET(target))
-		{
-			if(target->CastToMob()->GetOwner()->CastToClient()->GetLevel() > this->CastToMob()->GetOwner()->CastToClient()->GetBecomeNPCLevel())
-				return 0;
-			else
-				return 1;
-		}
-		else if(_NPCPET(target))
-		{
-			return 1;
-		}
-		else if(_BECOMENPCPET(target))
-		{
-			return 1;
-		}
-		else
-		{
-			goto nocase;
-		}
-	}
-
-nocase:
-	LogFile->write(EQEMuLog::Debug, "Mob::IsAttackAllowed: don't have a rule for this - %s vs %s\n", this->GetName(), target->GetName());
-	return 0;
-}
-
-#else // not guildwars
-
 bool Mob::IsAttackAllowed(Mob *target)
 {
 	Mob *mob1, *mob2, *tempmob;
@@ -571,32 +433,27 @@ bool Mob::IsAttackAllowed(Mob *target)
 		return true;
 
 	// can't damage own pet (applies to everthing)
-	if(target->GetOwner() && target->GetOwner() == this)
+	Mob *target_owner = target->GetOwner();
+	Mob *our_owner = GetOwner();
+	if(target_owner && target_owner == this)
 		return false;
-	else if(GetOwner() && GetOwner() == target)
+	else if(our_owner && our_owner == target)
 		return false;
 	
 	//cannot hurt untargetable mobs
 	bodyType bt = target->GetBodyType();
+
 	if(bt == BT_NoTarget || bt == BT_NoTarget2)
 		return(false);
 	
-#ifdef SHAWN319
-	if
-	(
-	(IsClient() && CastToClient()->GetGM()) ||
-	(target->IsClient() && target->CastToClient()->GetGM())
-	)
-	return false;
-#endif
 	// solar: the format here is a matrix of mob type vs mob type.
 	// redundant ones are omitted and the reverse is tried if it falls through.
 
 	
 	// first figure out if we're pets.  we always look at the master's flags.
 	// no need to compare pets to anything
-	mob1 = this->GetOwner() ? this->GetOwner() : this;
-	mob2 = target->GetOwner() ? target->GetOwner() : target;
+	mob1 = our_owner ? our_owner : this;
+	mob2 = target_owner ? target_owner : target;
 
 	reverse = 0;
 	do
@@ -634,9 +491,10 @@ bool Mob::IsAttackAllowed(Mob *target)
 				c1 = mob1->CastToClient();
 				becomenpc = mob2->CastToClient();
 	
-				if(c1->GetLevel() > becomenpc->GetBecomeNPCLevel())
+				//who made up this rule???
+				/*if(c1->GetLevel() > becomenpc->GetBecomeNPCLevel())
 					return false;
-				else
+				else*/
 					return true;
 			}	
 			else if(_CLIENTCORPSE(mob2))	// client vs client corpse
@@ -652,7 +510,13 @@ bool Mob::IsAttackAllowed(Mob *target)
 		{
 			if(_NPC(mob2))						// npc vs npc
 			{
-				npc1 = mob1->CastToNPC();
+/*
+this says that an NPC can NEVER attack a faction ally...
+this is stupid... somebody else should check this rule if they want to
+enforce it, this just says 'can they possibly fight based on their
+type', in which case, the answer is yes.
+*/
+/*				npc1 = mob1->CastToNPC();
 				npc2 = mob2->CastToNPC();
 				if
 				(
@@ -665,6 +529,7 @@ bool Mob::IsAttackAllowed(Mob *target)
 				)
 					return false;
 				else
+*/
 					return true;
 			}
 			else if(_BECOMENPC(mob2))	// npc vs becomenpc
@@ -725,7 +590,6 @@ bool Mob::IsAttackAllowed(Mob *target)
 	return false;
 }
 
-#endif // not guildwars
 
 // solar: this is to check if non detrimental things are allowed to be done
 // to the target.  clients cannot affect npcs and vice versa, and clients
@@ -864,6 +728,8 @@ bool Mob::IsBeneficialAllowed(Mob *target)
 
 bool Mob::CombatRange(Mob* other)
 {
+	if(!other)
+		return(false);
     // neotokyo: some mobs have set size == -1; this caused a signed/unsigned overflow
 	sint32 size_mod = (sint32)GetSize();
 	if(GetRace() == 49 || GetRace() == 158 || GetRace() == 196) //For races with a fixed size

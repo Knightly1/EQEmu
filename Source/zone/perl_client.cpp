@@ -47,6 +47,8 @@ XS(XS_Client_SendSound)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SendSound();
 	}
@@ -70,6 +72,8 @@ XS(XS_Client_Save)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->Save(iCommitNow);
 		ST(0) = boolSV(RETVAL);
@@ -93,6 +97,8 @@ XS(XS_Client_SaveBackup)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SaveBackup();
 	}
@@ -115,6 +121,8 @@ XS(XS_Client_Connected)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->Connected();
 		ST(0) = boolSV(RETVAL);
@@ -139,6 +147,8 @@ XS(XS_Client_InZone)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->InZone();
 		ST(0) = boolSV(RETVAL);
@@ -162,6 +172,8 @@ XS(XS_Client_Kick)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->Kick();
 	}
@@ -183,6 +195,8 @@ XS(XS_Client_Disconnect)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->Disconnect();
 	}
@@ -205,6 +219,8 @@ XS(XS_Client_IsLD)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsLD();
 		ST(0) = boolSV(RETVAL);
@@ -228,6 +244,8 @@ XS(XS_Client_WorldKick)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->WorldKick();
 	}
@@ -251,6 +269,8 @@ XS(XS_Client_GetAnon)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetAnon();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -273,6 +293,8 @@ XS(XS_Client_Duck)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->Duck();
 	}
@@ -294,6 +316,8 @@ XS(XS_Client_Stand)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->Stand();
 	}
@@ -316,6 +340,8 @@ XS(XS_Client_SetGM)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetGM(toggle);
 	}
@@ -338,6 +364,8 @@ XS(XS_Client_SetPVP)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetPVP(toggle);
 	}
@@ -360,6 +388,8 @@ XS(XS_Client_GetPVP)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetPVP();
 		ST(0) = boolSV(RETVAL);
@@ -384,6 +414,8 @@ XS(XS_Client_GetGM)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetGM();
 		ST(0) = boolSV(RETVAL);
@@ -408,6 +440,8 @@ XS(XS_Client_SetBaseClass)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetBaseClass(i);
 	}
@@ -430,6 +464,8 @@ XS(XS_Client_SetBaseRace)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetBaseRace(i);
 	}
@@ -452,6 +488,8 @@ XS(XS_Client_SetBaseGender)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetBaseGender(i);
 	}
@@ -475,6 +513,8 @@ XS(XS_Client_GetBaseFace)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetBaseFace();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -500,6 +540,8 @@ XS(XS_Client_GetLanguageSkill)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetLanguageSkill(n);
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -524,6 +566,8 @@ XS(XS_Client_GetLastName)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetLastName();
 		sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG;
@@ -548,6 +592,8 @@ XS(XS_Client_GetLDoNPoints)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetLDoNPoints();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -572,6 +618,8 @@ XS(XS_Client_GetBaseSTR)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetBaseSTR();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -596,6 +644,8 @@ XS(XS_Client_GetBaseSTA)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetBaseSTA();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -620,6 +670,8 @@ XS(XS_Client_GetBaseCHA)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetBaseCHA();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -644,6 +696,8 @@ XS(XS_Client_GetBaseDEX)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetBaseDEX();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -668,6 +722,8 @@ XS(XS_Client_GetBaseINT)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetBaseINT();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -692,6 +748,8 @@ XS(XS_Client_GetBaseAGI)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetBaseAGI();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -716,6 +774,8 @@ XS(XS_Client_GetBaseWIS)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetBaseWIS();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -740,6 +800,8 @@ XS(XS_Client_GetWeight)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetWeight();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -764,6 +826,8 @@ XS(XS_Client_GetEXP)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetEXP();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -789,6 +853,8 @@ XS(XS_Client_UpdateLDoNPoints)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->UpdateLDoNPoints(points, theme);
 		ST(0) = boolSV(RETVAL);
@@ -813,6 +879,8 @@ XS(XS_Client_SetDeity)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetDeity(i);
 	}
@@ -837,6 +905,8 @@ XS(XS_Client_AddEXP)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 3)
 			conlevel = 0xFF;
@@ -873,6 +943,8 @@ XS(XS_Client_SetEXP)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 4)
 			resexp = false;
@@ -881,56 +953,6 @@ XS(XS_Client_SetEXP)
 		}
 
 		THIS->SetEXP(set_exp, set_aaxp, resexp);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Client_SetLevel); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_SetLevel)
-{
-	dXSARGS;
-	if (items < 2 || items > 3)
-		Perl_croak(aTHX_ "Usage: Client::SetLevel(THIS, set_level, command= false)");
-	{
-		Client *		THIS;
-		uint8		set_level = (uint8)SvUV(ST(1));
-		bool		command;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-
-		if (items < 3)
-			command = false;
-		else {
-			command = (bool)SvTRUE(ST(2));
-		}
-
-		THIS->SetLevel(set_level, command);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Client_GoToBind); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_GoToBind)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Client::GoToBind(THIS)");
-	{
-		Client *		THIS;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-
-		THIS->GoToBind();
 	}
 	XSRETURN_EMPTY;
 }
@@ -954,6 +976,8 @@ XS(XS_Client_SetBindPoint)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 2)
 			to_zone = -1;
@@ -1005,6 +1029,8 @@ XS(XS_Client_MovePC)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 6)
 			ignorerestrictions = 0;
@@ -1039,6 +1065,8 @@ XS(XS_Client_ChangeLastName)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->ChangeLastName(in_lastname);
 	}
@@ -1069,6 +1097,8 @@ XS(XS_Client_GetFactionLevel)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(7), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(7)));
@@ -1076,6 +1106,8 @@ XS(XS_Client_GetFactionLevel)
 		}
 		else
 			Perl_croak(aTHX_ "tnpc is not of type Mob");
+		if(tnpc == NULL)
+			Perl_croak(aTHX_ "tnpc is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetFactionLevel(char_id, npc_id, p_race, p_class, p_deity, pFaction, tnpc);
 		XSprePUSH; PUSHi((IV)RETVAL);
@@ -1103,6 +1135,8 @@ XS(XS_Client_SetFactionLevel)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetFactionLevel(char_id, npc_id, char_class, char_race, char_deity);
 	}
@@ -1130,6 +1164,8 @@ XS(XS_Client_SetFactionLevel2)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetFactionLevel2(char_id, faction_id, char_class, char_race, char_deity, value);
 	}
@@ -1153,6 +1189,8 @@ XS(XS_Client_GetRawItemAC)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetRawItemAC();
 		XSprePUSH; PUSHi((IV)RETVAL);
@@ -1177,6 +1215,8 @@ XS(XS_Client_AddSkill)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->AddSkill(skillid, value);
 	}
@@ -1200,6 +1240,8 @@ XS(XS_Client_AccountID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->AccountID();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1224,6 +1266,8 @@ XS(XS_Client_AccountName)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->AccountName();
 		sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG;
@@ -1248,6 +1292,8 @@ XS(XS_Client_Admin)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->Admin();
 		XSprePUSH; PUSHi((IV)RETVAL);
@@ -1272,6 +1318,8 @@ XS(XS_Client_CharacterID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->CharacterID();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1295,6 +1343,8 @@ XS(XS_Client_UpdateAdmin)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 2)
 			iFromDB = true;
@@ -1323,6 +1373,8 @@ XS(XS_Client_UpdateWho)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 2)
 			remove = 0;
@@ -1352,6 +1404,8 @@ XS(XS_Client_GuildEQID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GuildEQID();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1376,6 +1430,8 @@ XS(XS_Client_GuildDBID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GuildDBID();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1400,6 +1456,8 @@ XS(XS_Client_GuildRank)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GuildRank();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1425,6 +1483,8 @@ XS(XS_Client_SetGuild)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->SetGuild(in_guilddbid, in_rank);
 		ST(0) = boolSV(RETVAL);
@@ -1452,6 +1512,8 @@ XS(XS_Client_GuildChangeRank)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->GuildChangeRank(name, guildid, oldrank, newrank);
 	}
@@ -1475,6 +1537,8 @@ XS(XS_Client_GetFace)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetFace();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1499,6 +1563,8 @@ XS(XS_Client_TakeMoneyFromPP)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->TakeMoneyFromPP(copper);
 		ST(0) = boolSV(RETVAL);
@@ -1527,6 +1593,8 @@ XS(XS_Client_AddMoneyToPP)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->AddMoneyToPP(copper, silver, gold, platinum, updateclient);
 	}
@@ -1551,6 +1619,8 @@ XS(XS_Client_CheckIncreaseSkill)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 3)
 			chancemodi = 0;
@@ -1581,6 +1651,8 @@ XS(XS_Client_TGB)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->TGB();
 		ST(0) = boolSV(RETVAL);
@@ -1606,6 +1678,8 @@ XS(XS_Client_GetSkillPoints)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetSkillPoints();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1629,6 +1703,8 @@ XS(XS_Client_SetSkillPoints)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetSkillPoints(inp);
 	}
@@ -1652,6 +1728,8 @@ XS(XS_Client_IncreaseSkill)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 3)
 			value = 1;
@@ -1681,6 +1759,8 @@ XS(XS_Client_IncreaseLanguageSkill)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 3)
 			value = 1;
@@ -1711,6 +1791,8 @@ XS(XS_Client_GetRawSkill)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetRawSkill(skill_id);
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1733,6 +1815,8 @@ XS(XS_Client_GMKill)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->GMKill();
 	}
@@ -1755,6 +1839,8 @@ XS(XS_Client_IsMedding)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsMedding();
 		ST(0) = boolSV(RETVAL);
@@ -1780,6 +1866,8 @@ XS(XS_Client_GetDuelTarget)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetDuelTarget();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -1803,6 +1891,8 @@ XS(XS_Client_IsDueling)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsDueling();
 		ST(0) = boolSV(RETVAL);
@@ -1827,6 +1917,8 @@ XS(XS_Client_SetDuelTarget)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetDuelTarget(set_id);
 	}
@@ -1849,6 +1941,8 @@ XS(XS_Client_SetDueling)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetDueling(duel);
 	}
@@ -1870,6 +1964,8 @@ XS(XS_Client_ResetAA)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->ResetAA();
 	}
@@ -1894,6 +1990,8 @@ XS(XS_Client_MemSpell)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 4)
 			update_client = true;
@@ -1923,6 +2021,8 @@ XS(XS_Client_UnmemSpell)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 3)
 			update_client = true;
@@ -1951,6 +2051,8 @@ XS(XS_Client_UnmemSpellAll)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 2)
 			update_client = true;
@@ -1981,6 +2083,8 @@ XS(XS_Client_ScribeSpell)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 4)
 			update_client = true;
@@ -2010,6 +2114,8 @@ XS(XS_Client_UnscribeSpell)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 3)
 			update_client = true;
@@ -2038,6 +2144,8 @@ XS(XS_Client_UnscribeSpellAll)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 2)
 			update_client = true;
@@ -2066,6 +2174,8 @@ XS(XS_Client_IsSitting)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsSitting();
 		ST(0) = boolSV(RETVAL);
@@ -2090,6 +2200,8 @@ XS(XS_Client_IsBecomeNPC)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->IsBecomeNPC();
 		ST(0) = boolSV(RETVAL);
@@ -2115,6 +2227,8 @@ XS(XS_Client_GetBecomeNPCLevel)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetBecomeNPCLevel();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -2138,6 +2252,8 @@ XS(XS_Client_SetBecomeNPC)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetBecomeNPC(flag);
 	}
@@ -2160,6 +2276,8 @@ XS(XS_Client_SetBecomeNPCLevel)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetBecomeNPCLevel(level);
 	}
@@ -2183,6 +2301,8 @@ XS(XS_Client_LootToStack)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->LootToStack(itemid);
 		ST(0) = boolSV(RETVAL);
@@ -2207,6 +2327,8 @@ XS(XS_Client_SetFeigned)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetFeigned(in_feigned);
 	}
@@ -2229,6 +2351,8 @@ XS(XS_Client_GetFeigned)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetFeigned();
 		ST(0) = boolSV(RETVAL);
@@ -2253,6 +2377,8 @@ XS(XS_Client_AutoSplitEnabled)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->AutoSplitEnabled();
 		ST(0) = boolSV(RETVAL);
@@ -2277,6 +2403,8 @@ XS(XS_Client_SetHorseId)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetHorseId(horseid_in);
 	}
@@ -2300,6 +2428,8 @@ XS(XS_Client_GetHorseId)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetHorseId();
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -2325,6 +2455,8 @@ XS(XS_Client_NukeItem)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->NukeItem(itemnum);
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -2349,6 +2481,8 @@ XS(XS_Client_SetTint)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetTint(slot_id, color);
 	}
@@ -2372,6 +2506,8 @@ XS(XS_Client_SetMaterial)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetMaterial(slot_id, item_id);
 	}
@@ -2393,6 +2529,8 @@ XS(XS_Client_Undye)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->Undye();
 	}
@@ -2417,6 +2555,8 @@ XS(XS_Client_GetItemIDAt)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetItemIDAt(slot_id);
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -2442,6 +2582,8 @@ XS(XS_Client_DeleteItemInInventory)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 3)
 			quantity = 0;
@@ -2477,6 +2619,8 @@ XS(XS_Client_SummonItem)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 3)
 			charges = 0;
@@ -2506,6 +2650,8 @@ XS(XS_Client_SetStats)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetStats(type, increase_val);
 	}
@@ -2528,6 +2674,8 @@ XS(XS_Client_DropItem)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->DropItem(slot_id);
 	}
@@ -2549,6 +2697,8 @@ XS(XS_Client_BreakInvis)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->BreakInvis();
 	}
@@ -2571,6 +2721,8 @@ XS(XS_Client_GetGroup)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetGroup();
 		ST(0) = sv_newmortal();
@@ -2594,6 +2746,8 @@ XS(XS_Client_LeaveGroup)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->LeaveGroup();
 	}
@@ -2616,6 +2770,8 @@ XS(XS_Client_Hungry)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->Hungry();
 		ST(0) = boolSV(RETVAL);
@@ -2640,6 +2796,8 @@ XS(XS_Client_Thirsty)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->Thirsty();
 		ST(0) = boolSV(RETVAL);
@@ -2666,6 +2824,8 @@ XS(XS_Client_GetInstrumentMod)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetInstrumentMod(spell_id);
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -2690,6 +2850,8 @@ XS(XS_Client_CanUseSkill)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->CanUseSkill(skillid);
 		ST(0) = boolSV(RETVAL);
@@ -2716,6 +2878,8 @@ XS(XS_Client_DecreaseByID)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->DecreaseByID(type, amt);
 		ST(0) = boolSV(RETVAL);
@@ -2742,6 +2906,8 @@ XS(XS_Client_SlotConvert2)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->SlotConvert2(slot);
 		XSprePUSH; PUSHu((UV)RETVAL);
@@ -2764,6 +2930,8 @@ XS(XS_Client_Escape)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->Escape();
 	}
@@ -2785,6 +2953,8 @@ XS(XS_Client_RemoveNoRent)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->RemoveNoRent();
 	}
@@ -2807,6 +2977,8 @@ XS(XS_Client_RangedAttack)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(1), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(1)));
@@ -2814,6 +2986,8 @@ XS(XS_Client_RangedAttack)
 		}
 		else
 			Perl_croak(aTHX_ "other is not of type Mob");
+		if(other == NULL)
+			Perl_croak(aTHX_ "other is NULL, avoiding crash.");
 
 		THIS->RangedAttack(other);
 	}
@@ -2836,6 +3010,8 @@ XS(XS_Client_ThrowingAttack)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (sv_derived_from(ST(1), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(1)));
@@ -2843,6 +3019,8 @@ XS(XS_Client_ThrowingAttack)
 		}
 		else
 			Perl_croak(aTHX_ "other is not of type Mob");
+		if(other == NULL)
+			Perl_croak(aTHX_ "other is NULL, avoiding crash.");
 
 		THIS->ThrowingAttack(other);
 	}
@@ -2864,6 +3042,8 @@ XS(XS_Client_GoFish)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->GoFish();
 	}
@@ -2885,6 +3065,8 @@ XS(XS_Client_ForageItem)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->ForageItem();
 	}
@@ -2910,6 +3092,8 @@ XS(XS_Client_CalcPriceMod)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		if (items < 2)
 			other = 0;
@@ -2920,6 +3104,8 @@ XS(XS_Client_CalcPriceMod)
 			}
 			else
 				Perl_croak(aTHX_ "other is not of type Mob");
+			if(other == NULL)
+				Perl_croak(aTHX_ "other is NULL, avoiding crash.");
 		}
 
 		if (items < 3)
@@ -2949,6 +3135,8 @@ XS(XS_Client_ResetTrade)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->ResetTrade();
 	}
@@ -2973,6 +3161,8 @@ XS(XS_Client_UseDiscipline)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->UseDiscipline(spell_id, target);
 		ST(0) = boolSV(RETVAL);
@@ -2998,6 +3188,8 @@ XS(XS_Client_SetLanguageSkill)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		THIS->SetLanguageSkill(langid, value);
 	}
@@ -3022,6 +3214,8 @@ XS(XS_Client_GetCharacterFactionLevel)
 		}
 		else
 			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetCharacterFactionLevel(faction_id);
 		XSprePUSH; PUSHi((IV)RETVAL);
@@ -3086,8 +3280,6 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "SetDeity"), XS_Client_SetDeity, file, "$$");
 		newXSproto(strcpy(buf, "AddEXP"), XS_Client_AddEXP, file, "$$;$$");
 		newXSproto(strcpy(buf, "SetEXP"), XS_Client_SetEXP, file, "$$$;$");
-		newXSproto(strcpy(buf, "SetLevel"), XS_Client_SetLevel, file, "$$;$");
-		newXSproto(strcpy(buf, "GoToBind"), XS_Client_GoToBind, file, "$");
 		newXSproto(strcpy(buf, "SetBindPoint"), XS_Client_SetBindPoint, file, "$;$$$$");
 		newXSproto(strcpy(buf, "MovePC"), XS_Client_MovePC, file, "$$$$$;$$");
 		newXSproto(strcpy(buf, "ChangeLastName"), XS_Client_ChangeLastName, file, "$$");

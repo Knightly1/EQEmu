@@ -67,6 +67,8 @@
 #include "../common/bodytypes.h"
 #include "map.h"
 
+#define SPELL_ATTACK_SKILL 231
+
 enum FindSpellType {
 	SPELLTYPE_SELF,
 	SPELLTYPE_OFFENSIVE,
@@ -181,9 +183,11 @@ struct StatBonuses {
 	sint16 ResistFearChance;	//i
 	sint16 StunResist;		//i
 	sint16 MeleeSkillCheck;	//i
+	uint8  MeleeSkillCheckSkill;
 	sint16 HitChance;			//HitChance/15 == % increase i
 	uint8  HitChanceSkill;
-	sint16 DamageModifier;		//i
+	sint16 DamageModifier;		//needs to be thought about more and implemented
+	uint8  DamageModifierSkill;
 	sint16 MinDamageModifier;   //i
 	sint16 ProcChance;			// ProcChance/10 == % increase i
 	sint16 ExtraAttackChance;
@@ -258,10 +262,8 @@ bool logpos;
 	int32	GetPRange(float x, float y, float z);
 	static	int32	RandomTimer(int min, int max);
 	static	int8	GetDefaultGender(int16 in_race, int8 in_gender = 0xFF);
-	static	void	CreateSpawnPacket(APPLAYER* app, NewSpawn_Struct* ns);
+	static	void	CreateSpawnPacket(EQZonePacket* app, NewSpawn_Struct* ns);
 //	static	int		CheckEffectIDMatch(int8 effectindex, int16 spellid1, int8 caster_level1, int16 spellid2, int8 caster_level2);
-	static	int32	GetAppearanceValue(int8 iAppearance);
-//  static	int8	MaxSkill(int16 skillid, int16 class_, int16 level);
 			int8	MaxSkill(int16 skillid, int16 class_, int16 level);
     inline	int8	MaxSkill(int16 skillid) { return MaxSkill(skillid, GetClass(), GetLevel()); }
     // Util functions for MaxSkill
@@ -331,7 +333,7 @@ bool logpos;
 	inline virtual bool IsMob() { return true; }
 	inline virtual bool InZone() { return true; }
 	MyList <wplist> Waypoints;
-	void	TicProcess();
+	void	BuffProcess();
 	virtual void SetLevel(uint8 in_level, bool command = false) { level = in_level; }
 	
 	virtual inline sint32 GetPrimaryFaction() { return 0; }
@@ -345,12 +347,13 @@ bool logpos;
 
 	void Warp( float x, float y, float z );
 	inline virtual bool IsMoving() { return moving; }
-	virtual void SetMoving(bool move) { moving = move; }
+	virtual void SetMoving(bool move) { moving = move; delta_x=0; delta_y=0; delta_z=0; delta_heading=0; }
 	virtual void GoToBind() {}
 	virtual void Gate();
 	virtual bool Attack(Mob* other, int Hand = 13, bool FromRiposte = false) { return false; }		// 13 = Primary (default), 14 = secondary
 	virtual void Damage(Mob* from, sint32 damage, int16 spell_id, int8 attack_skill = 0x04, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false) {};
 	virtual void Heal();
+	virtual void HealDamage(uint32 ammount);
 	virtual void SetMaxHP() { cur_hp = max_hp; }
 	virtual void Death(Mob* killer, sint32 damage, int16 spell_id = 0xFFFF, int8 attack_skill = 0x04) {}
 	static int32 GetLevelCon(int8 mylevel, int8 iOtherLevel);
@@ -361,21 +364,21 @@ bool logpos;
 	bool ChangeHP(Mob* other, sint32 amount, int16 spell_id = 0, sint8 buffslot = -1, bool iBuffTic = false);
 	int MonkSpecialAttack(Mob* other, int8 skill_used);
 	void TryBackstab(Mob *other, const Item_Struct* weapon);
-	void DoAnim(const int animnum, int type=1, bool ackreq = true);
+	void DoAnim(const int animnum, int type=0, bool ackreq = true, FilterType filter = FilterNone);
 	
 	void ChangeSize(float in_size, bool bNoRestriction = false);
 	virtual void GMMove(float x, float y, float z, float heading = 0.01);
 	void SendPosUpdate(int8 iSendToSelf = 0);
-	void MakeSpawnUpdate(SpawnPositionUpdate_Struct* spu);
+	void MakeSpawnUpdateNoDelta(PlayerPositionUpdateServer_Struct* spu);
 	void MakeSpawnUpdate(PlayerPositionUpdateServer_Struct* spu);
 	void SendPosition();
 	void SendAllPosition();
 
-	void CreateDespawnPacket(APPLAYER* app);
-	void CreateHorseSpawnPacket(APPLAYER* app, const char* ownername, uint16 ownerid, Mob* ForWho = 0);
-	void CreateSpawnPacket(APPLAYER* app, Mob* ForWho = 0);
+	void CreateDespawnPacket(EQZonePacket* app);
+	void CreateHorseSpawnPacket(EQZonePacket* app, const char* ownername, uint16 ownerid, Mob* ForWho = 0);
+	void CreateSpawnPacket(EQZonePacket* app, Mob* ForWho = 0);
 	virtual void FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho);
-	void CreateHPPacket(APPLAYER* app);
+	void CreateHPPacket(EQZonePacket* app);
 	void SendHPUpdate();
 		
 	bool AddProcToWeapon(int16 spell_id, bool bPerma = false, int8 iChance = 3);
@@ -531,30 +534,36 @@ bool logpos;
 	void	BuffFadeAll();
 	void	BuffFadeBySlot(int slot, bool iRecalcBonuses = true);
 	int	CanBuffStack(int16 spellid, int8 caster_level, bool iFailIfOverwrite = false);
-	inline bool	IsCasting() { return (bool) (casting_spell_id != 0); }
+	inline bool	IsCasting() { return((casting_spell_id != 0)); }
 	int16	CastingSpellID() { return casting_spell_id; }
 	
 // vesuvias - appearence fix
 	void	SendIllusionPacket(int16 in_race, int8 in_gender = 0xFF, int16 in_texture = 0xFFFF, int16 in_helmtexture = 0xFFFF, int8 in_haircolor = 0xFF, int8 in_beardcolor = 0xFF, int8 in_eyecolor1 = 0xFF, int8 in_eyecolor2 = 0xFF, int8 in_hairstyle = 0xFF, int8 in_luclinface = 0xFF, int8 in_beard = 0xFF, int8 in_aa_title = 0xFF);
 
+	static	int32	GetAppearanceValue(EmuAppearance iAppearance);
 	void	SendAppearancePacket(int32 type, int32 value, bool WholeZone = true, bool iIgnoreSelf = false);
-	void	SetAppearance(int8 app, bool iIgnoreSelf = true);
-	inline const int8&	GetAppearance()				{ return appearance; }
+	void	SetAppearance(EmuAppearance app, bool iIgnoreSelf = true);
+	inline EmuAppearance	GetAppearance()	const { return _appearance; }
 	inline const int8&	GetRunAnimSpeed()			{ return pRunAnimSpeed; }
 	inline void			SetRunAnimSpeed(sint8 in)	{ if (pRunAnimSpeed != in) { pRunAnimSpeed = in; pLastChange = Timer::GetCurrentTime(); } }
+	
 	Mob*	GetPet();
 	Mob*	GetFamiliar();
 	void	SetPet(Mob* newpet);
 	Mob*	GetOwner();
 	Mob*	GetOwnerOrSelf();
-					void	SetPetID(int16 NewPetID);
-	inline const	int16&	GetPetID()						{ return petid;  }
-					void	SetFamiliarID(int16 NewPetID);
-	inline const	int16&	GetFamiliarID()					{ return familiarid;  }
-					void	SetOwnerID(int16 NewOwnerID);
-	inline const	int16&	GetOwnerID()					{ return ownerid; }
-	inline const	int16&	GetPetType()					{ return typeofpet; }
-	bool IsFamiliar() { return(typeofpet >= 1 && typeofpet <= 4); }
+	void	SetPetID(int16 NewPetID);
+	inline int16	GetPetID()		const			{ return petid;  }
+	void	SetFamiliarID(int16 NewPetID);
+	inline int16	GetFamiliarID()	const			{ return familiarid;  }
+	void	SetOwnerID(int16 NewOwnerID);
+	inline int16	GetOwnerID()	const			{ return ownerid; }
+	inline const	int16&	GetPetType()	const			{ return typeofpet; }
+	bool IsFamiliar() const { return(typeofpet >= 1 && typeofpet <= 4); }
+	inline bool HasOwner() const { return(GetOwnerID() != 0); }
+	inline bool IsPet() const { return(GetOwnerID() != 0); }
+	inline bool HasPet() const { return(GetPetID() != 0); }
+	
     inline const	bodyType	GetBodyType() const	{ return bodytype; }
     int16   FindSpell(int16 classp, int16 level, int type, FindSpellType spelltype, float distance, sint32 mana_avail);
 	void	CheckBuffs();
@@ -591,18 +600,18 @@ bool logpos;
 	int	GetMonkHandToHandDelay(void);
 	int8	GetClassLevelFactor();
 	void	Mesmerize();
-	inline bool	IsMezzed()	{ return mezzed;}
-	inline bool	IsStunned() { return stunned; }
-	inline int16	GetErrorNumber()	{return adverrorinfo;}
+	inline bool	IsMezzed() const { return mezzed; }
+	inline bool	IsStunned() const { return stunned; }
+	inline int16	GetErrorNumber() const {return adverrorinfo;}
 	
-	inline int16	GetRune() { return rune; }
+	inline int16	GetRune() const { return rune; }
 	inline void	SetRune(int16 in_rune) { rune = in_rune; }
 	
-	sint16	ReduceDamage(sint16 damage, int16 in_rune);
-	sint16  ReduceMagicalDamage(sint16 damage, int16 in_rune);
+	sint16	ReduceDamage(sint16 damage);
+	sint16  ReduceMagicalDamage(sint16 damage);
 
 	
-   	inline const int16& GetMagicRune() { return magicrune; }
+   	inline int16 GetMagicRune() const { return magicrune; }
 	void	SetMagicRune(int16 in_rune) { magicrune = in_rune; }
 	
     bool SpecAttacks[SPECATK_MAXNUM];
@@ -726,15 +735,13 @@ bool logpos;
 	int16	CheckHealAggroAmount(int16 spellid);
 	virtual int32 GetAA(int32 aa_id) { return(0); }
 	
-	
-	int CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level = 1);
+	int16	GetInstrumentMod(int16 spell_id);
+	int CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level = 1, Mob *caster = NULL);
 	int CalcSpellEffectValue_formula(int formula, int base, int max, int caster_level, int16 spell_id);
 	int CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, int caster_level2);
 
 	inline EGNode *GetEGNode() { return(_egnode); }
 	inline void SetEGNode(EGNode *s) { _egnode = s; }
-	
-	inline void SignalNPC(int _signal_id) { signaled = true; signal_id = _signal_id; }
 	
 	bool	isgrouped; //These meant to be private?
 	bool	pendinggroup;
@@ -754,6 +761,7 @@ bool logpos;
   // HP Event 
    inline int& GetNextHPEvent() { return nexthpevent; } 
    void SetNextHPEvent( int hpevent );
+	void SendItemAnimation(Mob *to, const Item_Struct *item);
 	
 	bool DivineAura();
 	
@@ -767,6 +775,8 @@ bool logpos;
 	inline int GetMWP() { return(max_wp); }
 	
 protected:
+	void CommonDamage(Mob* other, sint32 &damage, const int16 spell_id, const int8 attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic);
+
 	int	AC;
 	int	ATK;
 	int	STR;
@@ -802,9 +812,6 @@ protected:
 	
 	int32			follow;
 	
-	int		signal_id;
-	bool	signaled;	// used by quest signal() command
-	
 	int8    gender;
 	int16	race;
 	int8	base_gender;
@@ -827,10 +834,13 @@ protected:
 	void CalcSpellBonuses(StatBonuses* newbon);
 	virtual void CalcBonuses();
 	void TryWeaponProc(const Item_Struct* weapon, Mob *on);
+	void TryWeaponProc(const ItemInst* weapon, Mob *on);
+	void ExecWeaponProc(uint16 spell_id, Mob *on);
+	float GetProcChances(float &ProcBonus, float &ProcChance);
 	
-    enum {MAX_PROCS = 4};
-    tProc PermaProcs[MAX_PROCS];
-    tProc SpellProcs[MAX_PROCS];
+	enum {MAX_PROCS = 4};
+	tProc PermaProcs[MAX_PROCS];
+	tProc SpellProcs[MAX_PROCS];
 	
 	char    name[64];
 	char		clean_name[64];
@@ -848,17 +858,16 @@ protected:
 	int8    light;
 	
 	float	fixedZ;
-	int8    appearance; // 0 standing, 1 sitting, 2 ducking, 3 lieing down, 4 looting
+	EmuAppearance    _appearance;
 	int8	pRunAnimSpeed;
 	
 	Mob*	target;
 	Timer	attack_timer;
+	Timer	attack_dw_timer;
+	Timer	ranged_timer;
 	float	attack_speed;		//% increase/decrease in attack speed (not haste)
 	Timer	tic_timer;
 	Timer	mana_timer;
-	
-	// Kaiyodo - Timer added for dual wield
-	Timer attack_dw_timer;
 	
 	Timer spellend_timer;
 	int16	casting_spell_id;

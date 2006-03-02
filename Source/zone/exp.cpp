@@ -32,26 +32,21 @@ float class_modifiers[16] = { 9.0f, 10.0f, 14.0f, 14.0f, 14.0f, 10.0f, 12.0f, 14
 
 
 void Client::AddEXP(int32 add_exp, int8 conlevel, bool resexp) {
-#ifdef GUILDWARS
-	m_pp.perAA = 0;
-#endif
-	
-	if (m_pp.perAA<0 || m_pp.perAA>100)
-		m_pp.perAA=0;	// stop exploit with sanity check
+	if (m_epp.perAA<0 || m_epp.perAA>100)
+		m_epp.perAA=0;	// stop exploit with sanity check
 	
 	int32 add_aaxp;
 	if(resexp) {
 		add_aaxp = 0;
 	} else {
 		//figure out how much of this goes to AAs
-		add_aaxp = add_exp * m_pp.perAA / 100;
+		add_aaxp = add_exp * m_epp.perAA / 100;
 		//take that ammount away from regular exp
 		add_exp -= add_aaxp;
 	
 		//get zone modifier
 		if (zone->GetEXPMod() > 0) {
-			int32 factor = 100 * (int32) zone->GetEXPMod();
-			add_exp += (add_exp * factor / 10000);
+			add_exp = int32(float(add_exp) * zone->GetEXPMod());
 		}
 	
 #ifdef CON_XP_SCALING
@@ -96,12 +91,7 @@ void Client::AddEXP(int32 add_exp, int8 conlevel, bool resexp) {
 		}
 #endif
 	}	//end !resexp
-	
-#ifdef FREEBSD
-	//Father Nitwit Debug:
-	Message(15, "Adding %i experience to your character.", add_exp);
-#endif
-	
+
 	int32 exp = GetEXP() + add_exp;
 
 	int32 aaexp = (int32)((zone->GetAAXPMod()) * add_aaxp);
@@ -133,11 +123,6 @@ void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
 	}
 	else
 		Message(15, "You have lost experience.");
-
-#ifdef FREEBSD
-//Father Nitwit Debug:
-Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
-#endif
 	
 	//check_level represents the level we should be when we have
 	//this ammount of exp (once these loops complete)
@@ -159,6 +144,7 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 		}
 	}
 	check_level--;
+
 	
 	//see if we gained any AAs
 	if (set_aaxp >= max_AAXP) {
@@ -179,10 +165,8 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 		//figure out how many AA points we get from the exp were setting
 		m_pp.aapoints = set_aaxp / max_AAXP;
 		
-		//get remainder exp points
+		//get remainder exp points, set in PP below
 		set_aaxp = set_aaxp - (max_AAXP * m_pp.aapoints);
-		//set our profile's remainder exp
-		m_pp.expAA = set_aaxp;
 		
 		//add in how many points we had
 		m_pp.aapoints += last_unspentAA;
@@ -225,12 +209,14 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 			Message(15, "Welcome to level %i!", check_level);
 		SetLevel(check_level);
 	}
-	//set the client's EXP
-	m_pp.exp = set_exp;
 	
-	if (GetLevel() < 51)
-		m_pp.perAA = 0;	// turn off aa exp if they drop below 51
-	else
+	//set the client's EXP and AAEXP
+	m_pp.exp = set_exp;
+	m_pp.expAA = set_aaxp;
+	
+	if (GetLevel() < 51) {
+		m_epp.perAA = 0;	// turn off aa exp if they drop below 51
+	} else
 		SendAAStats();	//otherwise, send them an AA update
 
 	//send the expdata in any case so the xp bar isnt stuck after leveling
@@ -238,7 +224,7 @@ Message(15, "You now have %i experience points.", (set_exp + set_aaxp));
 	int32 tmpxp2 = GetEXPForLevel(GetLevel());
 	// Quag: crash bug fix... Divide by zero when tmpxp1 and 2 equalled each other, most likely the error case from GetEXPForLevel() (invalid class, etc)
 	if (tmpxp1 != tmpxp2 && tmpxp1 != 0xFFFFFFFF && tmpxp2 != 0xFFFFFFFF) {
-		APPLAYER* outapp = new APPLAYER(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
+		EQZonePacket* outapp = new EQZonePacket(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
 		ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
 		double tmpxp = (double) ( (double) set_exp-tmpxp2 ) / ( (double) tmpxp1-tmpxp2 );
 		eu->exp = (uint32)(330.0f * tmpxp);
@@ -268,7 +254,7 @@ void Client::SetLevel(int8 set_level, bool command)
 		return;
 	}
 
-	APPLAYER* outapp = new APPLAYER(OP_LevelUpdate, sizeof(LevelUpdate_Struct));
+	EQZonePacket* outapp = new EQZonePacket(OP_LevelUpdate, sizeof(LevelUpdate_Struct));
 	LevelUpdate_Struct* lu = (LevelUpdate_Struct*)outapp->pBuffer;
 	lu->level = set_level;
 	lu->level_old = level;
@@ -454,5 +440,48 @@ void Group::SplitExp(uint32 exp, Mob* other) {
 	}
 #endif
 }
+
+
+
+void Client::SetLeadershipEXP(uint32 group_exp, uint32 raid_exp) {
+	while(group_exp >= GROUP_EXP_PER_POINT) {
+		group_exp -= GROUP_EXP_PER_POINT;
+		m_pp.group_leadership_points++;
+	}
+	while(raid_exp >= RAID_EXP_PER_POINT) {
+		raid_exp -= RAID_EXP_PER_POINT;
+		m_pp.raid_leadership_points++;
+	}
+	
+	m_pp.group_leadership_exp = group_exp;
+	m_pp.raid_leadership_exp = raid_exp;
+	
+	SendLeadershipEXPUpdate();
+}
+
+void Client::AddLeadershipEXP(uint32 group_exp, uint32 raid_exp) {
+	SetLeadershipEXP(GetGroupEXP() + group_exp, GetRaidEXP() + raid_exp);
+}
+
+void Client::SendLeadershipEXPUpdate() {
+	EQZonePacket* outapp = new EQZonePacket(OP_LeadershipExpUpdate, sizeof(LeadershipExpUpdate_Struct));
+	LeadershipExpUpdate_Struct* eu = (LeadershipExpUpdate_Struct *) outapp->pBuffer;
+	
+	eu->group_leadership_exp = m_pp.group_leadership_exp;
+	eu->group_leadership_points = m_pp.group_leadership_points;
+	eu->raid_leadership_exp = m_pp.raid_leadership_exp;
+	eu->raid_leadership_points = m_pp.raid_leadership_points;
+	
+	FastQueuePacket(&outapp);
+}
+
+
+
+
+
+
+
+
+
 
 

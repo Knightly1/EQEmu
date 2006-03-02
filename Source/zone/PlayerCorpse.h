@@ -75,9 +75,9 @@ public:
 	uint32	GetPlatinum()	{ return platinum; }
 
 	void	FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho);
-	void	MakeLootRequestPackets(Client* client, const APPLAYER* app);
-	void	LootItem(Client* client, const APPLAYER* app);
-	void	EndLoot(Client* client, const APPLAYER* app);
+	void	MakeLootRequestPackets(Client* client, const EQZonePacket* app);
+	void	LootItem(Client* client, const EQZonePacket* app);
+	void	EndLoot(Client* client, const EQZonePacket* app);
 	void	Summon(Client* client, bool spell);
 	void	CastRezz(int16 spellid, Mob* Caster);
 	void	CompleteRezz();

@@ -8,6 +8,7 @@
 #include "../common/Condition.h"
 #include "../common/timeoutmgr.h"
 #include "../common/opcodemgr.h"
+#include "../common/timer.h"
 
 #define STREAM_TIMEOUT 45000 //in ms
 
@@ -32,6 +33,8 @@ class EQStreamFactory : private Timeoutable {
 		Mutex MStreams;
 
 		virtual void CheckTimeout();
+
+		Timer *DecayTimer;
 
 	public:
 		EQStreamFactory(EQStreamType type) : Timeoutable(5000) { ReaderRunning=false; WriterRunning=false; StreamType=type; }

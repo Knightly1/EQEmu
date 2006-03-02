@@ -50,10 +50,14 @@ Core Zone features
 #define EMBPERL_XS_CLASSES
 
 //enable IO capture and transmission to in game clients
+//this seems to make perl very unhappy on reload, and crashes
 #define EMBPERL_IO_CAPTURE
 
 //enable perl-based in-game command, pretty useless without EMBPERL_XS_CLASSES
 #define EMBPERL_COMMANDS
+
+//enable #plugin and #peval, which requires IO::Stringy
+//#define EMBPERL_EVAL_COMMANDS
 
 #endif
 
@@ -173,11 +177,11 @@ enum {	//reuse times
 	ForagingReuseTime = 75,		//this is wrong
 	MendReuseTime = 300,
 	TrackingReuseTime = 10,
-	BashReuseTime = 8,
+	BashReuseTime = 5,
 	BackstabReuseTime = 10,
 	KickReuseTime = 8,
 	TailRakeReuseTime = 6,
-	EagleStrikeReuseTime = 6,
+	EagleStrikeReuseTime = 5,
 	RoundKickReuseTime = 9,
 	TigerClawReuseTime = 6,
 	FlyingKickReuseTime = 8,
@@ -202,7 +206,14 @@ enum {	//timer settings, all in milliseconds
 	Tribute_duration = 600000,
 	ZoneTimerResolution = 3			//sleep time between zone main loop runs
 };
-	
+
+enum {	//some random constants
+	//each of these attack modifiers are added to the NPC's level to determine their 
+	//probability of executing such an attack (which may or may not hit)
+	NPCDualAttackModifier = 20,
+	NPCTripleAttackModifier = 0,
+	NPCQuadAttackModifier = -20
+};
 
 //max number of people per group.
 //is pretty much tied to what the client supports
@@ -251,9 +262,16 @@ enum {	//timer settings, all in milliseconds
 //The Level Cap:
 #define LEVEL_CAP 65
 
+//the square of the maximum range at whihc you could possibly use NPC services (shop, tribute, etc)
+#define USE_NPC_RANGE2 200*200		//arbitrary right now
+
 //the formula for experience for killing a mob.
 //level is the only valid variable to use
 #define EXP_FORMULA level*level*75*35/10
+
+//Leadership AA experience points
+#define GROUP_EXP_PER_POINT 1000
+#define RAID_EXP_PER_POINT 2000
 
 //Some hard coded statuses from commands and other places:
 enum {
@@ -282,6 +300,15 @@ enum {
 	commandChangeDatarate = 201,	//edit client's data rate
 	commandZoneToCoords = 0			//can #zone with coords
 };
+
+//these are large right now because the x,y,z coords of the zone
+//lines do not make a lot of sense
+//Maximum distance from a zone point given that the request didnt
+//know what zone that the line was for
+#define ZONEPOINT_NOZONE_RANGE 40000.0f
+//Maximum distance from a zone point if zone was specified
+#define ZONEPOINT_ZONE_RANGE 40000.0f
+
 
 /*
 

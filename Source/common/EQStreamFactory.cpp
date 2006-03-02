@@ -1,8 +1,11 @@
+
+#ifdef WIN32
+	#include <windows.h>
+#endif
 #include "EQStreamFactory.h"
 #ifdef WIN32
-	#include <winsock2.h>
+	#include <winsock.h>
 	#include <process.h>
-	#include <windows.h>
 	#include <io.h>
 	#include <stdio.h>
 #else
@@ -81,8 +84,8 @@ struct sockaddr_in address;
 		fcntl(sock, F_SETFL, O_NONBLOCK);
 	#endif
 	//moved these because on windows the output was delayed and causing the console window to look bad
-	cout << "Starting factory Reader" << endl;
-	cout << "Starting factory Writer" << endl;
+	//cout << "Starting factory Reader" << endl;
+	//cout << "Starting factory Writer" << endl;
 	#ifdef WIN32
 		_beginthread(EQStreamFactoryReaderLoop,0, this);
 		_beginthread(EQStreamFactoryWriterLoop,0, this);
@@ -128,6 +131,7 @@ unsigned char buffer[2048];
 sockaddr_in from;
 int socklen=sizeof(sockaddr_in);
 timeval sleep_time;
+//time_t now;
 
 	ReaderRunning=true;
 	while(sock!=-1) {
@@ -156,7 +160,7 @@ timeval sleep_time;
 				// What do we wanna do?
 			} else {
 				char temp[25];
-				sprintf(temp,"%lu.%d",ntohl(from.sin_addr.s_addr),ntohs(from.sin_port));
+				sprintf(temp,"%u.%d",ntohl(from.sin_addr.s_addr),ntohs(from.sin_port));
 				MStreams.lock();
 				if ((stream_itr=Streams.find(temp))==Streams.end()) {
 					MStreams.unlock();
@@ -165,6 +169,7 @@ timeval sleep_time;
 						s->SetFactory(this);
 						s->SetStreamType(StreamType);
 						Streams[temp]=s;
+						WriterWork.Signal();
 						Push(s);
 						s->Process(buffer,length);
 						s->SetLastPacketTime(Timer::GetCurrentTime());
@@ -241,8 +246,13 @@ map<string,EQStream *>::iterator stream_itr;
 bool havework=true;
 vector<EQStream *> wants_write;
 vector<EQStream *>::iterator cur,end;
+bool decay=false;
+uint32 stream_count;
+
+Timer DecayTimer(20);
 	
 	WriterRunning=true;
+	DecayTimer.Enable();
 	while(sock!=-1) {
 		//if (!havework) {
 			//WriterWork.Wait();
@@ -254,11 +264,17 @@ vector<EQStream *>::iterator cur,end;
 		
 		havework = false;
 		wants_write.clear();
+
+		decay=DecayTimer.Check();
 		
 		//copy streams into a seperate list so we dont have to keep
 		//MStreams locked while we are writting
 		MStreams.lock();
 		for(stream_itr=Streams.begin();stream_itr!=Streams.end();stream_itr++) {
+			// If it's time to decay the bytes sent, then let's do it before we try to write
+			if (decay)
+				stream_itr->second->Decay();
+
 			if (stream_itr->second->HasOutgoingData()) {
 				havework=true;
 				stream_itr->second->PutInUse();
@@ -275,7 +291,16 @@ vector<EQStream *>::iterator cur,end;
 			(*cur)->ReleaseFromUse();
 		}
 
-		Sleep(40);
+		Sleep(10);
+
+		MStreams.lock();
+		stream_count=Streams.size();
+		MStreams.unlock();
+		if (!stream_count) {
+			//cout << "No streams, waiting on condition" << endl;
+			WriterWork.Wait();
+			//cout << "Awake from condition, must have a stream now" << endl;
+		}
 	}
 }
 

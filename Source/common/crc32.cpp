@@ -104,9 +104,9 @@ void CRC32::SetEQChecksum(uchar* in_data, int32 in_length)
 #ifndef WIN32
 #warning "Comment out i386 define if your arch isn't x86"
 #endif
-#if !defined(i386)
-#define i386	// If you are on a non-Intel based platform (Sparc/HP/NEC/etc), you will want to comment this define.
-#endif
+//#if !defined(i386)
+//#define i386	// If you are on a non-Intel based platform (Sparc/HP/NEC/etc), you will want to comment this define.
+//#endif
 
 uint32 CRC32::Update(const int8* buf, uint32 bufsize, uint32 crc32) {
 #if defined(WIN32)

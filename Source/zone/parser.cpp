@@ -1667,3 +1667,8 @@ int Parser::ParseCommands(string text, int line, int justcheck, int32 npcid, NPC
 	}
 	return 1;
 }
+
+void Parser::ReloadQuests() {
+	ClearCache();
+}
+

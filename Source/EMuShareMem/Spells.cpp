@@ -91,7 +91,7 @@ bool pDLLLoadSPDat(const CALLBACK_FileLoadSPDat cbFileLoadSPDat, const void** oS
 		}
 	}
 	else {
-		cout << "Error Loading NPCTypes: NPCTypes.cpp: pDLLLoadNPCTypes: Open() == false" << endl;
+		cout << "Error Loading SPDat: Spells.cpp: pDLLLoadSPDat: Open() == false" << endl;
 		return false;
 	}
 	return false;

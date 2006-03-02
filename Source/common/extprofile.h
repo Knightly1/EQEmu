@@ -45,6 +45,7 @@ struct ExtendedProfile_Struct {
 	char				pet_name[64];
 	
 	uint32				aa_effects;
+	uint32				perAA;		//% of exp going to AAs
 };
 
 #pragma pack()

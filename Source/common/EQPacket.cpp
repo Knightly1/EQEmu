@@ -24,14 +24,14 @@
 #include "op_codes.h"
 #include "CRC16.h"
 #include "opcodemgr.h"
+#include "packet_dump.h"
 
 using namespace std;
 
-OpcodeManager *EQOpcodeManager;
+OpcodeManager *RawOpcodeManager=NULL;
+extern OpcodeManager *WorldOpcodeManager;
 
-uint8 EQApplicationPacket::default_opcode_size=2;
-
-EQPacket::EQPacket(const uint16 op, const unsigned char *buf, uint32 len)
+EQPacket::EQPacket(OpcodeManager **om, const uint16 op, const unsigned char *buf, uint32 len)
 {
 	this->opcode=op;
 	this->pBuffer=NULL;
@@ -45,6 +45,9 @@ EQPacket::EQPacket(const uint16 op, const unsigned char *buf, uint32 len)
 			memset(this->pBuffer,0,len);
 		}
 	}
+	this->OpMgr=om;
+	this->emu_opcode = OP_Unknown;
+
 }
 
 uint32 EQProtocolPacket::serialize(unsigned char *dest) const
@@ -90,13 +93,13 @@ void EQPacket::DumpRawHeader(uint16 seq, FILE *to) const
 		string sIP,dIP;;
 		sIP=long2ip(src_ip);
 		dIP=long2ip(dst_ip);
-		fprintf(to, "[%s:%d->%s:%d] ",sIP.c_str(),src_port,dIP.c_str(),dst_port);
+		fprintf(to, "[%s:%d->%s:%d]\n",sIP.c_str(),src_port,dIP.c_str(),dst_port);
 	}
 	if (seq != 0xffff)
 		fprintf(to, "[Seq=%u] ",seq);
 	string name;
-	if(EQOpcodeManager != NULL)
-		name = EQOpcodeManager->EQToName(opcode);
+	if(OpMgr != NULL && *OpMgr != NULL)
+		name = (*OpMgr)->EQToName(opcode);
 	fprintf(to, "[OpCode 0x%04x (%s) Size=%lu]\n",opcode,name.c_str(),size);
 }
 
@@ -112,8 +115,8 @@ void EQPacket::DumpRawHeaderNoTime(uint16 seq, FILE *to) const
 		fprintf(to, "[Seq=%u] ",seq);
 	
 	string name;
-	if(EQOpcodeManager != NULL)
-		name = EQOpcodeManager->EQToName(opcode);
+	if(OpMgr != NULL && *OpMgr != NULL)
+		name = (*OpMgr)->EQToName(opcode);
 	
 	fprintf(to, "[OpCode 0x%04x (%s) Size=%lu]\n",opcode,name.c_str(),size);
 }
@@ -140,6 +143,7 @@ uint32 offset;
 		pBuffer=NULL;
 		size=0;
 	}
+	OpMgr=&RawOpcodeManager;
 }
 
 bool EQProtocolPacket::combine(const EQProtocolPacket *rhs)
@@ -171,31 +175,6 @@ bool result=false;
 
 	return result;
 
-}
-
-EQApplicationPacket::EQApplicationPacket(const unsigned char *buf, uint32 len, uint8 opcode_size)
-{
-uint32 offset=0;
-	app_opcode_size=(opcode_size==0) ? EQApplicationPacket::default_opcode_size : opcode_size;
-
-	if (app_opcode_size==1) {
-		opcode=*(const unsigned char *)buf;
-		offset++;
-	} else {
-		opcode=*(const uint16 *)buf;
-		offset+=2;
-	}
-
-	if ((len-offset)>0) {
-		pBuffer=new unsigned char[len-offset];
-		memcpy(pBuffer,buf+offset,len-offset);
-		size=len-offset;
-	} else {
-		pBuffer=NULL;
-		size=0;
-	}
-	
-	emu_opcode = OP_Unknown;
 }
 
 bool EQApplicationPacket::combine(const EQApplicationPacket *rhs)
@@ -238,63 +217,6 @@ unsigned char *tmpbuffer=NULL;
 	pBuffer=tmpbuffer;
 
 	return true;
-}
-
-void EQApplicationPacket::SetOpcode(EmuOpcode emu_op) {
-	if(emu_op == OP_Unknown) {
-		opcode = 0;
-		emu_opcode = OP_Unknown;
-		return;
-	}
-
-	opcode = EQOpcodeManager->EmuToEQ(emu_op);
-	
-#if EQDEBUG >= 4
-	if(opcode == OP_Unknown) {
-		LogFile->write(EQEMuLog::Debug, "Unable to convert Emu opcode %s (%d) into an EQ opcode.", OpcodeNames[emu_op], emu_op);
-	}
-#endif
-
-	//save the emu opcode we just set.
-	emu_opcode = emu_op;
-}
-
-const EmuOpcode EQApplicationPacket::GetOpcodeConst() const {
-	if(emu_opcode != OP_Unknown) {
-		return(emu_opcode);
-	}
-	if(opcode == 0) {
-		return(OP_Unknown);
-	}
-
-	EmuOpcode emu_op;
-	emu_op = EQOpcodeManager->EQToEmu(opcode);
-#if EQDEBUG >= 4
-	if(emu_op == OP_Unknown) {
-		LogFile->write(EQEMuLog::Debug, "Unable to convert EQ opcode 0x%.4x to an emu opcode.", opcode);
-	}
-#endif
-	
-	return(emu_op);
-}
-
-EQApplicationPacket *EQProtocolPacket::MakeApplicationPacket(uint8 opcode_size) const {
-	EQApplicationPacket *res = new EQApplicationPacket;
-	res->app_opcode_size=(opcode_size==0) ? EQApplicationPacket::default_opcode_size : opcode_size;
-	if (res->app_opcode_size==1) {
-		res->pBuffer= new unsigned char[size+1];
-		memcpy(res->pBuffer+1,pBuffer,size);
-		*(res->pBuffer)=htons(opcode)&0xff;
-		res->opcode=opcode&0xff;
-		res->size=size+1;
-	} else {
-		res->pBuffer= new unsigned char[size];
-		memcpy(res->pBuffer,pBuffer,size);
-		res->opcode=opcode;
-		res->size=size;
-	}
-	res->copyInfo(this);
-	return(res);
 }
 
 bool EQProtocolPacket::ValidateCRC(const unsigned char *buffer, int length, uint32 Key)
@@ -369,10 +291,11 @@ void EQProtocolPacket::ChatDecode(unsigned char *buffer, int size, int DecodeKey
 	if (buffer[1]!=0x01 && buffer[0]!=0x02 && buffer[0]!=0x1d) {
 		int Key=DecodeKey;
 		unsigned char *test=(unsigned char *)malloc(size);
-		test[0]=buffer[0];
-		test[1]=buffer[1];
-		int i;
-		for (i = 2 ; i+4 < size ; i+=4)
+		buffer+=2;
+		size-=2;
+
+        	int i;
+		for (i = 0 ; i+4 <= size ; i+=4)
 		{
 			int pt = (*(int*)&buffer[i])^(Key);
 			Key = (*(int*)&buffer[i]);
@@ -383,7 +306,7 @@ void EQProtocolPacket::ChatDecode(unsigned char *buffer, int size, int DecodeKey
 		{
 			test[i]=buffer[i]^KC;
 		}
-		memcpy(&buffer[0],&test[0],size);	
+		memcpy(buffer,test,size);	
 		free(test);
 	}
 }
@@ -394,9 +317,9 @@ void EQProtocolPacket::ChatEncode(unsigned char *buffer, int size, int EncodeKey
 		int Key=EncodeKey;
 		char *test=(char*)malloc(size);
 		int i;
-		test[0]=buffer[0];
-		test[1]=buffer[1];
-		for ( i = 2 ; i+4 <= size ; i+=4)
+		buffer+=2;
+		size-=2;
+		for ( i = 0 ; i+4 <= size ; i+=4)
 		{
 			int pt = (*(int*)&buffer[i])^(Key);
 			Key = pt;
@@ -407,8 +330,80 @@ void EQProtocolPacket::ChatEncode(unsigned char *buffer, int size, int EncodeKey
 		{
 			test[i]=buffer[i]^KC;
 		}
-		memcpy(&buffer[0],&test[0],size);	
+		memcpy(buffer,test,size);	
 		free(test);
 	}
+}
+
+
+void EQPacket::SetOpcode(EmuOpcode emu_op) {
+	if(emu_op == OP_Unknown) {
+		opcode = 0;
+		emu_opcode = OP_Unknown;
+		return;
+	}
+
+	if (OpMgr == NULL || *OpMgr == NULL) {
+#if EQDEBUG >= 4
+		LogFile->write(EQEMuLog::Debug, "OpMgr is NULL!");
+		LogFile->write(EQEMuLog::Debug, "WorldOpMgr=0x%x\n!",WorldOpcodeManager);
+#endif
+		opcode = OP_Unknown;
+	} else {
+		opcode = (*OpMgr)->EmuToEQ(emu_op);
+	}
+	
+#if EQDEBUG >= 4
+	if(opcode == OP_Unknown) {
+		LogFile->write(EQEMuLog::Debug, "Unable to convert Application opcode %s (%d) into an EQ opcode.", OpcodeNames[emu_op], emu_op);
+	}
+#endif
+
+	//save the emu opcode we just set.
+	emu_opcode = emu_op;
+}
+
+const EmuOpcode EQPacket::GetOpcode() const {
+	if(emu_opcode != OP_Unknown) {
+		return(emu_opcode);
+	}
+	if(opcode == 0) {
+		return(OP_Unknown);
+	}
+
+	EmuOpcode emu_op;
+	emu_op = (OpMgr && *OpMgr) ? (*OpMgr)->EQToEmu(opcode) : OP_Unknown;
+#if EQDEBUG >= 4
+	if(emu_op == OP_Unknown) {
+		LogFile->write(EQEMuLog::Debug, "Unable to convert EQ opcode 0x%.4x to an Application opcode.", opcode);
+	}
+#endif
+	
+	emu_opcode = emu_op;
+	
+	return(emu_op);
+}
+
+void DumpPacketHex(const EQApplicationPacket* app)
+{
+	DumpPacketHex(app->pBuffer, app->size);
+}
+
+void DumpPacketAscii(const EQApplicationPacket* app)
+{
+	DumpPacketAscii(app->pBuffer, app->size);
+}
+
+void DumpPacket(const EQApplicationPacket* app, bool iShowInfo) {
+	if (iShowInfo) {
+		cout << "Dumping Applayer: 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec;
+		cout << " size:" << app->size << endl;
+	}
+	DumpPacketHex(app->pBuffer, app->size);
+//	DumpPacketAscii(app->pBuffer, app->size);
+}
+
+void DumpPacketBin(const EQApplicationPacket* app) {
+	DumpPacketBin(app->pBuffer, app->size);
 }
 

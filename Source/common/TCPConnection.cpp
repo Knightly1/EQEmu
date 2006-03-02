@@ -122,10 +122,14 @@ TCPConnection::TCPConnection(TCPServer* iServer, SOCKET in_socket, int32 irIP, i
 	id = Server->GetNextID();
 	ConnectionType = Incomming;
 	pOldFormat = iOldFormat;
-	if (pOldFormat)
+	#ifdef MINILOGIN
 		TCPMode = modePacket;
-	else
-		TCPMode = modeConsole;
+	#else
+		if (pOldFormat)
+			TCPMode = modePacket;
+		else
+			TCPMode = modeConsole;
+	#endif
 	pState = TCPS_Connected;
 	pFree = false;
 	pEcho = false;
@@ -675,16 +679,20 @@ bool TCPConnection::Connect(int32 in_ip, int16 in_port, char* errbuf) {
 	SetEcho(false);
 	MSendQueue.lock();
 	ClearBuffers();
-	if (pOldFormat) {
+	#ifdef MINILOGIN
 		TCPMode = modePacket;
-	}
-	else if (TCPMode == modePacket || TCPMode == modeTransition) {
-		TCPMode = modeTransition;
-		sendbuf_size = 16;
-		sendbuf_used = sendbuf_size;
-		sendbuf = new uchar[sendbuf_size];
-		memcpy(sendbuf, "\0**PACKETMODE**\r", 16);
-	}
+	#else
+		if (pOldFormat) {
+			TCPMode = modePacket;
+		}
+		else if (TCPMode == modePacket || TCPMode == modeTransition) {
+			TCPMode = modeTransition;
+			sendbuf_size = 16;
+			sendbuf_used = sendbuf_size;
+			sendbuf = new uchar[sendbuf_size];
+			memcpy(sendbuf, "\0**PACKETMODE**\r", 16);
+		}
+	#endif
 	MSendQueue.unlock();
 
 	rIP = in_ip;
@@ -1371,19 +1379,13 @@ bool TCPConnection::SendData(char* errbuf) {
 	return true;
 }
 
+ThreadReturnType TCPConnectionLoop(void* tmp) {
 #ifdef WIN32
-void TCPConnectionLoop(void* tmp) {
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
-#else
-void* TCPConnectionLoop(void* tmp) {
 #endif
 	if (tmp == 0) {
 		ThrowError("TCPConnectionLoop(): tmp = 0!");
-#ifdef WIN32
-		return;
-#else
-		return 0;
-#endif
+		THREAD_RETURN(NULL);
 	}
 	TCPConnection* tcpc = (TCPConnection*) tmp;
 	tcpc->MLoopRunning.lock();
@@ -1407,11 +1409,8 @@ void* TCPConnectionLoop(void* tmp) {
 			Sleep(10);
 	}
 	tcpc->MLoopRunning.unlock();
-#ifdef WIN32
-	_endthread();
-#else
-	return 0;
-#endif
+	
+	THREAD_RETURN(NULL);
 }
 
 bool TCPConnection::RunLoop() {
@@ -1460,19 +1459,13 @@ bool TCPServer::RunLoop() {
 	return ret;
 }
 
+ThreadReturnType TCPServerLoop(void* tmp) {
 #ifdef WIN32
-void TCPServerLoop(void* tmp) {
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
-#else
-void* TCPServerLoop(void* tmp) {
 #endif
 	if (tmp == 0) {
 		ThrowError("TCPServerLoop(): tmp = 0!");
-#ifdef WIN32
-		return;
-#else
-		return 0;
-#endif
+		THREAD_RETURN(NULL);
 	}
 	TCPServer* tcps = (TCPServer*) tmp;
 	tcps->MLoopRunning.lock();
@@ -1482,11 +1475,8 @@ void* TCPServerLoop(void* tmp) {
 		tcps->Process();
 	}
 	tcps->MLoopRunning.unlock();
-#ifdef WIN32
-	return;
-#else
-	return 0;
-#endif
+	
+	THREAD_RETURN(NULL);
 }
 
 void TCPServer::Process() {
@@ -1498,7 +1488,7 @@ void TCPServer::Process() {
 	while(iterator.MoreElements()) {
 		if (iterator.GetData()->IsFree() && (!iterator.GetData()->CheckNetActive())) {
 			#if EQN_DEBUG >= 4
-				cout << "EQNetwork Connection deleted." << endl;
+				cout << "EQStream Connection deleted." << endl;
 			#endif
 			iterator.RemoveCurrent();
 		}
@@ -1531,7 +1521,11 @@ void TCPServer::ListenNewConnections() {
 	while ((tmpsock = accept(sock, (struct sockaddr*) &from, (int *) &fromlen)) != INVALID_SOCKET) {
 		ioctlsocket (tmpsock, FIONBIO, &nonblocking);
 #else
+#ifdef __CYGWIN__
+	while ((tmpsock = accept(sock, (struct sockaddr *) &from, (int *) &fromlen)) != INVALID_SOCKET) {
+#else
 	while ((tmpsock = accept(sock, (struct sockaddr*) &from, &fromlen)) != INVALID_SOCKET) {
+#endif
 		fcntl(tmpsock, F_SETFL, O_NONBLOCK);
 #endif
 		int bufsize = 64 * 1024; // 64kbyte recieve buffer, up from default of 8k

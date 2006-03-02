@@ -12,6 +12,7 @@ Eglin
 
 #include <string>
 #include <vector>
+#include <stdio.h>
 
 //headers from the Perl distribution
 #include <EXTERN.h> 
@@ -43,6 +44,10 @@ extern "C" {	//the perl headers dont do this for us...
 #undef bool
 #endif
 
+#ifdef Zero
+#undef Zero
+#endif
+
 //so embedded scripts can use xs extensions (ala 'use socket;')
 EXTERN_C void boot_DynaLoader(pTHX_ CV* cv);
 EXTERN_C void xs_init(pTHX);
@@ -54,7 +59,9 @@ private:
 	mutable std::string errmsg;
 	//kludgy workaround for the fact that we can't directly do something like SvIV(get_sv($big[0]{ass}->{struct}))
 	SV * my_get_sv(const char * varname) {
-		eval(std::string("$scratch::temp = ").append(varname).append(";").c_str());
+		char buffer[256];
+		snprintf(buffer, 256, "if(defined(%s)) { $scratch::temp = %s; } else { $scratch::temp = 'UNDEF'; }", varname, varname);
+		eval(buffer);
 		return get_sv("scratch::temp", false);
 	}
 	
@@ -111,6 +118,9 @@ public:
 	
 	//check to see if a sub exists in package
 	bool SubExists(const char *package, const char *sub);
+	
+	//check to see if a variable exists in package
+	bool VarExists(const char *package, const char *var);
 };
 #endif //EMBPERL
 

@@ -56,7 +56,7 @@ public:
 	//build all task packets for a specific task.
 	void MakeTaskDescriptions(uint32 task_id, EQStream *into);
 	//build a task history packet for this client state
-	EQApplicationPacket *MakeHistoryPacket(ClientTaskState *state);
+	EQZonePacket *MakeHistoryPacket(ClientTaskState *state);
 	
 protected:
 	typedef enum {

@@ -18,7 +18,7 @@
 
 // Debug Levels
 #ifndef EQDEBUG
-#define EQDEBUG 0
+#define EQDEBUG 1
 #else
 ////// File/Console options
 // 0 <= Quiet mode Errors to file Status and Normal ignored
@@ -40,7 +40,8 @@
 //
 #endif
 
-#if defined(_EQDEBUG) && defined(WIN32)
+
+#if defined(_DEBUG) && defined(WIN32)
 	#ifndef _CRTDBG_MAP_ALLOC
 		#include <stdlib.h>
 		#include <crtdbg.h>
@@ -75,10 +76,14 @@
 	#define DebugBreak()			if(0) {}
 #endif
 
-#if defined(WIN32) && defined(PACKETCOLLECTOR)
-	// Packet Collector on win32 requires winsock2.h due to latest pcap.h
-	// winsock2.h must come before windows.h
-	#include <winsock2.h>
+#if defined(WIN32) && ( defined(PACKETCOLLECTOR) || defined(COLLECTOR) )
+	// Packet Collector on win32 requires winsock.h due to latest pcap.h
+	// winsock.h must come before windows.h
+	#include <winsock.h>
+#endif
+
+#ifdef WIN32
+	#include <windows.h>
 #endif
 
 #include "common_profile.h"

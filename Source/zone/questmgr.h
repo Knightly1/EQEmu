@@ -92,6 +92,8 @@ public:
 	void setskill(int skill_id, int value);
 	void setallskill(int value);
 	void attack(const char *client_name);
+	void attacknpc(int npc_entity_id);
+	void attacknpctype(int npc_type_id);
 	void save();
 	void faction(int faction_id, int faction_value);
 	void setsky(uint8 new_sky);

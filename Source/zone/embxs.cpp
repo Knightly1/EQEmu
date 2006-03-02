@@ -17,6 +17,10 @@
 */
 #ifdef EMBPERL 
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 #include "masterentity.h"
 #include "command.h"
 

@@ -1,3 +1,6 @@
+#ifdef WIN32
+#include <windows.h>
+#endif
 #include "EQEMuError.h"
 #include "linked_list.h"
 #include "Mutex.h"
@@ -59,7 +62,7 @@ void AddEQEMuError(eEQEMuError iError, bool iExitNow) {
 	EQEMuErrorList->Append(tmp);
 
 	if (iExitNow)
-		CatchSignal(0);
+		CatchSignal(2);
 }
 
 void AddEQEMuError(char* iError, bool iExitNow) {
@@ -74,7 +77,7 @@ void AddEQEMuError(char* iError, bool iExitNow) {
 	EQEMuErrorList->Append(tmp);
 
 	if (iExitNow)
-		CatchSignal(0);
+		CatchSignal(2);
 }
 
 int32 CheckEQEMuError() {

@@ -21,7 +21,7 @@ OpcodeManager::OpcodeManager() {
 	loaded = false;
 }
 
-bool OpcodeManager::LoadOpcodesFile(const char *filename, OpcodeSetStrategy *s) {
+bool OpcodeManager::LoadOpcodesFile(const char *filename, OpcodeSetStrategy *s, bool report_errors) {
 	FILE *opf = fopen(filename, "r");
 	if(opf == NULL) {
 		fprintf(stderr, "Unable to open opcodes file '%s'. Thats bad.\n", filename);
@@ -51,7 +51,7 @@ bool OpcodeManager::LoadOpcodesFile(const char *filename, OpcodeSetStrategy *s) 
 		}
 		//make sure we found =
 		if(*num != '=') {
-			fprintf(stderr, "Malformed opcode line at %s:%d\n", filename, lineno);
+			if(report_errors) fprintf(stderr, "Malformed opcode line at %s:%d\n", filename, lineno);
 			continue;
 		}
 		*num = '\0';	//null terminate the name
@@ -59,7 +59,7 @@ bool OpcodeManager::LoadOpcodesFile(const char *filename, OpcodeSetStrategy *s) 
 		
 		//read the opcode
 		if(sscanf(num, "0x%hx", &curop) != 1) {
-			fprintf(stderr, "Malformed opcode at %s:%d\n", filename, lineno);
+			if(report_errors) fprintf(stderr, "Malformed opcode at %s:%d\n", filename, lineno);
 			continue;
 		}
 		
@@ -78,16 +78,16 @@ bool OpcodeManager::LoadOpcodesFile(const char *filename, OpcodeSetStrategy *s) 
 		//get the name of this emu opcode
 		const char *op_name = OpcodeNames[emu_op];
 		if(op_name[0] == '\0') {
-			printf("Over-ran the bounds of the opcode name array. You prolly need to recompile the opcode stuff.\n");
-			printf("I will let you continue, since you may have gotten all the opcodes you need.\n");
+			if(report_errors) printf("Over-ran the bounds of the opcode name array. You prolly need to recompile the opcode stuff.\n");
+			if(report_errors) printf("I will let you continue, since you may have gotten all the opcodes you need.\n");
 			break;
 		}
 		
 		//find the opcode in the file
 		res = eq.find(op_name);
 		if(res == eq.end()) {
-			fprintf(stderr, "Opcode %s is missing from %s\n", op_name, filename);
-			ret = false;
+			if(report_errors) fprintf(stderr, "Opcode %s is missing from %s\n", op_name, filename);
+			//ret = false;
 			continue;	//continue to give them a list of all missing opcodes
 		}
 		
@@ -122,14 +122,12 @@ EmuOpcode OpcodeManager::NameSearch(const char *name) {
 	return(OP_Unknown);
 }
 
-void OpcodeManager::SetOpcode(EmuOpcode emu_op, uint16 eq_op) {
-	return;
-}
-
 #ifdef SHARED_OPCODES
-bool SharedOpcodeManager::LoadOpcodes(const char *filename) {
-	if (!EMuShareMemDLL.Load())
+bool SharedOpcodeManager::LoadOpcodes(const char *filename, bool report_errors) {
+	if (!EMuShareMemDLL.Load()) {
+		printf("Unable to load EMuShareMem for opcodes.\n");
 		return false;
+	}
 	MOpcodes.lock();
 	
 	loaded = true;
@@ -142,10 +140,10 @@ bool SharedOpcodeManager::LoadOpcodes(const char *filename) {
 
 bool SharedOpcodeManager::DLLLoadOpcodesCallback(const char *filename) {
 	SharedMemStrategy s;
-	return(LoadOpcodesFile(filename, &s));
+	return(LoadOpcodesFile(filename, &s, true));
 }
 
-bool SharedOpcodeManager::ReloadOpcodes(const char *filename) {
+bool SharedOpcodeManager::ReloadOpcodes(const char *filename, bool report_errors) {
 /*	if(!loaded)
 		return(LoadOpcodes(filename));
 	
@@ -199,7 +197,7 @@ void SharedOpcodeManager::SharedMemStrategy::Set(EmuOpcode emu_op, uint16 eq_op)
 
 
 RegularOpcodeManager::RegularOpcodeManager()
-: OpcodeManager()
+: MutableOpcodeManager()
 {
 	emu_to_eq = NULL;
 	eq_to_emu = NULL;
@@ -210,7 +208,7 @@ RegularOpcodeManager::~RegularOpcodeManager() {
 	safe_delete(eq_to_emu);
 }
 
-bool RegularOpcodeManager::LoadOpcodes(const char *filename) {
+bool RegularOpcodeManager::LoadOpcodes(const char *filename, bool report_errors) {
 	NormalMemStrategy s;
 	s.it = this;
 	MOpcodes.lock();
@@ -224,12 +222,12 @@ bool RegularOpcodeManager::LoadOpcodes(const char *filename) {
 	//dont need to set eq_to_emu cause every element should get a value
 	memset(eq_to_emu, 0, sizeof(EmuOpcode)*MAX_EQ_OPCODE);
 	
-	bool ret = LoadOpcodesFile(filename, &s);
+	bool ret = LoadOpcodesFile(filename, &s, report_errors);
 	MOpcodes.unlock();
 	return ret;
 }
 
-bool RegularOpcodeManager::ReloadOpcodes(const char *filename) {
+bool RegularOpcodeManager::ReloadOpcodes(const char *filename, bool report_errors) {
 	if(!loaded)
 		return(LoadOpcodes(filename));
 	
@@ -239,7 +237,7 @@ bool RegularOpcodeManager::ReloadOpcodes(const char *filename) {
 	
 	memset(eq_to_emu, 0, sizeof(uint16)*MAX_EQ_OPCODE);
 	
-	bool ret = LoadOpcodesFile(filename, &s);
+	bool ret = LoadOpcodesFile(filename, &s, report_errors);
 	
 	MOpcodes.unlock();
 	return(ret);
@@ -295,15 +293,15 @@ void RegularOpcodeManager::NormalMemStrategy::Set(EmuOpcode emu_op, uint16 eq_op
 }
 
 NullOpcodeManager::NullOpcodeManager()
-: OpcodeManager() {
+: MutableOpcodeManager() {
 }
 
 	
-bool NullOpcodeManager::LoadOpcodes(const char *filename) {
+bool NullOpcodeManager::LoadOpcodes(const char *filename, bool report_errors) {
 	return(true);
 }
 
-bool NullOpcodeManager::ReloadOpcodes(const char *filename) {
+bool NullOpcodeManager::ReloadOpcodes(const char *filename, bool report_errors) {
 	return(true);
 }
 	
@@ -313,6 +311,36 @@ uint16 NullOpcodeManager::EmuToEQ(const EmuOpcode emu_op) {
 
 EmuOpcode NullOpcodeManager::EQToEmu(const uint16 eq_op) {
 	return(OP_Unknown);
+}
+
+EmptyOpcodeManager::EmptyOpcodeManager()
+: MutableOpcodeManager() {
+}
+
+	
+bool EmptyOpcodeManager::LoadOpcodes(const char *filename, bool report_errors) {
+	return(true);
+}
+
+bool EmptyOpcodeManager::ReloadOpcodes(const char *filename, bool report_errors) {
+	return(true);
+}
+	
+uint16 EmptyOpcodeManager::EmuToEQ(const EmuOpcode emu_op) {
+	map<EmuOpcode, uint16>::iterator f;
+	f = emu_to_eq.find(emu_op);
+	return(f == emu_to_eq.end()? 0 : f->second);
+}
+
+EmuOpcode EmptyOpcodeManager::EQToEmu(const uint16 eq_op) {
+	map<uint16, EmuOpcode>::iterator f;
+	f = eq_to_emu.find(eq_op);
+	return(f == eq_to_emu.end()?OP_Unknown:f->second);
+}
+
+void EmptyOpcodeManager::SetOpcode(EmuOpcode emu_op, uint16 eq_op) {
+	emu_to_eq[emu_op] = eq_op;
+	eq_to_emu[eq_op] = emu_op;
 }
 
 

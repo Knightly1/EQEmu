@@ -1,17 +1,14 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="8.00"
+	Version="7.00"
 	Name="Zone"
-	ProjectGUID="{92B13BB8-8AA5-48AA-A72E-4E7620512AF6}"
-	>
+	SccProjectName=""
+	SccLocalPath="">
 	<Platforms>
 		<Platform
-			Name="Win32"
-		/>
+			Name="Win32"/>
 	</Platforms>
-	<ToolFiles>
-	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Raid Addicts|Win32"
@@ -20,55 +17,27 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../Build/Zone.tlb"
-				HeaderFileName=""
-			/>
+			CharacterSet="2">
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
 				InlineFunctionExpansion="2"
-				PreprocessorDefinitions="SHAREMEM;CATCH_CRASH;_WIN32_WINNT=0x0400;NDEBUG;ZONESERVER;ZONE;INVERSEXY;WIN32;_CONSOLE;FIELD_ITEMS;EQDEBUG=0"
+				PreprocessorDefinitions="i386,SHAREMEM,CATCH_CRASH,_WIN32_WINNT=0x0400,NDEBUG,ZONESERVER,ZONE,INVERSEXY,WIN32,_CONSOLE,FIELD_ITEMS,EQDEBUG=0"
 				StringPooling="TRUE"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="TRUE"
-				UsePrecompiledHeader="0"
+				UsePrecompiledHeader="2"
 				PrecompiledHeaderFile=".\../Build/Zone/Release/Zone.pch"
 				AssemblerListingLocation=".\../Build/Zone/Release/"
 				ObjectFile=".\../Build/Zone/Release/"
 				ProgramDataBaseFileName=".\../Build/Zone/Release/"
 				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"
-			/>
+				DebugInformationFormat="3"/>
 			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
+				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
 				OutputFile=".\../Build/Zone.exe"
 				LinkIncremental="1"
@@ -78,32 +47,91 @@
 				ProgramDatabaseFile=".\../Build/Zone.pdb"
 				GenerateMapFile="TRUE"
 				MapFileName="../Build/Zone.map"
-				SubSystem="1"
-				TargetMachine="1"
-			/>
+				SubSystem="1"/>
 			<Tool
-				Name="VCALinkTool"
-			/>
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../Build/Zone.tlb"/>
 			<Tool
-				Name="VCManifestTool"
-			/>
+				Name="VCPostBuildEventTool"/>
 			<Tool
-				Name="VCXDCMakeTool"
-			/>
+				Name="VCPreBuildEventTool"/>
 			<Tool
-				Name="VCBscMakeTool"
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="DebugPerl|Win32"
+			OutputDirectory=".\..\Build"
+			IntermediateDirectory=".\..\Build\ZonePerl"
+			ConfigurationType="1"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="C:\perl\lib\core"
+				PreprocessorDefinitions="EMBPERL,EMBPERL_PLUGIN,SHAREMEM,i386,_WIN32_WINNT=0x0400,ZONE,INVERSEXY,WIN32,_CONSOLE,EQDEBUG,FIELD_ITEMS"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="1"
+				PrecompiledHeaderFile=".\..\Build\ZonePerl/Zone.pch"
+				AssemblerListingLocation=".\..\Build\ZonePerl/"
+				ObjectFile=".\..\Build\ZonePerl/"
+				ProgramDataBaseFileName=".\..\Build\ZonePerl/"
+				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				OutputFile="../Build/Zone/Zone.bsc"
-			/>
+				DebugInformationFormat="3"
+				CompileAs="0"/>
 			<Tool
-				Name="VCAppVerifierTool"
-			/>
+				Name="VCCustomBuildTool"/>
 			<Tool
-				Name="VCWebDeploymentTool"
-			/>
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
+				OutputFile="../build/ZonePerl.exe"
+				LinkIncremental="2"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="C:\perl\lib\core"
+				IgnoreDefaultLibraryNames="LIBCMT,LIBC"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile=".\..\Build/ZonePerl.pdb"
+				SubSystem="1"/>
 			<Tool
-				Name="VCPostBuildEventTool"
-			/>
+				Name="VCMIDLTool"
+				TypeLibraryName=".\..\Build/Zone.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
@@ -112,88 +140,62 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../build/Zone.tlb"
-				HeaderFileName=""
-			/>
+			CharacterSet="2">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="SHAREMEM;_WIN32_WINNT=0x0400;_EQDEBUG;ZONE;INVERSEXY;WIN32;_CONSOLE;EQDEBUG;FIELD_ITEMS"
+				EnableIntrinsicFunctions="TRUE"
+				ImproveFloatingPointConsistency="FALSE"
+				OptimizeForWindowsApplication="FALSE"
+				PreprocessorDefinitions="SHAREMEM;i386;_WIN32_WINNT=0x0400;_EQDEBUG;ZONE;INVERSEXY;WIN32;_CONSOLE;FIELD_ITEMS"
+				StringPooling="TRUE"
 				MinimalRebuild="TRUE"
-				BasicRuntimeChecks="3"
+				BasicRuntimeChecks="0"
 				RuntimeLibrary="1"
-				UsePrecompiledHeader="0"
+				EnableFunctionLevelLinking="TRUE"
 				PrecompiledHeaderFile=".\../Build/Zone/Debug/Zone.pch"
 				AssemblerListingLocation=".\../Build/Zone/Debug/"
 				ObjectFile=".\../Build/Zone/Debug/"
 				ProgramDataBaseFileName=".\../Build/Zone/Debug/"
 				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="4"
-				DisableSpecificWarnings="4996;"
-			/>
+				DebugInformationFormat="3"/>
 			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
+				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
 				OutputFile="../build/ZoneDebug.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames="LIBCMT,LIBC"
+				IgnoreDefaultLibraryNames="LIBCMT,LIBC,MSVCRT"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../build/ZoneDebug.pdb"
-				SubSystem="1"
-				TargetMachine="1"
-			/>
+				SubSystem="1"/>
 			<Tool
-				Name="VCALinkTool"
-			/>
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../build/Zone.tlb"/>
 			<Tool
-				Name="VCManifestTool"
-			/>
+				Name="VCPostBuildEventTool"/>
 			<Tool
-				Name="VCXDCMakeTool"
-			/>
+				Name="VCPreBuildEventTool"/>
 			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="TRUE"
-				OutputFile=".\../build/Zone.bsc"
-			/>
+				Name="VCPreLinkEventTool"/>
 			<Tool
-				Name="VCAppVerifierTool"
-			/>
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"/>
 			<Tool
-				Name="VCWebDeploymentTool"
-			/>
+				Name="VCWebServiceProxyGeneratorTool"/>
 			<Tool
-				Name="VCPostBuildEventTool"
-			/>
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
@@ -202,91 +204,61 @@
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../Build/Zone.tlb"
-				HeaderFileName=""
-			/>
+			CharacterSet="2">
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
 				InlineFunctionExpansion="2"
-				PreprocessorDefinitions="SHAREMEM;CATCH_CRASH;_WIN32_WINNT=0x0400;NDEBUG;ZONESERVER;ZONE;INVERSEXY;WIN32;_CONSOLE;FIELD_ITEMS;EQDEBUG=0"
+				PreprocessorDefinitions="SHAREMEM,i386,CATCH_CRASH,_WIN32_WINNT=0x0400,NDEBUG,ZONESERVER,ZONE,INVERSEXY,WIN32,_CONSOLE,FIELD_ITEMS,EQDEBUG=0"
 				StringPooling="TRUE"
 				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="TRUE"
-				UsePrecompiledHeader="0"
+				BufferSecurityCheck="FALSE"
+				EnableFunctionLevelLinking="FALSE"
+				UsePrecompiledHeader="2"
 				PrecompiledHeaderFile=".\../Build/Zone/Release/Zone.pch"
 				AssemblerListingLocation=".\../Build/Zone/Release/"
 				ObjectFile=".\../Build/Zone/Release/"
 				ProgramDataBaseFileName=".\../Build/Zone/Release/"
 				BrowseInformation="1"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"
-				DisableSpecificWarnings="4996;"
-			/>
+				DebugInformationFormat="0"/>
 			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
+				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
 				OutputFile=".\../Build/Zone.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames="libc"
-				GenerateDebugInformation="TRUE"
+				IgnoreDefaultLibraryNames="libc,MSVCRT"
+				GenerateDebugInformation="FALSE"
 				ProgramDatabaseFile=".\../Build/Zone.pdb"
-				GenerateMapFile="TRUE"
+				GenerateMapFile="FALSE"
 				MapFileName="../Build/Zone.map"
-				SubSystem="1"
-				TargetMachine="1"
-			/>
+				SubSystem="1"/>
 			<Tool
-				Name="VCALinkTool"
-			/>
+				Name="VCMIDLTool"
+				TypeLibraryName=".\../Build/Zone.tlb"/>
 			<Tool
-				Name="VCManifestTool"
-			/>
+				Name="VCPostBuildEventTool"/>
 			<Tool
-				Name="VCXDCMakeTool"
-			/>
+				Name="VCPreBuildEventTool"/>
 			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="TRUE"
-				OutputFile="../Build/Zone/Zone.bsc"
-			/>
+				Name="VCPreLinkEventTool"/>
 			<Tool
-				Name="VCAppVerifierTool"
-			/>
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"/>
 			<Tool
-				Name="VCWebDeploymentTool"
-			/>
+				Name="VCWebServiceProxyGeneratorTool"/>
 			<Tool
-				Name="VCPostBuildEventTool"
-			/>
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 	</Configurations>
 	<References>
@@ -294,2829 +266,589 @@
 	<Files>
 		<Filter
 			Name="Source Files"
-			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
-			>
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
 			<File
-				RelativePath="AA.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\AA.cpp">
 			</File>
 			<File
-				RelativePath="aggro.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\aggro.cpp">
 			</File>
 			<File
-				RelativePath="attack.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\attack.cpp">
 			</File>
 			<File
-				RelativePath="beacon.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\beacon.cpp">
 			</File>
 			<File
-				RelativePath="bonuses.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\bonuses.cpp">
 			</File>
 			<File
-				RelativePath="client.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\client.cpp">
 			</File>
 			<File
-				RelativePath="client_logs.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\client_logs.cpp">
 			</File>
 			<File
-				RelativePath="client_mods.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\client_mods.cpp">
 			</File>
 			<File
-				RelativePath="client_packet.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\client_packet.cpp">
 			</File>
 			<File
-				RelativePath="client_process.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\client_process.cpp">
 			</File>
 			<File
-				RelativePath="command.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\command.cpp">
 			</File>
 			<File
-				RelativePath="doors.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\doors.cpp">
 			</File>
 			<File
-				RelativePath="effects.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\effects.cpp">
 			</File>
 			<File
-				RelativePath=".\embperl.cpp"
-				>
+				RelativePath=".\embparser.cpp">
 			</File>
 			<File
-				RelativePath="entity.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\embperl.cpp">
 			</File>
 			<File
-				RelativePath="..\common\EQEMuError.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\embxs.cpp">
 			</File>
 			<File
-				RelativePath=".\exp.cpp"
-				>
+				RelativePath=".\entity.cpp">
 			</File>
 			<File
-				RelativePath="faction.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath="..\common\EQEMuError.cpp">
 			</File>
 			<File
-				RelativePath="forage.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\exp.cpp">
 			</File>
 			<File
-				RelativePath="groups.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\faction.cpp">
 			</File>
 			<File
-				RelativePath="guilds.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\fearpath.cpp">
 			</File>
 			<File
-				RelativePath="hate_list.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\forage.cpp">
 			</File>
 			<File
-				RelativePath=".\horse.cpp"
-				>
+				RelativePath=".\groups.cpp">
 			</File>
 			<File
-				RelativePath="inventory.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\guilds.cpp">
 			</File>
 			<File
-				RelativePath="loottables.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\hate_list.cpp">
 			</File>
 			<File
-				RelativePath="Map.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\horse.cpp">
 			</File>
 			<File
-				RelativePath="mob.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\inventory.cpp">
 			</File>
 			<File
-				RelativePath="MobAI.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\loottables.cpp">
 			</File>
 			<File
-				RelativePath="net.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\Map.cpp">
 			</File>
 			<File
-				RelativePath="npc.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\mob.cpp">
 			</File>
 			<File
-				RelativePath="Object.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\MobAI.cpp">
 			</File>
 			<File
-				RelativePath="parser.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\net.cpp">
 			</File>
 			<File
-				RelativePath=".\pathing.cpp"
-				>
+				RelativePath=".\npc.cpp">
 			</File>
 			<File
-				RelativePath="petitions.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\Object.cpp">
 			</File>
 			<File
-				RelativePath="pets.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\parser.cpp">
 			</File>
 			<File
-				RelativePath="PlayerCorpse.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\pathing.cpp">
 			</File>
 			<File
-				RelativePath="..\common\ptimer.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\perl_client.cpp">
 			</File>
 			<File
-				RelativePath="questmgr.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\perl_entity.cpp">
 			</File>
 			<File
-				RelativePath="spawn2.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\perl_groups.cpp">
 			</File>
 			<File
-				RelativePath="spawngroup.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\perl_mob.cpp">
 			</File>
 			<File
-				RelativePath="spdat.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\perl_npc.cpp">
 			</File>
 			<File
-				RelativePath=".\special_attacks.cpp"
-				>
+				RelativePath=".\perl_PlayerCorpse.cpp">
 			</File>
 			<File
-				RelativePath="spell_effects.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\perlparser.cpp">
 			</File>
 			<File
-				RelativePath="spells.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\petitions.cpp">
 			</File>
 			<File
-				RelativePath="tradeskills.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\pets.cpp">
 			</File>
 			<File
-				RelativePath="trading.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\PlayerCorpse.cpp">
 			</File>
 			<File
-				RelativePath="trap.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath="..\common\ptimer.cpp">
 			</File>
 			<File
-				RelativePath="tribute.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\questmgr.cpp">
 			</File>
 			<File
-				RelativePath="waypoints.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\spawn2.cpp">
 			</File>
 			<File
-				RelativePath="worldserver.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\spawngroup.cpp">
 			</File>
 			<File
-				RelativePath="zone.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\spdat.cpp">
 			</File>
 			<File
-				RelativePath="zonedbasync.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
+				RelativePath=".\special_attacks.cpp">
+			</File>
+			<File
+				RelativePath=".\spell_effects.cpp">
+			</File>
+			<File
+				RelativePath=".\spells.cpp">
+			</File>
+			<File
+				RelativePath=".\titles.cpp">
+			</File>
+			<File
+				RelativePath=".\tradeskills.cpp">
+			</File>
+			<File
+				RelativePath=".\trading.cpp">
+			</File>
+			<File
+				RelativePath=".\trap.cpp">
+			</File>
+			<File
+				RelativePath=".\tribute.cpp">
+			</File>
+			<File
+				RelativePath=".\waypoints.cpp">
+			</File>
+			<File
+				RelativePath=".\worldserver.cpp">
+			</File>
+			<File
+				RelativePath=".\zone.cpp">
+			</File>
+			<File
+				RelativePath=".\zonedbasync.cpp">
+			</File>
+			<File
+				RelativePath=".\zoning.cpp">
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
-			Filter="h;hpp;hxx;hm;inl"
-			>
+			Filter="h;hpp;hxx;hm;inl">
 			<File
-				RelativePath="beacon.h"
-				>
+				RelativePath=".\beacon.h">
 			</File>
 			<File
-				RelativePath="client.h"
-				>
+				RelativePath=".\client.h">
 			</File>
 			<File
-				RelativePath=".\client_logs.h"
-				>
+				RelativePath=".\client_packet.h">
 			</File>
 			<File
-				RelativePath="command.h"
-				>
+				RelativePath=".\command.h">
 			</File>
 			<File
-				RelativePath="doors.h"
-				>
+				RelativePath=".\doors.h">
 			</File>
 			<File
-				RelativePath="entity.h"
-				>
+				RelativePath=".\entity.h">
 			</File>
 			<File
-				RelativePath="..\common\EQEMuError.h"
-				>
+				RelativePath="..\common\EQEMuError.h">
 			</File>
 			<File
-				RelativePath="event_codes.h"
-				>
+				RelativePath=".\event_codes.h">
 			</File>
 			<File
-				RelativePath="faction.h"
-				>
+				RelativePath=".\faction.h">
 			</File>
 			<File
-				RelativePath="features.h"
-				>
+				RelativePath=".\features.h">
 			</File>
 			<File
-				RelativePath="..\common\files.h"
-				>
+				RelativePath="..\common\files.h">
 			</File>
 			<File
-				RelativePath="Forage.h"
-				>
+				RelativePath=".\Forage.h">
 			</File>
 			<File
-				RelativePath="groups.h"
-				>
+				RelativePath=".\groups.h">
 			</File>
 			<File
-				RelativePath="hate_list.h"
-				>
+				RelativePath=".\hate_list.h">
 			</File>
 			<File
-				RelativePath=".\horse.h"
-				>
+				RelativePath=".\loottable.h">
 			</File>
 			<File
-				RelativePath="loottable.h"
-				>
+				RelativePath=".\map.h">
 			</File>
 			<File
-				RelativePath="map.h"
-				>
+				RelativePath=".\mob.h">
 			</File>
 			<File
-				RelativePath=".\masterentity.h"
-				>
+				RelativePath=".\net.h">
 			</File>
 			<File
-				RelativePath="mob.h"
-				>
+				RelativePath=".\npc.h">
 			</File>
 			<File
-				RelativePath="net.h"
-				>
+				RelativePath=".\NpcAI.h">
 			</File>
 			<File
-				RelativePath="npc.h"
-				>
+				RelativePath=".\object.h">
 			</File>
 			<File
-				RelativePath="NpcAI.h"
-				>
+				RelativePath=".\parser.h">
 			</File>
 			<File
-				RelativePath="object.h"
-				>
+				RelativePath=".\petitions.h">
 			</File>
 			<File
-				RelativePath="parser.h"
-				>
+				RelativePath=".\pets.h">
 			</File>
 			<File
-				RelativePath="petitions.h"
-				>
+				RelativePath=".\PlayerCorpse.h">
 			</File>
 			<File
-				RelativePath="PlayerCorpse.h"
-				>
+				RelativePath=".\skills.h">
 			</File>
 			<File
-				RelativePath="skills.h"
-				>
+				RelativePath=".\spawn2.h">
 			</File>
 			<File
-				RelativePath="spawn2.h"
-				>
+				RelativePath=".\spawngroup.h">
 			</File>
 			<File
-				RelativePath="spawngroup.h"
-				>
+				RelativePath=".\spdat.h">
 			</File>
 			<File
-				RelativePath="spdat.h"
-				>
+				RelativePath=".\titles.h">
 			</File>
 			<File
-				RelativePath=".\StringIDs.h"
-				>
+				RelativePath=".\trap.h">
 			</File>
 			<File
-				RelativePath="trap.h"
-				>
+				RelativePath=".\worldserver.h">
 			</File>
 			<File
-				RelativePath="worldserver.h"
-				>
+				RelativePath=".\zone.h">
 			</File>
 			<File
-				RelativePath="zone.h"
-				>
+				RelativePath=".\zonedbasync.h">
 			</File>
 			<File
-				RelativePath="zonedbasync.h"
-				>
-			</File>
-			<File
-				RelativePath="zonedump.h"
-				>
+				RelativePath=".\zonedump.h">
 			</File>
 		</Filter>
 		<Filter
 			Name="Common Header Files"
-			>
+			Filter="">
 			<File
-				RelativePath="..\common\classes.h"
-				>
+				RelativePath="..\common\classes.h">
 			</File>
 			<File
-				RelativePath="..\common\Condition.h"
-				>
+				RelativePath="..\common\CRC16.h">
 			</File>
 			<File
-				RelativePath="..\common\crc32.h"
-				>
+				RelativePath="..\common\crc32.h">
 			</File>
 			<File
-				RelativePath="..\common\database.h"
-				>
+				RelativePath="..\common\database.h">
 			</File>
 			<File
-				RelativePath="..\common\dbasync.h"
-				>
+				RelativePath="..\common\dbasync.h">
 			</File>
 			<File
-				RelativePath="..\common\dbcore.h"
-				>
+				RelativePath="..\common\dbcore.h">
 			</File>
 			<File
-				RelativePath="..\common\DBMemLeak.h"
-				>
+				RelativePath="..\common\DBMemLeak.h">
 			</File>
 			<File
-				RelativePath="..\common\debug.h"
-				>
+				RelativePath="..\common\debug.h">
 			</File>
 			<File
-				RelativePath="..\common\deity.h"
-				>
+				RelativePath="..\common\deity.h">
 			</File>
 			<File
-				RelativePath="..\common\EMuShareMem.h"
-				>
+				RelativePath="..\common\emu_opcodes.h">
 			</File>
 			<File
-				RelativePath="..\common\eq_opcodes.h"
-				>
+				RelativePath="..\common\emu_oplist.h">
 			</File>
 			<File
-				RelativePath="..\common\eq_packet_structs.h"
-				>
+				RelativePath="..\common\EMuShareMem.h">
 			</File>
 			<File
-				RelativePath="..\common\EQCheckTable.h"
-				>
+				RelativePath="..\common\eq_packet_structs.h">
 			</File>
 			<File
-				RelativePath="..\common\EQNetwork.h"
-				>
+				RelativePath="..\common\EQCheckTable.h">
 			</File>
 			<File
-				RelativePath="..\common\EQOpcodes.h"
-				>
+				RelativePath="..\common\EQOpcodes.h">
 			</File>
 			<File
-				RelativePath="..\common\eqtime.h"
-				>
+				RelativePath="..\common\EQPacket.h">
 			</File>
 			<File
-				RelativePath="..\common\extprofile.h"
-				>
+				RelativePath="..\common\EQStream.h">
 			</File>
 			<File
-				RelativePath="..\common\Item.h"
-				>
+				RelativePath="..\common\EQStreamFactory.h">
 			</File>
 			<File
-				RelativePath="..\common\Kaiyodo-LList.h"
-				>
+				RelativePath="..\common\eqtime.h">
 			</File>
 			<File
-				RelativePath="..\common\linked_list.h"
-				>
+				RelativePath="..\common\Item.h">
 			</File>
 			<File
-				RelativePath="..\common\md5.h"
-				>
+				RelativePath="..\common\Kaiyodo-LList.h">
 			</File>
 			<File
-				RelativePath="..\common\misc.h"
-				>
+				RelativePath="..\common\linked_list.h">
 			</File>
 			<File
-				RelativePath="..\common\MiscFunctions.h"
-				>
+				RelativePath="..\common\md5.h">
 			</File>
 			<File
-				RelativePath="..\common\moremath.h"
-				>
+				RelativePath="..\common\misc.h">
 			</File>
 			<File
-				RelativePath="..\common\Mutex.h"
-				>
+				RelativePath="..\common\MiscFunctions.h">
 			</File>
 			<File
-				RelativePath="..\common\packet_dump.h"
-				>
+				RelativePath="..\common\moremath.h">
 			</File>
 			<File
-				RelativePath="..\common\packet_dump_file.h"
-				>
+				RelativePath="..\common\Mutex.h">
 			</File>
 			<File
-				RelativePath="..\common\packet_functions.h"
-				>
+				RelativePath="..\common\opcodemgr.h">
 			</File>
 			<File
-				RelativePath="..\common\ptimer.h"
-				>
+				RelativePath="..\common\packet_dump.h">
 			</File>
 			<File
-				RelativePath="..\common\queue.h"
-				>
+				RelativePath="..\common\packet_dump_file.h">
 			</File>
 			<File
-				RelativePath="..\common\races.h"
-				>
+				RelativePath="..\common\packet_functions.h">
 			</File>
 			<File
-				RelativePath="..\common\Seperator.h"
-				>
+				RelativePath="..\common\queue.h">
 			</File>
 			<File
-				RelativePath="..\common\serverinfo.h"
-				>
+				RelativePath="..\common\races.h">
 			</File>
 			<File
-				RelativePath="..\common\servertalk.h"
-				>
+				RelativePath="..\common\rdtsc.h">
 			</File>
 			<File
-				RelativePath="..\common\TCPConnection.h"
-				>
+				RelativePath="..\common\Seperator.h">
 			</File>
 			<File
-				RelativePath="..\common\timeoutmgr.h"
-				>
+				RelativePath="..\common\serverinfo.h">
 			</File>
 			<File
-				RelativePath="..\common\timer.h"
-				>
+				RelativePath="..\common\servertalk.h">
 			</File>
 			<File
-				RelativePath="..\common\types.h"
-				>
+				RelativePath="..\common\SharedLibrary.h">
 			</File>
 			<File
-				RelativePath="..\common\unix.h"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					ExcludedFromBuild="TRUE"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
+				RelativePath="..\common\TCPConnection.h">
 			</File>
 			<File
-				RelativePath="..\common\version.h"
-				>
+				RelativePath="..\common\timer.h">
+			</File>
+			<File
+				RelativePath="..\common\types.h">
+			</File>
+			<File
+				RelativePath="..\common\unix.h">
+			</File>
+			<File
+				RelativePath="..\common\version.h">
 			</File>
 		</Filter>
 		<Filter
 			Name="Common Source Files"
-			>
+			Filter="">
 			<File
-				RelativePath="..\common\classes.cpp"
-				>
+				RelativePath="..\common\classes.cpp">
+			</File>
+			<File
+				RelativePath="..\common\Condition.cpp">
+			</File>
+			<File
+				RelativePath="..\common\CRC16.cpp">
+			</File>
+			<File
+				RelativePath="..\common\crc32.cpp">
+			</File>
+			<File
+				RelativePath="..\common\database.cpp">
 				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
+					Name="DebugPerl|Win32">
 					<Tool
 						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
+						UsePrecompiledHeader="2"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\common\dbasync.cpp">
+			</File>
+			<File
+				RelativePath="..\common\dbcore.cpp">
+			</File>
+			<File
+				RelativePath="..\common\DBMemLeak.cpp">
+			</File>
+			<File
+				RelativePath="..\common\debug.cpp">
+			</File>
+			<File
+				RelativePath="..\common\emu_opcodes.cpp">
+			</File>
+			<File
+				RelativePath="..\common\EMuShareMem.cpp">
+			</File>
+			<File
+				RelativePath="..\common\EQPacket.cpp">
+			</File>
+			<File
+				RelativePath="..\common\EQStream.cpp">
+			</File>
+			<File
+				RelativePath="..\common\EQStreamFactory.cpp">
+			</File>
+			<File
+				RelativePath="..\common\eqtime.cpp">
+			</File>
+			<File
+				RelativePath="..\common\extprofile.cpp">
+			</File>
+			<File
+				RelativePath="..\common\Item.cpp">
+			</File>
+			<File
+				RelativePath="..\common\md5.cpp">
+			</File>
+			<File
+				RelativePath="..\common\misc.cpp">
+			</File>
+			<File
+				RelativePath="..\common\MiscFunctions.cpp">
+			</File>
+			<File
+				RelativePath="..\common\moremath.cpp">
+			</File>
+			<File
+				RelativePath="..\common\Mutex.cpp">
+			</File>
+			<File
+				RelativePath="..\common\opcodemgr.cpp">
+			</File>
+			<File
+				RelativePath="..\common\packet_dump.cpp">
+			</File>
+			<File
+				RelativePath="..\common\packet_dump_file.cpp">
+			</File>
+			<File
+				RelativePath="..\common\packet_functions.cpp">
+			</File>
+			<File
+				RelativePath="..\common\races.cpp">
+			</File>
+			<File
+				RelativePath="..\common\rdtsc.cpp">
+			</File>
+			<File
+				RelativePath="..\common\serverinfo.cpp">
+			</File>
+			<File
+				RelativePath="..\common\SharedLibrary.cpp">
+			</File>
+			<File
+				RelativePath="..\common\TCPConnection.cpp">
+			</File>
+			<File
+				RelativePath="..\common\timeoutmgr.cpp">
+			</File>
+			<File
+				RelativePath="..\common\timer.cpp">
+			</File>
+			<File
+				RelativePath="..\common\unix.cpp">
+				<FileConfiguration
+					Name="Raid Addicts|Win32"
+					ExcludedFromBuild="TRUE">
+					<Tool
+						Name="VCCLCompilerTool"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugPerl|Win32"
+					ExcludedFromBuild="TRUE">
+					<Tool
+						Name="VCCLCompilerTool"/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
-					>
+					ExcludedFromBuild="TRUE">
 					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
+						Name="VCCLCompilerTool"/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
-					>
+					ExcludedFromBuild="TRUE">
 					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\Condition.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\common\crc32.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\database.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\dbasync.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\dbcore.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\DBMemLeak.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\debug.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\EMuShareMem.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\EQNetwork.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\eqtime.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\extprofile.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\common\Item.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\md5.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\misc.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\MiscFunctions.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\moremath.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\Mutex.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\packet_dump.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\packet_dump_file.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\packet_functions.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\races.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\serverinfo.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\TCPConnection.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\timeoutmgr.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\common\timer.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\common\unix.cpp"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					ExcludedFromBuild="TRUE"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="0"
-						BrowseInformation="1"
-					/>
+						Name="VCCLCompilerTool"/>
 				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter
 			Name="Text Files"
-			>
+			Filter="">
 			<File
-				RelativePath="..\readme.txt"
-				>
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					ExcludedFromBuild="TRUE"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
+				RelativePath="..\readme.txt">
 			</File>
 		</Filter>
 	</Files>

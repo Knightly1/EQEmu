@@ -36,3 +36,6 @@
 #ifndef EQTIME_INI
   #define EQTIME_INI		BASEDIR "eqtime.cfg"
 #endif
+
+//yea yea, not a file, dont care
+#define WORLDSERVER_PORT		9000

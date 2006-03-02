@@ -29,10 +29,18 @@
 class Seperator
 {
 public:
-	Seperator(const char* message, char div = ' ', int16 in_maxargnum = 10, int16 arglen = 100, bool iObeyQuotes = false, char div2 = '\t', char div3 = 0, bool iSkipEmpty = true) {
+	Seperator(const char* message_in, char div = ' ', int16 in_maxargnum = 10, int16 arglen = 100, bool iObeyQuotes = false, char div2 = '\t', char div3 = 0, bool iSkipEmpty = true) {
 		int i;
 		argnum = 0;
-		msg = strdup(message);
+		int len = strlen(message_in);
+		
+		if(arglen > len)
+			arglen = len+1;
+		
+		//msg = strdup(message);
+		msg = new char[len+1];
+		strcpy(msg, message_in);
+		const char *message = msg;
 		this->maxargnum = in_maxargnum;
 		argplus = new const char *[maxargnum+1];
 		arg = new char *[maxargnum+1];
@@ -41,7 +49,6 @@ public:
 			memset(arg[i], 0, arglen+1);
 		}
 
-		int len = strlen(message);
 		int s = 0, l = 0;
 		bool inarg = (!iSkipEmpty || !(message[0] == div || message[0] == div2 || message[0] == div3));
 		bool inquote = (iObeyQuotes && (message[0] == '\"' || message[0] == '\''));
@@ -95,8 +102,7 @@ public:
 			safe_delete(arg[i]);
 		safe_delete_array(arg);
 		safe_delete_array(argplus);
-		if (msg)
-			free(msg);
+		safe_delete_array(msg);
 	}
 	int16 argnum;
 	char** arg;

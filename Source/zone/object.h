@@ -23,7 +23,7 @@
 
 #include "../common/types.h"
 #include "../common/linked_list.h"
-#include "../common/eq_opcodes.h"
+#include "../common/emu_opcodes.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/Item.h"
 #include "client.h"
@@ -31,6 +31,44 @@
 #include "npc.h"
 #include "entity.h"
 #include "../common/timer.h"
+
+/*
+item icon numbers (showeq)
+IT1_ACTORDEF=Long Sword
+IT5_ACTORDEF=Throwing Knife
+IT8_ACTORDEF=Basic Staff
+IT10_ACTORDEF=Arrow
+IT14_ACTORDEF=Basic Hammer
+IT16_ACTORDEF=Basic Spear
+IT27_ACTORDEF=Book
+IT35_ACTORDEF=Mod Rod
+IT62_ACTORDEF=Flaming Sword
+IT63_ACTORDEF=Small Bag
+IT64_ACTORDEF=Large Bag
+IT65_ACTORDEF=Scroll
+IT66_ACTORDEF=Forge
+IT67_ACTORDEF=Voodoo Doll
+IT68_ACTORDEF=Glowing Black Stone
+IT69_ACTORDEF=Oven
+IT70_ACTORDEF=Brew Barrel
+IT73_ACTORDEF=Kiln
+IT74_ACTORDEF=Pottery Wheel
+IT78_ACTORDEF=Campfire (Oven)
+IT128_ACTORDEF=Loom
+IT177_ACTORDEF=Shattering Hammer
+IT203_ACTORDEF=Round Shield
+IT210_ACTORDEF=Shimmering Orb
+IT400_ACTORDEF=Globe of Slush Water
+IT401_ACTORDEF=Red Mushroom
+IT402_ACTORDEF=Blue Mushroom
+IT403_ACTORDEF=Yew Leaf
+IT10511_ACTORDEF=A Soulstone Shard
+IT10512_ACTORDEF=Orb of Exploration
+IT10630_ACTORDEF=Fish Sword
+IT10661_ACTORDEF=Blade of Walnan
+IT10714_ACTORDEF=Augmentation Sealer
+IT10725_ACTORDEF=Shuriken
+*/
 
 // Object Types
 #define OT_DROPPEDITEM	0x01
@@ -48,11 +86,26 @@
 #define OT_MAGELEX		0x19
 #define OT_NECROLEX		0x1A
 #define OT_ENCHLEX		0x1B
+// high elf forge is 0x1F
 #define OT_TEIRDALFORGE	0x20
 #define OT_OGGOKFORGE	0x21
 #define OT_STORMGUARDF	0x22
+// gnome forge 0x23
+// barbarian forge 0x24
+// 
+// iksar forge 0x26
+// human forge 0x27 (qeynos or freeport?)
+// human forge 0x28 (qeynos or freeport?)
+// halfling tailoring kit 0x29
+// erudite tailoring kit 0x2A
+// wood elf tailoring kit 0x2B
+// wood elf fletching kit 0x2C
+// iksar pottery wheel 0x2D
 #define OT_TACKLEBOX	0x2e
-#define OT_FIERDALF		0x30
+// troll forge 0x2F
+#define OT_FIERDALFFORGE	0x30
+// halfling forge 0x31
+// erudite forge 0x32
 #define OT_AUGMENT		0x35
 
 // Icon values:
@@ -93,8 +146,8 @@ public:
 	static uint32 TypeToSkill(uint32 type);
 	
 	// Packet functions
-	void CreateSpawnPacket(APPLAYER* app);
-	void CreateDeSpawnPacket(APPLAYER* app);
+	void CreateSpawnPacket(EQZonePacket* app);
+	void CreateDeSpawnPacket(EQZonePacket* app);
 	
 	//Decay functions
 	void StartDecay() {decay_timer.Start();}
@@ -109,8 +162,11 @@ public:
 	virtual bool Save();
 	virtual void SetID(int16 set_id);
 	
+	void ClearUser() { user = NULL; }
+	
 protected:
 	void	ResetState();	// Set state back to original
+	void	RandomSpawn(bool send_packet = false);		//spawn this ground spawn at a random place
 	
 	Object_Struct	m_data;		// Packet data
 	ItemInst*		m_inst;		// Item representing object
@@ -125,6 +181,8 @@ protected:
 	float			m_z;
 	float			m_heading;
 	bool			m_ground_spawn;
+	
+	Client *user;
 	
 	Timer respawn_timer;
 	Timer decay_timer;

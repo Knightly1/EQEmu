@@ -43,7 +43,8 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "EMUSHAREMEM_EXPORTS" /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "EMUSHAREMEM_EXPORTS" /YX /FD /c
+# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /I "c:\mysql\include" /I "c:\eqemu\include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "EMUSHAREMEM_EXPORTS" /FD /c
+# SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -53,7 +54,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /map:"../Build/EMuShareMem.map" /debug /machine:I386
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /map:"../Build/EMuShareMem.map" /debug /machine:I386 /libpath:"c:\mysql\lib\opt" /libpath:"c:\eqemu\lib"
 
 !ELSEIF  "$(CFG)" == "EMuShareMem - Win32 Debug"
 
@@ -69,7 +70,8 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 1
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "EMUSHAREMEM_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "EMUSHAREMEM_EXPORTS" /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /Gm /GX /ZI /Od /I "c:\mysql\include" /I "c:\eqemu\include" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "EMUSHAREMEM_EXPORTS" /FD /GZ /c
+# SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
@@ -79,7 +81,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept /libpath:"c:\mysql\lib\opt" /libpath:"c:\eqemu\lib"
 
 !ENDIF 
 
@@ -97,6 +99,10 @@ SOURCE=.\DLLMain.cpp
 # Begin Source File
 
 SOURCE=.\Doors.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\GuildList.cpp
 # End Source File
 # Begin Source File
 
@@ -122,6 +128,10 @@ SOURCE=.\NPCFactionLists.cpp
 # Begin Source File
 
 SOURCE=.\NPCTypes.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\Opcodes.cpp
 # End Source File
 # Begin Source File
 
@@ -169,6 +179,10 @@ SOURCE=.\Spells.h
 # PROP Default_Filter ""
 # Begin Source File
 
+SOURCE=..\common\debug.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\EMuShareMem.cpp
 
 !IF  "$(CFG)" == "EMuShareMem - Win32 Release"
@@ -182,15 +196,15 @@ SOURCE=..\common\EMuShareMem.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\timer.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\common\debug.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\common\Mutex.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\SharedLibrary.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\timer.cpp
 # End Source File
 # End Group
 # Begin Group "Common Header Files"
@@ -198,11 +212,11 @@ SOURCE=..\common\Mutex.cpp
 # PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=..\common\EMuShareMem.h
+SOURCE=..\common\debug.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\debug.h
+SOURCE=..\common\EMuShareMem.h
 # End Source File
 # Begin Source File
 

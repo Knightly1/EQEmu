@@ -16,20 +16,19 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include <fstream>
 #include "../common/debug.h"
 #include "../common/eqtime.h"
 #include "../common/eq_packet_structs.h"
 #include <memory.h>
 #include <iostream>
 using namespace std;
-	#ifdef _CRTDBG_MAP_ALLOC
+	/*#ifdef _CRTDBG_MAP_ALLOC
 		#undef new
-	#endif
-#include <fstream>
-	#ifdef _CRTDBG_MAP_ALLOC
+	#endif*/
+	/*#ifdef _CRTDBG_MAP_ALLOC
 		#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
-	#endif
-#include "../common/debug.h"
+	#endif*/
 
 #define EQT_VERSION 1000
 

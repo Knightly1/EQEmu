@@ -26,7 +26,9 @@
 typedef int SOCKET;
 
 void Sleep(unsigned int x);
+#ifndef __CYGWIN__
 char* strupr(char* tmp);
 char* strlwr(char* tmp);
+#endif
 #endif
 #endif

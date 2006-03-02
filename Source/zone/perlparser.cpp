@@ -39,12 +39,13 @@ SvPV_nolen == string with no length restriction
 */
 
 PerlXSParser::PerlXSParser() : PerlembParser() {
-	_empty_sv = newSV(0);
-	ReloadQuests();	//not sure WHY I have to call this again
-				//but if I dont, it dosent call the right map_funs
+	//we cannot rely on PerlembParser to call the rigth map_funs because 
+	//our virtual table is not set up until after we call them, so we need to move
+	//the call to ReloadQuests out of the constructor.
 }
 
 void PerlXSParser::map_funs() {
+	_empty_sv = newSV(0);
 
 	perl->eval(
 	"{"
@@ -71,6 +72,9 @@ void PerlXSParser::map_funs() {
 	
 	"package EntityList;"
 	"&boot_EntityList;"		//load our EntityList XS
+	
+	"package PerlPacket;"
+	"&boot_PerlPacket;"		//load our PerlPacket XS
 	
 	"package Group;"
 	"&boot_Group;"		//load our Group XS
@@ -934,6 +938,34 @@ XS(XS__attack)
 	XSRETURN_EMPTY;
 }
 
+XS(XS__attacknpc);
+XS(XS__attacknpc)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: attacknpc(npc_entity_id)");
+
+	int	npc_entity_id = (int)SvIV(ST(0));
+
+	quest_manager.attacknpc(npc_entity_id);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__attacknpctype);
+XS(XS__attacknpctype)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: attacknpctype(npc_type_id)");
+
+	int	npc_type_id = (int)SvIV(ST(0));
+
+	quest_manager.attacknpctype(npc_type_id);
+
+	XSRETURN_EMPTY;
+}
+
 XS(XS__save);
 XS(XS__save)
 {
@@ -1481,6 +1513,8 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "setskill"), XS__setskill, file);
 		newXS(strcpy(buf, "setallskill"), XS__setallskill, file);
 		newXS(strcpy(buf, "attack"), XS__attack, file);
+		newXS(strcpy(buf, "attacknpc"), XS__attacknpc, file);
+		newXS(strcpy(buf, "attacknpctype"), XS__attacknpctype, file);
 		newXS(strcpy(buf, "save"), XS__save, file);
 		newXS(strcpy(buf, "faction"), XS__faction, file);
 		newXS(strcpy(buf, "setsky"), XS__setsky, file);
