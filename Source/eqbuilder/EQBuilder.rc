@@ -1,0 +1,499 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_BIGZONE DIALOG DISCARDABLE  0, 0, 602, 309
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Large Zone View"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "Done",IDOK,545,291,50,11
+    CONTROL         "Zone View",IDC_ZONEVIEW,"MFCZoneViewerCtrl",WS_TABSTOP,
+                    7,7,412,295
+    DEFPUSHBUTTON   "Zoom In",IDC_ZoomIn,446,23,50,14
+    DEFPUSHBUTTON   "Zoom Out",IDC_ZoomOut,446,41,50,14
+    DEFPUSHBUTTON   "Reset View",IDC_RESET_VIEW,446,59,50,14
+    GROUPBOX        "View Controls",IDC_STATIC,423,7,89,120
+    GROUPBOX        "Algorithm Controls",IDC_STATIC,519,7,76,99
+    PUSHBUTTON      "Reprocess",IDC_REPROCESS,530,86,50,14
+    DEFPUSHBUTTON   "+ Resolution",IDC_INCREASE_RES,446,77,50,14
+    DEFPUSHBUTTON   "- Resolution",IDC_DECREASE_RES,446,95,50,14
+    CONTROL         "Toggle Path Drawing",IDC_DRAW_PATHS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,427,113,83,10
+    CONTROL         "Tree1",IDC_MOB_TREE,"SysTreeView32",TVS_HASBUTTONS | 
+                    TVS_HASLINES | TVS_LINESATROOT | TVS_FULLROWSELECT | 
+                    WS_BORDER | WS_TABSTOP,422,139,173,150
+    LTEXT           "Zone Spawns:",IDC_STATIC,424,129,47,8
+END
+
+IDD_LOOT DIALOG DISCARDABLE  0, 0, 436, 247
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Loot Editor"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,376,221,50,14
+    CONTROL         "Tree1",IDC_SOURCE_MAPPINGS,"SysTreeView32",WS_BORDER | 
+                    WS_TABSTOP,12,36,140,185
+    LTEXT           "Loot Mappings:",IDC_STATIC,12,27,50,8
+    CONTROL         "Tree1",IDC_CURRENT_MAPPINGS,"SysTreeView32",WS_BORDER | 
+                    WS_TABSTOP,155,36,156,185
+    LTEXT           "Loot Mappings:",IDC_STATIC,153,27,50,8
+    PUSHBUTTON      "Delete",IDC_DELETE_MAPPING,110,223,41,14
+    PUSHBUTTON      "Add",IDC_ADD_MAPPING,11,223,41,14
+    CONTROL         "Enable Loot Mapping",IDC_TOGGLE_LOOT,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,11,15,83,10
+    PUSHBUTTON      "Edit",IDC_EDIT_MAPPING,61,223,39,14
+    GROUPBOX        "Loot Mapping",IDC_STATIC,7,7,422,233
+END
+
+IDD_FACTIONS DIALOG DISCARDABLE  0, 0, 330, 247
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Factions Editor"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,273,226,50,14
+    CONTROL         "Tree1",IDC_SOURCE_MAPPINGS,"SysTreeView32",WS_BORDER | 
+                    WS_TABSTOP,7,36,140,185
+    LTEXT           "Faction Mappings:",IDC_STATIC,7,27,59,8
+    CONTROL         "Tree1",IDC_CURRENT_MAPPINGS,"SysTreeView32",WS_BORDER | 
+                    WS_TABSTOP,154,36,156,185
+    LTEXT           "Current Mappings:",IDC_STATIC,153,27,58,8
+    CONTROL         "Enable Faction Mapping",IDC_TOGGLE_FACTIONS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,7,93,10
+    PUSHBUTTON      "Delete",IDC_DELETE_MAPPING,106,226,41,14
+    PUSHBUTTON      "Add",IDC_ADD_MAPPING,7,226,41,14
+    PUSHBUTTON      "Edit",IDC_EDIT_MAPPINGS,58,226,39,14
+END
+
+IDD_LOADING_MAP DIALOG DISCARDABLE  0, 0, 202, 38
+STYLE WS_POPUP | WS_CAPTION | WS_THICKFRAME
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Loading Map...",IDC_STATIC,79,14,48,8
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_BIGZONE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 595
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 302
+    END
+
+    IDD_LOOT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 429
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 240
+    END
+
+    IDD_FACTIONS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 323
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 240
+    END
+
+    IDD_LOADING_MAP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 195
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 31
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// French (France) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_EQBUILDER_DIALOG DIALOGEX 0, 0, 609, 364
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "EQBuilder v2.0"
+FONT 8, "MS Sans Serif"
+BEGIN
+    COMBOBOX        IDC_ZONE_COMBO,17,17,128,203,CBS_DROPDOWNLIST | 
+                    CBS_AUTOHSCROLL | CBS_SORT | CBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Load From DB",IDC_LOADDB_BUTTON,17,32,53,12,WS_DISABLED
+    CONTROL         "Tree1",IDC_LOG_TREE,"SysTreeView32",TVS_SHOWSELALWAYS | 
+                    WS_BORDER | WS_TABSTOP,12,59,131,87
+    PUSHBUTTON      "Add",IDC_ADD_BUTTON,12,151,27,12,WS_DISABLED
+    PUSHBUTTON      "Delete",IDC_DELETE_BUTTON,12,167,29,12,WS_DISABLED
+    COMBOBOX        IDC_TYPELOG_COMBO,78,151,65,45,CBS_DROPDOWNLIST | 
+                    WS_DISABLED | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Compile",IDC_COMPILE_BUTTON,71,167,31,12,WS_DISABLED
+    CONTROL         "Moving mobs",IDC_MOVING_CHECK,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,13,203,60,10
+    CONTROL         "Same Loc Range",IDC_AROUND_CHECK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,216,86,10
+    EDITTEXT        IDC_AROUND_EDIT,103,214,28,12,ES_AUTOHSCROLL
+    CONTROL         "Min Spawn Probability",IDC_MINPROB_CHECK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,259,86,10
+    EDITTEXT        IDC_MINPROB_EDIT,103,257,28,12,ES_AUTOHSCROLL
+    CONTROL         "Moved Modifier",IDC_MOVED_CHECK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,289,86,10
+    EDITTEXT        IDC_MOVED_EDIT,103,287,28,12,ES_AUTOHSCROLL
+    CONTROL         "Dead Modifier",IDC_DEAD_CHECK,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,13,303,86,10
+    EDITTEXT        IDC_DEAD_EDIT,103,301,28,12,ES_AUTOHSCROLL
+    CONTROL         "Occurency Modifier",IDC_OCCUR_CHECK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,317,86,10
+    EDITTEXT        IDC_OCCUR_EDIT,103,315,28,12,ES_AUTOHSCROLL
+    CONTROL         "Tree5",IDC_MOB_TREE,"SysTreeView32",TVS_HASBUTTONS | 
+                    TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS | 
+                    WS_BORDER | WS_TABSTOP,166,22,302,123
+    CONTROL         "Tree5",IDC_SPAWN_TREE,"SysTreeView32",TVS_HASBUTTONS | 
+                    TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS | 
+                    WS_BORDER | WS_TABSTOP,169,164,297,153
+    CONTROL         "Tab1",IDC_DATAMODE,"SysTabControl32",
+                    TCS_FOCUSONBUTTONDOWN | WS_GROUP | WS_TABSTOP,167,149,
+                    302,171
+    PUSHBUTTON      "Process Data",IDC_PROCESS_BUTTON,166,326,53,13,
+                    WS_DISABLED
+    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER,
+                    226,326,243,13
+    CONTROL         "SQL file",IDC_SQL_RADIO,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,493,135,53,11
+    CONTROL         "Database",IDC_DATABASE_RADIO,"Button",
+                    BS_AUTORADIOBUTTON | WS_DISABLED | WS_GROUP,493,145,53,
+                    11
+    CONTROL         "NPC Data",IDC_OUT_NPCS,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,492,158,62,10
+    CONTROL         "Spawn Data",IDC_OUT_SPAWNS,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,492,168,61,10
+    CONTROL         "Door Data",IDC_OUT_DOORS,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,492,198,59,10
+    CONTROL         "Teleports Data",IDC_OUT_TELEPORTS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,492,208,63,10
+    CONTROL         "Grid Data",IDC_OUT_GRIDS,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,492,178,65,10
+    CONTROL         "Merchant Data",IDC_OUT_MERCHANTS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,492,188,65,10
+    PUSHBUTTON      "Output Data",IDC_WRITE_BUTTON,492,222,59,12,WS_DISABLED
+    GROUPBOX        "Log Files",IDC_LOG_STATIC,8,49,143,135,BS_CENTER | 
+                    WS_GROUP
+    GROUPBOX        "Zones",IDC_ZONE_STATIC,8,8,143,40,BS_CENTER | WS_GROUP
+    GROUPBOX        "Stats",IDC_STATS_STATIC,482,8,109,112,BS_CENTER
+    CTEXT           "NPCs",IDC_STATIC,487,18,53,13,0,WS_EX_CLIENTEDGE
+    CTEXT           "0",IDC_NPC_STATIC,542,18,43,13,0,WS_EX_CLIENTEDGE
+    CTEXT           "Spawns",IDC_STATIC,487,32,53,13,0,WS_EX_CLIENTEDGE
+    CTEXT           "0",IDC_MOB_STATIC,542,32,43,13,0,WS_EX_CLIENTEDGE
+    CTEXT           "Spawn Points",IDC_STATIC,487,47,53,13,0,
+                    WS_EX_CLIENTEDGE
+    CTEXT           "0/0",IDC_SPAWN_STATIC,542,47,43,13,0,WS_EX_CLIENTEDGE
+    CTEXT           "Doors",ID_STATIC,487,61,53,13,0,WS_EX_CLIENTEDGE
+    CTEXT           "0",IDC_DOOR_STATIC,542,61,43,13,0,WS_EX_CLIENTEDGE
+    CTEXT           "Teleports",IDC_STATIC,487,75,53,13,0,WS_EX_CLIENTEDGE
+    CTEXT           "0",IDC_TELEPORT_STATIC,542,75,43,13,0,WS_EX_CLIENTEDGE
+    GROUPBOX        "Data",IDC_STATIC,161,7,314,344,BS_CENTER
+    GROUPBOX        "Spawn Modifiers/Filters",IDC_STATIC,7,194,144,157,
+                    BS_CENTER | WS_GROUP
+    GROUPBOX        "Output",IDC_STATIC,482,123,118,115,BS_CENTER
+    CTEXT           "Grids",IDC_STATIC,487,89,53,13,0,WS_EX_CLIENTEDGE
+    CTEXT           "0",IDC_GRID_STATIC,542,89,43,13,0,WS_EX_CLIENTEDGE
+    CTEXT           "Merchants",IDC_STATIC,487,103,53,13,0,WS_EX_CLIENTEDGE
+    CTEXT           "0",IDC_MERCHANT_STATIC,542,103,43,13,0,WS_EX_CLIENTEDGE
+    LTEXT           "NPC List:",IDC_STATIC,166,13,30,8
+    CONTROL         "Affirm Modifier",IDC_AFFIRM_CHECK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,274,86,10
+    EDITTEXT        IDC_AFFIRM_EDIT,103,272,28,12,ES_AUTOHSCROLL
+    CONTROL         "Camp Radius",IDC_CAMP_CHECK,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,13,230,86,10
+    EDITTEXT        IDC_CAMP_EDIT,103,229,28,12,ES_AUTOHSCROLL
+    CONTROL         "Maximum Z Difference",IDC_DELTAZ_CHECK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,245,86,10
+    EDITTEXT        IDC_DELTAZ_EDIT,103,243,28,12,ES_AUTOHSCROLL
+    CONTROL         "Zone View",IDC_ZONEVIEW,"MFCZoneViewerCtrl",0x0,480,251,
+                    118,86
+    PUSHBUTTON      "+",IDC_ZONE_ZOOM_IN,482,339,15,9
+    PUSHBUTTON      "-",IDC_ZONE_ZOOM_OUT,501,339,15,9
+    PUSHBUTTON      "R",IDC_ZONE_RESET,519,339,15,9
+    PUSHBUTTON      "Big",IDC_ZONE_BIG,565,339,26,9
+    PUSHBUTTON      "Reload Map",IDC_RELOAD_MAP,73,32,49,12,WS_DISABLED
+    GROUPBOX        "Zone View",IDC_STATIC,477,242,123,110
+    PUSHBUTTON      "Factions",IDC_FACTIONS_BUTTON,10,369,40,14
+    PUSHBUTTON      "Loot",IDC_LOOT_BUTTON,54,369,40,14
+    PUSHBUTTON      "Spells",IDC_SPELLS_BUTTON,98,369,40,14
+    PUSHBUTTON      "Clear",IDC_DELETE_ALL_BUTTON,43,167,26,12,WS_DISABLED
+    PUSHBUTTON      "Add Dir",IDC_ADD_DIR_BUTTON,42,151,33,12,WS_DISABLED
+    PUSHBUTTON      "Compile All",IDC_COMPILE_ALL_BUTTON,105,167,41,12,
+                    WS_DISABLED
+    PUSHBUTTON      "Go",IDC_GO_BUTTON,125,32,20,12
+END
+
+IDD_DATABASE DIALOGEX 0, 0, 186, 132
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Connection to the Database"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Connect",IDOK,19,104,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,114,104,50,14
+    EDITTEXT        IDC_HOST,81,18,83,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_USER,81,38,83,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_PASSWORD,81,58,83,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DATABASE,81,78,83,12,ES_AUTOHSCROLL
+    CTEXT           "Host",IDC_STATIC,20,18,51,11,0,WS_EX_CLIENTEDGE
+    CTEXT           "User",IDC_STATIC,20,38,51,11,0,WS_EX_CLIENTEDGE
+    CTEXT           "Password",IDC_STATIC,20,58,51,11,0,WS_EX_CLIENTEDGE
+    CTEXT           "Database",IDC_STATIC,20,78,51,11,0,WS_EX_CLIENTEDGE
+END
+
+IDD_SQLOPT DIALOG DISCARDABLE  0, 0, 231, 257
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "General Options"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "General SQL",ID_STATIC,7,3,217,37
+    GROUPBOX        "SQL ID Options",IDC_STATIC,7,43,217,136
+    CONTROL         "Include Delete Querries",IDC_DELETE_CHECK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,16,17,93,12
+    CONTROL         "Use Zone ID",IDC_USEZONEID,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,14,79,70,14
+    CONTROL         "Use a specific ID :",IDC_USESPECID,"Button",
+                    BS_AUTORADIOBUTTON,14,101,78,14
+    EDITTEXT        IDC_ZONEID,124,79,29,13,ES_AUTOHSCROLL
+    EDITTEXT        IDC_NPCID,94,120,41,12,ES_AUTOHSCROLL | WS_DISABLED
+    EDITTEXT        IDC_SPAWNID,94,138,41,12,ES_AUTOHSCROLL | WS_DISABLED
+    EDITTEXT        IDC_GRIDID,94,157,41,12,ES_AUTOHSCROLL | WS_DISABLED
+    LTEXT           "Start NPCs at :",IDC_STATIC,30,122,59,11
+    LTEXT           "Start Spawns at :",IDC_STATIC,30,140,59,11
+    LTEXT           "Start Grids at :",IDC_STATIC,30,159,59,11
+    DEFPUSHBUTTON   "OK",IDOK,57,231,50,14
+    LTEXT           "ZoneID *",IDC_STATIC,89,81,34,11
+    CONTROL         "Use the database for NPC IDs",IDC_USEDBID,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,14,57,146,12
+    GROUPBOX        "General",ID_STATIC2,7,181,217,47
+    LTEXT           "EQ Maps Path:",IDC_STATIC,13,194,49,8
+    EDITTEXT        IDC_EQMAPS,65,192,119,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_BrowseMaps,190,192,25,12
+    LTEXT           "EQEmu Maps Path:",IDC_STATIC,13,209,63,8
+    EDITTEXT        IDC_EQEMUMAPS,79,208,105,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_BrowseEmuMaps,190,208,25,12
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_EQBUILDER_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 600
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 357
+    END
+
+    IDD_DATABASE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 125
+    END
+
+    IDD_SQLOPT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 224
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 250
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 12, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\EQBuilder.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""l.fra\\afxres.rc""          // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,3,0,0
+ PRODUCTVERSION 1,3,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040c04b0"
+        BEGIN
+            VALUE "Comments", "\0"
+            VALUE "CompanyName", "\0"
+            VALUE "FileDescription", "Application MFC EQBuilder\0"
+            VALUE "FileVersion", "1, 3, 0, 0\0"
+            VALUE "InternalName", "EQBuilder\0"
+            VALUE "LegalCopyright", "Copyright (C) 2004\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OriginalFilename", "EQBuilder.EXE\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "Application EQBuilder\0"
+            VALUE "ProductVersion", "1, 3, 0, 0\0"
+            VALUE "SpecialBuild", "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x40c, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON    DISCARDABLE     "eqtools.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU1 MENU DISCARDABLE 
+BEGIN
+    POPUP "&Database"
+    BEGIN
+        MENUITEM "&Connect",                    ID_DATABASE_CONNECTION
+    END
+    POPUP "&Output"
+    BEGIN
+        MENUITEM "&SQL Options",                ID_OUTPUT_SQLOPT
+        MENUITEM "Database Options",            ID_OUTPUT_DBOPT
+    END
+END
+
+#endif    // French (France) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
+#ifdef _WIN32
+LANGUAGE 12, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\EQBuilder.rc2"  // non-Microsoft Visual C++ edited resources
+#include "l.fra\afxres.rc"          // Standard components
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

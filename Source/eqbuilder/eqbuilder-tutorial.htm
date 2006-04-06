@@ -1,0 +1,109 @@
+<html>
+<head>
+<title>Document sans titre</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+</head>
+
+<body>
+<h1><strong>How to use EqBuilder ?</strong></h1>
+<h3><strong>1) What is a well built zone ?</strong></h3>
+<p>To well build a zone you need :<br>
+- good spawn points<br>
+- good spawn tables<br>
+- good pathing<br>
+- all the rare spawns</p>
+<p>To obtain such qualities for your built zones, you'll need to use some tricks
+  for the data collection with eqcollector and you'll have to use wisely eqbuilder
+options for each logs ...</p>
+<h3><strong>2) EQCollector logs : 3 types of logs and 2 methods to build a zone
+    ?</strong></h3>
+<p>Monsters have a spawn point, it's what we want to collect, the most precious
+  info for worldbuilders =)<br>
+  But the monsters are not always at their spawn point, because some are roaming,
+    some are patrolling, some are wandering, and some are just disturbed by players
+( like for example pulled monsters ) ...<br>
+So when you enter a zone, there is no way to know if a monster is at its spawn
+point or not ...<br>
+<br>
+<strong>QUICK METHOD</strong> :</p>
+<p>by just zoning and zoning and collecting a lot of logs like this,
+  you'll populate
+  really
+  quickly your database, but won't have nor pathing info, nor spawn table info,
+  and maybe some spawn points won't be true ones, generally moving monsters won't
+  appear too, the positive point is at least you won't have dupes =)<br>
+  - just load each log and compile it<br>
+  - compile  1 log by zone<br>
+  - let
+  all logs  to default
+  type 'npctype'<br>
+  that's all !<br>
+  zones must be full respawned when you collect the logs to obtain better datas<br>
+  ( you can decide to create a database via this method, but you can really
+  do better with EQBuilder eheh )</p>
+<p><strong>ADVANCED METHOD</strong> :</p>
+<p>for this method you'll need 3 different types of logs to compile together
+  :<br>
+  <br>
+<strong>Pathing Log : ( 1 log, needed if you want grids )</strong></p>
+<p>you'll need at first a pathing log to collect
+  good pathing info, so spawn points and grid waypoints are clearly identified
+  ...
+  
+  here some advice to collect a good pathing log :<br>
+  - because roaming npcs and pulled npcs can't be differenciated, less players
+  are in the zone better pathing info you'll collect =) the best is if you are
+  alone in the zone<br>
+  - the mean time for a monster to complete its patrol can really vary from
+  different zones, but I noticed 20-25 minutes give good results generally ... if
+  you want good pathing, you have to wait enough so monsters have completed their
+  patrol<br>
+  - you'll understand a full respawned zone is better, keep your eqcollector
+ready after a patch =) or choose to collect at hours when there is less players</p>
+<p><strong>Npctype Log : ( as many logs as needed )<br>
+  <br>
+  </strong>if you turn the type of the log to 'npctype' grids won't be collected
+  from these logs<br>
+  because some monsters are rare like boss monsters or named ones, it's difficult
+  to meet the pathing log quality requirements  and to have these rare
+  monsters up at the same time<br>
+  so you can use this type of log for those logs where pathing is bad ( because
+  there was a lot of players fighting in the zone for example )
+but where rare monsters are up<br>
+here's some advice to collect a good npctype log :<br>
+- you don't need to wait that all monsters complete their patrol like
+for pathing logs, you
+just have to assure yourself that all moving monsters have at least moved one
+time
+=) so you won't collect false spawn points
+of moving monsters, 10 to 20 minutes should be good<br>
+- try to collect a log if there is several rare spawns at the same time, so you
+won't need 100 logs ! eqbuilder should crash anyway !<br>
+compile npctype logs after you have compiled the pathing log<br>
+- after a patch generally there is better chance to see rare spawns =)</p>
+<p><strong>Raid Log : ( 1 log max, not needed if you have good npctype logs )</strong></p>
+<p>in raids or if you stay long time in a hunting zone, a lot of monsters
+  are killed and a lot of monsters respawns, when a monster respawn you have
+  TRUE spawn points,
+  it's why raid logs can be usefull, and
+  because a lot of monsters respawn you can complete like this spawn tables like
+if u used several npctype logs<br>
+if you turn logs type to 'raid', grids won't be collected again and just respawned
+monsters will be collected<br>
+here's some advice for raid logs :<br>
+- stay longer than 30 minutes so there is at least 1 respawn<br>
+- don't compile big raid logs if you don't have a lot of memory in your computer
+=( ( working hard on ways to reduce the memory requirements =( )<br>
+- kill a lot of monsters ! lol make them respawn !<br>
+( raid logs must be compiled at last )<br>
+  <br>
+  After collecting and compiling these logs, you will certainly have spawn dupes
+  or false spawns, you can then change eqbuilder filters or modifiers to reprocess
+the compiled data and to obtain better results</p>
+<p>This method is a lot slower, but you can obtain really good moving and spawning
+  db for each zone, so it will save you a lot of efforts to build a nice database
+=)</p>
+<p><br>
+</p>
+</body>
+</html>
