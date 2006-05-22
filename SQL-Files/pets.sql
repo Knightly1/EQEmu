@@ -1,10 +1,11 @@
+DROP TABLE pets;
 CREATE TABLE pets (
  type VARCHAR(64) NOT NULL,
  npcID int NOT NULL,
  temp TINYINT NOT NULL,
  PRIMARY KEY(type)
 );
-
+DELETE FROM npc_types WHERE id>=500 AND id<700;
 INSERT INTO pets (type,npcID,temp) VALUES('Animation1', 500, 0);
 INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(500, 'Animation1', 1, 127, 1, 24, 23, 0, 0, 6, 6, 0, 1, 5, '', 6.66, 1.25);
 
@@ -348,77 +349,85 @@ INSERT INTO pets (type,npcID,temp) VALUES('SumWaterR16', 613, 0);
 INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(613, 'SumWaterR16', 65, 75, 9, 24, 5000, 2, 2, 6, 360, 16, 28, 102, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_1_', 614, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(614, 'skel_pet_1_', 5, 60, 1, 8, 30, 2, 0, 3, 6, 0, 6, 10, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(614, 'skel_pet_1_', 1, 60, 1, 8, 30, 2, 0, 3, 6, 0, 6, 10, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_5_', 615, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(615, 'skel_pet_5_', 9, 60, 1, 8, 90, 2, 0, 4, 6, 0, 7, 12, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(615, 'skel_pet_5_', 5, 60, 1, 8, 90, 2, 0, 4, 6, 0, 7, 12, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_9_', 616, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(616, 'skel_pet_9_', 11, 60, 1, 8, 200, 2, 0, 6, 6, 0, 9, 14, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(616, 'skel_pet_9_', 9, 60, 1, 8, 200, 2, 0, 6, 6, 0, 9, 14, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_11_', 617, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(617, 'skel_pet_11_', 16, 60, 1, 8, 250, 2, 0, 6, 6, 0, 11, 16, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(617, 'skel_pet_11_', 11, 60, 1, 8, 250, 2, 0, 6, 6, 0, 11, 16, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_16_', 618, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(618, 'skel_pet_16_', 19, 60, 1, 8, 300, 2, 0, 6, 6, 0, 13, 20, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(618, 'skel_pet_16_', 16, 60, 1, 8, 300, 2, 0, 6, 6, 0, 13, 20, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_19_', 619, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(619, 'skel_pet_19_', 22, 60, 1, 8, 375, 2, 0, 6, 6, 0, 15, 22, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(619, 'skel_pet_19_', 19, 60, 1, 8, 375, 2, 0, 6, 6, 0, 15, 22, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_22_', 620, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(620, 'skel_pet_22_', 25, 60, 1, 8, 700, 2, 0, 6, 6, 0, 19, 26, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(620, 'skel_pet_22_', 22, 60, 1, 8, 700, 2, 0, 6, 6, 0, 19, 26, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_25_', 621, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(621, 'skel_pet_25_', 29, 60, 1, 8, 775, 2, 0, 6, 6, 0, 21, 28, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(621, 'skel_pet_25_', 25, 60, 1, 8, 775, 2, 0, 6, 6, 0, 21, 28, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_29_', 622, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(622, 'skel_pet_29_', 33, 60, 1, 8, 850, 2, 0, 6, 6, 0, 25, 33, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(622, 'skel_pet_29_', 29, 60, 1, 8, 850, 2, 0, 6, 6, 0, 25, 33, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_33_', 623, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(623, 'skel_pet_33_', 37, 60, 1, 8, 1000, 2, 0, 6, 6, 0, 32, 39, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(623, 'skel_pet_33_', 33, 60, 1, 8, 1000, 2, 0, 6, 6, 0, 32, 39, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_37_', 624, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(624, 'skel_pet_37_', 41, 60, 1, 8, 1300, 2, 0, 6, 30, 22, 40, 47, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(624, 'skel_pet_37_', 37, 60, 1, 8, 1300, 2, 0, 6, 30, 22, 40, 47, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_41_', 625, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(625, 'skel_pet_41_', 43, 60, 1, 8, 2350, 2, 0, 6, 60, 22, 48, 55, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(625, 'skel_pet_41_', 41, 60, 1, 8, 2350, 2, 0, 6, 60, 22, 48, 55, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_43_', 626, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(626, 'skel_pet_43_', 44, 60, 9, 8, 1400, 2, 0, 6, 30, 22, 50, 57, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(626, 'skel_pet_43_', 43, 60, 9, 8, 1400, 2, 0, 6, 30, 22, 50, 57, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_44_', 627, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(627, 'skel_pet_44_', 47, 60, 7, 8, 1700, 2, 0, 7, 30, 22, 52, 59, '', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(627, 'skel_pet_44_', 44, 60, 7, 8, 1700, 2, 0, 7, 30, 22, 52, 59, '', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_47_', 628, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(628, 'skel_pet_47_', 60, 60, 1, 8, 2700, 2, 0, 7, 60, 22, 59, 69, 'D', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(628, 'skel_pet_47_', 47, 85, 1, 8, 2700, 2, 0, 7, 60, 22, 59, 69, 'D', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_61_', 629, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(629, 'skel_pet_61_', 61, 60, 1, 8, 3000, 2, 0, 7, 90, 22, 60, 73, 'DE', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(629, 'skel_pet_61_', 60, 85, 1, 8, 3000, 2, 0, 7, 90, 22, 60, 73, 'DE', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_63_', 630, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(630, 'skel_pet_63_', 63, 60, 9, 8, 2500, 2, 0, 7, 90, 22, 64, 73, 'DE', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(630, 'skel_pet_63_', 63, 85, 9, 8, 2500, 2, 0, 7, 90, 22, 64, 73, 'DE', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_65_', 631, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(631, 'skel_pet_65_', 65, 60, 7, 8, 4000, 2, 0, 7, 120, 22, 60, 78, 'DQE', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(631, 'skel_pet_65_', 65, 85, 7, 8, 4000, 2, 0, 7, 120, 22, 60, 78, 'DQE', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_67_', 632, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(632, 'skel_pet_67_', 67, 60, 1, 8, 4300, 2, 0, 7, 120, 22, 65, 82, 'DQE', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(632, 'skel_pet_67_', 65, 85, 1, 8, 4300, 2, 0, 7, 120, 22, 65, 82, 'DQE', 6.66, 1.25);
 
 INSERT INTO pets (type,npcID,temp) VALUES('skel_pet_70_', 633, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(633, 'skel_pet_70_', 70, 60, 1, 8, 4700, 2, 0, 7, 120, 22, 70, 86, 'DQE', 6.66, 1.25);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(633, 'skel_pet_70_', 65, 85, 9, 8, 4700, 2, 0, 7, 120, 22, 70, 86, 'DQE', 6.66, 1.25);
 
-INSERT INTO pets (type,npcID,temp) VALUES('cleric_hammer_67_', 634, 1);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(634, 'cleric_hammer_67_', 1, 60, 1, 24, 100, 2, 0, 2, 6, 0, 5, 75, '', 6.66, 1.25);
+INSERT INTO pets (type,npcID,temp) VALUES('sk_pet_68_', 634, 0);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(634, 'sk_pet_68_', 60, 60, 1, 8, 4000, 2, 0, 7, 6, 0, 60, 68, 'DE', 6.66, 1.25);
 
-INSERT INTO pets (type,npcID,temp) VALUES('Mistwalker', 635, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(635, 'Mistwalker', 50, 120, 1, 24, 1, 2, 0, 3, 6, 0, 85, 105, '', 6.66, 1.25);
+INSERT INTO pets (type,npcID,temp) VALUES('cleric_hammer_67_', 635, 1);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(635, 'cleric_hammer_67_', 1, 60, 1, 24, 100, 2, 0, 2, 6, 0, 5, 75, '', 6.66, 1.25);
 
-INSERT INTO pets (type,npcID,temp) VALUES('TunareBane', 636, 1);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(636, 'TunareBane', 50, 76, 1, 24, 2500, 2, 3, 2, 6, 0, 71, 78, '', 6.66, 1.25);
+INSERT INTO pets (type,npcID,temp) VALUES('SumSword', 636, 1);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(636, 'SumSword', 52, 127, 1, 24, 1000, 0, 0, 6, 6, 0, 35, 73, '', 6.66, 1.25);
 
-INSERT INTO pets (type,npcID,temp) VALUES('Burnout', 637, 1);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(637, 'Burnout', 50, 75, 1, 24, 1000, 2, 0, 6, 6, 164, 60, 87, 'Q', 6.66, 1.25);
+INSERT INTO pets (type,npcID,temp) VALUES('Mistwalker', 637, 0);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(637, 'Mistwalker', 50, 120, 1, 24, 1, 2, 0, 3, 6, 0, 85, 105, '', 6.66, 1.25);
 
-INSERT INTO pets (type,npcID,temp) VALUES('DruidPet', 638, 0);
-INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(638, 'DruidPet', 25, 43, 1, 24, 100, 2, 0, 1, 6, 0, 17, 25, '', 6.66, 1.25);
+INSERT INTO pets (type,npcID,temp) VALUES('TunareBane', 638, 1);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(638, 'TunareBane', 50, 76, 1, 24, 2500, 2, 3, 2, 6, 0, 71, 78, '', 6.66, 1.25);
 
+INSERT INTO pets (type,npcID,temp) VALUES('Burnout', 639, 1);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(639, 'Burnout', 50, , 1, 24, 1000, 2, 0, 6, 6, 164, 60, 87, 'Q', 6.66, 1.25);
+
+INSERT INTO pets (type,npcID,temp) VALUES('DruidPet', 640, 0);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(640, 'DruidPet', 25, 43, 1, 24, 100, 2, 0, 1, 6, 0, 17, 25, '', 6.66, 1.25);
+
+INSERT INTO pets (type,npcID,temp) VALUES('SumSword', 641, 1);
+INSERT INTO npc_types (id,name,level,race,class,bodytype,hp,gender,texture,size,hp_regen_rate,npc_spells_id,mindmg,maxdmg,npcspecialattks,walkspeed,runspeed) VALUES(641, 'SumSword', 52, 127, 1, 24, 1000, 0, 0, 6, 6, 0, 35, 73, '', 6.66, 1.25);
