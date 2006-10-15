@@ -11,7 +11,7 @@ LINKOUT=-o
 NOLINK=-c
 LINKER=gcc
 MYSQL_FLAGS=-I/usr/include/mysql
-MYSQL_LIB=-L/usr/include/mysql -lmysqlclient -lz -lcrypt -lnsl -lm -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv
+MYSQL_LIB=-L/usr/lib/mysql -lmysqlclient -lz -lcrypt -lnsl -lm -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv
 DFLAGS=-DEQDEBUG=5
 WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual -Wno-deprecated  -Wcomment -Wcast-align
 COPTS=$(WFLAGS) -O -g -pg -march=i686 -pthread -pipe -DEQLAUNCH $(DFLAGS) $(MYSQL_FLAGS)

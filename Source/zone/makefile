@@ -11,7 +11,7 @@ LINKOUT=-o
 NOLINK=-c
 LINKER=gcc
 MYSQL_FLAGS=-I/usr/include/mysql
-MYSQL_LIB=-L/usr/include/mysql -lmysqlclient -lz -lcrypt -lnsl -lm -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv
+MYSQL_LIB=-L/usr/lib/mysql -lmysqlclient -lz -lcrypt -lnsl -lm -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv
 DFLAGS=-DEQDEBUG=5 -DCATCH_CRASH -DNO_PIDLOG -DSHAREMEM -DSPELL_EFFECT_SPAM -DFIELD_ITEMS -DCOMBINED -DAPP_OPCODE_SIZE=2 -Di386
 #try commenting out the following three lines to disable embedded perl
 PERL_FLAGS=perl -MExtUtils::Embed -e ccopts

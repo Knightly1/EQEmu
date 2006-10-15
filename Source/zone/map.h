@@ -110,7 +110,8 @@ typedef unsigned short NodeRef;
 
 class Map {
 public:
-	static Map* Map::LoadMapfile(const char* in_zonename, const char *directory = NULL);
+	static Map* LoadMapfile(const char* in_zonename, const char *directory = NULL);
+	
 	Map();
 	~Map();
 	

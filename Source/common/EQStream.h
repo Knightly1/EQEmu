@@ -223,7 +223,7 @@ class EQStream : public EQStreamInterface {
 		void SetOpcodeSize(uint8 s) { app_opcode_size = s; }
 		void SetStreamType(EQStreamType t);
 		inline const EQStreamType GetStreamType() const { return StreamType; }
-		static const char *EQStream::StreamTypeString(EQStreamType t);
+		static const char *StreamTypeString(EQStreamType t);
 
 		void Decay();
 		void AdjustRates(uint32 average_delta);

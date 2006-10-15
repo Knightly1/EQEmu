@@ -69,7 +69,9 @@ void log_packet_mob(LogType type, Mob *who, const BasePacket *p) {
 void Mob::mob_log(LogType type, const char *fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
-	log_message_mobVA(type, this, fmt, args);
+	if(log_type_info[type].enabled) {
+		log_message_mobVA(type, this, fmt, args);
+	}
 	va_end(args);
 }
 

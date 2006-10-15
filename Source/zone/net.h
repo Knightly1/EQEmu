@@ -37,8 +37,8 @@ void UpdateWindowTitle(char* iNewTitle = 0);
 class NetConnection
 {
 public:
-	NetConnection::~NetConnection();
-	NetConnection::NetConnection();
+	~NetConnection();
+	NetConnection();
 	
 	int32	GetIP();
 	int32	GetIP(char* name);

@@ -83,7 +83,7 @@ public:
 	
 	static const uint32 _RulesCount = _IntRuleCount+_RealRuleCount+_BoolRuleCount;
 
-	RuleManager::RuleManager();
+	RuleManager();
 	
 	//fetch routines, you should generally use the Rule* macros instead of this
 	inline int   GetIntRule (IntType  t) const { return(m_RuleIntValues[t] ); }

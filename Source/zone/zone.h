@@ -67,8 +67,8 @@ class database;
 class Zone
 {
 public:
-	static bool Zone::Bootup(int32 iZoneID, bool iStaticZone = false);
-	static void Zone::Shutdown(bool quite = false);
+	static bool Bootup(int32 iZoneID, bool iStaticZone = false);
+	static void Shutdown(bool quite = false);
 	
 	Zone(int32 in_zoneid, const char* in_short_name);
 	~Zone();

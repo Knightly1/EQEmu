@@ -27,8 +27,8 @@
 class Beacon : public Mob
 {
 public:
-	Beacon::Beacon(Mob *at_mob, int lifetime);
-	Beacon::~Beacon();
+	Beacon(Mob *at_mob, int lifetime);
+	~Beacon();
 	
 	bool	IsBeacon()			const { return true; }
 	bool	Process();
