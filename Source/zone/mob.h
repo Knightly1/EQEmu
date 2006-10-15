@@ -747,7 +747,7 @@ bool logpos;
 	int16	GetInstrumentMod(int16 spell_id);
 	int CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level = 1, Mob *caster = NULL);
 	int CalcSpellEffectValue_formula(int formula, int base, int max, int caster_level, int16 spell_id);
-	int CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, int caster_level2);
+	int CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, int caster_level2, Mob* caster1 = NULL, Mob* caster2 = NULL);
 
 	inline EGNode *GetEGNode() { return(_egnode); }
 	inline void SetEGNode(EGNode *s) { _egnode = s; }

@@ -2,6 +2,19 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
 ==10/15/2006
+FatherNitwit: (KLS) 
+FatherNitwit: (KLS) 
+FatherNitwit: (KLS) 
+FatherNitwit: (KLS) 
+FatherNitwit: (KLS) 
+FatherNitwit: (KLS) 
+FatherNitwit: (KLS) 
+FatherNitwit: (KLS) 
+FatherNitwit: (KLS) 
+FatherNitwit: (KLS) made it so you can snare things while they're rooted
+FatherNitwit: (KLS) made it so beneficial songs will stack with beneficial spells
+FatherNitwit: (KLS) made it so a beneficial effect and a detrimental of an effect don't conflict
+FatherNitwit: (KLS) let dots of the same resist type stack so long as they aren't the same spell
 FatherNitwit: cleanup windows logging a bit
 FatherNitwit: (eq4me) GCC 4+ build fixes
 

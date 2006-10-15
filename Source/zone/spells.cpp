@@ -1755,7 +1755,7 @@ int CalcBuffDuration_formula(int level, int formula, int duration)
 // -1 if they can't stack and spellid2 should be stopped
 //currently, a spell will not land if it would overwrite a better spell on any effect
 //if all effects are better or the same, we overwrite, else we do nothing
-int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, int caster_level2)
+int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, int caster_level2, Mob* caster1, Mob* caster2)
 {
 	const SPDat_Spell_Struct &sp1 = spells[spellid1];
 	const SPDat_Spell_Struct &sp2 = spells[spellid2];
@@ -1764,23 +1764,34 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 	int blocked_effect, blocked_below_value, blocked_slot;
 	int overwrite_effect, overwrite_below_value, overwrite_slot;
 
-	mlog(SPELLS__STACKING, "Check Stacking on old %s (%d) @ lvl %d vs. new %s (%d) @ lv %d", sp1.name, spellid1, caster_level1, sp2.name, spellid2, caster_level2);
-	
-	// an easy case
-	if(spellid1 == spellid2)
+	mlog(SPELLS__STACKING, "Check Stacking on old %s (%d) @ lvl %d (by %s) vs. new %s (%d) @ lvl %d (by %s)", sp1.name, spellid1, caster_level1, (caster1==NULL)?"Nobody":caster1->GetName(), sp2.name, spellid2, caster_level2, (caster2==NULL)?"Nobody":caster2->GetName());
+
+	/*
+	One of these is a bard song and one isn't and they're both beneficial so they should stack.
+	*/
+	if(IsBardSong(spellid1) != IsBardSong(spellid2)) 
 	{
-		mlog(SPELLS__STACKING, "Simple case, spells are the same, choose higher level");
-		if(caster_level2 >= caster_level1)
-			return 1;	// overwrite
-		return -1; // can't stack
+		if(!IsDetrimentalSpell(spellid1) && !IsDetrimentalSpell(spellid2))
+		{
+			mlog(SPELLS__STACKING, "%s and %s are beneficial, and one is a bard song, no action needs to be taken", sp1.name, sp2.name);
+			return (0);
+		}
 	}
-	
+
+
 	// solar: check for special stacking block command in spell1 against spell2
 	for(i = 0; i < EFFECT_COUNT; i++)
 	{
 		effect1 = sp1.effectid[i];
 		if(effect1 == SE_StackingCommand_Block)
 		{
+			/*
+			The logic here is if you're comparing the same spells they can't block each other
+			from refreshing
+			*/
+			if(spellid1 == spellid2)
+				continue;
+
 			blocked_effect = sp1.base[i];
 			blocked_slot = sp1.formula[i] - 201;	//they use base 1 for slots, we use base 0
 			blocked_below_value = sp1.max[i];
@@ -1822,15 +1833,22 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 			} else {
 				mlog(SPELLS__STACKING, "%s (%d) overwrites existing spell if effect %d on slot %d is below %d, but we do not have that effect on that slot. Ignored.",
 					sp2.name, spellid2, overwrite_effect, overwrite_slot, overwrite_below_value);
+
 			}
 		}
 	}
 	
 	bool sp1_detrimental = IsDetrimentalSpell(spellid1);
 	bool sp2_detrimental = IsDetrimentalSpell(spellid2);
+	bool sp_det_mismatch;
+
+	if(sp1_detrimental == sp2_detrimental)
+		sp_det_mismatch = false;
+	else
+		sp_det_mismatch = true;
 	
 	// now compare matching effects
-	// abitrartion takes place if 2 spells have th same effect at the same
+	// arbitration takes place if 2 spells have the same effect at the same
 	// effect slot, otherwise they're stackable, even if it's the same effect
 	bool will_overwrite = false;
 	for(i = 0; i < EFFECT_COUNT; i++)
@@ -1840,35 +1858,43 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 
 		effect1 = sp1.effectid[i];
 		effect2 = sp2.effectid[i];
-		
-		// same effect in both spells?
+
+		/*
+		Quick check, are the effects the same, if so then
+		keep going else ignore it for stacking purposes.
+		*/
 		if(effect1 != effect2)
 			continue;
-		
-		//special handling for HP buffs (DoTs and HoTs).
-		//consider the resist type of the spell, and let one dot stack from each resist type
-		if(effect1 == SE_CurrentHP) {
-			if(sp1.resisttype != sp2.resisttype) {
-				mlog(SPELLS__STACKING, "Spell %s is a resist type %d HP spell and Spell %s is a resist type %d HP spell. Not comparing.",
-					sp1.name, sp1.resisttype, sp2.name, sp2.resisttype);
+
+		/*
+		If target is a npc and caster1 and caster2 exist
+		If Caster1 isn't the same as Caster2 and the effect is a DoT then ignore it.
+		*/
+		if(IsNPC() && caster1 && caster2 && caster1 != caster2) {
+			if(effect1 == SE_CurrentHP && sp1_detrimental && sp2_detrimental) {
 				continue;
+				mlog(SPELLS__STACKING, "Both casters exist and are not the same, the effect is a detrimental dot, moving on");
 			}
-			//else, same resist type, standard rules apply
+		}
+
+		/*
+		If the effects are the same and
+		sp1 = beneficial & sp2 = detrimental or
+		sp1 = detrimental & sp2 = beneficial
+		Then this effect should be ignored for stacking purposes.
+		*/
+		if(sp_det_mismatch)
+		{
+			mlog(SPELLS__STACKING, "The effects are the same but the spell types are not, passing the effect");
+			continue;
 		}
 		
-		// a detrimental spell will overwrite a good spell already worn
-		// but not vice versa...
-		if(sp1_detrimental && !sp2_detrimental) {
-			mlog(SPELLS__STACKING, "Spell %s is detrimental but %s is not. Preventing spell %s from landing.",
-				sp1.name, sp2.name, sp1.name);
-			return(-1);
-		}
-		if(!sp1_detrimental && sp2_detrimental) {
-			mlog(SPELLS__STACKING, "Spell %s is detrimental but %s is not. We will overwrite %s if there are no other conflicts.",
-				sp2.name, sp1.name, sp1.name);
-			//we dont return here... a better value on just one effect dosent mean they are
-			//all better...
-			will_overwrite = true;
+		/*
+		If the spells aren't the same
+		and the effect is a dot we can go ahead and stack it
+		*/
+		if(effect1 == SE_CurrentHP && spellid1 != spellid2 && sp1_detrimental && sp2_detrimental) {
+			mlog(SPELLS__STACKING, "The spells are not the same and it is a detrimental dot, passing");
 			continue;
 		}
 
@@ -1900,6 +1926,7 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 		}
 		//we dont return here... a better value on this one effect dosent mean they are
 		//all better...
+
 		mlog(SPELLS__STACKING, "Spell %s (value %d) is not as good as %s (value %d). We will overwrite %s if there are no other conflicts.",
 			sp1.name, sp1_value, sp2.name, sp2_value, sp1.name);
 		will_overwrite = true;
@@ -1915,6 +1942,7 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 	mlog(SPELLS__STACKING, "Stacking code decided that %s is not affected by %s.", sp2.name, sp1.name);
 	return 0;
 }
+
 
 // returns the slot the buff was added to, -1 if it wasn't added due to
 // stacking problems, and -2 if this is not a buff
@@ -1955,7 +1983,7 @@ int Mob::AddBuff(Mob *caster, int16 spell_id, int duration)
 		if(curbuf.spellid != SPELL_UNKNOWN)
 		{
 			// there's a buff in this slot
-			ret = CheckStackConflict(curbuf.spellid, curbuf.casterlevel, spell_id, caster_level);
+			ret = CheckStackConflict(curbuf.spellid, curbuf.casterlevel, spell_id, caster_level, entity_list.GetMobID(curbuf.casterid), caster);
 			if(ret == -1) {	// stop the spell
 				mlog(SPELLS__BUFFS, "Adding buff %d failed: stacking prevented by spell %d in slot %d with caster level %d", spell_id, curbuf.spellid, buffslot, curbuf.casterlevel);
 				return -1;
@@ -2561,16 +2589,6 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 		if(SpecAttacks[UNSNAREABLE]) {
 			mlog(SPELLS__RESISTS, "We are immune to Snare spells.");
 			caster->Message_StringID(MT_Shout, IMMUNE_MOVEMENT);
-			return true;
-		}
-		
-		//this is a crap load of work to say "a movement speed increase cannot land if your rooted."
-		int8 buffslot = GetBuffSlotFromType(SE_MovementSpeed);
-		if((FindType(SE_Root) && IsEffectInSpell(spell_id, SE_MovementSpeed)) 
-			|| (buffslot!=255 && IsValidSpell(buffs[buffslot].spellid)
-			&& IsDetrimentalSpell(buffs[buffslot].spellid) && IsBeneficialSpell(spell_id)))
-		{
-			caster->Message_StringID(MT_Shout,CANNOT_AFFECT_PC);
 			return true;
 		}
 	}
