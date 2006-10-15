@@ -812,6 +812,8 @@ bool Database::LoadVariables_result(MYSQL_RES* result) {
 
 // Gets variable from 'variables' table
 bool Database::GetVariable(const char* varname, char* varvalue, int16 varvalue_len) {
+	varvalue[0] = '\0';
+	
 	LockMutex lock(&Mvarcache);
 	if (strlen(varname) <= 1)
 		return false;

@@ -2,15 +2,17 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
 ==10/15/2006
-FatherNitwit: (KLS) 
-FatherNitwit: (KLS) 
-FatherNitwit: (KLS) 
-FatherNitwit: (KLS) 
-FatherNitwit: (KLS) 
-FatherNitwit: (KLS) 
-FatherNitwit: (KLS) 
-FatherNitwit: (KLS) 
-FatherNitwit: (KLS) 
+FatherNitwit: (KLS) Fix for haste & slow issue on NPCs
+FatherNitwit: (KLS) Fixed faction not changing issue (caused by min/max sticking fix)
+FatherNitwit: (KLS) Changed con level code to be more accurate
+FatherNitwit: Made /pet attack range a rule (Pets:AttackCommandRange) default to 150.
+FatherNitwit: (KLS) Changed how consider and consider corpse is handled a bit, consider corpse should be more informative
+FatherNitwit: (KLS) Fixed bug with charged/stacked items on corpses.
+FatherNitwit: (KLS) Support for leaving naked corpses
+FatherNitwit: Added rules: Character:DeathExpLossLevel, Character:CorpseDecayTimeMS
+FatherNitwit: 	Character:LeaveNakedCorpses
+FatherNitwit: Replaced db variable 'leavecorpses' with rule Character:LeaveCorpses
+FatherNitwit: (KLS) hopefully fixing monk kill crash.
 FatherNitwit: (KLS) made it so you can snare things while they're rooted
 FatherNitwit: (KLS) made it so beneficial songs will stack with beneficial spells
 FatherNitwit: (KLS) made it so a beneficial effect and a detrimental of an effect don't conflict

@@ -62,7 +62,7 @@ public:
 	ServerLootItem_Struct* GetItem(int16 lootslot, ServerLootItem_Struct** bag_item_data = 0);
 	void	RemoveItem(int16 lootslot);
 	void	RemoveItem(ServerLootItem_Struct* item_data);
-	void	AddCash(int16 in_copper, int16 in_silver, int16 in_gold, int16 in_platinum);
+	void	SetCash(int16 in_copper, int16 in_silver, int16 in_gold, int16 in_platinum);
 	void	RemoveCash();
 	void	QueryLoot(Client* to);
 	int32	CountItems();

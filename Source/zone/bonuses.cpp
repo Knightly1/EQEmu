@@ -40,6 +40,7 @@ void Mob::CalcBonuses()
 	
 	CalcMaxHP();
 	CalcMaxMana();
+	SetAttackTimer();
 	
 	rooted = FindType(SE_Root);
 }

@@ -441,11 +441,15 @@ float Mob::_GetMovementSpeed(int mod) const {
 	}
 	
 	int movemod = spellbonuses.movementspeed + itembonuses.movementspeed + mod;
+	
+	if(movemod < -85) //cap it at moving very very slow
+		movemod = -85;
+	
 	if (movemod != 0)
 		speed_mod += float(movemod) / 100.0f;
 
 	if(speed_mod <= 0.0f)
-		return(0.0f);
+		return(0.0001f);
 
 	//runspeed cap.
 	if(GetClass() == BARD) {

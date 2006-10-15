@@ -369,12 +369,12 @@ XS(XS_Corpse_RemoveItem)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_Corpse_AddCash); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Corpse_AddCash)
+XS(XS_Corpse_SetCash); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Corpse_SetCash)
 {
 	dXSARGS;
 	if (items != 5)
-		Perl_croak(aTHX_ "Usage: Corpse::AddCash(THIS, in_copper, in_silver, in_gold, in_platinum)");
+		Perl_croak(aTHX_ "Usage: Corpse::SetCash(THIS, in_copper, in_silver, in_gold, in_platinum)");
 	{
 		Corpse *		THIS;
 		int16		in_copper = (int16)SvUV(ST(1));
@@ -391,7 +391,7 @@ XS(XS_Corpse_AddCash)
 		if(THIS == NULL)
 			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
-		THIS->AddCash(in_copper, in_silver, in_gold, in_platinum);
+		THIS->SetCash(in_copper, in_silver, in_gold, in_platinum);
 	}
 	XSRETURN_EMPTY;
 }
@@ -817,7 +817,7 @@ XS(boot_Corpse)
 		newXSproto(strcpy(buf, "AddItem"), XS_Corpse_AddItem, file, "$$$;$");
 		newXSproto(strcpy(buf, "GetWornItem"), XS_Corpse_GetWornItem, file, "$$");
 		newXSproto(strcpy(buf, "RemoveItem"), XS_Corpse_RemoveItem, file, "$$");
-		newXSproto(strcpy(buf, "AddCash"), XS_Corpse_AddCash, file, "$$$$$");
+		newXSproto(strcpy(buf, "SetCash"), XS_Corpse_SetCash, file, "$$$$$");
 		newXSproto(strcpy(buf, "RemoveCash"), XS_Corpse_RemoveCash, file, "$");
 		newXSproto(strcpy(buf, "CountItems"), XS_Corpse_CountItems, file, "$");
 		newXSproto(strcpy(buf, "Delete"), XS_Corpse_Delete, file, "$");

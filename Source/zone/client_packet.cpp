@@ -1316,34 +1316,35 @@ void Client::Handle_OP_ConsiderCorpse(const EQApplicationPacket *app)
 	Consider_Struct* conin = (Consider_Struct*)app->pBuffer;
 	Corpse* tcorpse = entity_list.GetCorpseByID(conin->targetid);
 	if (tcorpse && tcorpse->IsNPCCorpse()) {
-		Message(10, "This corpse regards you sadly. Noone asked what i wanted my tombstone to say!");
 		int32 min; int32 sec; int32 ttime;
 		if ((ttime = tcorpse->GetDecayTime()) != 0) {
 			sec = (ttime/1000)%60; // Total seconds
 			min = (ttime/60000)%60; // Total seconds / 60 drop .00
-			//Message(10,  "This corpse will decay in %i minutes, %i seconds.", min, sec);
 			char val1[20]={0};
 			char val2[20]={0};
 			Message_StringID(10,CORPSE_DECAY1,ConvertArray(min,val1),ConvertArray(sec,val2));
 		}
 		else {
 			Message_StringID(10,CORPSE_DECAY_NOW);
-			//Message(10,  "This corpse is waiting to expire.");
 		}
 	}
 	else if (tcorpse && tcorpse->IsPlayerCorpse()) {
-		Message(10, "This corpse glares at you threateningly! I told you that wasn't going to work");
-		int32 min; int32 sec; int32 ttime;
+		int32 day; int32 hour; int32 min; int32 sec; int32 ttime;
 		if ((ttime = tcorpse->GetDecayTime()) != 0) {
 			sec = (ttime/1000)%60; // Total seconds
-			min = (ttime/60000)%60; // Total seconds / 60 drop .00
-			//Message(10,  "This corpse will decay in %i minutes, %i seconds.", min, sec);
-			char val1[20]={0};
-			char val2[20]={0};
-			Message_StringID(10,CORPSE_DECAY1,ConvertArray(min,val1),ConvertArray(sec,val2));
+			min = (ttime/60000)%60; // Total seconds
+			hour = (ttime/3600000)%60; // Total hours
+			day = (ttime/86400000)%24; // Total Days
+			if(day)
+				Message(0, "This corpse will decay in %i days, %i hours, %i minutes and %i seconds.", day, hour, min, sec);
+			else if(hour)
+				Message(0, "This corpse will decay in %i hours, %i minutes and %i seconds.", hour, min, sec);
+			else
+				Message(0, "This corpse will decay in %i minutes and %i seconds.", min, sec);
+
+			Message(0, "This corpse %s be resurrected.", tcorpse->Rezzed()?"cannot":"can");
 		}
 		else {
-			//Message(10,  "This corpse is waiting to expire.");
 			Message_StringID(10,CORPSE_DECAY_NOW);
 		}
 	}
@@ -1379,7 +1380,16 @@ void Client::Handle_OP_Consider(const EQApplicationPacket *app)
 	{ 
 		if (GetFeigned()) 
 			con->faction = FACTION_INDIFFERENT; 
-	} 
+	}
+
+	if(!(con->faction == FACTION_SCOWLS))
+	{
+		if(tmob->IsNPC())
+		{
+			if(tmob->CastToNPC()->IsOnHatelist(this))
+				con->faction = FACTION_THREATENLY;
+		}
+	}
 
 	QueuePacket(outapp);
 	safe_delete(outapp);
@@ -4256,9 +4266,7 @@ void Client::Handle_OP_GroupFollow2(const EQApplicationPacket *app)
 			GroupJoin_Struct* outgj=(GroupJoin_Struct*)outapp->pBuffer;
 			strcpy(outgj->membername, inviter->GetName());
 			strcpy(outgj->yourname, inviter->GetName());
-			outgj->action = 9;
-printf("Initial group invite:\n");
-DumpPacket(outapp);
+			outgj->action = 8;
 			inviter->CastToClient()->QueuePacket(outapp);
 			safe_delete(outapp);
 		}
@@ -4269,10 +4277,9 @@ DumpPacket(outapp);
 		
 		if(!group->AddMember(this))
 			return;
+
 		group->SendUpdate(7,this);
-		group->SendUpdate(7,inviter);
 		group->SendHPPacketsTo(this);
-		
 	}
 	return;
 }
@@ -4523,7 +4530,7 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 			Message_StringID(10, CANNOT_WAKE, mypet->GetCleanName(), target->GetCleanName());
 			break;
 		}
-		if (mypet->GetHateTop()==0 && target != this && DistNoZ(*target) <= 100) {
+		if (mypet->GetHateTop()==0 && target != this && DistNoRootNoZ(*target) <= (RuleR(Pets, AttackCommandRange)*RuleR(Pets, AttackCommandRange))) {
 			zone->AddAggroMob();
 			mypet->AddToHateList(target, 1);
 			Message_StringID(10, PET_ATTACKING, mypet->GetCleanName(), target->GetCleanName());

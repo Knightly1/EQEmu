@@ -576,7 +576,7 @@ void  Client::SetFactionLevel(int32 char_id, int32 npc_id, int8 char_class, int8
 			}
 			else
 			{
-				if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], current_value, factionvalues)))
+				if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], current_value + npc_value[i], factionvalues)))
 				{
 					return;
 				}

@@ -38,6 +38,7 @@ using namespace std;
 #include "zone.h"
 #include "StringIDs.h"
 #include "../common/MiscFunctions.h"
+#include "../common/rulesys.h"
 
 #ifdef WIN32
 #define snprintf	_snprintf
@@ -1071,6 +1072,12 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	entity_list.RemoveFromTargets(this);
 	hate_list.RemoveEnt(this);
 	
+	if(isgrouped) {
+		Group *g = GetGroup();
+		if(g)
+			g->MemberZoned(this);
+	}
+	
 	//remove ourself from all proximities
 	ClearAllProximities();
 
@@ -1081,7 +1088,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	// figure out if they should lose exp
 	exploss = (int)(GetLevel() * (GetLevel() / 18.0) * 12000);
 
-	if( (GetLevel() < 9) || IsBecomeNPC() )
+	if( (GetLevel() < RuleI(Character, DeathExpLossLevel)) || IsBecomeNPC() )
 	{
 		exploss = 0;
 	}
@@ -1111,7 +1118,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	
 	// now we apply the exp loss, unmem their spells, and make a corpse
 	// unless they're a GM (or less than lvl 10
-	if(!GetGM() && GetLevel() > 9)
+	if(!GetGM())
 	{
 		if(exploss > 0) {
 			sint32 newexp = GetEXP();
@@ -1128,16 +1135,13 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 		//this generates a lot of 'updates' to the client that the client does not need
 		BuffFadeAll();
 		UnmemSpellAll(false);
-
-		// check db variable 'leavecorpses'
-		char tmp[20] = {0};
-		database.GetVariable("leavecorpses", tmp, 20);
-		int leavecorpses = atoi(tmp);
-		if(leavecorpses)
+		
+		if(RuleB(Character, LeaveCorpses))
 		{
 			// creating the corpse takes the cash/items off the player too
 			Corpse *new_corpse = new Corpse(this, exploss);
-			
+
+			char tmp[20];
 			database.GetVariable("ServerType", tmp, 9);
 			if(atoi(tmp)==1 && other->IsClient()){
 				char tmp2[10] = {0};
@@ -1236,12 +1240,6 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 	heading = 0;
 	
 	Save();
-	
-	if(isgrouped) {
-		Group *g = GetGroup();
-		if(g)
-			g->MemberZoned(this);
-	}
 	
 	//temp hack...
 	GoToBind();
