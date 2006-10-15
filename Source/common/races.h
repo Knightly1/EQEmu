@@ -21,23 +21,28 @@
 
 //theres a big list straight from the client below.
 
-#define HUMAN			  1
-#define BARBARIAN		  2
-#define ERUDITE			  3
-#define WOOD_ELF		  4
-#define HIGH_ELF		  5
-#define DARK_ELF		  6
-#define HALF_ELF		  7
-#define DWARF			  8
-#define TROLL			  9
-#define OGRE			 10
-#define HALFLING		 11
-#define GNOME			 12
-#define WEREWOLF		 14
-#define SKELETON		 60
-#define ELEMENTAL		 75
+#define HUMAN			1
+#define BARBARIAN		2
+#define ERUDITE			3
+#define WOOD_ELF		4
+#define HIGH_ELF		5
+#define DARK_ELF		6
+#define HALF_ELF		7
+#define DWARF			8
+#define TROLL			9
+#define OGRE			10
+#define HALFLING		11
+#define GNOME			12
+#define WEREWOLF		14
+#define WOLF			42
+#define BEAR			43
+#define SKELETON		60
+#define TIGER			63
+#define ELEMENTAL		75
+#define ALLIGATOR		91
 #define EYE_OF_ZOMM		108
 #define WOLF_ELEMENTAL	120
+#define INVISIBLE_MAN	127
 #define IKSAR			128
 #define VAHSHIR			130
 #define IKSAR_SKELETON	161

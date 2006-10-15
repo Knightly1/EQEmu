@@ -22,25 +22,17 @@
 #ifndef EMBPARSER_CPP
 #define EMBPARSER_CPP
 
-#ifdef WIN32
-#include <windows.h>
-#endif
-
 #ifdef EMBPERL
 
-#include "masterentity.h"
 #include "../common/debug.h"
+#include "masterentity.h"
 #include "features.h"
 #include "embparser.h"
 #include "questmgr.h"
 #include "command.h"
+#include "../common/MiscFunctions.h"
 
 #include <algorithm>
-
-#ifdef WIN32
-//borrow this from Wes... I like it
-extern char* itoa(int integer);
-#endif
 
 //these MUST be in the same order as the QuestEventID enum
 const char *QuestEventSubroutines[_LargestEventID] = {
@@ -50,6 +42,7 @@ const char *QuestEventSubroutines[_LargestEventID] = {
 	"EVENT_SPAWN",
 	"EVENT_ATTACK",
 	"EVENT_SLAY",
+	"EVENT_NPC_SLAY",
 	"EVENT_WAYPOINT",
 	"EVENT_TIMER",
 	"EVENT_SIGNAL",
@@ -118,7 +111,7 @@ void PerlembParser::ExportVar(const char * pkgprefix, const char * varname, unsi
 	}
 }
 
-void PerlembParser::ExportVar(const char * pkgprefix, const char * varname, double value) const
+void PerlembParser::ExportVar(const char * pkgprefix, const char * varname, float value) const
 {
 	if(!perl)
 		return;
@@ -198,6 +191,15 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 		return;
 	}
 	
+	int charid=0;
+	
+	if (mob && mob->IsClient()) {  // some events like waypoint and spawn don't have a player involved
+		charid=mob->CastToClient()->CharacterID();
+	} else {
+		charid=-npcmob->GetNPCTypeID();		// make char id negative npc id as a fudge
+	}
+
+	ExportVar(packagename.c_str(), "charid", charid);
 	
 //	packagename = GetPkgPrefix(npcid);
 
@@ -210,45 +212,41 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 		MYSQL_RES *result;
 		MYSQL_ROW row;
 //		char tmpname[64];
-		int charid=0;
-		
-			if (mob && mob->IsClient())  // some events like waypoint and spawn don't have a player involved
-			{
-					charid=mob->CastToClient()->CharacterID();
-			}
-
-		else
-		{
-			charid=-npcmob->GetNPCTypeID();		// make char id negative npc id as a fudge
-		}
-
-		ExportVar(packagename.c_str(),"charid",charid);
 
 		database.RunQuery(query, MakeAnyLenString(&query, 
-		  "SELECT name,value FROM quest_globals WHERE (npcid=%i || npcid=0) && (charid=%i || charid=0) && (zoneid=%i || zoneid=0) && expdate >= unix_timestamp(now())", 
+		  "SELECT name,value,expdate FROM quest_globals WHERE (npcid=%i || npcid=0) && (charid=%i || charid=0) && (zoneid=%i || zoneid=0)", 
 		     npcmob->GetNPCTypeID(),charid,zone->GetZoneID()), errbuf, &result);
-//		printf("%s\n",query);
-//		printf("%s\n",errbuf);
+		bool run_delete = false;
+		uint32 now = Timer::GetTimeSeconds();
 		if (result)
 		{
-//			printf("Loading global variables for %s\n",npcmob->GetName());
 			while ((row = mysql_fetch_row(result)))
 			{
 //				printf("$%s = %s\n",row[0],row[1]);
+				uint32 expdate = atoul(row[2]);
+				if(expdate > now)
+					run_delete = true;
 				ExportVar(packagename.c_str(), row[0], row[1]);
 			}
 			mysql_free_result(result);		
 		}
 		safe_delete_array(query);
+		
+		if(run_delete) {
+			database.RunQuery(query, MakeAnyLenString(&query, 
+		  "DELETE FROM quest_globals WHERE expdate < %lu", 
+		     now), errbuf);
+			safe_delete_array(query);
+		}
 	}
 
 
 	int8 fac = 0;
 	if (mob && mob->IsClient()) {
-		ExportVar(packagename.c_str(), "uguildid", mob->CastToClient()->GuildDBID());
+		ExportVar(packagename.c_str(), "uguild_id", mob->CastToClient()->GuildID());
 		ExportVar(packagename.c_str(), "uguildrank", mob->CastToClient()->GuildRank());
 		ExportVar(packagename.c_str(), "status", mob->CastToClient()->Admin()); 
-		ExportVar(packagename.c_str(), "cumflag", mob->CastToClient()->flag[50]); 
+//		ExportVar(packagename.c_str(), "cumflag", mob->CastToClient()->flag[50]); 
 	}
 
 	if (mob && npcmob && mob->IsClient() && npcmob->IsNPC()) {
@@ -284,7 +282,8 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 		ExportVar(packagename.c_str(), "mlevel", npcmob->GetLevel()); 
 //end Myra
 // hp event
-		ExportVar(packagename.c_str(), "hpevent", npcmob->GetNextHPEvent()); 
+		ExportVar(packagename.c_str(), "hpevent", npcmob->GetNextHPEvent());
+		ExportVar(packagename.c_str(), "inchpevent", npcmob->GetNextIncHPEvent()); 
 		ExportVar(packagename.c_str(), "hpratio",npcmob->GetHPRatio());
 // sandy bug fix
 		ExportVar(packagename.c_str(), "x", npcmob->GetX() ); 
@@ -385,6 +384,10 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 			ExportVar(packagename.c_str(), "signal", data);
 			break;
 		}
+		case EVENT_NPC_SLAY: {
+			ExportVar(packagename.c_str(), "killed", mob->GetNPCTypeID());
+			break;
+		}
 		//nothing special about these events
 		case EVENT_DEATH:
 		case EVENT_SPAWN:
@@ -411,15 +414,19 @@ void PerlembParser::ReloadQuests() {
 	
 	command_clear_perl();
 	
-	if(perl != NULL)
-		delete perl;
 	try {
-		perl = new Embperl;
+		if(perl == NULL)
+			perl = new Embperl;
+		else
+			perl->Reinit();
 		map_funs();
 	}
 	catch(const char * msg) {
-		perl = NULL;
-		LogFile->write(EQEMuLog::Status, "Error initializing perlembed: %s", msg);
+		if(perl != NULL) {
+			delete perl;
+			perl = NULL;
+		}
+		LogFile->write(EQEMuLog::Status, "Error re-initializing perlembed: %s", msg);
 		throw msg;
 	}
 	try {
@@ -789,9 +796,9 @@ void PerlembParser::map_funs()
 "sub castspell{push(@cmd_queue,{func=>'castspell',args=>join(',',@_)});}"
 "sub selfcast{push(@cmd_queue,{func=>'selfcast',args=>join(',',@_)});}"
 "sub depop{push(@cmd_queue,{func=>'depop'});}"
-"sub cumflag{push(@cmd_queue,{func=>'cumflag'});}"
-"sub flagnpc{push(@cmd_queue,{func=>'flagnpc',args=>join(',',@_)});}"
-"sub flagclient{push(@cmd_queue,{func=>'flagclient',args=>join(',',@_)});}"
+//"sub cumflag{push(@cmd_queue,{func=>'cumflag'});}"
+//"sub flagnpc{push(@cmd_queue,{func=>'flagnpc',args=>join(',',@_)});}"
+//"sub flagclient{push(@cmd_queue,{func=>'flagclient',args=>join(',',@_)});}"
 "sub exp{push(@cmd_queue,{func=>'exp',args=>join(',',@_)});}"
 "sub level{push(@cmd_queue,{func=>'level',args=>join(',',@_)});}"
 "sub safemove{push(@cmd_queue,{func=>'safemove'});}"
@@ -834,6 +841,7 @@ void PerlembParser::map_funs()
 "sub save{push(@cmd_queue,{func=>'save',args=>join(',',@_)});}"
 "sub linkitem{push(@cmd_queue,{func=>'linkitem',args=>join(',',@_)});}"
 //end Myra
+"sub sethp{push(@cmd_queue,{func=>'sethp',args=>join(',',@_)});}"
 "sub signal{push(@cmd_queue,{func=>'signal',args=>join(',',@_)});}"
 // SCORPIOUS2K - add perl versions qglobal commands
 "sub setglobal{push(@cmd_queue,{func=>'setglobal',args=>join(',',@_)});}"
@@ -841,6 +849,7 @@ void PerlembParser::map_funs()
 "sub delglobal{push(@cmd_queue,{func=>'delglobal',args=>join(',',@_)});}"
 // event hp
 "sub setnexthpevent{push(@cmd_queue,{func=>'setnexthpevent',args=>join(',',@_)});}"
+"sub setnextinchpevent{push(@cmd_queue,{func=>'setnextinchpevent',args=>join(',',@_)});}"
 "sub respawn{push(@cmd_queue,{func=>'respawn',args=>join(',',@_)});}"
 // new wandering commands
 "sub stop{push(@cmd_queue,{func=>'stop',args=>join(',',@_)});}"
@@ -862,6 +871,8 @@ void PerlembParser::map_funs()
 "sub pathto{push(@cmd_queue,{func=>'pathto',args=>join(',',@_)});}"
 "sub spawn_condition{push(@cmd_queue,{func=>'spawn_condition',args=>join(',',@_)});}"
 "sub toggle_spawn_event{push(@cmd_queue,{func=>'toggle_spawn_event',args=>join(',',@_)});}"
+"sub set_zone_flag{push(@cmd_queue,{func=>'set_zone_flag',args=>join(',',@_)});}"
+"sub clear_zone_flag{push(@cmd_queue,{func=>'clear_zone_flag',args=>join(',',@_)});}"
 "package main;"
 "}"
 );//eval

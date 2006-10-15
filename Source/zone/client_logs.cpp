@@ -124,6 +124,17 @@ void ClientLogs::EQEmuIO_fmt(EQEMuLog::LogIDs id, const char *fmt, va_list ap) {
 	client_logs.msg(id, _buffer);
 }
 
+void ClientLogs::EQEmuIO_pva(EQEMuLog::LogIDs id, const char *prefix, const char *fmt, va_list ap) {
+	if(fmt[0] == '\n' || fmt[0] == '\r')
+		return;	//skip new lines...
+	char *buf = _buffer;
+	int plen = snprintf(buf, MAX_CLIENT_LOG_MESSAGE_LENGTH, prefix);
+	buf += plen;
+	vsnprintf(buf, MAX_CLIENT_LOG_MESSAGE_LENGTH-plen, fmt, ap);
+	_buffer[MAX_CLIENT_LOG_MESSAGE_LENGTH] = '\0';
+	client_logs.msg(id, _buffer);
+}
+
 #endif //CLIENT_LOGS
 
 

@@ -19,6 +19,7 @@
 #include "../common/types.h"
 #include "entity.h"
 #include "masterentity.h"
+#include "../common/MiscFunctions.h"
 
 /*
 
@@ -35,6 +36,7 @@ CREATE TABLE traps (
   effect int(11) NOT NULL default '0',
   effectvalue int(11) NOT NULL default '0',
   effectvalue2 int(11) NOT NULL default '0',
+  message varcahr(200) NOT NULL;
   skill int(11) NOT NULL default '0',
   spawnchance int(11) NOT NULL default '0',
   PRIMARY KEY  (id)
@@ -96,23 +98,45 @@ void Trap::Trigger(Mob* trigger)
 	switch (effect)
 	{
 		case 0:
-			entity_list.MessageClose(trigger,false,100,13,"%s triggers a trap!",trigger->GetName());
-			if ((tmp = database.GetNPCType(TRAP_NPC_TYPE)))
+			if(!message[0])
 			{
+				entity_list.MessageClose(trigger,false,100,13,"%s triggers a trap!",trigger->GetName());
+			}
+			else
+			{
+				entity_list.MessageClose(trigger,false,100,13,"%s",message.c_str());
+			}
+
+			if ((tmp = database.GetNPCType(effectvalue)))			{
 				NPCType tmp2(*tmp);
 				tmp2.level = trigger->GetLevel();
 				NPC* new_npc = new NPC(&tmp2, 0, x, y, z, 0);
 				entity_list.AddNPC(new_npc);
-				new_npc->SpellFinished(effectvalue,trigger->GetID(),10,0);
+				new_npc->SpellFinished(effectvalue2,trigger,10,0);
 				new_npc->Depop();
 			}
 			break;
 		case 1:
-			entity_list.MessageClose(trigger,false,effectvalue,13,"A loud alarm rings out through the air...");
-			entity_list.SendAlarm(this,trigger);
-			break;
+			if (!message[0])
+			{
+				entity_list.MessageClose(trigger,false,effectvalue,13,"A loud alarm rings out through the air...");
+			}
+			else
+			{
+				entity_list.MessageClose(trigger,false,effectvalue,13,"%s",message.c_str());
+			}
+
+			entity_list.SendAlarm(this,trigger,effectvalue2);			break;
 		case 2:
-			entity_list.MessageClose(trigger,false,100,13,"The air shimmers...");
+			if (!message[0])
+			{
+				entity_list.MessageClose(trigger,false,100,13,"The air shimmers...");
+			}
+			else
+			{
+				entity_list.MessageClose(trigger,false,100,13,"%s",message.c_str());
+			}
+
 			for (i = 0; i < effectvalue2; i++)
 			{
 				if ((tmp = database.GetNPCType(effectvalue)))
@@ -125,7 +149,15 @@ void Trap::Trigger(Mob* trigger)
 			}
 			break;
 		case 3:
-			entity_list.MessageClose(trigger,false,100,13,"A bandit leaps out from behind a tree!");
+			if (!message[0])
+			{
+				entity_list.MessageClose(trigger,false,100,13,"A bandit leaps out from behind a tree!");
+			}
+			else
+			{
+				entity_list.MessageClose(trigger,false,100,13,"%s",message.c_str());
+			}
+
 			for (i = 0; i < effectvalue2; i++)
 			{
 				if ((tmp = database.GetNPCType(effectvalue)))
@@ -137,6 +169,17 @@ void Trap::Trigger(Mob* trigger)
 				}
 			}
 			break;
+		case 4:
+			if (!message[0])
+			{
+				entity_list.MessageClose(trigger,false,100,13,"%s triggers a trap!",trigger->GetName());
+			}
+			else
+			{
+				entity_list.MessageClose(trigger,false,100,13,"%s",message.c_str());
+			}
+			trigger->Message(13,"A trap hits you for %i points of damage.",effectvalue);
+			trigger->SetHP(trigger->GetHP() - effectvalue);	
 	}
 	respawn_timer.Start(600000);
 	chkarea_timer.Disable();
@@ -206,7 +249,7 @@ Mob* EntityList::GetTrapTrigger(Trap* trap) {
 }
 
 //todo: rewrite this to not need direct access to trap members.
-bool Database::LoadTraps(const char* zonename) {
+bool ZoneDatabase::LoadTraps(const char* zonename) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -215,7 +258,7 @@ bool Database::LoadTraps(const char* zonename) {
 	//	int char_num = 0;
 	unsigned long* lengths;
 
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id,x,y,z,effect,effectvalue,effectvalue2,skill,spawnchance,maxzdiff,radius,chance FROM traps WHERE zone='%s'", zonename), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id,x,y,z,effect,effectvalue,effectvalue2,skill,spawnchance,maxzdiff,radius,chance,message FROM traps WHERE zone='%s'", zonename), errbuf, &result)) {
 		safe_delete_array(query);
 		while ((row = mysql_fetch_row(result)))
 		{
@@ -235,6 +278,7 @@ bool Database::LoadTraps(const char* zonename) {
 				trap->maxzdiff = atof(row[9]);
 				trap->radius = atof(row[10]);
 				trap->chance = atoi(row[11]);
+				trap->message = row[12];
 				entity_list.AddTrap(trap);
 			}
 		}
@@ -248,6 +292,3 @@ bool Database::LoadTraps(const char* zonename) {
 
 	return true;
 }
-
-
-

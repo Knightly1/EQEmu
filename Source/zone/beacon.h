@@ -30,17 +30,16 @@ public:
 	Beacon::Beacon(Mob *at_mob, int lifetime);
 	Beacon::~Beacon();
 	
-	bool	IsBeacon()			{ return true; }
+	bool	IsBeacon()			const { return true; }
 	bool	Process();
 	virtual void	Depop(bool not_used = true)	{ remove_me = true; }
-	void AELocationSpell(Mob *caster, float range, int16 cast_spell_id);
+	void AELocationSpell(Mob *caster, int16 cast_spell_id);
 
 protected:
 	Timer remove_timer;
 	bool remove_me;
 
 	int16 spell_id;
-	float spell_range;
 	int spell_iterations;
 	Timer spell_timer;
 

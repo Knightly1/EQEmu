@@ -34,7 +34,7 @@ public:
 	Spawn2(int32 spawn2_id, int32 spawngroup_id, 
 		float x, float y, float z, float heading, 
 		int32 respawn, int32 variance, 
-		int32 timeleft = 0, int16 grid = 0,
+		int32 timeleft = 0, int32 grid = 0,
 		uint16 cond_id = SC_AlwaysEnabled, sint16 min_value = 0);
 	~Spawn2();
 
@@ -71,7 +71,7 @@ private:
 	float	z;
 	float	heading;
 	int32	variance_;
-	int16	grid_;
+	int32	grid_;
 	uint16	condition_id;
 	sint16	condition_min_value;
 };

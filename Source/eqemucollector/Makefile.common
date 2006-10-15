@@ -2,10 +2,11 @@ OBJS=eqemucollector.o .obj/EQStream.o .obj/EQPacket.o .obj/misc.o .obj/CRC16.o \
   EQStreamPair.o PluginManager.o ../common/SharedLibrary.o .obj/Mutex.o \
   .obj/unix.o StreamPairManager.o .obj/timeoutmgr.o .obj/timer.o \
   climain.o PacketHandler.o .obj/opcodemgr.o ../common/emu_opcodes.o \
-  ../common/Condition.o
+  ../common/Condition.o ../common/packet_dump.o ../common/packet_functions.o \
+  .obj/BasePacket.o .obj/logsys.o .obj/debug.o
 
 PLUGS=dump_packet.so dump_packet_header.so dump_packetfiles.so watch_packet.so \
-   dump_unknowns.so dump_pf_privacy.so
+   dump_unknowns.so dump_pf_privacy.so dump_messages.so
 
 all: eqemucollector plugins
 
@@ -14,18 +15,25 @@ eqemucollector: $(OBJS)
 
 plugins: $(PLUGS)
 
+testme.so: testme.cpp .obj/MiscFunctions.o
+	g++ $(CXXFLAGS) -fPIC -shared -Wl,-soname,$@ -lc -o $@ $^
+
 dump_packetfiles.so: dump_packetfiles.cpp .obj/packetfile.o
-	g++ $(CXXFLAGS) -shared -Wl,-soname,$@ -o $@ $^
+	g++ $(CXXFLAGS) -fPIC -shared -Wl,-soname,$@ -lc -o $@ $^
 
 dump_pf_privacy.so: dump_pf_privacy.cpp .obj/packetfile.o
-	g++ $(CXXFLAGS) -shared -Wl,-soname,$@ -o $@ $^
+	g++ $(CXXFLAGS) -fPIC -shared -Wl,-soname,$@ -lc -o $@ $^
+
+dump_pp.so: dump_pp.cpp
+	g++ $(CXXFLAGS) -fPIC -I/usr/include/mysql  -shared -Wl,-soname,$@ -o $@ $^ -L/usr/include/mysql -lmysqlclient -lz -lcrypt -lnsl -lm -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv
+
 
 clean:
 	rm -f eqemucollector $(OBJS) $(PLUGS)
 
 #general plugin rule
 %.so: %.cpp PacketHandler.h
-	g++ $(CXXFLAGS) -shared -Wl,-soname,$@ -o $@ $< 
+	g++ $(CXXFLAGS) -fPIC -shared -Wl,-soname,$@ -o $@ $< 
 
 
 .obj/%.o: ../common/%.cpp ../common/%.h

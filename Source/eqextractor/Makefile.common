@@ -4,12 +4,21 @@ PFOBJS=.obj/Mutex.o .obj/unix.o .obj/packetfile.o \
 
 #objects for EQ extractor
 EEOBJS=eqextractor.o $(PFOBJS) ../common/dbcore.o ExtractCollector.o \
-  Extractors.o ExtractDB.o ../common/MiscFunctions.o Explorers.o \
-  StructExplorer.o
+  ExtractDB.o ../common/MiscFunctions.o Explorers.o ../common/misc.o \
+  StructExplorer.o ../common/packet_dump.o ../common/buildfile.o \
+  patches/versions.o patches/patch_021505.o patches/patch_current.o \
+  patches/patch_local.o patches/patch_121504.o patches/patch_051105.o \
+  patches/patch_Titanium.o patches/patch_62.o
 
-all: eqextractor pf2text
+all: eqextractor pf2text catalogpf restamppf
 
-pf2text: pf2text.o $(PFOBJS)
+pf2text: pf2text.o $(PFOBJS) ../common/eqstrmgr.o
+	g++ $(LDFLAGS) -o $@ $^
+
+catalogpf: catalogpf.o $(PFOBJS)
+	g++ $(LDFLAGS) -o $@ $^
+
+restamppf: restamppf.o $(PFOBJS)
 	g++ $(LDFLAGS) -o $@ $^
 
 eqextractor: $(EEOBJS)
@@ -24,10 +33,10 @@ clean:
 
 .obj/%.o: ../common/%.cpp ../common/%.h
 	mkdir -p .obj
-	g++ $(CXXFLAGS) -c $< -o $@
+	$(CC) $(CXXFLAGS) -c $< -o $@
 
 %.o: %.cpp %.h
 	mkdir -p .obj
-	g++ $(CXXFLAGS) -c $< -o $@
+	$(CC) $(CXXFLAGS) -c $< -o $@
 
 

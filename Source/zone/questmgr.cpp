@@ -63,7 +63,7 @@ using namespace std;
 #include "../common/skills.h"
 #include "../common/classes.h"
 #include "../common/races.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "../common/files.h"
 #include "spdat.h"
 #include "../common/packet_functions.h"
@@ -71,8 +71,9 @@ using namespace std;
 #include "zone.h"
 #include "parser.h"
 #include "event_codes.h"
+#include "guild_mgr.h"
 
-extern Database database;
+
 extern Zone* zone;
 extern WorldServer worldserver;
 extern EntityList entity_list;
@@ -267,14 +268,22 @@ void QuestManager::setstat(int stat, int value) {
 		initiator->SetStats(stat, value);
 }
 
+void QuestManager::incstat(int stat, int value) { //old setstat command aza
+	if (initiator) 
+		initiator->IncStats(stat, value);
+}
+
 void QuestManager::castspell(int spell_id, int target_id) {
-	if (npc)
-		npc->SpellFinished(spell_id, target_id);	
+	if (npc) {
+		Mob *tgt = entity_list.GetMob(target_id);
+		if(tgt != NULL)
+			npc->SpellFinished(spell_id, tgt);
+	}
 }
 
 void QuestManager::selfcast(int spell_id) {
 	if (initiator)
-		initiator->SpellFinished(spell_id, initiator->GetID(),10,0);
+		initiator->SpellFinished(spell_id, initiator,10,0);
 }
 
 void QuestManager::addloot(int item_id, int charges) {
@@ -292,7 +301,7 @@ void QuestManager::Zone(const char *zone_name) {
 		ztz->requested_zone_id = database.GetZoneID(zone_name);
 		ztz->admin = initiator->Admin();
 		strcpy(ztz->name, initiator->GetName());
-		ztz->guild_id = initiator->GuildDBID();
+		ztz->guild_id = initiator->GuildID();
 		ztz->ignorerestrictions = 3;
 		worldserver.SendPacket(pack);
 		safe_delete(pack);				
@@ -303,9 +312,8 @@ void QuestManager::settimer(const char *timer_name, int seconds) {
 	list<QuestTimer>::iterator cur = QTimerList.begin(), end;
 	
 	end = QTimerList.end();
-	while (cur != end)
-	{
-		if (cur->name == timer_name) {
+	while (cur != end) {
+		if (cur->mob == npc && cur->name == timer_name) {
 			cur->mob = npc;
 			cur->Timer_.Enable();
 			cur->Timer_.Start(seconds * 1000, false);
@@ -331,7 +339,7 @@ void QuestManager::stoptimer(const char *timer_name) {
 	end = QTimerList.end();
 	while (cur != end)
 	{
-		if(cur->name == timer_name)
+		if(cur->mob == npc && cur->name == timer_name)
 		{
 			QTimerList.erase(cur);
 			return;
@@ -388,6 +396,7 @@ void QuestManager::sfollow() {
 	npc->SetFollowID(0);
 }
 
+/*
 void QuestManager::cumflag() {
 	npc->flag[50] = npc->flag[50] + 1;
 }
@@ -411,7 +420,7 @@ void QuestManager::flagcheck(int32 flag_to_check, int32 flag_to_set) {
 //				if (initiator->flag[atoi(arglist[0])] != 0)
 //					if (initiator) initiator->flag[atoi(arg1)] = 0;
 
-}
+}*/
 
 void QuestManager::changedeity(int diety_id) {
 	//Cofruben:-Changes the deity.
@@ -449,7 +458,7 @@ bool QuestManager::isdisctome(int item_id) {
 		return(false);
 	}
 	
-	if(item->ItemClass != ItemClassCommon || item->Common.ItemType != ItemTypeSpell) {
+	if(item->ItemClass != ItemClassCommon || item->ItemType != ItemTypeSpell) {
 		return(false);
 	}
 	
@@ -472,11 +481,11 @@ bool QuestManager::isdisctome(int item_id) {
 	cbit |= 1 << (ENCHANTER-1);
 	cbit |= 1 << (MAGICIAN-1);
 	cbit |= 1 << (NECROMANCER-1);
-	if(item->Common.Classes & cbit) {
+	if(item->Classes & cbit) {
 		return(false);
 	}
 	
-	int32 spell_id = item->Common.Scroll.Effect;
+	int32 spell_id = item->Scroll.Effect;
 	if(!IsValidSpell(spell_id)) {
 		return(false);
 	}
@@ -502,7 +511,7 @@ void QuestManager::safemove() {
 
 void QuestManager::rain(int weather) {
 	zone->zone_weather = weather;
-	EQZonePacket* outapp = new EQZonePacket(OP_Weather, 8);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 	*((int32*) &outapp->pBuffer[4]) = (int32) weather; // Why not just use 0x01/2/3?
 	entity_list.QueueClients(npc, outapp);
 	safe_delete(outapp);
@@ -510,7 +519,7 @@ void QuestManager::rain(int weather) {
 
 void QuestManager::snow(int weather) {
 	zone->zone_weather = weather + 1;
-	EQZonePacket* outapp = new EQZonePacket(OP_Weather, 8);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 	outapp->pBuffer[0] = 0x01;
 	*((int32*) &outapp->pBuffer[4]) = (int32)weather;
 	entity_list.QueueClients(initiator, outapp);
@@ -551,7 +560,7 @@ void QuestManager::permagender(int gender_id) {
 
 void QuestManager::scribespells() {
  	//Cofruben:-Scribe spells for user up to his actual level. 
-	int book_slot;
+	int16 book_slot;
 	int16 curspell;
 	for(curspell = 0, book_slot = 0; curspell < SPDAT_RECORDS && book_slot < MAX_PP_SPELLBOOK; curspell++)
 	{
@@ -567,8 +576,13 @@ void QuestManager::scribespells() {
 	}
 }
 
+void QuestManager::unscribespells() {
+	//aza: unscribes all spells of the user
+	initiator->UnscribeSpellAll();
+	}
+
 void QuestManager::givecash(int copper, int silver, int gold, int platinum) {
-	EQZonePacket* outapp = new EQZonePacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct)); 
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct)); 
 	moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer; 
 	d->response      = 1; 
 	d->unknown1      = 0x5a; 
@@ -576,57 +590,52 @@ void QuestManager::givecash(int copper, int silver, int gold, int platinum) {
 	d->unknown3      = 0; 
 	if (initiator && initiator->IsClient())
 	{
-	d->copper      = copper; 
-	d->silver      = silver; 
-	d->gold         = gold; 
-	d->platinum      = platinum; 
-	initiator->AddMoneyToPP(d->copper, d->silver, d->gold, d->platinum,true); 
-	initiator->QueuePacket(outapp);
-	string tmp;
-	if (d->platinum>0){
-		tmp = "You receive ";
-		tmp += d->platinum;
-		tmp += " plat"; 
-	}
-	if (d->gold>0){
-		if (tmp.length()==0){
+		d->copper      = copper; 
+		d->silver      = silver; 
+		d->gold         = gold; 
+		d->platinum      = platinum; 
+		initiator->AddMoneyToPP(d->copper, d->silver, d->gold, d->platinum,true); 
+		initiator->QueuePacket(outapp);
+		
+		string tmp;
+		if (d->platinum>0){
 			tmp = "You receive ";
-			tmp += d->gold;
+			tmp += itoa(d->platinum);
+			tmp += " plat"; 
+		}
+		if (d->gold>0){
+			if (tmp.length()==0){
+				tmp = "You receive ";
+			}
+			else{
+				tmp += ",";
+			}
+			tmp += itoa(d->gold);
 			tmp += " gold";
 		}
-		else{
-			tmp += ",";
-			tmp += d->gold;
-			tmp += " gold";
-		}
-	}
-	if(d->silver>0){
-		if (tmp.length()==0){
-			tmp = "You receive ";
-			tmp += d->silver;
+		if(d->silver>0){
+			if (tmp.length()==0){
+				tmp = "You receive ";
+			}
+			else{
+				tmp += ",";
+			}
+			tmp += itoa(d->silver);
 			tmp += " silver";
 		}
-		else{
-			tmp += ",";
-			tmp += d->silver;
-			tmp += " silver";
-		}
-	}
-	if(d->copper>0){
-		if (tmp.length()==0){
-			tmp = "You receive ";
-			tmp += d->copper;
+		if(d->copper>0){
+			if (tmp.length()==0){
+				tmp = "You receive ";
+			}
+			else{
+				tmp += ",";
+			}
+			tmp += itoa(d->copper);
 			tmp += " copper";
 		}
-		else{
-			tmp += ",";
-			tmp += d->copper;
-			tmp += " copper";
-		}
-	}
-	tmp += " pieces.";
-	if (initiator) 
-		initiator->Message(MT_OOC,tmp.c_str());
+		tmp += " pieces.";
+		if (initiator) 
+			initiator->Message(MT_OOC,tmp.c_str());
 	}
 	safe_delete(outapp);
 }
@@ -735,8 +744,8 @@ void QuestManager::faction(int faction_id, int faction_value) {
 			initiator->SetFactionLevel2(
 				initiator->CharacterID(), 
 				faction_id, 
-				initiator->GetClass(), 
-				initiator->GetRace(), 
+				initiator->GetBaseClass(), 
+				initiator->GetBaseRace(), 
 				initiator->GetDeity(), 
 				faction_value); 
 			
@@ -747,15 +756,15 @@ void QuestManager::faction(int faction_id, int faction_value) {
 void QuestManager::setsky(uint8 new_sky) {
 	if (zone)
 		zone->newzone_data.sky = new_sky;
-	EQZonePacket* outapp = new EQZonePacket(OP_NewZone, sizeof(NewZone_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
 	memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 	entity_list.QueueClients(initiator, outapp);
 	safe_delete(outapp);
 }
 
 void QuestManager::setguild(int32 new_guild_id, int8 new_rank) {
-	if (initiator && initiator->IsClient()){
-		initiator->SetGuild(new_guild_id, new_rank);
+	if (initiator && initiator->IsClient()) {
+		guild_mgr.SetGuild(initiator->CharacterID(), new_guild_id, new_rank);
 	}
 }
 
@@ -892,8 +901,8 @@ void QuestManager::setglobal(const char *varname, const char *newvalue, int opti
 
 	// clean up expired vars and get rid of the one we're going to set if there
 	database.RunQuery(query, MakeAnyLenString(&query, 
-		"DELETE FROM quest_globals WHERE expdate < %i || (name='%s' && (charid=0 || (npcid=%i && charid=%i && zoneid=%i)))"
-		,Timer::GetCurrentTime(),varname,qgNpcid,qgCharid,qgZoneid), errbuf);
+		"DELETE FROM quest_globals WHERE expdate < %i || (name='%s' && npcid=%i && charid=%i && zoneid=%i))"
+		,Timer::GetTimeSeconds(),varname,qgNpcid,qgCharid,qgZoneid), errbuf);
 	safe_delete_array(query);
 	
 	//NOTE: this should be escaping the contents of arglist
@@ -918,14 +927,10 @@ void QuestManager::targlobal(const char *varname, const char *value, const char 
 	//MYSQL_ROW row;
 	// clean up expired vars and get rid of the one we're going to set if there
 	database.RunQuery(query, MakeAnyLenString(&query, 
-		"DELETE FROM quest_globals WHERE expdate < %i || (name='%s' && (charid=0 || (npcid=%i && charid=%i && zoneid=%i)))"
-		,Timer::GetCurrentTime(),varname,qgNpcid,qgCharid,qgZoneid), errbuf, &result);
-	if (query)
-	{
-		safe_delete_array(query);
-		query=0;
-	}
-	mysql_free_result(result);
+		"DELETE FROM quest_globals WHERE expdate < %i || (name='%s' && npcid=%i && charid=%i && zoneid=%i))"
+		,Timer::GetTimeSeconds(),varname,qgNpcid,qgCharid,qgZoneid), errbuf);
+	safe_delete_array(query);
+	
 	if (!database.RunQuery(query, MakeAnyLenString(&query, 
 	  "INSERT INTO quest_globals (charid,npcid,zoneid,name,value,expdate) VALUES (%i,%i,%i,'%s','%s',unix_timestamp(now())+%i)",
 	  qgCharid,qgNpcid,qgZoneid,varname,value,
@@ -949,7 +954,7 @@ void QuestManager::delglobal(const char *varname) {
 	//MYSQL_ROW row;
 	int qgZoneid=zone->GetZoneID();
 	int qgCharid=0;
-	int qgNpcid=npc->GetID();
+	int qgNpcid=npc->GetNPCTypeID();
 	if (initiator && initiator->IsClient())  // some events like waypoint and spawn don't have a player involved
 	{
 		qgCharid=initiator->CharacterID();
@@ -960,7 +965,7 @@ void QuestManager::delglobal(const char *varname) {
 		qgCharid=-qgNpcid;		// make char id negative npc id as a fudge
 	}
 	if (!database.RunQuery(query, 
-	  MakeAnyLenString(&query, "DELETE FROM quest_globals WHERE name='%s' && (npcid=0 || charid=0 || zoneid=0 ||(npcid=%i && charid=%i && zoneid=%i))",
+	  MakeAnyLenString(&query, "DELETE FROM quest_globals WHERE name='%s' && (npcid=0 || npcid=%i) && (charid=0 || charid=%i) && (zoneid=%i || zoneid=0)",
 	  varname,qgNpcid,qgCharid,qgZoneid),errbuf)) 
 	{
 		cerr << "delglobal error deleting " << varname << " : " << errbuf << endl;
@@ -972,34 +977,36 @@ void QuestManager::delglobal(const char *varname) {
 int32 QuestManager::QGexpdate(const char * name, const char * options)
 {
 	// format:	Y#### or D## or H## or M## or S## or T###### or C#######
+	
+	if(options[0] == 'F')
+		return(0xFFFFFFFF);
 
 	int32 tval=strlen(options);
 
 	if (tval < 2 || (tval>1 && !isdigit(options[1])))
 	{
 		cerr << "Invalid duration '" << options <<"' for " << name << " using default" << endl;
-		tval=1000000;		// default=1 day
+		tval=2629743;		// default=1 day
 	}
 	else
 	{
 		tval=atoi(&options[1]);
-/*
 		if (toupper(options[0])=='Y')
 		{	// years
 			if (tval>50)
 			{
 				tval=50;
 			}
-			tval=tval*10000000000;
+			tval = tval*31556926;
 		}
-		else */if (toupper(options[0])=='D')
+		else if (toupper(options[0])=='D')
 		{	// days
 
-			if (tval>30)
+			if (tval>300)
 			{
-				tval=30;
+				tval=300;
 			}
-			tval=tval*1000000;
+			tval=tval*2629743;
 		}
 		else if (toupper(options[0])=='H')
 		{	// hours
@@ -1007,7 +1014,7 @@ int32 QuestManager::QGexpdate(const char * name, const char * options)
 			{
 				tval=23;
 			}
-			tval=tval*10000;
+			tval=tval*3600;
 		}
 		else if (toupper(options[0])=='M')
 		{	// minutes
@@ -1015,7 +1022,7 @@ int32 QuestManager::QGexpdate(const char * name, const char * options)
 			{
 				tval=59;
 			}
-			tval=tval*100;
+			tval=tval*60;
 		}
 		else if (toupper(options[0])=='S')
 		{	// seconds
@@ -1035,11 +1042,11 @@ int32 QuestManager::QGexpdate(const char * name, const char * options)
 		else 
 		{	// calender time as YYYMMDD
 			cerr << "Invalid duration '" << options <<"' for " << name << " using default" << endl;
-			tval=1000000;		// default=1 day
+			tval=2629743;		// default=1 day
 		}
 	}
 
-	return tval;
+	return(Timer::GetTimeSeconds() + tval);
 }
 
 
@@ -1084,6 +1091,10 @@ void QuestManager::addldonpoints(sint32 points, int32 theme) {
 
 void QuestManager::setnexthpevent(int at) {
 	npc->SetNextHPEvent( at ); 
+}
+
+void QuestManager::setnextinchpevent(int at) {
+	npc->SetNextIncHPEvent( at ); 
 }
 
 void QuestManager::respawn(int npc_type, int grid) {
@@ -1202,8 +1213,23 @@ void QuestManager::toggle_spawn_event(int event_id, bool enable, bool reset_base
 	zone->spawn_conditions.ToggleEvent(event_id, enable, reset_base);
 }
 
+bool QuestManager::has_zone_flag(int zone_id) {
+	return(initiator->HasZoneFlag(zone_id));
+}
 
+void QuestManager::set_zone_flag(int zone_id) {
+	initiator->SetZoneFlag(zone_id);
+}
 
+void QuestManager::clear_zone_flag(int zone_id) {
+	initiator->ClearZoneFlag(zone_id);
+}
 
+void QuestManager::sethp(int hpperc) {
+	float maxhp;
+	float newhp;
 
-
+	maxhp = npc->GetMaxHP();
+	newhp = maxhp/100*(100-hpperc);
+	npc->Damage(npc, newhp, SPELL_UNKNOWN, 0, false, 0, false);
+}

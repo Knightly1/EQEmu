@@ -27,12 +27,17 @@
 
 #include "features.h"
 #ifdef EMBPERL_XS_CLASSES
-#include "embperl.h"
 #include "../common/debug.h"
+#include "embperl.h"
 
 typedef const char Const_char;
 
 #include "npc.h"
+
+#ifdef THIS	 /* this macro seems to leak out on some systems */
+#undef THIS		
+#endif
+
 
 XS(XS_NPC_SignalNPC); /* prototype to pass -Wmissing-prototypes */
 XS(XS_NPC_SignalNPC)
@@ -327,30 +332,6 @@ XS(XS_NPC_GetLoottableID)
 		XSprePUSH; PUSHu((UV)RETVAL);
 	}
 	XSRETURN(1);
-}
-
-XS(XS_NPC_SetPetType); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_SetPetType)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: NPC::SetPetType(THIS, in_type)");
-	{
-		NPC *		THIS;
-		int16		in_type = (int16)SvUV(ST(1));
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->SetPetType(in_type);
-	}
-	XSRETURN_EMPTY;
 }
 
 XS(XS_NPC_GetCopper); /* prototype to pass -Wmissing-prototypes */
@@ -705,58 +686,6 @@ XS(XS_NPC_IsPVP)
 	XSRETURN(1);
 }
 
-XS(XS_NPC_CurrentPosition); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_CurrentPosition)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: NPC::CurrentPosition(THIS)");
-	{
-		NPC *		THIS;
-		int8		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->CurrentPosition();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_NPC_HasBanishCapability); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_HasBanishCapability)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: NPC::HasBanishCapability(THIS)");
-	{
-		NPC *		THIS;
-		int8		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->HasBanishCapability();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
 XS(XS_NPC_GetNPCFactionID); /* prototype to pass -Wmissing-prototypes */
 XS(XS_NPC_GetNPCFactionID)
 {
@@ -807,65 +736,6 @@ XS(XS_NPC_GetPrimaryFaction)
 		XSprePUSH; PUSHi((IV)RETVAL);
 	}
 	XSRETURN(1);
-}
-
-XS(XS_NPC_GetIgnoreTarget); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_GetIgnoreTarget)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: NPC::GetIgnoreTarget(THIS)");
-	{
-		NPC *		THIS;
-		Mob *		RETVAL;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetIgnoreTarget();
-		ST(0) = sv_newmortal();
-		sv_setref_pv(ST(0), "Mob", (void*)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_NPC_SetIgnoreTarget); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_SetIgnoreTarget)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: NPC::SetIgnoreTarget(THIS, mob)");
-	{
-		NPC *		THIS;
-		Mob*		mob;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		if (sv_derived_from(ST(1), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(1)));
-			mob = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "mob is not of type Mob");
-		if(mob == NULL)
-			Perl_croak(aTHX_ "mob is NULL, avoiding crash.");
-
-		THIS->SetIgnoreTarget(mob);
-	}
-	XSRETURN_EMPTY;
 }
 
 XS(XS_NPC_GetNPCHate); /* prototype to pass -Wmissing-prototypes */
@@ -962,56 +832,6 @@ XS(XS_NPC_SetNPCFactionID)
 		THIS->SetNPCFactionID(in);
 	}
 	XSRETURN_EMPTY;
-}
-
-XS(XS_NPC_SetFeignMemory); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_SetFeignMemory)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: NPC::SetFeignMemory(THIS, num)");
-	{
-		NPC *		THIS;
-		char*		num = (char *)SvPV_nolen(ST(1));
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->SetFeignMemory(num);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_NPC_GetFeignMemory); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_GetFeignMemory)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: NPC::GetFeignMemory(THIS)");
-	{
-		NPC *		THIS;
-		Const_char *		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetFeignMemory();
-		sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG;
-	}
-	XSRETURN(1);
 }
 
 XS(XS_NPC_GetMaxDMG); /* prototype to pass -Wmissing-prototypes */
@@ -1257,6 +1077,369 @@ XS(XS_NPC_DoClassAttacks)
 	XSRETURN_EMPTY;
 }
 
+XS(XS_NPC_GetMaxWp); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_GetMaxWp)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: NPC::GetMaxWp(THIS)");
+	{
+		NPC *		THIS;
+		int		RETVAL;
+		dXSTARG;
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		RETVAL = THIS->GetMaxWp();
+		XSprePUSH; PUSHi((IV)RETVAL);
+	}
+	XSRETURN(1);
+}
+
+XS(XS_NPC_DisplayWaypointInfo); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_DisplayWaypointInfo)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: NPC::DisplayWaypointInfo(THIS, to)");
+	{
+		NPC *		THIS;
+		Client *		to;
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		if (sv_derived_from(ST(1), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(1)));
+			to = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "to is not of type Client");
+		if(to == NULL)
+			Perl_croak(aTHX_ "to is NULL, avoiding crash.");
+
+		THIS->DisplayWaypointInfo(to);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_NPC_CalculateNewWaypoint); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_CalculateNewWaypoint)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: NPC::CalculateNewWaypoint(THIS)");
+	{
+		NPC *		THIS;
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->CalculateNewWaypoint();
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_NPC_AssignWaypoints); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_AssignWaypoints)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: NPC::AssignWaypoints(THIS, grid)");
+	{
+		NPC *		THIS;
+		int32		grid = (int32)SvUV(ST(1));
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->AssignWaypoints(grid);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_NPC_SetWaypointPause); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_SetWaypointPause)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: NPC::SetWaypointPause(THIS)");
+	{
+		NPC *		THIS;
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->SetWaypointPause();
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_NPC_UpdateWaypoint); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_UpdateWaypoint)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: NPC::UpdateWaypoint(THIS, wp_index)");
+	{
+		NPC *		THIS;
+		int		wp_index = (int)SvIV(ST(1));
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->UpdateWaypoint(wp_index);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_NPC_StopWandering); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_StopWandering)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: NPC::StopWandering(THIS)");
+	{
+		NPC *		THIS;
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->StopWandering();
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_NPC_ResumeWandering); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_ResumeWandering)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: NPC::ResumeWandering(THIS)");
+	{
+		NPC *		THIS;
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->ResumeWandering();
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_NPC_PauseWandering); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_PauseWandering)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: NPC::PauseWandering(THIS, pausetime)");
+	{
+		NPC *		THIS;
+		int		pausetime = (int)SvIV(ST(1));
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->PauseWandering(pausetime);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_NPC_MoveTo); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_MoveTo)
+{
+	dXSARGS;
+	if (items != 4)
+		Perl_croak(aTHX_ "Usage: NPC::MoveTo(THIS, mtx, mty, mtz)");
+	{
+		NPC *		THIS;
+		float		mtx = (float)SvNV(ST(1));
+		float		mty = (float)SvNV(ST(2));
+		float		mtz = (float)SvNV(ST(3));
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->MoveTo(mtx, mty, mtz);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_NPC_NextGuardPosition); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_NextGuardPosition)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: NPC::NextGuardPosition(THIS)");
+	{
+		NPC *		THIS;
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->NextGuardPosition();
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_NPC_SaveGuardSpot); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_SaveGuardSpot)
+{
+	dXSARGS;
+	if (items < 1 || items > 2)
+		Perl_croak(aTHX_ "Usage: NPC::SaveGuardSpot(THIS, iClearGuardSpot= false)");
+	{
+		NPC *		THIS;
+		bool		iClearGuardSpot;
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		if (items < 2)
+			iClearGuardSpot = false;
+		else {
+			iClearGuardSpot = (bool)SvTRUE(ST(1));
+		}
+
+		THIS->SaveGuardSpot(iClearGuardSpot);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_NPC_IsGuarding); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_IsGuarding)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: NPC::IsGuarding(THIS)");
+	{
+		NPC *		THIS;
+		bool		RETVAL;
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		RETVAL = THIS->IsGuarding();
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_NPC_AI_SetRoambox); /* prototype to pass -Wmissing-prototypes */
+XS(XS_NPC_AI_SetRoambox)
+{
+	dXSARGS;
+	if (items < 6 || items > 7)
+		Perl_croak(aTHX_ "Usage: NPC::AI_SetRoambox(THIS, iDist, iMaxX, iMinX, iMaxY, iMinY, iDelay= 2500)");
+	{
+		NPC *		THIS;
+		float		iDist = (float)SvNV(ST(1));
+		float		iMaxX = (float)SvNV(ST(2));
+		float		iMinX = (float)SvNV(ST(3));
+		float		iMaxY = (float)SvNV(ST(4));
+		float		iMinY = (float)SvNV(ST(5));
+		int32		iDelay;
+
+		if (sv_derived_from(ST(0), "NPC")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(NPC *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type NPC");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		if (items < 7)
+			iDelay = 2500;
+		else {
+			iDelay = (int32)SvUV(ST(6));
+		}
+
+		THIS->AI_SetRoambox(iDist, iMaxX, iMinX, iMaxY, iMinY, iDelay);
+	}
+	XSRETURN_EMPTY;
+}
+
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -1269,7 +1452,7 @@ XS(boot_NPC)
 	file[255] = 0;
 	
 	if(items != 1)
-		LogFile->write(EQEMuLog::Error, "boot_quest does not take any arguments.");
+		fprintf(stderr, "boot_quest does not take any arguments.");
 	char buf[128];
 
 	//add the strcpy stuff to get rid of const warnings....
@@ -1289,7 +1472,6 @@ XS(boot_NPC)
 		newXSproto(strcpy(buf, "RemoveCash"), XS_NPC_RemoveCash, file, "$");
 		newXSproto(strcpy(buf, "CountLoot"), XS_NPC_CountLoot, file, "$");
 		newXSproto(strcpy(buf, "GetLoottableID"), XS_NPC_GetLoottableID, file, "$");
-		newXSproto(strcpy(buf, "SetPetType"), XS_NPC_SetPetType, file, "$$");
 		newXSproto(strcpy(buf, "GetCopper"), XS_NPC_GetCopper, file, "$");
 		newXSproto(strcpy(buf, "GetSilver"), XS_NPC_GetSilver, file, "$");
 		newXSproto(strcpy(buf, "GetGold"), XS_NPC_GetGold, file, "$");
@@ -1304,17 +1486,11 @@ XS(boot_NPC)
 		newXSproto(strcpy(buf, "GetGrid"), XS_NPC_GetGrid, file, "$");
 		newXSproto(strcpy(buf, "GetSp2"), XS_NPC_GetSp2, file, "$");
 		newXSproto(strcpy(buf, "IsPVP"), XS_NPC_IsPVP, file, "$");
-		newXSproto(strcpy(buf, "CurrentPosition"), XS_NPC_CurrentPosition, file, "$");
-		newXSproto(strcpy(buf, "HasBanishCapability"), XS_NPC_HasBanishCapability, file, "$");
 		newXSproto(strcpy(buf, "GetNPCFactionID"), XS_NPC_GetNPCFactionID, file, "$");
 		newXSproto(strcpy(buf, "GetPrimaryFaction"), XS_NPC_GetPrimaryFaction, file, "$");
-		newXSproto(strcpy(buf, "GetIgnoreTarget"), XS_NPC_GetIgnoreTarget, file, "$");
-		newXSproto(strcpy(buf, "SetIgnoreTarget"), XS_NPC_SetIgnoreTarget, file, "$$");
 		newXSproto(strcpy(buf, "GetNPCHate"), XS_NPC_GetNPCHate, file, "$$");
 		newXSproto(strcpy(buf, "IsOnHatelist"), XS_NPC_IsOnHatelist, file, "$$");
 		newXSproto(strcpy(buf, "SetNPCFactionID"), XS_NPC_SetNPCFactionID, file, "$$");
-		newXSproto(strcpy(buf, "SetFeignMemory"), XS_NPC_SetFeignMemory, file, "$$");
-		newXSproto(strcpy(buf, "GetFeignMemory"), XS_NPC_GetFeignMemory, file, "$");
 		newXSproto(strcpy(buf, "GetMaxDMG"), XS_NPC_GetMaxDMG, file, "$");
 		newXSproto(strcpy(buf, "IsAnimal"), XS_NPC_IsAnimal, file, "$");
 		newXSproto(strcpy(buf, "GetPetSpellID"), XS_NPC_GetPetSpellID, file, "$");
@@ -1324,6 +1500,20 @@ XS(boot_NPC)
 		newXSproto(strcpy(buf, "PickPocket"), XS_NPC_PickPocket, file, "$$");
 		newXSproto(strcpy(buf, "StartSwarmTimer"), XS_NPC_StartSwarmTimer, file, "$$");
 		newXSproto(strcpy(buf, "DoClassAttacks"), XS_NPC_DoClassAttacks, file, "$$");
+		newXSproto(strcpy(buf, "GetMaxWp"), XS_NPC_GetMaxWp, file, "$");
+		newXSproto(strcpy(buf, "DisplayWaypointInfo"), XS_NPC_DisplayWaypointInfo, file, "$$");
+		newXSproto(strcpy(buf, "CalculateNewWaypoint"), XS_NPC_CalculateNewWaypoint, file, "$");
+		newXSproto(strcpy(buf, "AssignWaypoints"), XS_NPC_AssignWaypoints, file, "$$");
+		newXSproto(strcpy(buf, "SetWaypointPause"), XS_NPC_SetWaypointPause, file, "$");
+		newXSproto(strcpy(buf, "UpdateWaypoint"), XS_NPC_UpdateWaypoint, file, "$$");
+		newXSproto(strcpy(buf, "StopWandering"), XS_NPC_StopWandering, file, "$");
+		newXSproto(strcpy(buf, "ResumeWandering"), XS_NPC_ResumeWandering, file, "$");
+		newXSproto(strcpy(buf, "PauseWandering"), XS_NPC_PauseWandering, file, "$$");
+		newXSproto(strcpy(buf, "MoveTo"), XS_NPC_MoveTo, file, "$$$$");
+		newXSproto(strcpy(buf, "NextGuardPosition"), XS_NPC_NextGuardPosition, file, "$");
+		newXSproto(strcpy(buf, "SaveGuardSpot"), XS_NPC_SaveGuardSpot, file, "$;$");
+		newXSproto(strcpy(buf, "IsGuarding"), XS_NPC_IsGuarding, file, "$");
+		newXSproto(strcpy(buf, "AI_SetRoambox"), XS_NPC_AI_SetRoambox, file, "$$$$$$;$");
 	XSRETURN_YES;
 }
 

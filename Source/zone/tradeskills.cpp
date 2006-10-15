@@ -24,10 +24,11 @@
 #endif
 
 #include "masterentity.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "../common/packet_functions.h"
 #include "../common/packet_dump.h"
 #include "StringIDs.h"
+#include "../common/MiscFunctions.h"
 
 void Object::HandleAugmentation(Client* user, const AugmentItem_Struct* in_augment, Object *worldo)
 {
@@ -36,22 +37,22 @@ void Object::HandleAugmentation(Client* user, const AugmentItem_Struct* in_augme
 		return;
 	}
 	
-	ItemCommonInst *tobe_auged, *auged_with = NULL;
+	ItemInst *tobe_auged, *auged_with = NULL;
 	sint8 slot=-1;
-	ItemContainerInst* container = (ItemContainerInst *)worldo->m_inst;
+	ItemInst* container = worldo->m_inst;
 
-	if (!(tobe_auged = (ItemCommonInst *)container->GetItem(0))) {
+	if (!(tobe_auged = container->GetItem(0))) {
 		user->Message(13, "Error: No item in slot 0 of sealer");
 		return;
 	}
 	if (tobe_auged->IsAugmentable()) {
-		if (!(auged_with=(ItemCommonInst *)container->GetItem(1))) {;
+		if (!(auged_with=container->GetItem(1))) {;
 			user->Message(13, "Error: No item in slot 1 of sealer");
 			return;
 		}
 	} else {
 		auged_with=tobe_auged;
-		if (!(tobe_auged=(ItemCommonInst *)container->GetItem(1))) {
+		if (!(tobe_auged=container->GetItem(1))) {
 			user->Message(13, "Error: No item in slot 1 of sealer");
 			return;
 		}
@@ -63,7 +64,7 @@ void Object::HandleAugmentation(Client* user, const AugmentItem_Struct* in_augme
 			tobe_auged->PutAugment(slot,*auged_with);
 			user->PushItemOnCursor(*tobe_auged,true);
 			container->Clear();
-			EQZonePacket* outapp = new EQZonePacket(OP_ClearObject,0);
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClearObject,0);
 			user->QueuePacket(outapp);
 			safe_delete(outapp);
 			database.DeleteWorldContainer(worldo->m_id, zone->GetZoneID());
@@ -71,7 +72,7 @@ void Object::HandleAugmentation(Client* user, const AugmentItem_Struct* in_augme
 			user->Message(13, "Error: No available slot for augment");
 		}
 	} else {
-		ItemCommonInst *old_aug=NULL;
+		ItemInst *old_aug=NULL;
 		const uint32 id=auged_with->GetID();
 		if (id==40408 || id==40409 || id==40410)
 			tobe_auged->DeleteAugment(in_augment->augment_slot);
@@ -82,7 +83,7 @@ void Object::HandleAugmentation(Client* user, const AugmentItem_Struct* in_augme
 		if (old_aug)
 			user->PushItemOnCursor(*old_aug,true);
 		container->Clear();
-		EQZonePacket* outapp = new EQZonePacket(OP_ClearObject,0);
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClearObject,0);
 		user->QueuePacket(outapp);
 		safe_delete(outapp);
 		database.DeleteWorldContainer(worldo->m_id, zone->GetZoneID());
@@ -100,7 +101,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	
 	Inventory& user_inv = user->GetInv();
 	PlayerProfile_Struct& user_pp = user->GetPP();
-	ItemContainerInst* container = NULL;
+	ItemInst* container = NULL;
 	ItemInst* inst = NULL;
 	uint8 tradeskill = 0xE8;
 	uint8 passtype = 0;
@@ -119,7 +120,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 		if (inst) {
 			const Item_Struct* item = inst->GetItem();
 			if (item && inst->IsType(ItemClassContainer)) {
-				tradeskill = item->Container.BagType;
+				tradeskill = item->BagType;
 			}
 		}
 	}
@@ -129,7 +130,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 		return;
 	}
 	
-	container = (ItemContainerInst*)inst;
+	container = inst;
 	
 	// Convert container type to tradeskill type
 	switch (tradeskill)
@@ -211,7 +212,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	DBTradeskillRecipe_Struct spec;
 	if (!database.GetTradeRecipe(container, passtype, tradeskill, &spec)) {
 		user->Message_StringID(4,TRADESKILL_NOCOMBINE);
-		EQZonePacket* outapp = new EQZonePacket(OP_TradeSkillCombine, 0);
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_TradeSkillCombine, 0);
 		user->QueuePacket(outapp);
 		safe_delete(outapp);
 		return;
@@ -221,14 +222,14 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	bool success = user->TradeskillExecute(&spec, tradeskill);
 	
 	// Send acknowledgement packets to client
-	EQZonePacket* outapp = new EQZonePacket(OP_TradeSkillCombine, 0);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_TradeSkillCombine, 0);
 	user->QueuePacket(outapp);
 	safe_delete(outapp);
 	
 	//now clean out the containers.
 	if(worldcontainer){
 		container->Clear();
-		outapp = new EQZonePacket(OP_ClearObject,0);
+		outapp = new EQApplicationPacket(OP_ClearObject,0);
 		user->QueuePacket(outapp);
 		safe_delete(outapp);
 		database.DeleteWorldContainer(worldo->m_id, zone->GetZoneID());
@@ -245,7 +246,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 		}
 		container->Clear();
 		if(success && spec.replace_container) {
-			user->DeleteItemInInventory(in_combine->container_slot);
+			user->DeleteItemInInventory(in_combine->container_slot, 0, true);
 		}
 	}
 }
@@ -253,7 +254,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 void Object::HandleAutoCombine(Client* user, const RecipeAutoCombine_Struct* rac) {
 	
 	//get our packet ready, gotta send one no matter what...
-	EQZonePacket* outapp = new EQZonePacket(OP_RecipeAutoCombine, sizeof(RecipeAutoCombine_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_RecipeAutoCombine, sizeof(RecipeAutoCombine_Struct));
 	RecipeAutoCombine_Struct *outp = (RecipeAutoCombine_Struct *)outapp->pBuffer;
 	outp->object_type = rac->object_type;
 	outp->some_id = rac->some_id;
@@ -390,7 +391,7 @@ void Object::HandleAutoCombine(Client* user, const RecipeAutoCombine_Struct* rac
 	//TODO: find in-pack containers in inventory, make sure they are really
 	//there, and then use that slot to handle replace_container too.
 	if(success && spec.replace_container) {
-//		user->DeleteItemInInventory(in_combine->container_slot);
+//		user->DeleteItemInInventory(in_combine->container_slot, 0, true);
 	}
 	
 }
@@ -426,12 +427,12 @@ uint32 Object::TypeToSkill(uint32 type) {
 			tradeskill = JEWELRY_MAKING;
 			break;
 		}
-		case OT_POTTERYWHEEL: {
+		case OT_POTTERYWHEEL:
+		case OT_KILN: {
 			tradeskill = POTTERY;
 			break;
 		}
-		case OT_OVEN:
-		case OT_KILN: {
+		case OT_OVEN: {
 			tradeskill = BAKING;
 			break;
 		}
@@ -441,6 +442,10 @@ uint32 Object::TypeToSkill(uint32 type) {
 		}
 		case OT_KEYMAKER: { //unknown for now...
 			tradeskill = 0;
+			break;
+		}
+		case OT_TOOLBOX: {
+			tradeskill = TINKERING;
 			break;
 		}
 		case OT_WIZARDLEX:
@@ -480,16 +485,16 @@ void Client::TradeskillSearchResults(const char *query, unsigned long qlen,
 	}
 	
 	uint8 r;
-	//I could prolly get away with allocating a single EQZonePacket, and
-	//just re-using it, but this is safe, and im not sure.
 	for(r = 0; r < qcount; r++) {
 		row = mysql_fetch_row(result);
+		if(row == NULL || row[0] == NULL || row[1] == NULL || row[2] == NULL || row[3] == NULL)
+			continue;
 		uint32 recipe = (uint32)atoi(row[0]);
 		const char *name = row[1];
 		uint32 trivial = (uint32) atoi(row[2]);
 		uint32 comp_count = (uint32) atoi(row[3]);
 		
-		EQZonePacket* outapp = new EQZonePacket(OP_RecipeReply, sizeof(RecipeReply_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_RecipeReply, sizeof(RecipeReply_Struct));
 		RecipeReply_Struct *reply = (RecipeReply_Struct *) outapp->pBuffer;
 		
 		reply->object_type = objtype;
@@ -499,9 +504,8 @@ void Client::TradeskillSearchResults(const char *query, unsigned long qlen,
 		reply->trivial = trivial;
 		strncpy(reply->recipe_name, name, 63);
 		
-		QueuePacket(outapp);
 		//DumpPacket(outapp);
-		safe_delete(outapp);
+		FastQueuePacket(&outapp);
 	}
 	mysql_free_result(result);
 }
@@ -555,7 +559,7 @@ void Client::SendTradeskillDetails(unsigned long recipe_id) {
 	
 	//biggest this packet can ever be:
 	// 64 * 10 + 8 * 10 + 4 + 4 * 10 = 764
-	char *buf = new char[775];	//dynamic so we can just give it to EQZonePacket
+	char *buf = new char[775];	//dynamic so we can just give it to EQApplicationPacket
 	uint8 r,k;
 	
 	unsigned long *header = (unsigned long *) buf;
@@ -631,7 +635,7 @@ void Client::SendTradeskillDetails(unsigned long recipe_id) {
 	
 	uint32 total = sizeof(unsigned long) + dist + datalen;
 	
-	EQZonePacket* outapp = new EQZonePacket(OP_RecipeDetails);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_RecipeDetails);
 	outapp->size = total;
 	outapp->pBuffer = (uchar*) buf;
 	QueuePacket(outapp);
@@ -644,46 +648,109 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskil
 	if(spec == NULL || tradeskill == 0)
 		return(false);
 	
-	sint16 user_skill = (sint16) GetSkill(tradeskill);
+	sint16 user_skill = GetSkill(tradeskill);
 	float chance = 0;
-	
-	// statbonus 20%/10% with 200 + 0.05% / 0.025% per point above 200
-	float wisebonus =  (m_pp.WIS > 200) ? 20 + ((m_pp.WIS - 200) * 0.05) : m_pp.WIS * 0.1;
-	float intbonus =  (m_pp.INT > 200) ? 10 + ((m_pp.INT - 200) * 0.025) : m_pp.INT * 0.05;
-	
-	vector< pair<uint32,uint8> >::iterator itr;
-	
-	//Reworked this because it seemed to use spec->skill_needed as spec->trivial...
-	if(spec->nofail) {
-		chance = 100;	//cannot fail.
-	} else if(((sint16)user_skill - (sint16)spec->skill_needed) < 0) {
-		chance = 0;
-		//impossible... is there a message for this???
-	} else if (((sint16)user_skill - (sint16)spec->trivial) >= 0) {
-		chance = 80+wisebonus-10; // 80% basechance + max 20% stats
-		Message_StringID(4,TRADESKILL_TRIVIAL);
-	} else {
-		if ((spec->trivial - user_skill) < 20) {
-			// 40 base chance success + max 40% skill + 20% max stats
-			chance = 40 + wisebonus + 40 - ((spec->trivial - user_skill)*2);
-		}
-		else {
-			// 0 base chance success + max 30% skill + 10% max stats
-			chance = 0 + (wisebonus/2) + 30 - (((spec->trivial - user_skill) * (spec->trivial - user_skill))*0.01875);
-		}
-		
-//Is there a reason we dont use CheckIncreaseSkill()?
-		// skillincrease?
-		if ((55-(user_skill*0.236))+intbonus > (float)rand()/RAND_MAX*100) {
-			SetSkill(tradeskill, GetRawSkill(tradeskill) + 1);
-			//Message(4, "You have become better at (skillid=%i)", tradeskill);
-		}
+	float skillup_modifier;
+	sint16 thirdstat = 0;
+	sint16 stat_modifier = 15;
+	uint16 success_modifier;
+
+	// Rework based on the info on eqtraders.com
+	// http://mboards.eqtraders.com/eq/showthread.php?t=22246
+	// 09/10/2006 v0.1 (eq4me)
+	// 09/11/2006 v0.2 (eq4me)
+	// Todo:
+	//     Implementing AAs
+	//     Success modifiers based on recipes
+	//     Skillup modifiers based on the rarity of the ingredients
+
+	// Some tradeskills are more eqal then others. ;-)
+	// If you want to customize the stage1 success rate do it here.
+    // Remember: skillup_modifier is (float). Lower is better
+	switch(tradeskill) {
+	case FLETCHING:
+	case ALCHEMY:
+	case JEWELRY_MAKING:
+	case POTTERY:
+		skillup_modifier = 4;
+		break;
+	case BAKING:
+	case BREWING:
+		skillup_modifier = 3;
+		break;
+	case RESEARCH:
+		skillup_modifier = 1;
+		break;
+	default:
+		skillup_modifier = 2;
+		break;
+	}
+
+	// Some tradeskills take the higher of one additional stat beside INT and WIS
+	// to determine the skillup rate. Additionally these tradeskills do not have an
+	// -15 modifier on their statbonus.
+	if (tradeskill ==  FLETCHING || tradeskill == MAKE_POISON) {
+		thirdstat = GetDEX();
+		stat_modifier = 0;
+	} else if (tradeskill == BLACKSMITHING) {
+		thirdstat = GetSTR();
+		stat_modifier = 0;
 	}
 	
-	float res = ((float)rand()/RAND_MAX*100);
+	sint16 higher_from_int_wis = (GetINT() > GetWIS()) ? GetINT() : GetWIS();
+	sint16 bonusstat = (higher_from_int_wis > thirdstat) ? higher_from_int_wis : thirdstat;
+	
+	vector< pair<uint32,uint8> >::iterator itr;
+
+
+    //calculate the base success chance
+	// For trivials over 68 the chance is (skill - 0.75*trivial) +51.5
+    // For trivial up to 68 the chance is (skill - trivial) + 66
+	if (spec->trivial >= 68) {
+		chance = (user_skill - (0.75*spec->trivial)) + 51.5;
+	} else {
+		chance = (user_skill - spec->trivial) + 66;
+	}
+	
+	sint16 over_trivial = (sint16)user_skill - (sint16)spec->trivial;
+
+	//handle caps
+	if(spec->nofail) {
+		chance = 100;	//cannot fail.
+		_log(TRADESKILLS__TRACE, "...This combine cannot fail.");
+	} else if(over_trivial > 0) {
+		// At reaching trivial the chance goes to 95% going up an additional
+		// percent for every 40 skillpoints above the trivial.
+		// The success rate is not modified through stats.
+		// Mastery AAs are unaccounted for so far.
+		// chance_AA = chance + ((100 - chance) * mastery_modifier)
+		// But the 95% limit with an additional 1% for every 40 skill points
+		// above critical still stands.
+		// Mastery modifier is: 10%/25%/50% for rank one/two/three
+		chance = 95.0f + (float(user_skill - spec->trivial) / 40.0f);
+		Message_StringID(4, TRADESKILL_TRIVIAL);
+	} else if(chance < 5) {
+		// Minimum chance is always 5
+		chance = 5;
+	} else if(chance > 95) {
+		//cap is 95, shouldent reach this before trivial, but just in case.
+		chance = 95;
+	}
+	
+	_log(TRADESKILLS__TRACE, "...Current skill: %d , Trivial: %d , Success chance: %f percent", user_skill , spec->trivial , chance);
+	_log(TRADESKILLS__TRACE, "...Bonusstat: %d , INT: %d , WIS: %d , DEX: %d , STR: %d", bonusstat , GetINT() , GetWIS() , GetDEX() , GetSTR());
+	
+	float res = MakeRandomFloat(0, 99);
 	if ((tradeskill==75) || GetGM() || (chance > res)){
-		Message_StringID(4,TRADESKILL_SUCCEED);
+		success_modifier = 1;
 		
+		if(over_trivial < 0)
+			CheckIncreaseTradeskill(bonusstat, stat_modifier, skillup_modifier, success_modifier, tradeskill);
+		
+		Message_StringID(4,TRADESKILL_SUCCEED);
+
+		_log(TRADESKILLS__TRACE, "Tradeskill success");
+
 		itr = spec->onsuccess.begin();
 		while(itr != spec->onsuccess.end()) {
 			//should we check this crap?
@@ -692,7 +759,14 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskil
 		}
 		return(true);
 	} else {
+		success_modifier = 2; // Halves the chance
+		
+		if(over_trivial < 0)
+			CheckIncreaseTradeskill(bonusstat, stat_modifier, skillup_modifier, success_modifier, tradeskill);
+		
 		Message_StringID(4,TRADESKILL_FAILED);
+
+		_log(TRADESKILLS__TRACE, "Tradeskill failed");
 		
 		itr = spec->onfail.begin();
 		while(itr != spec->onfail.end()) {
@@ -704,9 +778,50 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskil
 	return(false);
 }
 
+void Client::CheckIncreaseTradeskill(sint16 bonusstat, sint16 stat_modifier, float skillup_modifier, uint16 success_modifier, uint16 tradeskill)
+{
+	uint16 current_raw_skill = GetRawSkill(tradeskill);
+	int maxskill = MaxSkill(tradeskill);
+
+	if(current_raw_skill >= 252)
+		return;	//try not to break things...
+	if(maxskill == 254 || current_raw_skill >= maxskill)
+		return;	//not allowed to go higher.
+	
+	float chance_stage2 = 0;
+
+	//A successfull combine doubles the stage1 chance for an skillup
+	//Some tradeskill are harder than others. See above for more.
+	float chance_stage1 = (bonusstat - stat_modifier) / (skillup_modifier * success_modifier);
+
+	//In stage2 the only thing that matters is your current unmodified skill.
+	//If you want to customize here you probbably need to implement your own
+	//formula instead of tweaking the below one.
+	if (chance_stage1 > MakeRandomFloat(0, 99)) {
+		if (current_raw_skill < 15) {
+			// Allways succeed
+			chance_stage2 = 100;
+		} else if (current_raw_skill < 175) {
+			//From skill 16 to 174 your chance of success falls linearly from 92% to 13%.
+			chance_stage2 = (200 - current_raw_skill) / 2;
+		} else {
+			//At skill 175, your chance of success falls linearly from 12.5% to 2.5% at skill 300.
+			chance_stage2 = 12.5 - (.08 * (current_raw_skill - 175));
+		}
+	}
+	   
+	if (chance_stage2 > MakeRandomFloat(0, 99)) {
+		//Only if stage1 and stage2 succeeded you get a skillup.
+		SetSkill(tradeskill, current_raw_skill + 1);
+	}
+
+	_log(TRADESKILLS__TRACE, "...skillup_modifier: %f , success_modifier: %d , stat modifier: %d", skillup_modifier , success_modifier , stat_modifier);
+	_log(TRADESKILLS__TRACE, "...Stage1 chance was: %f percent",  chance_stage1);
+	_log(TRADESKILLS__TRACE, "...Stage2 chance was: %f percent. 0 percent means stage1 failed",  chance_stage2);
+}
 
 
-bool Database::GetTradeRecipe(const ItemContainerInst* container, uint8 c_type, uint8 tradeskill, 
+bool ZoneDatabase::GetTradeRecipe(const ItemInst* container, uint8 c_type, uint8 tradeskill, 
 	DBTradeskillRecipe_Struct *spec)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -831,7 +946,7 @@ bool Database::GetTradeRecipe(const ItemContainerInst* container, uint8 c_type, 
 	
 
 
-bool Database::GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint8 tradeskill, 
+bool ZoneDatabase::GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint8 tradeskill, 
 	DBTradeskillRecipe_Struct *spec)
 {	
 	char errbuf[MYSQL_ERRMSG_SIZE];

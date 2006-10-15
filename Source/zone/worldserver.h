@@ -18,56 +18,42 @@
 #ifndef WORLDSERVER_H
 #define WORLDSERVER_H
 
-#include "../common/servertalk.h"
-#include "../common/linked_list.h"
-#include "../common/timer.h"
-#include "../common/queue.h"
-#include "../common/packet_functions.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/Mutex.h"
-#include "../common/TCPConnection.h"
-#include "mob.h"
+#include "../common/worldconn.h"
+#include <string>
 
-#define WSCS_Construction	0
-#define WSCS_Ready			1
-#define WSCS_Connecting		2
-#define WSCS_Authenticating	3
-#define WSCS_Connected		100
-#define WSCS_Disconnecting	200
+struct GuildJoin_Struct;
+class EQApplicationPacket;
+class Client;
+class Database;
 
-class WorldServer {
+class WorldServer : public WorldConnection {
 public:
 	WorldServer();
-    ~WorldServer();
+    virtual ~WorldServer();
 
-	void Process();
-	bool SendPacket(ServerPacket* pack);
+	virtual void Process();
+	
 	void SendGuildJoin(GuildJoin_Struct* gj);
 	bool SendChannelMessage(Client* from, const char* to, int8 chan_num, int32 guilddbid, int8 language, const char* message, ...);
 	bool SendEmoteMessage(const char* to, int32 to_guilddbid, int32 type, const char* message, ...);
 	bool SendEmoteMessage(const char* to, int32 to_guilddbid, sint16 to_minstatus, int32 type, const char* message, ...);
 	void SetZone(int32 iZoneID);
-	void SetConnectInfo();
 	int32 SendGroupIdRequest();
-	bool RezzPlayer(EQZonePacket* rpack,int32 rezzexp, int16 opcode);
-	int32	GetIP()		{ return tcpc->GetrIP(); }
-	int16	GetPort()	{ return tcpc->GetrPort(); }
-	bool	Connected()	{ return (pConnected && tcpc->Connected()); }
-
-	bool	Connect();
-	void	AsyncConnect();
-	void	Disconnect();
-	inline int16	GetErrorNumber()	{ return adverrornum; }
-	inline bool		TryReconnect()		{ return pTryReconnect; }
-	bool oocmuted;
+	bool RezzPlayer(EQApplicationPacket* rpack,int32 rezzexp, int16 opcode);
+	bool IsOOCMuted() const { return(oocmuted); }
 	
 	int32 NextGroupID();
 	
+	void SetLaunchedName(const char *n) { m_launchedName = n; }
+	void SetLauncherName(const char *n) { m_launcherName = n; }
+	
 private:
-	TCPConnection* tcpc;
-	int16	adverrornum;
-	bool	pTryReconnect;
-	bool	pConnected;
+	virtual void OnConnected();
+	
+	std::string m_launchedName;
+	std::string m_launcherName;
+	
+	bool oocmuted;
 	
 	int32 cur_groupid;
 	int32 last_groupid;

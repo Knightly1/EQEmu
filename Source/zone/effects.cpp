@@ -18,8 +18,7 @@
 #include "../common/debug.h"
 #include "masterentity.h"
 #include "worldserver.h"
-#include "net.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "spdat.h"
 #include "../common/packet_dump.h"
 #include "../common/packet_functions.h"
@@ -406,7 +405,7 @@ bool Client::TrainDiscipline(int32 itemid) {
 		return(false);
 	}
 	
-	if(item->ItemClass != ItemClassCommon || item->Common.ItemType != ItemTypeSpell) {
+	if(item->ItemClass != ItemClassCommon || item->ItemType != ItemTypeSpell) {
 		Message(13, "Invalid item type, you cannot learn from this item.");
 		//summon them the item back...
 		SummonItem(itemid);
@@ -440,14 +439,14 @@ bool Client::TrainDiscipline(int32 itemid) {
 	//make sure we can train this...
 	//can we use the item?
 	uint32 cbit = 1 << (myclass-1);
-	if(!(item->Common.Classes & cbit)) {
+	if(!(item->Classes & cbit)) {
 		Message(13, "Your class cannot learn from this tome.");
 		//summon them the item back...
 		SummonItem(itemid);
 		return(false);
 	}
 	
-	int32 spell_id = item->Common.Scroll.Effect;
+	int32 spell_id = item->Scroll.Effect;
 	if(!IsValidSpell(spell_id)) {
 		Message(13, "This tome contains invalid knowledge.");
 		return(false);
@@ -493,7 +492,7 @@ bool Client::TrainDiscipline(int32 itemid) {
 void Client::SendDisciplineUpdate() {
 	//this dosent seem to work right now
 	
-	EQZonePacket app(OP_DisciplineUpdate, sizeof(Disciplines_Struct));
+	EQApplicationPacket app(OP_DisciplineUpdate, sizeof(Disciplines_Struct));
 	Disciplines_Struct *d = (Disciplines_Struct*)app.pBuffer;
 	//dunno why I dont just send the one from m_pp
 	memcpy(d, &m_pp.disciplines, sizeof(m_pp.disciplines));
@@ -512,7 +511,7 @@ bool Client::UseDiscipline(int32 spell_id, int32 target) {
 		return(false);	//not found.
 	
 	//check the discipline timer
-	if(!p_timers.Expired(pTimerDisciplineReuse)) {
+	if(!p_timers.Expired(&database, pTimerDisciplineReuse)) {
 		char val1[20]={0};
 		char val2[20]={0};
 		int32 remain = p_timers.GetRemainingTime(pTimerDisciplineReuse);
@@ -586,12 +585,12 @@ void EntityList::AETaunt(Client* taunter, float range) {
 // solar: causes caster to hit every mob within dist range of center with
 // spell_id.
 // NPC spells will only affect other NPCs with compatible faction
-void EntityList::AESpell(Mob *caster, Mob *center, float dist, 
-	int16 spell_id, bool affect_caster)
+void EntityList::AESpell(Mob *caster, Mob *center, int16 spell_id, bool affect_caster)
 {
 	LinkedListIterator<Mob*> iterator(mob_list);
 	Mob *curmob;
 	
+	float dist = caster->GetAOERange(spell_id);
 	float dist2 = dist * dist;
 	
 	bool bad = IsDetrimentalSpell(spell_id);
@@ -619,8 +618,59 @@ void EntityList::AESpell(Mob *caster, Mob *center, float dist,
 					continue;
 			}
 		}
+		//finally, make sure they are within range
+		if(bad) {
+			if(!center->CheckLosFN(curmob))
+				continue;
+		}
 		//if we get here... cast the spell.
 		caster->SpellOnTarget(spell_id, curmob);
+	}	
+}
+
+// solar: causes caster to hit every mob within dist range of center with
+// a bard pulse of spell_id.
+// NPC spells will only affect other NPCs with compatible faction
+void EntityList::AEBardPulse(Mob *caster, Mob *center, int16 spell_id, bool affect_caster)
+{
+	LinkedListIterator<Mob*> iterator(mob_list);
+	Mob *curmob;
+	
+	float dist = caster->GetAOERange(spell_id);
+	float dist2 = dist * dist;
+	
+	bool bad = IsDetrimentalSpell(spell_id);
+	bool isnpc = caster->IsNPC();
+	
+	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
+	{
+		curmob = iterator.GetData();
+		if(curmob == center)	//do not affect center
+			continue;
+		if(curmob == caster && !affect_caster)	//watch for caster too
+			continue;
+		if(center->DistNoRoot(*curmob) > dist2)	//make sure they are in range
+			continue;
+		if(isnpc && curmob->IsNPC()) {	//check npc->npc casting
+			FACTION_VALUE f = curmob->GetReverseFactionCon(caster);
+			if(bad) {
+				//affect mobs that are on our hate list, or
+				//which have bad faction with us
+				if( ! (caster->CheckAggro(curmob) || f == FACTION_THREATENLY || f == FACTION_SCOWLS) )
+					continue;
+			} else {
+				//only affect mobs we would assist.
+				if( ! (f <= FACTION_AMIABLE))
+					continue;
+			}
+		}
+		//finally, make sure they are within range
+		if(bad) {
+			if(!center->CheckLosFN(curmob))
+				continue;
+		}
+		//if we get here... cast the spell.
+		caster->BardPulse(spell_id, curmob);
 	}	
 }
 

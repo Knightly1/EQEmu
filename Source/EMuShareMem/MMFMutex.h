@@ -1,5 +1,6 @@
 #ifndef MMFMUTEX_H
 #define MMFMUTEX_H
+#ifndef WIN32
 #include <sys/types.h> // moved before sys/shm.h for freeBSD
 #include <sys/shm.h>
 #include <sys/ipc.h>
@@ -38,4 +39,5 @@ class MMFMutex
         sem_t m_semaphore;
         int m_recursive_count;
 };
+#endif //!WIN32
 #endif

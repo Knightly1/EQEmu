@@ -1,10 +1,26 @@
+/*  EQEMu:  Everquest Server Emulator
+    Copyright (C) 2001-2006  EQEMu Development Team (http://eqemulator.net)
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+  
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY except by those people which sell it, which
+	are required to give you total support for your newly bought product;
+	without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+	A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+	
+	  You should have received a copy of the GNU General Public License
+	  along with this program; if not, write to the Free Software
+	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+#include "debug.h"
 #include "rdtsc.h"
 #include "types.h"
 #include <stdio.h>
 
 #ifdef WIN32
-	#include <windows.h>
-	#include <winsock.h>
 	#include <sys/timeb.h>
 	#include "../common/timer.h"
 #else
@@ -13,7 +29,7 @@
 #endif
 
 #ifdef i386
-#define USE_RDTSC
+	#define USE_RDTSC
 #else
 	#ifndef WIN32
 		#warning RDTSC_Timer cannot use rdtsc on a non-intel platform, using gettimeofday
@@ -51,13 +67,17 @@ sint64 RDTSC_Timer::rdtsc() {
 
 #ifdef WIN32
 	//untested!
-	unsigned long high, low;
+	unsigned long highw, loww;
 	__asm {
+		push eax
+		push edx
 		rdtsc
-		mov high, edx
-		mov low, eax
+		mov highw, eax
+		mov loww, edx
+		pop edx
+		pop eax
 	}
-	res = ((sint64)high)<<32 | low;
+	res = ((sint64)highw)<<32 | loww;
 #else
 	//gnu version
 	__asm__ __volatile__ ("rdtsc" : "=A" (res));
@@ -82,7 +102,11 @@ void RDTSC_Timer::init() {
 		before = rdtsc();
 		
 		//sleep a know duration to figure out clock rate
+#ifdef WIN32
+		Sleep(SLEEP_TIME);
+#else
 		usleep(SLEEP_TIME * 1000);	//ms * 1000
+#endif
 		
 		after = rdtsc();
 		

@@ -23,6 +23,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "map.h"
 #include "spdat.h"
 #include "../common/skills.h"
+#include "../common/MiscFunctions.h"
 #include "StringIDs.h"
 #include <iostream>
 
@@ -398,12 +399,12 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 			  ) {
 				//attacking someone on same faction, or a friend
 				
-#if (EQDEBUG>=5) 
-				LogFile->write(EQEMuLog::Debug, "AIYellForHelp(\"%s\",\"%s\") %s attacking %s Dist %f Z %f", 
-					sender->GetName(), attacker->GetName(), mob->GetName(), attacker->GetName(), mob->DistNoRoot(*sender), fabs(sender->GetZ()+mob->GetZ()));
-#endif
 				//Father Nitwit:  make sure we can see them.
 				if(mob->CheckLosFN(attacker)) {
+#if (EQDEBUG>=5) 
+					LogFile->write(EQEMuLog::Debug, "AIYellForHelp(\"%s\",\"%s\") %s attacking %s Dist %f Z %f", 
+						sender->GetName(), attacker->GetName(), mob->GetName(), attacker->GetName(), mob->DistNoRoot(*sender), fabs(sender->GetZ()+mob->GetZ()));
+#endif
 					mob->AddToHateList(attacker, 1, 0, false);
 				}
 			}
@@ -422,7 +423,7 @@ bool Mob::IsAttackAllowed(Mob *target)
 {
 	Mob *mob1, *mob2, *tempmob;
 	Client *c1, *c2, *becomenpc;
-	NPC *npc1, *npc2;
+//	NPC *npc1, *npc2;
 	int reverse;
 
 	// some special cases
@@ -849,9 +850,9 @@ bool Mob::CheckLos(Mob* other) {
 			while(*iface != -1)
 			{
 				temp_z = zone->map->GetFaceHeight( *iface, x_pos, y_pos );
-//UMM.. OMG... sqrt(pow(x, 2)) == x.... retards
-				float best_dist = sqrt((double)(pow(best_z-tmp_z, 2)));
-				float tmp_dist = sqrt((double)(pow(tmp_z-tmp_z, 2)));
+//UMM.. OMG... sqrtf(pow(x, 2)) == x.... retards
+				float best_dist = sqrtf((float)(pow(best_z-tmp_z, 2)));
+				float tmp_dist = sqrtf((float)(pow(tmp_z-tmp_z, 2)));
 				if (tmp_dist < best_dist)
 				{
 					best_z = temp_z;
@@ -1132,5 +1133,24 @@ int16 Mob::CheckHealAggroAmount(int16 spellid) {
 		AggroAmount /= 10;
 	return AggroAmount;
 }
+
+void Mob::AddFeignMemory(Client* attacker) {
+	if(feign_memory_list.empty() && AIfeignremember_timer != NULL)
+		AIfeignremember_timer->Start(AIfeignremember_delay);
+	feign_memory_list.insert(attacker->CharacterID());
+}
+
+void Mob::RemoveFromFeignMemory(Client* attacker) {
+	feign_memory_list.erase(attacker->CharacterID());
+	if(feign_memory_list.empty() && AIfeignremember_timer != NULL)
+	   AIfeignremember_timer->Disable();
+}
+
+void Mob::ClearFeignMemory() {
+	feign_memory_list.clear();
+	if(AIfeignremember_timer != NULL)
+		AIfeignremember_timer->Disable();
+}
+
 
 

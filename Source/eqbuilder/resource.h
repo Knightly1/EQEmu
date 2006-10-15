@@ -72,20 +72,36 @@
 #define IDC_GRID_BUTTON                 1063
 #define IDC_DELETE_ALL_BUTTON           1063
 #define IDC_HOST                        1064
+#define IDC_FIXED_MERGE_EDIT            1064
 #define IDC_USER                        1065
+#define IDC_OCCUR_EDIT3                 1065
+#define IDC_PATH_MERGE_EDIT             1065
 #define IDC_PASSWORD                    1066
 #define IDC_DATABASE                    1067
 #define IDC_GRIDID                      1072
 #define IDC_USESPECID                   1074
 #define IDC_NPCID                       1075
 #define IDC_SPAWNID                     1079
+#define IDC_SPAWN2ID                    1079
+#define IDC_SPAWN2ID_FVAL               1080
+#define IDC_SPAWN2ID_ZVAL               1081
 #define IDC_USEZONEID                   1082
+#define IDC_SPAWNGROUPID                1082
 #define IDC_ZONEID                      1083
+#define IDC_SPAWNGROUPID_FVAL           1083
+#define IDC_GRIDID_FVAL                 1084
+#define IDC_MERCHANTID                  1085
+#define IDC_MERCHANTID_FVAL             1086
 #define IDC_USEDBID                     1087
+#define IDC_GRIDID_ZVAL                 1087
 #define IDC_OUT_NPCS                    1088
+#define IDC_MERCHANTID_ZVAL             1088
 #define IDC_OUT_SPAWNS                  1089
+#define IDC_SPAWNGROUPID_ZVAL           1089
 #define IDC_OUT_DOORS                   1090
+#define IDC_NPCID_FVAL                  1090
 #define IDC_OUT_TELEPORTS               1091
+#define IDC_NPCID_ZVAL                  1091
 #define IDC_OUT_GRIDS                   1092
 #define IDC_OUT_MERCHANTS               1093
 #define IDC_DATAMODE                    1094
@@ -100,6 +116,7 @@
 #define IDC_DRAW_PATHS                  1109
 #define IDC_EQEMUMAPS                   1109
 #define IDC_BrowseEmuMaps               1110
+#define IDC_DRAW_HILITE                 1110
 #define IDC_DELETE_MAPPING              1112
 #define IDC_ADD_MAPPING                 1113
 #define IDC_TOGGLE_FACTIONS             1114
@@ -112,6 +129,34 @@
 #define IDC_SOURCE_MAPPINGS             1117
 #define IDC_CURRENT_MAPPINGS            1118
 #define IDC_GO_BUTTON                   1120
+#define IDC_SPAWN2ID_DB                 1121
+#define IDC_SPAWN2ID_FIXED              1122
+#define IDC_SPAWN2ID_FLOAT              1123
+#define IDC_GRIDID_DB                   1124
+#define IDC_GRIDID_FIXED                1125
+#define IDC_GRIDID_FLOAT                1126
+#define IDC_GRIDID_DB2                  1127
+#define IDC_GRIDID_FIXED2               1128
+#define IDC_SPAWNID_FLOAT3              1129
+#define IDC_SPAWN2ID_ZID                1130
+#define IDC_GRIDID_ZID                  1131
+#define IDC_MERCHANTID_ZID              1132
+#define IDC_NPCID_DB                    1133
+#define IDC_NPCID_FIXED                 1134
+#define IDC_NPCID_FLOAT                 1135
+#define IDC_NPCID_ZID                   1136
+#define IDC_FIXED_FROM_DB               1137
+#define IDC_FLOAT_FROM_DB               1138
+#define IDC_RESET_IDS                   1138
+#define IDC_SAVE_IDS                    1139
+#define IDC_SPAWNGROUPID_DB             1139
+#define IDC_LOAD_IDS                    1140
+#define IDC_SPAWNGROUPID_FIXED          1140
+#define IDC_SPAWNGROUPID_FLOAT          1141
+#define IDC_FIXED_MERGE                 1141
+#define IDC_SPAWNGROUPID_ZID            1142
+#define IDC_PATHING_MERGE               1142
+#define IDC_PROGRESS_TEXT               1143
 #define ID_DATABASE_CONNECTION          32771
 #define ID_OUTPUT_SQLOPT                32772
 #define ID_OUTPUT_DBOPT                 32773
@@ -120,9 +165,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        140
+#define _APS_NEXT_RESOURCE_VALUE        141
 #define _APS_NEXT_COMMAND_VALUE         32774
-#define _APS_NEXT_CONTROL_VALUE         1121
+#define _APS_NEXT_CONTROL_VALUE         1144
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

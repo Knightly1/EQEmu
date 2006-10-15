@@ -1,7 +1,8 @@
-
+#include "debug.h"
 #ifdef WIN32
 	#include <windows.h>
 	#include <process.h>
+	#include <winsock2.h>
 #endif
 #include <iostream>
 using namespace std;
@@ -16,28 +17,22 @@ using namespace std;
 #include "../common/MiscFunctions.h"
 #define ASYNC_LOOP_GRANULARITY 4 //# of ms between checking our work
 
-extern Database database;
-DBAsync*				dbasync = new DBAsync(&database);
-AutoDelete<DBAsync>					dba_ad(&dbasync);
-DBAsyncFinishedQueue*	MTdbafq = new DBAsyncFinishedQueue(dbasync);
-AutoDelete<DBAsyncFinishedQueue>	dba_mtafq(&MTdbafq);
-
 bool DBAsyncCB_LoadVariables(DBAsyncWork* iWork) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	MYSQL_RES* result = 0;
 	DBAsyncQuery* dbaq = iWork->PopAnswer();
 	if (dbaq->GetAnswer(errbuf, &result))
-		database.LoadVariables_result(result);
+		iWork->GetDB()->LoadVariables_result(result);
 	else
 		cout << "Error: DBAsyncCB_LoadVariables failed: !GetAnswer: '" << errbuf << "'" << endl;
 	return true;
 }
 
-void AsyncLoadVariables() {
+void AsyncLoadVariables(DBAsync *dba, Database *db) {
 	char* query = 0;
-	DBAsyncWork* dbaw = new DBAsyncWork(&DBAsyncCB_LoadVariables, 0, DBAsync::Read);
-	dbaw->AddQuery(0, &query, database.LoadVariables_MQ(&query));
-	dbasync->AddWork(&dbaw);
+	DBAsyncWork* dbaw = new DBAsyncWork(db, &DBAsyncCB_LoadVariables, 0, DBAsync::Read);
+	dbaw->AddQuery(0, &query, db->LoadVariables_MQ(&query));
+	dba->AddWork(&dbaw);
 }
 
 
@@ -46,6 +41,11 @@ void AsyncLoadVariables() {
 //which will get signaled when somebody puts something on the queue
 ThreadReturnType DBAsyncLoop(void* tmp) {
 	DBAsync* dba = (DBAsync*) tmp;
+	
+#ifndef WIN32
+	_log(COMMON__THREADS, "Starting DBAsyncLoop with thread ID %d", pthread_self());
+#endif
+	
 	dba->MLoopRunning.lock();
 	while (dba->RunLoop()) {
 		//wait before working so we check the loop condition
@@ -60,12 +60,17 @@ ThreadReturnType DBAsyncLoop(void* tmp) {
 //		Sleep(ASYNC_LOOP_GRANULARITY);
 	}
 	dba->MLoopRunning.unlock();
+	
 #ifndef WIN32
-	return 0;
+	_log(COMMON__THREADS, "Ending DBAsyncLoop with thread ID %d", pthread_self());
 #endif
+	
+	THREAD_RETURN(NULL);
 }
 
-DBAsync::DBAsync(DBcore* iDBC) : Timeoutable(10000) {
+DBAsync::DBAsync(DBcore* iDBC)
+: Timeoutable(10000)
+{
 	pDBC = iDBC;
 	pRunLoop = true;
 	pNextID = 1;
@@ -73,7 +78,7 @@ DBAsync::DBAsync(DBcore* iDBC) : Timeoutable(10000) {
 	_beginthread(DBAsyncLoop, 0, this);
 #else
 	pthread_t thread;
-	pthread_create(&thread, NULL, &DBAsyncLoop, this);
+	pthread_create(&thread, NULL, DBAsyncLoop, this);
 #endif
 }
 
@@ -326,9 +331,8 @@ void DBAsync::DispatchWork(DBAsyncWork* iWork) {
 
 
 
-DBAsyncFinishedQueue::DBAsyncFinishedQueue(DBAsync* iDBA, int32 iTimeout) {
+DBAsyncFinishedQueue::DBAsyncFinishedQueue(int32 iTimeout) {
 	pTimeout = iTimeout;
-	iDBA->AddFQ(this);
 }
 
 DBAsyncFinishedQueue::~DBAsyncFinishedQueue() {
@@ -404,7 +408,9 @@ bool DBAsyncFinishedQueue::Push(DBAsyncWork* iDBAW) {
 
 
 
-DBAsyncWork::DBAsyncWork(DBAsyncFinishedQueue* iDBAFQ, int32 iWPT, DBAsync::Type iType, int32 iTimeout) {
+DBAsyncWork::DBAsyncWork(Database *db, DBAsyncFinishedQueue* iDBAFQ, int32 iWPT, DBAsync::Type iType, int32 iTimeout)
+: m_db(db)
+{
 	pstatus = DBAsync::AddingWork;
 	pType = iType;
 	pExecuteAfter = 0;
@@ -418,7 +424,9 @@ DBAsyncWork::DBAsyncWork(DBAsyncFinishedQueue* iDBAFQ, int32 iWPT, DBAsync::Type
 	pTSFinish = 0;
 }
 
-DBAsyncWork::DBAsyncWork(DBWorkCompleteCallBack iCB, int32 iWPT, DBAsync::Type iType, int32 iTimeout) {
+DBAsyncWork::DBAsyncWork(Database *db, DBWorkCompleteCallBack iCB, int32 iWPT, DBAsync::Type iType, int32 iTimeout)
+: m_db(db)
+{
 	pstatus = DBAsync::AddingWork;
 	pType = iType;
 	pExecuteAfter = 0;

@@ -6,7 +6,7 @@
 #endif // _MSC_VER > 1000
 // BigZoneDlg.h : header file
 //
-
+#pragma warning(disable:4786)
 #include "ZoneViewer.h"
 
 class CEQBuilderDlg;
@@ -76,6 +76,7 @@ protected:
 	virtual BOOL OnInitDialog();
 	afx_msg void OnSelchangedMobTree(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnDestroy();
+	afx_msg void OnDrawHilite();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

@@ -38,25 +38,31 @@ float CEQBuilderDlg::MobDistance(cmob *left, cmob *right) {
 	
 
 	//modifiers
-	if(left->npc->type == right->npc->type)
-		distance *= 0.95f;		//5% bonus for same body type
-	if(left->npc->race == right->npc->race)
-		distance *= 0.90f;		//10% bonus for same race
-	if(left->npc->texture == right->npc->texture && left->npc->texture != 0 && left->npc->texture != 255 && left->npc->texture != -1)
-		distance *= 0.90f;		//10% bonus for same non-0/255 texture
-	if(left->npc->size == right->npc->size)
-		distance *= 0.95f;		//5% bonus for same size
-	
-	//level difference modifiers
-	int dl = left->npc->level-right->npc->level;
-	if(dl < 0)
-		dl = -dl;
-	if(dl < 3)
-		distance *= 0.90f;		//10% bonus for <3 level difference
-	else if(dl > 10)
-		distance *= 10;			//1000% penalty for >10 level difference
-	else if(dl > 5)
-		distance *= 1.10f;		//10% penalty for >5 level difference
+	if(left->npc->IsSameAs(right->npc, false)) {
+		//the are exactly the same except for level...
+		distance *= 0.5; //50% bonus, may want to be bigger
+	} else {
+		if(left->npc->type == right->npc->type)
+			distance *= 0.95f;		//5% bonus for same body type
+		if(left->npc->race == right->npc->race)
+			distance *= 0.90f;		//10% bonus for same race
+		if(left->npc->texture == right->npc->texture && left->npc->texture != 0 && left->npc->texture != 255 && left->npc->texture != -1)
+			distance *= 0.90f;		//10% bonus for same non-0/255 texture
+		if(left->npc->size == right->npc->size)
+			distance *= 0.95f;		//5% bonus for same size
+
+		//level difference modifiers
+		int dl = left->npc->level-right->npc->level;
+		if(dl < 0)
+			dl = -dl;
+		if(dl < 3)
+			distance *= 0.90f;		//10% bonus for <3 level difference
+		else if(dl > 10)
+			distance *= 10;			//1000% penalty for >10 level difference
+		else if(dl > 5)
+			distance *= 1.10f;		//10% penalty for >5 level difference
+	}
+
 
 	return(distance);
 }
@@ -75,6 +81,9 @@ float CEQBuilderDlg::SpawnDistance(cmob *left, cspawn *right) {
 }
 
 bool CEQBuilderDlg::WillMergeSpawns(cspawn *left, cspawn *right) {
+	if(left->is_special || right->is_special)
+		return(false);	//special spawns never merge
+	
 	float distance;
 	
 	float dx = left->center.x - right->center.x;
@@ -95,8 +104,8 @@ bool CEQBuilderDlg::WillMergeSpawns(cspawn *left, cspawn *right) {
 //input = fixedMobs
 //output = fixedSpawns
 void CEQBuilderDlg::clusterFixedMobs() {
-	delete fixedSpawns;
-	fixedSpawns = new spawn_list();
+	if(fixedSpawns == NULL)
+		fixedSpawns = new spawn_list();
 
 	int mobcount = fixedMobs->getsize();
 	int i,r;
@@ -126,20 +135,35 @@ void CEQBuilderDlg::clusterFixedMobs() {
 	float err2 = filtres.coord_error*filtres.coord_error;
 	
 	spawn_list core_spawns;
+	float initbuildpos = buildpos;
 
 	//first time through just collapses spawns within coord_error range
 	for( i = 0; i < mobcount; i++ ) {
 		cmob *mob = fixedMobs->get(i);
 
+		cspawn *match = NULL;
+
+		//if this is a special mob, then it may only join a special group
+		//but we must still hunt for this special group before making a new
+		//group since they are likely to be in the list multiple times
+
 		int spawncount = core_spawns.getsize();
 
-		cspawn *match = NULL;
 		float dist = LARGE_DISTANCE+1;
 		float curdist;
 		for(r = 0; r < spawncount; r++) {
 			cspawn *spawn = core_spawns.get(r);
 			curdist = SpawnDistance(mob, spawn);
 			if(curdist < err2) {
+				if(spawn->is_special) {
+					//this is a special spawn, not just anybody can hop into it, only a mob already in it
+					if(!spawn->ContainsNPC(mob->npc, false))
+						continue;
+					//else, spawn is special and it already contains this mob, its a match
+				} else if(mob->npc->IsSpecial()) {
+					//a special mob may never join a non-special spawn
+					continue;
+				}
 				match = spawn;
 				break;
 			}
@@ -149,6 +173,9 @@ void CEQBuilderDlg::clusterFixedMobs() {
 			AddNewSpawn(&core_spawns, mob, logPathing, true);
 		else
 			updateSpawnPoint(match, mob, false, logPathing);
+		
+		buildpos = initbuildpos + float( i * 10 ) / mobcount;
+		pProgress->SetPos( buildpos );
 	}
 	
 	
@@ -173,7 +200,9 @@ void CEQBuilderDlg::clusterFixedMobs() {
 
 			//add a new spawn point for the group at the center of the older group
 			//this assumes the core group is really only one spawn point (within coord error)
-			merge_with->locs->add(new cloc(core->center));
+			if(!spawnContainsLoc(merge_with, &core->center)) {
+				merge_with->locs->add(new cspawnpoint(&core->center));
+			}
 
 			//now copy all the mobs into the older group
 			int k;
@@ -190,6 +219,19 @@ void CEQBuilderDlg::clusterFixedMobs() {
 			merge_with->falsespawn = false;		//camps are not false either
 			merge_with->probability = getSpawnProbability( merge_with, logPathing ) ;
 		}
+
+		buildpos = initbuildpos + 10 + ( i * 10 ) / corecount;
+		pProgress->SetPos( buildpos );
 	}
 
+}
+
+bool CEQBuilderDlg::spawnContainsLoc(cspawn *spawn, const cloc *loc) {
+	for ( int j=0; j < spawn->locs->getsize(); j++ ) {
+		cspawnpoint* c = spawn->locs->get(j);
+		if ( isSameLoc( c, loc ) == locSamePoint ) {
+			return(true);
+		}
+	}
+	return(false);
 }

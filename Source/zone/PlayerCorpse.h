@@ -38,10 +38,10 @@ public:
 	Corpse::Corpse(int32 in_corpseid, int32 in_charid, char* in_charname, ItemList* in_itemlist, int32 in_copper, int32 in_silver, int32 in_gold, int32 in_plat, float in_x, float in_y, float in_z, float in_heading, float in_size, int8 in_gender, int16 in_race, int8 in_class, int8 in_deity, int8 in_level, int8 in_texture, int8 in_helmtexture,int32 in_rezexp);
 	Corpse::~Corpse();
 
-	bool	IsCorpse()			{ return true; }
-	bool	IsPlayerCorpse()	{ return p_PlayerCorpse; }
-	bool	IsNPCCorpse()		{ return !p_PlayerCorpse; }
-	bool	IsBecomeNPCCorpse() { return become_npc; }
+	bool	IsCorpse()			const { return true; }
+	bool	IsPlayerCorpse()	const { return p_PlayerCorpse; }
+	bool	IsNPCCorpse()		const { return !p_PlayerCorpse; }
+	bool	IsBecomeNPCCorpse() const { return become_npc; }
 	bool	Process();
 	bool	Save();
 	int32	GetCharID()			{ return charid; }
@@ -75,9 +75,9 @@ public:
 	uint32	GetPlatinum()	{ return platinum; }
 
 	void	FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho);
-	void	MakeLootRequestPackets(Client* client, const EQZonePacket* app);
-	void	LootItem(Client* client, const EQZonePacket* app);
-	void	EndLoot(Client* client, const EQZonePacket* app);
+	void	MakeLootRequestPackets(Client* client, const EQApplicationPacket* app);
+	void	LootItem(Client* client, const EQApplicationPacket* app);
+	void	EndLoot(Client* client, const EQApplicationPacket* app);
 	void	Summon(Client* client, bool spell);
 	void	CastRezz(int16 spellid, Mob* Caster);
 	void	CompleteRezz();

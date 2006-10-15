@@ -7,6 +7,8 @@
 #include "EQBuilderDlg.h"
 #include "spawn_list.h"
 #include "npc_list.h"
+#include "../zone/map.h"
+#include <math.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -60,6 +62,7 @@ BEGIN_MESSAGE_MAP(BigZoneDlg, CDialog)
 	ON_NOTIFY(NM_CLICK, IDC_MOB_TREE, OnClickMoblist)
 	ON_NOTIFY(TVN_SELCHANGED, IDC_MOB_TREE, OnSelchangedMobTree)
 	ON_WM_DESTROY()
+	ON_BN_CLICKED(IDC_DRAW_HILITE, OnDrawHilite)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -165,7 +168,9 @@ void BigZoneDlg::RedoMobList() {
 	lMobList->DeleteAllItems();
 	
 	map<string, HTREEITEM> rel;
-	map<string, HTREEITEM>::iterator res;
+	map<string, HTREEITEM>::iterator res, cur, end;
+	map<string, int> fixed_spawncount;
+	map<string, int> grid_spawncount;
 	
 	TVINSERTSTRUCT ins;
 	char buffer[256];
@@ -192,6 +197,8 @@ void BigZoneDlg::RedoMobList() {
 		HTREEITEM npcentry = lMobList->InsertItem( &ins );
 		
 		rel[n] = npcentry;
+		fixed_spawncount[n] = 0;
+		grid_spawncount[n] = 0;
 	}
 
 	max = gridSpawns->getsize();
@@ -209,6 +216,8 @@ void BigZoneDlg::RedoMobList() {
 			res = rel.find(n);
 			if(res == rel.end())
 				continue;
+			
+			grid_spawncount[n]++;
 
 			HTREEITEM entry = res->second;
 
@@ -228,13 +237,55 @@ void BigZoneDlg::RedoMobList() {
 				int jmax;
 				jmax = spawn->grid->waypoints->getsize();
 				int j;
+				cwaypoint *wp1, *wp2;
+				wp1 = NULL;
+				wp2 = NULL;	
+				VERTEX start, end;
+				float len, dot;
 				for(j = 0; j < jmax; j++) {
 					cwaypoint *wp = spawn->grid->waypoints->get(j);
+
+					if(wp2) {
+						//last walking vector
+						start.x = wp1->loc->x - wp2->loc->x;
+						start.y = wp1->loc->y - wp2->loc->y;
+						start.z = 0;
+						//current walking vector
+						end.x = wp->loc->x - wp1->loc->x;
+						end.y = wp->loc->y - wp1->loc->y;
+						end.z = 0;
+						//normalize both vectors
+						len = sqrt(end.x*end.x + end.y*end.y);
+						if(len < 0.000005f) {
+							//close enough to 0
+							//special value
+							dot = -2;
+						} else {
+							end.x /= len;
+							end.y /= len;
+							len = sqrt(start.x*start.x + start.y*start.y);
+							if(len < 0.000005f) {
+								//close enough to 0
+								//special value
+								dot = -2;
+							} else {
+								start.x /= len;	//this len is used below!
+								start.y /= len;
+
+								//dot product of the two vectors:
+								dot = start.x*end.x + start.y*end.y;
+							}
+						}
+					} else
+						dot = -1;
+					
 					CString line;
-					line.Format("(%.3f,%.3f,%.3f @%d)", wp->loc->x, wp->loc->y, wp->loc->z, wp->loc->heading);
+					line.Format("(%.3f,%.3f,%.3f @%.2f) %.3f", wp->loc->x, wp->loc->y, wp->loc->z, wp->loc->heading, dot);
 					strcpy(buffer, (const char *) line);
 					ins.item.pszText = buffer;
 					lMobList->InsertItem( &ins );
+					wp2 = wp1;
+					wp1 = wp;
 				}
 			}
 		}
@@ -257,6 +308,8 @@ void BigZoneDlg::RedoMobList() {
 			if(res == rel.end())
 				continue;
 
+			fixed_spawncount[n]++;
+
 			HTREEITEM entry = res->second;
 
 			CString line;
@@ -272,6 +325,24 @@ void BigZoneDlg::RedoMobList() {
 		}
 
 	}
+
+	cur = rel.begin();
+	end = rel.end();
+	for(; cur != end; cur++) {
+		HTREEITEM entry = cur->second;
+
+		CString line;
+		line.Format("Count: %d fixed, %d grid", fixed_spawncount[cur->first], grid_spawncount[cur->first]);
+		strcpy(buffer, (const char *) line);
+		
+		ins.hParent = entry;
+		ins.hInsertAfter = TVI_FIRST;
+		ins.item.mask = TVIF_TEXT | TVIF_PARAM;
+		ins.item.pszText = buffer;
+		ins.item.lParam = 0;
+		HTREEITEM locentry = lMobList->InsertItem( &ins );
+	}
+
 }
 
 BOOL BigZoneDlg::OnInitDialog() 
@@ -319,6 +390,12 @@ void BigZoneDlg::OnDestroy()
 	
 	m_shown = false;
 	
+}
+
+void BigZoneDlg::OnDrawHilite() 
+{
+	vZoneView.ToggleDrawHilite();
+	vZoneView.RedrawWindow();
 }
 
 

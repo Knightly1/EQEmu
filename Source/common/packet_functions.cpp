@@ -93,12 +93,12 @@ voidpf eqemu_alloc_func(voidpf opaque, uInt items, uInt size) {
 }
 
 void eqemu_free_func(voidpf opaque, voidpf address) {
-	delete (char *)address;
+	delete[] (char *)address;
 }
 #endif
 
 
-int DeflatePacket(unsigned char* in_data, int in_length, unsigned char* out_data, int max_out_length) {
+int DeflatePacket(const unsigned char* in_data, int in_length, unsigned char* out_data, int max_out_length) {
 #ifdef REUSE_ZLIB
 	static bool inited = false;
 	static z_stream zstream;
@@ -110,13 +110,14 @@ int DeflatePacket(unsigned char* in_data, int in_length, unsigned char* out_data
     	return(0);
     }
     if(!inited) {
+		memset(&zstream, 0, sizeof(zstream));
 		zstream.zalloc    = eqemu_alloc_func;
 		zstream.zfree     = eqemu_free_func;
 		zstream.opaque    = Z_NULL;
 		deflateInit(&zstream, Z_FINISH);
     }
 	
-	zstream.next_in   = in_data;
+	zstream.next_in   = const_cast<unsigned char *>(in_data);
 	zstream.avail_in  = in_length;
 /*	zstream.zalloc    = Z_NULL;
 	zstream.zfree     = Z_NULL;
@@ -144,9 +145,10 @@ int DeflatePacket(unsigned char* in_data, int in_length, unsigned char* out_data
 	}
 	
 	z_stream zstream;
+	memset(&zstream, 0, sizeof(zstream));
     int zerror;
 	
-	zstream.next_in   = in_data;
+	zstream.next_in   = const_cast<unsigned char *>(in_data);
 	zstream.avail_in  = in_length;
 	zstream.zalloc    = eqemu_alloc_func;
 	zstream.zfree     = eqemu_free_func;
@@ -169,7 +171,7 @@ int DeflatePacket(unsigned char* in_data, int in_length, unsigned char* out_data
 #endif
 }
 
-uint32 InflatePacket(uchar* indata, uint32 indatalen, uchar* outdata, uint32 outdatalen, bool iQuiet) {
+uint32 InflatePacket(const uchar* indata, uint32 indatalen, uchar* outdata, uint32 outdatalen, bool iQuiet) {
 #ifdef REUSE_ZLIB
 	static bool inited = false;
 	static z_stream zstream;
@@ -187,7 +189,7 @@ uint32 InflatePacket(uchar* indata, uint32 indatalen, uchar* outdata, uint32 out
 		inflateInit2(&zstream, 15);
     }
 
-	zstream.next_in		= indata;
+	zstream.next_in		= const_cast<unsigned char *>(indata);
 	zstream.avail_in	= indatalen;
 	zstream.next_out	= outdata;
 	zstream.avail_out	= outdatalen;
@@ -233,7 +235,7 @@ uint32 InflatePacket(uchar* indata, uint32 indatalen, uchar* outdata, uint32 out
 	int zerror = 0;
 	int i;
 	
-	zstream.next_in		= indata;
+	zstream.next_in		= const_cast<unsigned char *>(indata);
 	zstream.avail_in	= indatalen;
 	zstream.next_out	= outdata;
 	zstream.avail_out	= outdatalen;

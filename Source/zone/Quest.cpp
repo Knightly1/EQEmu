@@ -51,7 +51,7 @@ Quest::~Quest()
 	delete[] m_pQuests;
 }
 
-bool Database::OpenQuery(char* zonename) {
+bool ZoneDatabase::OpenQuery(char* zonename) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char* query = 0;
 	MYSQL_RES* result;
@@ -85,7 +85,7 @@ bool Database::OpenQuery(char* zonename) {
 		}
 		mysql_free_result(result);
 	}
-	cerr << "Error in Database::OpenQuest query '" << query << "' " << errbuf << endl;
+	cerr << "Error in ZoneDatabase::OpenQuest query '" << query << "' " << errbuf << endl;
 	delete[] query;
 
 return false;

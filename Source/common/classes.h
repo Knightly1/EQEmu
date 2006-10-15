@@ -57,6 +57,7 @@
 #define MERCHANT 41
 #define ADVENTURERECRUITER 60
 #define ADVENTUREMERCHANT 61
+#define CORPSE_CLASS 62	//only seen on Danvi's Corpse in Akheva so far..
 #define TRIBUTE_MASTER	63
 #define GUILD_TRIBUTE_MASTER	64	//not sure
 #define warrior_1 1
@@ -74,7 +75,8 @@
 #define rogue_1 256
 #define shaman_1 512
 #define beastlord_1 16384
-#define call_1 32768
+#define berserker_1 32768
+#define call_1 65536
 
 const char* GetEQClassName(int8 class_, int8 level = 0);
 int32 GetArrayEQClass(int8 eqclass);

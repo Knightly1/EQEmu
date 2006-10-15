@@ -24,14 +24,14 @@ eqbuilderini::eqbuilderini( CString eqbpath )
 	this->user = "";
 	this->password = "";
 	this->db = "";
-	this->useopt = 1;
+/*	this->useopt = 1;
 	this->zoneid = 400;
 	this->npcid = 1000;
 	this->spawnid = 1000;
 	this->gridid = 1000;
 	this->sqldelete = false;
 	this->usedb = false;
-	this->eqmaps_path = "";
+*/	this->eqmaps_path = "";
 	this->eqemumaps_path = "";
 	load();
 }
@@ -44,7 +44,7 @@ void eqbuilderini::setdbparams( CString host, CString user, CString password, CS
 	save();
 }
 
-void eqbuilderini::setsqlparams( int useopt, int zoneid, int npcid, int spawnid, int gridid, bool sqldelete, bool usedb ) {
+/*void eqbuilderini::setsqlparams( int useopt, int zoneid, int npcid, int spawnid, int gridid, bool sqldelete, bool usedb ) {
 	this->useopt = useopt;
 	this->zoneid = zoneid;
 	this->npcid = npcid;
@@ -53,7 +53,7 @@ void eqbuilderini::setsqlparams( int useopt, int zoneid, int npcid, int spawnid,
 	this->sqldelete = sqldelete;
 	this->usedb = usedb;
 	save();
-}
+}*/
 
 void eqbuilderini::setgeneralparams( CString eqmaps_path, CString eqemumaps_path ) {
 	this->eqmaps_path = eqmaps_path;
@@ -99,7 +99,7 @@ void eqbuilderini::load() {
 			password = value;
 		} else if ( cle == "db" ) {
 			db = value;
-		} else if ( cle == "useopt" ) {
+/*		} else if ( cle == "useopt" ) {
 			useopt = atoi( value );
 		} else if ( cle == "zoneid" ) {
 			zoneid = atoi( value );
@@ -113,7 +113,7 @@ void eqbuilderini::load() {
 			sqldelete = ( value == "true" );
 		} else if ( cle == "usedb" ) {
 			usedb = ( value == "true" );
-		} else if ( cle == "eqmaps_path" ) {
+*/		} else if ( cle == "eqmaps_path" ) {
 			eqmaps_path = value;
 		} else if ( cle == "eqemumaps_path" ) {
 			eqemumaps_path = value;
@@ -174,7 +174,7 @@ void eqbuilderini::save() {
 	line = "\n";
 	f.WriteString(line);
 
-	line = "[SQL Options]\n";
+/*	line = "[SQL Options]\n";
 	f.WriteString(line);
 	line.Format( "useopt=%d\n", this->useopt );
 	f.WriteString(line);
@@ -198,7 +198,7 @@ void eqbuilderini::save() {
 		line.Format( "usedb=false\n" );
 	}
 	f.WriteString(line);
-
+*/
 	line = "[General Options]\n";
 	f.WriteString(line);
 	line = "eqmaps_path=" + this->eqmaps_path + "\n";

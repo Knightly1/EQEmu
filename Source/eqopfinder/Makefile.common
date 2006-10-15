@@ -1,0 +1,26 @@
+#the set of objects needed to do something useful with packetfiles
+OFOBJS=.obj/Mutex.o .obj/unix.o .obj/packetfile.o \
+  .obj/opcodemgr.o ../common/emu_opcodes.o structmatch.o matchers.o \
+  .obj/MiscFunctions.o .obj/packet_dump.o eqopfinder.o .obj/logsys.o
+
+all: eqopfinder
+
+eqopfinder: $(OFOBJS)
+	g++ $(LDFLAGS) -o $@ $^
+
+#force these to depend on the oplist
+../common/emu_opcodes.o: ../common/emu_oplist.h
+.obj/opcodemgr.o: ../common/emu_oplist.h
+
+clean:
+	rm -f eqextract $(OFOBJS) eqopfinder
+
+.obj/%.o: ../common/%.cpp ../common/%.h
+	mkdir -p .obj
+	g++ $(CXXFLAGS) -c $< -o $@
+
+%.o: %.cpp %.h
+	mkdir -p .obj
+	g++ $(CXXFLAGS) -c $< -o $@
+
+

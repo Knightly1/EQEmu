@@ -46,6 +46,8 @@ using namespace std;
 #include "../common/packet_dump_file.h"
 #include "../common/EQStreamFactory.h"
 #include "../common/EQStream.h"
+#include "ZoneConfig.h"
+#include "../common/breakdowns.h"
 #include "map.h"
 #include "object.h"
 #include "petitions.h"
@@ -61,13 +63,7 @@ using namespace std;
 #define strcasecmp  _stricmp
 #endif
 
-#ifdef GUILDWARS
-#include "../GuildWars/GuildWars.h"
-extern GuildWars guildwars;
-extern GuildLocationList location_list;
-#endif
 
-extern Database database;
 extern WorldServer worldserver;
 extern Zone* zone;
 extern int32 numclients;
@@ -79,6 +75,8 @@ extern bool staticzone;
 Zone* zone = 0;
 volatile bool ZoneLoaded = false;
 extern Parser* parse;
+extern DBAsyncFinishedQueue MTdbafq;
+extern DBAsync *dbasync;
 void CleanupLoadZoneState(int32 spawn2_count, ZSDump_Spawn2** spawn2_dump, ZSDump_NPC** npc_dump, ZSDump_NPC_Loot** npcloot_dump, NPCType** gmspawntype_dump, Spawn2*** spawn2_loaded, NPC*** npc_loaded, MYSQL_RES** result);
 
 bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
@@ -94,8 +92,10 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 		return false;
 	}
 	
+	LogFile->write(EQEMuLog::Status, "Booting %s", zonename);
+	
 	numclients = 0;
-	zone = new Zone(iZoneID, zonename, net.GetZoneAddress(), net.GetZonePort());
+	zone = new Zone(iZoneID, zonename);
    
 	// Load all NPCs in for the current zone.
 	database.GetNPCType (0);
@@ -142,13 +142,13 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 	ZoneLoaded = true;
 
 	worldserver.SetZone(iZoneID);
-	LogFile->write(EQEMuLog::Normal, "---- Zone server %s, listening on port:%i ----", zonename, net.GetZonePort());
+	LogFile->write(EQEMuLog::Normal, "---- Zone server %s, listening on port:%i ----", zonename, ZoneConfig::get()->ZonePort);
 	LogFile->write(EQEMuLog::Status, "Zone Bootup: %s (%i)", zonename, iZoneID);
 	UpdateWindowTitle();
 	zone->GetTimeSync();
 
 	//This is a bad way of making it set the type to clear on bootup.
-	int8 weather=database.GetZoneW(zone->GetZoneID());
+	int8 weather=database.GetZoneWeather(zone->GetZoneID());
 	if(weather<1 || weather>3)
 		zone->weather_type=1;
 	else
@@ -213,21 +213,21 @@ bool Zone::LoadZoneObjects() {
 //tradeskill containers do not have an itemid of 0... at least what I am seeing
 			if (itemid == 0) {
 				// Generic tradeskill container
-				inst = new ItemContainerInst(ItemUseWorldContainer);
+				inst = new ItemInst(ItemUseWorldContainer);
 			}
 			else {
 				// Groundspawn object
-				inst = ItemInst::Create(itemid);
+				inst = database.CreateItem(itemid);
 			}
 			
 			//Father Nitwit's fix... not perfect...
 			if(inst == NULL && type != OT_DROPPEDITEM) {
-				inst = new ItemContainerInst(ItemUseWorldContainer);
+				inst = new ItemInst(ItemUseWorldContainer);
 			}
 			
 			// Load child objects if container
 			if (inst && inst->IsType(ItemClassContainer)) {
-				database.LoadWorldContainer(id, (ItemContainerInst*)inst);
+				database.LoadWorldContainer(id, inst);
 			}
 			
 			Object* object = new Object(id, type, icon, data, inst);
@@ -258,7 +258,7 @@ bool Zone::LoadGroundSpawns() {
 	for(gsindex=0;gsindex<50;gsindex++){
 		if(groundspawn.spawn[gsindex].item>0 && groundspawn.spawn[gsindex].item<500000){
 			ItemInst* inst = NULL;
-			inst = ItemInst::Create(groundspawn.spawn[gsindex].item);
+			inst = database.CreateItem(groundspawn.spawn[gsindex].item);
 			gsnumber=groundspawn.spawn[gsindex].max_allowed;
 			ix=0;
 			if(inst){
@@ -268,6 +268,7 @@ bool Zone::LoadGroundSpawns() {
 					Object* object = new Object(inst,name,groundspawn.spawn[gsindex].max_x,groundspawn.spawn[gsindex].min_x,groundspawn.spawn[gsindex].max_y,groundspawn.spawn[gsindex].min_y,groundspawn.spawn[gsindex].max_z,groundspawn.spawn[gsindex].heading,groundspawn.spawn[gsindex].respawntimer);//new object with id of 10000+
 					entity_list.AddObject(object, false);
 				}
+				safe_delete(inst);
 			}
 		}
 	}
@@ -354,7 +355,7 @@ void Zone::LoadTempMerchantData(){
 	workpt.b4() = DBA_b4_Zone;
 	workpt.w2_3() = 0;
 	workpt.b1() = DBA_b1_Zone_MerchantListsTemp;
-	DBAsyncWork* dbaw = new DBAsyncWork(MTdbafq, workpt, DBAsync::Read);
+	DBAsyncWork* dbaw = new DBAsyncWork(&database, &MTdbafq, workpt, DBAsync::Read);
 	dbaw->AddQuery(1, &query, MakeAnyLenString(&query, 
 		"select ml.npcid,ml.slot,ml.itemid,ml.charges from "
 		"merchantlist_temp ml, npc_types nt, spawnentry se, "
@@ -476,7 +477,7 @@ void Zone::GetMerchantDataForZoneLoad(){
 	workpt.b4() = DBA_b4_Zone;
 	workpt.w2_3() = 0;
 	workpt.b1() = DBA_b1_Zone_MerchantLists;
-	DBAsyncWork* dbaw = new DBAsyncWork(MTdbafq, workpt, DBAsync::Read);
+	DBAsyncWork* dbaw = new DBAsyncWork(&database, &MTdbafq, workpt, DBAsync::Read);
 	dbaw->AddQuery(1, &query, MakeAnyLenString(&query, 
 		"select ml.merchantid,ml.slot,ml.item "
 		"from merchantlist ml, npc_types nt, spawnentry se, spawn2 s2 "
@@ -606,31 +607,32 @@ std::map<uint32,NPCType *>::iterator itr;
 void Zone::LoadZoneDoors(const char* zone)
 {
 	LogFile->write(EQEMuLog::Status, "Loading doors for %s ...", zone);
-	for(uint32 i=0;i<=database.MaxDoors();i++)
-	{
-		const Door* door = 0;
-		door = database.GetDoorDBID(i);
-		if(door == 0 || door->db_id == 0 || strcasecmp(door->zone_name, zone)){
-			if(door&&!strcasecmp(door->zone_name, zone))
-			LogFile->write(EQEMuLog::Error, "Database errror, Not Sending door: i:%i door:%p db_id:%i zone_name:%s zone:%s door_id:%i",
-				i, door, door->db_id, door->zone_name, zone, door->door_id);
-			continue;
-		}
-#if (EQDEBUG>=11)
-			LogFile->write(EQEMuLog::Debug, "Sending door:%i", i);
-#endif
-
-		Doors* newdoor = new Doors(door);
-		if(newdoor)
-			entity_list.AddDoor(newdoor);
-		else
-			LogFile->write(EQEMuLog::Error,"Could not add door to entity list!");
-	}
-	LogFile->write(EQEMuLog::Status, "Done loading doors for %s ...", zone);
 	
+	int32 maxid;
+	sint32 count = database.GetDoorsCount(&maxid, zone);
+	if(count < 1) {
+		LogFile->write(EQEMuLog::Status, "... No doors loaded.");
+		return;
+	}
+	
+	Door *dlist = new Door[count];
+	
+	if(!database.LoadDoors(count, dlist, zone)) {
+		LogFile->write(EQEMuLog::Error, "... Failed to load doors.");
+		delete[] dlist;
+		return;
+	}
+	
+	int r;
+	Door *d = dlist;
+	for(r = 0; r < count; r++, d++) {
+		Doors* newdoor = new Doors(d);
+		entity_list.AddDoor(newdoor);
+	}
+	delete[] dlist;
 }
 
-Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, int16 in_port) 
+Zone::Zone(int32 in_zoneid, const char* in_short_name)
 :	initgrids_timer(10000),
 	autoshutdown_timer(ZONE_AUTOSHUTDOWN_DELAY),
 	clientauth_timer(AUTHENTICATION_TIMEOUT * 1000),
@@ -645,8 +647,6 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, i
 	memset(file_name, 0, sizeof(file_name));
 	long_name = 0;
 	aggroedmobs =0;
-	address = strcpy(new char[strlen(in_address)+1], in_address);
-	port = in_port;
 
 	psafe_x = 0;
 	psafe_y = 0;
@@ -665,14 +665,40 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, i
 	Weather_Timer = new Timer(((rand()%7200-30)+30)*2000);
 	Weather_Timer->Start();
 	LogFile->write(EQEMuLog::Status, "Weather should change in %i seconds",Weather_Timer->GetRemainingTime()/1000);
-	zone_weather=weather_type-1;
-#ifdef GUILDWARS
-	database.LoadLocationInformation();
-	guildwars.SetCurrentZone(in_zoneid);
-	guildwars.Construct();
-	db_update = new Timer(600000);
+	weather_type = 1;
+	zone_weather = 0;
+	
+	aas = NULL;
+//	aa_buffer = NULL;
+	totalAAs = 0;
+}
+
+Zone::~Zone() {
+	if(pQueuedMerchantsWorkID != 0)
+		dbasync->CancelWork(pQueuedMerchantsWorkID);
+	spawn2_list.Clear();
+	safe_delete(map);
+	safe_delete(pathing);
+	if (worldserver.Connected()) {
+		worldserver.SetZone(0);
+	}
+	safe_delete_array(short_name);
+	safe_delete_array(long_name);
+	safe_delete(Weather_Timer);
+	zone_point_list.Clear();
+	entity_list.Clear();
+//	safe_delete_array(aa_buffer);
+	if(aas != NULL) {
+		int r;
+		for(r = 0; r < totalAAs; r++) {
+			uchar *data = (uchar *) aas[r];
+			safe_delete_array(data);
+		}
+		safe_delete_array(aas);
+	}
+#ifdef CLIENT_LOGS
+	client_logs.clear();
 #endif
-	aa_buffer = NULL;
 }
 
 //Modified for timezones.
@@ -744,13 +770,13 @@ bool Zone::Init(bool iStaticZone) {
 		LogFile->write(EQEMuLog::Error, "Loading ground spawns failed. continuing.");
 	}
 	
-	LogFile->write(EQEMuLog::Status, "Loading Objects from DB...");
+	LogFile->write(EQEMuLog::Status, "Loading World Objects from DB...");
 	if (!LoadZoneObjects())
 	{
-		LogFile->write(EQEMuLog::Error, "Loading Objects failed. continuing.");
+		LogFile->write(EQEMuLog::Error, "Loading World Objects failed. continuing.");
 	}
 	
-	//load up the zone's doors
+	//load up the zone's doors (prints inside)
 	zone->LoadZoneDoors(zone->GetShortName());
 	
 	//clear trader items if we are loading the bazaar
@@ -759,9 +785,9 @@ bool Zone::Init(bool iStaticZone) {
 	
 	// Load exp modifier variables.
 	// Set default value for EXP modifiers 
-	EXPMod = (double)1;
+	EXPMod = (float)1;
 	GroupEXPBonus = 0.1;
-	AAXPMod = (double)1;
+	AAXPMod = (float)1;
  
 	char tmp[10];
 	char *tmp2;
@@ -809,53 +835,60 @@ bool Zone::Init(bool iStaticZone) {
 	return true;
 }
 
-Zone::~Zone()
-{
-	if(pQueuedMerchantsWorkID != 0)
-		dbasync->CancelWork(pQueuedMerchantsWorkID);
-	spawn2_list.Clear();
-	safe_delete(map);
-	safe_delete(pathing);
-	if (worldserver.Connected()) {
-		worldserver.SetZone(0);
-	}
-	safe_delete_array(short_name);
-	safe_delete_array(long_name);
-	safe_delete_array(address);
-	safe_delete(Weather_Timer);
+void Zone::ReloadStaticData() {
+	LogFile->write(EQEMuLog::Status, "Reloading Zone Static Data...");
+	
+	LogFile->write(EQEMuLog::Status, "Reloading static zone points...");
 	zone_point_list.Clear();
-	entity_list.Clear();
-	if(aas != NULL) {
-		int r;
-		for(r = 0; r < totalAAs; r++)
-			safe_delete(aas->aa[r]);
+	if (!database.LoadStaticZonePoints(&zone_point_list, GetShortName())) {
+		LogFile->write(EQEMuLog::Error, "Loading static zone points failed.");
 	}
-	safe_delete(aa_buffer);
-#ifdef GUILDWARS
-	location_list.ClearLocations();
-	guildwars.Deconstruct();
-	safe_delete(db_update);
-#endif
-#ifdef CLIENT_LOGS
-	client_logs.clear();
-#endif
+	
+	LogFile->write(EQEMuLog::Status, "Reloading traps...");
+	entity_list.RemoveAllTraps();
+	if (!database.LoadTraps(GetShortName()))
+	{
+		LogFile->write(EQEMuLog::Error, "Reloading traps failed.");
+	}
+	
+	LogFile->write(EQEMuLog::Status, "Reloading ground spawns...");
+	if (!LoadGroundSpawns())
+	{
+		LogFile->write(EQEMuLog::Error, "Reloading ground spawns failed. continuing.");
+	}
+	
+	entity_list.RemoveAllObjects();
+	LogFile->write(EQEMuLog::Status, "Reloading World Objects from DB...");
+	if (!LoadZoneObjects())
+	{
+		LogFile->write(EQEMuLog::Error, "Reloading World Objects failed. continuing.");
+	}
+	
+	entity_list.RemoveAllDoors();
+	zone->LoadZoneDoors(zone->GetShortName());
+	
+	//load the zone config file.
+	if (!LoadZoneCFG(zone->GetShortName(), true)) // try loading the zone name...
+		LoadZoneCFG(zone->GetFileName()); // if that fails, try the file name, then load defaults
+	
+	LogFile->write(EQEMuLog::Status, "Zone Static Data Reloaded.");
 }
 
 bool Zone::LoadZoneCFG(const char* filename, bool DontLoadDefault) {
 	memset(&newzone_data, 0, sizeof(NewZone_Struct));
-	NewZone_Struct* nsc = database.GetZoneCFG(database.GetZoneID(filename));
-	if(nsc){
-		memcpy(&newzone_data,nsc,sizeof(NewZone_Struct));
-		strcpy(newzone_data.zone_short_name, GetShortName());
-		strcpy(newzone_data.zone_long_name, GetLongName());
-		strcpy(newzone_data.zone_short_name2,GetShortName());
-		safe_delete(nsc);
-		LogFile->write(EQEMuLog::Status, "Successfully loaded Zone Config.");
-		return true;
+	if(!database.GetZoneCFG(database.GetZoneID(filename), &newzone_data, can_bind)) {
+		cout << "Error while loading Zone Config!\n";
+		cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
+		return false;
 	}
-	cout << "Error while loading Zone Config!\n";
-	cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
-	return false;
+	
+	//overwrite with our internal variables
+	strcpy(newzone_data.zone_short_name, GetShortName());
+	strcpy(newzone_data.zone_long_name, GetLongName());
+	strcpy(newzone_data.zone_short_name2,GetShortName());
+	
+	LogFile->write(EQEMuLog::Status, "Successfully loaded Zone Config.");
+	return true;
 }
 
 bool Zone::SaveZoneCFG() {
@@ -1084,10 +1117,7 @@ void Zone::Repop(int32 delay) {
 void Zone::GetTimeSync()
 {
 	if (worldserver.Connected() && !gottime) {
-		ServerPacket* pack = new ServerPacket;
-		pack->size = 0;
-		pack->opcode = ServerOP_GetWorldTime;
-		pack->pBuffer = new uchar[pack->size];
+		ServerPacket* pack = new ServerPacket(ServerOP_GetWorldTime, 0);
 		worldserver.SendPacket(pack);
 		safe_delete(pack);
 	}
@@ -1096,10 +1126,7 @@ void Zone::GetTimeSync()
 void Zone::SetDate(int16 year, int8 month, int8 day, int8 hour, int8 minute)
 {
 	if (worldserver.Connected()) {
-		ServerPacket* pack = new ServerPacket;
-		pack->size = sizeof(eqTimeOfDay);
-		pack->opcode = ServerOP_SetWorldTime;
-		pack->pBuffer = new uchar[pack->size];
+		ServerPacket* pack = new ServerPacket(ServerOP_SetWorldTime, sizeof(eqTimeOfDay));
 		eqTimeOfDay* eqtod = (eqTimeOfDay*)pack->pBuffer;
 		eqtod->start_eqtime.minute=minute;
 		eqtod->start_eqtime.hour=hour;
@@ -1116,10 +1143,7 @@ void Zone::SetDate(int16 year, int8 month, int8 day, int8 hour, int8 minute)
 void Zone::SetTime(int8 hour, int8 minute)
 {
 	if (worldserver.Connected()) {
-		ServerPacket* pack = new ServerPacket;
-		pack->size = sizeof(eqTimeOfDay);
-		pack->opcode = ServerOP_SetWorldTime;
-		pack->pBuffer = new uchar[pack->size];
+		ServerPacket* pack = new ServerPacket(ServerOP_SetWorldTime, sizeof(eqTimeOfDay));
 		eqTimeOfDay* eqtod = (eqTimeOfDay*)pack->pBuffer;
 		zone_time.getEQTimeOfDay(time(0), &eqtod->start_eqtime);
 		eqtod->start_eqtime.minute=minute;
@@ -1207,7 +1231,7 @@ ZonePoint* Zone::GetClosestZonePointWithoutZone(float x, float y, float z, float
 	return closest_zp;
 }
 
-bool Database::LoadStaticZonePoints(LinkedList<ZonePoint*>* zone_point_list,const char* zonename)
+bool ZoneDatabase::LoadStaticZonePoints(LinkedList<ZonePoint*>* zone_point_list,const char* zonename)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
@@ -1246,7 +1270,7 @@ bool Database::LoadStaticZonePoints(LinkedList<ZonePoint*>* zone_point_list,cons
 return true;
 }
 
-bool Database::DumpZoneState() {
+bool ZoneDatabase::DumpZoneState() {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 
@@ -1344,7 +1368,7 @@ bool Database::DumpZoneState() {
 	return true;
 }
 
-sint8 Database::LoadZoneState(const char* zonename, LinkedList<Spawn2*>& spawn2_list) {
+sint8 ZoneDatabase::LoadZoneState(const char* zonename, LinkedList<Spawn2*>& spawn2_list) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -1556,6 +1580,85 @@ void Zone::SpawnStatus(Mob* client) {
 	client->Message(0, "%i spawns listed.", x);
 }
 
+void Zone::ShowEnabledSpawnStatus(Mob* client)
+{
+	LinkedListIterator<Spawn2*> iterator(spawn2_list);
+	int x = 0;
+	int iEnabledCount = 0;
+
+	iterator.Reset();
+
+	while(iterator.MoreElements())
+	{
+		if (iterator.GetData()->timer.GetRemainingTime() != 0xFFFFFFFF)
+		{
+			client->Message(0, "  %d:  %1.1f, %1.1f, %1.1f:  %1.2f", iterator.GetData()->GetID(), iterator.GetData()->GetX(), iterator.GetData()->GetY(), iterator.GetData()->GetZ(), (float)iterator.GetData()->timer.GetRemainingTime() / 1000);
+			iEnabledCount++;
+		}
+
+		x++;
+		iterator.Advance();
+	}
+
+	client->Message(0, "%i of %i spawns listed.", iEnabledCount, x);
+}
+
+void Zone::ShowDisabledSpawnStatus(Mob* client)
+{
+	LinkedListIterator<Spawn2*> iterator(spawn2_list);
+	int x = 0;
+	int iDisabledCount = 0;
+
+	iterator.Reset();
+
+	while(iterator.MoreElements())
+	{
+		if (iterator.GetData()->timer.GetRemainingTime() == 0xFFFFFFFF)
+		{
+			client->Message(0, "  %d:  %1.1f, %1.1f, %1.1f:  disabled", iterator.GetData()->GetID(), iterator.GetData()->GetX(), iterator.GetData()->GetY(), iterator.GetData()->GetZ());
+			iDisabledCount++;
+		}
+
+		x++;
+		iterator.Advance();
+	}
+
+	client->Message(0, "%i of %i spawns listed.", iDisabledCount, x);
+}
+
+void Zone::ShowSpawnStatusByID(Mob* client, uint32 spawnid)
+{
+	LinkedListIterator<Spawn2*> iterator(spawn2_list);
+	int x = 0;
+	int iSpawnIDCount = 0;
+
+	iterator.Reset();
+
+	while(iterator.MoreElements())
+	{
+		if (iterator.GetData()->GetID() == spawnid)
+		{
+			if (iterator.GetData()->timer.GetRemainingTime() == 0xFFFFFFFF)
+				client->Message(0, "  %d:  %1.1f, %1.1f, %1.1f:  disabled", iterator.GetData()->GetID(), iterator.GetData()->GetX(), iterator.GetData()->GetY(), iterator.GetData()->GetZ());
+			else
+				client->Message(0, "  %d:  %1.1f, %1.1f, %1.1f:  %1.2f", iterator.GetData()->GetID(), iterator.GetData()->GetX(), iterator.GetData()->GetY(), iterator.GetData()->GetZ(), (float)iterator.GetData()->timer.GetRemainingTime() / 1000);
+
+			iSpawnIDCount++;
+
+			break;
+		}
+
+		x++;
+		iterator.Advance();
+	}
+
+	if(iSpawnIDCount > 0)
+		client->Message(0, "%i of %i spawns listed.", iSpawnIDCount, x);
+	else
+		client->Message(0, "No matching spawn id was found in this zone.");
+}
+
+
 bool Zone::RemoveSpawnEntry(uint32 spawnid)
 {
 	LinkedListIterator<Spawn2*> iterator(spawn2_list);
@@ -1584,7 +1687,7 @@ bool Zone::RemoveSpawnGroup(uint32 in_id) {
 
 
 // Added By Hogie
-bool Database::GetDecayTimes(npcDecayTimes_Struct* npcCorpseDecayTimes) {
+bool ZoneDatabase::GetDecayTimes(npcDecayTimes_Struct* npcCorpseDecayTimes) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char* query = 0;
 	int i = 0;
@@ -1648,7 +1751,7 @@ void Zone::weatherSend()
 		entity_list.Message(0, 0, "Strange weather patterns form in the sky. (%i)", zone_weather);
 		break;
 	}*/
-	EQZonePacket* outapp = new EQZonePacket(OP_Weather, 8);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 	if(zone_weather>0)
 		outapp->pBuffer[0] = zone_weather-1;
 	if(zone_weather>0)

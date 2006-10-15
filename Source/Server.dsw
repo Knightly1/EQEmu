@@ -63,6 +63,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "eqlaunch"=.\eqlaunch\eqlaunch.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "pf2text"=.\eqextractor\pf2text.dsp - Package Owner=<4>
 
 Package=<5>

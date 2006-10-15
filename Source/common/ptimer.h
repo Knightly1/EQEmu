@@ -1,5 +1,5 @@
 /*  EQEMu:  Everquest Server Emulator
-    Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
+    Copyright (C) 2001-2005  EQEMu Development Team (http://eqemu.org)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -44,24 +44,26 @@ enum {	//values for pTimerType
 	pTimerHarmTouch = 89,		//so dont change them
 	
 	pTimerAAStart = 1000,		//AA re-use timers
-	pTimerAAEnd = 1999,
-	pTimerAAEffectStart = 2001,	//AA effect timers
-	pTimerAAEffectEnd	= 2999,
+	pTimerAAEnd = 2999,
+	pTimerAAEffectStart = 3001,	//AA effect timers
+	pTimerAAEffectEnd	= 4999,
 	
 	pTimerSpellStart = 5000		//Do not put any timer IDs above this one
 								//if needed, increase its starting ID
 };
 
+class Database;
+
 typedef uint16 pTimerType;
 
 class PersistentTimer {
 public:
-	static PersistentTimer *LoadTimer(int32 char_id, pTimerType type);
+	static PersistentTimer *LoadTimer(Database *db, int32 char_id, pTimerType type);
 	
 	PersistentTimer(int32 char_id, pTimerType type, int32 duration);
 	PersistentTimer(int32 char_id, pTimerType type, int32 start_time, int32 duration, bool enable);
-
-	bool Expired(bool iReset = true);
+	
+	bool Expired(Database *db, bool iReset = true);
 	void Start(int32 set_timer_time=0);
 	
 	void SetTimer(int32 set_timer_time=0);
@@ -74,9 +76,9 @@ public:
 
 	inline bool Enabled() { return enabled; }
 
-	bool Load();
-	bool Store();
-	bool Clear();
+	bool Load(Database *db);
+	bool Store(Database *db);
+	bool Clear(Database *db);
 
 protected:
 	int32 get_current_time();
@@ -96,13 +98,13 @@ public:
 	
 	~PTimerList();
 	
-	bool Load();
-	bool Store();
-	bool Clear();
+	bool Load(Database *db);
+	bool Store(Database *db);
+	bool Clear(Database *db);
 	
 	void Start(pTimerType type, int32 duration);
-	bool Expired(pTimerType type, bool reset = true);
-	void Clear(pTimerType type);
+	bool Expired(Database *db, pTimerType type, bool reset = true);
+	void Clear(Database *db, pTimerType type);
 	void Enable(pTimerType type);
 	bool Enabled(pTimerType type);
 	void Disable(pTimerType type);
@@ -115,11 +117,14 @@ public:
 	
 	//Clear a timer for a char not logged in
 	//this is not defined on a char which is logged in!
-	static bool ClearOffline(int32 char_id, pTimerType type);
+	static bool ClearOffline(Database *db, int32 char_id, pTimerType type);
 	
 	typedef map<pTimerType, PersistentTimer *>::iterator iterator;
 	iterator begin() { return(_list.begin()); }
 	iterator end() { return(_list.end()); }
+	
+	
+	void AddTimer(pTimerType type, int32 start_time, int32 duration, bool enable);
 protected:
 	int32 _char_id;
 	

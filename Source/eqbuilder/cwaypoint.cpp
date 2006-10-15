@@ -21,7 +21,6 @@ static char THIS_FILE[]=__FILE__;
 cwaypoint::cwaypoint()
 {
 	db = false;
-	this->id = 0;
 	this->loc = new cloc();
 	this->pause = false;
 	this->valid = true;
@@ -31,7 +30,6 @@ cwaypoint::cwaypoint()
 cwaypoint::cwaypoint( const cwaypoint* wp )
 {
 	this->db = wp->db;
-	this->id = wp->id;
 	this->loc = new cloc( wp->loc );
 	this->pause = wp->pause;
 	this->valid = wp->valid;

@@ -5,7 +5,7 @@ const char * charIn2 = "`~1234567890-=!@#$%^&*()_+qwertyuiop[]asdfghjkl;'zxcvbnm
 
 char com_list[512];
 
-char * gettok(const char * string, int chara, int pos) {
+/*char * gettok(const char * string, int chara, int pos) {
 	static char * pch;
 	static char temp[100];
 	static char ty[100];
@@ -19,7 +19,7 @@ char * gettok(const char * string, int chara, int pos) {
 		pch = strtok(NULL,ty);
 	}
 	return pch;
-}
+}*/
 
 
 int calc(char * stuff) {

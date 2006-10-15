@@ -22,7 +22,8 @@ static char THIS_FILE[]=__FILE__;
 
 cmob::cmob()
 {
-	this->id = 0;
+	this->entity_id = 0;
+	this->db_spawnentry_id = 0;
 	this->npc = NULL;
 	this->hp = 0;
 	this->owned = false;
@@ -40,9 +41,10 @@ cmob::cmob()
 	db = false;
 }
 
-cmob::cmob( cmob* mob )
+cmob::cmob( const cmob* mob )
 {
-	this->id = mob->id;
+	this->entity_id = mob->entity_id;
+	this->db_spawnentry_id = mob->db_spawnentry_id;
 	this->db = mob->db;
 	this->npc = new cnpc( mob->npc );
 	this->hp = mob->hp;

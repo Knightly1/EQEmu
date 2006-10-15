@@ -42,8 +42,8 @@ extern Zone* zone;
 Beacon::Beacon(Mob *at_mob, int lifetime)
 :Mob
 (
-	0, 0, 0, 0, 0, 0, 0, BT_Humanoid, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	NULL, NULL, 0, 0, 0, INVISIBLE_MAN, 0, BT_NoTarget, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ),
 		remove_timer(lifetime),
 		spell_timer(0)
@@ -52,7 +52,6 @@ Beacon::Beacon(Mob *at_mob, int lifetime)
 	spell_timer.Disable();
 	remove_me = false;
 	spell_id = 0xFFFF;
-	spell_range = 0;
 	spell_iterations = 0;
 	caster_id = 0;
 
@@ -96,14 +95,13 @@ bool Beacon::Process()
 		if(caster && spell_iterations--)
 		{
 			bool affect_caster = !caster->IsNPC();	//NPC AE spells do not affect the NPC caster
-			entity_list.AESpell(caster, this, spell_range, spell_id, affect_caster);
+			entity_list.AESpell(caster, this, spell_id, affect_caster);
 		}
 		else
 		{
 			// spell is done casting, or caster disappeared
 			spell_id = 0xFFFF;
 			spell_iterations = 0;
-			spell_range = 0;
 			spell_timer.Disable();
 			caster_id = 0;
 		}
@@ -117,7 +115,7 @@ bool Beacon::Process()
 	return true;
 }
 
-void Beacon::AELocationSpell(Mob *caster, float range, int16 cast_spell_id)
+void Beacon::AELocationSpell(Mob *caster, int16 cast_spell_id)
 {
 	if(!IsValidSpell(cast_spell_id) || !caster)
 		return;
@@ -126,7 +124,6 @@ void Beacon::AELocationSpell(Mob *caster, float range, int16 cast_spell_id)
 	spell_id = cast_spell_id;
 	spell_iterations = spells[spell_id].AEDuration / 2500;
 	spell_iterations = spell_iterations < 1 ? 1 : spell_iterations;	// at least 1
-	spell_range = range;
 	spell_timer.Start(2500);
 	spell_timer.Trigger();
 }

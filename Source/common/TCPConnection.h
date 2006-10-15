@@ -46,142 +46,94 @@
 
 #include "types.h"
 #include "Mutex.h"
-#include "linked_list.h"
 #include "queue.h"
-#include "servertalk.h"
-#include "timer.h"
 #include "MiscFunctions.h"
 
-class TCPServer;
+class BaseTCPServer;
+class ServerPacket;
 
 #define TCPConnection_ErrorBufferSize	1024
 #define MaxTCPReceiveBuffferSize		524288
 
-#define TCPS_Ready			0
-#define TCPS_Connecting		1
-#define TCPS_Connected		100
-#define TCPS_Disconnecting	200
-#define TCPS_Disconnected	201
-#define TCPS_Closing		250
-#define TCPS_Error			255
 
 #ifndef DEF_eConnectionType
 #define DEF_eConnectionType
 enum eConnectionType {Incomming, Outgoing};
 #endif
 
-#ifdef WIN32
-	void TCPServerLoop(void* tmp);
-	void TCPConnectionLoop(void* tmp);
-#else
-	void* TCPServerLoop(void* tmp);
-	void* TCPConnectionLoop(void* tmp);
-#endif
 
-enum eTCPMode { modeConsole, modeTransition, modePacket };
 class TCPConnection {
+protected:
+	typedef enum {
+		TCPS_Ready = 0,
+		TCPS_Connecting = 1,
+		TCPS_Connected = 100,
+		TCPS_Disconnecting = 200,	//I do not know the difference between Disconnecting and Closing
+		TCPS_Disconnected = 201,
+		TCPS_Closing = 250,
+		TCPS_Error = 255
+	} State_t;
+	
 public:
-#pragma pack(1)
-	struct TCPNetPacket_Struct {
-		int32	size;
-		struct {
-			int8
-				compressed : 1,
-				destination : 1,
-				flag3 : 1,
-				flag4 : 1,
-				flag5 : 1,
-				flag6 : 1,
-				flag7 : 1,
-				flag8 : 1;
-		} flags;
-		int16	opcode;
-		uchar	buffer[0];
-	};
-#pragma pack()
-
-	static TCPNetPacket_Struct* MakePacket(ServerPacket* pack, int32 iDestination = 0);
-	static SPackSendQueue* TCPConnection::MakeOldPacket(ServerPacket* pack);
-
-	TCPConnection(TCPServer* iServer, SOCKET iSock, int32 irIP, int16 irPort, bool iOldFormat = false);
-	TCPConnection(bool iOldFormat = false, TCPServer* iRelayServer = 0, eTCPMode iMode = modePacket);	// for outgoing connections
-	TCPConnection(TCPServer* iServer, TCPConnection* iRelayLink, int32 iRemoteID, int32 irIP, int16 irPort);				// for relay connections
+	//socket created by a server (incoming)
+	TCPConnection(int32 ID, SOCKET iSock, int32 irIP, int16 irPort);
+	//socket created to connect to a server (outgoing)
+	TCPConnection();	// for outgoing connections
+	
 	virtual ~TCPConnection();
-
+	
 	// Functions for outgoing connections
-	bool			Connect(char* irAddress, int16 irPort, char* errbuf = 0);
-	bool			Connect(int32 irIP, int16 irPort, char* errbuf = 0);
-	void			AsyncConnect(char* irAddress, int16 irPort);
+	bool			Connect(const char* irAddress, int16 irPort, char* errbuf = 0);
+	virtual bool	ConnectIP(int32 irIP, int16 irPort, char* errbuf = 0);
+	void			AsyncConnect(const char* irAddress, int16 irPort);
 	void			AsyncConnect(int32 irIP, int16 irPort);
-	virtual void	Disconnect(bool iSendRelayDisconnect = true);
+	virtual void	Disconnect();
 
-	virtual bool	SendPacket(ServerPacket* pack, int32 iDestination = 0);
-	virtual bool	SendPacket(TCPNetPacket_Struct* tnps);
 	bool			Send(const uchar* data, sint32 size);
-
-	char*			PopLine();
-	ServerPacket*	PopPacket(); // OutQueuePop()
-	inline int32	GetrIP()			{ return rIP; }
-	inline int16	GetrPort()			{ return rPort; }
-	virtual int8	GetState();
-	eTCPMode		GetMode()			{ return TCPMode; }
-	inline bool		Connected()		{ return (GetState() == TCPS_Connected); }
-	inline bool		ConnectReady()	{ return (bool) (GetState() == TCPS_Ready && ConnectionType == Outgoing); }
+	
+	char*			PopLine();		//returns ownership of allocated byte array
+	inline int32	GetrIP()	const		{ return rIP; }
+	inline int16	GetrPort()		const	{ return rPort; }
+	virtual State_t	GetState() const;
+	inline bool		Connected()	const	{ return (GetState() == TCPS_Connected); }
+	bool		ConnectReady() const;
 	void			Free();		// Inform TCPServer that this connection object is no longer referanced
 
-	inline int32	GetID()			{ return id; }
-	inline bool		IsRelayServer() { return RelayServer; }
-	inline int32	GetRemoteID()	{ return RemoteID; }
-	inline TCPConnection* GetRelayLink()	{ return RelayLink; }
+	inline int32	GetID()	const		{ return id; }
 
 	bool			GetEcho();
 	void			SetEcho(bool iValue);
-protected:
-	friend class TCPServer;
-	virtual bool	Process();
-	void			SetState(int8 iState);
-	inline bool		IsFree() { return pFree; }
+	bool GetSockName(char *host, uint16 *port);
+	
+	//should only be used by TCPServer<T>:
 	bool			CheckNetActive();
+	inline bool		IsFree() const { return pFree; }
+	virtual bool	Process();
 
-#ifdef WIN32
-	friend void TCPConnectionLoop(void* tmp);
-#else
-	friend void* TCPConnectionLoop(void* tmp);
-#endif
-	SOCKET			sock;
+protected:
+	friend class BaseTCPServer;
+	void			SetState(State_t iState);
+
+	static ThreadReturnType TCPConnectionLoop(void* tmp);
+//	SOCKET			sock;
 	bool			RunLoop();
 	Mutex			MLoopRunning;
 	Mutex	MAsyncConnect;
 	bool	GetAsyncConnect();
 	bool	SetAsyncConnect(bool iValue);
 	char*	charAsyncConnect;
+	bool	pAsyncConnect;	//this flag should really be turned into a state instead.
+
+	virtual bool ProcessReceivedData(char* errbuf = 0);
+	virtual bool SendData(bool &sent_something, char* errbuf = 0);
+	virtual bool RecvData(char* errbuf = 0);
 	
-#ifdef WIN32
-	friend class TCPConnection;
-#endif
-	void	OutQueuePush(ServerPacket* pack);
-	void	RemoveRelay(TCPConnection* relay, bool iSendRelayDisconnect);
-private:
-	void	ProcessNetworkLayerPacket(ServerPacket* pack);
-	void	SendNetErrorPacket(const char* reason = 0);
-	TCPServer*		Server;
-	TCPConnection*	RelayLink;
-	int32			RemoteID;
-	sint32			RelayCount;
+	virtual void ClearBuffers();
 
-	bool pOldFormat;
-	bool SendData(char* errbuf = 0);
-	bool RecvData(char* errbuf = 0);
-	bool ProcessReceivedData(char* errbuf = 0);
-	bool ProcessReceivedDataAsPackets(char* errbuf = 0);
-	bool ProcessReceivedDataAsOldPackets(char* errbuf = 0);
-	void ClearBuffers();
-
-	bool	pAsyncConnect;
+	
+	bool m_previousLineEnd;
 
 	eConnectionType	ConnectionType;
-	eTCPMode		TCPMode;
-	bool	RelayServer;
 	Mutex	MRunLoop;
 	bool	pRunLoop;
 
@@ -190,87 +142,38 @@ private:
 	int32	rIP;
 	int16	rPort; // host byte order
 	bool	pFree;
-
-	Mutex	MState;
-	int8	pState;
-
-	void	LineOutQueuePush(char* line);
+	
+	mutable Mutex	MState;
+	State_t	pState;
+	
+	//text based line out queue.
+	Mutex MLineOutQueue;
+	virtual bool	LineOutQueuePush(char* line);	//this is really kinda a hack for the transition to packet mode. Returns true to stop processing the output.
 	MyQueue<char> LineOutQueue;
-	MyQueue<ServerPacket> OutQueue;
-	Mutex	MOutQueueLock;
-
-	Timer*	keepalive_timer;
-	Timer*	timeout_timer;
-
+	
 	uchar*	recvbuf;
 	sint32	recvbuf_size;
 	sint32	recvbuf_used;
-
+	
 	sint32	recvbuf_echo;
-	bool	pEcho;
-	Mutex	MEcho;
-
-	void	InModeQueuePush(TCPNetPacket_Struct* tnps);
-	MyQueue<TCPNetPacket_Struct> InModeQueue;
+	volatile bool	pEcho;
+	
 	Mutex	MSendQueue;
 	uchar*	sendbuf;
 	sint32	sendbuf_size;
 	sint32	sendbuf_used;
 	bool	ServerSendQueuePop(uchar** data, sint32* size);
+	bool	ServerSendQueuePopForce(uchar** data, sint32* size);		//does a lock() instead of a trylock()
 	void	ServerSendQueuePushEnd(const uchar* data, sint32 size);
 	void	ServerSendQueuePushEnd(uchar** data, sint32 size);
 	void	ServerSendQueuePushFront(uchar* data, sint32 size);
-};
-
-class TCPServer {
-public:
-	TCPServer(int16 iPort = 0, bool iOldFormat = false);
-	virtual ~TCPServer();
-
-	bool	Open(int16 iPort = 0, char* errbuf = 0);			// opens the port
-	void	Close();						// closes the port
-	bool	IsOpen();
-	inline int16	GetPort()		{ return pPort; }
-
-	TCPConnection* NewQueuePop();
-
-	void	SendPacket(ServerPacket* pack);
-	void	SendPacket(TCPConnection::TCPNetPacket_Struct** tnps);
-protected:
-#ifdef WIN32
-	friend void TCPServerLoop(void* tmp);
-#else
-	friend void* TCPServerLoop(void* tmp);
-#endif
-	void	Process();
-	bool	RunLoop();
-	Mutex	MLoopRunning;
-
-	friend class TCPConnection;
-	inline int32	GetNextID() { return NextID++; }
-	void			AddConnection(TCPConnection* con);
-	TCPConnection*	GetConnection(int32 iID);
+	
 private:
-	void	ListenNewConnections();
-
-	int32	NextID;
-	bool	pOldFormat;
-
-	Mutex	MRunLoop;
-	bool	pRunLoop;
-
-	Mutex	MSock;
-	SOCKET	sock;
-	int16	pPort;
-
-	Mutex	MNewQueue;
-	MyQueue<TCPConnection>		NewQueue;
-
-	void	CheckInQueue();
-	Mutex	MInQueue;
-	TCPConnection::TCPNetPacket_Struct*	InQueuePop();
-	MyQueue<TCPConnection::TCPNetPacket_Struct>	InQueue;
-
-	LinkedList<TCPConnection*>*	list;
+	void FinishDisconnect();
 };
+
+
 #endif
+
+
+

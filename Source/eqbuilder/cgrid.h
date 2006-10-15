@@ -19,7 +19,7 @@ public:
 	virtual ~cgrid();
 
 	bool db;
-	int id;
+	int db_id;
 	waypoint_list* waypoints;
 
 };

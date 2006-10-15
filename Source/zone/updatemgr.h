@@ -39,7 +39,7 @@ using namespace std;
 #define UPDATE_JUMP_FLUSH 200	//
 
 class EQStream;
-class EQZonePacket;
+class EQApplicationPacket;
 class Mob;
 
 class UMType {
@@ -47,11 +47,11 @@ public:
 	UMType() {
 		app = NULL; ack = false;
 	}
-	UMType(EQZonePacket *_app, bool _ack) {
+	UMType(EQApplicationPacket *_app, bool _ack) {
 		app = _app; ack = _ack;
 	}
 	
-	EQZonePacket *app;
+	EQApplicationPacket *app;
 	bool ack;
 };
 
@@ -70,7 +70,7 @@ public:
 	~UpdateManager();
 	
 	//range2 is the range of 'from' to this client, squared
-	void QueuePacket(EQZonePacket *app, bool ack_req, Mob *from, float range2);
+	void QueuePacket(EQApplicationPacket *app, bool ack_req, Mob *from, float range2);
 	void Process();
 	void FlushQueues();
 	

@@ -3,6 +3,8 @@
 
 #include "stdafx.h"
 #include "database.h"
+#include "IDGenerator.h"
+#include "IDGenSet.h"
 #include  <io.h>
 #include <string.h>
 
@@ -154,7 +156,7 @@ void database::SaveLog( CString zonename, CString filename )
 	CString query;
 	MYSQL_RES* result;
 
-	query.Format( "INSERT INTO logs ( zone, name ) VALUES ( '%s', '%s' )", zonename, filename );
+	query.Format( "INSERT INTO logs ( zone, name, type ) VALUES ( '%s', '%s', 1 )", zonename, filename );
 	runquery( query, &result, NULL, NULL );
 }
 
@@ -178,6 +180,8 @@ CString database::getZoneName( int zoneid )
 	runquery( query, &result, NULL, NULL );	
 
 	row = mysql_fetch_row( result );
+	if(row == NULL)
+		return("");
 
 	return row[0];
 
@@ -214,8 +218,8 @@ int database::GetRace( CString nomrace )
 int database::getclasse( CString classenom ) {
 
 	CString query;
-	MYSQL_RES* result;
-	MYSQL_ROW row;
+//	MYSQL_RES* result;
+//	MYSQL_ROW row;
 
 	classenom.MakeLower();
 	
@@ -276,6 +280,47 @@ void database::InvalidateCaches() {
 	m_classCachesFilled = false;
 }
 
+void database::extractdeletes( CString path, CString zonename, bool delquerryok ) {
+	CString outputrep;
+	outputrep.Format( "%s\\output", path  );
+
+	if( _access( outputrep, 0 ) == -1 ) {
+		CreateDirectory( outputrep, NULL );
+	}
+
+	CString zonerep;
+	zonerep.Format( "%s\\%s", outputrep, zonename );
+
+	if( _access( zonerep, 0 ) == -1 ) {
+		CreateDirectory( zonerep, NULL );
+	}
+
+
+	CString filename;
+	filename.Format( "%s\\%s-deletes.sql", zonerep, zonename );
+
+	CFile f;
+	f.Open( filename, CFile::modeCreate | CFile::modeWrite, NULL );
+
+	CString query;
+	query.Format( "DELETE FROM grid_entries USING grid_entries,spawn2 WHERE grid_entries.gridid=spawn2.pathgrid AND spawn2.zone='%s';\n", zonename );
+	f.Write( query, lstrlen(query) );
+	query.Format( "DELETE FROM grid USING grid,spawn2 WHERE grid.id=spawn2.pathgrid AND spawn2.zone='%s';\n", zonename );
+	f.Write( query, lstrlen(query) );
+	query.Format( "DELETE FROM merchantlist USING merchantlist,npc_types,spawn2,spawnentry WHERE merchantlist.merchantid=npc_types.merchant_id AND npc_types.id=spawnentry.npcID AND spawn2.spawngroupID=spawnentry.spawngroupID AND spawn2.zone='%s';\n", zonename);
+	f.Write( query, lstrlen(query) );
+	query.Format( "DELETE FROM npc_types USING npc_types,spawn2,spawnentry WHERE npc_types.id=spawnentry.npcID AND spawn2.spawngroupID=spawnentry.spawngroupID AND spawn2.zone='%s';\n", zonename);
+	f.Write( query, lstrlen(query) );
+	query.Format( "DELETE FROM spawngroup WHERE name LIKE '%s%%';\n", zonename );
+	f.Write( query, lstrlen(query) );
+	query.Format( "DELETE FROM spawnentry USING spawn2,spawnentry WHERE spawnentry.spawngroupID = spawn2.spawngroupID AND spawn2.zone = '%s';\n", zonename );
+	f.Write( query, lstrlen(query) );
+	query.Format( "DELETE FROM spawn2 WHERE zone = '%s';\n", zonename );		
+	f.Write( query, lstrlen(query) );
+
+	f.Close();
+}
+
 void database::extractdoors( door_list* doors, teleport_list* teleports, CString path, CString zonename, bool delquerryok )
 {
 	int id;
@@ -331,6 +376,7 @@ void database::extractdoors( door_list* doors, teleport_list* teleports, CString
 		pos_z = door->loc->z;
 		pos_heading = door->loc->heading;
 		teleportid = door->teleportid;
+		bool tpfound = false;
 		if ( teleportid > 0 ) {
 			for( int j = 0;j<teleports->getsize();j++ ) {
 				cteleport* tp = teleports->get(j);
@@ -340,18 +386,21 @@ void database::extractdoors( door_list* doors, teleport_list* teleports, CString
 					dest_y = tp->loc->y;
 					dest_z = tp->loc->z;
 					dest_heading = tp->loc->heading;
+					tpfound = true;
 					break;
 				}
 			}
 		}
 		CString ckeys;
 		CString cvalues;
-		if ( teleportid > 0 ) {
-			ckeys = "`doorid`, `zone`, `name`, `pos_y`, `pos_x`, `pos_z`, `heading`, `opentype`, `dest_zone`, `dest_x`, `dest_y`, `dest_z`, `dest_heading`";
-			cvalues.Format( "'%d', '%s', '%s', '%f', '%f', '%f', '%f', '%d', '%s', '%f', '%f', '%f', '%f'", id, zone, model, pos_x, pos_y, pos_z, pos_heading, opentype, dest_zone, dest_y, dest_x, dest_z, dest_heading );
+		if ( tpfound ) {
+			ckeys = "`doorid`, `zone`, `name`, `pos_x`, `pos_y`, `pos_z`, `heading`, `opentype`, `dest_zone`, `dest_x`, `dest_y`, `dest_z`, `dest_heading`";
+			cvalues.Format( "'%d', '%s', '%s', '%f', '%f', '%f', '%f', '%d', '%s', '%f', '%f', '%f', '%f'", id, zone, model, pos_x, pos_y, pos_z, 
+				pos_heading, opentype, dest_zone, dest_x, dest_y, dest_z, dest_heading );
 		} else {
-			ckeys = "`doorid`, `zone`, `name`, `pos_y`, `pos_x`, `pos_z`, `heading`, `opentype`";
-			cvalues.Format( "'%d', '%s', '%s', '%f', '%f', '%f', '%f', '%d'", id, zone, model, pos_x, pos_y, pos_z, pos_heading, opentype );
+			ckeys = "`doorid`, `zone`, `name`, `pos_x`, `pos_y`, `pos_z`, `heading`, `opentype`";
+			cvalues.Format( "'%d', '%s', '%s', '%f', '%f', '%f', '%f', '%d'", id, zone, model, 
+				pos_x, pos_y, pos_z, pos_heading, opentype );
 		}
 
 		query = "INSERT INTO `doors` (" + ckeys + ") VALUES (" + cvalues + ");\n";
@@ -428,9 +477,9 @@ void database::extractnpcs( npc_list* npcs, CString path, CString zonename, bool
 
 	int id;
 	CString nom;
+	CString last_name;
 	int level;
 	double size;
-	double walkspeed;
 	double runspeed;
 	int race;
 	int classe;
@@ -446,6 +495,7 @@ void database::extractnpcs( npc_list* npcs, CString path, CString zonename, bool
 	int luclin_eyecolor2;
 	int luclin_beard;
 	int luclin_beardcolor;
+	int merchantid;
 
 	CString outputrep;
 	outputrep.Format( "%s\\output", path  );
@@ -481,12 +531,12 @@ void database::extractnpcs( npc_list* npcs, CString path, CString zonename, bool
 		if(npc->db)
 			continue;   //it came from the DB, it dosent need to go in it again
 		
-		id = npc->id;
+		id = npc->db_id;
 		nom = npc->nom;
+		last_name = npc->last_name;
 		level = npc->level;
 		gender = npc->gender;
 		size = npc->size;
-		walkspeed = npc->walkspeed;
 		runspeed = npc->runspeed;
 		race = npc->race;
 		classe = npc->classe;
@@ -502,21 +552,28 @@ void database::extractnpcs( npc_list* npcs, CString path, CString zonename, bool
 		luclin_beard = npc->luclin_beard;
 		luclin_beardcolor = npc->luclin_beardcolor;
 		
-		if ( usedb && isnpcindb( id ) ) {
-			continue;
-		}
+		if(npc->merchant != NULL)
+			merchantid = npc->merchant->db_id;
+		else
+			merchantid = 0;
+
+//		if ( usedb && isnpcindb( id ) ) {
+//			continue;
+//		}
 
   		CString ckeys;
 		CString cvalues;
-		ckeys = "`id`, `name`, `level`, `gender`, `size`, `walkspeed`, `runspeed`, "
-		"`race`, `class`, `bodytype`, `hp`, `texture`, `helmtexture`, `face`, "
-		"`luclin_hairstyle`, `luclin_haircolor`, `luclin_eyecolor`, `luclin_eyecolor2`, `luclin_beard`, `luclin_beardcolor`";
-		cvalues.Format( "'%d', '%s', '%d', '%d', '%f', '%f', '%f', "
+		ckeys = "`id`, `name`, `lastname`, `level`, `gender`, `size`, `runspeed`, "
+			"`race`, `class`, `bodytype`, `hp`, `texture`, `helmtexture`, `face`, "
+			"`luclin_hairstyle`, `luclin_haircolor`, `luclin_eyecolor`, `luclin_eyecolor2`, "
+			"`luclin_beard`, `luclin_beardcolor`, `merchant_id`";
+		cvalues.Format( "'%d', '%s', '%s', '%d', '%d', '%f', '%f', '%f', "
 		"'%d', '%d', '%d', '%d', '%d', '%d', '%d', "
-		"'%d', '%d', '%d', '%d', '%d', '%d'",
-			id,nom,level,gender,size,walkspeed,runspeed,
+		"'%d', '%d', '%d', '%d', '%d', '%d', '%d'",
+			id,nom,last_name,level,gender,size,runspeed,
 			race,classe,bodytype,hp,texture,helmtexture,face,
-			luclin_hairstyle,luclin_haircolor,luclin_eyecolor,luclin_eyecolor2,luclin_beard,luclin_beardcolor );
+			luclin_hairstyle,luclin_haircolor,luclin_eyecolor,luclin_eyecolor2,
+			luclin_beard,luclin_beardcolor,merchantid );
 
 		query = "INSERT INTO `npc_types` (" + ckeys + ") VALUES (" + cvalues + ");\n";
 
@@ -527,7 +584,7 @@ void database::extractnpcs( npc_list* npcs, CString path, CString zonename, bool
 
 }
 
-bool database::isnpcindb( int npcid ) {
+/*bool database::isnpcindb( int npcid ) {
 
 	CString query;
 	MYSQL_RES* result;
@@ -538,10 +595,10 @@ bool database::isnpcindb( int npcid ) {
 
 	return ( nbrows == 1 );
 
-}
+}*/
 
 //OMG this is the most rediculous method I have ever seen.
-int database::getfreenpcid( int start, IntArray* usednpcids ) {
+/*int database::getfreenpcid( int start, IntArray* usednpcids ) {
 
 	CString query;
 	MYSQL_RES* result;
@@ -575,28 +632,30 @@ int database::getfreenpcid( int start, IntArray* usednpcids ) {
 
 	return npcid;
 
-}
+}*/
 
-int database::getnpcid( cnpc* npc ) {
+//not currently used, might be a useful option to put back in.. maybe
+int database::FindNPCInDatabase( cnpc* npc ) {
 
 	CString query;
 	MYSQL_RES* result;
 	MYSQL_ROW row;
 	unsigned __int64 nbrows = 0;
-
-	query.Format( "SELECT id FROM npc_types WHERE name='%s' AND level='%d' AND gender='%d' AND size='%f' AND race='%d' AND class='%d' AND bodytype='%d' AND texture='%d' AND helmtexture='%d'", npc->nom, npc->level, npc->gender, npc->size, npc->race, npc->classe, npc->type, npc->texture, npc->helmtexture );
+	
+	query.Format( "SELECT id FROM npc_types WHERE name='%s' AND level='%d' AND gender='%d' AND size='%f' AND race='%d' AND class='%d' AND bodytype='%d' AND texture='%d' AND helmtexture='%d'", 
+		npc->nom, npc->level, npc->gender, npc->size, npc->race, npc->classe, 
+		npc->type, npc->texture, npc->helmtexture );
 	runquery( query, &result, &nbrows, NULL );
-
+	
 	if ( nbrows == 1 ) {
 		row = mysql_fetch_row( result );
 		return atoi(row[0]);
 	}
-
+	
 	return 0;
-
 }
 
-int database::getbestgroupid( IntArray* usedgroupids, IntArray* npcids ) {
+/*int database::getbestgroupid( IntArray* usedgroupids, IntArray* npcids ) {
 
 	int deca = 0;
 	int sgid = npcids->GetAt(0);
@@ -627,7 +686,7 @@ int database::getNextSpawn2ID(int min) {
 	if(_spawn2id < min)
 		_spawn2id = min;
 	return(_spawn2id++);
-}
+}*/
 
 void database::extractASpawn(cspawn *spawn, CString &zonename, CFile &f) {
 	int spawngroup_id;
@@ -636,7 +695,6 @@ void database::extractASpawn(cspawn *spawn, CString &zonename, CFile &f) {
 	int spawnentry_npcid;
 	int spawnentry_chance;
 
-	int spawn2_id;
 	int spawn2_spawngroupid;
 	CString zone;
 	double spawn2_x;
@@ -644,20 +702,23 @@ void database::extractASpawn(cspawn *spawn, CString &zonename, CFile &f) {
 	double spawn2_z;
 	double spawn2_heading;
 	int spawn2_pathgrid;
-	IntArray* npcids;
+
+	if(spawn->falsespawn)
+		return;		//skip bad spawns (used by pathing combiner)
+
 	
 	zone = zonename;
 	if ( spawn->grid != NULL ) {
-		spawn2_pathgrid = spawn->grid->id;
+		spawn2_pathgrid = spawn->grid->db_id;
 	} else {
 		spawn2_pathgrid = 0;
 	}
 
 	// npcids
-	npcids = new IntArray();
+/*	npcids = new IntArray();
 	for ( int j = 0;j<spawn->mobs->getsize(); j++ ) {
 		npcids->Add( spawn->mobs->get(j)->npc->id );
-	}
+	}*/
 
 	// groupid
 /*		spawn2_spawngroupid = getbestgroupid( usedgroupids, npcids );
@@ -670,21 +731,23 @@ void database::extractASpawn(cspawn *spawn, CString &zonename, CFile &f) {
 
 	if(!spawn->db) {
 		//spawn group is not in the DB, put it there...
-		spawn2_spawngroupid = spawn->id;
+		spawn2_spawngroupid = spawn->db_id;
 		
 		//create spawn2 entries
 		int r,locmax;
 		locmax = spawn->locs->getsize();
 		for(r = 0; r < locmax; r++) {
-			cloc *loc = spawn->locs->get(r);
+			const cspawnpoint *loc = spawn->locs->get(r);
 			spawn2_x = loc->x;
 			spawn2_y = loc->y;
 			spawn2_z = loc->z;
 			spawn2_heading = loc->heading;
-			spawn2_id = getNextSpawn2ID(spawn->id);
+			int spawn2_id = loc->db_id;
 
 			ckeys = "`id`, `spawngroupID`, `zone`, `x`, `y`, `z`, `heading`, `pathgrid`";
-			cvalues.Format( "'%d', '%d', '%s', '%f', '%f', '%f', '%f', '%d'",spawn2_id,spawn2_spawngroupid,zone,spawn2_y,spawn2_x,spawn2_z,spawn2_heading,spawn2_pathgrid );
+			cvalues.Format( "'%d', '%d', '%s', '%f', '%f', '%f', '%f', '%d'",
+				spawn2_id, spawn2_spawngroupid, zone, spawn2_x, spawn2_y, spawn2_z,
+				spawn2_heading, spawn2_pathgrid );
 			query = "INSERT INTO `spawn2` (" + ckeys + ") VALUES (" + cvalues + ");\n";
 			f.Write( query, lstrlen(query) );
 		}
@@ -702,28 +765,30 @@ void database::extractASpawn(cspawn *spawn, CString &zonename, CFile &f) {
 	int chance_cut = 100 / spawn->mobs->getsize();
 	int chance_change = 100 % spawn->mobs->getsize();
 	//generate each spawn entry
-	for ( int k = 0;k<spawn->mobs->getsize(); k++ ) {
-		cmob *m = spawn->mobs->get(k);
+	int mg = spawn->mobs->getsize();
+	int k;
+	for (k = 0; k < mg; k++ ) {
+		const cmob *m = spawn->mobs->get(k);
 		if ( !m->valid ) {
 			continue;   //skip invalids
 		}
 		if(m->db)
 			continue;   //skip entries allready in the db
 
+		int spawnentry_id = m->db_spawnentry_id;
 		spawnentry_spawngroupid = spawn2_spawngroupid;
-		spawnentry_npcid = npcids->GetAt(k);
+		spawnentry_npcid = m->npc->db_id;
 		spawnentry_chance = chance_cut;
 		if(k < chance_change)
 			spawnentry_chance++;
 
-		ckeys = "`spawngroupID`, `npcID`, `chance`";
-		cvalues.Format( "'%d', '%d', '%d'",spawnentry_spawngroupid,spawnentry_npcid,spawnentry_chance );
+		ckeys = "`id`, `spawngroupID`, `npcID`, `chance`";
+		cvalues.Format( "'%d', '%d', '%d', '%d'",
+			spawnentry_id, spawnentry_spawngroupid, spawnentry_npcid, spawnentry_chance );
 		query = "INSERT INTO `spawnentry` (" + ckeys + ") VALUES (" + cvalues + ");\n";
 		f.Write( query, lstrlen(query) );
 
 	}
-
-	delete npcids;
 }
 
 void database::extractspawns( spawn_list* fspawns, spawn_list* gspawns, CString path, CString zonename, bool delquerryok ) {
@@ -822,32 +887,39 @@ void database::extractgrids( grid_list* grids, CString path, CString zonename, u
 		if(grid->db)
 			continue;   //skip entries allready in the db
 		
-		id = grid->id;
+		id = grid->db_id;
 		type = 3;
 		type2 = 0;
 		ckeys = "`id`, `zoneid`, `type`, `type2`";
 		cvalues.Format( "%d, %d, %d, %d", id, zone_id, type, type2 );
 		query = "INSERT INTO `grid` (" + ckeys + ") VALUES (" + cvalues + ");\n";
-		f.Write( query, lstrlen(query) );
 
 		int goal = grid->waypoints->getsize();
 		for ( int j=0;j<goal;j++ ) {
-				cwaypoint* wp = grid->waypoints->get(j);
-				wp_x = wp->loc->x;
-				wp_y = wp->loc->y;
-				wp_z = wp->loc->z;
-				wp_heading = wp->loc->heading;
-				if ( wp->pause == true ) {
-					wp_pause = 45;
-				} else {
-					wp_pause = 0;
-				}
-				
-				ckeys = "`gridid`, `zoneid`, `number`, `x`, `y`, `z`, `heading`, `pause`";
-				cvalues.Format( "%d, %d, %d, %f, %f, %f, %f, %d", id, zone_id, j, wp_y, wp_x, wp_z, wp_heading, wp_pause);
-				query = "INSERT INTO `grid_entries` (" + ckeys + ") VALUES (" + cvalues + ");\n";
+			cwaypoint* wp = grid->waypoints->get(j);
+			if(wp->colinear) {
+				//skip the previous point (middle point)
+			} else {
+				//write the previous point
 				f.Write( query, lstrlen(query) );
+			}
+			wp_x = wp->loc->x;
+			wp_y = wp->loc->y;
+			wp_z = wp->loc->z;
+			wp_heading = wp->loc->heading;
+			if ( wp->pause == true ) {
+				wp_pause = 45;
+			} else {
+				wp_pause = 0;
+			}
+			
+			ckeys = "`gridid`, `zoneid`, `number`, `x`, `y`, `z`, `heading`, `pause`";
+			cvalues.Format( "%d, %d, %d, %f, %f, %f, %f, %d", id, zone_id, 
+				j, wp_x, wp_y, wp_z, wp_heading, wp_pause);
+			query = "INSERT INTO `grid_entries` (" + ckeys + ") VALUES (" + cvalues + ");\n";
 		}
+		//write out the final point
+		f.Write( query, lstrlen(query) );
 	}
 
 	f.Close();
@@ -911,7 +983,7 @@ void database::extractmerchants( merchant_list* merchants, CString path, CString
 */
 	for( int j = 0;j<merchants->getsize();j++ ) {
 		cmerchant* cm = merchants->get(j);
-		if(cm->id == 0) {
+		if(cm->db_id == 0) {
 			continue;	//never used or referenced, why bother....
 		}
 		
@@ -927,7 +999,7 @@ void database::extractmerchants( merchant_list* merchants, CString path, CString
 		cur = cm->items.begin();
 		end = cm->items.end();
 		for(; cur != end; cur++, slot++) {
-			cvalues.Format( "'%d', '%d', '%d'", cm->id, slot, cur->second);
+			cvalues.Format( "'%d', '%d', '%d'", cm->db_id, slot, cur->second);
 
 			query = "INSERT INTO `merchantlist` (" + ckeys + ") VALUES (" + cvalues + ");\n";
 
@@ -1080,9 +1152,19 @@ void database::loadLootMapping(const char *zonename, map<string, int> &mapping) 
 	}*/
 }
 
+int database::load_value(const char *query) {
+	MYSQL_RES* result = NULL;
+	MYSQL_ROW row;
 
+	runquery( query, &result, NULL, NULL );
+	if(result == NULL)
+		return(0);
 
-
+	if ( row = mysql_fetch_row( result ) ) {
+		return(atoi(row[0]));
+	}
+	return(0);
+}
 
 BEGIN_MESSAGE_MAP(database, CWnd)
 	//{{AFX_MSG_MAP(database)

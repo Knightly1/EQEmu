@@ -69,8 +69,8 @@ UpdateManager::~UpdateManager() {
 		cur = levels[r].begin();
 		end = levels[r].end();
 		for(; cur != end; cur++) {
-			EQZonePacket *tmp = cur->second.app;
-			EQZonePacket::PacketUsed(&tmp);
+			EQApplicationPacket *tmp = cur->second.app;
+			EQApplicationPacket::PacketUsed(&tmp);
 		}
 		levels[r].clear();
 	}
@@ -79,7 +79,7 @@ UpdateManager::~UpdateManager() {
 /*
 	Puts a packet into its proper spacial queue
 */
-void UpdateManager::QueuePacket(EQZonePacket *app, bool ack_req, Mob *from, float range2) {
+void UpdateManager::QueuePacket(EQApplicationPacket *app, bool ack_req, Mob *from, float range2) {
 	int r = UPDATE_LEVELS;
 	UMMap *cur = levels;
 	const float *cur_d = level_distances2;
@@ -98,7 +98,7 @@ void UpdateManager::QueuePacket(EQZonePacket *app, bool ack_req, Mob *from, floa
 		//reference decrementing is taken care of my UMType destructor
 		//if anything is overwritten
 		(*cur)[id] = UMType(app, ack_req);
-//		(*cur)[id] = UMType(app->CopyZonePacket(), ack_req);
+//		(*cur)[id] = UMType(app->Copy(), ack_req);
 		return;
 	}
 	//if we get here, were in trouble...
@@ -164,7 +164,7 @@ if(level > 0)
 		//relies on fast queue setting .app to null if it eats it
 //LogFile->write(EQEMuLog::Debug, "Sending id 0x%x for level %d\n", key, level);
 		net->FastQueuePacket(&cur->second.app, cur->second.ack);
-//EQZonePacket::PacketUsed(&cur->second.app);
+//EQApplicationPacket::PacketUsed(&cur->second.app);
 		cur++;
 		om->erase(key);
 		
@@ -175,9 +175,9 @@ if(level > 0)
 			//do we need this count check?
 			if(curm->count(key) != 0) {
 				//reference decrementing is taken care of my UMType destructor
-				EQZonePacket *tmp = (*curm)[key].app;
+				EQApplicationPacket *tmp = (*curm)[key].app;
 				curm->erase(key);
-				EQZonePacket::PacketUsed(&tmp);
+				EQApplicationPacket::PacketUsed(&tmp);
 			}
 		}
 	}

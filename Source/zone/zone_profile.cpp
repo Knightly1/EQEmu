@@ -106,14 +106,12 @@ const char *__cp_names[CommonProfiler::MaxCommonProfilerId] = {
 		"Inventory_GetItem",
 		"Inventory_HasItem",
 		
-		"ItemInst_Serialize",
-		"ItemCommonInst_Serialize",
-		"ItemContainerInst_Serialize",
-		
 		"MakeRandomFloat",
 		
 		"Mutex_lock",
-		"Timer_Check"
+		"Timer_Check",
+		
+		"WorldConnection_Process"
 };
 #endif
 

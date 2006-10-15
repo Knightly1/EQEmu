@@ -16,6 +16,10 @@
   #define ADDON_INI_FILE	BASEDIR "addon.ini"
 #endif
 
+#ifndef LOG_INI_FILE
+  #define LOG_INI_FILE	BASEDIR "log.ini"
+#endif
+
 #ifndef OPCODES_FILE
   #define OPCODES_FILE	BASEDIR "opcodes.conf"
 #endif

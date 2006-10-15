@@ -2,7 +2,6 @@
 #define EQTIME_H
 
 #include "../common/eq_packet_structs.h"
-#include "../common/database.h"
 #include <string>
 
 using namespace std;

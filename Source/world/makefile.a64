@@ -1,34 +1,30 @@
-APP=world
-SF= ../common/timer.o ../common/packet_dump.o ../common/races.o ../common/unix.o \
-   ../common/Mutex.o ../common/MiscFunctions.o ../common/serverinfo.o \
-   ../common/classes.o ../common/TCPConnection.o ../common/eqtime.o ../common/crc32.o \
-   client.o net.o console.o zoneserver.o LoginServer.o ../common/md5.o ../common/dbcore.o \
-   ../common/dbasync.o ../common/EMuShareMem.o ../common/EQEMuError.o ../common/misc.o \
-   .obj/debug.o .obj/database.o .obj/Item.o ../common/extprofile.o .obj/EQStream.o \
-   .obj/EQStreamFactory.o .obj/EQPacket.o ../common/CRC16.o ../common/packet_functions.o \
-   ../common/timeoutmgr.o ../common/Condition.o ../common/opcodemgr.o ../common/emu_opcodes.o \
-   ../common/SharedLibrary.o ../common/EQChatPacket.o ../common/EQLoginPacket.o ../common/EQMailPacket.o \
-   ../common/EQWorldPacket.o ../common/EQZonePacket.o
 
-CC=gcc
+HCC=$(shell ccache -V 2>/dev/null)
+ifneq (,$(findstring version,$(HCC)))
+	CC=ccache gcc
+else
+	CC=gcc
+endif
+
+OUT=-o 
+LINKOUT=-o 
+NOLINK=-c
 LINKER=gcc
 DFLAGS=-DDEBUG=5 -DEQDEBUG=5 -DSHAREMEM -DCATCH_CRASH -DNO_PIDLOG -DFIELD_ITEMS -DIRC -DAPP_OPCODE_SIZE=2
 WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual -Wcomment -Wcast-align -Wno-deprecated
 COPTS=$(WFLAGS) -g -march=athlon64 -O -pthread -pipe -DFX -D_GNU_SOURCE -DINVERSEXY -DWORLD $(DFLAGS) -I/usr/include/mysql -I/usr/mysql/include 
-LINKOPTS=-rdynamic -L. -lstdc++ -lm -lz -L/usr/lib/mysql -L/usr/mysql/lib -L/usr/lib/mysql -L/usr/lib64/mysql -lmysqlclient -ldl
-all: $(APP)
+LINKOPTS=$(COPTS) -rdynamic -L. -lstdc++ -lm -lz -L/usr/lib/mysql -L/usr/mysql/lib -L/usr/lib/mysql -L/usr/lib64/mysql -lmysqlclient -ldl
 
-$(APP): $(SF)
-	$(LINKER) $(COPTS) $(OBJS) $^ $(LINKOPTS) -o $@
+all: world
 
-clean:
-	rm -f $(SF) $(APP)
 
-%.o: %.cpp
-	$(CC) -c $(COPTS) $< -o $@
+include .depend
 
-.obj/%.o: ../common/%.cpp ../common/%.h
-	mkdir -p .obj
-	$(CC) $(COPTS) -c $< -o $@
-	
+include makefile.common
+
+.depend depend:
+	echo $(SF) "" | sed -e 's#.obj/#../common/#g' -e 's/\.o/.cpp/g' | \
+	xargs gcc -MM $(COPTS) `$(PERL_FLAGS)` >.depend
+
+
 

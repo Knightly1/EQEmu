@@ -15,6 +15,8 @@
 
 using namespace std;
 
+class IDGenerator;
+
 class waypoint_list  
 {
 public:

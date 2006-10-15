@@ -41,6 +41,12 @@
 
 #define EFFECT_COUNT 12
 
+enum SpellAffectIndex {
+	SAI_Calm			= 12, // Lull and Alliance Spells
+	SAI_Dispell_Sight	= 14, // Dispells and Spells like Bind Sight
+	SAI_Memory_Blur		= 27,
+	SAI_Calm_Song		= 43  // Lull and Alliance Songs
+};
 enum RESISTTYPE
 {
 	RESIST_NONE = 0,
@@ -55,29 +61,30 @@ enum RESISTTYPE
 };
 
 //Target Type IDs
-#define ST_TargetOptional	0x01 // Target is used if present, but not required. ex: Flare, Fireworks
-#define ST_AECaster			0x04 // ae centered around caster
-#define ST_Target			0x05 // single targetted
-#define ST_Self				0x06 // self only
-#define ST_AETarget			0x08 // ae around target
-#define ST_AEBard			0x28 // ae friendly around self (ae bard song)
-#define ST_Group			0x29 // group spell
-#define ST_GroupTeleport	0x03
-//#define ST_AlterPlane		0x3
-#define ST_Undead			0x0a
-#define ST_Tap				0x0d
-#define ST_Pet				0x0e
-#define ST_Animal           0x09
-#define ST_Plant            0x10
-#define ST_Dragon           0x12
-#define ST_Giant            0x11
-//#define ST_Unknown1			0x14
-//#define ST_Unknown			0x18
-//#define ST_Summoned			0x19
-#define ST_Summoned			0x0b // NEOTOKYO: see spells_en.txt -> seems to be value 11 not 25
-#define ST_Corpse			0x0f
-#define ST_UndeadAE			0x18
-
+typedef enum {
+  ST_TargetOptional		= 0x01, // Target is used if present, but not required. ex: Flare, Fireworks
+  ST_AECaster			= 0x04, // ae centered around caster
+  ST_Target				= 0x05, // single targetted
+  ST_Self				= 0x06, // self only
+  ST_AETarget			= 0x08, // ae around target
+  ST_AEBard				= 0x28, // ae friendly around self (ae bard song)
+  ST_Group				= 0x29, // group spell
+  ST_GroupTeleport		= 0x03, // EverHood - AND Necro Epic 2 Pet Owners Group (Guardian of Blood Recourse - Spell ID=6316)
+//  ST_AlterPlane		= 0x3,
+  ST_Undead				= 0x0a,
+  ST_Tap				= 0x0d,
+  ST_Pet				= 0x0e,
+  ST_Animal          	= 0x09,
+  ST_Plant				= 0x10,
+  ST_Dragon				= 0x12,
+  ST_Giant				= 0x11,
+//  ST_Unknown1			= 0x14,
+//  ST_Unknown			= 0x18,
+//  ST_Summoned			= 0x19,
+  ST_Summoned			= 0x0b, // NEOTOKYO: see spells_en.txt -> seems to be value 11 not 25
+  ST_Corpse				= 0x0f,
+  ST_UndeadAE			= 0x18,
+} SpellTargetType;
 
 //Spell Effect IDs
 #define SE_CurrentHP				0	// Heals and nukes, repeates every tic if in a buff
@@ -152,7 +159,7 @@ enum RESISTTYPE
 #define SE_Teleport					83
 #define SE_TossUp					84	// Gravity Flux
 #define SE_WeaponProc				85	// i.e. Call of Fire
-#define SE_Harmony					86	// what is SE_Lull??
+#define SE_Harmony					86	// what is SE_Lull??,. "Reaction Radius"
 #define SE_MagnifyVision			87	// Telescope
 #define SE_Succor					88	// Evacuate/Succor lines?
 #define SE_ModelSize				89	// Shrink, Growth
@@ -222,7 +229,14 @@ enum RESISTTYPE
 #define SE_Reflect					158
 #define SE_AllStats					159	// Aura of Destruction
 #define SE_MakeDrunk				160
-#define SE_MeleeMitigation			168
+#define SE_MitigateSpellDamage		161	//not implemented rune type, with max value
+#define SE_MitigateMeleeDamage		162	//not implemented rune type, with max value
+#define SE_NegateAttacks			163	//not implemented pet targeted, seems to negate `base` number of melee or spells
+#define SE_AppraiseLDonChest		164
+#define SE_DisarmLDoNTrap			165
+#define SE_UnlockLDoNChest			166
+#define SE_PetPowerIncrease			167	//not implemented, base % increase of pet stuff
+#define SE_MeleeMitigation			168	//not implemented, unlimited for duration
 #define SE_CriticalHitChance		169
 #define SE_CrippBlowChance			171
 #define SE_AvoidMeleeChance			172
@@ -240,25 +254,91 @@ enum RESISTTYPE
 #define SE_HitChance				184
 #define SE_DamageModifier			185
 #define SE_MinDamageModifier		186
+#define SE_IncreaseBlockChance		188	//not implemented
+#define SE_CurrentEndurance			189	//not implemented
+#define SE_Amnesia					191	//Amnesia (Silence vs Melee Effect)
+#define SE_Hate2					192	//not implemented
+
 #define SE_FadingMemories			194
 #define SE_StunResist				195
+#define SE_Strikethrough			196
+
+#define SE_Endurance2				198
+
 #define SE_ProcChance				200
 #define SE_RangedProc				201	//not implemented
+#define SE_IllusionOther			202	//not implemented
+#define SE_MassGroupBuff			203	//not implemented
+
 #define SE_Rampage					205
 #define SE_AETaunt					206
+#define SE_FleshToBone				207
+
+#define SE_FadingMemories2			209
+#define SE_PetShield				210	//per lucy, not implemented
+#define SE_AEMelee					211	//per lucy, not implemented
+#define SE_ProlongedDestruction		212	//per lucy, not implemented
+
+#define SE_MaxHPChange 				214	//Grace of the Order, Plague of Hulcror, not implemented
+
+#define SE_Accuracy					216	//not implemented
+
+#define SE_SlayUndead				219	//not implemented
+
+#define SE_GiveDoubleAttack			225	//not implemented
+
 #define SE_ReduceSkillTimer			227	//not implemented
+
 #define SE_DivineSave				232	//not implemented (base == % chance on death to insta-res)
+
 #define SE_Blank					254
+
+#define SE_TripleBackstab			258 //not implemented
+
+#define SE_RaiseStatCap				262 //not implemented
+
 #define SE_ExtraAttackChance		266 //not implemented
+
 #define SE_CriticalDoTChance		273	//not implemented
-#define SE_CriticalSpellChance		295 //not implemented
+#define SE_CriticalHealChance		274	//not implemented
+#define SE_Flurry					279	//not implemented
+
+#define SE_SomeRecourse				289 //not implemented
+
+#define SE_Purify					291 //not implemented
+
+#define SE_CriticalSpellChance		294 //not implemented
+#define SE_SpellVulnerability		296	//not implemented, base % increase in incoming spell damage
+
 #define SE_ChangeHeight				298	//not implemented
 #define SE_WakeTheDead				299
 #define SE_Doppelganger				300
-#define SE_NoCombatSkills			311
+
+#define SE_mitigateDamageShield		305 //not implemented
+#define SE_WakeTheDead2				306 //not implemented
+#define SE_Appraisal				307 //not implemented
+#define SE_SuspendMinion			308 //not implemented
+#define SE_YetAnotherGate			309 //not implemented, spell 5953
+#define SE_ReduceReuseTimer			310 //not implemented
+#define SE_NoCombatSkills			311 //not implemented
+#define SE_Sanctuary				312 //not implemented
+
+#define SE_Invisibility2			314 //not implemented
+#define SE_InvisVsUndead2			315 //not implemented
+#define SE_CriticalHealOverTimer	319 //not implemented
+
+#define SE_ReduceHate				321 //not implemented
+#define SE_GateToHomeCity			322 //not implemented
 #define SE_DefensiveProc			323	//not implemented
+#define SE_HPToMana					324 //not implemented
+
+#define SE_ManaAbsorbPercentDamage	329 //not implemented
 #define SE_CriticalDamageMob		330	//not implemented
+
+#define SE_SummonToCorpse			332 //not implemented
+#define SE_EffectOnFade				333 //not implemented
 #define SE_BardAEDot				334	//needs a better name (spell id 703 and 730)
+#define SE_PercentXPIncrease		337 //not implemented
 
 #define DF_Permanent		50
 
@@ -307,7 +387,7 @@ struct SPDat_Spell_Struct
 /* 084 */	int			Activated; // probaly another effecttype flag	
 /* 085 */	int			resisttype;
 /* 086 */	int			effectid[EFFECT_COUNT];	// Spell's effects
-/* 098 */	int			targettype;	// Spell's Target
+/* 098 */	SpellTargetType	targettype;	// Spell's Target
 /* 099 */	int			basediff; // base difficulty fizzle adjustment
 /* 100 */	int			skill;
 /* 101 */	sint16		zonetype;	// 01=Outdoors, 02=dungeons, ff=Any 
@@ -391,12 +471,10 @@ bool NoMerchantSpell(int16 spell_id);
 int GetSpellEffectIndex(int16 spell_id, int effect);
 int CanUseSpell(int16 spellid, int classa, int level);
 int GetMinLevel(int16 spell_id);
-class Mob;
-int CalcBuffDuration(Mob *caster, Mob *target, int16 spell_id);
 int CalcBuffDuration_formula(int level, int formula, int duration);
 
 
 int CalcPetHp(int levelb, int classb, int STA = 75);
-char *GetRandPetName();
+const char *GetRandPetName();
 
 #endif

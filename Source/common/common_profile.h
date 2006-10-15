@@ -65,14 +65,12 @@ public:
 		Inventory_GetItem,
 		Inventory_HasItem,
 		
-		ItemInst_Serialize,
-		ItemCommonInst_Serialize,
-		ItemContainerInst_Serialize,
-		
 		MakeRandomFloat,
 		
 		Mutex_lock,
 		Timer_Check,
+		
+		WorldConnection_Process,
 		
 		MaxCommonProfilerId
 	};

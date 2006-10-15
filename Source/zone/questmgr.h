@@ -50,6 +50,7 @@ public:
 	int16 spawn2(int npc_type, int grid, int unused, float x, float y, float z, float heading);
 	int16 unique_spawn(int npc_type, int grid, int unused, float x, float y, float z, float heading = 0);
 	void setstat(int stat, int value);
+	void incstat(int stat, int value); //old setstat command
 	void castspell(int spell_id, int target_id);
 	void selfcast(int spell_id);
 	void addloot(int item_id, int charges = 0);
@@ -63,12 +64,11 @@ public:
 	void settarget(const char *type, int target_id);
 	void follow(int entity_id);
 	void sfollow();
-	void cumflag();
-	void flagnpc(int32 flag_num, int8 flag_value);
-	void flagcheck(int32 flag_to_check, int32 flag_to_set);
+//	void cumflag();
+//	void flagnpc(int32 flag_num, int8 flag_value);
+//	void flagcheck(int32 flag_to_check, int32 flag_to_set);
 	//bool isflagset(int flag_num);
 	void changedeity(int diety_id);
-	//flagmob->CastToClient() WTF??
 	void exp(int amt);
 	void level(int newlevel);
 	void traindisc(int discipline_tome_item_id);
@@ -81,6 +81,7 @@ public:
 	void permarace(int race_id);
 	void permagender(int gender_id);
 	void scribespells();
+	void unscribespells();
 	void givecash(int copper, int silver, int gold, int platinum);
 	void pvp(const char *mode);
 	void movepc(int zone_id, float x, float y, float z);
@@ -114,6 +115,7 @@ public:
 	void resume();
 	void addldonpoints(sint32 points, int32 theme);
 	void setnexthpevent(int at);
+	void setnextinchpevent(int at);
 	void respawn(int npc_type, int grid);
 	void set_proximity(float minx, float maxx, float miny, float maxy, float minz=-999999, float maxz=999999);
 	void clear_proximity();
@@ -124,6 +126,11 @@ public:
 	void spawn_condition(const char *zone_short, uint16 condition_id, short new_value);
 	short get_spawn_condition(const char *zone_short, uint16 condition_id);
 	void toggle_spawn_event(int event_id, bool enable, bool reset_base);
+	bool has_zone_flag(int zone_id);
+	void set_zone_flag(int zone_id);
+	void clear_zone_flag(int zone_id);
+	void sethp(int hpperc);
+	
 	
 	//not in here because it retains perl types
 	//thing ChooseRandom(array_of_things)

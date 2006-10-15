@@ -21,7 +21,7 @@ using namespace std;
 #include "../common/skills.h"
 #include "../common/classes.h"
 #include "../common/races.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "../common/files.h"
 #include "spdat.h"
 #include "../common/packet_functions.h"
@@ -33,7 +33,7 @@ using namespace std;
 #include "basic_functions.h"
 #include "questmgr.h"
 
-extern Database database;
+
 extern Zone* zone;
 extern WorldServer worldserver;
 extern EntityList entity_list;
@@ -149,18 +149,14 @@ int calc(string calc)
 	return returnvalue;
 }
 
-int Parser::numtok(string text, const char * character) {
-	string::iterator iterator = text.begin();
+int Parser::numtok(const char *text, char character) {
 	int returnvalue=0;
-	while(*iterator) {
-		if (*iterator == *character) returnvalue++;
-		iterator++;
+	for(; *text != '\0'; text++) {
+		if(*text == character) returnvalue++;
 	}
 	return returnvalue;
 }
-#ifdef WIN32
-char* itoa(int integer) {static char tmp[10];itoa(integer,tmp,10);return tmp;}
-#endif
+
 string strlwr(string tmp) {
 	string res;
 	transform(tmp.begin(), tmp.end(), res.begin(), (int(*)(int))tolower);
@@ -171,22 +167,20 @@ int strcmp(const string &com, const string &com2) {
 	return strcmp(com.c_str(),com2.c_str());
 }
 
-string gettok(string text, string character, int index)
+string gettok(const char *text, char character, int index)
 {
-	string::iterator iterator = text.begin();
 	string buffer;
 	int find=0;
-	while (*iterator)
+	for(; *text != '\0'; *text++)
 	{
-		if (*iterator != character[0])
-			buffer+=*iterator;
+		if (*text != character)
+			buffer += *text;
 		else {
 			if (find == index)
 				break;
-			buffer="";
+			buffer = "";
 			find++;
 		}
-		iterator++;
 	}
 	return buffer;
 }
@@ -194,10 +188,10 @@ string gettok(string text, string character, int index)
 void Parser::MakeVars(string text, int32 npcid) {
 	string buffer;
 	string temp;
-	int pos = numtok(text," ")+1;
+	int pos = numtok(text.c_str(),' ')+1;
 	for(int i=0;i<pos;i++)
 	{
-			buffer = gettok(text,string(" "),i).c_str();
+			buffer = gettok(text.c_str(),' ',i).c_str();
 			temp = (string)itoa(i+1); temp += "."; temp += (string)itoa(npcid);
 #if Parser_DEBUG>10
 				printf("Buffer: %s, temp: %s\n",buffer.c_str(),temp.c_str());
@@ -263,7 +257,7 @@ int Parser::pcalc(const char * string) {
 	return calc(string);
 }
 
-void Parser::MakeParms(const char * string, int32 npcid) {
+void Parser::MakeParms(const char * str, int32 npcid) {
 	char temp[100];
 	memset(temp, 0, sizeof(temp));
 	char temp2[100];
@@ -271,10 +265,10 @@ void Parser::MakeParms(const char * string, int32 npcid) {
 	char temp3[100];
 	memset(temp3, 0, sizeof(temp3));
 
-	int tmpfor = numtok(string, ",")+1;
+	int tmpfor = numtok(str, ',')+1;
 	for ( int i=0; i < tmpfor; i++) {
 		memset(temp2, 0, sizeof(temp2));
-		strn0cpy(temp2, gettok(string, ',', i), sizeof(temp2));
+		strn0cpy(temp2, gettok(str, ',', i).c_str(), sizeof(temp2));
 		snprintf(temp, sizeof(temp), "param%s.%d", itoa(i+1 ,temp3, 10),npcid);
 		AddVar(temp, temp2);
 	}
@@ -375,7 +369,7 @@ void Parser::Event(QuestEventID event, int32 npcid, const char * data, NPC* npcm
 	}
 	int8 fac = 0;
 	if (mob && mob->IsClient()) {		
-		AddVar("uguildid.g", itoa(mob->CastToClient()->GuildDBID()));
+		AddVar("uguild_id.g", itoa(mob->CastToClient()->GuildID()));
 		AddVar("uguildrank.g", itoa(mob->CastToClient()->GuildRank()));
 	}
 
@@ -451,6 +445,10 @@ void Parser::Event(QuestEventID event, int32 npcid, const char * data, NPC* npcm
 		}
 		case EVENT_SLAY: {
 			SendCommands("event_slay", qstID, npcmob, mob);
+			break;
+		}
+		case EVENT_NPC_SLAY: {
+			SendCommands("event_npc_slay", qstID, npcmob, mob);
 			break;
 		}
 		case EVENT_WAYPOINT: {
@@ -845,12 +843,12 @@ void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid
 	else if (!strcmp(command,"sfollow"))  {
 		quest_manager.sfollow();
 	}
-	else if (!strcmp(command,"cumflag")) {
+/*	else if (!strcmp(command,"cumflag")) {
 		quest_manager.cumflag();
 	}
 	else if (!strcmp(command,"flagnpc")) {
 		quest_manager.flagnpc(atoi(arglist[0]), atoi(arglist[1]));
-	}
+	}*/
 	else if (!strcmp(command,"changedeity")) {
 		quest_manager.changedeity(atoi(arglist[0]));
 	}
@@ -923,9 +921,9 @@ void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid
 	else if (!strcmp(command,"save")) {
 		quest_manager.save();
 	}
-	else if (!strcmp(command,"flagcheck")) {
+	/*else if (!strcmp(command,"flagcheck")) {
 		quest_manager.flagcheck(atoi(arglist[0]), atoi(arglist[1]));
-	}
+	}*/
 	else if (!strcmp(command,"faction")) {
 		quest_manager.faction(atoi(arglist[0]), atoi(arglist[1]));
 	}
@@ -994,6 +992,15 @@ void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid
 	}
 	else if (!strcmp(command,"setnexthpevent")) {
 		quest_manager.setnexthpevent(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"setnextinchpevent")) {
+		quest_manager.setnextinchpevent(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"clear_zone_flag")) {
+		quest_manager.clear_zone_flag(atoi(arglist[0]));
+	}
+	else if (!strcmp(command,"set_zone_flag")) {
+		quest_manager.set_zone_flag(atoi(arglist[0]));
 	}
 	else if (!strcmp(command,"set_proximity")) {
 		float v1 = atof(arglist[4]);
@@ -1316,7 +1323,7 @@ void Parser::HandleVars(string varname, string varparms, string& origstring, str
       Replace(origstring,format,itoa(varparms[0])); 
    } 
 	else if (!strcmp(strlwr((const char*)varname.c_str()),"gettok")) {
-		Replace(origstring,format,gettok(arglist[0],arglist[1],atoi(arglist[2])));
+		Replace(origstring,format,gettok(arglist[0],arglist[1][0],atoi(arglist[2])));
 	}
 	else {
 		Replace(origstring,format,tempvar);
@@ -1404,7 +1411,7 @@ void Parser::ParseVars(string& text, int32 npcid, Mob* mob)
 	}
 }
 	
-
+/*
 char * fixstring(char * string)
 {
 	char tmp[255];
@@ -1427,7 +1434,7 @@ char * fixstring(char * string)
 			else	   quote++;
 	}
 	return tmp2;
-}
+}*/
 
 int DoCompare(string compare1, string sign, string compare2)
 {

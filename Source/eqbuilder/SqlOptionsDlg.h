@@ -11,24 +11,26 @@
 /////////////////////////////////////////////////////////////////////////////
 // SqlOptionsDlg dialog
 
+class IDGenSet;
+
 class SqlOptionsDlg : public CDialog
 {
 // Construction
 public:
-	SqlOptionsDlg( int useopt, int zoneid, int npcid, int spawnid, int gridid, bool sqldelete, bool usedb, CString eqmaps_path, CString eqemumaps_path, CWnd* pParent = NULL);   // standard constructor
+	SqlOptionsDlg( /*int useopt, int zoneid, int npcid, int spawnid, 
+		int gridid, bool sqldelete, bool usedb, */ CString eqmaps_path, 
+		CString eqemumaps_path,
+		IDGenSet *ids,
+		CWnd* pParent = NULL);   // standard constructor
 
 // Dialog Data
-	//{{AFX_DATA(SqlOptionsDlg)
 	enum { IDD = IDD_SQLOPT };
-	int		m_spawnid;
-	int		m_npcid;
-	int		m_gridid;
-	int		m_zoneid;
 	BOOL	m_sqldelete;
 	int		m_useopt;
 	BOOL	m_usedb;
 	CString	m_EQMaps;
 	CString	m_EQEmuMaps;
+	//{{AFX_DATA(SqlOptionsDlg)
 	//}}AFX_DATA
 
 	// Overrides
@@ -40,6 +42,10 @@ public:
 
 // Implementation
 protected:
+
+	//pointers to our parent's ID gens
+	IDGenSet *m_ids;
+	
 	CEdit* eNpcID;
 	CEdit* eSpawnID; 
 	CEdit* eGridID;
@@ -57,7 +63,39 @@ protected:
 	afx_msg void OnUsezoneid();
 	afx_msg void OnUsespecid();
 	afx_msg void OnBrowseMaps();
+
 	afx_msg void OnBrowseEmuMaps();
+	afx_msg void OnNpcidDb();
+	afx_msg void OnNpcidFixed();
+	afx_msg void OnChangeNpcid();
+	afx_msg void OnNpcidFloat();
+	afx_msg void OnChangeNpcidFval();
+	afx_msg void OnNpcidZid();
+	afx_msg void OnChangeNpcidZval();
+	
+	afx_msg void OnSpawngroupidDb();
+	afx_msg void OnSpawngroupidFixed();
+	afx_msg void OnChangeSpawngroupid();
+	afx_msg void OnSpawngroupidFloat();
+	afx_msg void OnChangeSpawngroupidFval();
+	afx_msg void OnSpawngroupidZid();
+	afx_msg void OnChangeSpawngroupidZval();
+	
+	afx_msg void OnGrididDb();
+	afx_msg void OnGrididFixed();
+	afx_msg void OnChangeGridid();
+	afx_msg void OnGrididFloat();
+	afx_msg void OnChangeGrididFval();
+	afx_msg void OnGrididZid();
+	afx_msg void OnChangeGrididZval();
+
+	afx_msg void OnMerchantidDb();
+	afx_msg void OnMerchantidFixed();
+	afx_msg void OnChangeMerchantid();
+	afx_msg void OnMerchantidFloat();
+	afx_msg void OnChangeMerchantidFval();
+	afx_msg void OnMerchantidZid();
+	afx_msg void OnChangeMerchantidZval();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

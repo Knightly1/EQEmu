@@ -20,6 +20,7 @@
 
 #include "../common/types.h"
 #include "features.h"
+#include <map>
 
 enum FACTION_VALUE {
 	FACTION_ALLY = 1,
@@ -59,10 +60,7 @@ struct Faction {
 	char	name[50];
 };
 
-struct FactionValue {
-	uint32	factionID;
-	sint16	value;
-};
+typedef map<uint32, sint16> faction_map;
 
 struct NPCFaction    
 {    

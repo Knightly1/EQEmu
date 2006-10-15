@@ -39,20 +39,20 @@ using namespace std;
 #include "StringIDs.h"
 #include "worldserver.h"
 
-extern Database database;
+
 extern EntityList entity_list;
 extern Zone* zone;
 extern WorldServer worldserver;
 extern npcDecayTimes_Struct npcCorpseDecayTimes[100];
 
 void Corpse::SendEndLootErrorPacket(Client* client) {
-	EQZonePacket* outapp = new EQZonePacket(OP_LootComplete, 0);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_LootComplete, 0);
 	client->QueuePacket(outapp);
 	safe_delete(outapp);
 }
 
 void Corpse::SendLootReqErrorPacket(Client* client, int8 response) {
-	EQZonePacket* outapp = new EQZonePacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
 	moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer;
 	d->response		= response;
 	d->unknown1		= 0x5a;
@@ -112,7 +112,7 @@ Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname
 Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, const NPCType** in_npctypedata, int32 in_decaytime)
 // vesuvias - appearence fix
  : Mob("Unnamed_Corpse","",0,0,in_npc->GetGender(),in_npc->GetRace(),in_npc->GetClass(),BT_Humanoid//bodytype added
-       ,in_npc->GetDeity(),in_npc->GetLevel(),in_npc->GetNPCTypeID(),0,in_npc->GetSize(),0,0,in_npc->GetHeading(),in_npc->GetX(),in_npc->GetY(),in_npc->GetZ(),0,0,in_npc->GetTexture(),in_npc->GetHelmTexture(),0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,1,0,0,0,0,0),
+       ,in_npc->GetDeity(),in_npc->GetLevel(),in_npc->GetNPCTypeID(),0,in_npc->GetSize(),0,in_npc->GetHeading(),in_npc->GetX(),in_npc->GetY(),in_npc->GetZ(),0,0,in_npc->GetTexture(),in_npc->GetHelmTexture(),0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0,0,0,0,0),
 	corpse_decay_timer(in_decaytime),
 	corpse_delay_timer(in_decaytime/2)
 {
@@ -143,7 +143,7 @@ Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, const NPC
 	for(int count = 0; count < 100; count++) {
 		if ((level >= npcCorpseDecayTimes[count].minlvl) && (level <= npcCorpseDecayTimes[count].maxlvl)) {
 			corpse_decay_timer.SetTimer(npcCorpseDecayTimes[count].seconds*1000);
-			corpse_delay_timer.SetTimer(npcCorpseDecayTimes[count].seconds*100);
+//			corpse_delay_timer.SetTimer(npcCorpseDecayTimes[count].seconds*100);
 			break;
 		}
 	}
@@ -175,7 +175,6 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 	0,
 	client->GetSize(),
 	0,
-	0,
 	client->GetHeading(),	// heading
 	client->GetX(),
 	client->GetY(),
@@ -201,7 +200,6 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 	client->GetPP().face,
 	client->GetPP().beard,
 	0xff,	// aa title
-	1,
 	0,
 	0,
 	0,
@@ -307,7 +305,7 @@ void Corpse::MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot)
 // Mongrel: added see_invis and see_invis_undead
 Corpse::Corpse(int32 in_dbid, int32 in_charid, char* in_charname, ItemList* in_itemlist, int32 in_copper, int32 in_silver, int32 in_gold, int32 in_plat, float in_x, float in_y, float in_z, float in_heading, float in_size, int8 in_gender, int16 in_race, int8 in_class, int8 in_deity, int8 in_level, int8 in_texture, int8 in_helmtexture,int32 in_rezexp)
 // vesuvias - appearence fix
- : Mob("Unnamed_Corpse","",0,0,in_gender, in_race, in_class, BT_Humanoid, in_deity, in_level,0,0, in_size, 0, 0, in_heading, in_x, in_y, in_z,0,0,in_texture,in_helmtexture,0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,1,0,0,0,0,0),
+ : Mob("Unnamed_Corpse","",0,0,in_gender, in_race, in_class, BT_Humanoid, in_deity, in_level,0,0, in_size, 0, in_heading, in_x, in_y, in_z,0,0,in_texture,in_helmtexture,0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0,0,0,0,0),
 	corpse_decay_timer(1800000),
 	corpse_delay_timer(600000)
 {
@@ -639,7 +637,7 @@ void Corpse::AllowMobLoot(Mob *them, int8 slot)
 }
 
 // @merth: this function needs some work
-void Corpse::MakeLootRequestPackets(Client* client, const EQZonePacket* app) {
+void Corpse::MakeLootRequestPackets(Client* client, const EQApplicationPacket* app) {
 	// Added 12/08.  Started compressing loot struct on live.
 	char tmp[10];
 	if(p_depop)
@@ -693,7 +691,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQZonePacket* app) {
 	if (tCanLoot >= 2 || (tCanLoot == 1 && client->Admin() >= 100 && client->GetGM()))
 	{
 		this->BeingLootedBy = client->GetID();
-		EQZonePacket* outapp = new EQZonePacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct));
 		moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer;
 		
 		d->response		= 1;
@@ -756,7 +754,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQZonePacket* app) {
 		if(tCanLoot==5){
 			int pkitem = GetPKItem();
 			const Item_Struct* item = database.GetItem(pkitem);
-			ItemInst* inst = ItemInst::Create(item, item->Common.MaxCharges);
+			ItemInst* inst = database.CreateItem(item, item->MaxCharges);
 			if (inst)
 			{
 				client->SendItemPacket(22, inst, ItemPacketLoot);
@@ -789,7 +787,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQZonePacket* app) {
 					item = database.GetItem(item_data->item_id);
 					if (client && item)
 					{
-						ItemInst* inst = ItemInst::Create(item, item_data->charges, item_data->aug1, item_data->aug2, item_data->aug3, item_data->aug4, item_data->aug5);
+						ItemInst* inst = database.CreateItem(item, item_data->charges, item_data->aug1, item_data->aug2, item_data->aug3, item_data->aug4, item_data->aug5);
 						if (inst)
 						{
 							client->SendItemPacket(i + 22, inst, ItemPacketLoot);
@@ -807,7 +805,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQZonePacket* app) {
 	client->QueuePacket(app);
 }
 
-void Corpse::LootItem(Client* client, const EQZonePacket* app)
+void Corpse::LootItem(Client* client, const EQApplicationPacket* app)
 {
 	//this gets sent out no matter what as a sort of 'ack', so send it here.
 	client->QueuePacket(app);
@@ -854,11 +852,11 @@ void Corpse::LootItem(Client* client, const EQZonePacket* app)
 	
 	if (item != 0)
 	{
-		inst = ItemInst::Create(item, item_data?item_data->charges:0, item_data->aug1, item_data->aug2, item_data->aug3, item_data->aug4, item_data->aug5);
-		if(item->Common.MaxCharges == -1)
+		inst = database.CreateItem(item, item_data?item_data->charges:0, item_data->aug1, item_data->aug2, item_data->aug3, item_data->aug4, item_data->aug5);
+		if(item->MaxCharges == -1)
 			inst->SetCharges(1);
 		else
-			inst->SetCharges(item->Common.MaxCharges);
+			inst->SetCharges(item->MaxCharges);
 	}
 
 	if (client && inst)
@@ -964,8 +962,8 @@ void Corpse::LootItem(Client* client, const EQZonePacket* app)
 	safe_delete(inst);
 }
 
-void Corpse::EndLoot(Client* client, const EQZonePacket* app) {
-	EQZonePacket* outapp = new EQZonePacket;
+void Corpse::EndLoot(Client* client, const EQApplicationPacket* app) {
+	EQApplicationPacket* outapp = new EQApplicationPacket;
 	outapp->SetOpcode(OP_LootComplete);
 	outapp->size = 0;
 	client->QueuePacket(outapp);
@@ -1053,7 +1051,7 @@ void Corpse::CompleteRezz(){
 	this->Save();
 }
 
-int32 Database::UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading, bool rezzed) {
+int32 ZoneDatabase::UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading, bool rezzed) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char* query = new char[256+(datasize*2)];
 	char* end = query;
@@ -1085,7 +1083,7 @@ int32 Database::UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charnam
 	return dbid;
 }
 
-int32 Database::CreatePlayerCorpse(int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading) {
+int32 ZoneDatabase::CreatePlayerCorpse(int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char* query = new char[256+(datasize*2)];
 	char* end = query;
@@ -1120,7 +1118,7 @@ int32 Database::CreatePlayerCorpse(int32 charid, const char* charname, int32 zon
 	return last_insert_id;
 }
 
-bool Database::LoadPlayerCorpses(int32 iZoneID) {
+bool ZoneDatabase::LoadPlayerCorpses(int32 iZoneID) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -1148,7 +1146,7 @@ bool Database::LoadPlayerCorpses(int32 iZoneID) {
 	return true;
 }
 
-bool Database::DeletePlayerCorpse(int32 dbid) {
+bool ZoneDatabase::DeletePlayerCorpse(int32 dbid) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	
@@ -1193,7 +1191,7 @@ sint32 Corpse::GetEquipmentColor(int8 material_slot)
 	{
 		return item_tint[material_slot].rgb.use_tint ?
 			item_tint[material_slot].color :
-			item->Common.Color;
+			item->Color;
 	}
 
 	return 0;

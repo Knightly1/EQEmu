@@ -27,12 +27,17 @@
 
 #include "features.h"
 #ifdef EMBPERL_XS_CLASSES
-#include "embperl.h"
 #include "../common/debug.h"
+#include "embperl.h"
 
 typedef const char Const_char;
 
 #include "mob.h"
+
+#ifdef THIS	 /* this macro seems to leak out on some systems */
+#undef THIS		
+#endif
+
 
 XS(XS_Mob_IsClient); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_IsClient)
@@ -1397,49 +1402,17 @@ XS(XS_Mob_GetBuffSlotFromType)
 	XSRETURN(1);
 }
 
-XS(XS_Mob_MakePetType); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_MakePetType)
-{
-	dXSARGS;
-	if (items != 3)
-		Perl_croak(aTHX_ "Usage: Mob::MakePetType(THIS, spell_id, pettype)");
-	{
-		Mob *		THIS;
-		int16		spell_id = (int16)SvUV(ST(1));
-		char*		pettype = (char *)SvPV_nolen(ST(2));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->MakePetType(spell_id, pettype);
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_Mob_MakePet); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_MakePet)
 {
 	dXSARGS;
-	if (items < 5 || items > 11)
-		Perl_croak(aTHX_ "Usage: Mob::MakePet(THIS, spell_id, in_level, in_class, in_race, in_texture= 0, in_pettype= 0, in_size= 0, type= 0, min_dmg= 0, max_dmg= 0)");
+	if (items < 3 || items > 4)
+		Perl_croak(aTHX_ "Usage: Mob::MakePet(THIS, spell_id, pettype, name=NULL)");
 	{
 		Mob *		THIS;
 		int16		spell_id = (int16)SvUV(ST(1));
-		int8		in_level = (int8)SvUV(ST(2));
-		int8		in_class = (int8)SvUV(ST(3));
-		int16		in_race = (int16)SvUV(ST(4));
-		int8		in_texture;
-		int8		in_pettype;
-		float		in_size;
-		int8		type;
-		int32		min_dmg;
-		int32		max_dmg;
+		char*		pettype = (char *)SvPV_nolen(ST(2));
+		char *		name;
 
 		if (sv_derived_from(ST(0), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -1450,43 +1423,13 @@ XS(XS_Mob_MakePet)
 		if(THIS == NULL)
 			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
-		if (items < 6)
-			in_texture = 0;
+		if (items < 4)
+			name = NULL;
 		else {
-			in_texture = (int8)SvUV(ST(5));
+			name = (char *)SvPV_nolen(ST(3));
 		}
 
-		if (items < 7)
-			in_pettype = 0;
-		else {
-			in_pettype = (int8)SvUV(ST(6));
-		}
-
-		if (items < 8)
-			in_size = 0;
-		else {
-			in_size = (float)SvNV(ST(7));
-		}
-
-		if (items < 9)
-			type = 0;
-		else {
-			type = (int8)SvUV(ST(8));
-		}
-
-		if (items < 10)
-			min_dmg = 0;
-		else {
-			min_dmg = (int32)SvUV(ST(9));
-		}
-
-		if (items < 11)
-			max_dmg = 0;
-		else {
-			max_dmg = (int32)SvUV(ST(10));
-		}
-
-		THIS->MakePet(spell_id, in_level, in_class, in_race, in_texture, in_pettype, in_size, type, min_dmg, max_dmg);
+		THIS->MakePet(spell_id, pettype, name);
 	}
 	XSRETURN_EMPTY;
 }
@@ -4481,102 +4424,6 @@ XS(XS_Mob_IsEnraged)
 	XSRETURN(1);
 }
 
-XS(XS_Mob_StopWandering); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_StopWandering)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::StopWandering(THIS)");
-	{
-		Mob *		THIS;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->StopWandering();
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_ResumeWandering); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_ResumeWandering)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::ResumeWandering(THIS)");
-	{
-		Mob *		THIS;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->ResumeWandering();
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_PauseWandering); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_PauseWandering)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Mob::PauseWandering(THIS, pausetime)");
-	{
-		Mob *		THIS;
-		int		pausetime = (int)SvIV(ST(1));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->PauseWandering(pausetime);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_MoveTo); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_MoveTo)
-{
-	dXSARGS;
-	if (items != 4)
-		Perl_croak(aTHX_ "Usage: Mob::MoveTo(THIS, mtx, mty, mtz)");
-	{
-		Mob *		THIS;
-		float		mtx = (float)SvNV(ST(1));
-		float		mty = (float)SvNV(ST(2));
-		float		mtz = (float)SvNV(ST(3));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->MoveTo(mtx, mty, mtz);
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_Mob_GetReverseFactionCon); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_GetReverseFactionCon)
 {
@@ -4639,240 +4486,6 @@ XS(XS_Mob_IsAIControlled)
 	XSRETURN(1);
 }
 
-XS(XS_Mob_GetGuardX); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetGuardX)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetGuardX(THIS)");
-	{
-		Mob *		THIS;
-		float		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetGuardX();
-		XSprePUSH; PUSHn((double)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_GetGuardY); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetGuardY)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetGuardY(THIS)");
-	{
-		Mob *		THIS;
-		float		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetGuardY();
-		XSprePUSH; PUSHn((double)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_GetGuardZ); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetGuardZ)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetGuardZ(THIS)");
-	{
-		Mob *		THIS;
-		float		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetGuardZ();
-		XSprePUSH; PUSHn((double)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_SetGuardXYZ); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_SetGuardXYZ)
-{
-	dXSARGS;
-	if (items != 4)
-		Perl_croak(aTHX_ "Usage: Mob::SetGuardXYZ(THIS, x, y, z)");
-	{
-		Mob *		THIS;
-		float		x = (float)SvNV(ST(1));
-		float		y = (float)SvNV(ST(2));
-		float		z = (float)SvNV(ST(3));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->SetGuardXYZ(x, y, z);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_GetGuardHeading); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetGuardHeading)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetGuardHeading(THIS)");
-	{
-		Mob *		THIS;
-		float		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetGuardHeading();
-		XSprePUSH; PUSHn((double)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_GetSpawnX); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetSpawnX)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetSpawnX(THIS)");
-	{
-		Mob *		THIS;
-		float		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetSpawnX();
-		XSprePUSH; PUSHn((double)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_GetSpawnY); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetSpawnY)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetSpawnY(THIS)");
-	{
-		Mob *		THIS;
-		float		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetSpawnY();
-		XSprePUSH; PUSHn((double)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_GetSpawnZ); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetSpawnZ)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetSpawnZ(THIS)");
-	{
-		Mob *		THIS;
-		float		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetSpawnZ();
-		XSprePUSH; PUSHn((double)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_GetSpawnHeading); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetSpawnHeading)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetSpawnHeading(THIS)");
-	{
-		Mob *		THIS;
-		float		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetSpawnHeading();
-		XSprePUSH; PUSHn((double)RETVAL);
-	}
-	XSRETURN(1);
-}
-
 XS(XS_Mob_GetAggroRange); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_GetAggroRange)
 {
@@ -4923,83 +4536,6 @@ XS(XS_Mob_GetAssistRange)
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
-}
-
-XS(XS_Mob_SaveGuardSpot); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_SaveGuardSpot)
-{
-	dXSARGS;
-	if (items < 1 || items > 2)
-		Perl_croak(aTHX_ "Usage: Mob::SaveGuardSpot(THIS, iClearGuardSpot= false)");
-	{
-		Mob *		THIS;
-		bool		iClearGuardSpot;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		if (items < 2)
-			iClearGuardSpot = false;
-		else {
-			iClearGuardSpot = (bool)SvTRUE(ST(1));
-		}
-
-		THIS->SaveGuardSpot(iClearGuardSpot);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_SaveSpawnSpot); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_SaveSpawnSpot)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::SaveSpawnSpot(THIS)");
-	{
-		Mob *		THIS;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->SaveSpawnSpot();
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_UpdateWaypoint); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_UpdateWaypoint)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Mob::UpdateWaypoint(THIS, wp_index)");
-	{
-		Mob *		THIS;
-		int		wp_index = (int)SvIV(ST(1));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->UpdateWaypoint(wp_index);
-	}
-	XSRETURN_EMPTY;
 }
 
 XS(XS_Mob_SetPetOrder); /* prototype to pass -Wmissing-prototypes */
@@ -5696,79 +5232,6 @@ XS(XS_Mob_CalculateDistance)
 	XSRETURN(1);
 }
 
-XS(XS_Mob_CalculateNewWaypoint); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_CalculateNewWaypoint)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::CalculateNewWaypoint(THIS)");
-	{
-		Mob *		THIS;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->CalculateNewWaypoint();
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_CalculateHeadingToNextWaypoint); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_CalculateHeadingToNextWaypoint)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::CalculateHeadingToNextWaypoint(THIS)");
-	{
-		Mob *		THIS;
-		int8		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->CalculateHeadingToNextWaypoint();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_AssignWaypoints); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_AssignWaypoints)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Mob::AssignWaypoints(THIS, grid)");
-	{
-		Mob *		THIS;
-		int16		grid = (int16)SvUV(ST(1));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->AssignWaypoints(grid);
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_Mob_SendTo); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_SendTo)
 {
@@ -6003,29 +5466,6 @@ XS(XS_Mob_GetResist)
 	XSRETURN(1);
 }
 
-XS(XS_Mob_StopSong); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_StopSong)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::StopSong(THIS)");
-	{
-		Mob *		THIS;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->StopSong();
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_Mob_GetShieldTarget); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_GetShieldTarget)
 {
@@ -6085,65 +5525,6 @@ XS(XS_Mob_SetShieldTarget)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_Mob_GetSongTarget); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetSongTarget)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetSongTarget(THIS)");
-	{
-		Mob *		THIS;
-		Mob *		RETVAL;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetSongTarget();
-		ST(0) = sv_newmortal();
-		sv_setref_pv(ST(0), "Mob", (void*)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_SetSongTarget); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_SetSongTarget)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Mob::SetSongTarget(THIS, mob)");
-	{
-		Mob *		THIS;
-		Mob*		mob;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		if (sv_derived_from(ST(1), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(1)));
-			mob = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "mob is not of type Mob");
-		if(mob == NULL)
-			Perl_croak(aTHX_ "mob is NULL, avoiding crash.");
-
-		THIS->SetSongTarget(mob);
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_Mob_Charmed); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_Charmed)
 {
@@ -6192,6 +5573,32 @@ XS(XS_Mob_GetLevelHP)
 			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetLevelHP(tlevel);
+		XSprePUSH; PUSHu((UV)RETVAL);
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Mob_GetZoneID); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_GetZoneID)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::GetZoneID(THIS)");
+	{
+		Mob *		THIS;
+		int32		RETVAL;
+		dXSTARG;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		RETVAL = THIS->GetZoneID();
 		XSprePUSH; PUSHu((UV)RETVAL);
 	}
 	XSRETURN(1);
@@ -6304,6 +5711,95 @@ XS(XS_Mob_DivineAura)
 	XSRETURN(1);
 }
 
+XS(XS_Mob_AddFeignMemory); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_AddFeignMemory)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Mob::AddFeignMemory(THIS, attacker)");
+	{
+		Mob *		THIS;
+		Client*		attacker;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		if (sv_derived_from(ST(1), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(1)));
+			attacker = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "attacker is not of type Client");
+		if(attacker == NULL)
+			Perl_croak(aTHX_ "attacker is NULL, avoiding crash.");
+
+		THIS->AddFeignMemory(attacker);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_Mob_RemoveFromFeignMemory); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_RemoveFromFeignMemory)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Mob::RemoveFromFeignMemory(THIS, attacker)");
+	{
+		Mob *		THIS;
+		Client*		attacker;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		if (sv_derived_from(ST(1), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(1)));
+			attacker = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "attacker is not of type Client");
+		if(attacker == NULL)
+			Perl_croak(aTHX_ "attacker is NULL, avoiding crash.");
+
+		THIS->RemoveFromFeignMemory(attacker);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_Mob_ClearFeignMemory); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_ClearFeignMemory)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Mob::ClearFeignMemory(THIS)");
+	{
+		Mob *		THIS;
+
+		if (sv_derived_from(ST(0), "Mob")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Mob *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Mob");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->ClearFeignMemory();
+	}
+	XSRETURN_EMPTY;
+}
+
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -6316,7 +5812,7 @@ XS(boot_Mob)
 	file[255] = 0;
 	
 	if(items != 1)
-		LogFile->write(EQEMuLog::Error, "boot_quest does not take any arguments.");
+		fprintf(stderr, "boot_quest does not take any arguments.");
 	char buf[128];
 
 	//add the strcpy stuff to get rid of const warnings....
@@ -6372,8 +5868,7 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "FindBuff"), XS_Mob_FindBuff, file, "$$");
 		newXSproto(strcpy(buf, "FindType"), XS_Mob_FindType, file, "$$;$$");
 		newXSproto(strcpy(buf, "GetBuffSlotFromType"), XS_Mob_GetBuffSlotFromType, file, "$$");
-		newXSproto(strcpy(buf, "MakePetType"), XS_Mob_MakePetType, file, "$$$");
-		newXSproto(strcpy(buf, "MakePet"), XS_Mob_MakePet, file, "$$$$$;$$$$$$");
+		newXSproto(strcpy(buf, "MakePet"), XS_Mob_MakePet, file, "$$$;$");
 		newXSproto(strcpy(buf, "GetBaseRace"), XS_Mob_GetBaseRace, file, "$");
 		newXSproto(strcpy(buf, "GetBaseGender"), XS_Mob_GetBaseGender, file, "$");
 		newXSproto(strcpy(buf, "GetDeity"), XS_Mob_GetDeity, file, "$");
@@ -6487,26 +5982,10 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "SetMagicRune"), XS_Mob_SetMagicRune, file, "$$");
 		newXSproto(strcpy(buf, "StartEnrage"), XS_Mob_StartEnrage, file, "$");
 		newXSproto(strcpy(buf, "IsEnraged"), XS_Mob_IsEnraged, file, "$");
-		newXSproto(strcpy(buf, "StopWandering"), XS_Mob_StopWandering, file, "$");
-		newXSproto(strcpy(buf, "ResumeWandering"), XS_Mob_ResumeWandering, file, "$");
-		newXSproto(strcpy(buf, "PauseWandering"), XS_Mob_PauseWandering, file, "$$");
-		newXSproto(strcpy(buf, "MoveTo"), XS_Mob_MoveTo, file, "$$$$");
 		newXSproto(strcpy(buf, "GetReverseFactionCon"), XS_Mob_GetReverseFactionCon, file, "$$");
 		newXSproto(strcpy(buf, "IsAIControlled"), XS_Mob_IsAIControlled, file, "$");
-		newXSproto(strcpy(buf, "GetGuardX"), XS_Mob_GetGuardX, file, "$");
-		newXSproto(strcpy(buf, "GetGuardY"), XS_Mob_GetGuardY, file, "$");
-		newXSproto(strcpy(buf, "GetGuardZ"), XS_Mob_GetGuardZ, file, "$");
-		newXSproto(strcpy(buf, "SetGuardXYZ"), XS_Mob_SetGuardXYZ, file, "$$$$");
-		newXSproto(strcpy(buf, "GetGuardHeading"), XS_Mob_GetGuardHeading, file, "$");
-		newXSproto(strcpy(buf, "GetSpawnX"), XS_Mob_GetSpawnX, file, "$");
-		newXSproto(strcpy(buf, "GetSpawnY"), XS_Mob_GetSpawnY, file, "$");
-		newXSproto(strcpy(buf, "GetSpawnZ"), XS_Mob_GetSpawnZ, file, "$");
-		newXSproto(strcpy(buf, "GetSpawnHeading"), XS_Mob_GetSpawnHeading, file, "$");
 		newXSproto(strcpy(buf, "GetAggroRange"), XS_Mob_GetAggroRange, file, "$");
 		newXSproto(strcpy(buf, "GetAssistRange"), XS_Mob_GetAssistRange, file, "$");
-		newXSproto(strcpy(buf, "SaveGuardSpot"), XS_Mob_SaveGuardSpot, file, "$;$");
-		newXSproto(strcpy(buf, "SaveSpawnSpot"), XS_Mob_SaveSpawnSpot, file, "$");
-		newXSproto(strcpy(buf, "UpdateWaypoint"), XS_Mob_UpdateWaypoint, file, "$$");
 		newXSproto(strcpy(buf, "SetPetOrder"), XS_Mob_SetPetOrder, file, "$$");
 		newXSproto(strcpy(buf, "GetPetOrder"), XS_Mob_GetPetOrder, file, "$");
 		newXSproto(strcpy(buf, "IsRoamer"), XS_Mob_IsRoamer, file, "$");
@@ -6528,9 +6007,6 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "CalculateNewPosition"), XS_Mob_CalculateNewPosition, file, "$$$$$;$");
 		newXSproto(strcpy(buf, "CalculateNewPosition2"), XS_Mob_CalculateNewPosition2, file, "$$$$$;$");
 		newXSproto(strcpy(buf, "CalculateDistance"), XS_Mob_CalculateDistance, file, "$$$$");
-		newXSproto(strcpy(buf, "CalculateNewWaypoint"), XS_Mob_CalculateNewWaypoint, file, "$");
-		newXSproto(strcpy(buf, "CalculateHeadingToNextWaypoint"), XS_Mob_CalculateHeadingToNextWaypoint, file, "$");
-		newXSproto(strcpy(buf, "AssignWaypoints"), XS_Mob_AssignWaypoints, file, "$$");
 		newXSproto(strcpy(buf, "SendTo"), XS_Mob_SendTo, file, "$$$$");
 		newXSproto(strcpy(buf, "SendToFixZ"), XS_Mob_SendToFixZ, file, "$$$$");
 		newXSproto(strcpy(buf, "NPCSpecialAttacks"), XS_Mob_NPCSpecialAttacks, file, "$$$");
@@ -6540,17 +6016,18 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "DontRootMeBefore"), XS_Mob_DontRootMeBefore, file, "$");
 		newXSproto(strcpy(buf, "DontSnareMeBefore"), XS_Mob_DontSnareMeBefore, file, "$");
 		newXSproto(strcpy(buf, "GetResist"), XS_Mob_GetResist, file, "$$");
-		newXSproto(strcpy(buf, "StopSong"), XS_Mob_StopSong, file, "$");
 		newXSproto(strcpy(buf, "GetShieldTarget"), XS_Mob_GetShieldTarget, file, "$");
 		newXSproto(strcpy(buf, "SetShieldTarget"), XS_Mob_SetShieldTarget, file, "$$");
-		newXSproto(strcpy(buf, "GetSongTarget"), XS_Mob_GetSongTarget, file, "$");
-		newXSproto(strcpy(buf, "SetSongTarget"), XS_Mob_SetSongTarget, file, "$$");
 		newXSproto(strcpy(buf, "Charmed"), XS_Mob_Charmed, file, "$");
 		newXSproto(strcpy(buf, "GetLevelHP"), XS_Mob_GetLevelHP, file, "$$");
+		newXSproto(strcpy(buf, "GetZoneID"), XS_Mob_GetZoneID, file, "$");
 		newXSproto(strcpy(buf, "CheckAggroAmount"), XS_Mob_CheckAggroAmount, file, "$$");
 		newXSproto(strcpy(buf, "CheckHealAggroAmount"), XS_Mob_CheckHealAggroAmount, file, "$$");
 		newXSproto(strcpy(buf, "GetAA"), XS_Mob_GetAA, file, "$$");
 		newXSproto(strcpy(buf, "DivineAura"), XS_Mob_DivineAura, file, "$");
+		newXSproto(strcpy(buf, "AddFeignMemory"), XS_Mob_AddFeignMemory, file, "$$");
+		newXSproto(strcpy(buf, "RemoveFromFeignMemory"), XS_Mob_RemoveFromFeignMemory, file, "$$");
+		newXSproto(strcpy(buf, "ClearFeignMemory"), XS_Mob_ClearFeignMemory, file, "$");
 	XSRETURN_YES;
 }
 

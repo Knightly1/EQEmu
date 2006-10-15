@@ -25,7 +25,7 @@
 #include <queue>
 
 class Client;
-class EQZonePacket;
+class EQApplicationPacket;
 
 using namespace std;
 
@@ -55,8 +55,8 @@ public:
 	
 	//packet stuff
 	void	Message(Client* sender,const char* message);
-	void	QueuePacket(const EQZonePacket *app, bool ack_req = true);
-	EQZonePacket	*BuildFullUpdate(Client *for_who);
+	void	QueuePacket(const EQApplicationPacket *app, bool ack_req = true);
+	EQApplicationPacket	*BuildFullUpdate(Client *for_who);
 	
 	//leadership stuff
 	void	SetLeader(Client* newleader){ leader=newleader; };

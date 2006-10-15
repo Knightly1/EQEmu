@@ -20,6 +20,7 @@
 #include "features.h"
 #include "masterentity.h"
 #include "../common/packet_dump.h"
+#include "../common/MiscFunctions.h"
 #include <string>
 #include <map>
 
@@ -114,7 +115,7 @@ void Client::ToggleTribute(bool enabled) {
 }
 
 void Client::DoTributeUpdate() {
-	EQZonePacket outapp(OP_TributeUpdate, sizeof(TributeInfo_Struct));
+	EQApplicationPacket outapp(OP_TributeUpdate, sizeof(TributeInfo_Struct));
 	TributeInfo_Struct *tis = (TributeInfo_Struct *) outapp.pBuffer;
 	
 	tis->active = m_pp.tribute_active ? 1 : 0;
@@ -166,7 +167,7 @@ void Client::DoTributeUpdate() {
 			int32 item_id = tier.tribute_item_id;
 			
 			//summon the item for them
-			const ItemInst* inst = ItemInst::Create(item_id, 1);
+			const ItemInst* inst = database.CreateItem(item_id, 1);
 			if(inst == NULL)
 				continue;
 			PutItemInInventory(TRIBUTE_SLOT_START+r, *inst, false);
@@ -183,7 +184,7 @@ void Client::DoTributeUpdate() {
 
 void Client::SendTributeTimer() {
 	//update their timer.
-	EQZonePacket outapp2(OP_TributeTimer, sizeof(uint32));
+	EQApplicationPacket outapp2(OP_TributeTimer, sizeof(uint32));
 	uint32 *timeleft = (uint32 *) outapp2.pBuffer;
 	if(m_pp.tribute_active)
 		*timeleft = m_pp.tribute_time_remaining;
@@ -228,7 +229,7 @@ void Client::SendTributeDetails(int32 client_id, uint32 tribute_id) {
 	TributeData &td = tribute_list[tribute_id];
 
 	int len = td.description.length();
-	EQZonePacket outapp(OP_SelectTribute, sizeof(SelectTributeReply_Struct)+len+1);
+	EQApplicationPacket outapp(OP_SelectTribute, sizeof(SelectTributeReply_Struct)+len+1);
 	SelectTributeReply_Struct *t = (SelectTributeReply_Struct *) outapp.pBuffer;
 	
 	t->client_id = client_id;
@@ -284,7 +285,7 @@ sint32 Client::TributeMoney(int32 platinum) {
 }
 
 void Client::AddTributePoints(sint32 ammount) {
-	EQZonePacket outapp(OP_TributePointUpdate, sizeof(TributePoint_Struct));
+	EQApplicationPacket outapp(OP_TributePointUpdate, sizeof(TributePoint_Struct));
 	TributePoint_Struct *t = (TributePoint_Struct *) outapp.pBuffer;
 	
 	//change the point values.
@@ -311,7 +312,7 @@ void Client::SendTributes() {
 		if(cur->second.is_guild)
 			continue;	//skip guild tributes here
 		int len = cur->second.name.length();
-		EQZonePacket outapp(OP_TributeInfo, sizeof(TributeAbility_Struct) + len + 1);
+		EQApplicationPacket outapp(OP_TributeInfo, sizeof(TributeAbility_Struct) + len + 1);
 		TributeAbility_Struct* tas = (TributeAbility_Struct*)outapp.pBuffer;
 		
 		tas->tribute_id = htonl(cur->first);
@@ -348,7 +349,7 @@ void Client::SendGuildTributes() {
 		int len = cur->second.name.length();
 		
 		//guild tribute has an unknown uint32 at its begining, guild ID?
-		EQZonePacket outapp(OP_TributeInfo, sizeof(TributeAbility_Struct) + len + 1 + 4);
+		EQApplicationPacket outapp(OP_TributeInfo, sizeof(TributeAbility_Struct) + len + 1 + 4);
 		uint32 *unknown = (uint32 *) outapp.pBuffer;
 		TributeAbility_Struct* tas = (TributeAbility_Struct*) (outapp.pBuffer+4);
 		
@@ -377,7 +378,7 @@ void Client::SendGuildTributes() {
 	}
 }
 
-bool Database::LoadTributes() {
+bool ZoneDatabase::LoadTributes() {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     MYSQL_RES *result;
     MYSQL_ROW row;

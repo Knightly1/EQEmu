@@ -14,13 +14,13 @@ public:
 		watch_op = op;
 	}
 
-	virtual void ToClientPacket(EQStreamType t, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *p) {
+	virtual void ToClientPacket(EQStreamType t, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *p) {
 		if(eq_opcode != watch_op)
 			return;
 		cout << "Server->Client: ";
 		p->DumpRaw();
 	}
-	virtual void ToServerPacket(EQStreamType t, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *p) {
+	virtual void ToServerPacket(EQStreamType t, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *p) {
 		if(eq_opcode != watch_op)
 			return;
 		cout << "Client->Server: ";

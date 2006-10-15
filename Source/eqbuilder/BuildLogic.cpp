@@ -25,7 +25,7 @@ static char THIS_FILE[] = __FILE__;
 
 #define COLINEAR_DOT_PRODUCT_THRESHOLD 0.97		//~14 degrees
 #define MAX_PATH_LENGTH 600.0f
-
+#define MIN_WAYPOINT_COUNT 2
 
 
 void CEQBuilderDlg::Reprocess() {
@@ -33,42 +33,76 @@ void CEQBuilderDlg::Reprocess() {
 }
 
 void CEQBuilderDlg::ProcessData() {
+	pProgress->SetPos( 0 );
+	buildpos = 0;
+	
+	m_ids.Restart();
 
-	npcid = npcstartid;
-	currentlog->compilepos = 50;
-	pProgress->SetPos( 50 );
+	ClearBuildResults();
 
 	//process the logs and consolicate the entities in our lists
 	//combine all the mob entires, set npc ids, and handle merchants
+	m_progressText.SetWindowText("Extracting NPC Data");
+	m_progressText.RedrawWindow();
 	getNPCData();
 	
 	//split the spawn data into roaming and non-roaming mobs
 	//creating spawns for the roaming mobs, into gridSpawns
 	//and making a list of non-roaming mobs for clustering, into fixedMobs
+	m_progressText.SetWindowText("Splitting Spawns");
+	m_progressText.RedrawWindow();
 	splitSpawnData();
-	
-	//cluster fixed mobs into spawn points, into fixedSpawns
-	clusterFixedMobs();
 	
 	//look through each spawn point in the spawn list.
 	//find the longest path of any mob in the spawn point, and use it for the point
-	getGridData(gridSpawns);
+	//it is possible to reduce a roaming spawn to a fixed spawn here if they dont move much
+	m_progressText.SetWindowText("Extracting Grids");
+	m_progressText.RedrawWindow();
+	extractGridData();
+	
+	//cluster fixed mobs into spawn points, into fixedSpawns
+	m_progressText.SetWindowText("Clustering Fixed Mobs");
+	m_progressText.RedrawWindow();
+	clusterFixedMobs();
+
+	//try to combine roaming spawn groups which contain the same mobs
+	//currently: we want to do this before joining fixed mobs to prevent 
+	//2nd degree linking (where a fixed mob gets sucked into a grid, which 
+	//causes another grid to get combined with the first grid, which would 
+	//not have happened otherwise)
+	m_progressText.SetWindowText("Joining Pathing Mobs");
+	m_progressText.RedrawWindow();
+	JoinPathingMobs();
+
+	//try to suck fixed mobs into roaming spawn groups containing the same mobs
+	m_progressText.SetWindowText("Joining Fixed Mobs");
+	m_progressText.RedrawWindow();
+	JoinFixedMobs();
 	
 	//clean up both of the spawn lists, also setting their IDs
-	int spawnid = 0;
-	if ( sqloptions->m_useopt == 0 ) {
-		spawnid = zoneid * sqloptions->m_zoneid;
-	} else if ( sqloptions->m_useopt == 1 ) {
-		spawnid = sqloptions->m_spawnid;
-	}
-	fixedSpawns = CleanSpawnList(fixedSpawns, spawnid);
-	gridSpawns = CleanSpawnList(gridSpawns, spawnid);
+	m_progressText.SetWindowText("Cleaning Spawns");
+	m_progressText.RedrawWindow();
+	fixedSpawns = CleanSpawnList(fixedSpawns);
+	gridSpawns = CleanSpawnList(gridSpawns);
+	
+	//build our final grid list
+	m_progressText.SetWindowText("Building Grid List");
+	m_progressText.RedrawWindow();
+	buildGridList();
 
 	//we now have our seperate fixed and moving spawn points
 	
+	pProgress->SetPos( 95 );
+
 	//display the spawns
+	m_progressText.SetWindowText("Displaying data");
+	m_progressText.RedrawWindow();
 	afficherSpawns();
 	SetDataDisplay(lSpawnTabs->GetCurSel());
+
+	pProgress->SetPos( 100 );
+	m_progressText.SetWindowText("Done.");
+	m_progressText.RedrawWindow();
 	
 	// scores
 	CString doors;
@@ -137,7 +171,9 @@ void CEQBuilderDlg::ReloadMap() {
 	zone_map = Map::LoadMapfile(zonename, sqloptions->m_EQEmuMaps);
 }
 
-spawn_list *CEQBuilderDlg::CleanSpawnList(spawn_list *from, int &spawnid) {
+//this is currently the last thing which is done to a spawn group
+//at the end of processing the data...
+spawn_list *CEQBuilderDlg::CleanSpawnList(spawn_list *from) {
 	spawn_list *to = new spawn_list();
 
 	//just because our linked list wants to delete itself, we have to copy everything here...
@@ -154,6 +190,7 @@ spawn_list *CEQBuilderDlg::CleanSpawnList(spawn_list *from, int &spawnid) {
 	}
 
 	int maxpos = from->getsize();
+	float initbuildpos = buildpos;
 
 	for ( int i=0;i<maxpos;i++ ) {
 		cspawn *ospawn = from->get(i);
@@ -170,11 +207,29 @@ spawn_list *CEQBuilderDlg::CleanSpawnList(spawn_list *from, int &spawnid) {
 		cspawn* spawn = new cspawn( ospawn );
 
 		// give it the next spawn id
-		spawn->id = spawnid;
-		spawnid++;
+		spawn->db_id = m_ids.spawngroup.GetNextID();
+
+		//now give each of its spawn points an ID too..
+		int r,locmax;
+		locmax = spawn->locs->getsize();
+		for(r = 0; r < locmax; r++) {
+			cspawnpoint *loc = spawn->locs->get(r);
+			loc->db_id = m_ids.spawn2.GetNextID();
+		}
+
+		//now give each mob (spawnentry) in the spawn group an ID
+		int mg = spawn->mobs->getsize();
+		int k;
+		for (k = 0; k < mg; k++ ) {
+			cmob *m = spawn->mobs->get(k);
+			m->db_spawnentry_id = m_ids.spawnentry.GetNextID();
+		}
 		
 		//add it to the result list
 		to->add(spawn);
+
+		buildpos = initbuildpos + float( i * 12 ) / maxpos;
+		pProgress->SetPos( buildpos );
 	}
 
 	delete from;
@@ -345,92 +400,111 @@ bool CEQBuilderDlg::isMovingAtInit( cmob* mob ) {
 
 }
 
-void CEQBuilderDlg::getGridData(spawn_list *spawns) {
-	
+void CEQBuilderDlg::extractGridData() {
+
+	if(fixedSpawns == NULL)
+		fixedSpawns = new spawn_list();
+
+	float initbuildpos = buildpos;
+	int maxpos = gridSpawns->getsize();
+
+	for ( int i=0; i<maxpos; i++ ) {
+
+		//progression
+		buildpos = initbuildpos + float( i * 10 ) / maxpos;
+		pProgress->SetPos( buildpos );
+		
+		cspawn* spawn = gridSpawns->get(i);
+
+		if ( !spawn->roaming ) {
+			//send them to the fixed list...
+			gridSpawns->remove(spawn);
+			maxpos--;
+			i--;
+			fixedSpawns->add(spawn);
+			continue;
+		}
+
+		cgrid* grid = NULL;
+
+		//find the longest grid for this spawn's set of mobs
+		for ( int j = 0; j<spawn->mobs->getsize(); j++ ) {
+			
+			cmob* mob = spawn->mobs->get(j);
+			
+			if ( mob->waypoints == NULL )
+				continue;
+				
+			cgrid* mobgrid = getGrid( mob );
+			if(mobgrid == NULL)
+				continue;
+
+			if ( grid == NULL ) {
+				grid = mobgrid;
+			} else {
+				if ( grid->waypoints->getsize() < mobgrid->waypoints->getsize() ) {
+					delete [] grid;
+					grid = mobgrid;
+				} else {
+					delete [] mobgrid;
+				}
+			}
+
+		}
+
+
+		if ( grid == NULL ) {
+			//send them to the fixed list...
+			gridSpawns->remove(spawn);
+			maxpos--;
+			i--;
+			fixedSpawns->add(spawn);
+			continue;
+		}
+
+//		grid->id = m_gridids.GetNextID();
+
+		spawn->grid = new cgrid( grid );
+
+		cspawnpoint *loc = new cspawnpoint(grid->waypoints->get(0)->loc);
+
+		if(spawn->locs != NULL)
+			delete spawn->locs;
+		spawn->locs = new spawnpoint_list();
+		spawn->locs->add(loc);
+		spawn->center = *loc;
+
+//		listGrids->add( grid );
+	}
+
+
+}
+
+void CEQBuilderDlg::buildGridList() {
 	if ( listGrids != NULL ) {
 		delete [] listGrids;
 		listGrids = NULL;
 	}
-
 	listGrids = new grid_list();
 
-	int gridid;
-
-
-	if ( sqloptions->m_useopt == 0 ) {
-		gridid = zoneid * sqloptions->m_zoneid / 2;
-	} else if ( sqloptions->m_useopt == 1 ) {
-		gridid = sqloptions->m_gridid;
-	}
-
-	int maxpos = spawns->getsize();
+	float initbuildpos = buildpos;
+	int maxpos = gridSpawns->getsize();
 
 	for ( int i=0; i<maxpos; i++ ) {
-		
-		cspawn* spawn = spawns->get(i);
-
-		if ( spawn->roaming == true ) {
-
-			cgrid* grid = NULL;
-
-			//find the longest grid for this spawn's set of mobs
-			for ( int j = 0; j<spawn->mobs->getsize(); j++ ) {
-				
-				cmob* mob = spawn->mobs->get(j);
-				
-				if ( mob->waypoints == NULL )
-					continue;
-					
-				cgrid* mobgrid = getGrid( mob );
-				if(mobgrid == NULL)
-					continue;
-
-				if ( grid == NULL ) {
-					grid = mobgrid;
-				} else {
-					if ( grid->waypoints->getsize() < mobgrid->waypoints->getsize() ) {
-						delete [] grid;
-						grid = mobgrid;
-					} else {
-						delete [] mobgrid;
-					}
-				}
-
-			}
-
-
-			if ( grid == NULL ) {
-				continue;
-			}
-
-			grid->id = gridid;
-			gridid++;
-
-			spawn->grid = new cgrid( grid );
-
-			cloc *loc = new cloc();
-			loc->x = grid->waypoints->get(0)->loc->x;
-			loc->y = grid->waypoints->get(0)->loc->y;
-			loc->z = grid->waypoints->get(0)->loc->z;
-			loc->heading = grid->waypoints->get(0)->loc->heading;
-
-			if(spawn->locs != NULL)
-				delete spawn->locs;
-			spawn->locs = new loc_list();
-			spawn->locs->add(loc);
-			spawn->center = *loc;
-
-			listGrids->add( grid );
-
-		}
 
 		//progression
-		currentlog->compilepos = 70 + ( i * 10 ) / maxpos;
-		pProgress->SetPos( currentlog->compilepos );
+		buildpos = initbuildpos + float( i * 5 ) / maxpos;
+		pProgress->SetPos( buildpos );
 
+		cspawn* spawn = gridSpawns->get(i);
+
+		if(spawn->grid == NULL)
+			continue;
+
+		spawn->grid->db_id = m_ids.grid.GetNextID();
+		
+		listGrids->add( new cgrid( spawn->grid ) );
 	}
-
-
 }
 
 class g_point { public:
@@ -452,8 +526,8 @@ bool operator<(const g_point &l, const g_point &r) {
 
 cgrid* CEQBuilderDlg::getGrid( cmob* mob ) {
 	int size = mob->waypoints->getsize();
-	if(size < 2)
-			return(NULL);
+	if(size < MIN_WAYPOINT_COUNT)
+		return(NULL);
 	
 
 	cgrid* grid = new cgrid();
@@ -466,7 +540,6 @@ cgrid* CEQBuilderDlg::getGrid( cmob* mob ) {
 	//this is attempting to correct a major problem
 	if(mob->loc->dist2xy(path_first) < max_init_dist) {
 		cwaypoint* wp_init = new cwaypoint();
-		wp_init->id = mob->id;
 		wp_init->loc = new cloc( mob->loc );
 		wp_init->pause = true;
 		wp_init->valid = true;
@@ -475,7 +548,6 @@ cgrid* CEQBuilderDlg::getGrid( cmob* mob ) {
 	}
 
 	cwaypoint* wp_init = new cwaypoint();
-	wp_init->id = mob->id;
 	wp_init->loc = new cloc( path_first );
 	wp_init->pause = true;
 	wp_init->valid = true;
@@ -516,7 +588,7 @@ cgrid* CEQBuilderDlg::getGrid( cmob* mob ) {
 			most_frequent = curp->first;
 		}
 	}
-	if(bcount > 3 && bcount > size/3) {
+	if(bcount > 3 || bcount > size/3) {
 		discard_most_frequent = true;
 	}
 
@@ -527,17 +599,15 @@ cgrid* CEQBuilderDlg::getGrid( cmob* mob ) {
 	bool valid;
 	bool colinear;
 
-	VERTEX start, end, hit;
-	float len;
+	VERTEX start, end;
+//	VERTEX hit;
 	for ( i=1; i < size; i++ ) {
 		cwaypoint* wp2 = mob->waypoints->get(i);
 
 		if(discard_most_frequent && most_frequent.equals(wp2->loc))
 			continue;
 		
-valid = true;
-colinear = false;
-/*		//watch for long paths...
+		//watch for long paths...
 		end.x = lastlocation->x - wp2->loc->x;
 		end.y = lastlocation->y - wp2->loc->y;
 		float len2 = end.x*end.x + end.y*end.y;
@@ -547,10 +617,7 @@ colinear = false;
 		
 		//test for colinearity
 		if(lastlocation2 != NULL) {
-
-//temp disabled for testing..
-//				colinear = arePointsColinear(wp2->loc, lastlocation, lastlocation2);
-				colinear = false;
+				colinear = arePointsColinear(wp2->loc, lastlocation, lastlocation2);
 		} else
 			colinear = false;
 		
@@ -563,17 +630,15 @@ colinear = false;
 			end.z = wp2->loc->z+3;
 			
 			//len calculated above!
-			if(len > MAX_PATH_LENGTH)
-				valid = false;
-			else
-				valid = !zone_map->LineIntersectsZone(start, end, 0.1f, &hit);
+//disabled for now since nobody is using this valid flag except the GUI
+//			if(valid)
+//				valid = !zone_map->LineIntersectsZone(start, end, 0.1f, &hit);
+valid = true;
 		} else {
-			if(len > MAX_PATH_LENGTH)
-				valid = false;
-			else
-				valid = true;
+			//no map, cant invalidate by LOS
+			valid = true;
 		}
-*/
+
 		
 		cwaypoint* wp1 = new cwaypoint( wp2 );
 		wp2->valid = wp1->valid = valid;
@@ -603,14 +668,18 @@ bool CEQBuilderDlg::arePointsColinear(const cloc *pt1, const cloc *pt2, const cl
 	start.y = pt2->y - pt1->y;
 	start.z = 0;
 	//current walking vector
-	end.x = pt2->x - pt3->x;
-	end.y = pt2->y - pt3->y;
+	end.x = pt3->x - pt2->x;
+	end.y = pt3->y - pt2->y;
 	end.z = 0;
 	//normalize both vectors
 	len = sqrt(end.x*end.x + end.y*end.y);
+	if(len < 0.000005f)
+		return(true);
 	end.x /= len;
 	end.y /= len;
 	len = sqrt(start.x*start.x + start.y*start.y);
+	if(len < 0.000005f)
+		return(true);
 	start.x /= len;	//this len is used below!
 	start.y /= len;
 
@@ -620,6 +689,10 @@ bool CEQBuilderDlg::arePointsColinear(const cloc *pt1, const cloc *pt2, const cl
 	return(dot > COLINEAR_DOT_PRODUCT_THRESHOLD);
 }
 
+/*
+	This is a pre-processing step, preformed on a mob's movement
+	before any of the clustering is run.
+*/
 void CEQBuilderDlg::cleanMobMovement(cmob *mob) {
 	if(!mob->moved && !mob->roamed)
 		return;
@@ -637,6 +710,14 @@ void CEQBuilderDlg::cleanMobMovement(cmob *mob) {
 	vector<waypoint_list *> paths;
 	
 	int maxpos = mob->waypoints->getsize();
+	if(maxpos < MIN_WAYPOINT_COUNT) {
+		mob->moved = false;
+		mob->roamed = false;
+		delete mob->waypoints;
+		mob->waypoints = NULL;
+		return;
+	}
+
 	for ( int i=0; i<maxpos; i++ ) {
 		cwaypoint *c = mob->waypoints->get(i);
 		cut_path = false;
@@ -650,31 +731,48 @@ void CEQBuilderDlg::cleanMobMovement(cmob *mob) {
 		}
 		
 		//test for colinearity
+		//this step has been removed because it seems to frequently break LOS
+		//and the LOS checking added didnt seem to help
 		if(lastlocation2 != NULL) {
-			if(false/*arePointsColinear(lastlocation2, lastlocation, c->loc)*/) {
-				//last three points are colinear, we want to drop the middle point
-				//but this point is allready in our list and hence cannot be removed
-				//so instead we make it the last point...
-				lastwp->loc->x = c->loc->x;
-				lastwp->loc->y = c->loc->y;
-				lastwp->loc->z = c->loc->z;
-				lastwp->loc->heading = c->loc->heading;
-				lastwp->id = c->id;
-				lastwp->pause = c->pause;
-				lastwp->db = c->db;
-				lastwp->valid = c->valid;
-				lastwp->colinear = c->colinear;
+			if(arePointsColinear(lastlocation2, lastlocation, c->loc)) {
+				//colinear, see if this would break LOS on the line
 				
-				//now drop the current point, since we just essentially added it.
-				//leave last pointers as they were, they are still valid...
-				continue;
+				start.x = lastlocation2->x;
+				start.y = lastlocation2->y;
+				start.z = lastlocation2->z+3;
+				end.x = c->loc->x;
+				end.y = c->loc->y;
+				end.z = c->loc->z+3;
+				
+				if(!zone_map->LineIntersectsZone(start, end, 0.1f, &hit)) {
+					//does not break LOS...
+
+					//last three points are colinear, we want to drop the middle point
+					//but this point is allready in our list and hence cannot be removed
+					//so instead we make it the last point...
+					lastwp->loc->x = c->loc->x;
+					lastwp->loc->y = c->loc->y;
+					lastwp->loc->z = c->loc->z;
+					lastwp->loc->heading = c->loc->heading;
+					lastwp->pause = c->pause;
+					lastwp->db = c->db;
+					lastwp->valid = c->valid;
+					lastwp->colinear = c->colinear;
+					
+					//now drop the current point, since we just essentially added it.
+					//leave last pointers as they were, they are still valid...
+					continue;
+				}
 			}
 		}
 		
 		//once we get here, we need to break the path if we find a break in it
 		
 		
-		if(zone_map != NULL) {
+//disabled in this preprocessor step, done after clustering
+//which is less idea because it feeds the clustering code potentially bad
+//information, but it seems to work better, if we turn this on, we lose a lot of good paths
+/*		if(zone_map != NULL) {
 			start.x = lastlocation->x;
 			start.y = lastlocation->y;
 			start.z = lastlocation->z+3;
@@ -684,6 +782,7 @@ void CEQBuilderDlg::cleanMobMovement(cmob *mob) {
 			
 			cut_path = zone_map->LineIntersectsZone(start, end, 0.1f, &hit);
 		}
+*/
 
 		//watch for long paths...
 		end.x = lastlocation->x - c->loc->x;
@@ -785,7 +884,7 @@ void CEQBuilderDlg::cleanMobMovement(cmob *mob) {
 	}
 }
 
-LocDifference CEQBuilderDlg::isSameLoc( const cloc* loc1, const cloc* loc2 ) {
+LocDifference CEQBuilderDlg::isSameLoc( const cloc* loc1, const cloc* loc2 ) const {
 	
 	float err2 = filtres.coord_error*filtres.coord_error;
 	float camp2 = filtres.camp_range*filtres.camp_range;
@@ -815,7 +914,7 @@ bool CEQBuilderDlg::isSameCoord( const cloc* loc1, const cloc* loc2 ) {
 	return(d2 < 0.1*0.1);
 }
 
-int CEQBuilderDlg::getGridIndex( cgrid* grid1 ) {
+/*int CEQBuilderDlg::getGridIndex( cgrid* grid1 ) {
 
 	for ( int i=0; i<listGrids->getsize(); i++ ) {
 		cgrid* grid2 = listGrids->get(i);
@@ -832,13 +931,13 @@ int CEQBuilderDlg::getGridIndex( cgrid* grid1 ) {
 
 	return -1;
 
-}
+}*/
 
 int CEQBuilderDlg::getNPCid( cnpc* npc ) {
 
 	for ( int i=0; i<listNPCs->getsize(); i++ ) {
 		if ( isSameNPC( npc, listNPCs->get(i) ) ) {
-			return listNPCs->get(i)->id;
+			return listNPCs->get(i)->db_id;
 		}
 	}
 
@@ -848,7 +947,7 @@ int CEQBuilderDlg::getNPCid( cnpc* npc ) {
 
 void CEQBuilderDlg::AddNewSpawn(spawn_list *list, cmob *mob, logType log_type, bool calc_prob) {
 	cspawn* spawn = new cspawn();
-	spawn->locs->add(new cloc( mob->loc ));
+	spawn->locs->add(new cspawnpoint( mob->loc ));
 	spawn->locs->getcenter(&spawn->center);
 	spawn->center = cloc(mob->loc);
 	spawn->mobs = new mob_list();
@@ -856,6 +955,7 @@ void CEQBuilderDlg::AddNewSpawn(spawn_list *list, cmob *mob, logType log_type, b
 	spawn->nbmobs = 1;
 	spawn->truespawn = false;
 	spawn->falsespawn = false;
+	spawn->is_special = (mob->npc->classe > PLAYER_CLASS_COUNT);
 	if ( ( mob->roamed == true ) && ( mob->killed == false ) ) {
 		spawn->roaming = true;
 	} else {
@@ -875,6 +975,60 @@ void CEQBuilderDlg::AddNewSpawn(spawn_list *list, cmob *mob, logType log_type, b
 	list->add( spawn );
 }
 
+void CEQBuilderDlg::splitSpawnList(const mob_list *list, int ci, int compcount, logType type) {
+	float initbuildpos = buildpos;
+	LocDifference diff;
+	int initcount = list->getsize();
+
+	for ( int i=0; i < initcount; i++ ) {
+		buildpos = initbuildpos + float( i * 10 * ci ) / (initcount * compcount);
+		pProgress->SetPos( buildpos );
+
+		const cmob* smob = list->get(i);
+		
+		cmob *mob = new cmob(smob);
+
+		mob->npc->db_id = getNPCid( mob->npc );
+		
+		cleanMobMovement(mob);
+		
+		//save fixed spawns for the clustering algorithm
+		if(type == logRaid || mob->waypoints == NULL || !mob->roamed) {
+			//see if there is allready a roaming spawn here which contains this NPC
+			cspawn *s = getSpawnPointContaining(gridSpawns, mob, diff);
+			if(s == NULL) {
+				//add them to the fixed list and be done with them.
+				//the clustering algorithm will take care of duplicates
+				fixedMobs->add(new cmob(mob));
+			}
+			continue;
+		}
+		//only roamers get here...
+		
+		if ( isMovingAtInit( mob ) == true ) {
+			if ( type != logPathing ) {
+				continue;
+			}
+		}
+
+		cspawn *cs = getSpawnPoint( gridSpawns, mob, diff );
+		if ( cs == NULL ) {
+			
+			AddNewSpawn(gridSpawns, mob, type, true);
+			
+		} else {
+			//only join two roaming spawns if they are real close
+//obsoleted by path combining
+//			if(diff == locSamePoint)
+//				updateSpawnPoint( cs, mob, false, type );
+//			else
+				AddNewSpawn(gridSpawns, mob, type, true);
+
+		}
+
+	}
+}
+
 void CEQBuilderDlg::splitSpawnData() {
 
 	if ( gridSpawns != NULL ) {
@@ -891,7 +1045,17 @@ void CEQBuilderDlg::splitSpawnData() {
 
 	int maxpos = nblogs;
 
-	for ( int numlog=0; numlog<nblogs; numlog++ ) {
+	int compcount = 0;
+	int ci = 0;
+	int numlog;
+	for ( numlog=0; numlog<nblogs; numlog++ ) {
+		const clog* log = compiledlogs->get(numlog);
+		if(log->compiled)
+			compcount++;
+	}
+
+
+	for ( numlog=0; numlog<nblogs; numlog++ ) {
 
 		const clog* log = compiledlogs->get(numlog);
 		
@@ -899,97 +1063,10 @@ void CEQBuilderDlg::splitSpawnData() {
 			continue;
 		}
 		
-		int initcount = log->mobinit->getsize();
-		for ( int i=0; i < initcount; i++ ) {
+		ci++;
 
-			cmob* mob = log->mobinit->get(i);
-
-			mob->npc->id = getNPCid( mob->npc );
-			
-			cleanMobMovement(mob);
-
-/*			if ( log->type == logRaid ) {
-				//this logic seems retarded....
-				if ( mob->npc->level <= 65 ) {
-					continue;
-				}
-				if ( ( mob->moved == true ) || ( mob->roamed == true ) ) {
-					continue;
-				}
-			}
-*/
-			
-			//save fixed spawns for the clustering algorithm
-			if(!mob->roamed) {
-				//add them to the fixed list and be done with them.
-				fixedMobs->add(new cmob(mob));
-				continue;
-			}
-			//only roamers get here...
-			
-			if ( isMovingAtInit( mob ) == true ) {
-				if ( log->type != logPathing ) {
-					continue;
-				}
-			}
-
-			LocDifference diff;
-			cspawn *cs = getSpawnPoint( gridSpawns, mob, diff );
-			if ( cs == NULL ) {
-				
-				AddNewSpawn(gridSpawns, mob, log->type, true);
-				
-			} else {
-				//only join two roaming spawns if they are real close
-				if(diff == locSamePoint)
-					updateSpawnPoint( cs, mob, false, log->type );
-				else
-					AddNewSpawn(gridSpawns, mob, log->type, true);
-
-			}
-
-		}
-
-		int addcount = log->mobadd->getsize();
-		for ( int j=0; j < addcount; j++ ) {
-
-			cmob* mob = log->mobadd->get(j);
-
-			cleanMobMovement(mob);
-
-			mob->npc->id = getNPCid( mob->npc );
-			
-			//save fixed spawns for the clustering algorithm
-			if(!mob->roamed) {
-				//add them to the fixed list and be done with them.
-				fixedMobs->add(new cmob(mob));
-				continue;
-			}
-			//only roamers get here...
-			
-			
-			LocDifference diff;
-			cspawn *cs = getSpawnPoint( gridSpawns, mob, diff );
-			if ( cs == NULL ) {
-				
-				AddNewSpawn(gridSpawns, mob, log->type, false);
-
-			} else {
-
-				//only join two roaming spawns if they are real close
-				if(diff == locSamePoint)
-					updateSpawnPoint( cs, mob, true, log->type );
-				else
-					AddNewSpawn(gridSpawns, mob, log->type, false);
-
-			}
-
-		}
-
-		// progression
-		currentlog->compilepos = 60 + ( numlog * 10 ) / maxpos;
-		pProgress->SetPos( currentlog->compilepos );
-
+		splitSpawnList(log->mobinit, ci, compcount, log->type);
+		splitSpawnList(log->mobadd, ci, compcount, log->type);
 	}
 
 }
@@ -1001,6 +1078,11 @@ void CEQBuilderDlg::updateSpawnPoint( cspawn *spawn, cmob* mob, bool addspawn, l
 	if(spawn->is_camp && mob->roamed)
 		return;	//cannot add a roamer to a camp
 
+	if(spawn->is_special) {
+		if(!spawn->ContainsNPC(mob->npc, false))
+			return;	//cannot add a mob to a special spawn unless it already exists in that spawn (does it even make sense then??)
+	}
+	
 	//if the new mob roamed (and was not killed), and the spawn point is not a roamer
 	//and we are collecting pathing from this log, then make this spawn
 	//point a roamer
@@ -1045,6 +1127,37 @@ cspawn *CEQBuilderDlg::getSpawnPoint( spawn_list *list, cmob* mob, LocDifference
 	for ( int i=0; i<maxpos; i++ ) {
 		
 		cspawn *c = list->get(i);
+		
+		//cannot add a roaming mob to a camp spawn point
+		if(c->is_camp && mob->roamed)
+			continue;
+		
+		diff = isSameLoc( &c->center, mob->loc );
+		//if either mob or spawn point is a roamer, we cannot be in camp range
+		if(mob->roamed || c->roaming) {
+			if(diff == locSamePoint)
+				return c;
+			//else, not a match... either camp or unrelated
+		} else {
+			//neither entity is moving, we can build a camp if we want.
+			//let the update routine handle the camp logic.
+			if(diff == locSamePoint || diff == locCampRange)
+				return(c);
+		}
+	}
+
+	return(NULL);
+}
+
+cspawn *CEQBuilderDlg::getSpawnPointContaining( spawn_list *list, cmob* mob, LocDifference &diff ) {
+
+	int maxpos = list->getsize();
+	for ( int i=0; i<maxpos; i++ ) {
+		
+		cspawn *c = list->get(i);
+
+		if(!c->ContainsNPC(mob->npc, true))
+			continue;
 		
 		//cannot add a roaming mob to a camp spawn point
 		if(c->is_camp && mob->roamed)
@@ -1162,11 +1275,13 @@ int CEQBuilderDlg::getSpawnProbability( cspawn* spawn, logType typelog ) {
 	return prob;
 }
 
-void CEQBuilderDlg::processNPCData(cmob *mob, IntArray* usednpcids) {
+//called for each mob by getNPCData
+//after they have been reduced.
+void CEQBuilderDlg::processNPCData(const cmob *mob) {
 	cnpc *existing_npc = isNPCDejaSauve( mob->npc );
 	if ( existing_npc == NULL ) {
 
-		if ( sqloptions->m_usedb == TRUE ) {
+/*		if ( sqloptions->m_usedb == TRUE ) {
 			int id = db->getnpcid( mob->npc );
 			if ( id == 0 ) {
 				id = db->getfreenpcid( npcid, usednpcids );
@@ -1175,28 +1290,38 @@ void CEQBuilderDlg::processNPCData(cmob *mob, IntArray* usednpcids) {
 		} else {
 			mob->npc->id = npcid;
 			npcid++;
-		}
+		}*/
+
+		mob->npc->db_id = m_ids.npc_types.GetNextID();
 		
 		if(mob->npc->merchant != NULL) {
-			listShops->add(new cmerchant( mob->npc->merchant ));
+			cmerchant *m = new cmerchant( mob->npc->merchant );
+			m->db_id = m_ids.merchantlist.GetNextID();
+			listShops->add(m);
 		}
 		listNPCs->add( new cnpc( mob->npc ) );
 	} else {
+		//we found some other mob like this in our list allready
 		if(mob->npc->merchant != NULL) {
+			//we have a merchant
 			if(existing_npc->merchant == NULL) {
 				//the old mob didnt have a merchant set, but the new one does.
-				//move the merchant set over to the old mob.
-				existing_npc->merchant = mob->npc->merchant;
+				//copy the merchant set over to the old mob.
+				existing_npc->merchant = new cmerchant(mob->npc->merchant);
 				existing_npc->merchant->owner = existing_npc;
-				mob->npc->merchant = NULL;
+				existing_npc->merchant->db_id = m_ids.merchantlist.GetNextID();
+				//yes, we really duplicate this AGAIN
 				listShops->add(new cmerchant( existing_npc->merchant ));
 			} else {
+				//both the existing mob and this mob have merchant inventory
 				//TODO: could merge merchant lists or do something else intelligent...
+				existing_npc->merchant->mergeFrom(mob->npc->merchant);
 			}
 		}
 	}
 }
 
+//pulls out all the unique npc and merchant data
 void CEQBuilderDlg::getNPCData() {
 
 	if(listNPCs != NULL) {
@@ -1209,15 +1334,9 @@ void CEQBuilderDlg::getNPCData() {
 	listNPCs = new npc_list();
 	listShops = new merchant_list();
 
-	if ( sqloptions->m_useopt == 0 ) {
-		npcstartid = zoneid * sqloptions->m_zoneid;
-	} else if ( sqloptions->m_useopt == 1 ) {
-		npcstartid = sqloptions->m_npcid;
-	}
 
+	float initbuildpos = buildpos;
 	int maxpos = nblogs;
-	
-	IntArray* usednpcids = new IntArray();
 
 	for ( int numlog=0; numlog<nblogs; numlog++ ) {
 
@@ -1228,25 +1347,19 @@ void CEQBuilderDlg::getNPCData() {
 		}
 
 		for ( int i=0; i<log->nbmobinit; i++ ) {
-
 			cmob* mob = log->mobinit->get(i);
-			processNPCData(mob, usednpcids);
+			processNPCData(mob);
 
 		}
 
 		for ( int j=0; j<log->nbmobadd; j++ ) {
-
 			cmob* mob = log->mobadd->get(j);
-			processNPCData(mob, usednpcids);
+			processNPCData(mob);
 		}
 
-		// progression
-		currentlog->compilepos = 50 + ( numlog * 10 ) / maxpos;
-		pProgress->SetPos( currentlog->compilepos );
-
+		buildpos = initbuildpos + float( (numlog+1) * 15 ) / nblogs;
+		pProgress->SetPos( buildpos );
 	}
-
-	delete [] usednpcids;
 
 }
 
@@ -1266,11 +1379,11 @@ bool CEQBuilderDlg::IsValidSpawn( cmob* mob ) {
 	return true;
 }
 
-bool CEQBuilderDlg::isSameNPC( cnpc* npc1, cnpc* npc2 ) {
-	return(npc1->IsSameAs(npc2));
+bool CEQBuilderDlg::isSameNPC( const cnpc* npc1, const cnpc* npc2 ) {
+	return(npc1->IsSameAs(npc2, true));
 }
 
-cnpc *CEQBuilderDlg::isNPCDejaSauve( cnpc* npc ) {
+cnpc *CEQBuilderDlg::isNPCDejaSauve( const cnpc* npc ) {
 
 	cnpc *cc = NULL;
 	for ( int i=0; i<nbnpcs(); i++ ) {

@@ -23,7 +23,7 @@ CollectMobHandler::CollectMobHandler(const EQStreamPair *s)
 CollectMobHandler::~CollectMobHandler() {
 }
 
-void CollectMobHandler::ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *app) {
+void CollectMobHandler::ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *app) {
 	switch (emu_opcode) {
 		case OP_NewSpawn:
 		case OP_ZoneSpawns: {
@@ -36,17 +36,17 @@ void CollectMobHandler::ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuO
 			uchar* buffer=(uchar*)app->pBuffer;
 			for(int i=0;i<spawn_count;i++){
 				Spawn_Struct* spawn=(Spawn_Struct*)buffer;
-				if(spawn->npc>0 && spawn->npc!=2){
+				if(spawn->NPC>0 && spawn->NPC!=2){
 					cm.name = spawn->name;
 					cm._class = spawn->class_;
-					CollectMobList[spawn->spawn_id] = cm;
+					CollectMobList[spawn->spawnId] = cm;
 				}
 				buffer+=sizeof(Spawn_Struct);
 			}
 			break;
 		}
 		//these two assume spawn ID is the first thing in these packets....
-		case OP_MobUpdate: {
+		/*case OP_MobUpdate: {
 			if(app->size < 2)
 				break;
 			//mob updates are effectively waypoints
@@ -55,7 +55,7 @@ void CollectMobHandler::ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuO
 				CollectMobList[*spawn_id].wp_count++;
 			}
 			break;
-		}
+		}*/
 		case OP_ClientUpdate: {
 			if(app->size < 2)
 				break;
@@ -71,7 +71,7 @@ void CollectMobHandler::ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuO
 	}
 }
 
-void CollectMobHandler::ToServerPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *app) {
+void CollectMobHandler::ToServerPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *app) {
 	if(emu_opcode != OP_ShopRequest)
 		return;	//only need this one op
 

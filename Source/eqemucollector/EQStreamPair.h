@@ -27,7 +27,8 @@ using namespace std;
 #define CONNECTION_TIMEOUT 20000	//in ms
 
 class StreamPacketHandler;
-class EQApplicationPacket;
+class EQRawApplicationPacket;
+class OpcodeManager;
 
 class EQStreamPair {
 	public:
@@ -38,7 +39,7 @@ class EQStreamPair {
 
 	EQStream server, client;
 
-	EQStreamPair(bool be_quiet);
+	EQStreamPair(bool be_quiet, OpcodeManager **ops);
 	~EQStreamPair();
 	bool Process(const unsigned char *buffer, unsigned short length, unsigned long src_ip, unsigned short src_port, unsigned long dst_ip, unsigned short dst_port, unsigned long ts_sec, unsigned long ts_usec);
 	
@@ -59,7 +60,7 @@ protected:
 	
 	void CallCreateHandlers();
 	void AddHandler(StreamPacketHandler *it);
-	void NotifyHandlers(bool to_server, const EQApplicationPacket *app);
+	void NotifyHandlers(bool to_server, const EQRawApplicationPacket *app);
 	vector<StreamPacketHandler *> handlers;
 };
 

@@ -70,7 +70,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /GZ /c
-# ADD CPP /nologo /MDd /GX /Zi /Ob1 /I "H:\eqemu\src\wpdpack\Include" /I "H:\eqemu\src\zlib\include" /D "PCGUI" /D "COLLECTOR" /D "KEY64" /D "NDEBUG" /D "_CONSOLE" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /Fr /YX /FD /GZ /c
+# ADD CPP /nologo /MDd /GX /Zi /Od /Ob1 /I "H:\eqemu\src\wpdpack\Include" /I "H:\eqemu\src\zlib\include" /D "PCGUI" /D "COLLECTOR" /D "KEY64" /D "NDEBUG" /D "_CONSOLE" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /FAs /Fr /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
@@ -249,11 +249,31 @@ SOURCE=..\common\emu_opcodes.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\EQChatPacket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQLoginPacket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQMailPacket.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\EQPacket.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=..\common\EQStream.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQWorldPacket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQZonePacket.cpp
 # End Source File
 # Begin Source File
 

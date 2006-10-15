@@ -10,7 +10,7 @@
 using namespace std;
 #include "Spells.h"
 #include "../common/timer.h"
-#include "../zone/masterentity.h"
+//#include "../zone/masterentity.h"
 #include "MMF.h"
 
 MMF SpellsMMF;

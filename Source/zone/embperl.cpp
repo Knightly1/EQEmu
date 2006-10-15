@@ -10,10 +10,10 @@ Eglin
 
 #ifdef EMBPERL
 
+#include "../common/debug.h"
 #include <cstdio>
 #include <cstdarg>
 #include <vector>
-#include "../common/debug.h"
 #include "embperl.h"
 #include "embxs.h" 
 #include "features.h"
@@ -95,25 +95,34 @@ EXTERN_C void xs_init(pTHX)
 Embperl::Embperl()
 {
 	in_use = true;	//in case one of these files generates an event
-	//arguments for interpreter start
-	char *args[] = { "",
-#ifdef EMBPERL_IO_CAPTURE
-		"-w", "-W",		//only useful if the IO goes somewhere
-#endif
-		"-e", "0", NULL };
 	
 	//setup perl...
 	my_perl = perl_alloc();
 	if(!my_perl)
 		throw "Failed to init Perl (perl_alloc)";
+	DoInit();
+}
+
+void Embperl::DoInit() {
+	
+	//arguments for interpreter start
+	const char *args[] = { "",
+#ifdef EMBPERL_IO_CAPTURE
+		"-w", "-W",		//only useful if the IO goes somewhere
+#endif
+		"-e", "0;", NULL };
+	
+	
 	perl_construct(my_perl);
+	
+	
 	if(perl_parse(my_perl, xs_init,
 #ifdef EMBPERL_IO_CAPTURE
 		5,
 #else
 		3,
 #endif
-		args, NULL))
+		(char **) args, NULL))
 		throw "perl_parse failed";
 	perl_run(my_perl);
 	
@@ -151,7 +160,8 @@ Embperl::Embperl()
 //			"&boot_EQEmuIO;"
  			"sub TIEHANDLE { my $me = bless {}, $_[0]; $me->PRINT('Creating '.$me); return($me); } "
   			"sub WRITE {  } "
-  			"sub PRINTF { my $me = shift; $me->PRINT(sprintf(@_)); } "
+  			//dunno why I need to shift off fmt here, but it dosent like without it
+  			"sub PRINTF { my $me = shift; my $fmt = shift; $me->PRINT(sprintf($fmt, @_)); } "
   			"sub CLOSE { my $me = shift; $me->PRINT('Closing '.$me); } "
   			"sub DESTROY { my $me = shift; $me->PRINT('Destroying '.$me); } "
 //this ties us for all packages, just do it in quest since thats kinda 'our' package
@@ -239,11 +249,17 @@ Embperl::~Embperl()
   	,FALSE);
 */
 #endif
-	perl_destruct(my_perl);
 //I am commenting this out in the veign hope that it will help with crashes
 //under the assumption that we are not leaking a ton of memory and that this
 //will not be a regular part of a production server's activity, only when debugging
 	perl_free(my_perl);
+}
+
+void Embperl::Reinit() {
+	in_use = true;
+	perl_destruct(my_perl);
+	DoInit();
+	in_use = false;
 }
 
 void Embperl::init_eval_file(void)

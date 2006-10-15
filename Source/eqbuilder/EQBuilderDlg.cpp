@@ -26,7 +26,8 @@ static char THIS_FILE[] = __FILE__;
 // CEQBuilderDlg dialog
 
 CEQBuilderDlg::CEQBuilderDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CEQBuilderDlg::IDD, pParent)
+	: CDialog(CEQBuilderDlg::IDD, pParent),
+	  m_ids(&db_real)
 {
 	//{{AFX_DATA_INIT(CEQBuilderDlg)
 	//}}AFX_DATA_INIT
@@ -39,6 +40,7 @@ void CEQBuilderDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
 	//{{AFX_DATA_MAP(CEQBuilderDlg)
+	DDX_Control(pDX, IDC_PROGRESS_TEXT, m_progressText);
 	//}}AFX_DATA_MAP
 	DDX_Control(pDX, IDC_ZONEVIEW, vZoneView);
 }
@@ -103,6 +105,13 @@ BEGIN_MESSAGE_MAP(CEQBuilderDlg, CDialog)
 	ON_BN_CLICKED(IDC_LOOT_BUTTON, OnLootButton)
 	ON_BN_CLICKED(IDC_SPELLS_BUTTON, OnSpellsButton)
 	ON_BN_CLICKED(IDC_GO_BUTTON, OnGoButton)
+	ON_BN_CLICKED(IDC_SAVE_IDS, OnSaveIds)
+	ON_BN_CLICKED(IDC_RESET_IDS, OnResetIds)
+	ON_BN_CLICKED(IDC_LOAD_IDS, OnLoadIds)
+	ON_BN_CLICKED(IDC_FIXED_MERGE, OnFixedMerge)
+	ON_BN_CLICKED(IDC_PATHING_MERGE, OnPathingMerge)
+	ON_EN_CHANGE(IDC_FIXED_MERGE_EDIT, OnChangeFixedMergeEdit)
+	ON_EN_CHANGE(IDC_PATH_MERGE_EDIT, OnChangePathMergeEdit)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -132,12 +141,19 @@ BOOL CEQBuilderDlg::OnInitDialog()
 	eqbini = new eqbuilderini(chemin);
 	
 	// database
-	db = new database();
+	db = &db_real;
 	dbconnectdlg = new DBConnect( eqbini->host, eqbini->user, eqbini->password, eqbini->db, this );
 	db->Connexion( eqbini->host, eqbini->user, eqbini->password, eqbini->db );
 
+	//try to load the saved ID settings from a file
+	m_ids.ReadFromFile();
+
+
 	// output options
-	sqloptions = new SqlOptionsDlg(eqbini->useopt, eqbini->zoneid,eqbini->npcid, eqbini->spawnid, eqbini->gridid, eqbini->sqldelete, eqbini->usedb, eqbini->eqmaps_path, eqbini->eqemumaps_path );
+	sqloptions = new SqlOptionsDlg(/*eqbini->useopt, eqbini->zoneid,eqbini->npcid, 
+		eqbini->spawnid, eqbini->gridid, eqbini->sqldelete, eqbini->usedb, */
+		eqbini->eqmaps_path, eqbini->eqemumaps_path,
+		&m_ids);
 
 	// 
 	zones = NULL;
@@ -187,6 +203,7 @@ BOOL CEQBuilderDlg::OnInitDialog()
 			zonecombo->AddString( p );
 		}
 		zonecombo->EnableWindow();
+//zonecombo->SetCurSel(209);
 	} else {
 		zonecombo->EnableWindow( false );
 	}
@@ -279,8 +296,8 @@ BOOL CEQBuilderDlg::OnInitDialog()
 	bDeltazCheck = static_cast<CButton*>(GetDlgItem(IDC_DELTAZ_CHECK));
 	bDeltazCheck->SetCheck( true );
 	eDeltazEdit->EnableWindow();
-	filtres.deltaz = 25;
-	eDeltazEdit->SetWindowText( "25" );
+	filtres.deltaz = 15;
+	eDeltazEdit->SetWindowText( "15" );
 
 	eMinprobEdit = static_cast<CEdit*>(GetDlgItem(IDC_MINPROB_EDIT));
 	bMinprobCheck = static_cast<CButton*>(GetDlgItem(IDC_MINPROB_CHECK));
@@ -317,6 +334,23 @@ BOOL CEQBuilderDlg::OnInitDialog()
 	filtres.dead = "5";
 	eDeadEdit->SetWindowText( filtres.dead );
 
+	CString p;
+	ePathingErrEdit = static_cast<CEdit*>(GetDlgItem(IDC_PATH_MERGE_EDIT));
+	bPathingErrCheck = static_cast<CButton*>(GetDlgItem(IDC_PATHING_MERGE));
+	bPathingErrCheck->SetCheck( true );
+	ePathingErrEdit->EnableWindow();
+	filtres.path_error = 8;
+	p.Format("%.1f", filtres.path_error);
+	ePathingErrEdit->SetWindowText( p );
+
+	eFixedMergeErrEdit = static_cast<CEdit*>(GetDlgItem(IDC_FIXED_MERGE_EDIT));
+	bFixedMergeErrCheck = static_cast<CButton*>(GetDlgItem(IDC_FIXED_MERGE));
+	bFixedMergeErrCheck->SetCheck( true );
+	eFixedMergeErrEdit->EnableWindow();
+	filtres.fixedmerge_error = 8;
+	p.Format("%.1f", filtres.fixedmerge_error);
+	eFixedMergeErrEdit->SetWindowText( p );
+
 	bMovingCheck = static_cast<CButton*>(GetDlgItem( IDC_MOVING_CHECK ));
 	bMovingCheck->SetCheck( true );
 	filtres.movementok = true;
@@ -325,6 +359,7 @@ BOOL CEQBuilderDlg::OnInitDialog()
 	pProgress = static_cast<CProgressCtrl*>(GetDlgItem(IDC_PROGRESS));
 	pProgress->SetRange( 0, 100 );
 	pProgress->SetPos(0);
+	m_progressText.SetWindowText("Idle");
 	
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -365,26 +400,7 @@ HCURSOR CEQBuilderDlg::OnQueryDragIcon()
 	return (HCURSOR) m_hIcon;
 }
 
-void CEQBuilderDlg::ReleaseMemory() {
-
-/*	commented to try to fix crashes... I dont wanna hear it
-
-	if(zonelogs != NULL) {
-		delete zonelogs;
-		zonelogs = NULL;
-	}
-
-	if(compiledlogs != NULL) {
-		delete compiledlogs;
-		compiledlogs = NULL;
-	}
-	currentlog = NULL;
-*/
-	if(currentkeys != NULL) {
-		delete currentkeys;
-		currentkeys = NULL;
-	}
-
+void CEQBuilderDlg::ClearBuildResults() {
 	if(listNPCs != NULL) {
 		delete listNPCs;
 		listNPCs = NULL;
@@ -425,6 +441,31 @@ void CEQBuilderDlg::ReleaseMemory() {
 		listShops = NULL;
 	}
 	cur_merchant = NULL;
+}
+
+void CEQBuilderDlg::ReleaseMemory() {
+
+/*	commented to try to fix crashes... I dont wanna hear it
+
+	if(zonelogs != NULL) {
+		delete zonelogs;
+		zonelogs = NULL;
+	}
+
+	if(compiledlogs != NULL) {
+		delete compiledlogs;
+		compiledlogs = NULL;
+	}
+*/
+	currentlog = NULL;
+
+	if(currentkeys != NULL) {
+		delete currentkeys;
+		currentkeys = NULL;
+	}
+
+	ClearBuildResults();
+
 	
 	vZoneView.ClearSpawnLists();
 	m_bigZone->ClearLists();
@@ -496,6 +537,10 @@ void CEQBuilderDlg::OnGoButton()
 	lMobList->DeleteAllItems();
 	lSpawnList->DeleteAllItems();
 
+	//ID gens
+	m_ids.SetZoneID(zoneid);
+	m_ids.Reset();
+
 	// buttons
 	bAddLog->EnableWindow();
 	bAddDir->EnableWindow();
@@ -557,6 +602,7 @@ void CEQBuilderDlg::AddLogFile(CString pathname, CString filename, CString filee
 		nblogs ++;
 		clog* log = new clog();
 		log->name = filename;
+		log->type = logPathing;
 		compiledlogs->txt_add( log );
 
 	} else if(fileext == "bf" || fileext == ".bf") {
@@ -741,6 +787,8 @@ void CEQBuilderDlg::OnCompileButton()
 	if(currentlog->mobinit == NULL)
 		currentlog->mobinit = new mob_list();
 
+	m_progressText.SetWindowText("Compiling "+currentlog->name);
+	m_progressText.RedrawWindow();
 	// parsing
 	if(currentlog->is_build_file) {
 		load_build_file();
@@ -776,6 +824,9 @@ void CEQBuilderDlg::OnCompileAllButton()
 		if(currentlog->compiled)
 			continue;
 		
+		m_progressText.SetWindowText("Compiling "+currentlog->name);
+		m_progressText.RedrawWindow();
+
 		currentlog->compilepos = 0;
 		if(currentlog->is_build_file) {
 			load_build_file();
@@ -946,6 +997,7 @@ void CEQBuilderDlg::OnMovedCheck()
 
 	if ( bMovedCheck->GetCheck() ) {
 		eMovedEdit->EnableWindow();
+		OnChangeMovedEdit();
 	} else {
 		eMovedEdit->EnableWindow(false);
 		filtres.moved = "5";
@@ -957,6 +1009,7 @@ void CEQBuilderDlg::OnDeadCheck()
 {
 	if ( bDeadCheck->GetCheck() ) {
 		eDeadEdit->EnableWindow();
+		OnChangeDeadEdit();
 	} else {
 		eDeadEdit->EnableWindow(false);
 		filtres.dead = "5";
@@ -979,6 +1032,7 @@ void CEQBuilderDlg::OnAffirmCheck()
 {
 	if ( bAffirmCheck->GetCheck() ) {
 		eAffirmEdit->EnableWindow();
+		OnChangeOccurEdit();
 	} else {
 		eAffirmEdit->EnableWindow(false);
 		filtres.affirm = 10;
@@ -989,6 +1043,7 @@ void CEQBuilderDlg::OnCampCheck()
 {
 	if ( bAffirmCheck->GetCheck() ) {
 		eAffirmEdit->EnableWindow();
+		OnChangeCampEdit();
 	} else {
 		eAffirmEdit->EnableWindow(false);
 		filtres.camp_range = 0;
@@ -999,9 +1054,32 @@ void CEQBuilderDlg::OnDeltazCheck()
 {
 	if ( bDeltazCheck->GetCheck() ) {
 		eDeltazEdit->EnableWindow();
+		OnChangeDeltazEdit();
 	} else {
 		eDeltazEdit->EnableWindow(false);
 		filtres.deltaz = 999999;
+	}
+}
+
+void CEQBuilderDlg::OnFixedMerge() 
+{
+	if ( bFixedMergeErrCheck->GetCheck() ) {
+		eFixedMergeErrEdit->EnableWindow();
+		OnChangeFixedMergeEdit();
+	} else {
+		eFixedMergeErrEdit->EnableWindow(false);
+		filtres.fixedmerge_error = 0;
+	}
+}
+
+void CEQBuilderDlg::OnPathingMerge() 
+{
+	if ( bPathingErrCheck->GetCheck() ) {
+		ePathingErrEdit->EnableWindow();
+		OnChangePathMergeEdit();
+	} else {
+		ePathingErrEdit->EnableWindow(false);
+		filtres.path_error = 0;
 	}
 }
 
@@ -1018,6 +1096,24 @@ void CEQBuilderDlg::OnMovingCheck()
 		filtres.movementok = false;
 	}
 	
+}
+
+void CEQBuilderDlg::OnChangeFixedMergeEdit() 
+{
+	if ( bFixedMergeErrCheck->GetCheck() ) {
+		CString p;
+		eFixedMergeErrEdit->GetWindowText( p );
+		filtres.fixedmerge_error = atof((const char *) p);
+	}
+}
+
+void CEQBuilderDlg::OnChangePathMergeEdit() 
+{
+	if ( bPathingErrCheck->GetCheck() ) {
+		CString p;
+		ePathingErrEdit->GetWindowText( p );	
+		filtres.path_error = atof((const char *) p);
+	}
 }
 
 void CEQBuilderDlg::OnChangeMovedEdit() 
@@ -1100,7 +1196,6 @@ void CEQBuilderDlg::OnDestroy()
 
 	//seem to be getting this message in a strange place, screw cleaning up
 	delete zones;
-	delete db;
 
 	delete fileopendialog;
 	delete filesavedialog;
@@ -1145,7 +1240,7 @@ void CEQBuilderDlg::OnDatabaseConnection()
 				zonecombo->AddString( p );
 			}
 			zonecombo->EnableWindow();
-		// not successfull
+			// not successfull
 		} else {
 			zonecombo->EnableWindow( false );
 		}
@@ -1157,7 +1252,7 @@ void CEQBuilderDlg::OnOutputSqlopt()
 {
 	if ( sqloptions->DoModal() == IDOK ) {
 
-		eqbini->setsqlparams( sqloptions->m_useopt, sqloptions->m_zoneid, sqloptions->m_npcid, sqloptions->m_spawnid, sqloptions->m_gridid, (sqloptions->m_sqldelete==1)?true:false, (sqloptions->m_usedb==1)?true:false );
+//		eqbini->setsqlparams( sqloptions->m_useopt, sqloptions->m_zoneid, sqloptions->m_npcid, sqloptions->m_spawnid, sqloptions->m_gridid, (sqloptions->m_sqldelete==1)?true:false, (sqloptions->m_usedb==1)?true:false );
 		eqbini->setgeneralparams( sqloptions->m_EQMaps, sqloptions->m_EQEmuMaps );
 		
 	}
@@ -1177,6 +1272,11 @@ void CEQBuilderDlg::OnWriteButton()
 		OnGridButton();
 	if(out_merchants)
 		OnMerchantButton();
+	if ( outputtype == 1 ) {
+		db->extractdeletes( chemin, zonename, true );
+	}
+	
+	m_ids.DataWritten();
 }
 
 void CEQBuilderDlg::OnOutNpcs() 
@@ -1271,6 +1371,23 @@ void CEQBuilderDlg::OnSpellsButton()
 	
 }
 
+
+void CEQBuilderDlg::OnSaveIds() 
+{
+	m_ids.SaveToFile();
+}
+
+
+void CEQBuilderDlg::OnResetIds() 
+{
+	m_ids.Reset();
+}
+
+
+void CEQBuilderDlg::OnLoadIds() 
+{
+	m_ids.ReadFromFile();
+}
 
 
 

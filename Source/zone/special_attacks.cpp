@@ -24,8 +24,9 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemulator.net)
 
 #include "masterentity.h"
 #include "StringIDs.h"
+#include "../common/MiscFunctions.h"
 
-void Client::OPCombatAbility(const EQZonePacket *app) {
+void Client::OPCombatAbility(const EQApplicationPacket *app) {
 	if(!target)
 		return;
 	//make sure were actually able to use such an attack.
@@ -60,7 +61,7 @@ void Client::OPCombatAbility(const EQZonePacket *app) {
 	if(!CombatRange(target))
 		return;
 	
-	if(!p_timers.Expired(pTimerCombatAbility, false)) {
+	if(!p_timers.Expired(&database, pTimerCombatAbility, false)) {
 		Message(13,"Ability recovery time not yet met.");
 		return;
 	}
@@ -356,8 +357,8 @@ void Mob::TryBackstab(Mob *other, const Item_Struct* weapon) {
 	if(IsClient()) {
 		if(	weapon == NULL 	//no weapon
 			|| weapon->ItemClass != ItemClassCommon	//not possibly piercing
-			|| (weapon->Common.ItemType != ItemTypePierce	//not a piercer
-				&& weapon->Common.ItemType != ItemType2HPierce) ) {
+			|| (weapon->ItemType != ItemTypePierce	//not a piercer
+				&& weapon->ItemType != ItemType2HPierce) ) {
 			Message_StringID(13, BACKSTAB_WEAPON);
 			return;
 		}
@@ -437,7 +438,7 @@ void Mob::RogueBackstab(Mob* other, const Item_Struct* weapon, int8 bs_skill, bo
 	float skillmodifier = 0.0;
 	int8 primaryweapondamage;
 	if (weapon && weapon->ItemClass == ItemClassCommon)
-		primaryweapondamage = weapon->Common.Damage; //backstab uses primary weapon
+		primaryweapondamage = weapon->Damage; //backstab uses primary weapon
 	else
 		primaryweapondamage = this->GetLevel() % 10; // fallback incase it's a npc without a weapon
 	
@@ -482,13 +483,57 @@ void Mob::RogueAssassinate(Mob* other)
 	DoAnim(animPiercing);	//piercing animation
 }
 
+float Client::RangedHitChance(uint8 skill, Mob *other) {
+	float chancetohit = 0;
+	if(target->IsNPC())
+		chancetohit = GetSkill(skill) / 3.75;
+	else
+		chancetohit = GetSkill(skill) / 4.75; //harder to hit players
+
+	if (m_pp.level-target->GetLevel() < 0) {
+		chancetohit -= (float)((other->GetLevel()-GetLevel())*(other->GetLevel()-GetLevel()))/4;
+	}
+	
+	int16 targetagi = other->GetAGI();
+	
+	targetagi = (targetagi <= 200) ? targetagi:targetagi + ((targetagi-200)/5);
+	chancetohit -= (float)targetagi*0.05;
+	chancetohit += GetDEX()/2.0f;
+	
+	//minimum 15% chance to hit?
+	if(chancetohit > 0)
+		chancetohit += 30;
+	else
+		chancetohit = 30;
+	
+	float hit_bonuses = 0;
+	if(spellbonuses.HitChanceSkill == skill || spellbonuses.HitChanceSkill == 0xFF)
+		hit_bonuses += (spellbonuses.HitChance*2.0f) / 15.0f;
+	if(itembonuses.HitChanceSkill == skill || spellbonuses.HitChanceSkill == 0xFF)
+		hit_bonuses += (itembonuses.HitChance*2.0f) / 15.0f;
+	chancetohit += hit_bonuses;
+	
+	//cap chance to hit at 95%, if they arnt garunteed
+	if(hit_bonuses >= 600)	//garunteed hit disipline
+		chancetohit = 600;
+	else if(chancetohit > 190)
+		chancetohit = 190;
+	
+	return(chancetohit / 2.0);
+}
+
 void Client::RangedAttack(Mob* other) {
 	//conditions to use an attack checked before we are called
 	
 	//make sure the attack and ranged timers are up
 	//if the ranged timer is disabled, then they have no ranged weapon and shouldent be attacking anyhow
-	if((attack_timer.Enabled() && !attack_timer.Check(false)) || !ranged_timer.Check())
+	if((attack_timer.Enabled() && !attack_timer.Check(false)) || (ranged_timer.Enabled() && !ranged_timer.Check())) {
+		mlog(COMBAT__RANGED, "Ranged attack canceled. Timer not up. Attack %d, ranged %d", attack_timer.GetRemainingTime(), ranged_timer.GetRemainingTime());
+		Message(0, "Error: Timer not up. Attack %d, ranged %d", attack_timer.GetRemainingTime(), ranged_timer.GetRemainingTime());
 		return;
+	}
+	
+	//NOTE: augments are not properly supported on bows.
 	
 	const ItemInst* RangeWeapon = m_inv[SLOT_RANGE];
 	
@@ -497,10 +542,12 @@ void Client::RangedAttack(Mob* other) {
 	const ItemInst* Ammo = m_inv[SLOT_AMMO];
 	
 	if (!RangeWeapon || !RangeWeapon->IsType(ItemClassCommon)) {
+		mlog(COMBAT__RANGED, "Ranged attack canceled. Missing or invalid ranged weapon (%d) in slot %d", GetItemIDAt(SLOT_RANGE), SLOT_RANGE);
 		Message(0, "Error: Rangeweapon: GetItem(%i)==0, you have no bow!", GetItemIDAt(SLOT_RANGE));
 		return;
 	}
 	if (!Ammo || !Ammo->IsType(ItemClassCommon)) {
+		mlog(COMBAT__RANGED, "Ranged attack canceled. Missing or invalid ammo item (%d) in slot %d", GetItemIDAt(SLOT_AMMO), SLOT_AMMO);
 		Message(0, "Error: Ammo: GetItem(%i)==0, you have no ammo!", GetItemIDAt(SLOT_AMMO));
 		return;
 	}
@@ -508,14 +555,18 @@ void Client::RangedAttack(Mob* other) {
 	const Item_Struct* RangeItem = RangeWeapon->GetItem();
 	const Item_Struct* AmmoItem = Ammo->GetItem();
 	
-	if(RangeItem->Common.ItemType != ItemTypeBow) {
-		Message(0, "Error: Rangeweapon: GetItem(%i)==0, you have no bow!", GetItemIDAt(SLOT_RANGE));
+	if(RangeItem->ItemType != ItemTypeBow) {
+		mlog(COMBAT__RANGED, "Ranged attack canceled. Ranged item is not a bow. type %d.", RangeItem->ItemType);
+		Message(0, "Error: Rangeweapon: Item %d is not a bow.", RangeWeapon->GetID());
 		return;
 	}
-	if(AmmoItem->Common.ItemType != ItemTypeArrow) {
-		Message(0, "Error: Ammo: type %d != %d, you have the wrong type of ammo!", AmmoItem->Common.ItemType, ItemTypeArrow);
+	if(AmmoItem->ItemType != ItemTypeArrow) {
+		mlog(COMBAT__RANGED, "Ranged attack canceled. Ammo item is not an arrow. type %d.", AmmoItem->ItemType);
+		Message(0, "Error: Ammo: type %d != %d, you have the wrong type of ammo!", AmmoItem->ItemType, ItemTypeArrow);
 		return;
 	}
+	
+	mlog(COMBAT__RANGED, "Shooting %s with bow %s (%d) and arrow %s (%d)", target->GetName(), RangeItem->Name, RangeItem->ID, AmmoItem->Name, AmmoItem->ID);
 	
 	//look for ammo in inventory if we only have 1 left...
 	if(Ammo->GetCharges() == 1) {
@@ -526,15 +577,14 @@ void Client::RangedAttack(Mob* other) {
 			const ItemInst *pi = m_inv[r];
 			if(pi == NULL || !pi->IsType(ItemClassContainer))
 				continue;
-			const ItemContainerInst* bag = (const ItemContainerInst*) pi;
 			const Item_Struct* bagitem = pi->GetItem();
-			if(!bagitem || bagitem->Container.BagType != bagTypeQuiver)
+			if(!bagitem || bagitem->BagType != bagTypeQuiver)
 				continue;
 			
 			//we found a quiver, look for the ammo in it
 			int i;
-			for (i = 0; i < bagitem->Container.BagSlots; i++) {
-				ItemInst* baginst = bag->GetItem(i);
+			for (i = 0; i < bagitem->BagSlots; i++) {
+				ItemInst* baginst = pi->GetItem(i);
 				if(!baginst)
 					continue;	//empty
 				if(baginst->GetID() == Ammo->GetID()) {
@@ -543,6 +593,7 @@ void Client::RangedAttack(Mob* other) {
 					Ammo = baginst;
 					ammo_slot = m_inv.CalcSlotId(r, i);
 					found = true;
+					mlog(COMBAT__RANGED, "Using ammo from quiver stack at slot %d. %d in stack.", ammo_slot, Ammo->GetCharges());
 					break;
 				}
 			}
@@ -557,15 +608,16 @@ void Client::RangedAttack(Mob* other) {
 			if(aslot != SLOT_INVALID) {
 				ammo_slot = aslot;
 				Ammo = m_inv[aslot];
+				mlog(COMBAT__RANGED, "Using ammo from inventory stack at slot %d. %d in stack.", ammo_slot, Ammo->GetCharges());
 			}
 		}
 	}
 	
-	float range = RangeItem->Common.Range + AmmoItem->Common.Range + 5; //Fudge it a little, client will let you hit something at 0 0 0 when you are at 205 0 0
+	float range = RangeItem->Range + AmmoItem->Range + 5; //Fudge it a little, client will let you hit something at 0 0 0 when you are at 205 0 0
+	mlog(COMBAT__RANGED, "Calculated bow range to be %.1f", range);
 	range *= range;
-	if(DistNoRootNoZ(*target) > range)
-	{
-		LogFile->write(EQEMuLog::Error, "Ranged attack out of range... client should catch this. (%f > %f).\n", DistNoRootNoZ(*target), range);
+	if(DistNoRootNoZ(*target) > range) {
+		mlog(COMBAT__RANGED, "Ranged attack out of range... client should catch this. (%f > %f).\n", DistNoRootNoZ(*target), range);
 		//target is out of range, client does a message
 		return;
 	}
@@ -575,122 +627,106 @@ void Client::RangedAttack(Mob* other) {
 	//send item animation struct
 	SendItemAnimation(target, AmmoItem);
 	
-	//consume ammo
-	if(!GetAA(aaEndlessQuiver))
-		DeleteItemInInventory(ammo_slot, 1, true);
-
-	float chancetohit = 0;
-	if(target->IsNPC())
-		chancetohit = GetSkill(ARCHERY) / 3.75;
-	else
-		chancetohit = GetSkill(ARCHERY) / 4.75; //harder to hit players
-
-	if (m_pp.level-target->GetLevel() < 0) {
-		chancetohit -= (float)((target->GetLevel()-m_pp.level)*(target->GetLevel()-m_pp.level))/4;
-	}
-	
-	int16 targetagi = target->GetAGI();
-	int16 playerDex = (int16)(this->itembonuses.DEX + this->spellbonuses.DEX)/2;
-	
-	targetagi = (targetagi <= 200) ? targetagi:targetagi + ((targetagi-200)/5);
-	chancetohit -= (float)targetagi*0.05;
-	chancetohit += playerDex;
-	
-	//minimum 15% chance to hit?
-	if(chancetohit > 0)
-		chancetohit += 30;
-	else
-		chancetohit = 30;
-	
-	float hit_bonuses = 0;
-	if(spellbonuses.HitChanceSkill == ARCHERY || spellbonuses.HitChanceSkill == 0xFF)
-		hit_bonuses += (spellbonuses.HitChance*2.0f) / 15.0f;
-	if(itembonuses.HitChanceSkill == ARCHERY || spellbonuses.HitChanceSkill == 0xFF)
-		hit_bonuses += (itembonuses.HitChance*2.0f) / 15.0f;
-	chancetohit += hit_bonuses;
-	
-	//cap chance to hit at 95%, if they arnt garunteed
-	if(hit_bonuses >= 600)	//garunteed hit disipline
-		chancetohit = 600;
-	else if(chancetohit > 190)
-		chancetohit = 190;
+	float chancetohit = RangedHitChance(ARCHERY, target);
 	
 	// Hit?
-	if (MakeRandomFloat(0, 200) > chancetohit) {
+	if (MakeRandomFloat(0, 100) > chancetohit) {
+		mlog(COMBAT__RANGED, "Ranged attack missed %s. %.3f%%% chance to hit.", target->GetName(), chancetohit);
 		//this->Message(MT_Emote, "You missed your target");
 		//this->Message_StringID(M,GENERIC_MISS,"You","your target.");
-		target->Damage(this, 0, 0xffff, 0x07);
-	}
-	else {
-		const Item_Struct* RangeItem = RangeWeapon->GetItem();
-		const Item_Struct* AmmoItem = Ammo->GetItem();
-		uint16 WDmg = RangeItem->Common.Damage;
-		uint16 ADmg = AmmoItem->Common.Damage;
+		target->Damage(this, 0, SPELL_UNKNOWN, ARCHERY);
+	} else {
+		mlog(COMBAT__RANGED, "Ranged attack hit %s. %.3f%%% chance to hit.", target->GetName(), chancetohit);
 		
-		uint16 levelBonus = (GetSTR()+GetLevel()+GetSkill(ARCHERY)) / 100;
-		uint16 MaxDmg = (WDmg+ADmg)*levelBonus;
-		
-		
-		switch(GetAA(aaArcheryMastery)) {
-			case 1:
-				MaxDmg = MaxDmg * 115/100;
-				break;
-			case 2:
-				MaxDmg = MaxDmg * 125/100;
-				break;
-			case 3:
-				MaxDmg = MaxDmg * 150/100;
-				break;
-		}
-		
-		sint32 TotalDmg = 0;
-		sint32 critDmg = 0;
-		
-		if(GetClass()==RANGER) {
-			critDmg = (sint32)(MaxDmg * 1.2);
-		}
-		
-		if (MaxDmg == 0)
-			MaxDmg = 1;
-		TotalDmg = 1 + MakeRandomInt(0, MaxDmg);
-		if(target->IsClient()) { //Tone down pvp damage
-			if(critDmg>0)
-				critDmg-=critDmg/4;
-			TotalDmg-=TotalDmg/4;
-		}
-		// no crits before level 12 cap is maxed
-		if((GetClass()==RANGER)&&(GetSkill(ARCHERY)>65)&&((uint16)MakeRandomInt(0, 355) < (GetSkill(ARCHERY)+playerDex)/2)&&(chancetohit > 85)) {
-			if(target->IsNPC() && !target->IsMoving() && !target->IsRooted() && this->GetLevel()>50){
-				if(this->GetGM())
-					Message(0,"(GM ONLY) Doubling attack damage, npc isnt moving!");
-				critDmg*=2;
+		bool was_bane1, was_bane2;
+		uint16 WDmg = GetWeaponDamage(target, RangeItem, was_bane1);
+		uint16 ADmg = GetWeaponDamage(target, AmmoItem, was_bane2);
+		if(other->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE] && !was_bane1 && !was_bane2) {
+			//mob is immune to this attack
+			mlog(COMBAT__RANGED, "Ranged attack avoided. %s is immune to non-bane damage.", target->GetName());
+			target->Damage(this, -5, SPELL_UNKNOWN, ARCHERY);
+		} else if(other->SpecAttacks[IMMUNE_MELEE]) {
+			//mob is immune to this attack
+			mlog(COMBAT__RANGED, "Ranged attack avoided. %s is immune to all melee damage.", target->GetName());
+			target->Damage(this, -5, SPELL_UNKNOWN, ARCHERY);
+		} else if(other->SpecAttacks[IMMUNE_MELEE_NONMAGICAL] && (!RangeItem->Magic && !AmmoItem->Magic)) {
+			//mob is immune to this attack
+			mlog(COMBAT__RANGED, "Ranged attack avoided. %s is immune non-magical damage.", target->GetName());
+			target->Damage(this, -5, SPELL_UNKNOWN, ARCHERY);
+		} else {
+			uint16 levelBonus = (GetSTR()+GetLevel()+GetSkill(ARCHERY)) / 100;
+			uint16 MaxDmg = (WDmg+ADmg)*levelBonus;
+						
+			switch(GetAA(aaArcheryMastery)) {
+				case 1:
+					MaxDmg = MaxDmg * 115/100;
+					break;
+				case 2:
+					MaxDmg = MaxDmg * 125/100;
+					break;
+				case 3:
+					MaxDmg = MaxDmg * 150/100;
+					break;
 			}
-			char val1[20]={0};
-			entity_list.MessageClose_StringID(this, false, 200, MT_CritMelee, CRITICAL_HIT, GetName(), ConvertArray(critDmg,val1));
-			//this->Message_StringID(MT_CritMelee,CRITICAL_HIT,GetName(),ConvertArray(critDmg,val1));
-			//this->Message(MT_CritMelee, "You score a critical hit!(%d)", critDmg);
-			target->Damage(this, critDmg, 0xffff, 0x07);
-		}
-		else {
-			if(GetClass()==RANGER && !target->IsMoving() && !target->IsRooted() && this->GetLevel()>50){
-				if(this->GetGM())
-					Message(0,"(GM ONLY) Doubling attack damage, npc isnt moving!");
-				TotalDmg*=2;
+			
+			mlog(COMBAT__RANGED, "Bow DMG %d, Arrow DMG %d, level bonus %d. Max Damage %d", WDmg, ADmg, levelBonus, MaxDmg);
+			
+			
+			if(GetClass()==RANGER && target->IsNPC() && !target->IsMoving() && !target->IsRooted() && GetLevel() > 50){
+				MaxDmg *= 2;
+				mlog(COMBAT__RANGED, "Ranger. Target is stationary, doubling max damage to %d", MaxDmg);
 			}
-			char hitname[64]={0};
-			strncpy(hitname,target->GetName(),strlen(target->GetName())-2);
-			//char val1[20]={0};
-			//Message_StringID(MT_Emote,HIT_NON_MELEE,"You",hitname,ConvertArray(TotalDmg,val1));
-			//this->Message(MT_Emote, "You Hit for a total of %d non-melee damage.", TotalDmg);
-			target->Damage(this, TotalDmg, 0xffff, 0x07);
+			
+			if(target->IsClient()) { //Tone down pvp damage
+				MaxDmg *= 3/4;
+				mlog(COMBAT__RANGED, "PVP Max Damage reduction to %d", MaxDmg);
+			}
+			
+			sint32 TotalDmg = 0;
+			sint32 critDmg = 0;
+			
+			if (MaxDmg == 0)
+				MaxDmg = 1;
+			
+			TotalDmg = 1 + MakeRandomInt(0, MaxDmg);
+			
+			// no crits before level 12 cap is maxed
+			if(GetClass() == RANGER && GetSkill(ARCHERY) > 65 && chancetohit < 85 &&
+			  ((uint16)MakeRandomInt(0, 355) < (GetSkill(ARCHERY)+GetDEX())/4)) {
+				
+				critDmg = (sint32)(TotalDmg * 2);
+				
+			  	mlog(COMBAT__RANGED, "Landed a critical hit on %s for %d damage. Archery %d, DEX %d", target->GetName(), critDmg, GetSkill(ARCHERY), GetDEX());
+				char val1[20]={0};
+				entity_list.MessageClose_StringID(this, false, 200, MT_CritMelee, CRITICAL_HIT, GetName(), ConvertArray(critDmg,val1));
+				//this->Message_StringID(MT_CritMelee,CRITICAL_HIT,GetName(),ConvertArray(critDmg,val1));
+				//this->Message(MT_CritMelee, "You score a critical hit!(%d)", critDmg);
+				target->Damage(this, critDmg, SPELL_UNKNOWN, ARCHERY);
+			} else {
+			  	mlog(COMBAT__RANGED, "Arrow hit %s for %d damage.", target->GetName(), TotalDmg);
+				char hitname[64]={0};
+				strncpy(hitname,target->GetName(),strlen(target->GetName())-2);
+				//char val1[20]={0};
+				//Message_StringID(MT_Emote,HIT_NON_MELEE,"You",hitname,ConvertArray(TotalDmg,val1));
+				//this->Message(MT_Emote, "You Hit for a total of %d non-melee damage.", TotalDmg);
+				target->Damage(this, TotalDmg, SPELL_UNKNOWN, ARCHERY);
+			}
 		}
-		
-		//TODO: check bane and elemental damages
-		
-		if(target && (target->GetHP() > -10))
-			TryWeaponProc(RangeWeapon, target);
 	}
-
+	
+	//try proc on hits and misses
+	if(target && (target->GetHP() > -10))
+		TryWeaponProc(RangeWeapon, target);
+	
+	//consume ammo (should stay at the end, after we are done with everything)
+	if(!GetAA(aaEndlessQuiver)) {
+		DeleteItemInInventory(ammo_slot, 1, true);
+		mlog(COMBAT__RANGED, "Consumed one arrow from slot %d", ammo_slot);
+	} else {
+		mlog(COMBAT__RANGED, "Endless Quiver prevented ammo consumption.");
+	}
+	
+	
 	// See if the player increases their skill - with cap
 	/*float wisebonus =  (GetWIS() > 200) ? 20 + ((GetWIS() - 200) * 0.05) : GetWIS() * 0.1;
 	
@@ -704,8 +740,11 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 	
 	//make sure the attack and ranged timers are up
 	//if the ranged timer is disabled, then they have no ranged weapon and shouldent be attacking anyhow
-	if((attack_timer.Enabled() && !attack_timer.Check(false)) || !ranged_timer.Check())
+	if((attack_timer.Enabled() && !attack_timer.Check(false)) || (ranged_timer.Enabled() && !ranged_timer.Check())) {
+		mlog(COMBAT__RANGED, "Throwing attack canceled. Timer not up. Attack %d, ranged %d", attack_timer.GetRemainingTime(), ranged_timer.GetRemainingTime());
+		Message(0, "Error: Timer not up. Attack %d, ranged %d", attack_timer.GetRemainingTime(), ranged_timer.GetRemainingTime());
 		return;
+	}
 		
 	int ammo_slot = SLOT_RANGE;
 	const ItemInst* RangeWeapon = m_inv[SLOT_RANGE];
@@ -714,15 +753,19 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 	//	RangeWeapon = m_inv[SLOT_AMMO];
 	
 	if (!RangeWeapon || !RangeWeapon->IsType(ItemClassCommon)) {
+		mlog(COMBAT__RANGED, "Ranged attack canceled. Missing or invalid ranged weapon (%d) in slot %d", GetItemIDAt(SLOT_RANGE), SLOT_RANGE);
 		Message(0, "Error: Rangeweapon: GetItem(%i)==0, you have nothing to throw!", GetItemIDAt(SLOT_RANGE));
 		return;
 	}
 	
 	const Item_Struct* item = RangeWeapon->GetItem();
-	if(item->Common.ItemType != ItemTypeThrowing && item->Common.ItemType != ItemTypeThrowingv2) {
+	if(item->ItemType != ItemTypeThrowing && item->ItemType != ItemTypeThrowingv2) {
+		mlog(COMBAT__RANGED, "Ranged attack canceled. Ranged item %d is not a throwing weapon. type %d.", item->ItemType);
 		Message(0, "Error: Rangeweapon: GetItem(%i)==0, you have nothing useful to throw!", GetItemIDAt(SLOT_RANGE));
 		return;
 	}
+	
+	mlog(COMBAT__RANGED, "Throwing %s (%d) at %s", item->Name, item->ID, target->GetName());
 	
 	if(RangeWeapon->GetCharges() == 1) {
 		//first check ammo
@@ -731,6 +774,7 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 			//more in the ammo slot, use it
 			RangeWeapon = AmmoItem;
 			ammo_slot = SLOT_AMMO;
+			mlog(COMBAT__RANGED, "Using ammo from ammo slot, stack at slot %d. %d in stack.", ammo_slot, RangeWeapon->GetCharges());
 		} else {
 			//look through our inventory for more
 			sint32 aslot = m_inv.HasItem(item->ID, 1, invWherePersonal);
@@ -738,84 +782,76 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 				//the item wont change, but the instance does, not that it matters
 				ammo_slot = aslot;
 				RangeWeapon = m_inv[aslot];
+				mlog(COMBAT__RANGED, "Using ammo from inventory slot, stack at slot %d. %d in stack.", ammo_slot, RangeWeapon->GetCharges());
 			}
 		}
 	}
 	
-	int range = item->Common.Range +50/*Fudge it a little, client will let you hit something at 0 0 0 when you are at 205 0 0*/;
+	int range = item->Range +50/*Fudge it a little, client will let you hit something at 0 0 0 when you are at 205 0 0*/;
+	mlog(COMBAT__RANGED, "Calculated bow range to be %.1f", range);
 	range *= range;
-	if(DistNoRootNoZ(*target) > range)
-	{
+	if(DistNoRootNoZ(*target) > range) {
+		mlog(COMBAT__RANGED, "Throwing attack out of range... client should catch this. (%f > %f).\n", DistNoRootNoZ(*target), range);
 		//target is out of range, client does a message
 		return;
 	}
 	
+	// Throw stuff
+	DoAnim(animShootBow);
+//	DoAnim(anim1HWeapon);		//same number as 1HS/1HB, this is prolly wrong..
+	
 	//send item animation
 	SendItemAnimation(target, item);
-	
-	//consume ammo
-	DeleteItemInInventory(ammo_slot, 1, true);
 	 
-	uint8 WDmg = item->Common.Damage;
-	// Throw stuff
-	DoAnim(anim1HWeapon);		//same number as 1HS/1HB, this is prolly wrong..
+//	uint8 WDmg = item->Damage;
 	sint32 TotalDmg = 0;
 	
-	// borrowed this from attack.cpp
-	// chance to hit
-	
-	float chancetohit;
-	if(target->IsNPC())
-		chancetohit = GetSkill(THROWING) / 3.75;
-	else
-		chancetohit = GetSkill(THROWING) / 4.75; //harder to hit players
-	
-	if (GetLevel()-target->GetLevel() < 0) {
-		chancetohit -= (float)((target->GetLevel()-GetLevel())*(target->GetLevel()-GetLevel()))/4;
-	}
-	
-	int16 targetagi = target->GetAGI();
-	int16 playerDex = (int16)GetDEX()/2;
-	
-	targetagi = (targetagi <= 200) ? targetagi:targetagi + ((targetagi-200)/5);
-	chancetohit -= (float)targetagi*0.05;
-	chancetohit += playerDex;
-	
-	
-	float hit_bonuses = 0;
-	if(spellbonuses.HitChanceSkill == THROWING || spellbonuses.HitChanceSkill == 0xFF)
-		hit_bonuses += (spellbonuses.HitChance) / 15.0f;
-	if(itembonuses.HitChanceSkill == THROWING || spellbonuses.HitChanceSkill == 0xFF)
-		hit_bonuses += (itembonuses.HitChance) / 15.0f;
-	chancetohit += hit_bonuses;
-	
-	chancetohit = (chancetohit > 0) ? chancetohit+30:30;
-	
-	//cap chance to hit at 95%, if they arnt garunteed
-	if(hit_bonuses >= 600)	//garunteed hit disipline
-		chancetohit = 600;
-	else if(chancetohit > 95)
-		chancetohit = 95;
-	
+	float chancetohit = RangedHitChance(THROWING, target);
 	
 	// Hit?
 	if (MakeRandomFloat(0, 100) > chancetohit) {
-			target->Damage(this, 0, 0xffff, THROWING);
+		mlog(COMBAT__RANGED, "Ranged attack missed %s. %.3f%%% chance to hit.", target->GetName(), chancetohit);
+		//this->Message(MT_Emote, "You missed your target");
+		//this->Message_StringID(M,GENERIC_MISS,"You","your target.");
+		target->Damage(this, 0, SPELL_UNKNOWN, THROWING);
+	} else {
+		mlog(COMBAT__RANGED, "Throwing attack hit %s. %.3f%%% chance to hit.", target->GetName(), chancetohit);
+		
+		bool was_bane1;
+		uint16 WDmg = GetWeaponDamage(target, item, was_bane1);
+		if(other->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE] && !was_bane1) {
+			//mob is immune to this attack
+			mlog(COMBAT__RANGED, "Throwing attack avoided. %s is immune to non-bane damage.", target->GetName());
+			target->Damage(this, -5, SPELL_UNKNOWN, THROWING);
+		} else if(other->SpecAttacks[IMMUNE_MELEE]) {
+			//mob is immune to this attack
+			mlog(COMBAT__RANGED, "Throwing attack avoided. %s is immune to all melee damage.", target->GetName());
+			target->Damage(this, -5, SPELL_UNKNOWN, THROWING);
+		} else if(other->SpecAttacks[IMMUNE_MELEE_NONMAGICAL] && !item->Magic) {
+			//mob is immune to this attack
+			mlog(COMBAT__RANGED, "Throwing attack avoided. %s is immune non-magical damage.", target->GetName());
+			target->Damage(this, -5, SPELL_UNKNOWN, THROWING);
+		} else {
+			
+			//this is a terrible damage formula...
+			
+			
+			uint8 levelBonus = (GetSTR()+GetLevel()+GetSkill(THROWING)) / 100;
+			uint8 MaxDmg = (WDmg)*levelBonus;
+			if (MaxDmg == 0)
+				MaxDmg = 1;
+			TotalDmg = 1 + MakeRandomInt(0, MaxDmg);
+			mlog(COMBAT__RANGED, "Item DMG %d, level bonus %d. Max Damage %d. Hit for damage %d", WDmg, levelBonus, MaxDmg, TotalDmg);
+			//this->Message(MT_Emote, "You Hit for a total of %d damage.", TotalDmg);
+			target->Damage(this, TotalDmg, SPELL_UNKNOWN, THROWING);
+		}
 	}
-	else {
-		//this->Message(MT_Emote, "You Hit for a total of %d damage.", TotalDmg);
-		target->Damage(this, TotalDmg, 0xffff, THROWING);
-	}
-	
-	
-	uint8 levelBonus = (GetSTR()+GetLevel()+GetSkill(THROWING)) / 100;
-	uint8 MaxDmg = (WDmg)*levelBonus;
-	if (MaxDmg == 0)
-		MaxDmg = 1;
-	TotalDmg = 1 + MakeRandomInt(0, MaxDmg);
 	
 	if(target && (target->GetHP() > -10))
 		TryWeaponProc(RangeWeapon, target);
+	
+	//consume ammo
+	DeleteItemInInventory(ammo_slot, 1, true);
 	
 	// See if the player increases their skill - with cap
 	/*float wisebonus =  (GetWIS() > 200) ? 20 + ((GetWIS() - 200) * 0.05) : GetWIS() * 0.1;
@@ -823,11 +859,10 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 	if (((55-(GetSkill(THROWING)/4))+wisebonus > MakeRandomInt(0, 100)) && GetSkill(THROWING) < (uint16)((GetLevel()*5)+5))
 		SetSkill(THROWING,GetRawSkill(THROWING)+1);*/
 	CheckIncreaseSkill(THROWING);
-	return;
 }
 
 void Mob::SendItemAnimation(Mob *to, const Item_Struct *item) {
-	EQZonePacket *outapp = new EQZonePacket(OP_SomeItemPacketMaybe, sizeof(Arrow_Struct));
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_SomeItemPacketMaybe, sizeof(Arrow_Struct));
 	Arrow_Struct *as = (Arrow_Struct *) outapp->pBuffer;
 	as->type = 1;
 	as->src_x = GetX();
@@ -893,8 +928,9 @@ void NPC::DoClassAttacks(Mob *target) {
 		case ROGUE: case ROGUEGM:
 			if(level >= 10) {
 				const Item_Struct* weapon = NULL;
-				if(equipment[MATERIAL_PRIMARY] != 0)
-					weapon = database.GetItem(equipment[MATERIAL_PRIMARY]);
+//currently disabled because the values in primary and secondary are ID files, not item ids...
+//				if(equipment[MATERIAL_PRIMARY] != 0)
+//					weapon = database.GetItem(equipment[MATERIAL_PRIMARY]);
 				TryBackstab(target, weapon);
 				reuse = BackstabReuseTime * 1000;
 			}
@@ -1020,6 +1056,9 @@ void Mob::Taunt(NPC* who, bool always_succeed) {
 			who->CastToNPC()->AddToHateList(this, newhate);
 		}
 	}
+	
+	//generate at least one hate reguardless of the outcome.
+	who->CastToNPC()->AddToHateList(this, 1);
 }
 
 void Mob::InstillDoubt(Mob *who) {

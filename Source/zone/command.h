@@ -67,11 +67,9 @@ void command_clear_perl();
 void command_resetaa(Client* c,const Seperator *sep);
 void command_bind(Client* c,const Seperator *sep);
 void command_sendop(Client *c, const Seperator *sep);
-void command_pr(Client* c,const Seperator *sep);
-void command_range(Client* c,const Seperator *sep);
-void command_ppoint(Client* c,const Seperator *sep);
 void command_optest(Client *c, const Seperator *sep);
 void command_setstat(Client *c, const Seperator *sep);
+void command_incstat(Client *c, const Seperator *sep);
 void command_help(Client *c, const Seperator *sep);
 void command_version(Client *c, const Seperator *sep);
 void command_eitem(Client *c, const Seperator *sep);
@@ -251,24 +249,16 @@ void command_path(Client *c, const Seperator *sep);
 void command_ginfo(Client *c, const Seperator *sep);
 void command_opcode(Client *c, const Seperator *sep);
 void command_aggro(Client *c, const Seperator *sep);
-
-#ifdef GUILDWARS
-void command_zonelocations(Client *c, const Seperator *sep);
-void command_serverlocations(Client *c, const Seperator *sep);
-void command_takelocation(Client *c, const Seperator *sep);
-void command_guildnpc(Client *c, const Seperator *sep);
-void command_specialflag(Client *c, const Seperator *sep);
-void command_locationguards(Client *c, const Seperator *sep);
+void command_reloadstatic(Client *c, const Seperator *sep);
+void command_flags(Client *c, const Seperator *sep);
+void command_flagedit(Client *c, const Seperator *sep);
+void command_mlog(Client *c, const Seperator *sep);
+void command_serverrules(Client *c, const Seperator *sep);
 void command_acceptrules(Client *c, const Seperator *sep);
+void command_guildcreate(Client *c, const Seperator *sep);
+void command_guildapprove(Client *c, const Seperator *sep);
+void command_guildlist(Client *c, const Seperator *sep);
 void command_rules(Client *c, const Seperator *sep);
-void command_zonerestart(Client *c, const Seperator *sep);
-#endif
-
-#ifdef RAIDADDICTS
-void command_setpoints(Client *c, const Seperator *sep);
-void command_addpoints(Client *c, const Seperator *sep);
-void command_showpoints(Client *c, const Seperator *sep);
-#endif
 
 #ifdef EMBPERL
 void command_embperl_plugin(Client *c, const Seperator *sep);
@@ -286,3 +276,4 @@ void command_packetprofile(Client *c, const Seperator *sep);
 #endif
 
 #endif
+

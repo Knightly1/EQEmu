@@ -19,6 +19,7 @@
 #include "../common/eq_packet_structs.h"
 #include "masterentity.h"
 #include "titles.h"
+#include "../common/MiscFunctions.h"
 
 /*
 
@@ -62,8 +63,8 @@ bool TitleManager::LoadTitles() {
 	return(true);
 }
 
-EQZonePacket *TitleManager::MakeTitlesPacket(Client *who) {
-	EQZonePacket *outapp = NULL;
+EQApplicationPacket *TitleManager::MakeTitlesPacket(Client *who) {
+	EQApplicationPacket *outapp = NULL;
 	vector<TitleEntry>::iterator cur,end;
 	vector< vector<TitleEntry>::iterator > avaliable;
 	uint32 len = 0;
@@ -81,13 +82,13 @@ EQZonePacket *TitleManager::MakeTitlesPacket(Client *who) {
 	uint32 count = avaliable.size();
 	if(count == 0) {
 		//no titles avaliable...
-		outapp = new EQZonePacket(OP_CustomTitles, 4);
+		outapp = new EQApplicationPacket(OP_CustomTitles, 4);
 		return(outapp);
 	}
 	
 	uint32 pos = 0;
 	uint32 total_len = sizeof(Titles_Struct) + sizeof(TitleEntry_Struct)*count + len;
-	outapp = new EQZonePacket(OP_CustomTitles, total_len);
+	outapp = new EQApplicationPacket(OP_CustomTitles, total_len);
 	
 	Titles_Struct *header = (Titles_Struct *) outapp->pBuffer;
 	header->title_count = count;

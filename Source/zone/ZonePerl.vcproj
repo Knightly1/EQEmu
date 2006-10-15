@@ -1787,6 +1787,9 @@
 						BrowseInformation="1"
 					/>
 				</FileConfiguration>
+			<File
+				RelativePath="zone_logsys.cpp"
+				>
 			</File>
 			<File
 				RelativePath="tribute.cpp"
@@ -2630,6 +2633,26 @@
 				>
 			</File>
 			<File
+				RelativePath="..\common\EQChatPacket.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\EQLoginPacket.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\EQMailPacket.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\EQZonePacket.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\EQWorldPacket.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\common\EQStream.cpp"
 				>
 			</File>
@@ -2639,6 +2662,10 @@
 			</File>
 			<File
 				RelativePath="..\common\opcodemgr.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\common\logsys.cpp"
 				>
 			</File>
 			<File

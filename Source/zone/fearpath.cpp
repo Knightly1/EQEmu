@@ -1,5 +1,5 @@
 /*  EQEMu:  Everquest Server Emulator
-Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
+    Copyright (C) 2001-2006  EQEMu Development Team (http://eqemulator.net)
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 	  along with this program; if not, write to the Free Software
 	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
+
 #include "../common/debug.h"
 #include <math.h>
 #include <stdio.h>
@@ -234,7 +235,7 @@ bool Mob::FearTryStraight(Mob *caster, int32 duration, bool flee, VERTEX &hit, V
 	fear_vector.x = GetX() - caster->GetX();
 	fear_vector.y = GetY() - caster->GetY();
 	fear_vector.z = 0;	//I dont see any reason to use Z
-	float mag = sqrt(fear_vector.x*fear_vector.x + fear_vector.y*fear_vector.y);
+	float mag = sqrtf(fear_vector.x*fear_vector.x + fear_vector.y*fear_vector.y);
 	fear_vector.x /= mag;
 	fear_vector.y /= mag;
 	

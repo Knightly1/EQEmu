@@ -30,16 +30,13 @@ using namespace std;
 #include "../common/moremath.h"
 #include "parser.h"
 #include "StringIDs.h"
-#ifdef GUILDWARS
-#include "../GuildWars/GuildWars.h"
-extern GuildWars guildwars;
-#endif
+#include "../common/MiscFunctions.h"
 
-void Mob::AI_SetRoambox(float iDist, float iRoamDist, int32 iDelay) {
+void NPC::AI_SetRoambox(float iDist, float iRoamDist, int32 iDelay) {
 	AI_SetRoambox(iDist, GetX()+iRoamDist, GetX()-iRoamDist, GetY()+iRoamDist, GetY()-iRoamDist, iDelay);
 }
 
-void Mob::AI_SetRoambox(float iDist, float iMaxX, float iMinX, float iMaxY, float iMinY, int32 iDelay) {
+void NPC::AI_SetRoambox(float iDist, float iMaxX, float iMinX, float iMaxY, float iMinY, int32 iDelay) {
 	roambox_distance = iDist;
 	roambox_max_x = iMaxX;
 	roambox_min_x = iMinX;
@@ -49,49 +46,74 @@ void Mob::AI_SetRoambox(float iDist, float iMaxX, float iMinX, float iMaxY, floa
 	roambox_delay = iDelay;
 }
 
+void NPC::DisplayWaypointInfo(Client *c) {
+	c->Message(0, "Mob is on grid %d, in spawn group %d, on waypoint %d/%d", 
+		GetGrid(),
+		GetSp2(),
+		GetCurWp(),
+		GetMaxWp() );
+	
+	
+	vector<wplist>::iterator cur, end;
+	cur = Waypoints.begin();
+	end = Waypoints.end();
+	for(; cur != end; cur++) {
+		c->Message(0,"Waypoint %d: (%.2f,%.2f,%.2f) pause %d", 
+				cur->index,
+				cur->x,
+				cur->y,
+				cur->z,
+				cur->pause );
+	}
+}
+
 
 // support for new wandering quest commands
 
-void Mob::StopWandering()
+void NPC::StopWandering()
 {	// stops a mob from wandering, takes him off grid and sends him back to spawn point
 	roamer=false;
-	this->CastToNPC()->SetGrid(0);
+	CastToNPC()->SetGrid(0);
 	SendPosition();
+	mlog(QUESTS__PATHING, "Stop Wandering requested.");
 	return;
 }
 
-void Mob::ResumeWandering()
+void NPC::ResumeWandering()
 {	// causes wandering to continue - overrides waypoint pause timer and PauseWandering()
 	if(!IsNPC())
 		return;
-	if (this->CastToNPC()->GetGrid() != 0)
+	if (GetGrid() != 0)
 	{
-		if (this->CastToNPC()->GetGrid() < 0)
+		if (GetGrid() < 0)
 		{	// we were paused by a quest
 			AIwalking_timer->Disable();
-			this->CastToNPC()->SetGrid( 0 - this->CastToNPC()->GetGrid());
+			SetGrid( 0 - GetGrid());
 			if (cur_wp==-1)
 			{	// got here by a MoveTo()
 				cur_wp=save_wp;
 				UpdateWaypoint(cur_wp);	// have him head to last destination from here
 			}
+			mlog(QUESTS__PATHING, "Resume Wandering requested. Grid %d, wp %d", GetGrid(), cur_wp);
 		}
 		else if (AIwalking_timer->Enabled())
 		{	// we are at a waypoint paused normally
-			AIwalking_timer->Disable();	// disable timer to end pause now
+			mlog(QUESTS__PATHING, "Resume Wandering on timed pause. Grid %d, wp %d", GetGrid(), cur_wp);
+			AIwalking_timer->Trigger();	// disable timer to end pause now
 		}
 		else
 		{
 			LogFile->write(EQEMuLog::Error, "NPC not paused - can't resume wandering: %lu", GetNPCTypeID());
 			return;
 		}
+		
 		if (cur_wp_x == GetX() && cur_wp_y == GetY()) 
 		{	// are we we at a waypoint? if so, trigger event and start to next
 			char temp[100];
 			itoa(cur_wp,temp,10);	//do this before updating to next waypoint
 			CalculateNewWaypoint(); 
 	        SetAppearance(eaStanding, false); 
-			parse->Event(EVENT_WAYPOINT,this->GetNPCTypeID(), temp, CastToNPC(), NULL); 
+			parse->Event(EVENT_WAYPOINT,this->GetNPCTypeID(), temp, this, NULL); 
 		}	// if not currently at a waypoint, we continue on to the one we were headed to before the stop
 	}
 	else
@@ -101,36 +123,36 @@ void Mob::ResumeWandering()
 	return;
 }
 
-void Mob::PauseWandering(int pausetime)
+void NPC::PauseWandering(int pausetime)
 {	// causes wandering to stop but is resumable
 	// 0 pausetime means pause until resumed
 	// otherwise automatically resume when time is up
-	if (this->CastToNPC()->GetGrid() != 0)
+	if (GetGrid() != 0)
 	{
+		mlog(QUESTS__PATHING, "Paused Wandering requested. Grid %d. Resuming in %d ms (0=not until told)", GetGrid(), pausetime);
 		SendPosition();
 		if (pausetime<1)
 		{	// negative grid number stops him dead in his tracks until ResumeWandering()
-			this->CastToNPC()->SetGrid( 0 - this->CastToNPC()->GetGrid());
+			SetGrid( 0 - GetGrid());
 		}
 		else
 		{	// specified waiting time, he'll resume after that
 			AIwalking_timer->Start(pausetime*1000); // set the timer
 		}
-	}
-	else
-	{
+	} else {
 		LogFile->write(EQEMuLog::Error, "NPC not on grid - can't pause wandering: %lu", GetNPCTypeID());
 	}
 	return;
 }
 
-void Mob::MoveTo(float mtx, float mty, float mtz)
+void NPC::MoveTo(float mtx, float mty, float mtz)
 {	// makes mob walk to specified location
-	if (IsNPC() && CastToNPC()->GetGrid() != 0)
+	if (IsNPC() && GetGrid() != 0)
 	{	// he is on a grid
-		if (this->CastToNPC()->GetGrid() < 0)
+		if (GetGrid() < 0)
 		{	// currently stopped by a quest command
-			this->CastToNPC()->SetGrid( 0 - this->CastToNPC()->GetGrid());	// get him moving again
+			SetGrid( 0 - GetGrid());	// get him moving again
+			mlog(AI__WAYPOINTS, "MoveTo during quest wandering. Canceling quest wandering and going back to grid %d when MoveTo is done.", GetGrid());
 		}
 		AIwalking_timer->Disable();	// disable timer in case he is paused at a wp
 		if (cur_wp>=0)
@@ -138,12 +160,14 @@ void Mob::MoveTo(float mtx, float mty, float mtz)
 			save_wp=cur_wp;	// save the current waypoint
 			cur_wp=-1;		// flag this move as quest controlled
 		}
+		mlog(AI__WAYPOINTS, "MoveTo (%.3f, %.3f, %.3f), pausing regular grid wandering. Grid %d, save_wp %d", mtx, mty, mtz, -GetGrid(), save_wp);
 	}
 	else
 	{	// not on a grid
 		roamer=true;
 		save_wp=0;
 		cur_wp=-2;		// flag as quest controlled w/no grid
+		mlog(AI__WAYPOINTS, "MoveTo (%.3f, %.3f, %.3f) without a grid.", mtx, mty, mtz);
 	}
 	cur_wp_x = mtx;
 	cur_wp_y = mty;
@@ -153,14 +177,22 @@ void Mob::MoveTo(float mtx, float mty, float mtz)
 
 
 
-void Mob::UpdateWaypoint(int wp_index)
+void NPC::UpdateWaypoint(int wp_index)
 {
-	MyListItem <wplist> * Ptr = Waypoints.First;
-	while (Ptr) {
-		if ( Ptr->Data->index == wp_index) {
-				cur_wp_x = Ptr->Data->x;
-				cur_wp_y = Ptr->Data->y;
-				cur_wp_z = Ptr->Data->z;
+	if(wp_index >= Waypoints.size()) {
+		mlog(AI__WAYPOINTS, "Update to waypoint %d failed. Not found.", wp_index);
+		return;
+	}
+	vector<wplist>::iterator cur;
+	cur = Waypoints.begin();
+	cur += wp_index;
+	
+				cur_wp_x = cur->x;
+				cur_wp_y = cur->y;
+				cur_wp_z = cur->z;
+				cur_wp_pause = cur->pause;
+				
+				mlog(AI__WAYPOINTS, "Next waypoint %d: (%.3f, %.3f, %.3f)", wp_index, cur_wp_x, cur_wp_y, cur_wp_z);
 				
 #ifdef FIX_PATHING_WHEN_MOVING
 			    //fix up pathing Z
@@ -178,42 +210,23 @@ void Mob::UpdateWaypoint(int wp_index)
 			    	}
 			    }
 #endif
-				cur_wp_pause = Ptr->Data->pause;
-				break;
-		}
-		Ptr = Ptr->Next;
-	}
-	return;
+	
 }
 
-void Mob::CalculateNewWaypoint()
+void NPC::CalculateNewWaypoint()
 {
 //	int8 max_wp = wp_a[0];
 //	int8 wandertype = wp_a[1];
 //	int8 pausetype = wp_a[2];
 //	int8 cur_wp = wp_a[3];
 
-	int16 ranmax = cur_wp;
-	int16 ranmax2 = max_wp - cur_wp;
+	int32 ranmax = cur_wp;
+	int32 ranmax2 = max_wp - cur_wp;
 	int old_wp = cur_wp;
 
 	bool reached_end = false;
 	bool reached_beginning = false;
 
-// handle quest mob wandering control
-	if (cur_wp <0)
-	{	// under quest control, so no new wp - just stop
-// printf("cur_wp<0\n");
-		if (cur_wp==-1)
-		{	// mob is on a grid			
-			this->CastToNPC()->SetGrid( 0 - this->CastToNPC()->GetGrid());
-		}
-		else
-		{	// mob is not on a grid
-			cur_wp=0;
-		}
-		return;
-	}
 
 	//Determine if we're at the last/first waypoint
 	if (cur_wp == max_wp)
@@ -264,7 +277,7 @@ void Mob::CalculateNewWaypoint()
 
 }
 
-void Mob::SetWaypointPause() 
+void NPC::SetWaypointPause() 
 { 
    //Declare time to wait on current WP 
     
@@ -287,7 +300,42 @@ void Mob::SetWaypointPause()
          break; 
       } 
    } 
-} 
+}
+
+void NPC::SaveGuardSpot(bool iClearGuardSpot) {
+	if (iClearGuardSpot) {
+		mlog(AI__WAYPOINTS, "Clearing guard order.");
+		guard_x = 0;
+		guard_y = 0;
+		guard_z = 0;
+		guard_heading = 0;
+	}
+	else {
+		guard_x = x_pos;
+		guard_y = y_pos;
+		guard_z = z_pos;
+		guard_heading = heading;
+		if(guard_heading == 0)
+			guard_heading = 0.0001;		//hack to make IsGuarding simpler
+		mlog(AI__WAYPOINTS, "Setting guard position to (%.3f, %.3f, %.3f)", guard_x, guard_y, guard_z);
+	}
+}
+
+void NPC::NextGuardPosition() {
+	if (!CalculateNewPosition2(guard_x, guard_y, guard_z, GetWalkspeed())) {
+		SetHeading(guard_heading);
+		mlog(AI__WAYPOINTS, "Unable to move to next guard position. Prolly rooted.");
+	}
+}
+
+/*
+// we need this for charmed NPCs
+void Mob::SaveSpawnSpot() {
+    spawn_x = x_pos;
+    spawn_y = y_pos;
+    spawn_z = z_pos;
+    spawn_heading = heading;
+}*/
 
 
 
@@ -297,21 +345,21 @@ void Mob::SetWaypointPause()
 }*/
 
 float Mob::CalculateDistance(float x, float y, float z) {
-    return (float)sqrt( ((x_pos-x)*(x_pos-x)) + ((y_pos-y)*(y_pos-y)) + ((z_pos-z)*(z_pos-z)) );
+    return (float)sqrtf( ((x_pos-x)*(x_pos-x)) + ((y_pos-y)*(y_pos-y)) + ((z_pos-z)*(z_pos-z)) );
 }
 
-
-int8 Mob::CalculateHeadingToNextWaypoint() {
+/*
+int8 NPC::CalculateHeadingToNextWaypoint() {
     return CalculateHeadingToTarget(cur_wp_x, cur_wp_y);
 }
-
+*/
 sint8 Mob::CalculateHeadingToTarget(float in_x, float in_y) {
 	float angle;
 
 	if (in_x-x_pos > 0)
-		angle = - 90 + atan((double)(in_y-y_pos) / (double)(in_x-x_pos)) * 180 / M_PI;
+		angle = - 90 + atan((float)(in_y-y_pos) / (float)(in_x-x_pos)) * 180 / M_PI;
 	else if (in_x-x_pos < 0)
-		angle = + 90 + atan((double)(in_y-y_pos) / (double)(in_x-x_pos)) * 180 / M_PI;
+		angle = + 90 + atan((float)(in_y-y_pos) / (float)(in_x-x_pos)) * 180 / M_PI;
 	else // Added?
 	{
 		if (in_y-y_pos > 0)
@@ -335,8 +383,10 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 	if ((x_pos-x == 0) && (y_pos-y == 0)) {//spawn is at target coords
 		if(z_pos-z != 0) {
 			z_pos = z;
+			mlog(AI__WAYPOINTS, "Calc Position2 (%.3f, %.3f, %.3f): Jumping pure Z.", x, y, z);
 			return true;
 		}
+		mlog(AI__WAYPOINTS, "Calc Position2 (%.3f, %.3f, %.3f): We are there.", x, y, z);
 		return false;
 	}
 
@@ -344,6 +394,8 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 		x_pos = x_pos + tar_vx*tar_vector;
 		y_pos = y_pos + tar_vy*tar_vector;
 		z_pos = z_pos + tar_vz*tar_vector;
+		
+		mlog(AI__WAYPOINTS, "Calculating new position2 to (%.3f, %.3f, %.3f), old vector (%.3f, %.3f, %.3f)", x, y, z, tar_vx, tar_vy, tar_vz);
 		
 #ifdef FIX_PATHING_WHEN_MOVING
 	    //fix up pathing Z
@@ -364,19 +416,16 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 		tar_ndx++;
 		return true;
 	}
-	else{
-		if (tar_ndx>50)
-		{
-			tar_ndx--;
-		}
-		else
-		{
-			tar_ndx=0;
-		}
-		tarx=x;
-		tary=y;
-		tarz=z;
+	
+	
+	if (tar_ndx>50) {
+		tar_ndx--;
+	} else {
+		tar_ndx=0;
 	}
+	tarx=x;
+	tary=y;
+	tarz=z;
 
 	float nx = this->x_pos;
     float ny = this->y_pos;
@@ -388,11 +437,14 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 	tar_vz = z - nz;
 
 	pRunAnimSpeed = (sint8)(speed*NPC_RUNANIM_RATIO);
-	speed *= 46;
+	speed *= NPC_SPEED_MULTIPLIER;
+
+	mlog(AI__WAYPOINTS, "Calculating new position2 to (%.3f, %.3f, %.3f), new vector (%.3f, %.3f, %.3f) rate %.3f, RAS %d", x, y, z, tar_vx, tar_vy, tar_vz, speed, pRunAnimSpeed);
+
 	// --------------------------------------------------------------------------
 	// 2: get unit vector
 	// --------------------------------------------------------------------------
-	float mag = sqrt (tar_vx*tar_vx + tar_vy*tar_vy + tar_vz*tar_vz);
+	float mag = sqrtf (tar_vx*tar_vx + tar_vy*tar_vy + tar_vz*tar_vz);
 	tar_vector = speed / mag;
 
 // mob move fix
@@ -414,12 +466,14 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 			z_pos = z_pos + tar_vz;
 			tar_ndx=22-numsteps;
 			heading = CalculateHeadingToTarget(x, y);
+			mlog(AI__WAYPOINTS, "Next position2 (%.3f, %.3f, %.3f) (%d steps)", x_pos, y_pos, z_pos, numsteps);
 		}
 	    else
 		{
 			x_pos = x;
 			y_pos = y;
 			z_pos = z;
+			mlog(AI__WAYPOINTS, "Only a single step to get there... jumping.");
 		}
 	}
 
@@ -429,6 +483,7 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 		y_pos = y_pos + tar_vy*tar_vector;
 		z_pos = z_pos + tar_vz*tar_vector;
 		heading = CalculateHeadingToTarget(x, y);
+		mlog(AI__WAYPOINTS, "Next position2 (%.3f, %.3f, %.3f) (%d steps)", x_pos, y_pos, z_pos, numsteps);
 	}
 	
 #ifdef FIX_PATHING_WHEN_MOVING
@@ -482,6 +537,7 @@ bool Mob::CalculateNewPosition(float x, float y, float z, float speed, bool chec
 			moved=false;
 		}
 		SetRunAnimSpeed(0);
+		mlog(AI__WAYPOINTS, "Rooted while calculating new position to (%.3f, %.3f, %.3f)", x, y, z);
         return true;
     }
 
@@ -494,22 +550,27 @@ bool Mob::CalculateNewPosition(float x, float y, float z, float speed, bool chec
 		return false;
 	pRunAnimSpeed = (int8)(speed*NPC_RUNANIM_RATIO);
 	speed *= NPC_SPEED_MULTIPLIER;
+	
+	mlog(AI__WAYPOINTS, "Calculating new position to (%.3f, %.3f, %.3f) vector (%.3f, %.3f, %.3f) rate %.3f RAS %d", x, y, z, tar_vx, tar_vy, tar_vz, speed, pRunAnimSpeed);
+	
 	// --------------------------------------------------------------------------
 	// 2: get unit vector
 	// --------------------------------------------------------------------------
-	test_vector=sqrt (x*x + y*y + z*z);
-	tar_vector = speed / sqrt (tar_vx*tar_vx + tar_vy*tar_vy + tar_vz*tar_vz);
+	test_vector=sqrtf (x*x + y*y + z*z);
+	tar_vector = speed / sqrtf (tar_vx*tar_vx + tar_vy*tar_vy + tar_vz*tar_vz);
 	heading = CalculateHeadingToTarget(x, y);
 
 	if (tar_vector >= 1.0) {
 		x_pos = x;
 		y_pos = y;
 		z_pos = z;
+		mlog(AI__WAYPOINTS, "Close enough, jumping to waypoint");
 	}
 	else {
 		x_pos = x_pos + tar_vx*tar_vector;
 		y_pos = y_pos + tar_vy*tar_vector;
 		z_pos = z_pos + tar_vz*tar_vector;
+		mlog(AI__WAYPOINTS, "Next position (%.3f, %.3f, %.3f)", x_pos, y_pos, z_pos);
 	}
 	
 #ifdef FIX_PATHING_WHEN_MOVING
@@ -548,8 +609,11 @@ bool Mob::CalculateNewPosition(float x, float y, float z, float speed, bool chec
     return true;
 }
 
-void Mob::AssignWaypoints(int16 grid)
-{ char errbuf[MYSQL_ERRMSG_SIZE];
+void NPC::AssignWaypoints(int32 grid) {
+	if(grid == 0)
+		return;		//grid ID 0 not supported
+	
+	char errbuf[MYSQL_ERRMSG_SIZE];
   char *query = 0;
   MYSQL_RES *result;
   MYSQL_ROW row;
@@ -558,11 +622,12 @@ void Mob::AssignWaypoints(int16 grid)
 	WPErr = false;		// Will be set true if any errors encountered while querying the waypoints
 
 
-	Waypoints.ClearListAndData();
+	Waypoints.clear();
 
 	// Retrieve the wander and pause types for this grid
 	if(database.RunQuery(query,MakeAnyLenString(&query,"SELECT `type`,`type2` FROM `grid` WHERE `id`=%i AND `zoneid`=%i",grid,zone->GetZoneID()),errbuf, &result))
-	{   if((row = mysql_fetch_row(result)))
+	{
+		if((row = mysql_fetch_row(result)))
 	    {
 	    	if(row[0] != 0)
 	    		wandertype = atoi(row[0]);
@@ -585,7 +650,8 @@ void Mob::AssignWaypoints(int16 grid)
 	safe_delete_array(query);
 
 	if(!GridErr)
-	{   this->CastToNPC()->SetGrid(grid);	// Assign grid number
+	{
+	    this->CastToNPC()->SetGrid(grid);	// Assign grid number
 	    adverrorinfo = 7561;
 
 	    // Retrieve all waypoints for this grid
@@ -599,13 +665,13 @@ void Mob::AssignWaypoints(int16 grid)
 			{   
 			    if(row[0] != 0 && row[1] != 0 && row[2] != 0 && row[3] != 0)
 			    {
-			    	wplist* newwp = new wplist;
-					newwp->index = ++max_wp;
-					newwp->x = atof(row[0]);
-					newwp->y = atof(row[1]);
-					newwp->z = atof(row[2]);
-					newwp->pause = atoi(row[3]);
-					Waypoints.AddItem(newwp);
+			    	wplist newwp;
+					newwp.index = ++max_wp;
+					newwp.x = atof(row[0]);
+					newwp.y = atof(row[1]);
+					newwp.z = atof(row[2]);
+					newwp.pause = atoi(row[3]);
+					Waypoints.push_back(newwp);
 			    }
 			}
 			mysql_free_result(result);
@@ -618,12 +684,16 @@ void Mob::AssignWaypoints(int16 grid)
 	    safe_delete_array(query);
 	} // end if (!GridErr)
 	
-	if(!GridErr && !WPErr)
-	{   UpdateWaypoint(0);
+	if(Waypoints.size() < 2) {
+		roamer = false;
+	} else if(!GridErr && !WPErr) {
+	    UpdateWaypoint(0);
 	    SetWaypointPause();
 	    SendTo(cur_wp_x, cur_wp_y, cur_wp_z);
 	    if (wandertype == 1 || wandertype == 2)
-		CalculateNewWaypoint();
+			CalculateNewWaypoint();
+	} else {
+		roamer = false;
 	}
 }
 
@@ -633,13 +703,13 @@ void Mob::SendTo(float new_x, float new_y, float new_z) {
 //	float dx = new_x-x_pos;
 //	float dy = new_y-y_pos;
 	// 0.09 is a perfect magic number for a human pnj's
-//	AIwalking_timer->Start((int32) ( sqrt( dx*dx + dy*dy ) * 0.09f ) * 1000 );
+//	AIwalking_timer->Start((int32) ( sqrtf( dx*dx + dy*dy ) * 0.09f ) * 1000 );
 	
 /*	if (new_x-x_pos > 0)
-		angle = - 90 + atan((double)(new_y-y_pos) / (double)(new_x-x_pos)) * 180 / M_PI;
+		angle = - 90 + atan((float)(new_y-y_pos) / (float)(new_x-x_pos)) * 180 / M_PI;
 	else {
 		if (new_x-x_pos < 0)	
-			angle = + 90 + atan((double)(new_y-y_pos) / (double)(new_x-x_pos)) * 180 / M_PI;
+			angle = + 90 + atan((float)(new_y-y_pos) / (float)(new_x-x_pos)) * 180 / M_PI;
 		else { // Added?
 			if (new_y-y_pos > 0)
 				angle = 0;
@@ -658,6 +728,8 @@ void Mob::SendTo(float new_x, float new_y, float new_z) {
 	x_pos = new_x;
 	y_pos = new_y;
 	z_pos = new_z + 0.1;
+	
+	mlog(AI__WAYPOINTS, "Sent To (%.3f, %.3f, %.3f)", new_x, new_y, new_z);
 	
     //fix up pathing Z, this shouldent be needed IF our waypoints 
     //are corrected instead
@@ -700,7 +772,30 @@ void Mob::SendToFixZ(float new_x, float new_y, float new_z) {
     }
 }
 
-int8 Database::GetGridType2(int16 grid, int16 zoneid) {
+int	ZoneDatabase::GetHighestGrid(uint32 zoneid) {
+	char *query = 0;
+	char errbuff[MYSQL_ERRMSG_SIZE];
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	int res = 0;
+	if (RunQuery(query, MakeAnyLenString(&query,
+		"SELECT MAX(id) FROM grid WHERE zoneid= %i",
+		zoneid),errbuff,&result)) {
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			res = atoi( row[0] );
+		}
+		mysql_free_result(result);
+	} else {
+		LogFile->write(EQEMuLog::Error, "Error in GetHighestGrid query '%s': %s", query, errbuff);
+		safe_delete_array(query);
+	}
+
+	return(res);
+}
+
+int8 ZoneDatabase::GetGridType2(int32 grid, int16 zoneid) {
 	char *query = 0;
 	char errbuff[MYSQL_ERRMSG_SIZE];
 	MYSQL_RES *result;
@@ -721,7 +816,7 @@ int8 Database::GetGridType2(int16 grid, int16 zoneid) {
 	return(type2);
 }
 
-bool Database::GetWaypoints(int16 grid,int16 zoneid, int16 num, wplist* wp) {
+bool ZoneDatabase::GetWaypoints(int32 grid, int16 zoneid, int32 num, wplist* wp) {
 	_CP(Database_GetWaypoints);
 	char *query = 0;
 	char errbuff[MYSQL_ERRMSG_SIZE];
@@ -749,7 +844,7 @@ bool Database::GetWaypoints(int16 grid,int16 zoneid, int16 num, wplist* wp) {
 	return false;
 }
 
-void Database::AssignGrid(Client *client, float x, float y, int32 grid)
+void ZoneDatabase::AssignGrid(Client *client, float x, float y, int32 grid)
 {
 	char *query = 0;
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -833,7 +928,7 @@ void Database::AssignGrid(Client *client, float x, float y, int32 grid)
 				if(fuzzy)
 				{
 					float difference;
-					difference = sqrt(pow(fabs(x-dbx),2) + pow(fabs(y-dby),2));
+					difference = sqrtf(pow(fabs(x-dbx),2) + pow(fabs(y-dby),2));
 					client->Message(0, 
 						"Grid assign: spawn2 id = %d updated - fuzzy match: deviation %f",
 						spawn2id, difference
@@ -864,7 +959,7 @@ void Database::AssignGrid(Client *client, float x, float y, int32 grid)
 *	zoneid:		The ID number of the zone the grid is being created/deleted in
 */
 
-void Database::ModifyGrid(Client *c, bool remove, int16 id, int8 type, int8 type2, int16 zoneid) { 
+void ZoneDatabase::ModifyGrid(Client *c, bool remove, int32 id, int8 type, int8 type2, int16 zoneid) { 
 	char *query = 0;
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	if (!remove)
@@ -892,13 +987,13 @@ void Database::ModifyGrid(Client *c, bool remove, int16 id, int8 type, int8 type
 		}
 		safe_delete_array(query);
 	}
-} /*** END Database::ModifyGrid() ***/
+} /*** END ZoneDatabase::ModifyGrid() ***/
 
 /**************************************
 * AddWP - Adds a new waypoint to a specific grid for a specific zone.
 */
 
-void Database::AddWP(Client *c, int32 gridid, int16 wpnum, float xpos, float ypos, float zpos, int32 pause, int16 zoneid)
+void ZoneDatabase::AddWP(Client *c, int32 gridid, int32 wpnum, float xpos, float ypos, float zpos, int32 pause, int16 zoneid)
 {   
 	char *query = 0;
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -909,7 +1004,7 @@ void Database::AddWP(Client *c, int32 gridid, int16 wpnum, float xpos, float ypo
 		if(c) c->LogSQL(query);
 	}
 	safe_delete_array(query);
-} /*** END Database::AddWP() ***/
+} /*** END ZoneDatabase::AddWP() ***/
 
 
 /**********
@@ -923,7 +1018,7 @@ void Database::AddWP(Client *c, int32 gridid, int16 wpnum, float xpos, float ypo
 *	zoneid:		The ID number of the zone that contains the waypoint being deleted
 */
 
-void Database::DeleteWaypoint(Client *c, int16 grid_num, int32 wp_num, int16 zoneid)
+void ZoneDatabase::DeleteWaypoint(Client *c, int32 grid_num, int32 wp_num, int16 zoneid)
 {
 	char *query=0;
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -934,7 +1029,7 @@ void Database::DeleteWaypoint(Client *c, int16 grid_num, int32 wp_num, int16 zon
 		if(c) c->LogSQL(query);
 	}
 	safe_delete_array(query);
-} /*** END Database::DeleteWaypoint() ***/
+} /*** END ZoneDatabase::DeleteWaypoint() ***/
 
 
 /******************
@@ -945,7 +1040,7 @@ void Database::DeleteWaypoint(Client *c, int16 grid_num, int32 wp_num, int16 zon
 * the created grid is returned.
 */
 
-int32 Database::AddWPForSpawn(Client *c, int32 spawn2id, float xpos, float ypos, float zpos, int32 pause, int type1, int type2, int16 zoneid) {
+int32 ZoneDatabase::AddWPForSpawn(Client *c, int32 spawn2id, float xpos, float ypos, float zpos, int32 pause, int type1, int type2, int16 zoneid) {
 	char	*query = 0;
     int32	grid_num,	// The grid number the spawn is assigned to (if spawn has no grid, will be the grid number we end up creating)
 		next_wp_num;	// The waypoint number we should be assigning to the new waypoint
@@ -1028,10 +1123,10 @@ int32 Database::AddWPForSpawn(Client *c, int32 spawn2id, float xpos, float ypos,
 		return grid_num;
 	
 	return 0;
-} /*** END Database::AddWPForSpawn() ***/
+} /*** END ZoneDatabase::AddWPForSpawn() ***/
 
 
-int16 Database::GetFreeGrid(int16 zoneid) {
+int32 ZoneDatabase::GetFreeGrid(int16 zoneid) {
     char *query = 0;
 	char errbuf[MYSQL_ERRMSG_SIZE];
     MYSQL_RES *result;
@@ -1040,7 +1135,7 @@ int16 Database::GetFreeGrid(int16 zoneid) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {
 			row = mysql_fetch_row(result);
-			int16 tmp=0;
+			int32 tmp=0;
 			if (row[0]) 
 				tmp = atoi(row[0]);
 			mysql_free_result(result);

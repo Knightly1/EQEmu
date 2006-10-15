@@ -84,7 +84,7 @@ public:
 	void	MakeParms(const char * string, int32 npcid);
 	void	MakeVars(std::string text, int32 npcid);
 
-	int		numtok(std::string text, const char * character);
+	int		numtok(const char *text, char character);
 
 	int		ParseCommands(std::string text, int line, int justcheck, int32 npcid, NPC* other, Mob* mob, std::string filename=string("none"));
 	int		ParseIf(std::string text);

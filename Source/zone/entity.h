@@ -20,7 +20,7 @@
 
 #include "../common/types.h"
 #include "../common/linked_list.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "../common/eq_constants.h"
 #include "zonedump.h"
 #include "zonedbasync.h"
@@ -30,9 +30,9 @@
 #define MAX_SPAWNS_PER_PACKET	100
 
 //#ifdef WIN32
-	class	EQZonePacket;
+	class	EQApplicationPacket;
 //#else
-//	struct	EQZonePacket;
+//	struct	EQApplicationPacket;
 //#endif
 
 class Client;
@@ -58,17 +58,17 @@ public:
 	Entity();
 	virtual ~Entity();
 
-	virtual bool IsClient()			{ return false; }
-	virtual bool IsNPC()			{ return false; }
-	virtual bool IsMob()			{ return false; }
-	virtual bool IsCorpse()			{ return false; }
-	virtual bool IsPlayerCorpse()	{ return false; }
-	virtual bool IsNPCCorpse()		{ return false; }
-	virtual bool IsObject()			{ return false; }
-//	virtual bool IsGroup()			{ return false; }
-	virtual bool IsDoor()			{ return false; }
-	virtual bool IsTrap()			{ return false; }
-	virtual bool IsBeacon()			{ return false; }
+	virtual bool IsClient()			const { return false; }
+	virtual bool IsNPC()			const { return false; }
+	virtual bool IsMob()			const { return false; }
+	virtual bool IsCorpse()			const { return false; }
+	virtual bool IsPlayerCorpse()	const { return false; }
+	virtual bool IsNPCCorpse()		const { return false; }
+	virtual bool IsObject()			const { return false; }
+//	virtual bool IsGroup()			const { return false; }
+	virtual bool IsDoor()			const { return false; }
+	virtual bool IsTrap()			const { return false; }
+	virtual bool IsBeacon()			const { return false; }
 
 	virtual bool Process()  { return false; }
 	virtual bool Save() { return true; }
@@ -83,6 +83,16 @@ public:
 	Doors*	CastToDoors();
 	Trap*	CastToTrap();
 	Beacon*	CastToBeacon();
+	
+	const Client* CastToClient() const;
+	const NPC*    CastToNPC() const;
+	const Mob*    CastToMob() const;
+	const Corpse*	CastToCorpse() const;
+	const Object* CastToObject() const;
+//	const Group*	CastToGroup() const;
+	const Doors*	CastToDoors() const;
+	const Trap*	CastToTrap() const;
+	const Beacon*	CastToBeacon() const;
 
 	inline const int16& GetID()	{ return id; }
 	virtual const char* GetName() { return ""; }
@@ -122,7 +132,12 @@ public:
 	bool IsMobInZone(Mob *who);
 	void ClearClientPetitionQueue();
     bool CanAddHateForMob(Mob *p);
-	void	SendGuildJoin(GuildJoin_Struct* gj);
+    void	SendGuildMOTD(uint32 guild_id);
+    void	SendGuildSpawnAppearance(uint32 guild_id);
+    void	SendGuildMembers(uint32 guild_id);
+    void	RefreshAllGuildInfo(uint32 guild_id);
+    void	SendGuildList();
+//	void	SendGuildJoin(GuildJoin_Struct* gj);
 	// Check group list for NULL entries
    void CheckGroupList (const char *fname, const int fline);
 	void	GroupProcess();
@@ -135,7 +150,7 @@ public:
 	void	ProcessMove(Client *c, float x, float y, float z);
 	void	SendAATimer(int32 charid,UseAA_Struct* uaa);
 	Doors*	FindDoor(int8 door_id);
-	bool	MakeDoorSpawnPacket(EQZonePacket* app);
+	bool	MakeDoorSpawnPacket(EQApplicationPacket* app);
 	bool    MakeTrackPacket(Client* client);
 	void	SendTraders(Client* client);	
 	void    AddClient(Client*);
@@ -176,7 +191,6 @@ public:
 //	Entity*	GetEntityGroup(int32 id);
 	Entity*	GetEntityTrap(int16 id);
 	Entity*	GetEntityBeacon(int16 id);
-	void	GuildItemAward(int32 guilddbid, int16 itemid);
 	
 	void DescribeAggro(Client *towho, NPC *from_who, float dist, bool verbose);
 
@@ -189,10 +203,11 @@ public:
 	void	MessageClose(Mob* sender, bool skipsender, float dist, int32 type, const char* message, ...);
 	void	Message_StringID(Mob *sender, bool skipsender, int32 type, int32 string_id, const char* message1=0,const char* message2=0,const char* message3=0,const char* message4=0,const char* message5=0,const char* message6=0,const char* message7=0,const char* message8=0,const char* message9=0);
 	void	MessageClose_StringID(Mob *sender, bool skipsender, float dist, int32 type, int32 string_id, const char* message1=0,const char* message2=0,const char* message3=0,const char* message4=0,const char* message5=0,const char* message6=0,const char* message7=0,const char* message8=0,const char* message9=0);
-	void	ChannelMessageFromWorld(const char* from, const char* to, int8 chan_num, int32 guilddbid, int8 language, const char* message, ...);
+	void	ChannelMessageFromWorld(const char* from, const char* to, int8 chan_num, int32 guilddbid, int8 language, const char* message);
 	void    ChannelMessage(Mob* from, int8 chan_num, int8 language, const char* message, ...);
 	void	ChannelMessageSend(Mob* to, int8 chan_num, int8 language, const char* message, ...);
 	void    SendZoneSpawns(Client*);
+	void	SendZonePVPUpdates(Client *);
 	void	SendZoneSpawnsBulk(Client* client);
 	void    Save();
 	void    SendZoneCorpses(Client*);
@@ -202,20 +217,23 @@ public:
 
 	void    RemoveFromTargets(Mob* mob);
     void    ReplaceWithTarget(Mob* pOldMob, Mob*pNewTarget);
-	void	QueueCloseClients(Mob* sender, const EQZonePacket* app, bool ignore_sender=false, float dist=200, Mob* SkipThisMob = 0, bool ackreq = true,FilterType filter=FilterNone);
-	void    QueueClients(Mob* sender, const EQZonePacket* app, bool ignore_sender=false, bool ackreq = true);
-	void	QueueClientsStatus(Mob* sender, const EQZonePacket* app, bool ignore_sender = false, int8 minstatus = 0, int8 maxstatus = 0);
-	void	QueueClientsGuild(Mob* sender, const EQZonePacket* app, bool ignore_sender = false, int32 guildeqid = 0);
-	void	QueueClientsByTarget(Mob* sender, const EQZonePacket* app, bool iSendToSender = true, Mob* SkipThisMob = 0, bool ackreq = true);
-	void    QueueManaged(Mob* sender, const EQZonePacket* app, bool ignore_sender=false, bool ackreq = true);
+	void	QueueCloseClients(Mob* sender, const EQApplicationPacket* app, bool ignore_sender=false, float dist=200, Mob* SkipThisMob = 0, bool ackreq = true,eqFilterType filter=FilterNone);
+	void    QueueClients(Mob* sender, const EQApplicationPacket* app, bool ignore_sender=false, bool ackreq = true);
+	void	QueueClientsStatus(Mob* sender, const EQApplicationPacket* app, bool ignore_sender = false, int8 minstatus = 0, int8 maxstatus = 0);
+	void	QueueClientsGuild(Mob* sender, const EQApplicationPacket* app, bool ignore_sender = false, int32 guildeqid = 0);
+	void	QueueClientsByTarget(Mob* sender, const EQApplicationPacket* app, bool iSendToSender = true, Mob* SkipThisMob = 0, bool ackreq = true);
+	void    QueueManaged(Mob* sender, const EQApplicationPacket* app, bool ignore_sender=false, bool ackreq = true);
 
 	void	AEAttack(Mob *attacker, float dist, int Hand = 13, int count = 0);
 	void	AETaunt(Client *caster, float range = 0);
-	void	AESpell(Mob *caster, Mob *center, float dist, int16 spell_id, bool affect_caster = true);
+	void	AESpell(Mob *caster, Mob *center, int16 spell_id, bool affect_caster = true);
+	void	AEBardPulse(Mob *caster, Mob *center, int16 spell_id, bool affect_caster = true);
+	
+	void 	RadialSetLogging(Mob *around, bool enabled, bool clients, bool non_clients, float range = 0);
 
 	//trap stuff
 	Mob*	GetTrapTrigger(Trap* trap);
-	void	SendAlarm(Trap* trap, Mob* currenttarget);
+	void	SendAlarm(Trap* trap, Mob* currenttarget, int8 kos);
 	Trap*	FindNearbyTrap(Mob* searcher, float max_dist);
 	
 	void	AddHealAggro(Mob* target, Mob* caster, int16 thedam);
@@ -233,13 +251,6 @@ public:
 	void	SendPetitionToAdmins(Petition* pet);
 	void	SendPetitionToAdmins();
 
-#ifdef GUILDWARS
-	Client*	FindRankingOfficial(int32 guild_id);
-	Client* FindRankingOfficialByLocation(float x,float y,float z,float dist,int32 guild_id);
-	Client* FindEnemiesAtLocation(float x,float y,float z,float dist,int32 notguild);
-	void	GuildIntervalPoints(int32 guildid,sint32 points);
-#endif
-
 	void	ListNPCs(Client* client, const char* arg1 = 0, const char* arg2 = 0, int8 searchtype = 0);
 	void	ListNPCCorpses(Client* client);
 	void	ListPlayerCorpses(Client* client);
@@ -251,14 +262,17 @@ public:
 
     void    Process();
 	void	ClearFeignAggro(Mob* targ);
+	// Everhood 6/17/06
+	void	ClearZoneFeignAggro(Client* targ);
 	
 	bool	Fighting(Mob* targ);
 	void    RemoveFromHateLists(Mob* mob, bool settoone = false);
 	void	MessageGroup(Mob* sender, bool skipclose, int32 type, const char* message, ...);
 	
 	void	LimitAddNPC(NPC *npc);
+	void	LimitRemoveNPC(NPC *npc);
 	bool	LimitCheckType(int32 npc_type, int count);
-	bool	LimitCheckGroup(int32 npc_type, int32 spawngroup_id, int count);
+	bool	LimitCheckGroup(int32 spawngroup_id, int count);
 	bool	LimitCheckBoth(int32 npc_type, int32 spawngroup_id, int group_count, int type_count);
 
 	void	CheckClientAggro(Client *around);

@@ -21,7 +21,7 @@
 /* 
 ** Diety List
 */
-#define DEITY_AGNOSTIC		396
+#define DEITY_AGNOSTIC		396		//drop the high bit for 140
 #define DEITY_BRELL			202
 #define DEITY_CAZIC			203
 #define DEITY_EROLLSI		204

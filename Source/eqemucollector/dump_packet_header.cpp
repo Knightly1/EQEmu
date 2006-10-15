@@ -13,20 +13,20 @@ public:
 		clean = iclean;
 	}
 
-	virtual void ToClientPacket(EQStreamType Type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *p) {
+	virtual void ToClientPacket(EQStreamType Type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *p) {
 		if(clean) {
 			//drop some junk
-			if(emu_opcode == OP_ClientUpdate || emu_opcode == OP_MobUpdate)
+			if(emu_opcode == OP_ClientUpdate)
 				return;
 		}
 		cout << "Server->Client: ";
 //		p->DumpRawHeaderNoTime();
 		p->DumpRawHeader();
 	}
-	virtual void ToServerPacket(EQStreamType Type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *p) {
+	virtual void ToServerPacket(EQStreamType Type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *p) {
 		if(clean) {
 			//drop some junk
-			if(emu_opcode == OP_ClientUpdate || emu_opcode == OP_MobUpdate)
+			if(emu_opcode == OP_ClientUpdate)
 				return;
 		}
 		cout << "Client->Server: ";

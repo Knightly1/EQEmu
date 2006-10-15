@@ -52,7 +52,6 @@ void Horse::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 	ns->spawn.petOwnerId = 0;
 	
 	//dunno why we do these, they should allready be set right.
-	ns->spawn.walkspeed = NPCTypedata->walkspeed;
 	ns->spawn.runspeed = NPCTypedata->runspeed;
 }
 	
@@ -109,202 +108,162 @@ const NPCType *Horse::BuildHorseType(int16 spell_id) {
 	switch(spell_id) {
 		case 2862:
 			mount_color=0;  // Brown horse
-			npc_type->walkspeed=MOUNT_SLOW1_WALK;
 			npc_type->runspeed=MOUNT_SLOW1_RUN;
 			break;
 		case 2863:
 			mount_color=0;  // Brown horse
-			npc_type->walkspeed=MOUNT_SLOW2_WALK;
 			npc_type->runspeed=MOUNT_SLOW2_RUN;
 			break;
 		case 2864:
 			mount_color=0;  // Brown horse
-			npc_type->walkspeed=MOUNT_RUN1_WALK;
 			npc_type->runspeed=MOUNT_RUN1_RUN;
 			break;
 		case 2865:
 			mount_color=0;  // Brown horse
-			npc_type->walkspeed=MOUNT_RUN2_WALK;
 			npc_type->runspeed=MOUNT_RUN2_RUN;
 			break;
 		case 2866:
 			mount_color=0;  // Brown horse
-			npc_type->walkspeed=MOUNT_FAST_WALK;
 			npc_type->runspeed=MOUNT_FAST_RUN;
 			break;
 		case 2867:
 			mount_color=1;  // White horse
-			npc_type->walkspeed=MOUNT_SLOW1_WALK;
 			npc_type->runspeed=MOUNT_SLOW1_RUN;
 			break;
 		case 2868:
 			mount_color=1;  // White horse
-			npc_type->walkspeed=MOUNT_SLOW2_WALK;
 			npc_type->runspeed=MOUNT_SLOW2_RUN;
 			break;
 		case 2869:
 			mount_color=1;  // White horse
-			npc_type->walkspeed=MOUNT_RUN1_WALK;
 			npc_type->runspeed=MOUNT_RUN1_RUN;
 			break;
 		case 2870:
 			mount_color=1;  // White horse
-			npc_type->walkspeed=MOUNT_RUN2_WALK;
 			npc_type->runspeed=MOUNT_RUN2_RUN;
 			break;
 		case 2871:
 			mount_color=1;  // White horse
-			npc_type->walkspeed=MOUNT_FAST_WALK;
 			npc_type->runspeed=MOUNT_FAST_RUN;
 			break;
 		case 2872:
 			mount_color=2;  // Black horse
-			npc_type->walkspeed=MOUNT_SLOW1_WALK;
 			npc_type->runspeed=MOUNT_SLOW1_RUN;
 			break;
 		case 2873:
 			mount_color=2;  // Black horse
-			npc_type->walkspeed=MOUNT_SLOW2_WALK;
 			npc_type->runspeed=MOUNT_SLOW2_RUN;
 			break;
 		case 2916:
 			mount_color=2;  // Black horse
-			npc_type->walkspeed=MOUNT_RUN1_WALK;
 			npc_type->runspeed=MOUNT_RUN1_RUN;
 			break;
 		case 2917:
 			mount_color=2;  // Black horse
-			npc_type->walkspeed=MOUNT_RUN2_WALK;
 			npc_type->runspeed=MOUNT_RUN2_RUN;
 			break;
 		case 2918:
 			mount_color=2;  // Black horse
-			npc_type->walkspeed=MOUNT_FAST_WALK;
 			npc_type->runspeed=MOUNT_FAST_RUN;
 			break;
 		case 2919:
 			mount_color=3;  // Tan horse
-			npc_type->walkspeed=MOUNT_SLOW1_WALK;
 			npc_type->runspeed=MOUNT_SLOW1_RUN;
 			break;
 		case 2920:
 			mount_color=3;  // Tan horse
-			npc_type->walkspeed=MOUNT_SLOW2_WALK;
 			npc_type->runspeed=MOUNT_SLOW2_RUN;
 			break;
 		case 2921:
 			mount_color=3;  // Tan horse
-			npc_type->walkspeed=MOUNT_RUN1_WALK;
 			npc_type->runspeed=MOUNT_RUN1_RUN;
 			break;
 		case 2922:
 			mount_color=3;  // Tan horse
-			npc_type->walkspeed=MOUNT_RUN2_WALK;
 			npc_type->runspeed=MOUNT_RUN2_RUN;
 			break;
 		case 2923:
 			mount_color=3;  // Tan horse
-			npc_type->walkspeed=MOUNT_FAST_WALK;
 			npc_type->runspeed=MOUNT_FAST_RUN;
 			break;
 		case 3813:
 			mount_color=0;  // White drogmor
-			npc_type->walkspeed=MOUNT_SLOW1_WALK;
 			npc_type->runspeed=MOUNT_SLOW1_RUN;
 			break;
 		case 3814:
 			mount_color=0;  // White drogmor
-			npc_type->walkspeed=MOUNT_SLOW2_WALK;
 			npc_type->runspeed=MOUNT_SLOW2_RUN;
 			break;
 		case 3815:
 			mount_color=0;  // White drogmor
-			npc_type->walkspeed=MOUNT_RUN1_WALK;
 			npc_type->runspeed=MOUNT_RUN1_RUN;
 			break;
 		case 3816:
 			mount_color=0;  // White drogmor
-			npc_type->walkspeed=MOUNT_RUN2_WALK;
 			npc_type->runspeed=MOUNT_RUN2_RUN;
 			break;
 		case 3817:
 			mount_color=0;  // White drogmor
-			npc_type->walkspeed=MOUNT_FAST_WALK;
 			npc_type->runspeed=MOUNT_FAST_RUN;
 			break;
 		case 3818:
 			mount_color=1;  // Black drogmor
-			npc_type->walkspeed=MOUNT_SLOW1_WALK;
 			npc_type->runspeed=MOUNT_SLOW1_RUN;
 			break;
 		case 3819:
 			mount_color=1;  // Black drogmor
-			npc_type->walkspeed=MOUNT_SLOW2_WALK;
 			npc_type->runspeed=MOUNT_SLOW2_RUN;
 			break;
 		case 3820:
 			mount_color=1;  // Black drogmor
-			npc_type->walkspeed=MOUNT_RUN1_WALK;
 			npc_type->runspeed=MOUNT_RUN1_RUN;
 			break;
 		case 3821:
 			mount_color=1;  // Black drogmor
-			npc_type->walkspeed=MOUNT_RUN2_WALK;
 			npc_type->runspeed=MOUNT_RUN2_RUN;
 			break;
 		case 3822:
 			mount_color=1;  // Black drogmor
-			npc_type->walkspeed=MOUNT_FAST_WALK;
 			npc_type->runspeed=MOUNT_FAST_RUN;
 			break;
 		case 3823:
 			mount_color=2;  // Green drogmor
-			npc_type->walkspeed=MOUNT_SLOW1_WALK;
 			npc_type->runspeed=MOUNT_SLOW1_RUN;
 			break;
 		case 3824:
 			mount_color=2;  // Green drogmor
-			npc_type->walkspeed=MOUNT_SLOW2_WALK;
 			npc_type->runspeed=MOUNT_SLOW2_RUN;
 			break;
 		case 3825:
 			mount_color=2;  // Green drogmor
-			npc_type->walkspeed=MOUNT_RUN1_WALK;
 			npc_type->runspeed=MOUNT_RUN1_RUN;
 			break;
 		case 3826:
 			mount_color=2;  // Green drogmor
-			npc_type->walkspeed=MOUNT_RUN2_WALK;
 			npc_type->runspeed=MOUNT_RUN2_RUN;
 			break;
 		case 3827:
 			mount_color=2;  // Green drogmor
-			npc_type->walkspeed=MOUNT_FAST_WALK;
 			npc_type->runspeed=MOUNT_FAST_RUN;
 			break;
 		case 3828:
 			mount_color=3;  // Red drogmor
-			npc_type->walkspeed=MOUNT_SLOW1_WALK;
 			npc_type->runspeed=MOUNT_SLOW1_RUN;
 			break;
 		case 3829:
 			mount_color=3;  // Red drogmor
-			npc_type->walkspeed=MOUNT_SLOW2_WALK;
 			npc_type->runspeed=MOUNT_SLOW2_RUN;
 			break;
 		case 3830:
 			mount_color=3;  // Red drogmor
-			npc_type->walkspeed=MOUNT_RUN1_WALK;
 			npc_type->runspeed=MOUNT_RUN1_RUN;
 			break;
 		case 3831:
 			mount_color=3;  // Red drogmor
-			npc_type->walkspeed=MOUNT_RUN2_WALK;
 			npc_type->runspeed=MOUNT_RUN2_RUN;
 			break;
 		case 3832:
 			mount_color=3;  // Red drogmor
-			npc_type->walkspeed=MOUNT_FAST_WALK;
 			npc_type->runspeed=MOUNT_FAST_RUN;
 			break;
 		default:
@@ -320,7 +279,6 @@ const NPCType *Horse::BuildHorseType(int16 spell_id) {
 	npc_type->texture = mount_color;
 
 	npc_type->light = 0;
-	npc_type->fixedZ = 1;
 	npc_type->STR = 75;
 	npc_type->STA = 75;
 	npc_type->DEX = 75;
@@ -357,7 +315,7 @@ void Client::SummonHorse(int16 spell_id) {
 	// Okay, lets say they have a horse now.
 	
 	
-	EQZonePacket outapp;
+	EQApplicationPacket outapp;
 	horse->CreateHorseSpawnPacket(&outapp, GetName(), GetID());
 /*	// Doodman: Kludged in here instead of adding a field to PCType. FIXME!
 	NewSpawn_Struct* ns=(NewSpawn_Struct*)outapp->pBuffer;
@@ -391,7 +349,7 @@ void Client::SetHorseId(int16 horseid_in) {
 	horseId = horseid_in;
 }
 
-void Mob::CreateHorseSpawnPacket(EQZonePacket* app, const char* ownername, uint16 ownerid, Mob* ForWho) {
+void Mob::CreateHorseSpawnPacket(EQApplicationPacket* app, const char* ownername, uint16 ownerid, Mob* ForWho) {
 	app->SetOpcode(OP_NewSpawn);
 	app->pBuffer = new uchar[sizeof(NewSpawn_Struct)];
 	app->size = sizeof(NewSpawn_Struct);

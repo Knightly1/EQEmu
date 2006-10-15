@@ -13,11 +13,9 @@ class cloc
 {
 public:
 	cloc();
-	cloc( cloc* loc );
+	cloc( const cloc* loc );
 	cloc( double x, double y, double z );
 	cloc( double x, double y, double z, double heading );
-
-	virtual ~cloc();
 	
 	double dist2xy(const cloc *to) const {
 		double dx = x - to->x;
@@ -30,6 +28,15 @@ public:
 	double z;
 	double heading;
 
+};
+
+
+//a spawn2 entry
+class cspawnpoint : public cloc {
+public:
+	cspawnpoint( const cloc* loc );
+	cspawnpoint( const cspawnpoint* loc );
+	int db_id;
 };
 
 #endif // !defined(AFX_CLOC_H__735DA8C1_4DF9_4241_9FEE_9161537BCAFB__INCLUDED_)

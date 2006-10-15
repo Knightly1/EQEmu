@@ -102,10 +102,6 @@ SOURCE=.\Doors.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\GuildList.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\Items.cpp
 # End Source File
 # Begin Source File

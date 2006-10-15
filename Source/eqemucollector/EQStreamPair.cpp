@@ -38,11 +38,13 @@ extern vector<StreamDestroyHandler> StreamDestroyHandlers;
 
 
 
-EQStreamPair::EQStreamPair(bool be_quiet)
+EQStreamPair::EQStreamPair(bool be_quiet, OpcodeManager **ops)
 {
 	quiet = be_quiet;
 	valid = true;
 	first_packet=true;
+	server.SetOpcodeManager(ops);
+	client.SetOpcodeManager(ops);
 }
 
 EQStreamPair::~EQStreamPair() {
@@ -84,8 +86,11 @@ void EQStreamPair::CheckTimeouts(unsigned long now) {
 	if(!valid)
 		return;
 	//see if either of the connections are active.
-	if(server.CheckTimeout(now, CONNECTION_TIMEOUT) 
-	&& client.CheckTimeout(now, CONNECTION_TIMEOUT)) {
+	server.CheckTimeout(now, CONNECTION_TIMEOUT);
+	client.CheckTimeout(now, CONNECTION_TIMEOUT);
+	
+	if(server.CheckState(CLOSED) 
+	&& client.CheckState(CLOSED)) {
 		valid = false;
 	}
 }
@@ -95,7 +100,7 @@ void EQStreamPair::AddHandler(StreamPacketHandler *it) {
 	handlers.push_back(it);
 }
 
-void EQStreamPair::NotifyHandlers(bool to_server, const EQApplicationPacket *app) {
+void EQStreamPair::NotifyHandlers(bool to_server, const EQRawApplicationPacket *app) {
 	
 	EQStreamType type= client.GetStreamType();
 	EmuOpcode emu_op = app->GetOpcode();
@@ -148,6 +153,7 @@ bool EQStreamPair::Process(const unsigned char *buffer, unsigned short length, u
 {
 static unsigned char newbuffer[2048];
 unsigned long newlength;
+	//dump_message_column(const_cast<unsigned char*>(buffer),length,"Raw: ");
 	if (EQProtocolPacket::ValidateCRC(buffer,length,Key)) {
 		EQStreamType type=client.GetStreamType();
 		if (type==LoginStream || buffer[1]==0x01 || buffer[1]==0x02) {
@@ -157,7 +163,7 @@ unsigned long newlength;
 			memcpy(newbuffer,buffer,length);
 			newlength=length;
 			if (newbuffer[1] != 0x01 && newbuffer[1] != 0x02) {
-				EQProtocolPacket::ChatDecode(newbuffer,newlength-(newlength>8?2:0),Key);
+				EQProtocolPacket::ChatDecode(newbuffer,newlength-2,Key);
 			}
 			//dump_message_column(newbuffer,newlength,"");
 			//cout << endl;
@@ -175,10 +181,14 @@ unsigned long newlength;
 		}
 		return false;
 	}
-	if (newbuffer[1] != 0x01 && newbuffer[1] != 0x02 && newbuffer[1] != 0x1d && newlength>4)
+	
+	int16 proto_opcode = ntohs(*(const uint16 *)newbuffer);
+	
+	if (proto_opcode != OP_SessionRequest && newbuffer[1] != OP_SessionResponse && newbuffer[1] != OP_OutOfSession && newlength>4)
 		newlength-=2;
 
-	EQProtocolPacket *p=new EQProtocolPacket(newbuffer,newlength);
+	//dump_message_column(const_cast<unsigned char*>(newbuffer),newlength,"Dec: ");
+	EQProtocolPacket *p=new EQProtocolPacket(proto_opcode, newbuffer+2, newlength-2);
 	p->setSrcInfo(src_ip,src_port);
 	p->setDstInfo(dst_ip,dst_port);
 	p->setTimeInfo(ts_sec,ts_usec);
@@ -222,7 +232,7 @@ unsigned long newlength;
 
 
 void EQStreamPair::CheckQueues() {
-	EQApplicationPacket *c_app,*s_app,*app;
+	EQRawApplicationPacket *c_app,*s_app,*app;
 	while(1) {
 		c_app=client.PeekPacket();
 		s_app=server.PeekPacket();
@@ -258,10 +268,10 @@ void EQStreamPair::CheckQueues() {
 			first_packet=false;
 		}
 		if (c_app && (!s_app || (*c_app) < (*s_app) ) ) {
-			app=client.PopPacket();
+			app=client.PopRawPacket();
 			NotifyHandlers(false, app);
 		} else if (s_app && (!c_app || (*s_app) < (*c_app) ) ) {
-			app=server.PopPacket();
+			app=server.PopRawPacket();
 			NotifyHandlers(true, app);
 		} else {
 			break;

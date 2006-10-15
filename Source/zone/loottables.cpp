@@ -22,32 +22,27 @@ using namespace std;
 #include <stdlib.h>
 #include "npc.h"
 #include "masterentity.h"
-#include "../common/database.h"
+#include "zonedb.h"
+#include "../common/MiscFunctions.h"
 #ifdef WIN32
 #define snprintf	_snprintf
 #endif
-class NPC;
-extern Database database;
-#ifdef SHAREMEM
-	#include "../common/EMuShareMem.h"
-	extern LoadEMuShareMemDLL EMuShareMemDLL;
-	extern "C" bool extDBLoadLoot() { return database.DBLoadLoot(); }
-#endif
 
-//void Database::AddLootTableToNPC(int32 loottable_id, ItemList* itemlist, int32* copper, int32* silver, int32* gold, int32* plat) {
-//}
+#include "../common/EMuShareMem.h"
+extern LoadEMuShareMemDLL EMuShareMemDLL;
+bool SharedDatabase::extDBLoadLoot() {
+	return s_usedb->DBLoadLoot();
+}
 
-bool Database::LoadLoot() {
+bool SharedDatabase::LoadLoot() {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
     MYSQL_ROW row;
-#ifdef SHAREMEM
 	int32 tmpLootTableCount = 0;
 	int32 tmpLootTableEntriesCount = 0;
 	int32 tmpLootDropCount = 0;
 	int32 tmpLootDropEntriesCount = 0;
-#endif
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT max(id), count(*) FROM loottable"), errbuf, &result)) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {
@@ -56,9 +51,7 @@ bool Database::LoadLoot() {
 				loottable_max = atoi(row[0]);
 			else
 				loottable_max = 0;
-#ifdef SHAREMEM
 			tmpLootTableCount = atoi(row[1]);
-#endif
 		}
 		else {
 			mysql_free_result(result);
@@ -71,7 +64,6 @@ bool Database::LoadLoot() {
 		safe_delete_array(query);
 		return false;
 	}
-#ifdef SHAREMEM
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(*) FROM loottable_entries"), errbuf, &result)) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {
@@ -111,20 +103,11 @@ bool Database::LoadLoot() {
 		safe_delete_array(query);
 		return false;
 	}
-#endif	
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT max(lootdrop_id), count(*) FROM lootdrop_entries"), errbuf, &result)) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {
 			row = mysql_fetch_row(result);
-#ifndef SHAREMEM
-			if (row[0])
-				lootdrop_max = atoi(row[0]);
-			else
-				lootdrop_max = 0;
-#endif
-#ifdef SHAREMEM
 			tmpLootDropEntriesCount = atoi(row[1]);
-#endif
 		}
 		else {
 			mysql_free_result(result);
@@ -137,19 +120,14 @@ bool Database::LoadLoot() {
 		safe_delete_array(query);
 		return false;
 	}
-#ifdef SHAREMEM
 	return EMuShareMemDLL.Loot.DLLLoadLoot(&extDBLoadLoot,
 			 sizeof(LootTable_Struct), tmpLootTableCount, loottable_max,
 			 sizeof(LootTableEntries_Struct), tmpLootTableEntriesCount,
 			 sizeof(LootDrop_Struct), tmpLootDropCount, lootdrop_max,
 			 sizeof(LootDropEntries_Struct), tmpLootDropEntriesCount);
-#else
-	return true;
-#endif
 }
 
-#ifdef SHAREMEM
-bool Database::DBLoadLoot() {
+bool SharedDatabase::DBLoadLoot() {
 	LogFile->write(EQEMuLog::Status, "Loading Loot tables from database...");
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
@@ -178,7 +156,7 @@ bool Database::DBLoadLoot() {
 					if (i >= tmpLT->NumEntries) {
 						mysql_free_result(result);
 						mysql_free_result(result2);
-						cerr << "Error in Database::DBLoadLoot, i >= NumEntries" << endl;
+						cerr << "Error in ZoneDatabase::DBLoadLoot, i >= NumEntries" << endl;
 						return false;
 					}
 					tmpLT->Entries[i].lootdrop_id = atoi(row[1]);
@@ -190,7 +168,7 @@ bool Database::DBLoadLoot() {
 					mysql_free_result(result);
 					mysql_free_result(result2);
 					safe_delete(tmpLT);
-					cout << "Error in Database::DBLoadLoot: !cbAddLootTable(" << tmpid << ")" << endl;
+					cout << "Error in ZoneDatabase::DBLoadLoot: !cbAddLootTable(" << tmpid << ")" << endl;
 					return false;
 				}
 				safe_delete_array(tmpLT);
@@ -226,7 +204,7 @@ bool Database::DBLoadLoot() {
 					if (i >= tmpLD->NumEntries) {
 						mysql_free_result(result);
 						mysql_free_result(result2);
-						cerr << "Error in Database::DBLoadLoot, i >= NumEntries" << endl;
+						cerr << "Error in ZoneDatabase::DBLoadLoot, i >= NumEntries" << endl;
 						return false;
 					}
 					tmpLD->Entries[i].item_id = atoi(row[1]);
@@ -239,7 +217,7 @@ bool Database::DBLoadLoot() {
 					mysql_free_result(result);
 					mysql_free_result(result2);
 					safe_delete(tmpLD);
-					cout << "Error in Database::DBLoadLoot: !cbAddLootDrop(" << tmpid << ")" << endl;
+					cout << "Error in ZoneDatabase::DBLoadLoot: !cbAddLootDrop(" << tmpid << ")" << endl;
 					return false;
 				}
 				safe_delete(tmpLD);
@@ -262,149 +240,17 @@ bool Database::DBLoadLoot() {
 
 	return true;
 }
-#endif
 
-const LootTable_Struct* Database::GetLootTable(int32 loottable_id) {
-#ifdef SHAREMEM
+const LootTable_Struct* SharedDatabase::GetLootTable(int32 loottable_id) {
 	return EMuShareMemDLL.Loot.GetLootTable(loottable_id);
-#else
-	int32 i;
-	if (loottable_array == 0) {
-		loottable_array = new LootTable_Struct*[loottable_max+1];
-		loottable_inmem = new sint8[loottable_max+1];
-		for (i=0; i<=loottable_max; i++) {
-			loottable_array[i] = 0;
-			loottable_inmem[i] = 0;
-		}
-	}
-	if (loottable_id > loottable_max || loottable_id == 0)
-		return 0;
-	if (loottable_inmem[loottable_id] == -1)
-		return 0;
-	else if (loottable_inmem[loottable_id] == 1) {
-		if (loottable_array[loottable_id])
-			return loottable_array[loottable_id];
-		else
-			return 0;
-	}
-	loottable_inmem[loottable_id] = -1;
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	int32 tmpmincash = 0, tmpmaxcash = 0, tmpavgcoin = 0;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, mincash, maxcash, avgcoin FROM loottable WHERE id=%i", loottable_id), errbuf, &result)) {
-		safe_delete_array(query);
-		if (mysql_num_rows(result) == 1) {
-			row = mysql_fetch_row(result);
-			tmpmincash = atoi(row[1]);
-			tmpmaxcash = atoi(row[2]);
-			tmpavgcoin = atoi(row[3]);
-		}
-		else {
-			mysql_free_result(result);
-			return 0;
-		}
-		mysql_free_result(result);
-	}
-	else {
-		cerr << "Error in AddLootTableToNPC get coin query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return 0;
-	}
-
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT loottable_id, lootdrop_id, multiplier, probability FROM loottable_entries WHERE loottable_id=%i", loottable_id), errbuf, &result)) {
-		safe_delete_array(query);
-		loottable_array[loottable_id] = (LootTable_Struct*) new uchar[sizeof(LootTable_Struct) + (sizeof(LootTableEntries_Struct) * mysql_num_rows(result))];
-		loottable_inmem[loottable_id] = 1;
-		memset(loottable_array[loottable_id], 0, sizeof(LootTable_Struct) + (sizeof(LootTableEntries_Struct) * mysql_num_rows(result)));
-		loottable_array[loottable_id]->NumEntries = mysql_num_rows(result);
-		loottable_array[loottable_id]->mincash = tmpmincash;
-		loottable_array[loottable_id]->maxcash = tmpmaxcash;
-		loottable_array[loottable_id]->avgcoin = tmpavgcoin;
-		i=0;
-		while ((row = mysql_fetch_row(result))) {
-			if (i >= loottable_array[loottable_id]->NumEntries) {
-				mysql_free_result(result);
-				cerr << "Error in Database::GetLootTable, i >= NumEntries" << endl;
-				return 0;
-			}
-			loottable_array[loottable_id]->Entries[i].lootdrop_id = atoi(row[1]);
-			loottable_array[loottable_id]->Entries[i].multiplier = atoi(row[2]);
-			loottable_array[loottable_id]->Entries[i].probability = atoi(row[3]);
-			
-			if(loottable_array[loottable_id]->Entries[i].multiplier > NumEntries)
-				loottable_array[loottable_id]->Entries[i].multiplier = NumEntries;
-			i++;
-		}
-		mysql_free_result(result);
-	}
-	else {
-		cerr << "Error in AddLootTableToNPC get items query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return 0;
-	}
-	return loottable_array[loottable_id];
-#endif
 }
 
-const LootDrop_Struct* Database::GetLootDrop(int32 lootdrop_id) {
-#ifdef SHAREMEM
+const LootDrop_Struct* SharedDatabase::GetLootDrop(int32 lootdrop_id) {
 	return EMuShareMemDLL.Loot.GetLootDrop(lootdrop_id);
-#else
-	int32 i;
-	if (lootdrop_array == 0) {
-		lootdrop_array = new LootDrop_Struct*[lootdrop_max+1];
-		lootdrop_inmem = new bool[lootdrop_max+1];
-		for (i=0; i<=lootdrop_max; i++) {
-			lootdrop_array[i] = 0;
-			lootdrop_inmem[i] = false;
-		}
-	}
-	if (lootdrop_id > lootdrop_max || lootdrop_id == 0)
-		return 0;
-	if (lootdrop_inmem[lootdrop_id]) {
-		if (lootdrop_array[lootdrop_id])
-			return lootdrop_array[lootdrop_id];
-		else
-			return 0;
-	}
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT lootdrop_id, item_id, item_charges, equip_item, chance FROM lootdrop_entries WHERE lootdrop_id=%i order by chance desc", lootdrop_id), errbuf, &result)) {
-		safe_delete_array(query);
-		lootdrop_array[lootdrop_id] = (LootDrop_Struct*) new uchar[sizeof(LootDrop_Struct) + (sizeof(LootDropEntries_Struct) * mysql_num_rows(result))];
-		memset(lootdrop_array[lootdrop_id], 0, sizeof(LootDrop_Struct) + (sizeof(LootDropEntries_Struct) * mysql_num_rows(result)));
-		lootdrop_inmem[lootdrop_id] = true;
-		lootdrop_array[lootdrop_id]->NumEntries = mysql_num_rows(result);
-		i=0;
-		while ((row = mysql_fetch_row(result))) {
-			if (i >= lootdrop_array[lootdrop_id]->NumEntries) {
-				mysql_free_result(result);
-				cerr << "Error in Database::GetLootDrop, i >= NumEntries" << endl;
-				return 0;
-			}
-			lootdrop_array[lootdrop_id]->Entries[i].item_id = atoi(row[1]);
-			lootdrop_array[lootdrop_id]->Entries[i].item_charges = atoi(row[2]);
-			lootdrop_array[lootdrop_id]->Entries[i].equip_item = atoi(row[3]);
-			lootdrop_array[lootdrop_id]->Entries[i].chance = atoi(row[4]);
-			i++;
-		}
-		mysql_free_result(result);
-	}
-	else {
-		cerr << "Error in AddLootTableToNPC get items query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return 0;
-	}
-	return lootdrop_array[lootdrop_id];
-#endif
 }
 
 // Queries the loottable: adds item & coin to the npc
-void Database::AddLootTableToNPC(NPC* npc,int32 loottable_id, ItemList* itemlist, int32* copper, int32* silver, int32* gold, int32* plat) {
+void ZoneDatabase::AddLootTableToNPC(NPC* npc,int32 loottable_id, ItemList* itemlist, int32* copper, int32* silver, int32* gold, int32* plat) {
 	_ZP(Database_AddLootTableToNPC);
 //if (loottable_id == 178190)
 //DebugBreak();
@@ -464,7 +310,7 @@ void Database::AddLootTableToNPC(NPC* npc,int32 loottable_id, ItemList* itemlist
 
 // Called by AddLootTableToNPC
 // maxdrops = size of the array npcd
-void Database::AddLootDropToNPC(NPC* npc,int32 lootdrop_id, ItemList* itemlist) {
+void ZoneDatabase::AddLootDropToNPC(NPC* npc,int32 lootdrop_id, ItemList* itemlist) {
 	const LootDrop_Struct* lds = GetLootDrop(lootdrop_id);
 	if (!lds) {
 	 //   LogFile->write(EQEMuLog::Error, "Database Or Memory error GetLootDrop(%i) == 0, npc:%s", lootdrop_id, npc->GetName());
@@ -589,10 +435,10 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 		LogFile->write(EQEMuLog::Debug, "Adding drop to npc: %s, Item: %i", GetName(), item2->ID);
 #endif
 	
-	EQZonePacket* outapp = NULL;
+	EQApplicationPacket* outapp = NULL;
 	WearChange_Struct* wc = NULL;
 	if(wearchange) {
-		outapp = new EQZonePacket(OP_WearChange, sizeof(WearChange_Struct));
+		outapp = new EQApplicationPacket(OP_WearChange, sizeof(WearChange_Struct));
 		wc = (WearChange_Struct*)outapp->pBuffer;
 		wc->spawn_id = GetID();
 		wc->material=0;
@@ -614,7 +460,7 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 		
 		// @merth: IDFile size has been increased, this needs to change
 		uint8 emat;
-		if(item2->Common.Material <= 0
+		if(item2->Material <= 0
 			|| item2->Slots & (1 << SLOT_PRIMARY | 1 << SLOT_SECONDARY)) {
 			memset(newid, 0, sizeof(newid));
 			for(int i=0;i<7;i++){
@@ -625,23 +471,23 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 			}
 			emat = atoi(newid);
 		} else {
-			emat = item2->Common.Material;
+			emat = item2->Material;
 		}
 
 		if ((item2->Slots & (1 << SLOT_PRIMARY)) && (equipment[MATERIAL_PRIMARY]==0)) {
 			
 			d_meele_texture1 = atoi(newid);
-			if (item2->Common.Proc.Effect != 0)
-				CastToMob()->AddProcToWeapon(item2->Common.Proc.Effect, true);
+			if (item2->Proc.Effect != 0)
+				CastToMob()->AddProcToWeapon(item2->Proc.Effect, true);
 			
 			eslot = MATERIAL_PRIMARY;
 		}
 		else if (item2->Slots & (1 << SLOT_SECONDARY) && (equipment[MATERIAL_SECONDARY]==0) 
-			&& (GetOwner() != NULL || (GetLevel() >= 13 && MakeRandomInt(0,99) < NPC_DW_CHANCE) || (item2->Common.Damage==0)))
+			&& (GetOwner() != NULL || (GetLevel() >= 13 && MakeRandomInt(0,99) < NPC_DW_CHANCE) || (item2->Damage==0)))
 		{
 			d_meele_texture2 = atoi(newid);
-			if (item2->Common.Proc.Effect!=0)
-				CastToMob()->AddProcToWeapon(item2->Common.Proc.Effect, true);
+			if (item2->Proc.Effect!=0)
+				CastToMob()->AddProcToWeapon(item2->Proc.Effect, true);
 			
 			eslot = MATERIAL_SECONDARY;
 		}
@@ -673,13 +519,13 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 		if (((npc->GetRace()==127) && (npc->CastToMob()->GetOwnerID()!=0)) && (item2->Slots==24576) || (item2->Slots==8192) || (item2->Slots==16384)){
 			npc->d_meele_texture2=atoi(newid);
 			wc->wear_slot_id=8;
-			if (item2->Common.Material >0)
-				wc->material=item2->Common.Material;
+			if (item2->Material >0)
+				wc->material=item2->Material;
 			else
 				wc->material=atoi(newid);
-			npc->AC+=item2->Common.AC;
-			npc->STR+=item2->Common.STR;
-			npc->INT+=item2->Common.INT;
+			npc->AC+=item2->AC;
+			npc->STR+=item2->STR;
+			npc->INT+=item2->INT;
 		}
 		*/
 		
@@ -687,9 +533,9 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 		if(eslot != 0xFF) {
 			//equip it...
 			equipment[eslot] = item2->ID;
-			AC += item2->Common.AC;
-			STR += item2->Common.AStr;
-			INT += item2->Common.AInt;
+			AC += item2->AC;
+			STR += item2->AStr;
+			INT += item2->AInt;
 			
 			if(wearchange) {
 				wc->wear_slot_id = eslot;

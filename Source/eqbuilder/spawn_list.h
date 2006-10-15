@@ -21,6 +21,7 @@ public:
 	void add( cspawn* spawn );
 	cspawn* get( int pos );
 	int getsize() { return list.size(); }
+	void remove(cspawn *spawn);
 
 private:
 	vector<cspawn*> list;

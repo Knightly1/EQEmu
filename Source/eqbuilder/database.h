@@ -6,7 +6,7 @@
 #endif // _MSC_VER > 1000
 // database.h : header file
 //
-
+#pragma warning(disable:4786)
 #include <winsock.h>
 #include <mysql.h>
 #include <afxtempl.h>
@@ -32,9 +32,7 @@ typedef CArray<int,int&> IntArray;
 
 class merchant_list;
 class CEQBuilderDlg;
-
-/////////////////////////////////////////////////////////////////////////////
-// database window
+class IDGenSet;
 
 class database : public CWnd
 {
@@ -62,14 +60,16 @@ public:
 	void extractteleports( teleport_list* teleports, CString path, CString zonename, bool delquerryok );
 	void extractnpcs( npc_list* npcs, CString path, CString zonename, bool delquerryok, bool usedb );
 	void extractspawns( spawn_list* fspawns, spawn_list* gspawns, CString path, CString zonename, bool delquerryok );
-	void extractASpawn(cspawn *spawn, CString &zonename, CFile &f);
+	void extractASpawn( cspawn *spawn, CString &zonename, CFile &f);
 	void extractgrids( grid_list* grids, CString path, CString zonename, uint32 zone_id, bool delquerryok );
 	void extractmerchants( merchant_list* grids, CString path, CString zonename, bool delquerryok );
-	int getnpcid( cnpc* npc );
-	int getbestgroupid( IntArray* usedgroupids, IntArray* npcids );
+	void extractdeletes( CString path, CString zonename, bool delquerryok );
+	int FindNPCInDatabase( cnpc* npc );
+//	int getbestgroupid( IntArray* usedgroupids, IntArray* npcids );
 	int getclasse( CString classenom );
-	int getfreenpcid( int start, IntArray* usednpcids );
-	bool isnpcindb( int npcid );
+//	int getfreenpcid( int start, IntArray* usednpcids );
+//	bool isnpcindb( int npcid );
+	int load_value(const char *query);
 
 	void loadZone(int zoneid, CString zonename, CEQBuilderDlg *d);
 	void loadFactionMapping(const char *zonename, map<string, int> &mapping);
@@ -82,7 +82,7 @@ public:
 protected:
 	void runquery( CString query, MYSQL_RES** result, unsigned __int64* affected_rows, unsigned __int64* last_insert_id );
 	
-	int getNextSpawn2ID(int min);
+//	int getNextSpawn2ID(int min);
 	
 	int _merchantid;
 	int _spawn2id;

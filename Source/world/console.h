@@ -21,6 +21,7 @@
 #define CONSOLE_TIMEOUT 600000
 enum {
 	consoleLoginStatus = 50,	//ability to log in, basic commands.
+	httpLoginStatus = 100,		//can log into the HTTP interface
 	consoleFlagStatus = 200,	//flag
 	consoleKickStatus = 150,	//kick
 	consoleLockStatus = 150,	//world lock/unlock
@@ -38,13 +39,15 @@ enum {
 #include "../common/linked_list.h"
 #include "../common/timer.h"
 #include "../common/queue.h"
-#include "../common/TCPConnection.h"
+#include "../common/EmuTCPConnection.h"
 #include "WorldTCPConnection.h"
 #include "../common/Mutex.h"
 
+struct ServerChannelMessage_Struct;
+
 class Console : public WorldTCPConnection {
 public:
-	Console(TCPConnection* itcpc);
+	Console(EmuTCPConnection* itcpc);
 	virtual ~Console();
 	virtual inline bool IsConsole() { return true; }
 
@@ -67,9 +70,10 @@ public:
 	const char* AccountName() { return paccountname; }
 	int32 AccountID() { return paccountid; }
 private:
-	TCPConnection* tcpc;
+	EmuTCPConnection* tcpc;
 
-	Timer* timeout_timer;
+	Timer timeout_timer;
+	Timer prompt_timer;
 
 	void SendPrompt();
 

@@ -157,12 +157,20 @@ void Timer::Trigger()
 	start_time = current_time-timer_time-1;
 }
 
-const int32& Timer::GetCurrentTime()
+const int32 Timer::GetCurrentTime()
 {	
     return current_time;
 }
 
-const int32& Timer::SetCurrentTime()
+//just to keep all time related crap in one place... not really related to timers.
+const int32 Timer::GetTimeSeconds() {
+    struct timeval read_time;
+
+    gettimeofday(&read_time,0);
+    return(read_time.tv_sec);
+}
+
+const int32 Timer::SetCurrentTime()
 {
     struct timeval read_time;	
     int32 this_time;

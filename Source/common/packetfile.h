@@ -54,7 +54,9 @@ public:
 	void CloseFile();
 	
 	void WritePacket(uint16 eq_op, uint32 packlen, const unsigned char *packet, bool to_server, const struct timeval &tv);
-
+	
+	static bool SetPacketStamp(const char *file, uint32 stamp);
+	
 protected:
 	bool _WriteBlock(uint16 eq_op, const void *d, uint16 len, bool to_server, const struct timeval &tv);
 	

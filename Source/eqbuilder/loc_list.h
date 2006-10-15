@@ -14,6 +14,7 @@
 using namespace std;
 
 class cloc;
+class cspawnpoint;
 
 class loc_list  
 {
@@ -26,11 +27,28 @@ public:
 	cloc* get( int pos );
 	int getsize() { return list.size(); }
 	
-	void getcenter(cloc *center_into);
-	void get2Dradius(const cloc *center, float *radius_into);
-	
 private:
 	vector<cloc*> list;
+
+};
+
+
+class spawnpoint_list  
+{
+public:
+	spawnpoint_list();
+	spawnpoint_list( spawnpoint_list *list );
+	virtual ~spawnpoint_list();
+
+	void add( cspawnpoint* npc );
+	cspawnpoint* get( int pos );
+	int getsize() { return list.size(); }
+	
+	
+	void get2Dradius(const cloc *center, float *radius_into);
+	void getcenter(cloc *center_into);
+private:
+	vector<cspawnpoint *> list;
 
 };
 

@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /D "NDEBUG" /D "IRC" /D "WIN32" /D "i386" /D "WORLD" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /FD /c
+# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /I "..\common\SocketLib" /I "c:\Perl\lib\CORE" /D EQDEBUG=5 /D "NDEBUG" /D "IRC" /D "EMBPERL" /D "EMBPERL_PLUGIN" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D "_WIN32" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -52,7 +52,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo /o"../Build/World/World.bsc"
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/World.map" /debug /machine:I386 /nodefaultlib:"libc" /libpath:"c:\eqemu\lib" /libpath:"c:\mysql\lib\opt"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/World.map" /debug /machine:I386 /nodefaultlib:"libc" /libpath:"c:\eqemu\lib" /libpath:"c:\mysql\lib\opt" /libpath:"..\common\lib" /libpath:"c:\Perl\lib\CORE"
 # SUBTRACT LINK32 /pdb:none
 
 !ELSEIF  "$(CFG)" == "World - Win32 Debug"
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /Gm /GX /ZI /Od /I "c:\mysql\include" /I "c:\eqemu\include" /D "_DEBUG" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /Gm /GR /GX /ZI /Od /I "c:\mysql\include" /I "c:\eqemu\include" /I "..\common\SocketLib" /I "c:\Perl\lib\CORE" /D EQDEBUG=5 /D "_DEBUG" /D "EMBPERL" /D "EMBPERL_PLUGIN" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D "_WIN32" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -78,7 +78,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib mysqlclient.lib /nologo /subsystem:console /debug /machine:I386 /nodefaultlib:"LIBCMT" /nodefaultlib:"LIBC" /out:"../build/WorldDebug.exe" /pdbtype:sept /libpath:"c:\eqemu\lib" /libpath:"c:\mysql\lib\opt"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib mysqlclient.lib /nologo /subsystem:console /debug /machine:I386 /nodefaultlib:"LIBCMT" /nodefaultlib:"LIBC" /out:"../build/WorldDebug.exe" /pdbtype:sept /libpath:"c:\eqemu\lib" /libpath:"c:\mysql\lib\opt" /libpath:"..\common\lib" /libpath:"c:\Perl\lib\CORE"
 # SUBTRACT LINK32 /pdb:none /map
 
 !ELSEIF  "$(CFG)" == "World - Win32 Raid Addicts"
@@ -95,7 +95,8 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /D "NDEBUG" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /YX /FD /c
+# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /I "..\common\SocketLib" /I "c:\Perl\lib\CORE" /D "NDEBUG" /D EQDEBUG=5 /D "EMBPERL" /D "EMBPERL_PLUGIN" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D "_WIN32" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /FD /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -103,7 +104,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo /o"../Build/World/World.bsc"
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/World.map" /debug /machine:I386 /nodefaultlib:"libc" /libpath:"c:\eqemu\lib" /libpath:"c:\mysql\lib\opt"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib mysqlclient.lib /nologo /subsystem:console /map:"../Build/World.map" /debug /machine:I386 /nodefaultlib:"libc" /libpath:"c:\eqemu\lib" /libpath:"c:\mysql\lib\opt" /libpath:"..\common\lib" /libpath:"c:\Perl\lib\CORE"
 # SUBTRACT LINK32 /pdb:none
 
 !ENDIF 
@@ -122,7 +123,27 @@ SOURCE=.\client.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\cliententry.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\clientlist.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\console.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\EQLConfig.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\LauncherLink.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\LauncherList.cpp
 # End Source File
 # Begin Source File
 
@@ -131,6 +152,26 @@ SOURCE=.\LoginServer.cpp
 # Begin Source File
 
 SOURCE=.\net.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\perl_EQLConfig.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\world_logsys.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\WorldConfig.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\worlddb.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\zonelist.cpp
 # End Source File
 # Begin Source File
 
@@ -168,6 +209,14 @@ SOURCE=.\zoneserver.h
 # Begin Group "Common Source Files"
 
 # PROP Default_Filter "*.cpp"
+# Begin Source File
+
+SOURCE=..\common\SocketLib\Base64.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\BasePacket.cpp
+# End Source File
 # Begin Source File
 
 SOURCE=..\common\classes.cpp
@@ -225,19 +274,31 @@ SOURCE=..\common\EMuShareMem.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\EmuTCPConnection.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EmuTCPServer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\EQChatPacket.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\EQDB.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQDBRes.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQEmuConfig.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\EQEMuError.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\common\EQLoginPacket.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\common\EQMailPacket.cpp
 # End Source File
 # Begin Source File
 
@@ -253,15 +314,15 @@ SOURCE=..\common\EQStreamFactory.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\EQStreamIdent.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQStreamProxy.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\eqtime.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\common\EQWorldPacket.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\common\EQZonePacket.cpp
 # End Source File
 # Begin Source File
 
@@ -269,7 +330,31 @@ SOURCE=..\common\extprofile.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\SocketLib\File.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\guild_base.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\guilds.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\SocketLib\HttpdCookies.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\SocketLib\HttpdForm.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\SocketLib\HttpdSocket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\SocketLib\HTTPSocket.cpp
 # End Source File
 # Begin Source File
 
@@ -277,7 +362,19 @@ SOURCE=..\common\Item.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\logsys.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\md5.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\SocketLib\MemFile.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\SocketLib\Mime.cpp
 # End Source File
 # Begin Source File
 
@@ -313,6 +410,18 @@ SOURCE=..\common\packet_functions.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\SocketLib\Parse.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\perl_EQDB.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\perl_EQDBRes.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\races.cpp
 # End Source File
 # Begin Source File
@@ -321,11 +430,27 @@ SOURCE=..\common\serverinfo.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\shareddb.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\SharedLibrary.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\SocketLib\socket_include.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\StructStrategy.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\TCPConnection.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\TCPServer.cpp
 # End Source File
 # Begin Source File
 
@@ -334,6 +459,30 @@ SOURCE=..\common\timeoutmgr.cpp
 # Begin Source File
 
 SOURCE=..\common\timer.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\tinyxml\tinystr.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\tinyxml\tinyxml.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\tinyxml\tinyxmlerror.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\tinyxml\tinyxmlparser.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\SocketLib\Utility.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\XMLParser.cpp
 # End Source File
 # End Group
 # Begin Group "Common Header Files"
@@ -498,6 +647,110 @@ SOURCE=..\common\version.h
 # Begin Source File
 
 SOURCE=..\readme.txt
+# End Source File
+# End Group
+# Begin Group "HTTP"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\EQW.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\EQWHTTPHandler.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\EQWParser.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\HTTPRequest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\perl_EQW.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\perl_HTTPRequest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wguild_mgr.cpp
+# End Source File
+# End Group
+# Begin Group "Patches"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\common\patches\Live.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Client62.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Client62.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Client62_itemfields.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Client62_ops.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Client62_structs.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Live_itemfields.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\patches.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\patches.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\SSDeclare.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\SSDefine.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\SSRegister.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Titanium.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Titanium.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Titanium_itemfields.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Titanium_ops.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Titanium_structs.h
 # End Source File
 # End Group
 # End Target

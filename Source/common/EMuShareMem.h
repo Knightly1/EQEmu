@@ -1,3 +1,20 @@
+/*  EQEMu:  Everquest Server Emulator
+    Copyright (C) 2001-2006  EQEMu Development Team (http://eqemulator.net)
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+  
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY except by those people which sell it, which
+	are required to give you total support for your newly bought product;
+	without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+	A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+	
+	  You should have received a copy of the GNU General Public License
+	  along with this program; if not, write to the Free Software
+	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
 #ifndef EMuShareMem_H
 #define EMuShareMem_H
 #ifdef WIN32
@@ -15,16 +32,14 @@
 ///////////
 typedef bool(*CALLBACK_DBLoadItems)(sint32, int32);
 
-typedef bool(*DLLFUNC_DLLLoadItems)(const CALLBACK_DBLoadItems, int32, sint32*, int32*, int32*);
+typedef bool(*DLLFUNC_DLLLoadItems)(const CALLBACK_DBLoadItems, int32, sint32*, int32*);
 typedef const Item_Struct*(*DLLFUNC_GetItem)(uint32);
-typedef const unsigned char *(*DLLFUNC_GetItemSerialization)(uint32);
 typedef const Item_Struct*(*DLLFUNC_IterateItems)(uint32*);
-typedef bool(*DLLFUNC_AddItem)(int32, const Item_Struct*, const unsigned char *);
+typedef bool(*DLLFUNC_AddItem)(int32, const Item_Struct*);
 
 struct ItemsDLLFunc_Struct {
 	DLLFUNC_DLLLoadItems DLLLoadItems;
 	DLLFUNC_GetItem GetItem;
-	DLLFUNC_GetItemSerialization GetItemSerialization;
 	DLLFUNC_IterateItems IterateItems;
 	DLLFUNC_AddItem cbAddItem;
 };
@@ -121,22 +136,6 @@ struct OpcodeDLLFunc_Struct {
 	DLLFUNC_ClearEQOpcodes ClearEQOpcodes;
 };
 
-////////////////
-// GuildList ///
-////////////////
-typedef bool(*CALLBACK_DBLoadGuildList)();
-
-typedef bool(*DLLFUNC_DLLLoadGuildList)(const CALLBACK_DBLoadGuildList, int32);
-typedef const char*(*DLLFUNC_GetGuild)(int32);
-typedef uint32(*DLLFUNC_GetMaxGuildID)();
-typedef bool(*DLLFUNC_AddGuild)(int32, const char*);
-struct GuildListDLLFunc_Struct {
-	DLLFUNC_DLLLoadGuildList DLLLoadGuildList;
-	DLLFUNC_GetGuild GetGuild;
-	DLLFUNC_GetMaxGuildID GetMaxGuildID;
-	DLLFUNC_AddGuild cbAddGuild;
-};
-
 
 class LoadEMuShareMemDLL : public SharedLibrary {
 public:
@@ -153,10 +152,11 @@ public:
 	NPCFactionListDLLFunc_Struct	NPCFactionList;
 	LootDLLFunc_Struct				Loot;
 	OpcodeDLLFunc_Struct			Opcodes;
-	GuildListDLLFunc_Struct			GuildList;
 private:
 	void ClearFunc();
-
+	
+	bool loaded;
+	
 #ifdef WIN32
 #else
 	static int32  refCount;

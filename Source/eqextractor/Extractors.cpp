@@ -3,11 +3,12 @@
 EQ Extractor, by Father Nitwit 2005
 
 */
-#include "Extractors.h"
-//#include "../common/MiscFunctions.h"
-//#include "ExtractDB.h"
-#include <netinet/in.h>
-//#include <mysql.h>
+//#include "Extractors.h"	//do not include this
+
+//DO NOT INCLUDE ANY HEADERS HERE, put them in versions.h
+
+using namespace std;
+using namespace EQExtractor;
 
 /*
 
@@ -22,286 +23,83 @@ More things to extract:
 
 */
 
-#ifdef USE_CURRENT_STRUCTS
-#include "../common/eq_packet_structs.h"
-#else
-
-#pragma pack(1)
-struct Door_Struct
-{
-/*0000*/ char    name[16];            // Filename of Door // Was 10char long before... added the 6 in the next unknown to it: Daeken M. BlackBlade
-/*0016*/ char    unknown0016[16];
-/*0032*/ float   yPos;               // y loc
-/*0036*/ float   xPos;               // x loc
-/*0040*/ float   zPos;               // z loc
-/*0044*/ float	 heading;
-/*0048*/ int32   incline;	// rotates the whole door
-/*0052*/ int16   size;			// 100 is normal, smaller number = smaller model
-/*0054*/ int8    unknown0038[6];
-/*0060*/ uint8   doorId;             // door's id #
-/*0061*/ uint8   opentype;
-/*
- *  Open types:
- * 66 = PORT1414 (Qeynos)
- * 55 = BBBOARD (Qeynos)
- * 100 = QEYLAMP (Qeynos)
- * 56 = CHEST1 (Qeynos)
- * 5 = DOOR1 (Qeynos)
- */
-/*0062*/ uint8  state_at_spawn;
-/*0063*/ uint8  invert_state;	// if this is 1, the door is normally open
-/*0064*/ int32  door_param;
-/*0068*/ uint8  unknown0052[12]; // mostly 0s, the last 3 bytes are something tho
-/*0080*/
-};
-
-
-struct AA_Ability {
-/*00*/	int32 skill_id;
-/*04*/	int32 increase_amt;
-/*08*/	int32 unknown08;
-/*12*/	int32 last_level;
-};
-struct SendAA_Struct {
-/*0000*/	int32 id;
-/*0004*/	int32 hotkey_sid;
-/*0008*/	int32 hotkey_sid2;
-/*0012*/	int32 title_sid;
-/*0016*/	int32 desc_sid;
-/*0020*/	int32 class_type;
-/*0024*/	int32 cost;
-/*0028*/	int32 seq;
-/*0032*/	int32 current_level; //1s
-/*0036*/	int32 prereq_skill;
-/*0040*/	int32 prereq_minpoints; //min points in the prereq
-/*0044*/	int32 type;
-/*0048*/	int32 spellid;
-/*0052*/	int32 spell_type;
-/*0056*/	int32 spell_refresh;
-/*0060*/	int16 classes;
-/*0062*/	int16 berserker; //seems to be 1 if its a berserker ability
-/*0064*/	int32 max_level;
-/*0068*/	int32 last_id;
-/*0072*/	int32 next_id;
-/*0076*/	int32 cost2;
-/*0080*/	int32 unknown80[2]; //0s
-/*0084*/	int32 total_abilities;
-/*0088*/	AA_Ability abilities[0];
-};
-
-struct NewZone_Struct {
-/*0000*/	char	char_name[64];			// Character Name
-/*0064*/	char	zone_short_name[32];	// Zone Short Name
-/*0096*/	char	zone_long_name[278];	// Zone Long Name
-/*0374*/	uint8	ztype;					// Zone type (usually FF)
-/*0375*/	uint8	fog_red[4];				// Zone fog (red)
-/*0379*/	uint8	fog_green[4];			// Zone fog (green)
-/*0383*/	uint8	fog_blue[4];			// Zone fog (blue)
-/*0387*/	uint8	unknown323;
-/*0388*/	float	fog_minclip[4];
-/*0404*/	float	fog_maxclip[4];
-/*0420*/	float	walkspeed;
-/*0424*/	int8	time_type;
-/*0425*/	uint8	unknown360[49];
-/*0474*/	uint8	sky;					// Sky Type
-/*0475*/	uint8	unknown331[13];			// ***Placeholder
-/*0488*/	float	zone_exp_multiplier;	// Experience Multiplier
-/*0492*/	float	safe_x;					// Zone Safe X (Not Inversed)
-/*0496*/	float	safe_y;					// Zone Safe Y (Not Inversed)
-/*0500*/	float	safe_z;					// Zone Safe Z
-/*0504*/	float	unknown440;			// ***Placeholder
-/*0508*/	float	underworld;				// Underworld (Not Sure?)
-/*0512*/	float	minclip;				// Minimum View Distance
-/*0516*/	float	maxclip;				// Maximum View DIstance
-/*0520*/	int8	unknown_end[84];		// ***Placeholder
-/*0604*/	char	zone_short_name2[68];
-/*0672*/	char	unknown672[12];
-/*0684*/	uint16	zone_id;
-/*0686*/	uint16	zone_instance;
-};
-
-struct Object_Struct {
-/*00*/	uint32	linked_list_addr[2];// <Zaphod> They are, get this, prev and next, ala linked list
-/*08*/	uint16	unknown008[2];		//
-/*12*/	uint32	drop_id;			// Unique object id for zone
-/*16*/	uint16	zone_id;			// Redudant, but: Zone the object appears in
-/*18*/	uint16	zone_instance;		//
-/*20*/	uint32	unknown020[2];		//
-/*28*/	float	heading;			// heading
-/*32*/	float	z;					// z coord
-/*36*/	float	y;					// y coord
-/*40*/	float	x;					// x coord
-/*44*/	char	object_name[16];	// Name of object, usually something like IT63_ACTORDEF
-/*60*/	uint32	unknown060[5];		//
-/*80*/	uint32	object_type;		// Type of object, not directly translated to OP_OpenObject
-/*84*/	uint32	unknown084[1];		//
-/*88*/	uint32	spawn_id;			// Spawn Id of client interacting with object
-/*92*/
-};
-
-struct ZonePoint_Entry {
-/*0000*/	int32	iterator;
-/*0004*/	float	y;
-/*0008*/	float	x;
-/*0012*/	float	z;
-/*0016*/	float	heading;
-/*0020*/	int16	zoneid;
-/*0022*/	int16	zoneinstance; // LDoN instance
-};
-
-#define MAX_TRIBUTE_TIERS 10
-struct TributeLevel_Struct {
-   uint32	level;	//backwards byte order!
-   int32	tribute_item_id;	//backwards byte order!
-   int32	cost;	//backwards byte order!
-};
-
-struct TributeAbility_Struct {
-	int32	tribute_id;	//backwards byte order!
-	int32	unknown;	//backwards byte order!
-	TributeLevel_Struct tiers[MAX_TRIBUTE_TIERS];
-	char	name[0];
-};
-
-struct SelectTributeReply_Struct {
-   int32	client_id;	//echoed from request.
-   uint32	tribute_id;
-   char	desc[0];
-};
-
-struct BookText_Struct {
-	uint8 unknown0; //always 0xFF
-	uint8 type;             //type: 0=scroll, 1=book.. prolly others.
-	char booktext[0]; // Variable Length
-};
-
-struct TitleEntry_Struct {
-	uint32 skill_id;
-	uint32 skill_value;
-	char title[0];
-};
-
-struct Titles_Struct {
-	uint32  title_count;
-//logically, but not valid due to dynamic lengths
-//	TitleEntry_Struct titles[0];
-};
-
-
-struct TaskHistoryEntry_Struct {
-	uint32	task_id;
-	char	name[0];
-	uint32	completed_time;
-};
-struct TaskHistory_Struct {
-	uint32 completed_count;
-	TaskHistoryEntry_Struct entries[0];
-};
-
-struct Color_Struct{
-	union {
-		struct {
-			int8	blue;
-			int8	green;
-			int8	red;
-			uint8	use_tint;	// if there's a tint this is FF
-		} rgb;
-		uint32 color;
-	};
-};
-
-struct Spawn_Struct
-{
-/*000*/	int8	npc;	// 0=player,1=npc,2=pc corpse,3=npc corpse,4=???,5=unknown spawn,10=self
-/*001*/	int8	beard;			// vesuvias - appearance fix
-/*002*/	int8	beardcolor;			// Player right eye color
-/*003*/	int8	aa_title; // 0=none, 1=general, 2=archtype, 3=class
-/*004*/	Color_Struct	dye_rgb[7]; 			// armor dye colors
-/*032*/ int8	unknown032[11];
-/*043*/ int8	class_; //class
-/*044*/ int8	unknown044[2]; // *** Placeholder 
-/*046*/ int8	cur_hp; //current hp
-/*047*/	int8	afk; // 0=not afk, 1=afk
-union {
-/*048*/	int8	equip_chest2;// Second place in packet for chest texture (usually 0xFF in live packets)
-// Not sure why there are 2 of them, but it effects chest texture!
-/*048*/	int8	mount_color;// drogmor: 0=white, 1=black, 2=green, 3=red
-// horse: 0=brown, 1=white, 2=black, 3=tan
-};
-/*049*/ int32	race; // race 
-/*053*/ int8	eyecolor1;	// vesuvias
-/*054*/ char	name[64]; // name 
-/*118*/ int8	eyecolor2;	// vesuvias
-/*119*/ int8	face;
-/*120*/ int8	invis; // 0=visible,1=invisible 
-/*121*/ int8	max_hp; // max hp 
-/*122*/ int8	unknown122; // 0=Not pvp,1=pvp  solar: this is wrong
-/*123*/ int8	level; 
-/*124*/ int8	lfg; // 0=Not lfg,1=lfg 
-/*125*/ int32	heading:12; // spawn heading 
-/*****/ int32	delta_heading:10; // change in heading 
-/*****/ int32	animation:10; // animation id 
-/*129*/ sint32	deltaX:13; 
-/*****/ sint32	x:19; 
-/*133*/ sint32	y:19; 
-/*****/ sint32	deltaZ:13; 
-/*137*/ sint32	deltaY:13; 
-/*****/ sint32	z:19; 
-/*141*/ int8	hairstyle;	// vesuvias
-/*142*/ int8	haircolor;
-/*143*/ int8	invis2;		//not sure...
-/*144*/ int8	unknown144[5];
-/*149*/ int8	pvp;	//according to Wiz --verified (LE)
-/*150*/ int8	light;
-/*151*/ float	size; // Size 
-/*155*/ int8	helm; 
-/*156*/ float	runspeed; // 
-/*160*/ int8	gm; // 0=not GM,1=GM 
-/*161*/ float	walkspeed; // 
-/*165*/ int32	guild_id; // GuildID 
-/*169*/ int8	anon; // 0=normal,1=anon,2=roleplaying 
-/*170*/ int8	gender; // 0=male,1=female,2=other 
-/*171*/ int16	spawn_id; // Id of spawn 
-/*173*/ int8	unknown173[3]; 
-/*176*/ char	last_name[32]; // lastname 
-/*208*/ int32	equipment[9]; 
-/*244*/ int8	linkdead; // 0=Not LD, 1=LD 
-/*245*/ uint32	bodytype; // Bodytype 
-/*249*/	int8	guild_rank;
-/*250*/ int8	unknown249[4]; 
-/*254*/ uint32	pet_owner_id; 
-/*258*/ int16	deity; 
-/*260*/ int8	unknown260[6];
-/*266*/ int8	findable;	//can be found with find command.
-/*268*/ int8	unknown267[40];
-/*308*/ char	title[48];	//len might be wrong
-/*355*/ int8	unknown355[16];
-/*371*/ int8	unknown367[8];	//all 
-/*379*/
-};
-
-
-#pragma pack()
-
-#endif
-
-ZoneInfoExtractor::ZoneInfoExtractor()
-: ExtractBase() {
+ZoneInfoExtractor::ZoneInfoExtractor(const char *filename)
+: ExtractCollector(OP_GroundSpawn, "FAKE") {
+	if(filename != NULL) {
+		file_name = filename;
+		catalog_enabled = true;
+	} else {
+		catalog_enabled = false;
+	}
 	zone_id = 0xFFFF;
 }
 
-void ZoneInfoExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) {
-	if(emu_op != OP_NewZone)
-		return;
-	if(len != sizeof(NewZone_Struct)) {
-		printf("Size of newzone struct is invalid! Cannot get zone info.\n");
+void ZoneInfoExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
+#ifdef NO_ZONE_ID_IN_NEWZONE
+	if(emu_op == OP_GroundSpawn && len == sizeof(Object_Struct)) {
+		Object_Struct *i = (Object_Struct *) data;
+		zone_id = i->zone_id & 0xFFFF;
+		fprintf(stderr, "# Found a ground spawn containing the zone ID (%d), ignore the previous warning.\n", zone_id);
 		return;
 	}
-	NewZone_Struct *i = (NewZone_Struct *) data;
-	zone_id = i->zone_id;
-	short_name = i->zone_short_name;
-	long_name = i->zone_long_name;
-//	fprintf(stderr, "Found zone info: %s (%s=%s) (%d, %d)\n", long_name.c_str(), short_name.c_str(), i->zone_short_name2, zone_id, i->zone_instance);
+#endif
+	if(emu_op == OP_NewZone) {
+		if(len != sizeof(NewZone_Struct)) {
+			printf("Size of newzone struct (%d) is invalid! (wanted %d) Cannot get zone info.\n", len, sizeof(NewZone_Struct));
+			return;
+		}
+		NewZone_Struct *i = (NewZone_Struct *) data;
+		short_name = i->zone_short_name;
+		long_name = i->zone_long_name;
+#ifndef NO_ZONE_ID_IN_NEWZONE
+		zone_id = i->zone_id;
+		fprintf(stderr, "# Found zone info: %s (%s=%s) (id# %d, instance %d)\n", long_name.c_str(), short_name.c_str(), i->zone_short_name2, zone_id, i->zone_instance);
+#else
+		zone_id = 9999;
+		fprintf(stderr, "# Found zone info: %s (%s=%s)\n", long_name.c_str(), short_name.c_str(), i->zone_short_name2);
+		fprintf(stderr, "# WARNING: Using old collect which is missing zone id, you need to replace 9999 with the zone id for '%s'\n", short_name.c_str());
+#endif
+		if(catalog_enabled)
+			printf("Log %s contains zone '%s'\n", file_name.c_str(), i->zone_short_name);
+	}
+}
+
+SpawnListExtractor::SpawnListExtractor()
+: ExtractCollector(OP_SpawnAppearance, "FAKE") {
+}
+
+void SpawnListExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
+	if(emu_op == OP_SpawnAppearance && len == sizeof(SpawnAppearance_Struct)) {
+		SpawnAppearance_Struct* sa = (SpawnAppearance_Struct*) data;
+		if(sa->type != AT_SpawnID)
+			return;
+		printf("# Spawn Appearance says my spawn ID is %d (net %02x %02x)\n",
+			sa->parameter, sa->parameter&0xFF, (sa->parameter&0xFF00)>>8);
+		return;
+	}
+	
+	if(emu_op != OP_ZoneSpawns && emu_op != OP_NewSpawn && emu_op != OP_ZoneEntry)
+		return;
+	
+	if(len < sizeof(Spawn_Struct)) {
+		if(len != sizeof(ServerZoneEntry_Struct))
+			printf("Size of spawn struct (%d) is invalid (want %d)! Cannot explore this spawn list.\n", len, sizeof(Spawn_Struct));
+		return;
+	}
+	
+	uint32 used = 0;
+	while(used < len) {
+		Spawn_Struct *i = (Spawn_Struct *) (data + used);
+		
+		printf("%04d(%02x %02x): %s %s (class %d, race %d, level %d) (%.2f,%.2f,%.2f)\n",
+			i->spawnId, i->spawnId&0xFF, (i->spawnId&0xFF00)>>8,
+			i->name, i->lastName, 
+			i->class_, i->race, i->level,
+			EQ19toFloat(i->x), EQ19toFloat(i->y), EQ19toFloat(i->z)
+			);
+		
+		used += sizeof(Spawn_Struct);
+	}
 }
 
 
@@ -324,9 +122,38 @@ DoorExtractor::DoorExtractor(ZoneInfoExtractor *zi)
 	fields[DoorItem::door_param] = FieldInfo("door_param","", false, OnMissingOmit, vIntUnsigned);
 	fields[DoorItem::incline] = FieldInfo("incline","", false, OnMissingOmit, vIntUnsigned);
 	fields[DoorItem::size] = FieldInfo("size","", false, OnMissingOmit, vIntUnsigned);
+	fields[DoorItem::dest_zone] = FieldInfo("dest_zone","", false, OnMissingOmit, vIntUnsigned);
+	fields[DoorItem::dest_x] = FieldInfo("dest_x","", false, OnMissingOmit, vFloat);
+	fields[DoorItem::dest_y] = FieldInfo("dest_y","", false, OnMissingOmit, vFloat);
+	fields[DoorItem::dest_z] = FieldInfo("dest_z","", false, OnMissingOmit, vFloat);
+	fields[DoorItem::dest_heading] = FieldInfo("dest_heading","", false, OnMissingOmit, vFloat);
 }
 	
-void DoorExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) {
+void DoorExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
+	if(emu_op == OP_SendZonepoints) {
+		//we have to hack out zone points to try to get in-zone warp destinations
+		uint32 count = *((uint32 *) data);
+		len -= sizeof(uint32);
+		data += sizeof(uint32);
+		
+		ZonePoint_Entry *i = (ZonePoint_Entry *) data;
+		zone_point p;
+		while(count > 0) {
+			p.x = i->x;
+			p.y = i->y;
+			p.z = i->z;
+			p.h = i->heading;
+			p.dest_zone = i->zoneid;
+			
+			m_zonePoints[i->iterator] = p;
+			
+			i++;
+			count--;
+		}
+		
+		return;
+	}
+	
 	if(emu_op != my_op)
 		return;
 	uint32 count = len / sizeof(Door_Struct);
@@ -344,7 +171,9 @@ uint32 DoorExtractor::DoorItem::FromPacket(unsigned char *packet, uint32 len) {
 	Door_Struct *i = (Door_Struct *) packet;
 	
 	data[doorid] = ultoa(i->doorId + 1);	//door Id must always be > 0
-	data[zone] = zone_info->GetShortName();
+	string zs = zone_info->GetShortName();
+	transform(zs.begin(), zs.end(), zs.begin(), tolower);
+	data[zone] = zs;
 	data[name] = i->name;
 	data[pos_x] = ftoa(i->xPos);
 	data[pos_y] = ftoa(i->yPos);
@@ -358,6 +187,49 @@ uint32 DoorExtractor::DoorItem::FromPacket(unsigned char *packet, uint32 len) {
 	
 	return(sizeof(Door_Struct));
 }
+
+void DoorExtractor::GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item) {
+	DoorItem *door_item = (DoorItem *) item;
+	door_item->LookupDest(m_zonePoints);
+	ExtractCollector::GenerateAnInsert(into, make_replaces, was_update, item);
+}
+
+void DoorExtractor::GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *item) {
+	DoorItem *door_item = (DoorItem *) item;
+	door_item->LookupDest(m_zonePoints);
+	ExtractCollector::GenerateAnUpdate(into, db, item);
+}
+
+void DoorExtractor::GenerateAText(FILE *into, ExtractorDB *db, ExtractItem *item) {
+	DoorItem *door_item = (DoorItem *) item;
+	door_item->LookupDest(m_zonePoints);
+	ExtractCollector::GenerateAText(into, db, item);
+}
+
+void DoorExtractor::DoorItem::LookupDest(map<uint32, zone_point> &zonePoints) {
+	map<uint16, string>::iterator tgt;
+	//see if we have a door_param
+	tgt = data.find(door_param);
+	if(tgt == data.end())
+		return;
+	
+	uint32 param = atoi(tgt->second.c_str());
+	
+	//see if we have a zone_point for this value of door_param
+	map<uint32, zone_point>::iterator res = zonePoints.find(param);
+	if(res == zonePoints.end())
+		return;
+	
+	const zone_point &zp = res->second;
+	
+	//we have one
+	data[dest_zone] = itoa(zp.dest_zone);
+	data[dest_x] = ftoa(zp.x);
+	data[dest_y] = ftoa(zp.y);
+	data[dest_z] = ftoa(zp.z);
+	data[dest_heading] = ftoa(zp.h);
+}
+
 
 FuzzyDoorExtractor::FuzzyDoorExtractor(ZoneInfoExtractor *zi)
 : DoorExtractor(zi) {
@@ -416,29 +288,32 @@ AAExtractor::AAExtractor()
 : ExtractCollector(OP_SendAATable, "altadv_vars")
 {
 	//fill out the field list
-	fields[AAItem::aaid] = FieldInfo("skill_id","", true, OnMissingError);
-	fields[AAItem::hotkey_sid] = FieldInfo("hotkey_sid","", false, OnMissingOmit);
-	fields[AAItem::hotkey_sid2] = FieldInfo("hotkey_sid2","", false, OnMissingOmit);
-	fields[AAItem::title_sid] = FieldInfo("title_sid","", false, OnMissingOmit);
-	fields[AAItem::desc_sid] = FieldInfo("desc_sid","", false, OnMissingOmit);
-	fields[AAItem::cost] = FieldInfo("cost","", false, OnMissingOmit);
-	fields[AAItem::prereq_skill] = FieldInfo("prereq_skill","", false, OnMissingOmit);
-	fields[AAItem::prereq_minpoints] = FieldInfo("prereq_minpoints","", false, OnMissingOmit);
-	fields[AAItem::type] = FieldInfo("type","", false, OnMissingOmit);
-	fields[AAItem::spellid] = FieldInfo("spellid","", false, OnMissingOmit);
-	fields[AAItem::spell_type] = FieldInfo("spell_type","", false, OnMissingOmit);
-	fields[AAItem::spell_refresh] = FieldInfo("spell_refresh","", false, OnMissingOmit);
-	fields[AAItem::classes] = FieldInfo("classes","", false, OnMissingOmit);
-	fields[AAItem::berserker] = FieldInfo("berserker","", false, OnMissingOmit);
-	fields[AAItem::max_level] = FieldInfo("max_level","", false, OnMissingOmit);
-	fields[AAItem::name] = FieldInfo("name","", false, OnMissingUseDefault);
+	fields[AAItem::aaid] = FieldInfo("skill_id","", true, OnMissingError, vInt);
+	fields[AAItem::hotkey_sid] = FieldInfo("hotkey_sid","", false, OnMissingOmit, vIntUnsigned);
+	fields[AAItem::hotkey_sid2] = FieldInfo("hotkey_sid2","", false, OnMissingOmit, vIntUnsigned);
+	fields[AAItem::title_sid] = FieldInfo("title_sid","", false, OnMissingOmit, vIntUnsigned);
+	fields[AAItem::desc_sid] = FieldInfo("desc_sid","", false, OnMissingOmit, vIntUnsigned);
+	fields[AAItem::class_type] = FieldInfo("class_type","", false, OnMissingError, vIntUnsigned);
+	fields[AAItem::cost] = FieldInfo("cost","", false, OnMissingOmit, vInt);
+	fields[AAItem::prereq_skill] = FieldInfo("prereq_skill","", false, OnMissingOmit, vIntUnsigned);
+	fields[AAItem::prereq_minpoints] = FieldInfo("prereq_minpoints","", false, OnMissingOmit, vIntUnsigned);
+	fields[AAItem::type] = FieldInfo("type","", false, OnMissingOmit, vInt);
+	fields[AAItem::spellid] = FieldInfo("spellid","", false, OnMissingOmit, vIntUnsigned);
+	fields[AAItem::spell_type] = FieldInfo("spell_type","", false, OnMissingOmit, vInt);
+	fields[AAItem::spell_refresh] = FieldInfo("spell_refresh","", false, OnMissingOmit, vInt);
+	fields[AAItem::classes] = FieldInfo("classes","", false, OnMissingOmit, vIntUnsigned);
+	fields[AAItem::berserker] = FieldInfo("berserker","", false, OnMissingOmit, vIntUnsigned);
+	fields[AAItem::max_level] = FieldInfo("max_level","", false, OnMissingOmit, vInt);
+	//	fields[AAItem::name] = FieldInfo("name","", false, OnMissingUseDefault, vString);
 }
 
-void AAExtractor::GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item) {
-	ExtractCollector::GenerateAnInsert(into, make_replaces, item);
-	//assume item is really an AAItem
-	AAItem *aai = (AAItem *) item;
-	aai->abilities.GenerateInserts(into, make_replaces);
+void AAExtractor::GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item) {
+	ExtractCollector::GenerateAnInsert(into, make_replaces, was_update, item);
+	if(!was_update) {
+		//assume item is really an AAItem
+		AAItem *aai = (AAItem *) item;
+		aai->abilities.GenerateInserts(into, make_replaces);
+	}
 }
 
 void AAExtractor::GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *item) {
@@ -457,7 +332,7 @@ void AAExtractor::GenerateAText(FILE *into, ExtractorDB *db, ExtractItem *item) 
 
 uint32 AAExtractor::AAItem::FromPacket(unsigned char *packet, uint32 len) {
 	if(len < sizeof(SendAA_Struct)) {
-		printf("Packet of length %d is too short to be an AA packet (len %d)\n", len, sizeof(SendAA_Struct));
+		printf("# Packet of length %d is too short to be an AA packet (len %d)\n", len, sizeof(SendAA_Struct));
 		return(0);
 	}
 	SendAA_Struct *i = (SendAA_Struct *) packet;
@@ -467,6 +342,7 @@ uint32 AAExtractor::AAItem::FromPacket(unsigned char *packet, uint32 len) {
 	data[hotkey_sid2] = ultoa(i->hotkey_sid2);
 	data[title_sid] = ultoa(i->title_sid);
 	data[desc_sid] = ultoa(i->desc_sid);
+	data[class_type] = ultoa(i->class_type);
 	data[prereq_skill] = ultoa(i->prereq_skill);
 	data[prereq_minpoints] = ultoa(i->prereq_minpoints);
 	data[type] = ultoa(i->type);
@@ -476,6 +352,7 @@ uint32 AAExtractor::AAItem::FromPacket(unsigned char *packet, uint32 len) {
 	data[classes] = ultoa(i->classes);
 	data[berserker] = ultoa(i->berserker);
 	data[max_level] = ultoa(i->max_level);
+	data[cost] = ultoa(i->cost);
 	
 	//Pull out the dynamic length set of abilities using another extractor
 	abilities.SetAAID(i->id);
@@ -491,11 +368,11 @@ AAExtractor::AAAbilityExtractor::AAAbilityExtractor()
 	aa_id = 0;
 	
 	//fill out the field list
-	fields[AAAbilityItem::aa_id] = FieldInfo("aa_id","", true, OnMissingError);
-	fields[AAAbilityItem::ability] = FieldInfo("ability","", true, OnMissingError);
-	fields[AAAbilityItem::increase_amt] = FieldInfo("increase_amt","", false, OnMissingOmit);
-	fields[AAAbilityItem::last_level] = FieldInfo("last_level","", false, OnMissingOmit);
-	fields[AAAbilityItem::unknown08] = FieldInfo("unknown08","", false, OnMissingOmit);
+	fields[AAAbilityItem::aa_id] = FieldInfo("aa_id","", true, OnMissingError, vInt);
+	fields[AAAbilityItem::ability] = FieldInfo("ability","", false, OnMissingError, vInt);
+	fields[AAAbilityItem::increase_amt] = FieldInfo("increase_amt","", false, OnMissingOmit, vIntUnsigned);
+	fields[AAAbilityItem::last_level] = FieldInfo("level","", true, OnMissingOmit, vIntUnsigned);
+	fields[AAAbilityItem::unknown08] = FieldInfo("unknown08","", false, OnMissingOmit, vIntUnsigned);
 	
 }
 
@@ -565,14 +442,15 @@ uint32 ObjectExtractor::ObjectItem::FromPacket(unsigned char *packet, uint32 len
 	data[object_type] = ultoa(i->object_type);
 	data[unknown08] = ultoa(i->unknown008[0]);
 	data[unknown10] = ultoa(i->unknown008[1]);
-	data[unknown20] = ultoa(i->unknown020[0]);
-	data[unknown24] = ultoa(i->unknown020[1]);
-	data[unknown60] = ultoa(i->unknown060[0]);
-	data[unknown64] = ultoa(i->unknown060[1]);
-	data[unknown68] = ultoa(i->unknown060[2]);
-	data[unknown72] = ultoa(i->unknown060[3]);
-	data[unknown76] = ultoa(i->unknown060[4]);
-	data[unknown84] = ultoa(i->unknown084[0]);
+	data[unknown20] = ultoa(i->unknown020);
+	data[unknown24] = ultoa(i->unknown024);
+	//bullshit for now until I convert the DB fields from ints to floats
+	data[unknown60] = ultoa(*((uint32 *)&i->unknown064));
+	data[unknown64] = ultoa(*((uint32 *)&i->unknown068));
+	data[unknown68] = ultoa(*((uint32 *)&i->unknown072));
+	data[unknown72] = ultoa(i->unknown076);
+//	data[unknown76] = ultoa(i->unknown060);
+	data[unknown84] = ultoa(i->unknown084);
 //	data[unknown88] = ultoa(i->spawn_id);	//spawn id, dosent go in the db
 	
 	return(sizeof(Object_Struct));
@@ -623,19 +501,20 @@ void FuzzyObjectExtractor::GenerateClauses(string &field_names, string &where_cl
 }
 
 
-ZoneHeaderExtractor::ZoneHeaderExtractor()
+ZoneHeaderExtractor::ZoneHeaderExtractor(ZoneInfoExtractor *zi)
 : ExtractCollector(OP_NewZone, "zone")
 {
-//TODO: we need the zone ID number in here!!
+	zone_info = zi;
+	
 	//fill out the field list
 	fields[ZoneHeaderItem::zone_short_name] = FieldInfo("short_name","", true, OnMissingError);
 	fields[ZoneHeaderItem::zone_long_name] = FieldInfo("long_name","", false, OnMissingOmit);
 	fields[ZoneHeaderItem::ztype] = FieldInfo("ztype","", false, OnMissingOmit);
-	fields[ZoneHeaderItem::fog_red1] = FieldInfo("fog_red1","", false, OnMissingOmit, vInt);
-	fields[ZoneHeaderItem::fog_green1] = FieldInfo("fog_green1","", false, OnMissingOmit, vInt);
-	fields[ZoneHeaderItem::fog_blue1] = FieldInfo("fog_blue1","", false, OnMissingOmit, vInt);
-	fields[ZoneHeaderItem::fog_minclip1] = FieldInfo("fog_minclip1","", false, OnMissingOmit, vFloat);
-	fields[ZoneHeaderItem::fog_maxclip1] = FieldInfo("fog_maxclip1","", false, OnMissingOmit, vFloat);
+	fields[ZoneHeaderItem::fog_red1] = FieldInfo("fog_red","", false, OnMissingOmit, vInt);
+	fields[ZoneHeaderItem::fog_green1] = FieldInfo("fog_green","", false, OnMissingOmit, vInt);
+	fields[ZoneHeaderItem::fog_blue1] = FieldInfo("fog_blue","", false, OnMissingOmit, vInt);
+	fields[ZoneHeaderItem::fog_minclip1] = FieldInfo("fog_minclip","", false, OnMissingOmit, vFloat);
+	fields[ZoneHeaderItem::fog_maxclip1] = FieldInfo("fog_maxclip","", false, OnMissingOmit, vFloat);
 	fields[ZoneHeaderItem::fog_red2] = FieldInfo("fog_red2","", false, OnMissingOmit, vInt);
 	fields[ZoneHeaderItem::fog_green2] = FieldInfo("fog_green2","", false, OnMissingOmit, vInt);
 	fields[ZoneHeaderItem::fog_blue2] = FieldInfo("fog_blue2","", false, OnMissingOmit, vInt);
@@ -683,7 +562,7 @@ uint32 ZoneHeaderExtractor::ZoneHeaderItem::FromPacket(unsigned char *packet, ui
 	data[zone_short_name] = i->zone_short_name;
 	data[zone_long_name] = i->zone_long_name;
 	data[ztype] = itoa(i->ztype);
-	data[zone_id] = itoa(i->zone_id);
+	data[zone_id] = itoa(zone_info->GetZoneID());	//not all NewZone structs had this in it
 	
 	data[fog_red1] = itoa(i->fog_red[0]);
 	data[fog_green1] = itoa(i->fog_green[0]);
@@ -705,8 +584,9 @@ uint32 ZoneHeaderExtractor::ZoneHeaderItem::FromPacket(unsigned char *packet, ui
 	data[fog_blue4] = itoa(i->fog_blue[3]);
 	data[fog_minclip4] = ftoa(i->fog_minclip[3]);
 	data[fog_maxclip4] = ftoa(i->fog_maxclip[3]);
-	
-	data[walkspeed] = ftoa(walkspeed);
+
+//missing in current structs	
+//	data[walkspeed] = ftoa(walkspeed);
 	data[time_type] = itoa(i->time_type);
 	data[sky] = itoa(i->sky);
 	data[zone_exp_multiplier] = ftoa(i->zone_exp_multiplier);
@@ -716,6 +596,8 @@ uint32 ZoneHeaderExtractor::ZoneHeaderItem::FromPacket(unsigned char *packet, ui
 	data[underworld] = ftoa(i->underworld);
 	data[minclip] = ftoa(i->minclip);
 	data[maxclip] = ftoa(i->maxclip);
+//not in DB right now:
+	//i->gravity
 	
 	return(sizeof(NewZone_Struct));
 }
@@ -728,17 +610,17 @@ ZonePointExtractor::ZonePointExtractor(ZoneInfoExtractor *zi)
 	//fill out the field list
 	fields[ZonePointItem::iterator] = FieldInfo("number","", true, OnMissingError, vInt);
 	fields[ZonePointItem::zone_short] = FieldInfo("zone","", true, OnMissingError, vString);
-	fields[ZonePointItem::x] = FieldInfo("x","", false, OnMissingOmit, vFloat);
-	fields[ZonePointItem::y] = FieldInfo("y","", false, OnMissingOmit, vFloat);
-	fields[ZonePointItem::z] = FieldInfo("z","", false, OnMissingOmit, vFloat);
-	fields[ZonePointItem::heading] = FieldInfo("heading","", false, OnMissingOmit, vFloat);
+	fields[ZonePointItem::target_x] = FieldInfo("target_x","", false, OnMissingOmit, vFloat);
+	fields[ZonePointItem::target_y] = FieldInfo("target_y","", false, OnMissingOmit, vFloat);
+	fields[ZonePointItem::target_z] = FieldInfo("target_z","", false, OnMissingOmit, vFloat);
+	fields[ZonePointItem::target_heading] = FieldInfo("target_heading","", false, OnMissingOmit, vFloat);
 	fields[ZonePointItem::target_zone] = FieldInfo("target_zone_id","", false, OnMissingOmit, vInt);
 	
 	//fields which we are ignoring in the DB (cause they dont pertain to packets):
 	//target_x, target_y, target_z, target_heading, keep_x, keep_y
 }
 	
-void ZonePointExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) {
+void ZonePointExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
 	if(emu_op != my_op)
 		return;
 	uint32 count = *((uint32 *) data);
@@ -755,12 +637,15 @@ uint32 ZonePointExtractor::ZonePointItem::FromPacket(unsigned char *packet, uint
 	ZonePoint_Entry *i = (ZonePoint_Entry *) packet;
 	
 	data[iterator] = ultoa(i->iterator);
-	data[x] = ftoa(i->x);
-	data[y] = ftoa(i->y);
-	data[z] = ftoa(i->z);
-	data[heading] = ftoa(i->heading);
+	data[target_x] = ftoa(i->x);
+	data[target_y] = ftoa(i->y);
+	data[target_z] = ftoa(i->z);
+	data[target_heading] = ftoa(i->heading);
 	data[target_zone] = itoa(i->zoneid);
-	data[zone_short] = zone_info->GetShortName();
+	
+	string zs = zone_info->GetShortName();
+	transform(zs.begin(), zs.end(), zs.begin(), tolower);
+	data[zone_short] = zs;
 	
 	return(sizeof(ZonePoint_Entry));
 }
@@ -771,12 +656,12 @@ TributeExtractor::TributeExtractor()
 	//fill out the field list
 	fields[TributeItem::tribute_id] = FieldInfo("id","", true, OnMissingError, vInt);
 	fields[TributeItem::isguild] = FieldInfo("isguild","", true, OnMissingOmit, vInt);
-	fields[TributeItem::unknown] = FieldInfo("unknown","", false, OnMissingOmit, vInt);
+	fields[TributeItem::tier_count] = FieldInfo("unknown","", false, OnMissingOmit, vInt);
 	fields[TributeItem::name] = FieldInfo("name","", false, OnMissingOmit, vString);
 }
 
 //we have to watch two different opcodes.
-void TributeExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) {
+void TributeExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
 	if(emu_op != OP_TributeInfo && emu_op != OP_GuildTributeInfo)
 		return;	//not interested
 	ExtractItem *item = NewItem();
@@ -793,11 +678,13 @@ void TributeExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 
 	collected.push_back(item);
 }
 
-void TributeExtractor::GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item) {
-	ExtractCollector::GenerateAnInsert(into, make_replaces, item);
-	//assume item is really a TributeItem
-	TributeItem *ti = (TributeItem *) item;
-	ti->abilities.GenerateInserts(into, make_replaces);
+void TributeExtractor::GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item) {
+	ExtractCollector::GenerateAnInsert(into, make_replaces, was_update, item);
+	if(!was_update) {
+		//assume item is really a TributeItem
+		TributeItem *ti = (TributeItem *) item;
+		ti->abilities.GenerateInserts(into, make_replaces);
+	}
 }
 
 void TributeExtractor::GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *item) {
@@ -823,10 +710,10 @@ uint32 TributeExtractor::TributeItem::FromPacket(unsigned char *packet, uint32 l
 	
 	//stupid backwards byte order
 	i->tribute_id = ntohl(i->tribute_id);
-	i->unknown = ntohl(i->unknown);
+	i->tier_count = ntohl(i->tier_count);
 	
 	data[tribute_id] = ultoa(i->tribute_id);
-	data[unknown] = ultoa(i->unknown);
+	data[tier_count] = ultoa(i->tier_count);
 	data[name] = i->name;
 	
 	//Pull out the dynamic length set of abilities using another extractor
@@ -954,7 +841,7 @@ TitleExtractor::TitleExtractor()
 	fields[TitleItem::title] = FieldInfo("title","", true, OnMissingOmit, vString);
 }
 
-void TitleExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) {
+void TitleExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
 	if(emu_op != my_op)
 		return;
 	
@@ -973,7 +860,7 @@ uint32 TitleExtractor::TitleItem::FromPacket(unsigned char *packet, uint32 len) 
 	data[skill_value] = itoa(i->skill_value);
 	data[title] = i->title;
 	
-	return(sizeof(TitleEntry_Struct) + strlen(i->title) + 1);
+	return(sizeof(TitleEntry_Struct) + strlen(i->title));
 }
 
 /*
@@ -992,7 +879,7 @@ RecipeExtractor::RecipeExtractor()
 }
 
 /*//
-void RecipeExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) {
+void RecipeExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
 	if(emu_op != OP_RecipeReply && emu_op != OP_GuildRecipeInfo)
 		return;	//not interested
 	ExtractItem *item = NewItem();
@@ -1003,11 +890,13 @@ void RecipeExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 l
 	collected.push_back(item);
 }*/
 
-void RecipeExtractor::GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item) {
-	ExtractCollector::GenerateAnInsert(into, make_replaces, item);
-	//assume item is really a RecipeItem
-	RecipeItem *ti = (RecipeItem *) item;
-	ti->items.GenerateInserts(into, make_replaces);
+void RecipeExtractor::GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item) {
+	ExtractCollector::GenerateAnInsert(into, make_replaces, was_update, item);
+	if(!was_update) {
+		//assume item is really a RecipeItem
+		RecipeItem *ti = (RecipeItem *) item;
+		ti->items.GenerateInserts(into, make_replaces);
+	}
 }
 
 void RecipeExtractor::GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *item) {
@@ -1104,7 +993,7 @@ TaskExtractor::TaskExtractor()
 }
 
 //we have to watch two different opcodes.
-void TaskExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) {
+void TaskExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
 	if(emu_op != OP_TaskInfo && emu_op != OP_GuildTaskInfo)
 		return;	//not interested
 	ExtractItem *item = NewItem();
@@ -1121,7 +1010,7 @@ void TaskExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len
 	collected.push_back(item);
 }
 
-void TaskExtractor::GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item) {
+void TaskExtractor::GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item) {
 	ExtractCollector::GenerateAnInsert(into, make_replaces, item);
 	//assume item is really a TaskItem
 	TaskItem *ti = (TaskItem *) item;
@@ -1214,7 +1103,7 @@ TaskHistoryExtractor::TaskHistoryExtractor()
 	fields[TaskHistoryItem::task_name] = FieldInfo("task_name","", false, OnMissingOmit, vString);
 }
 
-void TaskHistoryExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) {
+void TaskHistoryExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
 	if(emu_op != my_op)
 		return;
 	
@@ -1232,13 +1121,30 @@ uint32 TaskHistoryExtractor::TaskHistoryItem::FromPacket(unsigned char *packet, 
 	data[task_id] = itoa(i->task_id);
 	data[task_name] = i->name;
 	
-	return(sizeof(TaskHistoryEntry_Struct) + strlen(i->name) + 1);
+	return(sizeof(TaskHistoryEntry_Struct) + strlen(i->name));
 }
+
+/*
+
+	Things we can extract from spawns:
+	- npc_types data.
+	- Movement
+	- Merchant conents.
+	  - Including 'diffing' them to find normal stock.
+	- Loot Items (need to split by tables, and set drop rate)
+	- Min and Max damage
+	- Spells Cast (need to classify type)
+	- Text said (and in reply to what)
+	- Handins (and rewards)
+
+*/
 
 SpawnExtractor::SpawnExtractor(ZoneInfoExtractor *zi)
 : ExtractCollector(OP_ZoneSpawns, "npc_types")
 {
 	zone_info = zi;
+	
+	max_id = 0;
 	
 	//fill out the field list
 	//the primary key on this is not the true primary key due to fuzzy matching
@@ -1251,9 +1157,9 @@ SpawnExtractor::SpawnExtractor(ZoneInfoExtractor *zi)
 	fields[SpawnItem::size] = FieldInfo("size","", false, OnMissingOmit, vFloat);
 	fields[SpawnItem::bodytype] = FieldInfo("bodytype","", false, OnMissingOmit, vInt);
 	fields[SpawnItem::beardcolor] = FieldInfo("luclin_beardcolor","", false, OnMissingOmit, vInt);
-//	fields[SpawnItem::beard] = FieldInfo("luclin_beard","", false, OnMissingOmit, vInt);
+	fields[SpawnItem::beard] = FieldInfo("luclin_beard","", false, OnMissingOmit, vInt);
 	fields[SpawnItem::eyecolor1] = FieldInfo("luclin_eyecolor","", false, OnMissingOmit, vInt);
-//	fields[SpawnItem::eyecolor2] = FieldInfo("luclin_eyecolor2","", false, OnMissingOmit, vInt);
+	fields[SpawnItem::eyecolor2] = FieldInfo("luclin_eyecolor2","", false, OnMissingOmit, vInt);
 	fields[SpawnItem::face] = FieldInfo("face","", false, OnMissingOmit, vInt);
 	fields[SpawnItem::hairstyle] = FieldInfo("luclin_hairstyle","", false, OnMissingOmit, vInt);
 	fields[SpawnItem::haircolor] = FieldInfo("luclin_haircolor","", false, OnMissingOmit, vInt);
@@ -1265,15 +1171,18 @@ SpawnExtractor::SpawnExtractor(ZoneInfoExtractor *zi)
 	fields[SpawnItem::id] = FieldInfo("id","", false, OnMissingOmit, vInt);
 }
 	
-void SpawnExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) {
-	if(emu_op == OP_ZoneSpawns) {
+void SpawnExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
+	switch(emu_op) {
+	case OP_ZoneSpawns: {
 		//bulk spawn packet
 		uint32 count = len / sizeof(Spawn_Struct);
 		if(count*sizeof(Spawn_Struct) != len) {
 			printf("Warning: Spawn packet is length %d which is not a multiple of the Spawn size %d\n", len, sizeof(Spawn_Struct));
 		}
 		SplitPacket(count, data, len);
-	} else if(emu_op == OP_NewSpawn) {
+	}
+	break;
+	case OP_NewSpawn: {
 		//a single spawn packet.
 		ExtractItem *item = NewItem();
 		if(item->FromPacket(data, len) == 0) {
@@ -1281,8 +1190,32 @@ void SpawnExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 le
 			return;
 		}
 		collected.push_back(item);
-	} else if(emu_op == OP_ClientUpdate) {
-		PlayerPositionUpdateServer_Struct *spu = (PlayerPositionUpdateServer_Struct *) data;
+	}
+	break;
+	case OP_ShopRequest: {
+		if(!to_server || len != sizeof(Merchant_Click_Struct))
+			return;
+		
+//		Merchant_Click_Struct *mcs = (Merchant_Click_Struct *) data;
+		//merchant id: mcs->npcid;
+	}
+	break;
+	case OP_ItemPacket: {
+		if(to_server || len < sizeof(ItemPacket_Struct))
+			return;
+		
+		ItemPacket_Struct *i = (ItemPacket_Struct *) data;
+		if(i->PacketType != ItemPacketMerchant)
+			return;
+		//merchant id: mcs->npcid;
+	}
+	break;
+	case OP_ClientUpdate: {
+		if(len != sizeof(PlayerPositionUpdateServer_Struct))
+			return;
+		
+/*		PlayerPositionUpdateServer_Struct *spu = 
+(PlayerPositionUpdateServer_Struct *) data;
 		map<uint16, SpawnItem *>::iterator sii = spawns.find(spu->spawn_id);
 		if(sii == spawns.end())
 			return;	//spawn not found.
@@ -1298,16 +1231,49 @@ void SpawnExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 le
 		p.dz = EQ13toFloat(spu->delta_z);
 		p.dh = EQ13toFloat(spu->delta_heading);
 		si->positions.push_back(p);
+*/
+	}
+	break;
+	default:
+		break;
 	}
 }
 
-void SpawnExtractor::GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item) {
+void SpawnExtractor::GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *itemo) {
+	SpawnItem *item = (SpawnItem *) itemo;
+	
 	//get and NPC ID for this guy
-	item->spawn_id = GetNextNPCID();
-	item->data[SpawnItem::id] = ultoa(item->spawn_id);
-	ExtractCollector::GenerateAnInsert(into, make_replaces, item);
+	item->npc_id = GetNextNPCID(NULL);
+	item->data[SpawnItem::id] = ultoa(item->npc_id);
+	ExtractCollector::GenerateAnInsert(into, make_replaces, was_update, item);
 	
 	item->GenerateSpawnInserts();
+}
+
+void SpawnExtractor::GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *itemo) {
+//	SpawnItem *item = (SpawnItem *) itemo;
+	
+//	item->LearnNPCID();
+}
+
+void SpawnExtractor::RegisterSpawnID(uint16 spawn_id, SpawnItem *si) {
+	spawns[spawn_id] = si;
+}
+
+uint32 SpawnExtractor::GetNextNPCID(ExtractorDB *db) {
+	if(max_id == 0) {
+		//needs to query the max spawn ID based on this zone
+		int zoneid = zone_info->GetZoneID();
+		
+		if(db == NULL) {
+			max_id = zoneid * 1000;
+		} else {
+			//"SELECT max(id) FROM npc_types WHERE id >= %d AND id < %d",
+			// zoneid*1000, zoneid*1000+1000
+			//max_id = atoi(row[0]) + 1;
+		}
+	}
+	return(max_id++);
 }
 
 void SpawnExtractor::SpawnItem::GenerateSpawnInserts() {
@@ -1327,7 +1293,7 @@ void SpawnExtractor::SpawnItem::GenerateSpawnInserts() {
 	if(cur == end)	//no still point found, use initial position
 		cur = positions.begin();
 	
-	PathPoint &spawn_point = *cur;
+//	PathPoint &spawn_point = *cur;
 
 	//spit up the spawn2, spawn group, spawn entry
 }
@@ -1339,8 +1305,14 @@ uint32 SpawnExtractor::SpawnItem::FromPacket(unsigned char *packet, uint32 len) 
 	}
 	Spawn_Struct *i = (Spawn_Struct *) packet;
 	
+	bool we_care = true;
 	
-	if(i->npc != 1 || i->pet_owner_id != 0 || i->name[0] == '\0') {
+	spawn_id = i->spawnId;
+	if(i->NPC != 1 || i->petOwnerId != 0 || i->name[0] == '\0')
+		we_care = false;
+	
+	if(!we_care)
+	{
 		//printf("# %s - %s is of type %d with owner %d\n", i->name, i->last_name, i->npc, i->pet_owner_id);
 		//consume the struct even though we dont want it
 		valid = false;
@@ -1365,25 +1337,38 @@ uint32 SpawnExtractor::SpawnItem::FromPacket(unsigned char *packet, uint32 len) 
 	}
 	
 	data[name] = i->name;
-	data[last_name] = i->last_name;
 	data[level] = itoa(i->level);
 	data[race] = itoa(i->race);
 	data[class_] = itoa(i->class_);
 	data[gender] = itoa(i->gender);
 	data[bodytype] = itoa(i->bodytype);
 	data[beardcolor] = itoa(i->beardcolor);
-//	data[beard] = itoa(i->beard);
+	data[beard] = itoa(i->beard);		//no place in DB for this
 	data[eyecolor1] = itoa(i->eyecolor1);
-//	data[eyecolor2] = itoa(i->eyecolor2);
+	data[eyecolor2] = itoa(i->eyecolor2);	//no place in DB for this
 	data[face] = itoa(i->face);
 	data[hairstyle] = itoa(i->hairstyle);
 	data[haircolor] = itoa(i->haircolor);
 	data[size] = ftoa(i->size);
 	data[findable] = itoa(i->findable);
 	data[equip_chest2] = itoa(i->equip_chest2);
-	data[helm] = itoa(i->helm);
+	data[helm] = itoa(i->helm == 255? 0 : i->helm);
 	data[runspeed] = ftoa(i->runspeed);
 	data[walkspeed] = ftoa(i->walkspeed);
+	data[last_name] = i->lastName;
+
+#ifdef SPAWN_DEBUG_MODE
+	//printf("Name: '%s'\n", i->name);
+	//printf("	beardcolor	= 0x%02x\n", i->beardcolor);
+	//printf("	beard 		= 0x%02x\n", i->beard);
+	//printf("	eyecolor1	= 0x%02x\n", i->eyecolor1);
+	//printf("	eyecolor2	= 0x%02x\n", i->eyecolor2);
+	//printf("	face		= 0x%02x\n", i->face);
+	//printf("	hairstyle	= 0x%02x\n", i->hairstyle);
+	//printf("	haircolor	= 0x%02x\n", i->haircolor);
+	//printf("	texture		= 0x%02x\n", i->texture);
+	//printf("	helm		= 0x%02x\n", i->helm);
+#endif
 	
 	//record initial position
 	PathPoint p;
@@ -1391,24 +1376,71 @@ uint32 SpawnExtractor::SpawnItem::FromPacket(unsigned char *packet, uint32 len) 
 	p.y = EQ19toFloat(i->y);
 	p.z = EQ19toFloat(i->z);
 	p.h = EQ19toFloat(i->heading);
-	p.dx = EQ13toFloat(i->delta_x);
-	p.dy = EQ13toFloat(i->delta_y);
-	p.dz = EQ13toFloat(i->delta_z);
-	p.dh = EQ13toFloat(i->delta_heading);
+	p.dx = NewEQ13toFloat(i->deltaX);
+	p.dy = NewEQ13toFloat(i->deltaY);
+	p.dz = NewEQ13toFloat(i->deltaZ);
+	p.dh = EQ13toFloat(i->deltaHeading);
 	positions.push_back(p);
 	
-	parent->RegisterSpawnID(i->spawn_id, this);
+	parent->RegisterSpawnID(spawn_id, this);
 	
 	return(sizeof(Spawn_Struct));
 }
 
 
+CharacterExtractor::CharacterExtractor(uint32 char_id, ZoneInfoExtractor *zi)
+: ExtractCollector(OP_PlayerProfile, "character_"),
+  charid(char_id)
+{
+	zone_info = zi;
+	memset(&m_pp, 0, sizeof(m_pp));
+	got_it = false;
+}
+	
+void CharacterExtractor::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
+	if(emu_op == OP_PlayerProfile) {
+		if(len != sizeof(m_pp)) {
+			printf("# size mismatch on OP_PlayerProfile (want %d, got %d), not extracting.\n", sizeof(m_pp), len);
+			return;
+		}
+		got_it = true;
+		memcpy(&m_pp, data, sizeof(m_pp));
+	}
+}
+
+void CharacterExtractor::GenerateInserts(FILE *into, bool make_replaces) {
+	if(!got_it)
+		return;
+	
+	fprintf(into, "# Insert mode player profile not currently supported\n");
+}
+
+void CharacterExtractor::GenerateUpdates(FILE *into, ExtractorDB *db) {
+	if(!got_it)
+		return;
+	
+	char *query = new char[376 + sizeof(PlayerProfile_Struct)*2];
+	char* end = query;
+
+	end += sprintf(end, "UPDATE character_ SET timelaston=unix_timestamp(now()),"
+						"name=\'%s\', x = %f, y = %f, z = %f, profile=\'", 
+				m_pp.name, 
+				m_pp.x, m_pp.y, m_pp.z);
+	end += db->DoEscapeString(end, (char*)&m_pp, sizeof(PlayerProfile_Struct));
+	end += sprintf(end,"\',class=%d,level=%d WHERE id=%u\n", m_pp.class_, m_pp.level, 
+		charid);
 
 
+	fprintf(into, query);
+	delete[] query;
+}
 
-
-
-
+void CharacterExtractor::GenerateTexts(FILE *into, ExtractorDB *db) {
+	if(!got_it)
+		return;
+	
+	fprintf(into, "# Text mode player profile not currently supported\n");
+}
 
 
 

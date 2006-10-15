@@ -67,6 +67,7 @@
 #ifdef WIN32
 	// VS6 doesn't like the length of STL generated names: disabling
 	#pragma warning(disable:4786)
+	#pragma warning(disable:4996)
 #endif
 
 #ifndef EQDEBUG_H
@@ -76,6 +77,7 @@
 	#define DebugBreak()			if(0) {}
 #endif
 
+#define _WINSOCKAPI_	//stupid windows, trying to fix the winsock2 vs. winsock issues
 #if defined(WIN32) && ( defined(PACKETCOLLECTOR) || defined(COLLECTOR) )
 	// Packet Collector on win32 requires winsock.h due to latest pcap.h
 	// winsock.h must come before windows.h
@@ -84,8 +86,10 @@
 
 #ifdef WIN32
 	#include <windows.h>
+	#include <winsock2.h>
 #endif
 
+#include "logsys.h"
 #include "common_profile.h"
 #ifdef ZONE
 #include "../zone/zone_profile.h"
@@ -114,14 +118,18 @@ public:
 	//these are callbacks called for each
 	typedef void (* msgCallbackBuf)(LogIDs id, const char *buf, int8 size, int32 count);
 	typedef void (* msgCallbackFmt)(LogIDs id, const char *fmt, va_list ap);
+	typedef void (* msgCallbackPva)(LogIDs id, const char *prefix, const char *fmt, va_list ap);
 	
 	void SetAllCallbacks(msgCallbackFmt proc);
 	void SetAllCallbacks(msgCallbackBuf proc);
+	void SetAllCallbacks(msgCallbackPva proc);
 	void SetCallback(LogIDs id, msgCallbackFmt proc);
 	void SetCallback(LogIDs id, msgCallbackBuf proc);
+	void SetCallback(LogIDs id, msgCallbackPva proc);
 	
 	bool writebuf(LogIDs id, const char *buf, int8 size, int32 count);
 	bool write(LogIDs id, const char *fmt, ...);
+	bool writePVA(LogIDs id, const char *prefix, const char *fmt, va_list args);
 	bool Dump(LogIDs id, int8* data, int32 size, int32 cols=16, int32 skip=0);
 private:
 	bool open(LogIDs id);
@@ -140,6 +148,7 @@ private:
 	
 	msgCallbackFmt logCallbackFmt[MaxLogID];
 	msgCallbackBuf logCallbackBuf[MaxLogID];
+	msgCallbackPva logCallbackPva[MaxLogID];
 };
 
 extern EQEMuLog* LogFile;

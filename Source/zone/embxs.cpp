@@ -17,17 +17,14 @@
 */
 #ifdef EMBPERL 
 
-#ifdef WIN32
-#include <windows.h>
-#endif
-
+#include "../common/debug.h"
 #include "masterentity.h"
 #include "command.h"
 
 #include "embperl.h"
 #include "embxs.h" 
 
-extern Database database; 
+ 
 
 const char *getItemName(unsigned itemid) 
 { 

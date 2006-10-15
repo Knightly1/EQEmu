@@ -15,13 +15,6 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-/*
-create table guilds (id int(11) primary key auto_increment, eqid smallint(4) not null unique, name varchar(32) not null unique, leader int(11) not null unique, 
-motd text not null, rank0title varchar(100) not null, rank1title varchar(100) not null, rank1 char(8) not null, rank2title varchar(100) not null, rank2 char(8) not null, 
-rank3title varchar(100) not null, rank3 char(8) not null, rank4title varchar(100) not null, rank4 char(8) not null, rank5title varchar(100) not null, rank5 char(8) not null);
-
-alter table character_ add column (guild int(11) default 0, guildrank tinyint(2) unsigned default 5);
-*/
 
 #ifndef GUILD_H
 #define GUILD_H
@@ -31,34 +24,23 @@ alter table character_ add column (guild int(11) default 0, guildrank tinyint(2)
 #define GUILD_NONE		0xFFFFFFFF // user has no guild
 
 #define GUILD_MAX_RANK  2   // 0-2 - some places in the code assume a single digit, dont go above 9
+
+//defines for standard ranks
 #define GUILD_MEMBER	0
+#define GUILD_OFFICER	1
+#define GUILD_LEADER	2
+#define GUILD_RANK_NONE (GUILD_MAX_RANK+1)
 
-#define GUILD_HEAR		0
-#define GUILD_SPEAK		1
-#define GUILD_INVITE	2
-#define GUILD_REMOVE	3
-#define GUILD_PROMOTE	4
-#define GUILD_DEMOTE	5
-#define GUILD_MOTD		6
-#define GUILD_WARPEACE	7
+typedef enum {
+	GUILD_HEAR		= 0,
+	GUILD_SPEAK		= 1,
+	GUILD_INVITE	= 2,
+	GUILD_REMOVE	= 3,
+	GUILD_PROMOTE	= 4,
+	GUILD_DEMOTE	= 5,
+	GUILD_MOTD		= 6,
+	GUILD_WARPEACE	= 7,
+	_MaxGuildAction
+} GuildAction;
 
-struct GuildRankLevel_Struct {
-	char rankname[101];
-	bool heargu;
-	bool speakgu;
-	bool invite;
-	bool remove;
-	bool promote;
-	bool demote;
-	bool motd;
-	bool warpeace;
-};
-
-struct GuildRanks_Struct {
-	char name[32];
-	int32 databaseID;
-	int32 leader;  // AccountID of leader
-	sint16 minstatus;	// minium status to use GM commands on this guild
-	GuildRankLevel_Struct rank[GUILD_MAX_RANK+1];
-};
 #endif

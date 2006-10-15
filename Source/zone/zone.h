@@ -27,7 +27,7 @@
 #include "../common/servertalk.h"
 #include "features.h"
 #include "spawngroup.h"
-#include "mob.h"
+//#include "mob.h"
 #include "zonedump.h"
 #include "spawn2.h"
 
@@ -60,6 +60,7 @@ struct ZoneClientAuth_Struct {
 extern EntityList entity_list;
 class database;
 class PathManager;
+struct SendAA_Struct;
 
 class database;
 
@@ -69,19 +70,17 @@ public:
 	static bool Zone::Bootup(int32 iZoneID, bool iStaticZone = false);
 	static void Zone::Shutdown(bool quite = false);
 	
-	Zone(int32 in_zoneid, const char* in_short_name, const char* in_address, int16 in_port);
+	Zone(int32 in_zoneid, const char* in_short_name);
 	~Zone();
 	bool	Init(bool iStaticZone);
 	bool	LoadZoneCFG(const char* filename, bool DontLoadDefault = false);
 	bool	SaveZoneCFG();
 	bool	IsLoaded();
 	bool	IsPVPZone() { return pvpzone; }
-	inline const char*	GetAddress()	{ return address; }
 	inline const char*	GetLongName()	{ return long_name; }
 	inline const char*	GetFileName()	{ return file_name; }
 	inline const char*	GetShortName()	{ return short_name; }
-	inline const int32&	GetZoneID()		{ return zoneid; }
-	inline const int16&	GetPort()		{ return port; }
+	inline const int32	GetZoneID() const { return zoneid; }
 
 	inline const float&	safe_x()		{ return psafe_x; }
 	inline const float&	safe_y()		{ return psafe_y; }
@@ -90,11 +89,13 @@ public:
 
 	void	LoadAAs();
 	int		GetTotalAAs() { return totalAAs; }
-	AA_List* GetAAList() { return aas; }
+//	AA_List* GetAAList() { return aas; }
+	SendAA_Struct* GetAABySequence(int32 seq) { return aas[seq]; }
 	SendAA_Struct* FindAA(int32 id);
 	void	LoadZoneDoors(const char* zone);
 	bool	LoadZoneObjects();
 	bool	LoadGroundSpawns();
+	void	ReloadStaticData();
 	
 	int32	CountSpawn2();
 	ZonePoint* GetClosestZonePoint(float x, float y, float z, const char* to_name, float max_distance = 40000.0f);
@@ -112,6 +113,9 @@ public:
 	bool	Depop();
 	void	Repop(int32 delay = 0);
 	void	SpawnStatus(Mob* client);
+	void	ShowEnabledSpawnStatus(Mob* client);
+	void    ShowDisabledSpawnStatus(Mob* client);
+	void    ShowSpawnStatusByID(Mob* client, uint32 spawnid);
 	void	StartShutdownTimer(int32 set_time = ZONE_AUTOSHUTDOWN_DELAY);
 	void	AddAuth(ServerZoneIncommingClient_Struct* szic);
 	void	RemoveAuth(const char* iCharName);
@@ -156,17 +160,19 @@ public:
 
 	void	weatherProc();
 	void	weatherSend();
+	bool	CanBind() const { return(can_bind); }
+	
 	time_t	weather_timer;
 	int8	weather_type;
-
+	
 	int8 loglevelvar;
 	int8 merchantvar;
 	int8 tradevar;
 	int8 lootvar;
 
-	double   GetGroupEXPBonus() { return GroupEXPBonus; } 
-	double   GetEXPMod()        { return EXPMod; } 
-	double   GetAAXPMod()      { return AAXPMod; } 
+	float   GetGroupEXPBonus() const { return GroupEXPBonus; } 
+	float   GetEXPMod()  const { return EXPMod; } 
+	float   GetAAXPMod() const { return AAXPMod; } 
 
 #ifdef GUILDWARS
 	LinkedList<Spawn2*> spawn2_list; // CODER new spawn list
@@ -175,19 +181,21 @@ public:
 	LinkedList<ZonePoint*> zone_point_list;
 //	LinkedList<Object*> object_list;
 	int32	numzonepoints;
+	
+	
 private:
 	int32	zoneid;
 	char*	short_name;
 	char	file_name[16];
 	char*	long_name;
-	char*	address;
-	int		totalAAs;
-	AA_List* aas;
-	uchar*	aa_buffer;
-	int16	port;
 	bool pvpzone;
 	float	psafe_x, psafe_y, psafe_z;
 	int32	pMaxClients;
+	bool	can_bind;
+	
+	int		totalAAs;
+	SendAA_Struct **aas;	//array of AA structs
+//	uchar*	aa_buffer;
 	
 	/*
 		Spawn related things
@@ -200,9 +208,9 @@ private:
 	
 	
 	
-	double  GroupEXPBonus; 
-	double  EXPMod; 
-	double  AAXPMod;
+	float  GroupEXPBonus;
+	float  EXPMod;
+	float  AAXPMod;
 
 	bool	staticzone;
 	bool	gottime;

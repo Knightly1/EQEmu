@@ -24,7 +24,7 @@
 #include "../common/queue.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/Mutex.h"
-#include "../common/TCPConnection.h"
+#include "../common/EmuTCPConnection.h"
 
 #ifdef WIN32
 	void AutoInitLoginServer(void *tmp);
@@ -42,19 +42,20 @@ public:
 	bool Connect(const char* iAddress = 0, int16 iPort = 0);
 
 	void SendInfo();
+	void SendNewInfo();
 	void SendStatus();
 
 	void SendPacket(ServerPacket* pack) { tcpc->SendPacket(pack); }
-	int8 GetState() { return tcpc->GetState(); }
+	bool ConnectReady() { return tcpc->ConnectReady(); }
 	bool Connected() { return tcpc->Connected(); }
 	bool MiniLogin() { return minilogin; }
 
 private:
 	bool minilogin;
-	TCPConnection* tcpc;
+	EmuTCPConnection* tcpc;
 	int32	LoginServerIP;
 	int16	LoginServerPort;
 
-	Timer* statusupdate_timer;
+	Timer statusupdate_timer;
 };
 #endif

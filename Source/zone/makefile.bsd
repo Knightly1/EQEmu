@@ -1,6 +1,10 @@
 
 CC=ccache gcc
 LINKER=gcc
+OUT=-o 
+LINKOUT=-o 
+NOLINK=-c
+
 
 #MYSQL_FLAGS=`mysql_config --cflags`
 #MYSQL_LIB=`mysql_config --libs`
@@ -19,7 +23,7 @@ WFLAGS=-Wall -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -Wno-deprecated  -
 # BSD pthreads
 #MYSQL_LIB=-L'/usr/local/lib/mysql' -lmysqlclient -lz -lcrypt -lm
 #COPTS=$(WFLAGS) -O2 -ggdb -pthread -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
-#LINKOPTS=-rdynamic -L. -pthread -lstdc++ $(MYSQL_LIB)
+#LINKOPTS=$(COPTS) -rdynamic -L. -pthread -lstdc++ $(MYSQL_LIB)
 
 # linuxthreads
 MYSQL_LIB=-L'/usr/local/lib' -llmysqlclient -lz -lcrypt -lm
@@ -27,17 +31,17 @@ DFLAGS+=-D__USE_UNIX98 -D_REENTRANT -D_THREAD_SAFE
 COPTS=$(WFLAGS) -I/usr/local/include/pthread/linuxthreads -O -ggdb -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
 
 #Unprofiled:
-LINKOPTS=-rdynamic -L. -llthread -llstdc++ -llsupc++ -llgcc_r $(MYSQL_LIB)
+LINKOPTS=$(COPTS) -rdynamic -L. -llthread -llstdc++ -llsupc++ -llgcc_r $(MYSQL_LIB)
 
 #to enable profiling:
 #MYSQL_LIB=-L'/usr/local/lib' -llmysqlclient_p -lz_p -lcrypt_p -lm_p
-#LINKOPTS=-rdynamic -L. -lc_p -lm_p -lutil_p -lz_p -llthread_p -llstdc++_p -llsupc++_p -llgcc_r_p $(MYSQL_LIB) -pg
+#LINKOPTS=$(COPTS) -rdynamic -L. -lc_p -lm_p -lutil_p -lz_p -llthread_p -llstdc++_p -llsupc++_p -llgcc_r_p $(MYSQL_LIB) -pg
 #COPTS+=-pg
 #profile friendly (from `perl -MExtUtils::Embed -e ldopts`):
 #PERL_LIB=echo -Wl,-R/usr/local/lib/perl5/5.8.2/mach/CORE -Wl,-E  -L/usr/local/lib /usr/local/lib/perl5/5.8.2/mach/auto/DynaLoader/DynaLoader.a -L/usr/local/lib/perl5/5.8.2/mach/CORE -lperl -lutil_p -lc_p -lm_p -lcrypt_p
 
 all: zone
-
+$(COPTS) 
 include .depend
 
 include makefile.common

@@ -65,7 +65,7 @@ public:
 	void ExportVar(const char * pkgprefix, const char * varname, const char * value) const;
 	void ExportVar(const char * pkgprefix, const char * varname, int value) const;
 	void ExportVar(const char * pkgprefix, const char * varname, unsigned int value) const;
-	void ExportVar(const char * pkgprefix, const char * varname, double value) const;
+	void ExportVar(const char * pkgprefix, const char * varname, float value) const;
 	//I don't escape the strings, so use caution!!
 	//Same as export var, except value is not quoted, and is evaluated as perl
 	void ExportVarComplex(const char * pkgprefix, const char * varname, const char * value) const;

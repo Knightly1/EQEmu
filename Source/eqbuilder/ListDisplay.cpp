@@ -48,16 +48,18 @@ void CEQBuilderDlg::SetDataDisplay(int index) {
 }
 
 void CEQBuilderDlg::afficherSpawns() {
+	pProgress->SetPos(0);
 
 	lMobList->DeleteAllItems();
 
 	int maxpos = listNPCs->getsize();
-	int curpos = 0;
 
-	for ( int i = 0; i<listNPCs->getsize();i++ ) {
+	for ( int i = 0; i<maxpos;i++ ) {
 		cnpc* npc = listNPCs->get(i);
 
 		CString line = npc->nom;
+		line += " ";
+		line += npc->last_name;
 		line += " (";
 		line += getClassName(npc->classe);
 		line += "), level ";
@@ -75,9 +77,7 @@ void CEQBuilderDlg::afficherSpawns() {
 
 
 		// progression
-		curpos ++;
-		currentlog->compilepos = 90 + ( curpos * 5 ) / maxpos;
-		pProgress->SetPos( currentlog->compilepos );
+		pProgress->SetPos( ( i * 50 ) / maxpos );
 	}
 	lMobList->SortChildren(NULL);
 }
@@ -107,7 +107,7 @@ void CEQBuilderDlg::showSpawnGroups() {
 		CString sloc;
 		smd = spawn->locs->getsize();
 		for ( j=0; j<smd; j++ ) {
-			cloc *loc = spawn->locs->get(j);
+			cspawnpoint *loc = spawn->locs->get(j);
 			sloc.Format( "Loc : (%f,%f,%f) %d chance", loc->x, loc->y, loc->z, spawn->probability );
 			lSpawnList->InsertItem( sloc, locs );
 		}
@@ -118,10 +118,7 @@ void CEQBuilderDlg::showSpawnGroups() {
 
 		// progression
 		curpos ++;
-		if(currentlog) {
-			currentlog->compilepos = 90 + ( curpos * 5 ) / maxpos;
-			pProgress->SetPos( currentlog->compilepos );
-		}
+		pProgress->SetPos( 50 + ( curpos * 50 ) / maxpos );
 	}
 
 	for ( int j = 0; j<gridSpawns->getsize();j++ ) {
@@ -156,7 +153,7 @@ void CEQBuilderDlg::showSpawnGroups() {
 		CString sloc;
 		int smd = spawn->locs->getsize();
 		for ( int j=0; j<smd; j++ ) {
-			cloc *loc = spawn->locs->get(j);
+			cspawnpoint *loc = spawn->locs->get(j);
 			sloc.Format( "Loc : (%f,%f,%f @%f) %d chance", loc->x, loc->y, loc->z, loc->heading, spawn->probability );
 			lSpawnList->InsertItem( sloc, locs );
 		}
@@ -178,10 +175,7 @@ void CEQBuilderDlg::showSpawnGroups() {
 
 		// progression
 		curpos ++;
-		if(currentlog) {
-			currentlog->compilepos = 90 + ( curpos * 5 ) / maxpos;
-			pProgress->SetPos( currentlog->compilepos );
-		}
+		pProgress->SetPos( 50 + ( curpos * 50 ) / maxpos );
 	}
 }
 
@@ -202,6 +196,9 @@ void CEQBuilderDlg::showMerchants() {
 		n = "Merchant: ";
 		if(m->owner != NULL) {
 			n += m->owner->nom;
+			if(!m->owner->last_name.IsEmpty()) {
+				n += " " + m->owner->last_name;
+			}
 		} else {
 			continue;	//no owner, skip this thing
 		}
@@ -217,6 +214,7 @@ void CEQBuilderDlg::showMerchants() {
 		}
 
 	}
+	pProgress->SetPos( 100 );
 }
 
 int CEQBuilderDlg::nbdoors() {
@@ -403,9 +401,13 @@ CString CEQBuilderDlg::getClassName(int id) {
 	case ADVENTUREMERCHANT:
 		return("Adv. Merchant");
 		break;
+	case CORPSE_CLASS:
+		return "Corpse Class";
 	case TRIBUTE_MASTER:
 		return("Tribute Master");
 		break;
+	case GUILD_TRIBUTE_MASTER:
+		return "Guild Tribute Master";
 	}
 	return("Unknown");
 }

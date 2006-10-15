@@ -21,16 +21,17 @@
 #include <stdlib.h>
 
 #include "masterentity.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "../common/packet_functions.h"
 #include "../common/packet_dump.h"
+#include "../common/MiscFunctions.h"
 #include "StringIDs.h"
 using namespace std;
 
 const char DEFAULT_OBJECT_NAME[] = "IT63_ACTORDEF";
 const char DEFAULT_OBJECT_NAME_SUFFIX[] = "_ACTORDEF";
 
-extern Database database;
+
 extern Zone* zone;
 extern EntityList entity_list;
 
@@ -218,14 +219,13 @@ void Object::PutItem(uint8 index, const ItemInst* inst)
 	}
 	
 	if (m_inst && m_inst->IsType(ItemClassContainer)) {
-		ItemContainerInst* bag = (ItemContainerInst*)m_inst;
 		if (inst) {
-			bag->PutItem(index, *inst);
+			m_inst->PutItem(index, *inst);
 		}
 		else {
-			bag->DeleteItem(index);
+			m_inst->DeleteItem(index);
 		}
-		database.SaveWorldContainer(zone->GetZoneID(),m_id,bag);
+		database.SaveWorldContainer(zone->GetZoneID(),m_id,m_inst);
 		// This is _highly_ inefficient, but for now it will work: Save entire object to database
 		//Save();
 	}
@@ -243,8 +243,7 @@ void Object::Close() {
 void Object::DeleteItem(uint8 index)
 {
 	if (m_inst && m_inst->IsType(ItemClassContainer)) {
-		ItemContainerInst* bag = (ItemContainerInst*)m_inst;
-		bag->DeleteItem(index);
+		m_inst->DeleteItem(index);
 		
 		// This is _highly_ inefficient, but for now it will work: Save entire object to database
 		Save();
@@ -257,8 +256,7 @@ ItemInst* Object::PopItem(uint8 index)
 	ItemInst* inst = NULL;
 	
 	if (m_inst && m_inst->IsType(ItemClassContainer)) {
-		ItemContainerInst* bag = (ItemContainerInst*)m_inst;
-		inst = bag->PopItem(index);
+		inst = m_inst->PopItem(index);
 		
 		// This is _highly_ inefficient, but for now it will work: Save entire object to database
 		Save();
@@ -267,7 +265,7 @@ ItemInst* Object::PopItem(uint8 index)
 	return inst;
 }
 
-void Object::CreateSpawnPacket(EQZonePacket* app)
+void Object::CreateSpawnPacket(EQApplicationPacket* app)
 {
 	app->SetOpcode(OP_GroundSpawn);
 	app->pBuffer = new uchar[sizeof(Object_Struct)];
@@ -275,11 +273,12 @@ void Object::CreateSpawnPacket(EQZonePacket* app)
 	memcpy(app->pBuffer, &m_data, sizeof(Object_Struct));
 }
 
-void Object::CreateDeSpawnPacket(EQZonePacket* app)
+void Object::CreateDeSpawnPacket(EQApplicationPacket* app)
 {
 	app->SetOpcode(OP_ClickObject);
 	app->pBuffer = new uchar[sizeof(ClickObject_Struct)];
 	app->size = sizeof(ClickObject_Struct);
+	memset(app->pBuffer, 0, sizeof(ClickObject_Struct));
 	ClickObject_Struct* co = (ClickObject_Struct*) app->pBuffer;
 	co->drop_id = m_data.drop_id;
 	co->player_id = 0;
@@ -288,7 +287,7 @@ void Object::CreateDeSpawnPacket(EQZonePacket* app)
 bool Object::Process(){
 	if(m_type == OT_DROPPEDITEM && decay_timer.Enabled() && decay_timer.Check()) {
 		// Send click to all clients (removes entity on client)
-		EQZonePacket* outapp = new EQZonePacket(OP_ClickObject, sizeof(ClickObject_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClickObject, sizeof(ClickObject_Struct));
 		ClickObject_Struct* click_object = (ClickObject_Struct*)outapp->pBuffer;
 		click_object->drop_id = GetID();
 		entity_list.QueueClients(NULL, outapp, false);
@@ -314,7 +313,7 @@ void Object::RandomSpawn(bool send_packet) {
 	respawn_timer.Disable();
 	
 	if(send_packet) {
-		EQZonePacket app;
+		EQApplicationPacket app;
 		CreateSpawnPacket(&app);
 		entity_list.QueueClients(NULL, &app, true);
 	}
@@ -339,7 +338,7 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 		}
 		
 		// Send click to all clients (removes entity on client)
-		EQZonePacket* outapp = new EQZonePacket(OP_ClickObject, sizeof(ClickObject_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClickObject, sizeof(ClickObject_Struct));
 		memcpy(outapp->pBuffer, click_object, sizeof(ClickObject_Struct));
 		entity_list.QueueClients(NULL, outapp, false);
 		safe_delete(outapp);
@@ -350,7 +349,7 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 		entity_list.RemoveEntity(this->GetID());
 	} else {
 		// Tradeskill item
-		EQZonePacket* outapp = new EQZonePacket(OP_ClickObjectAck, sizeof(ClickObjectAck_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClickObjectAck, sizeof(ClickObjectAck_Struct));
 		ClickObjectAck_Struct* coa = (ClickObjectAck_Struct*)outapp->pBuffer;
 		
 		//TODO: there is prolly a better way to do this.
@@ -387,14 +386,13 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 
 			//Clear out no-drop and no-rent items first
 			//TODO: should/could only do this if a different player opens it
-			ItemContainerInst* container = (ItemContainerInst*)m_inst;
-			container->ClearByFlags(byFlagSet, byFlagSet);
+			m_inst->ClearByFlags(byFlagSet, byFlagSet);
 			
-			EQZonePacket* outapp=new EQZonePacket(OP_ClientReady,0);
+			EQApplicationPacket* outapp=new EQApplicationPacket(OP_ClientReady,0);
 			sender->QueuePacket(outapp);
 			safe_delete(outapp);
 			for (uint8 i=0; i<10; i++) {
-				const ItemInst* inst = container->GetItem(i);
+				const ItemInst* inst = m_inst->GetItem(i);
 				if (inst) {
 					//sender->GetInv().PutItem(i+4000,inst);
 					sender->SendItemPacket(i, inst, ItemPacketWorldContainer);
@@ -407,7 +405,7 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 }
 
 // Add new Zone Object (theoretically only called for items dropped to ground)
-uint32 Database::AddObject(uint32 type, uint32 icon, const Object_Struct& object, const ItemInst* inst)
+uint32 ZoneDatabase::AddObject(uint32 type, uint32 icon, const Object_Struct& object, const ItemInst* inst)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char* query = 0;
@@ -440,7 +438,7 @@ uint32 Database::AddObject(uint32 type, uint32 icon, const Object_Struct& object
 	else {
 		// Save container contents, if container
 		if (inst && inst->IsType(ItemClassContainer)) {
-			SaveWorldContainer(object.zone_id, database_id, (const ItemContainerInst*)inst);
+			SaveWorldContainer(object.zone_id, database_id, inst);
 		}
 	}
 	
@@ -450,7 +448,7 @@ uint32 Database::AddObject(uint32 type, uint32 icon, const Object_Struct& object
 }
 
 // Update information about existing object in database
-void Database::UpdateObject(uint32 id, uint32 type, uint32 icon, const Object_Struct& object, const ItemInst* inst)
+void ZoneDatabase::UpdateObject(uint32 id, uint32 type, uint32 icon, const Object_Struct& object, const ItemInst* inst)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char* query = 0;
@@ -482,14 +480,14 @@ void Database::UpdateObject(uint32 id, uint32 type, uint32 icon, const Object_St
 	else {
 		// Save container contents, if container
 		if (inst && inst->IsType(ItemClassContainer)) {
-			SaveWorldContainer(object.zone_id, id, (const ItemContainerInst*)inst);
+			SaveWorldContainer(object.zone_id, id, inst);
 		}
 	}
 	
 	safe_delete_array(object_name);
 	safe_delete_array(query);
 }
-Ground_Spawns*	Database::LoadGroundSpawns(int32 zone_id,Ground_Spawns* gs){
+Ground_Spawns* ZoneDatabase::LoadGroundSpawns(int32 zone_id,Ground_Spawns* gs){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -520,7 +518,7 @@ Ground_Spawns*	Database::LoadGroundSpawns(int32 zone_id,Ground_Spawns* gs){
 	}
 	return gs;
 }
-void Database::DeleteObject(uint32 id)
+void ZoneDatabase::DeleteObject(uint32 id)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char* query = 0;

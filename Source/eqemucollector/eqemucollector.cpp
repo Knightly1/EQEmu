@@ -119,44 +119,7 @@ char _zero_buffer[64] = "";
 
 void handle_packet(unsigned char* x, const struct pcap_pkthdr* header, const unsigned char* data)
 {
-/*uint32_t ipHeaderLength, length, m_dataLength;
-struct ip* m_ip;
-struct udphdr *m_udp;
-string stype="unknown";
-char temp1[30],temp2[30];
-*/
-map<string,EQStreamPair *>::iterator stream_itr;
-/*
-
-	data+=sizeof (struct ether_header);
-
-	// we start at the IP header
-	m_ip = (struct ip*)data;
-
-	if (m_ip->ip_p != 17 )
-		return;
-
-	// retrieve the total length from the header
-	m_dataLength = ntohs (m_ip->ip_len);
-
-	// use this length to caclulate the rest
-	length = m_dataLength;
-
-	// skip past the IP header
-	ipHeaderLength	= m_ip->ip_hl * 4;
-	length	-= ipHeaderLength;
-	data += ipHeaderLength;
-
-	// get the UDP header
-	m_udp	 = (struct udphdr *) data;
-
-	// skip over UDP header
-	length	-= sizeof	(struct udphdr);
-	data += (sizeof (struct udphdr));
-
-	uint16_t sport=ntohs(m_udp->source);
-	uint16_t dport=ntohs(m_udp->dest);
-*/
+	map<string,EQStreamPair *>::iterator stream_itr;
 	ETHERNET_FRAME	*eh;
 	IP_HEADER		*iph;
 	UDP_HEADER		*uh;
@@ -219,35 +182,6 @@ map<string,EQStreamPair *>::iterator stream_itr;
 
 
 	stream_mgr.Process(sip, sport, dip, dport, header->ts, udp_data, datalen);
-	
-/*	
-//	sprintf(temp1,"%lu:%u-%lu:%u",(unsigned long)m_ip->ip_src.s_addr,sport,(unsigned long)m_ip->ip_dst.s_addr,dport);
-//	sprintf(temp2,"%lu:%u-%lu:%u",(unsigned long)m_ip->ip_dst.s_addr,dport,(unsigned long)m_ip->ip_src.s_addr,sport);
-
-	if ((stream_itr=streams.find(temp1))!=streams.end() || (stream_itr=streams.find(temp2))!=streams.end()) {
-		stream_itr->second->Process(udp_data, datalen, sip, sport, dip, dport, header->ts.tv_sec, header->ts.tv_usec);
-	} else {
-		//if (data[1]==0x01 || data[1]==0x02) {
-			EQStreamPair *sp=new EQStreamPair;
-			sp->Process(udp_data, datalen, sip, sport, dip, dport, header->ts.tv_sec, header->ts.tv_usec);
-	
-			streams[temp1]=sp;
-		//}
-	}*/
-	
-/*	//create our stream descriptor
-	EQStreamInfo sinfo(sip, dip, sport, dport);
-	
-	EQStreamPair *spair;
-	spair = streams.GetStream(sinfo);
-	if(spair == NULL) {
-		//new stream pair
-		spair = new EQStreamPair();
-		streams.AddStream(sinfo, spair);
-	}
-	
-	spair->Process(udp_data, datalen, sip, sport, dip, dport, header->ts.tv_sec, header->ts.tv_usec);
-*/
 }
 
 
@@ -265,14 +199,12 @@ void SetupGlobals() {
 //	load_opcode_names();
 	
 	OpcodeLoadFailed = false;
-	EQOpcodeManager = new RegularOpcodeManager();
-	if(!EQOpcodeManager->LoadOpcodes(OPCODES_FILE)) {
+	if(!stream_mgr.LoadOpcodes("opcodes.conf")) {
 		cerr << "Unable to load opcodes map. Names will not be resolved." << endl;
-		delete EQOpcodeManager;
-		EQOpcodeManager = new NullOpcodeManager();
 		OpcodeLoadFailed = true;
+	} else {
+		printf("Opcodes file %s successfully loaded.\n", OPCODES_FILE);
 	}
-	printf("Opcodes file %s successfully loaded.\n", OPCODES_FILE);
 }
 
 void SetupCollectEnvironment() {

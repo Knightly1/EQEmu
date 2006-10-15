@@ -1,4 +1,5 @@
 
+#include "../common/debug.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "ExtractDB.h"

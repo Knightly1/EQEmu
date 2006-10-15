@@ -37,7 +37,7 @@ class EQStreamFactory : private Timeoutable {
 		Timer *DecayTimer;
 
 	public:
-		EQStreamFactory(EQStreamType type) : Timeoutable(5000) { ReaderRunning=false; WriterRunning=false; StreamType=type; }
+		EQStreamFactory(EQStreamType type) : Timeoutable(5000) { ReaderRunning=false; WriterRunning=false; StreamType=type; sock=-1; }
 		EQStreamFactory(EQStreamType type, int port);
 
 		EQStream *Pop();
@@ -45,6 +45,7 @@ class EQStreamFactory : private Timeoutable {
 
 		bool Open();
 		bool Open(unsigned long port) { Port=port; return Open(); }
+		bool IsOpen() { return sock!=-1; }
 		void Close();
 		void ReaderLoop();
 		void WriterLoop();
@@ -52,7 +53,6 @@ class EQStreamFactory : private Timeoutable {
 		void StopReader() { MReaderRunning.lock(); ReaderRunning=false; MReaderRunning.unlock(); }
 		void StopWriter() { MWriterRunning.lock(); WriterRunning=false; MWriterRunning.unlock(); WriterWork.Signal(); }
 		void SignalWriter() { WriterWork.Signal(); }
-
 };
 
 #endif

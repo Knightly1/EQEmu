@@ -23,7 +23,7 @@ cloc::cloc()
 
 }
 
-cloc::cloc( cloc* loc )
+cloc::cloc( const cloc* loc )
 {
 	this->x = loc->x;
 	this->y = loc->y;
@@ -47,7 +47,20 @@ cloc::cloc( double x, double y, double z, double heading )
 	this->heading = heading;
 }
 
-cloc::~cloc()
+cspawnpoint::cspawnpoint( const cspawnpoint* loc )
 {
+	this->x = loc->x;
+	this->y = loc->y;
+	this->z = loc->z;
+	this->heading = loc->heading;
+	this->db_id = loc->db_id;
+}
 
+cspawnpoint::cspawnpoint( const cloc* loc )
+{
+	this->x = loc->x;
+	this->y = loc->y;
+	this->z = loc->z;
+	this->heading = loc->heading;
+	this->db_id = 0;
 }

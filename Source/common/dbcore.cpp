@@ -1,6 +1,10 @@
 #include "../common/debug.h"
 #include "../common/files.h"
 
+#ifdef WIN32
+#include <winsock2.h>
+#endif
+
 #include <iostream>
 using namespace std;
 #include <errmsg.h>
@@ -47,6 +51,7 @@ DBcore::~DBcore() {
 
 bool DBcore::ReadDBINI(char *host, char *user, char *passwd, char *database, int32 &port, bool &compress, bool *items) {
 	char buf[200], type[200];
+	char linebuf[512];
 	char cport[6]={0};
 
 	FILE *f;
@@ -71,10 +76,14 @@ bool DBcore::ReadDBINI(char *host, char *user, char *passwd, char *database, int
 	
 	while (!feof (f))
 	{
+		if(fgets(linebuf, 512, f) == NULL)
+			continue;
 #ifdef WIN32
-		if (fscanf (f, "%[^=]=%[^\n]\n", type, buf) == 2)
+		if (sscanf(linebuf, "%[^=]=%[^\n]\n", type, buf) != 2)
+			continue;
 #else	
-			if (fscanf (f, "%[^=]=%[^\r\n]\n", type, buf) == 2)
+		if (sscanf(linebuf, "%[^=]=%[^\r\n]\n", type, buf) != 2)
+			continue;
 #endif
 			{
 				if (!strncasecmp (type, "host", 4))
@@ -223,7 +232,8 @@ bool DBcore::RunQuery(const char* query, int32 querylen, char* errbuf, MYSQL_RES
 }
 
 int32 DBcore::DoEscapeString(char* tobuf, const char* frombuf, int32 fromlen) {
-	LockMutex lock(&MDatabase);
+//	No good reason to lock the DB, we only need it in the first place to check char encoding.
+//	LockMutex lock(&MDatabase);
 	return mysql_real_escape_string(&mysql, tobuf, frombuf, fromlen);
 }
 

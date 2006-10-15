@@ -1,3 +1,20 @@
+/*  EQEMu:  Everquest Server Emulator
+    Copyright (C) 2001-2006  EQEMu Development Team (http://eqemulator.net)
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+  
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY except by those people which sell it, which
+	are required to give you total support for your newly bought product;
+	without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+	A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+	
+	  You should have received a copy of the GNU General Public License
+	  along with this program; if not, write to the Free Software
+	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
 
 #include "debug.h"
 #include "Condition.h"
@@ -10,42 +27,64 @@
 #endif
 
 #ifdef WIN32
-/*
-
-	Windows does not support condition variables by default.
-	So we use a simple hack of sleeping in wait() and doing
-	nothing anywhere else. 
-	
-	some possible places to look for ways to do this:
-	http://www.cs.wustl.edu/~schmidt/win32-cv-1.html
-	
-	http://sources.redhat.com/pthreads-win32/
-	http://sources.redhat.com/cgi-bin/cvsweb.cgi/pthreads/pthread_cond_signal.c?rev=1.7&content-type=text/x-cvsweb-markup&cvsroot=pthreads-win32
-	
-*/
-
-#define CONDITION_HACK_GRANULARITY 4
 
 
 Condition::Condition() 
 {
-}
-
-void Condition::Signal()
-{
-}
-
-void Condition::SignalAll()
-{
-}
-
-void Condition::Wait()
-{
-	Sleep(CONDITION_HACK_GRANULARITY);
+	m_events[SignalEvent] = CreateEvent (NULL,  // security
+                                     FALSE, // is auto-reset event?
+                                     FALSE, // is signaled initially?
+                                     NULL); // name
+	m_events[BroadcastEvent] = CreateEvent (NULL,  // security
+                                     TRUE, // is auto-reset event?
+                                     FALSE, // is signaled initially?
+                                     NULL); // name
+	m_waiters = 0;
+	InitializeCriticalSection(&CSMutex);
 }
 
 Condition::~Condition()
 {
+	DeleteCriticalSection(&CSMutex);
+	CloseHandle(m_events[SignalEvent]);
+	CloseHandle(m_events[BroadcastEvent]);
+}
+
+void Condition::Signal()
+{
+	EnterCriticalSection(&CSMutex);
+	if(m_waiters > 0)
+		SetEvent(m_events[SignalEvent]);
+	LeaveCriticalSection(&CSMutex);
+}
+
+void Condition::SignalAll()
+{
+	EnterCriticalSection(&CSMutex);
+	if(m_waiters > 0)
+		SetEvent(m_events[BroadcastEvent]);
+	LeaveCriticalSection(&CSMutex);
+}
+
+void Condition::Wait()
+{
+	EnterCriticalSection(&CSMutex);
+	
+	m_waiters++;
+	
+	
+	LeaveCriticalSection(&CSMutex);
+	int result = WaitForMultipleObjects (_eventCount, m_events, FALSE, INFINITE);
+	EnterCriticalSection(&CSMutex);
+	
+	m_waiters--;
+	
+	//see if we are the last person waiting on the condition, and there was a broadcast
+	//if so, we need to reset the broadcast event.
+	if(m_waiters == 0 && result == (WAIT_OBJECT_0+BroadcastEvent))
+		ResetEvent(m_events[BroadcastEvent]);
+	
+	LeaveCriticalSection(&CSMutex);
 }
 
 

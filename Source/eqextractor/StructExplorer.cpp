@@ -3,6 +3,7 @@
 EQ Extractor, by Father Nitwit 2005
 
 */
+#include "../common/debug.h"
 #include "StructExplorer.h"
 
 
@@ -100,7 +101,7 @@ void StructExplorer::PrintQuadrentReal(const char *field_name, uint32 data) {
 	
 	printf("%s: (%u %u %u %u) (%u %u) (%d %d) (0x%.4x 0x%.4x)\n",
 	field_name,
-	fbr->bytes.b1, fbr->bytes.b2, fbr->bytes.b3, fbr->bytes.b3,
+	fbr->bytes.b1, fbr->bytes.b2, fbr->bytes.b3, fbr->bytes.b4,
 	fbr->words.w1, fbr->words.w2, fbr->signed_words.w1, fbr->signed_words.w2,
 	fbr->words.w1, fbr->words.w2
 	);
@@ -111,7 +112,31 @@ void StructExplorer::PrintQuadrentReal(const char *field_name, uint32 data) {
 	);
 }
 
-void StructExplorer::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) {
+void StructExplorer::PrintFloatsReal(const char *field_name, const char *data, uint32 len) {
+	if(len < sizeof(float))
+		return;
+	
+	int pos = 0;
+	len -= sizeof(float);
+	float *fp;
+	do {
+		fp = (float *) data;
+		
+		if(*fp < 0)
+			*fp = 0.0f - *fp;
+		
+		if(*fp > 0.0001 && *fp < 10000.0f) {
+			printf("((float *) %s[%d]) = %f\n", field_name, pos, *fp);
+		}
+		
+		data++;
+		len--;
+		pos++;
+	} while(len > 0);
+}
+
+
+void StructExplorer::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
 }
 
 

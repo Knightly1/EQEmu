@@ -1,30 +1,32 @@
 /*  EQEMu:  Everquest Server Emulator
-    Copyright (C) 2001-2004  EQEMu Development Team (http://eqemulator.org)
+    Copyright (C) 2001-2006  EQEMu Development Team (http://eqemulator.net)
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; version 2 of the License.
-
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+  
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY except by those people which sell it, which
 	are required to give you total support for your newly bought product;
 	without even the implied warranty of MERCHANTABILITY or FITNESS FOR
 	A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+	
+	  You should have received a copy of the GNU General Public License
+	  along with this program; if not, write to the Free Software
+	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
+
 #include "features.h"
 
 #ifdef EMBPERL
 #ifdef EMBPERL_XS
 
+#include "../common/debug.h"
 #include "perlparser.h"
 #include "questmgr.h"
 #include "embxs.h"
 #include "entity.h"
-#include "../common/debug.h"
+#include "../common/MiscFunctions.h"
 
 /*
 
@@ -133,9 +135,6 @@ void PerlXSParser::SendCommands(const char * pkgprefix, const char *event, int32
 		//todo: tweak this to be more accurate at deciding what to filter (we don't want to gag legit errors)
 		if(!strstr(err,"Undefined subroutine"))
 			LogFile->write(EQEMuLog::Status, "Script error: %s::%s - %s", pkgprefix, event, err);
-		
-		quest_manager.EndQuest();
-		return;
 	}
 	
 	quest_manager.EndQuest();
@@ -353,6 +352,21 @@ XS(XS__setstat)
 	XSRETURN_EMPTY;
 }
 
+XS(XS__incstat);  //old setstat command aza
+XS(XS__incstat)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: incstat(stat, value)");
+
+	int	stat = (int)SvIV(ST(0));
+	int	value = (int)SvIV(ST(1));
+
+	quest_manager.incstat(stat, value);
+
+	XSRETURN_EMPTY;
+}
+
 XS(XS__castspell);
 XS(XS__castspell)
 {
@@ -544,49 +558,6 @@ XS(XS__sfollow)
 	XSRETURN_EMPTY;
 }
 
-XS(XS__cumflag);
-XS(XS__cumflag)
-{
-	dXSARGS;
-	if (items != 0)
-		Perl_croak(aTHX_ "Usage: cumflag()");
-
-
-	quest_manager.cumflag();
-
-	XSRETURN_EMPTY;
-}
-
-XS(XS__flagnpc);
-XS(XS__flagnpc)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: flagnpc(flag_num, flag_value)");
-
-	int	flag_num = (int)SvIV(ST(0));
-	int	flag_value = (int)SvIV(ST(1));
-
-	quest_manager.flagnpc(flag_num, flag_value);
-
-	XSRETURN_EMPTY;
-}
-
-XS(XS__flagcheck);
-XS(XS__flagcheck)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: flagcheck(flag_to_check, flag_to_set)");
-
-	int	flag_to_check = (int)SvIV(ST(0));
-	int	flag_to_set = (int)SvIV(ST(1));
-
-	quest_manager.flagcheck(flag_to_check, flag_to_set);
-
-	XSRETURN_EMPTY;
-}
-
 XS(XS__changedeity);
 XS(XS__changedeity)
 {
@@ -766,6 +737,19 @@ XS(XS__scribespells)
 
 
 	quest_manager.scribespells();
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__unscribespells);
+XS(XS__unscribespells)
+{
+	dXSARGS;
+	if (items != 0)
+		Perl_croak(aTHX_ "Usage: unscribespells()");
+
+
+	quest_manager.unscribespells();
 
 	XSRETURN_EMPTY;
 }
@@ -1271,6 +1255,34 @@ XS(XS__setnexthpevent)
 	XSRETURN_EMPTY;
 }
 
+XS(XS__setnextinchpevent);
+XS(XS__setnextinchpevent)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: setnextinchpevent(at)");
+
+	int	at = (int)SvIV(ST(0));
+
+	quest_manager.setnextinchpevent(at);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__sethp);
+XS(XS__sethp)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: sethp(percentage)");
+
+	int	hpperc = (int)SvIV(ST(0));
+
+	quest_manager.sethp(hpperc);
+
+	XSRETURN_EMPTY;
+}
+
 XS(XS__respawn);
 XS(XS__respawn)
 {
@@ -1295,8 +1307,9 @@ XS(XS__ChooseRandom)
 	
 	int index = MakeRandomInt(0, items-1);
 	
-	//Im not 100% sure if I need to clear out ST(0) first...
-	ST(0) = sv_2mortal(ST(index));
+	SV *tmp = ST(0);
+	ST(0) = ST(index);
+	ST(index) = tmp;
 	
 	XSRETURN(1);	//return 1 element from the stack (ST(0))
 }
@@ -1443,6 +1456,53 @@ XS(XS__toggle_spawn_event)
 	XSRETURN_EMPTY;
 }
 
+XS(XS__has_zone_flag);
+XS(XS__has_zone_flag)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: has_zone_flag(zone_id)");
+	
+	sint16		RETVAL;
+	dXSTARG;
+	
+	int32	zone_id = (int)SvIV(ST(0));
+
+	RETVAL = quest_manager.has_zone_flag(zone_id);
+	XSprePUSH; PUSHu((IV)RETVAL);
+	
+	XSRETURN(1);
+
+}
+
+XS(XS__set_zone_flag);
+XS(XS__set_zone_flag)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: set_zone_flag(zone_id)");
+	
+	int32	zone_id = (int)SvIV(ST(0));
+	
+	quest_manager.set_zone_flag(zone_id);
+	
+	XSRETURN_EMPTY;
+}
+
+XS(XS__clear_zone_flag);
+XS(XS__clear_zone_flag)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: clear_zone_flag(zone_id)");
+	
+	int32	zone_id = (int)SvIV(ST(0));
+	
+	quest_manager.clear_zone_flag(zone_id);
+	
+	XSRETURN_EMPTY;
+}
+
 /*
 
 This is the callback perl will look for to setup the
@@ -1473,6 +1533,7 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "spawn2"), XS__spawn2, file);
 		newXS(strcpy(buf, "unique_spawn"), XS__unique_spawn, file);
 		newXS(strcpy(buf, "setstat"), XS__setstat, file);
+		newXS(strcpy(buf, "incstat"), XS__incstat, file);		
 		newXS(strcpy(buf, "castspell"), XS__castspell, file);
 		newXS(strcpy(buf, "selfcast"), XS__selfcast, file);
 		newXS(strcpy(buf, "addloot"), XS__addloot, file);
@@ -1486,9 +1547,6 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "settarget"), XS__settarget, file);
 		newXS(strcpy(buf, "follow"), XS__follow, file);
 		newXS(strcpy(buf, "sfollow"), XS__sfollow, file);
-		newXS(strcpy(buf, "cumflag"), XS__cumflag, file);
-		newXS(strcpy(buf, "flagnpc"), XS__flagnpc, file);
-		newXS(strcpy(buf, "flagcheck"), XS__flagcheck, file);
 		newXS(strcpy(buf, "changedeity"), XS__changedeity, file);
 		newXS(strcpy(buf, "exp"), XS__exp, file);
 		newXS(strcpy(buf, "level"), XS__level, file);
@@ -1502,6 +1560,7 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "permarace"), XS__permarace, file);
 		newXS(strcpy(buf, "permagender"), XS__permagender, file);
 		newXS(strcpy(buf, "scribespells"), XS__scribespells, file);
+		newXS(strcpy(buf, "unscribespells"), XS__unscribespells, file);
 		newXS(strcpy(buf, "givecash"), XS__givecash, file);
 		newXS(strcpy(buf, "pvp"), XS__pvp, file);
 		newXS(strcpy(buf, "movepc"), XS__movepc, file);
@@ -1535,6 +1594,8 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "resume"), XS__resume, file);
 		newXS(strcpy(buf, "addldonpoints"), XS__addldonpoints, file);
 		newXS(strcpy(buf, "setnexthpevent"), XS__setnexthpevent, file);
+		newXS(strcpy(buf, "setnextinchpevent"), XS__setnexthpevent, file);
+		newXS(strcpy(buf, "sethp"), XS__sethp, file);
 		newXS(strcpy(buf, "respawn"), XS__respawn, file);
         newXS(strcpy(buf, "getItemName"), XS_qc_getItemName, file);
         newXS(strcpy(buf, "ChooseRandom"), XS__ChooseRandom, file);
@@ -1547,6 +1608,9 @@ EXTERN_C XS(boot_quest)
         newXS(strcpy(buf, "spawn_condition"), XS__spawn_condition, file);
         newXS(strcpy(buf, "get_spawn_condition"), XS__get_spawn_condition, file);
         newXS(strcpy(buf, "toggle_spawn_event"), XS__toggle_spawn_event, file);
+        newXS(strcpy(buf, "has_zone_flag"), XS__has_zone_flag, file);
+        newXS(strcpy(buf, "set_zone_flag"), XS__set_zone_flag, file);
+        newXS(strcpy(buf, "clear_zone_flag"), XS__clear_zone_flag, file);
 	XSRETURN_YES;
 }
 

@@ -19,15 +19,15 @@
 #include "features.h"
 #include "masterentity.h"
 #include "StringIDs.h"
+#include "../common/MiscFunctions.h"
+#include "../common/rulesys.h"
 
-//experience modifiers based on race and class
+//experience modifiers based on race and class, used if USE_RACE_CLASS_XP_MODS is defined
 //                            hum     bar     eru     elf     hie     def     hef     dwa     tro     ogr     hal    gno     iks,    vah     frog
 float  race_modifiers[15] = { 100.0f, 105.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 120.0f, 115.0f, 95.0f, 100.0f, 120.0f, 100.0f, 100.0f}; // Quagmire - Guessed on iks and vah
 
 //                            war   cle    pal    ran    shd    dru    mnk    brd    rog    shm    nec    wiz    mag    enc    bst    bes
 float class_modifiers[16] = { 9.0f, 10.0f, 14.0f, 14.0f, 14.0f, 10.0f, 12.0f, 14.0f, 9.05f, 10.0f, 11.0f, 11.0f, 11.0f, 11.0f, 10.0f, 10.0f};
-
-
 
 
 
@@ -181,18 +181,12 @@ void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
 		//Message(15, "You now have %d skill points available to spend.", m_pp.aapoints);
 	}
 
-	int8 maxlevel = LEVEL_CAP + 1;
-
-#ifdef RAIDADDICTS
-	maxlevel = raidaddicts.GetZoneLevel();
-#endif
-
-	#ifdef GUILDWARS
-		if(GuildDBID() == 0)
-			maxlevel = NOGUILDCAPLEVEL;
-		else
-			maxlevel = GAINLEVEL;
-	#endif
+	int8 maxlevel = RuleI(Character, MaxLevel) + 1;
+	
+	if(check_level > maxlevel) {
+		check_level = maxlevel;
+		set_exp = GetEXPForLevel(maxlevel);
+	}
 	
 	if ((GetLevel() != check_level) && !(check_level >= maxlevel)) {
 		char val1[20]={0};
@@ -224,9 +218,9 @@ void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
 	int32 tmpxp2 = GetEXPForLevel(GetLevel());
 	// Quag: crash bug fix... Divide by zero when tmpxp1 and 2 equalled each other, most likely the error case from GetEXPForLevel() (invalid class, etc)
 	if (tmpxp1 != tmpxp2 && tmpxp1 != 0xFFFFFFFF && tmpxp2 != 0xFFFFFFFF) {
-		EQZonePacket* outapp = new EQZonePacket(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ExpUpdate, sizeof(ExpUpdate_Struct));
 		ExpUpdate_Struct* eu = (ExpUpdate_Struct*)outapp->pBuffer;
-		double tmpxp = (double) ( (double) set_exp-tmpxp2 ) / ( (double) tmpxp1-tmpxp2 );
+		float tmpxp = (float) ( (float) set_exp-tmpxp2 ) / ( (float) tmpxp1-tmpxp2 );
 		eu->exp = (uint32)(330.0f * tmpxp);
 		FastQueuePacket(&outapp);
 	}
@@ -254,7 +248,7 @@ void Client::SetLevel(int8 set_level, bool command)
 		return;
 	}
 
-	EQZonePacket* outapp = new EQZonePacket(OP_LevelUpdate, sizeof(LevelUpdate_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_LevelUpdate, sizeof(LevelUpdate_Struct));
 	LevelUpdate_Struct* lu = (LevelUpdate_Struct*)outapp->pBuffer;
 	lu->level = set_level;
 	lu->level_old = level;
@@ -271,8 +265,8 @@ void Client::SetLevel(int8 set_level, bool command)
 		lu->exp = 0;
 	}
 	else {
-		double tmpxp = (double) ( (double) m_pp.exp - GetEXPForLevel( GetLevel() )) /
-						( (double) GetEXPForLevel(GetLevel()+1) - GetEXPForLevel(GetLevel()));
+		float tmpxp = (float) ( (float) m_pp.exp - GetEXPForLevel( GetLevel() )) /
+						( (float) GetEXPForLevel(GetLevel()+1) - GetEXPForLevel(GetLevel()));
 		lu->exp =  (int32)(330.0f * tmpxp);
     }
 	QueuePacket(outapp);
@@ -300,6 +294,43 @@ void Client::SetLevel(int8 set_level, bool command)
 // Add: You can set the values you want now, client will be always sync :) - Merkur
 uint32 Client::GetEXPForLevel(int16 check_level)
 {
+
+	int16 check_levelm1 = check_level-1;
+	float mod;
+	if (check_level < 31)
+		mod = 1.0;
+	else if (check_level < 36)
+		mod = 1.1;
+	else if (check_level < 41)
+		mod = 1.2;
+	else if (check_level < 46)
+		mod = 1.3;
+	else if (check_level < 52)
+		mod = 1.4;
+	else if (check_level < 53)
+		mod = 1.5;
+	else if (check_level < 54)
+		mod = 1.6;
+	else if (check_level < 55)
+		mod = 1.7;
+	else if (check_level < 56)
+		mod = 1.9;
+	else if (check_level < 57)
+		mod = 2.1;
+	else if (check_level < 58)
+		mod = 2.3;
+	else if (check_level < 59)
+		mod = 2.5;
+	else if (check_level < 60)
+		mod = 2.7;
+	else if (check_level < 61)
+		mod = 3.0;
+	else
+		mod = 3.1;
+	
+	float base = (check_levelm1)*(check_levelm1)*(check_levelm1);
+	
+#ifdef USE_RACE_CLASS_XP_MODS
 	int16 tmprace = GetBaseRace();
 	if (tmprace == IKSAR) // Quagmire, set these up so they read from array right
 		tmprace = 12;
@@ -312,38 +343,13 @@ uint32 Client::GetEXPForLevel(int16 check_level)
 
 	if (tmprace >= sizeof(race_modifiers) || GetClass() < 1 || GetClass() - 1 >= PLAYER_CLASS_COUNT)
 		return 0xFFFFFFFF;
-
-	int16 check_levelm1 = check_level-1;
-	if (check_level < 31)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]);
-	else if (check_level < 36)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.1);
-	else if (check_level < 41)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.2);
-	else if (check_level < 46)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.3);
-	else if (check_level < 52)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.4);
-	else if (check_level < 53)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.5);
-	else if (check_level < 54)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.6);
-	else if (check_level < 55)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.7);
-	else if (check_level < 56)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*1.9);
-	else if (check_level < 57)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.1);
-	else if (check_level < 58)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.3);
-	else if (check_level < 59)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.5);
-	else if (check_level < 60)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*2.7);
-	else if (check_level < 61)
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*3.0);
-	else
-		return (uint32)((check_levelm1)*(check_levelm1)*(check_levelm1)*class_modifiers[GetClass()-1]*race_modifiers[tmprace]*3.1);
+	
+	mod *= class_modifiers[GetClass()-1]*race_modifiers[tmprace];
+#else
+	mod *= 1000;
+#endif
+	
+	return(uint32(base * mod));
 }
 
 void Group::SplitExp(uint32 exp, Mob* other) {
@@ -464,7 +470,7 @@ void Client::AddLeadershipEXP(uint32 group_exp, uint32 raid_exp) {
 }
 
 void Client::SendLeadershipEXPUpdate() {
-	EQZonePacket* outapp = new EQZonePacket(OP_LeadershipExpUpdate, sizeof(LeadershipExpUpdate_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_LeadershipExpUpdate, sizeof(LeadershipExpUpdate_Struct));
 	LeadershipExpUpdate_Struct* eu = (LeadershipExpUpdate_Struct *) outapp->pBuffer;
 	
 	eu->group_leadership_exp = m_pp.group_leadership_exp;

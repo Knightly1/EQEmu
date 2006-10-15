@@ -838,7 +838,7 @@ void LoadSPDat(SPDat_Spell_Struct** SpellsPointer) {
 	client2->SendAATimer(uaa);
 }
 
-void Database::UpdateAndDeleteAATimers(int32 charid){
+void ZoneDatabase::UpdateAndDeleteAATimers(int32 charid){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	char *query2 = 0;
@@ -853,7 +853,7 @@ void Database::UpdateAndDeleteAATimers(int32 charid){
 	safe_delete_array(query2);
 }
 
-void Database::UpdateTimersClientConnected(int32 charid){
+void ZoneDatabase::UpdateTimersClientConnected(int32 charid){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	if (!RunQuery(query, MakeAnyLenString(&query, "update aa_timers set end=(UNIX_TIMESTAMP(now())+(end-begin)),begin=UNIX_TIMESTAMP(now()) where charid=%i",charid), errbuf)) {
@@ -862,7 +862,7 @@ void Database::UpdateTimersClientConnected(int32 charid){
 	safe_delete_array(query);
 }
 
-void Database::GetAATimers(int32 charid){
+void ZoneDatabase::GetAATimers(int32 charid){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -885,7 +885,7 @@ void Database::GetAATimers(int32 charid){
 	safe_delete_array(query);
 }
 
-int32 Database::GetTimerRemaining(int32 charid,int32 ability){
+int32 ZoneDatabase::GetTimerRemaining(int32 charid,int32 ability){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -904,7 +904,7 @@ int32 Database::GetTimerRemaining(int32 charid,int32 ability){
 	return remain;
 }
 
-void Database::UpdateAATimers(int32 charid,int32 endtime,int32 begintime,int32 ability){
+void ZoneDatabase::UpdateAATimers(int32 charid,int32 endtime,int32 begintime,int32 ability){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	if(begintime==0){
@@ -957,9 +957,9 @@ int16 Client::GetCombinedAC_TEST() {
 			continue;
 	    
 		const Item_Struct* item = inst->GetItem();
-		if (item->Common.FocusId && (item->Common.FocusId != 0xFFFF)) {
-			if (IsIncreaseDurationSpell(item->Common.FocusId)) {
-				spell_id = item->Common.FocusId;
+		if (item->FocusId && (item->FocusId != 0xFFFF)) {
+			if (IsIncreaseDurationSpell(item->FocusId)) {
+				spell_id = item->FocusId;
 				if (itemname)
 					strcpy(itemname, item->Name);
 				return true;
@@ -977,9 +977,9 @@ bool Client::GetReduceManaCostItem(int16 &spell_id, char *itemname)
 			continue;
 	    
 		const Item_Struct* item = inst->GetItem();
-		if (item->Common.FocusId && (item->Common.FocusId != 0xFFFF)) {
-			if (IsReduceManaSpell(item->Common.FocusId)) {
-				spell_id = item->Common.FocusId;
+		if (item->FocusId && (item->FocusId != 0xFFFF)) {
+			if (IsReduceManaSpell(item->FocusId)) {
+				spell_id = item->FocusId;
 				if (itemname)
 					strcpy(itemname, item->Name);
 				return true;
@@ -997,9 +997,9 @@ bool Client::GetReduceCastTimeItem(int16 &spell_id, char *itemname)
 			continue;
 	    
 		const Item_Struct* item = inst->GetItem();
-		if (item->Common.FocusId && (item->Common.FocusId != 0xFFFF)) {
-			if (IsReduceCastTimeSpell(item->Common.FocusId)) {
-				spell_id = item->Common.FocusId;
+		if (item->FocusId && (item->FocusId != 0xFFFF)) {
+			if (IsReduceCastTimeSpell(item->FocusId)) {
+				spell_id = item->FocusId;
 				if (itemname)
 					strcpy(itemname, item->Name);
 				return true;
@@ -1017,9 +1017,9 @@ bool Client::GetExtendedRangeItem(int16 &spell_id, char *itemname)
 			continue;
 	    
 		const Item_Struct* item = inst->GetItem();
-		if (item->Common.FocusId && (item->Common.FocusId != 0xFFFF)) {
-			if (IsExtRangeSpell(item->Common.FocusId)) {
-				spell_id = item->Common.FocusId;
+		if (item->FocusId && (item->FocusId != 0xFFFF)) {
+			if (IsExtRangeSpell(item->FocusId)) {
+				spell_id = item->FocusId;
 				if (itemname)
 					strcpy(itemname, item->Name);
 				return true;
@@ -1037,9 +1037,9 @@ bool Client::GetImprovedHealingItem(int16 &spell_id, char *itemname)
 			continue;
 	    
 		const Item_Struct* item = inst->GetItem();
-		if (item->Common.FocusId && (item->Common.FocusId != 0xFFFF)) {
-			if (IsImprovedHealingSpell(item->Common.FocusId)) {
-				spell_id = item->Common.FocusId;
+		if (item->FocusId && (item->FocusId != 0xFFFF)) {
+			if (IsImprovedHealingSpell(item->FocusId)) {
+				spell_id = item->FocusId;
 				if (itemname)
 					strcpy(itemname, item->Name);
 				return true;
@@ -1057,9 +1057,9 @@ bool Client::GetImprovedDamageItem(int16 &spell_id, char *itemname)
 			continue;
 	    
 		const Item_Struct* item = inst->GetItem();
-		if (item->Common.FocusId && (item->Common.FocusId != 0xFFFF)) {
-			if (IsImprovedDamageSpell(item->Common.FocusId)) {
-				spell_id = item->Common.FocusId;
+		if (item->FocusId && (item->FocusId != 0xFFFF)) {
+			if (IsImprovedDamageSpell(item->FocusId)) {
+				spell_id = item->FocusId;
 				if (itemname)
 					strcpy(itemname, item->Name);
 				return true;
@@ -1194,7 +1194,7 @@ sint32 Client::GenericFocus(int16 spell_id, int16 modspellid)
 
 /*void Client::Discipline(ClientDiscipline_Struct* disc_in, Mob* tar) {
 Message(0, "Disc packet id=%d, %x,%x,%x", disc_in->disc_id, disc_in->unknown3[0], disc_in->unknown3[1], disc_in->unknown3[2]);
-	if (!p_timers.Expired(pTimerDisciplineReuse)) {
+	if (!p_timers.Expired(&database, pTimerDisciplineReuse)) {
 		char val1[20]={0};
 		char val2[20]={0};
 		int32 remain = p_timers.GetRemainingTime(pTimerDisciplineReuse);
@@ -1660,7 +1660,7 @@ Message(0, "Disc packet id=%d, %x,%x,%x", disc_in->disc_id, disc_in->unknown3[0]
 
 /*#if 0
 // Queries the loottable: adds item & coin to the npc
-void Database::AddLootTableToNPC(int32 loottable_id, ItemList* itemlist, int32* copper, int32* silver, int32* gold, int32* plat) {
+void ZoneDatabase::AddLootTableToNPC(int32 loottable_id, ItemList* itemlist, int32* copper, int32* silver, int32* gold, int32* plat) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -1745,7 +1745,7 @@ void Database::AddLootTableToNPC(int32 loottable_id, ItemList* itemlist, int32* 
 
 // Called by AddLootTableToNPC
 // maxdrops = size of the array npcd
-void Database::AddLootDropToNPC(int32 lootdrop_id, ItemList* itemlist) {
+void ZoneDatabase::AddLootDropToNPC(int32 lootdrop_id, ItemList* itemlist) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;

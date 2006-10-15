@@ -49,6 +49,8 @@ Copyright (C) 2001-2002	EQEMu Development Team (http://eqemulator.net)
 #include "../common/files.h"
 #include "../common/opcodemgr.h"
 #include "../common/EQPacket.h"
+#include "../common/guilds.h"
+#include "../common/rulesys.h"
 //#include "../common/servertalk.h" // for oocmute and revoke
 #include "worldserver.h"
 #include "masterentity.h"
@@ -56,11 +58,12 @@ Copyright (C) 2001-2002	EQEMu Development Team (http://eqemulator.net)
 #include "features.h"
 #include "pathing.h"
 #include "client_logs.h"
+#include "guild_mgr.h"
+#include "../common/patches/patches.h"
 
 // these should be in the headers...
 extern WorldServer worldserver;	
 extern bool spells_loaded;
-extern GuildRanks_Struct guilds[512];
 
 #ifdef EMBPERL 
 //this should probably be broken up to allow one define to build a ver that _only_ allows plugins
@@ -69,22 +72,6 @@ const static int PERL_PRIVS = 200; //what admin status is required to use perl? 
 #include "embperl.h"
 #include "embparser.h"
 #endif //EMBPERL_PLUGIN
-
-#ifdef GUILDWARS
-#include "../GuildWars/GuildWars.h"
-extern GuildLocationList location_list;
-extern GuildWars guildwars;
-#endif
-
-#ifdef RAIDADDICTS
-#include "RaidAddicts.h"
-extern RaidAddicts raidaddicts;
-#endif
-
-#ifdef WIN32
-//borrow this from Wayne... I like it
-extern char* itoa(int integer);
-#endif
 
 #include "StringIDs.h"
 #include "command.h"
@@ -160,20 +147,15 @@ Access Levels:
  * are not used and can be NULL.
  *
  */
-int command_init(void)
-{
-	int cmdlvl;
-
+int command_init(void) {
 	if
 	(
 		command_add("resetaa","Resets a Player's AA in their profile.",200,command_resetaa) ||
 		command_add("bind","Sets your targets bind spot to their current location",200,command_bind) ||
-		command_add("ppoint","[add or connect] Set P Points",200,command_ppoint) ||
-		command_add("setpr","[number (1-4)] Set P_Range point",200,command_pr) ||
-		command_add("setrange","Set range after selecting all four points",200,command_range) ||
 		command_add("sendop","[opcode] - LE's Private test command, leave it alone",200,command_sendop) ||
 		command_add("optest","solar's private test command",255,command_optest) ||
-		command_add("setstat","Increases or Decreases a client's stats permanently.",200,command_setstat) ||
+		command_add("setstat","Sets the stats to a specific value.",255,command_setstat) ||
+		command_add("incstat","Increases or Decreases a client's stats permanently.",200,command_incstat) ||
 		command_add("help","[search term] - List available commands and their description, specify partial command as argument to search",0,command_help) ||
 		command_add("version","- Display current version of EQEmu server",0,command_version) ||
 		command_add("eitem","- Changes item stats",200,command_eitem) ||
@@ -277,6 +259,7 @@ int command_init(void)
 		command_add("peekinv","[worn/cursor/inv/bank/trade/all] - Print out contents of your player target's inventory",100,command_peekinv) ||
 		command_add("findnpctype","[search criteria] - Search database NPC types",100,command_findnpctype) ||
 		command_add("viewnpctype","[npctype id] - Show info about an npctype",100,command_viewnpctype) ||
+		command_add("reloadstatic","- Reload Static Zone Data",150,command_reloadstatic) ||
 		command_add("reloadquest","- Clear quest cache",150,command_reloadqst) ||
 		command_add("reloadqst",NULL,0,command_reloadqst) ||
 		command_add("reloadpl",NULL,0,command_reloadqst) ||
@@ -329,16 +312,6 @@ int command_init(void)
 		command_add("qglobal","[on/off/view] - Toggles qglobal functionality on an NPC",100,command_qglobal) ||
 		command_add("loc","- Print out your or your target's current location and heading",0,command_loc) ||
 		command_add("goto","[x] [y] [z] - Teleport to the provided coordinates or to your target",10,command_goto) ||
-#ifdef GUILDWARS
-		command_add("zonelocations","[zonelocations] - GuildWars Location listing (Zone only)",100,command_zonelocations) ||
-		command_add("serverlocations","[serverlocations] - GuildWars Location listing (Entire Server)",100,command_serverlocations) ||
-		command_add("takelocation","[takelocation] - Takes over the current location you are in",200,command_takelocation) ||
-		command_add("specialflag","[specialflag] - Special guildwars pvp flag",100,command_specialflag) ||
-		command_add("restartzone","[restartzone] - Restarts the current zone if it is in a loop file",250,command_zonerestart) ||
-		command_add("locationguards","[locationguards] - Live guards names at the current location",150,command_locationguards) ||
-		command_add("rules","[rules] - Read the GuildWars ruleset",0,command_rules) ||
-		command_add("acceptrules","[acceptrules] - Accept the GuildWars Agreement",0,command_acceptrules) ||
-#endif
 #ifdef BUGTRACK
 		command_add("bugtrack","[bug description] - Report a bug",0,command_bug) ||
 #endif
@@ -348,11 +321,6 @@ int command_init(void)
 		command_add("peval","(expression) - execute some perl",PERL_PRIVS,command_embperl_eval) ||
 #endif //EMBPERL_EVAL_COMMANDS
 #endif //EMBPERL_PLUGIN
-#ifdef RAIDADDICTS
-		command_add("setpoints","[guk] [mirugal] [mistmoore] [rujarkian] [takish] (Players: [guktotal] [mirugaltotal] [mistmooretotal] [rujarkiantotal] [takishtotal])",200,command_setpoints) ||
-		command_add("showpoints","[PlayerName]",0,command_showpoints) ||
-		command_add("addpoints","[PlayerName]",150,command_addpoints) ||
-#endif
 		command_add("iteminfo","- Get information about the item on your cursor",10,command_iteminfo) ||
 		command_add("uptime","[zone server id] - Get uptime of worldserver, or zone server if argument provided",10,command_uptime) ||
 		command_add("flag","[status] [acctname] - Refresh your admin status, or set an account's admin status if arguments provided",0,command_flag) ||
@@ -397,13 +365,23 @@ int command_init(void)
 		command_add("timers","- Display persisten timers for target",200,command_timers) ||
 		command_add("hp","- Refresh your HP bar from the server.",0,command_hp) ||
 		command_add("pf","- ",0,command_pf) ||
+		command_add("logsql","- enable SQL logging",200,command_logsql) ||
 		command_add("bestz","- Ask map for a good Z coord for your x,y coords.",0,command_bestz) ||
 		command_add("ginfo","- get group info on target.",20,command_ginfo) ||
 		command_add("fear","- view and edit fear grids and hints",200,command_fear) ||
 		command_add("path","- view and edit pathing",200,command_path) ||
+		command_add("flags","- displays the flags of you or your target",0,command_flags) ||
+		command_add("flagedit","- Edit zone flags on your target",100,command_flagedit) ||
+		command_add("mlog","- Manage log settings",250,command_mlog) ||
 		command_add("aggro","(range) [-v] - Display aggro information for all mobs 'range' distance from your target. -v is verbose faction info.",100,command_aggro) ||
-		command_add("npcemote","[message] - Make your NPC target emote a message.",150,command_npcemote)
-	)
+		command_add("npcemote","[message] - Make your NPC target emote a message.",150,command_npcemote) ||
+		command_add("serverrules","- Read this server's rules",0,command_serverrules) ||
+		command_add("acceptrules","[acceptrules] - Accept the EQEmu Agreement",0,command_acceptrules) ||
+		command_add("rules","(subcommand) - Manage server rules", 250, command_rules) ||
+		command_add("guildcreate","[guildname] - Creates an approval setup for guild name specified",0,command_guildcreate) ||
+		command_add("guildapprove","[guildapproveid] - Approve a guild with specified ID (guild creator receives the id)",0,command_guildapprove) ||
+		command_add("guildlist","[guildapproveid] - Lists character names who have approved the guild specified by the approve id",0,command_guildlist)
+		)
 	{
 		command_deinit();
 		return -1;
@@ -412,13 +390,15 @@ int command_init(void)
 	map<string, CommandRecord *>::iterator cur,end;
 	cur = commandlist.begin();
 	end = commandlist.end();
+	map<string,uint8> command_settings;
+	map<string,uint8>::iterator itr;
+	database.GetCommandSettings(command_settings);
 	for(; cur != end; cur++) {
-		if((cmdlvl = database.CommandRequirement(cur->first.c_str())) != 255)
+		if ((itr=command_settings.find(cur->first))!=command_settings.end())
 		{
-
-			cur->second->access = cmdlvl;
+			cur->second->access = itr->second;
 #if EQDEBUG >=5
-			LogFile->write(EQEMuLog::Debug, "command_init(): - Command '%s' set to access level %d." , cur->first.c_str(), cmdlvl);
+			LogFile->write(EQEMuLog::Debug, "command_init(): - Command '%s' set to access level %d." , cur->first.c_str(), itr->second);
 #endif
 		}
 		else
@@ -701,23 +681,23 @@ void command_setstat(Client* c, const Seperator* sep){
 	}
 	else{
 		c->Message(0,"This command is used to permanently increase or decrease a players stats.");
+		c->Message(0,"Usage: #setstat {type} {value the stat should be}");
+		c->Message(0,"Types: Str: 0, Sta: 1, Agi: 2, Dex: 3, Int: 4, Wis: 5, Cha: 6");
+	}
+}
+
+void command_incstat(Client* c, const Seperator* sep){
+	if(sep->arg[1][0] && sep->arg[2][0] && c->GetTarget()!=0 && c->GetTarget()->IsClient()){
+		c->GetTarget()->CastToClient()->IncStats(atoi(sep->arg[1]),atoi(sep->arg[2]));
+	}
+	else{
+		c->Message(0,"This command is used to permanently increase or decrease a players stats.");
 		c->Message(0,"Usage: #setstat {type} {value by which to increase or decrease}");
 		c->Message(0,"Note: The value is in increments of 2, so a value of 3 will actually increase the stat by 6");
 		c->Message(0,"Types: Str: 0, Sta: 1, Agi: 2, Dex: 3, Int: 4, Wis: 5, Cha: 6");
 	}
 }
-void command_range(Client* c,const Seperator *sep){
-	int32 insert_id=0;
-	if(c->pr->p1set && c->pr->p2set && c->pr->p3set && c->pr->p4set){
-		insert_id=database.AddPRange(c->pr);
-		if(insert_id>0)
-			c->Message(0,"Successfully added PRange: %i",insert_id);
-		else
-			c->Message(13,"Error adding PRange!");
-	}
-	else
-		c->Message(0,"Not all points are set!");
-}
+
 void command_resetaa(Client* c,const Seperator *sep){
 	if(c->GetTarget()!=0 && c->GetTarget()->IsClient()){
 		c->GetTarget()->CastToClient()->ResetAA();
@@ -726,60 +706,7 @@ void command_resetaa(Client* c,const Seperator *sep){
 	else
 		c->Message(0,"Usage: Target a client and use #resetaa to reset the AA data in their Profile.");
 }
-void command_ppoint(Client* c,const Seperator *sep){
-	int32 insert_id=0;
-	if (sep->arg[1][0] && strcasecmp(sep->arg[1], "add") == 0){
-		insert_id=database.AddPPoint(c->GetX(),c->GetY(),c->GetZ());
-		if(insert_id>0)
-			c->Message(0,"Successfully added PPoint: %i",insert_id);
-		else
-			c->Message(13,"Error adding PPoint!");
-	}
-	else if(sep->arg[1][0] && strcasecmp(sep->arg[1], "connect") == 0 && sep->arg[2][0] && sep->arg[3][0] && sep->arg[4][0]){
-		insert_id=database.AddPConnect(atoi(sep->arg[2]),atoi(sep->arg[3]),atoi(sep->arg[4]));
-		if(insert_id>0)
-			c->Message(0,"Successfully connected PPoint: %i",insert_id);
-		else
-			c->Message(13,"Error connecting PPoint!");
-	}
-	else{
-		c->Message(0,"Usage: #ppoint add or connect");
-		c->Message(0,"Usage: #ppoint connect [p_point num] [p_range 1] [p_range 2]");
-	}
-}
-void command_pr(Client* c,const Seperator *sep){
-	int8 num=0;
-	if(sep->arg[1][0])
-		num=atoi(sep->arg[1]);
-	if(num>0 && num<5){
-		if(num==1){
-			c->pr->rx1=c->GetX();
-			c->pr->ry1=c->GetY();
-			c->pr->rz1=c->GetZ();
-			c->pr->p1set=true;
-		}
-		else if(num==2){
-			c->pr->rx2=c->GetX();
-			c->pr->ry2=c->GetY();
-			c->pr->rz2=c->GetZ();
-			c->pr->p2set=true;
-		}
-		else if(num==3){
-			c->pr->rx3=c->GetX();
-			c->pr->ry3=c->GetY();
-			c->pr->rz3=c->GetZ();
-			c->pr->p3set=true;
-		}
-		else if(num==4){
-			c->pr->rx4=c->GetX();
-			c->pr->ry4=c->GetY();
-			c->pr->rz4=c->GetZ();
-			c->pr->p4set=true;
-		}
-	}
-	else
-		c->Message(0,"Usage: #setpr [range id]");
-}
+
 void command_sendop(Client *c,const Seperator *sep){
 	/*if(sep->arg[1][0] && sep->arg[2][0])
 	{
@@ -794,7 +721,7 @@ void command_sendop(Client *c,const Seperator *sep){
 
 	*/
 	if(sep->arg[1][0] && sep->arg[2][0]){
-		EQZonePacket* outapp = new EQZonePacket((EmuOpcode)atoi(sep->arg[1]),sizeof(GMName_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket((EmuOpcode)atoi(sep->arg[1]),sizeof(GMName_Struct));
 		GMName_Struct* gms=(GMName_Struct*)outapp->pBuffer;
 		memset(outapp->pBuffer,0,outapp->size);
 		strcpy(gms->gmname,c->GetName());
@@ -807,7 +734,7 @@ void command_sendop(Client *c,const Seperator *sep){
 	}
 	/*
 		else{
-			EQZonePacket* outapp = new EQZonePacket(121,atoi(sep->arg[2]));
+			EQApplicationPacket* outapp = new EQApplicationPacket(121,atoi(sep->arg[2]));
 			memset(outapp->pBuffer,0,outapp->size);
 			int8 offset=atoi(sep->arg[3]);
 			if(offset<outapp->size && sep->arg[4][0])
@@ -832,7 +759,7 @@ void command_sendop(Client *c,const Seperator *sep){
 		}*/
 		//c->SetStats(atoi(sep->arg[1]),atoi(sep->arg[2]));
 	//}
-		/*EQZonePacket* outapp = new EQZonePacket(atoi(sep->arg[1]), sizeof(PlayerAA_Struct));
+		/*EQApplicationPacket* outapp = new EQApplicationPacket(atoi(sep->arg[1]), sizeof(PlayerAA_Struct));
 		memcpy(outapp->pBuffer,c->GetAAStruct(),outapp->size);
 		c->QueuePacket(outapp);
 		safe_delete(outapp);
@@ -845,7 +772,7 @@ void command_sendop(Client *c,const Seperator *sep){
 
 void command_optest(Client *c, const Seperator *sep)
 {
-	EQZonePacket *outapp = new EQZonePacket(OP_MoneyUpdate, sizeof(MoneyUpdate_Struct));
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_MoneyUpdate, sizeof(MoneyUpdate_Struct));
 	MoneyUpdate_Struct *mu = (MoneyUpdate_Struct *)outapp->pBuffer;
 	mu->platinum = sep->arg[1][0] ? atoi(sep->arg[1]) : 0;
 	mu->gold = sep->arg[2][0] ? atoi(sep->arg[2]): 0;
@@ -855,7 +782,7 @@ void command_optest(Client *c, const Seperator *sep)
 	safe_delete(outapp);
 
 /*
-	EQZonePacket outapp;
+	EQApplicationPacket outapp;
 	if(sep->arg[1][0])
 	{
 		c->CreateDespawnPacket(&outapp);
@@ -879,14 +806,14 @@ void command_optest(Client *c, const Seperator *sep)
 	
 
 /*
-	EQZonePacket* outapp = new EQZonePacket(OP_MemorizeSpell, sizeof(MemorizeSpell_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_MemorizeSpell, sizeof(MemorizeSpell_Struct));
 	MemorizeSpell_Struct* mem = (MemorizeSpell_Struct*)outapp->pBuffer;
 	mem->slot = sep->arg[1][0] ? atoi(sep->arg[1]) : 0;
 	mem->spell_id = sep->arg[2][0] ? atoi(sep->arg[2]) : 15;
 	mem->scribing = 0;
 	c->QueuePacket(outapp);
 
-	EQZonePacket* outapp = new EQZonePacket(OP_Action, sizeof(Action_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Action, sizeof(Action_Struct));
 	Action_Struct *act = (Action_Struct *)outapp->pBuffer;
 	act->target = c->GetTarget() ? c->GetTarget()->GetID() : c->GetID();
 	act->source = c->GetID();
@@ -909,14 +836,14 @@ void command_optest(Client *c, const Seperator *sep)
 */
 
 /*
-	EQZonePacket *outapp = new EQZonePacket(OP_MoveDoor, sizeof(MoveDoor_Struct));
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_MoveDoor, sizeof(MoveDoor_Struct));
 	MoveDoor_Struct *md = (MoveDoor_Struct *)outapp->pBuffer;
 	md->doorid = sep->arg[1][0] ? atoi(sep->arg[1]) : 0;
 	md->action = sep->arg[2][0] ? atoi(sep->arg[2]): 0;
 	entity_list.QueueClients(c, outapp);
 	safe_delete(outapp);
 
-	EQZonePacket *outapp = new EQZonePacket(OP_Damage, sizeof(CombatDamage_Struct));
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_Damage, sizeof(CombatDamage_Struct));
 	CombatDamage_Struct *cd = (CombatDamage_Struct *)outapp->pBuffer;
 	cd->target = c->GetTarget() ? c->GetTarget()->GetID() : c->GetID();
 	cd->source = c->GetID();
@@ -1004,7 +931,7 @@ void command_serversidename(Client *c, const Seperator *sep)
 
 void command_testspawnkill(Client *c, const Seperator *sep)
 {
-/*	EQZonePacket* outapp = new EQZonePacket(OP_Death, sizeof(Death_Struct));
+/*	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Death, sizeof(Death_Struct));
 	Death_Struct* d = (Death_Struct*)outapp->pBuffer;
 	d->corpseid = 1000;
 	//	d->unknown011 = 0x05;
@@ -1020,7 +947,7 @@ void command_testspawnkill(Client *c, const Seperator *sep)
 void command_testspawn(Client *c, const Seperator *sep)
 {
 	if (sep->IsNumber(1)) {
-		EQZonePacket* outapp = new EQZonePacket(OP_NewSpawn, sizeof(NewSpawn_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewSpawn, sizeof(NewSpawn_Struct));
 		NewSpawn_Struct* ns = (NewSpawn_Struct*)outapp->pBuffer;
 		c->FillSpawnStruct(ns, c);
 		strcpy(ns->spawn.name, "Test");
@@ -1057,7 +984,7 @@ void command_wc(Client *c, const Seperator *sep)
 	}
 	else
 	{
-		EQZonePacket* outapp = new EQZonePacket(OP_WearChange, sizeof(WearChange_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_WearChange, sizeof(WearChange_Struct));
 		WearChange_Struct* wc = (WearChange_Struct*)outapp->pBuffer;
 		wc->spawn_id = c->GetTarget()->GetID();
 		wc->wear_slot_id = atoi(sep->arg[1]);
@@ -1379,10 +1306,7 @@ void command_summon(Client *c, const Seperator *sep)
 				c->Message(0, "Summoning player from another zone not yet implemented.");
 				return;
 
-				ServerPacket* pack = new ServerPacket;
-				pack->opcode = ServerOP_ZonePlayer;
-				pack->size = sizeof(ServerZonePlayer_Struct);
-				pack->pBuffer = new uchar[pack->size];
+				ServerPacket* pack = new ServerPacket(ServerOP_ZonePlayer, sizeof(ServerZonePlayer_Struct));
 				ServerZonePlayer_Struct* szp = (ServerZonePlayer_Struct*) pack->pBuffer;
 				strcpy(szp->adminname, c->GetName());
 				szp->adminrank = c->Admin();
@@ -1413,7 +1337,7 @@ void command_summon(Client *c, const Seperator *sep)
 	{ // npc target
 		c->Message(0, "Summoning NPC %s to %1.1f, %1.1f, %1.1f", t->GetName(), c->GetX(), c->GetY(), c->GetZ());
 		t->CastToNPC()->GMMove(c->GetX(), c->GetY(), c->GetZ(), c->GetHeading());
-		t->SaveGuardSpot(true);
+		t->CastToNPC()->SaveGuardSpot(true);
 	}
 	else if (t->IsCorpse())
 	{ // corpse target
@@ -1640,7 +1564,7 @@ void command_timezone(Client *c, const Seperator *sep)
 		database.SetZoneTZ(zone->GetZoneID(), ntz);
 
 		// Update all clients with new TZ.
-		EQZonePacket* outapp = new EQZonePacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
 		TimeOfDay_Struct* tod = (TimeOfDay_Struct*)outapp->pBuffer;
 		zone->zone_time.getEQTimeOfDay(time(0), tod);
 		entity_list.QueueClients(c, outapp);
@@ -1651,7 +1575,7 @@ void command_timezone(Client *c, const Seperator *sep)
 void command_synctod(Client *c, const Seperator *sep)
 {
 	c->Message(13, "Updating Time/Date for all clients in zone...");
-	EQZonePacket* outapp = new EQZonePacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
 	TimeOfDay_Struct* tod = (TimeOfDay_Struct*)outapp->pBuffer;
 	zone->zone_time.getEQTimeOfDay(time(0), tod);
 	entity_list.QueueClients(c, outapp);
@@ -1771,7 +1695,7 @@ void command_zclip(Client *c, const Seperator *sep)
 			zone->newzone_data.fog_maxclip[0]=atof(sep->arg[5]);
 		if(sep->arg[6][0]!=0)
 			zone->newzone_data.fog_maxclip[1]=atof(sep->arg[6]);
-		EQZonePacket* outapp = new EQZonePacket(OP_NewZone, sizeof(NewZone_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -1885,7 +1809,7 @@ void command_weather(Client *c, const Seperator *sep)
 			if(sep->arg[2][0] != 0 && sep->arg[3][0] != 0) {
 				c->Message(0, "Sending weather packet... TYPE=%s, INTENSITY=%s", sep->arg[2], sep->arg[3]);
 				zone->zone_weather = atoi(sep->arg[2]);
-				EQZonePacket* outapp = new EQZonePacket(OP_Weather, 8);
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 				outapp->pBuffer[0] = atoi(sep->arg[2]);
 				outapp->pBuffer[4] = atoi(sep->arg[3]); // This number changes in the packets, intensity?
 				entity_list.QueueClients(c, outapp);
@@ -1898,7 +1822,7 @@ void command_weather(Client *c, const Seperator *sep)
 		else if(sep->arg[1][0] == '2')	{
 			entity_list.Message(0, 0, "Snowflakes begin to fall from the sky.");
 			zone->zone_weather = 2;
-			EQZonePacket* outapp = new EQZonePacket(OP_Weather, 8);
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 			outapp->pBuffer[0] = 0x01;
 			outapp->pBuffer[4] = 0x02; // This number changes in the packets, intensity?
 			entity_list.QueueClients(c, outapp);
@@ -1907,7 +1831,7 @@ void command_weather(Client *c, const Seperator *sep)
 		else if(sep->arg[1][0] == '1')	{
 			entity_list.Message(0, 0, "Raindrops begin to fall from the sky.");
 			zone->zone_weather = 1;
-			EQZonePacket* outapp = new EQZonePacket(OP_Weather, 8);
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 			outapp->pBuffer[4] = 0x01; // This is how it's done in Fear, and you can see a decent distance with it at this value
 			entity_list.QueueClients(c, outapp);
 			safe_delete(outapp);
@@ -1917,7 +1841,7 @@ void command_weather(Client *c, const Seperator *sep)
 		if(zone->zone_weather == 1)	{ // Doing this because if you have rain/snow on, you can only turn one off.
 			entity_list.Message(0, 0, "The sky clears as the rain ceases to fall.");
 			zone->zone_weather = 0;
-			EQZonePacket* outapp = new EQZonePacket(OP_Weather, 8);
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 			// To shutoff weather you send an empty 8 byte packet (You get this everytime you zone even if the sky is clear)
 			entity_list.QueueClients(c, outapp);
 			safe_delete(outapp);
@@ -1925,7 +1849,7 @@ void command_weather(Client *c, const Seperator *sep)
 		else if(zone->zone_weather == 2) {
 			entity_list.Message(0, 0, "The sky clears as the snow stops falling.");
 			zone->zone_weather = 0;
-			EQZonePacket* outapp = new EQZonePacket(OP_Weather, 8);
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 			// To shutoff weather you send an empty 8 byte packet (You get this everytime you zone even if the sky is clear)
 			outapp->pBuffer[0] = 0x01; // Snow has it's own shutoff packet
 			entity_list.QueueClients(c, outapp);
@@ -1934,7 +1858,7 @@ void command_weather(Client *c, const Seperator *sep)
 		else {
 			entity_list.Message(0, 0, "The sky clears.");
 			zone->zone_weather = 0;
-			EQZonePacket* outapp = new EQZonePacket(OP_Weather, 8);
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 			// To shutoff weather you send an empty 8 byte packet (You get this everytime you zone even if the sky is clear)
 			entity_list.QueueClients(c, outapp);
 			safe_delete(outapp);
@@ -1956,7 +1880,7 @@ void command_zheader(Client *c, const Seperator *sep)
 			c->Message(0, "Successfully loaded zone header for %s from database.", sep->argplus[1]);
 		else
 			c->Message(0, "Failed to load zone header %s from database", sep->argplus[1]);
-		EQZonePacket* outapp = new EQZonePacket(OP_NewZone, sizeof(NewZone_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -1972,7 +1896,7 @@ void command_zsky(Client *c, const Seperator *sep)
 		c->Message(0, "ERROR: Sky type can not be less than 0 or greater than 255!");
 	else {
 		zone->newzone_data.sky = atoi(sep->arg[1]);
-		EQZonePacket* outapp = new EQZonePacket(OP_NewZone, sizeof(NewZone_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -1996,7 +1920,7 @@ void command_zcolor(Client *c, const Seperator *sep)
 			zone->newzone_data.fog_green[z] = atoi(sep->arg[2]);
 			zone->newzone_data.fog_blue[z] = atoi(sep->arg[3]);
 		}
-		EQZonePacket* outapp = new EQZonePacket(OP_NewZone, sizeof(NewZone_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -2010,7 +1934,7 @@ void command_spon(Client *c, const Seperator *sep)
 
 void command_spoff(Client *c, const Seperator *sep)
 {
-	EQZonePacket* outapp = new EQZonePacket(OP_ManaChange, 0);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ManaChange, 0);
 	outapp->priority = 5;
 	c->QueuePacket(outapp);
 	safe_delete(outapp);
@@ -2029,7 +1953,7 @@ void command_itemtest(Client *c, const Seperator *sep)
 	fread(chBuffer, sizeof(chBuffer), sizeof(char), f);
 	fclose(f);
 		
-	EQZonePacket* outapp = new EQZonePacket(OP_ItemLinkResponse, strlen(chBuffer)+5);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ItemLinkResponse, strlen(chBuffer)+5);
 	memcpy(&outapp->pBuffer[4], chBuffer, strlen(chBuffer));
 	c->QueuePacket(outapp);
 	safe_delete(outapp);
@@ -2107,24 +2031,24 @@ void command_ai(Client *c, const Seperator *sep)
 			c->Message(0, "Usage: (targeted) #ai con [mob name]");
 	}
 	else if (strcasecmp(sep->arg[1], "guard") == 0) {
-		if (target)
-			target->SaveGuardSpot();
+		if (target && target->IsNPC())
+			target->CastToNPC()->SaveGuardSpot();
 		else
 			c->Message(0, "Usage: (targeted) #ai guard - sets npc to guard the current location (use #summon to move)");
 	}
 	else if (strcasecmp(sep->arg[1], "roambox") == 0) {
-		if (target && target->IsAIControlled()) {
+		if (target && target->IsAIControlled() && target->IsNPC()) {
 			if ((sep->argnum == 6 || sep->argnum == 7) && sep->IsNumber(2) && sep->IsNumber(3) && sep->IsNumber(4) && sep->IsNumber(5) && sep->IsNumber(6)) {
 				int32 tmp = 2500;
 				if (sep->IsNumber(7))
 					tmp = atoi(sep->arg[7]);
-				target->AI_SetRoambox(atof(sep->arg[2]), atof(sep->arg[3]), atof(sep->arg[4]), atof(sep->arg[5]), atof(sep->arg[6]), tmp);
+				target->CastToNPC()->AI_SetRoambox(atof(sep->arg[2]), atof(sep->arg[3]), atof(sep->arg[4]), atof(sep->arg[5]), atof(sep->arg[6]), tmp);
 			}
 			else if ((sep->argnum == 3 || sep->argnum == 4) && sep->IsNumber(2) && sep->IsNumber(3)) {
 				int32 tmp = 2500;
 				if (sep->IsNumber(4))
 					tmp = atoi(sep->arg[4]);
-				target->AI_SetRoambox(atof(sep->arg[2]), atof(sep->arg[3]), tmp);
+				target->CastToNPC()->AI_SetRoambox(atof(sep->arg[2]), atof(sep->arg[3]), tmp);
 			}
 			else {
 				c->Message(0, "Usage: #ai roambox dist max_x min_x max_y min_y [delay]");
@@ -2132,7 +2056,7 @@ void command_ai(Client *c, const Seperator *sep)
 			}
 		}
 		else
-			c->Message(0, "You need a AI Mob targeted");
+			c->Message(0, "You need a AI NPC targeted");
 	}
 	else if (strcasecmp(sep->arg[1], "stop") == 0 && c->Admin() >= commandToggleAI) {
 		if (target) {
@@ -2298,12 +2222,16 @@ void command_setpass(Client *c, const Seperator *sep)
 
 void command_grid(Client *c, const Seperator *sep)
 {
-	if (strcasecmp("add",sep->arg[1]) == 0)
+	if (strcasecmp("max",sep->arg[1]) == 0)
+		c->Message(0, "Highest grid ID in this zone: %d", database.GetHighestGrid(zone->GetZoneID()));
+	else if (strcasecmp("add",sep->arg[1]) == 0)
 		database.ModifyGrid(c, false,atoi(sep->arg[2]),atoi(sep->arg[3]), atoi(sep->arg[4]),zone->GetZoneID());
 	else if (strcasecmp("delete",sep->arg[1]) == 0)
 		database.ModifyGrid(c, true,atoi(sep->arg[2]),0,0,zone->GetZoneID());
-	else
+	else {
 		c->Message(0,"Usage: #grid add/delete grid_num wandertype pausetype");
+		c->Message(0,"Usage: #grid max - displays the highest grid ID used in this zone (for add)");
+	}
 }
 
 void command_wp(Client *c, const Seperator *sep)
@@ -2458,7 +2386,7 @@ void command_castspell(Client *c, const Seperator *sep)
 					c->CastSpell(spellid, 0, 10, 0);
 			else
 				if(c->Admin() >= commandInstacast)
-					c->SpellFinished(spellid, c->GetTarget()->GetID(), 10, 0);
+					c->SpellFinished(spellid, c->GetTarget(), 10, 0);
 				else
 					c->CastSpell(spellid, c->GetTarget()->GetID(), 10, 0);
 	}
@@ -2595,23 +2523,23 @@ void command_gender(Client *c, const Seperator *sep)
 
 void command_makepet(Client *c, const Seperator *sep)
 {
-	if (!(sep->IsNumber(1) && sep->IsNumber(2) && sep->IsNumber(3) && sep->IsNumber(4)))
-		c->Message(0, "Usage: #makepet level class race texture");
+	if (sep->arg[1][0] == '\0')
+		c->Message(0, "Usage: #makepet pet_type_name (will not survive across zones)");
 	else
-		c->MakePet(0, atoi(sep->arg[1]), atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]));
+		c->MakePet(0, sep->arg[1]);
 }
 
 void command_level(Client *c, const Seperator *sep)
 {
 	int16 level = atoi(sep->arg[1]);
-	if ((level <= 0) || ((level > LEVEL_CAP) && (c->Admin() < commandLevelAboveCap)) )
+	if ((level <= 0) || ((level > RuleI(Character, MaxLevel)) && (c->Admin() < commandLevelAboveCap)) )
 		c->Message(0, "Error: #Level: Invalid Level");
 	else if (c->Admin() < 100)
 		c->SetLevel(level, true);
 	else if (!c->GetTarget())
 		c->Message(0, "Error: #Level: No target");
 	else
-		if (!c->GetTarget()->IsNPC() && ((c->Admin() < commandLevelNPCAboveCap) && (level > LEVEL_CAP)))
+		if (!c->GetTarget()->IsNPC() && ((c->Admin() < commandLevelNPCAboveCap) && (level > RuleI(Character, MaxLevel))))
 			c->Message(0, "Error: #Level: Invalid Level");
 		else
 			c->GetTarget()->SetLevel(level, true);
@@ -2734,7 +2662,9 @@ void command_charbackup(Client *c, const Seperator *sep)
 		else
 			database.GetAccountIDByChar(sep->arg[2], &charid);
 		if (charid) {
-			if (database.RunQuery(query, MakeAnyLenString(&query, "Select id, backupreason, charid, account_id, zoneid, DATE_FORMAT(ts, '%%m/%%d/%%Y %%H:%%i:%%s') from character_backup where charid=%u", charid), errbuf, &result)) {
+			if (database.RunQuery(query, MakeAnyLenString(&query, 
+				"Select id, backupreason, charid, account_id, zoneid, DATE_FORMAT(ts, '%%m/%%d/%%Y %%H:%%i:%%s') "
+				" from character_backup where charid=%u", charid), errbuf, &result)) {
 				safe_delete(query);
 				int32 x = 0;
 				while ((row = mysql_fetch_row(result))) {
@@ -2761,8 +2691,20 @@ void command_charbackup(Client *c, const Seperator *sep)
 		
 		if (charid && sep->IsNumber(3)) {
 			int32 cbid = atoi(sep->arg[3]);
-			if (database.RunQuery(query, MakeAnyLenString(&query, "Insert into character_backup (backupreason, charid, account_id, name, profile, guild, guildrank, x, y, z, zoneid, alt_adv) select 1, id, account_id, name, profile, guild, guildrank, x, y, z, zoneid, alt_adv from character_ where id=%u", charid), errbuf)) {
-				if (database.RunQuery(query, MakeAnyLenString(&query, "update character_ inner join character_backup on character_.id = character_backup.charid set character_.name = character_backup.name, character_.profile = character_backup.profile, character_.guild = character_backup.guild, character_.guildrank = character_backup.guildrank, character_.x = character_backup.x, character_.y = character_backup.y, character_.z = character_backup.z, character_.zoneid = character_backup.zoneid, character_.alt_adv = character_backup.alt_adv where character_backup.charid=%u and character_backup.id=%u", charid, cbid), errbuf)) {
+			if (database.RunQuery(query, MakeAnyLenString(&query, 
+				"Insert into character_backup (backupreason, charid, account_id, name, profile, level, class, x, y, z, zoneid, alt_adv) "
+				" select 1, id, account_id, name, profile, level, class, x, y, z, zoneid, alt_adv from character_ where id=%u", charid), errbuf)) {
+				if (database.RunQuery(query, MakeAnyLenString(&query, 
+					"update character_ inner join character_backup on character_.id = character_backup.charid "
+					" set character_.name = character_backup.name, "
+					" character_.profile = character_backup.profile, "
+					" character_.level = character_backup.level, "
+					" character_.class = character_backup.class, "
+					" character_.x = character_backup.x, "
+					" character_.y = character_backup.y, "
+					" character_.z = character_backup.z, "
+					" character_.zoneid = character_backup.zoneid "
+					" where character_backup.charid=%u and character_backup.id=%u", charid, cbid), errbuf)) {
 					safe_delete(query);
 					c->Message(0, "Character restored.");
 				}
@@ -3087,7 +3029,7 @@ void command_kick(Client *c, const Seperator *sep)
 		if (client != 0) {
 			if (client->Admin() <= c->Admin()) {
 				client->Message(0, "You have been kicked by %s",c->GetName());
-				EQZonePacket* outapp = new EQZonePacket(OP_GMKick,0);
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_GMKick,0);
 				client->QueuePacket(outapp);
 				client->Kick();
 				c->Message(0, "Kick: local: kicking %s", sep->arg[1]);
@@ -3096,10 +3038,7 @@ void command_kick(Client *c, const Seperator *sep)
 		else if (!worldserver.Connected())
 			c->Message(0, "Error: World server disconnected");
 		else {
-			ServerPacket* pack = new ServerPacket;
-			pack->opcode = ServerOP_KickPlayer;
-			pack->size = sizeof(ServerKickPlayer_Struct);
-			pack->pBuffer = new uchar[pack->size];
+			ServerPacket* pack = new ServerPacket(ServerOP_KickPlayer, sizeof(ServerKickPlayer_Struct));
 			ServerKickPlayer_Struct* skp = (ServerKickPlayer_Struct*) pack->pBuffer;
 			strcpy(skp->adminname, c->GetName());
 			strcpy(skp->name, sep->arg[1]);
@@ -3180,7 +3119,7 @@ void command_equipitem(Client *c, const Seperator *sep)
 	if (sep->IsNumber(1) && (slot_id>=0) && (slot_id<=21)) {
 		const ItemInst* inst = c->GetInv().GetItem(SLOT_CURSOR);
 		if (inst && inst->IsType(ItemClassCommon)) {
-			EQZonePacket* outapp = new EQZonePacket(OP_MoveItem, sizeof(MoveItem_Struct));
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoveItem, sizeof(MoveItem_Struct));
 			MoveItem_Struct* mi	= (MoveItem_Struct*)outapp->pBuffer;
 			mi->from_slot		= SLOT_CURSOR;
 			mi->to_slot			= slot_id;
@@ -3552,7 +3491,7 @@ void command_lastname(Client *c, const Seperator *sep)
 
 void command_memspell(Client *c, const Seperator *sep)
 {
-	int slot;
+	uint32 slot;
 	int16 spell_id;
 
 	if (!(sep->IsNumber(1) && sep->IsNumber(2)))
@@ -3655,7 +3594,33 @@ void command_repop(Client *c, const Seperator *sep)
 
 void command_spawnstatus(Client *c, const Seperator *sep)
 {
-	zone->SpawnStatus(c);
+	if((sep->arg[1][0] == 'e') | (sep->arg[1][0] == 'E'))
+	{
+		// show only enabled spawns
+		zone->ShowEnabledSpawnStatus(c);
+	}
+	else if((sep->arg[1][0] == 'd') | (sep->arg[1][0] == 'D'))
+	{
+		// show only disabled spawns
+		zone->ShowDisabledSpawnStatus(c);
+	}
+	else if((sep->arg[1][0] == 'a') | (sep->arg[1][0] == 'A'))
+	{
+		// show all spawn staus with no filters
+		zone->SpawnStatus(c);
+	}
+	else if(sep->IsNumber(1))
+	{
+		// show spawn status by spawn2 id
+		zone->ShowSpawnStatusByID(c, atoi(sep->arg[1]));
+	}
+	else if(strcmp(sep->arg[1], "help") == 0)
+	{
+		c->Message(0, "Usage: #spawnstatus <[a]ll | [d]isabled | [e]nabled | {Spawn2 ID}>");
+	}
+	else {
+		zone->SpawnStatus(c);
+	}
 }
 
 void command_nukebuffs(Client *c, const Seperator *sep)
@@ -3675,7 +3640,7 @@ void command_zuwcoords(Client *c, const Seperator *sep)
 		zone->newzone_data.underworld = atof(sep->arg[1]);
 		//float newdata = atof(sep->arg[1]);
 		//memcpy(&zone->zone_header_data[130], &newdata, sizeof(float));
-		EQZonePacket* outapp = new EQZonePacket(OP_NewZone, sizeof(NewZone_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -3707,7 +3672,7 @@ void command_zsafecoords(Client *c, const Seperator *sep)
 		//memcpy(&zone->zone_header_data[118], &newdatay, sizeof(float));
 		//memcpy(&zone->zone_header_data[122], &newdataz, sizeof(float));
 		//zone->SetSafeCoords();
-		EQZonePacket* outapp = new EQZonePacket(OP_NewZone, sizeof(NewZone_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
 		safe_delete(outapp);
@@ -3821,137 +3786,6 @@ void command_haste(Client *c, const Seperator *sep)
 	else
 		c->Message(0, "Usage: #haste [percentage]");
 }
-
-#ifdef GUILDWARS
-
-void command_zonerestart(Client *c, const Seperator *sep)
-{
-	char msg[200];
-	c->Message(0,"Restarting zone %s",zone->GetLongName());
-	sprintf(msg,"The zone %s is restarting now.",zone->GetLongName());
-		if (!worldserver.SendChannelMessage(0, 0, 13, 0, 0, msg))
-			c->Message(0, "Error: World server disconnected");
-	exit(1);
-}
-
-void command_rules(Client *c, const Seperator *sep)
-{
-guildwars.SendRules(c);
-}
-
-void command_acceptrules(Client *c, const Seperator *sep)
-{
-if(!database.GetAgreementFlag(c->AccountID()))
-{
-database.SetAgreementFlag(c->AccountID());
-c->SendAppearancePacket(AT_Anim, ANIM_STAND);
-c->Message(0,"It is recorded you have agreed to the rules.");
-}
-}
-
-void command_takelocation(Client *c, const Seperator *sep)
-{
-if(c && c->Admin() > 200 && c->GuildDBID() != 0)
-{
-GuildLocation* gl = location_list.FindClosestLocationByClient(c);
-if(gl)
-gl->TakeOverLocation(c->GuildDBID());
-else
-c->Message(0,"You are not in a location");
-}
-else if(c)
-c->Message(0,"Status 200+ required, also must be in a guild.");
-}
-
-void command_locationguards(Client *c, const Seperator *sep)
-{
-GuildLocation* gl = location_list.FindClosestLocationByClient(c);
-if(gl)
-gl->SendGuardList(c);
-else
-c->Message(0,"You are not in a location");
-}
-
-void command_specialflag(Client *c, const Seperator *sep)
-{
-if(c && c->Admin() > 100 && c->GetTarget() != 0 && c->GetTarget()->IsClient())
-{
-if(c->GetTarget()->CastToClient()->permitflag)
-{
-c->GetTarget()->CastToClient()->permitflag = false;
-c->GetTarget()->CastToClient()->Message(0,"Special PvP flag disabled.");
-c->CastToClient()->Message(0,"%s special PvP flag disabled.",c->GetTarget()->CastToClient()->GetName());
-}
-else
-{
-c->GetTarget()->CastToClient()->permitflag = true;
-c->GetTarget()->CastToClient()->Message(0,"Special PvP flag enabled.");
-c->CastToClient()->Message(0,"%s special PvP flag enabled.",c->GetTarget()->CastToClient()->GetName());
-}
-}
-}
-
-void command_zonelocations(Client *c, const Seperator *sep)
-{
-//if(c)
-//location_list.SendLocationInformation(c,true);
-}
-void command_serverlocations(Client *c, const Seperator *sep)
-{
-//if(c)
-//location_list.SendLocationInformation(c,false);
-}
-#endif
-
-#ifdef RAIDADDICTS
-void command_setpoints(Client *c, const Seperator *sep)
-{
-	if (c->GetTarget() == 0)
-		c->Message(0, "ERROR: No target!");
-	else if (c->GetTarget() && c->GetTarget()->IsNPC()) {
-		c->Message(0, "Updating Points for %s (%u)",c->GetTarget()->GetName(),c->GetTarget()->GetNPCTypeID());
-		if (!raidaddicts.SetNPCPoints(c->GetTarget()->GetNPCTypeID(), atoi(sep->arg[1]),atoi(sep->arg[2]),atoi(sep->arg[3]),atoi(sep->arg[4]),atoi(sep->arg[5])))
-			c->Message(13, "Failed to set NPC Points");
-	} else if (c->GetTarget() && c->GetTarget()->IsClient()) {
-		if (!raidaddicts.SetPlayerPoints(c->GetTarget()->CastToClient()->CharacterID(), atoi(sep->arg[1]),atoi(sep->arg[2]),atoi(sep->arg[3]),atoi(sep->arg[4]),atoi(sep->arg[5]),atoi(sep->arg[6]),atoi(sep->arg[7]),atoi(sep->arg[8]),atoi(sep->arg[9]),atoi(sep->arg[10])))
-			c->Message(13, "Failed to set Player Points");
-		else {
-			c->GetTarget()->CastToClient()->Message(15, "Your LDoN Points have been been changed. Updating your client.");
-			c->GetTarget()->CastToClient()->UpdateLDoNPoints(0,0);
-			c->Message(0, "Updated Points for %s", c->GetTarget()->CastToClient()->GetName());
-		}
-	}
-}
-
-void command_showpoints(Client *c, const Seperator *sep)
-{
-	if (c->Admin() < 100)
-		raidaddicts.GetPlayerPoints(c, c);	
-	else {
-		if (strlen(sep->arg[1]) > 0) {
-			Client* target = entity_list.GetClientByName(sep->arg[1]);
-			if (target != 0)
-				raidaddicts.GetPlayerPoints(target, c);
-			else
-				c->Message(13, "Could not find %s.", sep->arg[1]);
-		} else if(c->GetTarget() && c->GetTarget()->IsClient())
-			raidaddicts.GetPlayerPoints(c->GetTarget()->CastToClient(), c);
-		else if (c->GetTarget() && c->GetTarget()->IsNPC())
-			raidaddicts.GetNPCPoints(c->GetTarget()->GetNPCTypeID(), c);
-		else c->Message(13, "No Target or Argument Given.");
-	}
-}
-
-void command_addpoints(Client *c, const Seperator *sep)
-{
-	if (!c->GetTarget()) {
-		c->Message(13, "You must have a Target!");
-		return;
-	}
-	raidaddicts.AddPoints(c, atoi(sep->arg[1]), atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), atoi(sep->arg[5]));
-}
-#endif
-
 
 void command_damage(Client *c, const Seperator *sep)
 {
@@ -4127,17 +3961,17 @@ void command_iteminfo(Client *c, const Seperator *sep)
 		if (c->Admin() >= 200)
 			c->Message(0, "MinStatus: %i", database.GetItemStatus(item->ID));
 		if (item->ItemClass==ItemClassBook)
-			c->Message(0, "  This item is a Book: %s", item->Book.Filename);
+			c->Message(0, "  This item is a Book: %s", item->Filename);
 		else if (item->ItemClass==ItemClassContainer)
-			c->Message(0, "  This item is a container with %i slots", item->Container.BagSlots);
+			c->Message(0, "  This item is a container with %i slots", item->BagSlots);
 		else {
-			c->Message(0, "  equipableSlots: %u equipable Classes: %u", item->Slots, item->Common.Classes);
-			c->Message(0, "  Magic: %i  SpellID: %i  Proc Level: %i DBCharges: %i  CurCharges: %i", item->Common.Magic, item->Common.Click.Effect, item->Common.Click.Level, item->Common.MaxCharges, inst->GetCharges());
-			c->Message(0, "  EffectType: 0x%02x  CastTime: %.2f", (int8) item->Common.Click.Type, (double) item->Common.CastTime/1000);
-			c->Message(0, "  Material: 0x02%x  Color: 0x%08x  Skill: %i", item->Common.Material, item->Common.Color, item->Common.ItemType);
-			c->Message(0, " Required level: %i Required skill: %i Recommended level:%i", item->Common.ReqLevel,  item->Common.RecSkill, item->Common.RecLevel);
-			c->Message(0, " Skill mod: %i percent: %i", item->Common.SkillModType, item->Common.SkillModValue);
-			c->Message(0, " BaneRace: %i BaneBody: %i BaneDMG: %i", item->Common.BaneDmgRace, item->Common.BaneDmgBody, item->Common.BaneDmgAmt);
+			c->Message(0, "  equipableSlots: %u equipable Classes: %u", item->Slots, item->Classes);
+			c->Message(0, "  Magic: %i  SpellID: %i  Proc Level: %i DBCharges: %i  CurCharges: %i", item->Magic, item->Click.Effect, item->Click.Level, item->MaxCharges, inst->GetCharges());
+			c->Message(0, "  EffectType: 0x%02x  CastTime: %.2f", (int8) item->Click.Type, (double) item->CastTime/1000);
+			c->Message(0, "  Material: 0x02%x  Color: 0x%08x  Skill: %i", item->Material, item->Color, item->ItemType);
+			c->Message(0, " Required level: %i Required skill: %i Recommended level:%i", item->ReqLevel,  item->RecSkill, item->RecLevel);
+			c->Message(0, " Skill mod: %i percent: %i", item->SkillModType, item->SkillModValue);
+			c->Message(0, " BaneRace: %i BaneBody: %i BaneDMG: %i", item->BaneDmgRace, item->BaneDmgBody, item->BaneDmgAmt);
 		}
 	}
 }
@@ -4178,7 +4012,7 @@ void command_flag(Client *c, const Seperator *sep)
 			c->Message(0, "You cannot set people's status to higher than your own");
 		else if (atoi(sep->arg[1]) < 0 && c->Admin() < commandBanPlayers)
 			c->Message(0, "You have too low of status to suspend/ban");
-		else if (!database.SetGMFlag(sep->argplus[2], atoi(sep->arg[1])))
+		else if (!database.SetAccountStatus(sep->argplus[2], atoi(sep->arg[1])))
 			c->Message(0, "Unable to set GM Flag.");
 		else {
 			c->Message(0, "Set GM Flag on account.");
@@ -4241,19 +4075,17 @@ void command_guild(Client *c, const Seperator *sep)
 		c->Message(0, "  #guild edit rank permission 0/1");
 		c->Message(0, "  #guild leader newleader (they must be rank0)");
 		*/
-		if (admin >= 100) {
 			c->Message(0, "GM Guild commands:");
 			c->Message(0, "  #guild list - lists all guilds on the server");
-			c->Message(0, "  #guild create {guildleader charname or AccountID} guildname");
-			c->Message(0, "  #guild delete guildDBID");
-			c->Message(0, "  #guild rename guildDBID newname");
-			c->Message(0, "  #guild set charname guildDBID    (0=no guild)");
+			c->Message(0, "  #guild create {guildleader charname or CharID} guildname");
+			c->Message(0, "  #guild delete guildID");
+			c->Message(0, "  #guild rename guildID newname");
+			c->Message(0, "  #guild set charname guildID    (0=no guild)");
 			c->Message(0, "  #guild setrank charname rank");
 			//c->Message(0, "  #guild gmedit guilddbid rank title newtitle");
 			//c->Message(0, "  #guild gmedit guilddbid rank permission 0/1");
-			c->Message(0, "  #guild setleader guildDBID {guildleader charname or AccountID}");
-			c->Message(0, "  #guild setdoor guildEQID");
-		}
+			c->Message(0, "  #guild setleader guildID {guildleader charname or CharID}");
+			//c->Message(0, "  #guild setdoor guildEQID");
 	}
 	else if (strcasecmp(sep->arg[1], "status") == 0 || strcasecmp(sep->arg[1], "stat") == 0) {
 		Client* client = 0;
@@ -4263,258 +4095,36 @@ void command_guild(Client *c, const Seperator *sep)
 			client = target->CastToClient();
 		if (client == 0)
 			c->Message(0, "You must target someone or specify a character name");
-		else if ((client->Admin() >= 100 && admin < 100) && client->GuildDBID() != c->GuildDBID()) // no peeping for GMs, make sure tell message stays the same
+		else if ((client->Admin() >= minStatusToEditOtherGuilds && admin < minStatusToEditOtherGuilds) && client->GuildID() != c->GuildID()) // no peeping for GMs, make sure tell message stays the same
 			c->Message(0, "You must target someone or specify a character name.");
 		else {
-			if (client->GuildDBID() == 0)
+			if (client->IsInAGuild())
 				c->Message(0, "%s is not in a guild.", client->GetName());
-			else if (guilds[client->GuildEQID()].leader == client->AccountID())
-				c->Message(0, "%s is the leader of <%s> rank: %s", client->GetName(), guilds[client->GuildEQID()].name, guilds[client->GuildEQID()].rank[client->GuildRank()].rankname);
+			else if (guild_mgr.IsGuildLeader(client->GuildID(), client->CharacterID()))
+				c->Message(0, "%s is the leader of <%s> rank: %s", client->GetName(), guild_mgr.GetGuildName(client->GuildID()), guild_mgr.GetRankName(client->GuildID(), client->GuildRank()));
 			else
-				c->Message(0, "%s is a member of <%s> rank: %s", client->GetName(), guilds[client->GuildEQID()].name, guilds[client->GuildEQID()].rank[client->GuildRank()].rankname);
+				c->Message(0, "%s is a member of <%s> rank: %s", client->GetName(), guild_mgr.GetGuildName(client->GuildID()), guild_mgr.GetRankName(client->GuildID(), client->GuildRank()));
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "info") == 0) {
-		if (sep->arg[2][0] == 0 && c->GuildDBID() == 0) {
-			if (admin >= 100)
-				c->Message(0, "Usage: #guildinfo guilddbid");
+		if (sep->arg[2][0] == 0 && c->IsInAGuild()) {
+			if (admin >= minStatusToEditOtherGuilds)
+				c->Message(0, "Usage: #guildinfo guild_id");
 			else
 				c->Message(0, "You're not in a guild");
 		}
 		else {
 			int32 tmp = GUILD_NONE;
 			if (sep->arg[2][0] == 0)
-				tmp = database.GetGuildEQID(c->GuildDBID());
-			else if (admin >= 100)
-				tmp = database.GetGuildEQID(atoi(sep->arg[2]));
-			if (tmp < 0 || tmp >= 512)
-				c->Message(0, "Guild not found.");
-			else {
-				c->Message(0, "Guild info DB# %i, %s", guilds[tmp].databaseID, guilds[tmp].name);
-				if (admin >= 100 || c->GuildEQID() == tmp) {
-					if (c->AccountID() == guilds[tmp].leader || c->GuildRank() == 2 || admin >= 100) {
-						char leadername[64];
-						database.GetAccountName(guilds[tmp].leader, leadername);
-						c->Message(0, "Guild Leader: %s", leadername);
-					}
-					c->Message(0, "Rank 0: %s", guilds[tmp].rank[0].rankname);
-					c->Message(0, "  All Permissions.");
-					for (int i = 1; i <= GUILD_MAX_RANK; i++) {
-						c->Message(0, "Rank %i: %s", i, guilds[tmp].rank[i].rankname);
-						c->Message(0, "  HearGU: %s  SpeakGU: %s  Invite: %s  Remove: %s  Promote: %s  Demote: %s  MOTD: %s  War/Peace: %s", guilds[tmp].rank[i].heargu?"Y":"N", guilds[tmp].rank[i].speakgu?"Y":"N", guilds[tmp].rank[i].invite?"Y":"N", guilds[tmp].rank[i].remove?"Y":"N", guilds[tmp].rank[i].promote?"Y":"N", guilds[tmp].rank[i].demote?"Y":"N", guilds[tmp].rank[i].motd?"Y":"N", guilds[tmp].rank[i].warpeace?"Y":"N");
-						//c->Message(0, "  HearGU: %i  SpeakGU: %i  Invite: %i  Remove: %i", guilds[tmp].rank[i].heargu, guilds[tmp].rank[i].speakgu, guilds[tmp].rank[i].invite, guilds[tmp].rank[i].remove);
-						//c->Message(0, "  Promote: %i  Demote: %i  MOTD: %i  War/Peace: %i", guilds[tmp].rank[i].promote, guilds[tmp].rank[i].demote, guilds[tmp].rank[i].motd, guilds[tmp].rank[i].warpeace);
-					}
-				}
-			}
+				tmp = c->GuildID();
+			else if (admin >= minStatusToEditOtherGuilds)
+				tmp = atoi(sep->arg[2]);
+			
+			if(tmp != GUILD_NONE)
+				guild_mgr.DescribeGuild(c, tmp);
 		}
 	}
-	/*else if (strcasecmp(sep->arg[1], "leader") == 0) {
-		if (c->GuildDBID() == 0)
-			c->Message(0, "You arent in a guild!");
-		else if (guilds[c->GuildEQID()].leader != c->AccountID())
-			c->Message(0, "You aren't the guild leader.");
-		else {
-			const char* tmptar = 0;
-			if (sep->arg[2][0] != 0)
-				tmptar = sep->argplus[2];
-			else if (tmptar == 0 && target != 0 && target->IsClient())
-				tmptar = target->CastToClient()->GetName();
-			if (tmptar == 0)
-				c->Message(0, "You must target someone or specify a character name.");
-			else {
-				ServerPacket* pack = new ServerPacket;
-				pack->opcode = ServerOP_GuildInvite;
-				pack->size = sizeof(ServerGuildCommand_Struct);
-				pack->pBuffer = new uchar[pack->size];
-				memset(pack->pBuffer, 0, pack->size);
-				ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-				sgc->guilddbid = c->GuildDBID();
-				sgc->guildeqid = c->GuildEQID();
-				sgc->fromrank = c->GuildRank();
-				sgc->fromaccountid = c->AccountID();
-				sgc->admin = admin;
-				strcpy(sgc->from, c->GetName());
-				strcpy(sgc->target, tmptar);
-				worldserver.SendPacket(pack);
-				safe_delete(pack);
-			}
-		}
-	}
-	else if (strcasecmp(sep->arg[1], "invite") == 0) {
-		if (c->GuildDBID() == 0)
-			c->Message(0, "You arent in a guild!");
-		else if (!guilds[c->GuildEQID()].rank[c->GuildRank()].invite)
-			c->Message(0, "You dont have permission to invite.");
-			//#ifdef GUILDWARS
-			//		else if (zone->GetGuildOwned() != 0 && !database.GetGuildAlliance(GuildDBID(),zone->GetGuildOwned()) && zone->GetGuildOwned() != GuildDBID() && zone->GetGuildOwned() != 3)
-			//			c->Message(0, "You cannot invite guild members in an enemy city unless it is a neutral guild.");
-			//#endif
-		else {
-			#ifdef GUILDWARS
-				if (database.NumberInGuild(c->GuildDBID())>MAXMEMBERS){
-					c->Message(15,"Your Guild has reached its Guildwars size limit.  You cannot invite any more people.");
-					return;
-				}
-			#endif
-			const char* tmptar = 0;
-			if (sep->arg[2][0] != 0)
-				tmptar = sep->argplus[2];
-			else if (tmptar == 0 && target != 0 && target->IsClient())
-				tmptar = target->CastToClient()->GetName();
-			if (tmptar == 0)
-				c->Message(0, "You must target someone or specify a character name.");
-
-			else {
-				ServerPacket* pack = new ServerPacket;
-				pack->opcode = ServerOP_GuildInvite;
-				pack->size = sizeof(ServerGuildCommand_Struct);
-				pack->pBuffer = new uchar[pack->size];
-				memset(pack->pBuffer, 0, pack->size);
-				ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-				sgc->guilddbid = c->GuildDBID();
-				sgc->guildeqid = c->GuildEQID();
-				sgc->fromrank = c->GuildRank();
-				sgc->fromaccountid = c->AccountID();
-				sgc->admin = admin;
-				strcpy(sgc->from, c->GetName());
-				strcpy(sgc->target, tmptar);
-				worldserver.SendPacket(pack);
-				safe_delete(pack);
-			}
-		}
-	}
-	else if (strcasecmp(sep->arg[1], "remove") == 0) {
-		if (c->GuildDBID() == 0)
-			c->Message(0, "You arent in a guild!");
-		else if ((!guilds[c->GuildEQID()].rank[c->GuildRank()].remove) && !(target == c && sep->arg[2][0] == 0))
-			c->Message(0, "You dont have permission to remove.");
-		else {
-			const char* tmptar = 0;
-			if (sep->arg[2][0] != 0)
-				tmptar = sep->argplus[2];
-			else if (tmptar == 0 && target != 0 && target->IsClient())
-				tmptar = target->CastToClient()->GetName();
-			if (tmptar == 0)
-				c->Message(0, "You must target someone or specify a character name.");
-			else {
-				ServerPacket* pack = new ServerPacket;
-				pack->opcode = ServerOP_GuildRemove;
-				pack->size = sizeof(ServerGuildCommand_Struct);
-				pack->pBuffer = new uchar[pack->size];
-				memset(pack->pBuffer, 0, pack->size);
-				ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-				sgc->guilddbid = c->GuildDBID();
-				sgc->guildeqid = c->GuildEQID();
-				sgc->fromrank = c->GuildRank();
-				sgc->fromaccountid = c->AccountID();
-				sgc->admin = admin;
-				strcpy(sgc->from, c->GetName());
-				strcpy(sgc->target, tmptar);
-
-				worldserver.SendPacket(pack);
-				safe_delete(pack);
-			}
-		}
-	}
-	else if (strcasecmp(sep->arg[1], "promote") == 0) {
-		if (c->GuildDBID() == 0)
-			c->Message(0, "You arent in a guild!");
-		else if (!(strlen(sep->arg[2]) == 1 && sep->arg[2][0] >= '0' && sep->arg[2][0] <= '9'))
-			c->Message(0, "Usage: #guild promote rank [charname]");
-		else if (atoi(sep->arg[2]) < 0 || atoi(sep->arg[2]) > GUILD_MAX_RANK)
-			c->Message(0, "Error: invalid rank #.");
-		else {
-			const char* tmptar = 0;
-			if (sep->arg[3][0] != 0)
-				tmptar = sep->argplus[3];
-			else if (tmptar == 0 && target != 0 && target->IsClient())
-				tmptar = target->CastToClient()->GetName();
-			if (tmptar == 0)
-				c->Message(0, "You must target someone or specify a character name.");
-			else {
-				ServerPacket* pack = new ServerPacket;
-				pack->opcode = ServerOP_GuildPromote;
-				pack->size = sizeof(ServerGuildCommand_Struct);
-				pack->pBuffer = new uchar[pack->size];
-				memset(pack->pBuffer, 0, pack->size);
-				ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-				sgc->guilddbid = c->GuildDBID();
-				sgc->guildeqid = c->GuildEQID();
-				sgc->fromrank = c->GuildRank();
-				sgc->fromaccountid = c->AccountID();
-				sgc->admin = admin;
-				sgc->newrank = atoi(sep->arg[2]);
-				strcpy(sgc->from, c->GetName());
-				strcpy(sgc->target, tmptar);
-				worldserver.SendPacket(pack);
-				safe_delete(pack);
-			}
-		}
-	}
-	else if (strcasecmp(sep->arg[1], "demote") == 0) {
-		if (c->GuildDBID() == 0)
-			c->Message(0, "You arent in a guild!");
-		else if (!(strlen(sep->arg[2]) == 1 && sep->arg[2][0] >= '0' && sep->arg[2][0] <= '9'))
-			c->Message(0, "Usage: #guild demote rank [charname]");
-		else if (atoi(sep->arg[2]) < 0 || atoi(sep->arg[2]) > GUILD_MAX_RANK)
-			c->Message(0, "Error: invalid rank #.");
-		else {
-			const char* tmptar = 0;
-			if (sep->arg[3][0] != 0)
-				tmptar = sep->argplus[3];
-			else if (tmptar == 0 && target != 0 && target->IsClient())
-				tmptar = target->CastToClient()->GetName();
-			if (tmptar == 0)
-				c->Message(0, "You must target someone or specify a character name.");
-			else {
-				ServerPacket* pack = new ServerPacket;
-				pack->opcode = ServerOP_GuildDemote;
-				pack->size = sizeof(ServerGuildCommand_Struct);
-				pack->pBuffer = new uchar[pack->size];
-				memset(pack->pBuffer, 0, pack->size);
-				ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-				sgc->guilddbid = c->GuildDBID();
-				sgc->guildeqid = c->GuildEQID();
-				sgc->fromrank = c->GuildRank();
-				sgc->fromaccountid = c->AccountID();
-				sgc->admin = admin;
-				sgc->newrank = atoi(sep->arg[2]);
-				strcpy(sgc->from, c->GetName());
-				strcpy(sgc->target, tmptar);
-				worldserver.SendPacket(pack);
-				safe_delete(pack);
-			}
-		}
-	}
-	else if (strcasecmp(sep->arg[1], "motd") == 0) {
-		if (c->GuildDBID() == 0)
-			c->Message(0, "You arent in a guild!");
-		else if (!guilds[c->GuildEQID()].rank[c->GuildRank()].motd)
-			c->Message(0, "You dont have permission to change the motd.");
-		else if (!worldserver.Connected())
-			c->Message(0, "Error: World server dirconnected");
-		else {
-			char tmp[255];
-			if (strcasecmp(sep->argplus[2], "none") == 0)
-				strcpy(tmp, "");
-			else
-				snprintf(tmp, sizeof(tmp), "%s - %s", c->GetName(), sep->argplus[2]);
-			if (database.SetGuildMOTD(c->GuildDBID(), tmp)) {
-				//ServerPacket* pack = new ServerPacket;
-				//pack->opcode = ServerOP_RefreshGuild;
-				//pack->size = 5;
-				//pack->pBuffer = new uchar[pack->size];
-				//memcpy(pack->pBuffer, &guildeqid, 4);
-				//worldserver.SendPacket(pack);
-				//delete pack;
-			}
-
-			else {
-				c->Message(0, "Motd update failed.");
-			}
-		}
-	}
+	/*
 	else if (strcasecmp(sep->arg[1], "edit") == 0) {
 		if (c->GuildDBID() == 0)
 			c->Message(0, "You arent in a guild!");
@@ -4532,10 +4142,7 @@ void command_guild(Client *c, const Seperator *sep)
 				c->Message(0, "  #guild edit rank permission 0/1");
 			}
 			else {
-				ServerPacket* pack = new ServerPacket;
-				pack->opcode = ServerOP_RefreshGuild;
-				pack->size = 5;
-				pack->pBuffer = new uchar[pack->size];
+				ServerPacket* pack = new ServerPacket(ServerOP_RefreshGuild, 5);
 				sint32 geqid=c->GuildEQID();
 				memcpy(pack->pBuffer, &geqid, 4);
 				worldserver.SendPacket(pack);
@@ -4561,10 +4168,7 @@ void command_guild(Client *c, const Seperator *sep)
 				c->Message(0, "  #guild gmedit guilddbid rank permission 0/1");
 			}
 			else {
-				ServerPacket* pack = new ServerPacket;
-				pack->opcode = ServerOP_RefreshGuild;
-				pack->size = 5;
-				pack->pBuffer = new uchar[pack->size];
+				ServerPacket* pack = new ServerPacket(ServerOP_RefreshGuild, 5);
 				memcpy(pack->pBuffer, &eqid, 4);
 				worldserver.SendPacket(pack);
 				safe_delete(pack);
@@ -4572,21 +4176,48 @@ void command_guild(Client *c, const Seperator *sep)
 		}
 	}
 	*/
-	else if (strcasecmp(sep->arg[1], "set") == 0 && admin >= 80) {
+	else if (strcasecmp(sep->arg[1], "set") == 0) {
 		if (!sep->IsNumber(3))
 			c->Message(0, "Usage: #guild set charname guildgbid (0 = clear guildtag)");
 		else {
-			ServerPacket* pack = new ServerPacket(ServerOP_GuildGMSet, sizeof(ServerGuildCommand_Struct));
-			ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-			sgc->guilddbid = atoi(sep->arg[3]);
-			sgc->admin = admin;
-			strcpy(sgc->from, c->GetName());
-			strcpy(sgc->target, sep->arg[2]);
-			worldserver.SendPacket(pack);
-			safe_delete(pack);
+			uint32 guild_id = atoi(sep->arg[3]);
+			
+			if(guild_id == 0)
+				guild_id = GUILD_NONE;
+			else if(!guild_mgr.GuildExists(guild_id)) {
+				c->Message(13, "Guild %d does not exist.", guild_id);
+				return;
+			}
+			
+			int32 charid = database.GetCharacterID(sep->arg[2]);
+			if(charid == 0) {
+				c->Message(13, "Unable to find character '%s'", charid);
+				return;
+			}
+			
+			//we could do the checking we need for guild_mgr.CheckGMStatus, but im lazy right now
+			if(admin < minStatusToEditOtherGuilds) {
+				c->Message(13, "Access denied.");
+				return;
+			}
+			
+			if(guild_id == GUILD_NONE) {
+				_log(GUILDS__ACTIONS, "%s: Removing %s (%d) from guild with GM command.", c->GetName(),
+					sep->arg[2], charid);
+			} else {
+				_log(GUILDS__ACTIONS, "%s: Putting %s (%d) into guild %s (%d) with GM command.", c->GetName(),
+					sep->arg[2], charid,
+					guild_mgr.GetGuildName(guild_id), guild_id);
+			}
+			
+			if(!guild_mgr.SetGuild(charid, guild_id, GUILD_MEMBER)) {
+				c->Message(13, "Error putting '%s' into guild %d", sep->arg[2], guild_id);
+			} else {
+				c->Message(0, "%s has been put into guild %d", sep->arg[2], guild_id);
+			}
 		}
 	}
-	else if (strcasecmp(sep->arg[1], "setdoor") == 0 && admin >= 100) {
+	/*else if (strcasecmp(sep->arg[1], "setdoor") == 0 && admin >= minStatusToEditOtherGuilds) {
 
 		if (!sep->IsNumber(2))
 			c->Message(0, "Usage: #guild setdoor guildEQid (0 = delete guilddoor)");
@@ -4603,208 +4234,218 @@ void command_guild(Client *c, const Seperator *sep)
 				c->SetSetGuildDoorID(atoi(sep->arg[2]));
 			}
 		}
-	}
-	else if (strcasecmp(sep->arg[1], "setrank") == 0 && admin >= 80) {
+	}*/
+	else if (strcasecmp(sep->arg[1], "setrank") == 0) {
+		int rank = atoi(sep->arg[3]);
 		if (!sep->IsNumber(3))
 			c->Message(0, "Usage: #guild setrank charname rank");
-		else if (atoi(sep->arg[3]) < 0 || atoi(sep->arg[3]) > GUILD_MAX_RANK)
+		else if (rank < 0 || rank > GUILD_MAX_RANK)
 			c->Message(0, "Error: invalid rank #.");
 		else {
-			ServerPacket* pack = new ServerPacket;
-			pack->opcode = ServerOP_GuildGMSetRank;
-			pack->size = sizeof(ServerGuildCommand_Struct);
-			pack->pBuffer = new uchar[pack->size];
-			memset(pack->pBuffer, 0, pack->size);
-			ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-			sgc->newrank = atoi(sep->arg[3]);
-			sgc->admin = admin;
-			strcpy(sgc->from, c->GetName());
-			strcpy(sgc->target, sep->arg[2]);
-			worldserver.SendPacket(pack);
-			safe_delete(pack);
+			int32 charid = database.GetCharacterID(sep->arg[2]);
+			if(charid == 0) {
+				c->Message(13, "Unable to find character '%s'", charid);
+				return;
+			}
+			
+			//we could do the checking we need for guild_mgr.CheckGMStatus, but im lazy right now
+			if(admin < minStatusToEditOtherGuilds) {
+				c->Message(13, "Access denied.");
+				return;
+			}
+			
+			_log(GUILDS__ACTIONS, "%s: Setting %s (%d)'s guild rank to %d with GM command.", c->GetName(),
+				sep->arg[2], charid, rank);
+			
+			if(!guild_mgr.SetGuildRank(charid, rank))
+				c->Message(13, "Error while setting rank %d on '%s'.", rank, sep->arg[2]);
+			else
+				c->Message(0, "%s has been set to rank %d", sep->arg[2], rank);
 		}
 	}
-	else if (strcasecmp(sep->arg[1], "create") == 0 && admin >= 80) {
+	else if (strcasecmp(sep->arg[1], "create") == 0) {
 		if (sep->arg[3][0] == 0)
-			c->Message(0, "Usage: #guild create {guildleader charname or AccountID} guild name");
+			c->Message(0, "Usage: #guild create {guildleader charname or CharID} guild name");
 		else if (!worldserver.Connected())
 			c->Message(0, "Error: World server dirconnected");
 		else {
 			int32 leader = 0;
-			if (sep->IsNumber(2))
+			if (sep->IsNumber(2)) {
 				leader = atoi(sep->arg[2]);
-			else
-				leader = database.GetAccountIDByChar(sep->arg[2]);
-
-			int32 tmp = database.GetGuildDBIDbyLeader(leader);
-			if (leader == 0)
+			} else if((leader=database.GetCharacterID(sep->arg[2])) != 0) {
+				//got it from the db..
+			} else {
+				c->Message(13, "Unable to find char '%s'", sep->arg[2]);
+				return;
+			}
+			if (leader == 0) {
 				c->Message(0, "Guild leader not found.");
-			else if (tmp != 0) {
-				int32 tmp2 = database.GetGuildEQID(tmp);
-				c->Message(0, "Error: %s already is the leader of DB# %i '%s'.", sep->arg[2], tmp, guilds[tmp2].name);
+				return;
+			}
+
+			int32 tmp = guild_mgr.FindGuildByLeader(leader);
+			if (tmp != GUILD_NONE) {
+				c->Message(0, "Error: %s already is the leader of DB# %i '%s'.", sep->arg[2], tmp, guild_mgr.GetGuildName(tmp));
 			}
 			else {
-				int32 tmpeq = database.CreateGuild(sep->argplus[3], leader);
-				if (tmpeq == GUILD_NONE)
-
+			
+				if(admin < minStatusToEditOtherGuilds) {
+					c->Message(13, "Access denied.");
+					return;
+				}
+				
+				int32 id = guild_mgr.CreateGuild(sep->argplus[3], leader);
+				
+				_log(GUILDS__ACTIONS, "%s: Creating guild %s with leader %d with GM command. It was given id %lu.", c->GetName(),
+					sep->argplus[3], leader, id);
+				
+				if (id == GUILD_NONE)
 					c->Message(0, "Guild creation failed.");
 				else {
-					ServerPacket* pack = new ServerPacket;
-					pack->opcode = ServerOP_RefreshGuild;
-					pack->size = 5;
-					pack->pBuffer = new uchar[pack->size];
-					memcpy(pack->pBuffer, &tmpeq, 4);
-					pack->pBuffer[4] = 1;
-					worldserver.SendPacket(pack);
-					safe_delete(pack);
-					database.GetGuildRanks(tmpeq, &guilds[tmpeq]);
-					c->Message(0, "Guild created: Leader: %i, DB# %i, EQ# %i: %s", leader, guilds[tmpeq].databaseID, tmpeq, sep->argplus[3]);
+					c->Message(0, "Guild created: Leader: %i, number %i: %s", leader, id, sep->argplus[3]);
+					
+					if(!guild_mgr.SetGuild(leader, id, GUILD_LEADER))
+						c->Message(0, "Unable to set guild leader's guild in the database. Your going to have to run #guild set");
 				}
+				
 			}
 		}
 	}
-	else if (strcasecmp(sep->arg[1], "delete") == 0 && admin >= 100) {
+	else if (strcasecmp(sep->arg[1], "delete") == 0) {
 		if (!sep->IsNumber(2))
-			c->Message(0, "Usage: #guild delete guildDBID");
+			c->Message(0, "Usage: #guild delete guildID");
 		else if (!worldserver.Connected())
 			c->Message(0, "Error: World server dirconnected");
 		else {
-			int32 tmpeq = database.GetGuildEQID(atoi(sep->arg[2]));
-			char tmpname[64];
-			if (tmpeq != GUILD_NONE) {
-				strcpy(tmpname, guilds[tmpeq].name);
-				if (guilds[tmpeq].minstatus > admin && admin < 250) {
-					c->Message(0, "Access denied.");
+			int32 id = atoi(sep->arg[2]);
+			
+			if(!guild_mgr.GuildExists(id)) {
+				c->Message(0, "Guild %d does not exist!", id);
+				return;
+			}
+			
+			if(admin < minStatusToEditOtherGuilds) {
+				//this person is not allowed to just edit any guild, check this guild's min status.
+				if(c->GuildID() != id) {
+					c->Message(13, "Access denied to edit other people's guilds");
+					return;
+				} else if(!guild_mgr.CheckGMStatus(id, admin)) {
+					c->Message(13, "Access denied to edit your guild with GM commands.");
 					return;
 				}
 			}
 
-			if (!database.DeleteGuild(atoi(sep->arg[2])))
+			_log(GUILDS__ACTIONS, "%s: Deleting guild %s (%d) with GM command.", c->GetName(), 
+				guild_mgr.GetGuildName(id), id);
+			
+			if (!guild_mgr.DeleteGuild(id))
 				c->Message(0, "Guild delete failed.");
 			else {
-				if (tmpeq != GUILD_NONE) {
-					ServerPacket* pack = new ServerPacket;
-					pack->opcode = ServerOP_RefreshGuild;
-					pack->size = 5;
-					pack->pBuffer = new uchar[pack->size];
-					memcpy(pack->pBuffer, &tmpeq, 4);
-					pack->pBuffer[4] = 1;
-					worldserver.SendPacket(pack);
-					safe_delete(pack);
-					c->Message(0, "Guild deleted: DB# %i, EQ# %i: %s", atoi(sep->arg[2]), tmpeq, tmpname);
-				}
-				else
-					c->Message(0, "Guild deleted: DB# %i", atoi(sep->arg[2]));
+				c->Message(0, "Guild %d deleted.", id);
 			}
 		}
 	}
-	else if (strcasecmp(sep->arg[1], "rename") == 0 && admin >= 100) {
+	else if (strcasecmp(sep->arg[1], "rename") == 0) {
 		if ((!sep->IsNumber(2)) || sep->arg[3][0] == 0)
-			c->Message(0, "Usage: #guild rename guildDBID newname");
+			c->Message(0, "Usage: #guild rename guildID newname");
 		else if (!worldserver.Connected())
 			c->Message(0, "Error: World server dirconnected");
 		else {
-			int32 tmpeq = database.GetGuildEQID(atoi(sep->arg[2]));
-			char tmpname[64];
-			if (tmpeq != GUILD_NONE) {
-				strcpy(tmpname, guilds[tmpeq].name);
-				if (guilds[tmpeq].minstatus > admin && admin < 250) {
-					c->Message(0, "Access denied.");
+			int32 id = atoi(sep->arg[2]);
+			
+			if(!guild_mgr.GuildExists(id)) {
+				c->Message(0, "Guild %d does not exist!", id);
+				return;
+			}
+			
+			if(admin < minStatusToEditOtherGuilds) {
+				//this person is not allowed to just edit any guild, check this guild's min status.
+				if(c->GuildID() != id) {
+					c->Message(13, "Access denied to edit other people's guilds");
+					return;
+				} else if(!guild_mgr.CheckGMStatus(id, admin)) {
+					c->Message(13, "Access denied to edit your guild with GM commands.");
 					return;
 				}
-
 			}
 
-			if (!database.RenameGuild(atoi(sep->arg[2]), sep->argplus[3]))
+			_log(GUILDS__ACTIONS, "%s: Renaming guild %s (%d) to '%s' with GM command.", c->GetName(), 
+				guild_mgr.GetGuildName(id), id, sep->argplus[3]);
+			
+			if (!guild_mgr.RenameGuild(id, sep->argplus[3]))
 				c->Message(0, "Guild rename failed.");
 			else {
-				if (tmpeq != GUILD_NONE) {
-					ServerPacket* pack = new ServerPacket;
-					pack->opcode = ServerOP_RefreshGuild;
-					pack->size = 5;
-					pack->pBuffer = new uchar[pack->size];
-					memcpy(pack->pBuffer, &tmpeq, 4);
-					pack->pBuffer[4] = 1;
-					worldserver.SendPacket(pack);
-					safe_delete(pack);
-					c->Message(0, "Guild renamed: DB# %i, EQ# %i, OldName: %s, NewName: %s", atoi(sep->arg[2]), tmpeq, tmpname, sep->argplus[3]);
-				}
-				else
-					c->Message(0, "Guild renamed: DB# %i, NewName: %s", atoi(sep->arg[2]), sep->argplus[3]);
+				c->Message(0, "Guild %d renamed to %s", id, sep->argplus[3]);
 			}
 		}
 	}
-	else if (strcasecmp(sep->arg[1], "setleader") == 0 && admin >= 100) {
+	else if (strcasecmp(sep->arg[1], "setleader") == 0) {
 		if (sep->arg[3][0] == 0 || !sep->IsNumber(2))
-			c->Message(0, "Usage: #guild setleader guilddbid {guildleader charname or AccountID}");
+			c->Message(0, "Usage: #guild setleader guild_id {guildleader charname or CharID}");
 		else if (!worldserver.Connected())
 			c->Message(0, "Error: World server dirconnected");
 		else {
 			int32 leader = 0;
-			if (sep->IsNumber(3))
-				leader = atoi(sep->arg[3]);
-			else
-				leader = database.GetAccountIDByChar(sep->argplus[3]);
+			if (sep->IsNumber(2)) {
+				leader = atoi(sep->arg[2]);
+			} else if((leader=database.GetCharacterID(sep->arg[2])) != 0) {
+				//got it from the db..
+			} else {
+				c->Message(13, "Unable to find char '%s'", sep->arg[2]);
+				return;
+			}
 
-			int32 tmpdb = database.GetGuildDBIDbyLeader(leader);
+			int32 tmpdb = guild_mgr.FindGuildByLeader(leader);
 			if (leader == 0)
 				c->Message(0, "New leader not found.");
 			else if (tmpdb != 0) {
-				int32 tmpeq = database.GetGuildEQID(tmpdb);
-				if (tmpeq >= 512)
-
-					c->Message(0, "Error: %s already is the leader of DB# %i.", sep->argplus[3], tmpdb);
-				else
-					c->Message(0, "Error: %s already is the leader of DB# %i <%s>.", sep->argplus[3], tmpdb, guilds[tmpeq].name);
+				c->Message(0, "Error: %s already is the leader of guild # %i", sep->arg[2], tmpdb);
 			}
 			else {
-				int32 tmpeq = database.GetGuildEQID(atoi(sep->arg[2]));
-				if (tmpeq == GUILD_NONE) {
-					c->Message(0, "Guild not found.");
+				int32 id = atoi(sep->arg[2]);
+				
+				if(!guild_mgr.GuildExists(id)) {
+					c->Message(0, "Guild %d does not exist!", id);
+					return;
 				}
-				else if (guilds[tmpeq].minstatus > admin && admin < 250) {
-					c->Message(0, "Access denied.");
+			
+				if(admin < minStatusToEditOtherGuilds) {
+					//this person is not allowed to just edit any guild, check this guild's min status.
+					if(c->GuildID() != id) {
+						c->Message(13, "Access denied to edit other people's guilds");
+						return;
+					} else if(!guild_mgr.CheckGMStatus(id, admin)) {
+						c->Message(13, "Access denied to edit your guild with GM commands.");
+						return;
+					}
 				}
-				else if (!database.SetGuildLeader(atoi(sep->arg[2]), leader))
+				
+				_log(GUILDS__ACTIONS, "%s: Setting leader of guild %s (%d) to %d with GM command.", c->GetName(), 
+					guild_mgr.GetGuildName(id), id, leader);
+				
+				if(!guild_mgr.SetGuildLeader(id, leader))
 					c->Message(0, "Guild leader change failed.");
 				else {
-					ServerPacket* pack = new ServerPacket;
-					pack->opcode = ServerOP_RefreshGuild;
-					pack->size = 5;
-					pack->pBuffer = new uchar[pack->size];
-					memcpy(pack->pBuffer, &tmpeq, 4);
-					worldserver.SendPacket(pack);
-					safe_delete(pack);
-					c->Message(0, "Guild leader changed: DB# %s, Leader: %s, Name: <%s>", sep->arg[2], sep->argplus[3], guilds[tmpeq].name);
+					c->Message(0, "Guild leader changed: guild # %d, Leader: %s", id, sep->argplus[3]);
 				}
 			}
 		}
 	}
-	else if (strcasecmp(sep->arg[1], "list") == 0 && admin >= 80) {
-		int x = 0;
-		c->Message(0, "Listing guilds on the server:");
-		char leadername[64];
-		for (int i=0; i<512; i++) {
-			if (guilds[i].databaseID != 0) {
-				leadername[0] = 0;
-				database.GetAccountName(guilds[i].leader, leadername);
-				if (leadername[0] == 0)
-					c->Message(0, "  DB# %i EQ# %i  <%s>", guilds[i].databaseID, i, guilds[i].name);
-				else
-					c->Message(0, "  DB# %i EQ# %i  <%s> Leader: %s", guilds[i].databaseID, i, guilds[i].name, leadername);
-				x++;
-			}
+	else if (strcasecmp(sep->arg[1], "list") == 0) {
+		if(admin < minStatusToEditOtherGuilds) {
+			c->Message(13, "Access denied.");
+			return;
 		}
-		c->Message(0, "%i guilds listed.", x);
+		guild_mgr.ListGuilds(c);
 	}
 	else {
 		c->Message(0, "Unknown guild command, try #guild help");
 	}
 }
-
+/*
 bool helper_guild_edit(Client *c, int32 dbid, int32 eqid, int8 rank, const char* what, const char* value) {
 	struct GuildRankLevel_Struct grl;
-	strcpy(grl.rankname, guilds[eqid].rank[rank].rankname);
+	strcpy(grl.rankname, guild_mgr.GetRankName(eqid, rank));
 	grl.demote = guilds[eqid].rank[rank].demote;
 	grl.heargu = guilds[eqid].rank[rank].heargu;
 	grl.invite = guilds[eqid].rank[rank].invite;
@@ -4849,18 +4490,14 @@ bool helper_guild_edit(Client *c, int32 dbid, int32 eqid, int8 rank, const char*
 	if (!database.EditGuild(dbid, rank, &grl))
 		c->Message(0, "Error: database.EditGuild() failed");
 	return true;
-}
+}*/
 
 void command_zonestatus(Client *c, const Seperator *sep)
 {
 	if (!worldserver.Connected())
 		c->Message(0, "Error: World server disconnected");
 	else {
-		ServerPacket* pack = new ServerPacket;
-		pack->size = strlen(c->GetName())+2;
-		pack->pBuffer = new uchar[pack->size];
-		memset(pack->pBuffer, 0, pack->size);
-		pack->opcode = ServerOP_ZoneStatus;
+		ServerPacket* pack = new ServerPacket(ServerOP_ZoneStatus, strlen(c->GetName())+2);
 		memset(pack->pBuffer, (int8) c->Admin(), 1);
 		strcpy((char *) &pack->pBuffer[1], c->GetName());
 		worldserver.SendPacket(pack);
@@ -4963,7 +4600,7 @@ void command_face(Client *c, const Seperator *sep)
 {
 	c->Message(0,"This command is not yet implemented.");
 
-	EQZonePacket* outapp = new EQZonePacket(OP_Illusion, sizeof(Illusion_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Illusion, sizeof(Illusion_Struct));
 	Illusion_Struct* is = (Illusion_Struct*) outapp->pBuffer;
 		
 	strcpy(is->charname, c->GetPP().name);
@@ -4988,7 +4625,8 @@ void command_face(Client *c, const Seperator *sep)
 
 void command_scribespells(Client *c, const Seperator *sep)
 {
-	int level, book_slot;
+	int level;
+	int16 book_slot;
 	int16 curspell;
 	Client *t=c;
 
@@ -5040,29 +4678,15 @@ void command_unscribespells(Client *c, const Seperator *sep)
 
 void command_wpinfo(Client *c, const Seperator *sep)
 {
-	c->Message(0,"This command is not yet implemented.");
-	return;
+	Mob *t=c->GetTarget();
 
-/*
-	Mob *t=c->GetTarget()
-
-	if (t == 0 || !t->IsNPC())
+	if (t == NULL || !t->IsNPC()) {
 		c->Message(0,"You must target an NPC to use this.");
-	else
-		c->Message(
-			0,
-			"NPC waypoint data: X: %f Y: %f Z: %f Pause: %i Grid: %i Max WP: %i Wandertype: %i Pausetype: %i CurWP: %i",
-			t->CastToNPC()->cur_wp_x,
-			t->CastToNPC()->cur_wp_y,
-			t->CastToNPC()->cur_wp_z,
-			t->CastToNPC()->wp_s[atoi(sep->arg[1])],
-			t->CastToNPC()->wp_a[4],
-			t->CastToNPC()->wp_a[0],
-			t->CastToNPC()->wp_a[1],
-			t->CastToNPC()->wp_a[2],
-			t->CastToNPC()->wp_a[3]
-		);
-*/
+		return;
+	}
+	
+	NPC *n = t->CastToNPC();
+	n->DisplayWaypointInfo(c);
 }
 
 void command_wpadd(Client *c, const Seperator *sep)
@@ -5109,10 +4733,7 @@ void command_interrupt(Client *c, const Seperator *sep)
 
 void command_d1(Client *c, const Seperator *sep)
 {
-	EQZonePacket app(OP_Action);
-	app.size = sizeof(Action_Struct);
-	app.pBuffer = new uchar[app.size];
-	memset(app.pBuffer, 0, app.size);
+	EQApplicationPacket app(OP_Action, sizeof(Action_Struct));
 	Action_Struct* a = (Action_Struct*)app.pBuffer;
 	a->target = c->GetTarget()->GetID();
 	a->source = c->GetID();
@@ -5576,7 +5197,6 @@ void command_npcedit(Client *c, const Seperator *sep)
       c->Message(0, "#npcedit Maxdmg - Sets an NPCs maximum damage");
       c->Message(0, "#npcedit Aggroradius - Sets an NPCs aggro radius");
       c->Message(0, "#npcedit Social - Set to 1 if an NPC should assist others on its faction");
-      c->Message(0, "#npcedit Walkspeed - Sets an NPCs walking speed");
       c->Message(0, "#npcedit Runspeed - Sets an NPCs run speed");
       c->Message(0, "#npcedit MR - Sets an NPCs magic resistance");
       c->Message(0, "#npcedit PR - Sets an NPCs poisen resistance");
@@ -5774,15 +5394,6 @@ void command_npcedit(Client *c, const Seperator *sep)
       c->LogSQL(query);
       safe_delete_array(query);
    }
-   else if ( strcasecmp( sep->arg[1], "walkspeed" ) == 0 )
-   {
-      char errbuf[MYSQL_ERRMSG_SIZE];
-      char *query = 0;
-      c->Message(15,"NPCID %u now walks at %f",c->GetTarget()->CastToNPC()->GetNPCTypeID(),atof(sep->arg[2]));
-      database.RunQuery(query, MakeAnyLenString(&query, "update npc_types set walkspeed=%f where id=%i",atof(sep->argplus[2]),c->GetTarget()->CastToNPC()->GetNPCTypeID()), errbuf);
-      c->LogSQL(query);
-      safe_delete_array(query);
-   }
    else if ( strcasecmp( sep->arg[1], "runspeed" ) == 0 )
    {
       char errbuf[MYSQL_ERRMSG_SIZE];
@@ -5946,7 +5557,15 @@ void command_profilereset(Client *c, const Seperator *sep) {
 #endif
 
 void command_opcode(Client *c, const Seperator *sep) {
-	if(ZoneOpcodeManager == NULL) {
+#ifndef WIN32
+#warning rewrite this...
+#endif
+	if(!strcasecmp( sep->arg[1], "reload" )) {
+		ReloadAllPatches();
+		c->Message(0, "Opcodes for all patches have been reloaded");
+	}
+	
+/*	if(ZoneOpcodeManager == NULL) {
 		c->Message(13, "It seems that the server is not using an opcode translator.");
 		return;
 	}
@@ -6000,7 +5619,7 @@ void command_opcode(Client *c, const Seperator *sep) {
 		}
 		
 		//turn the second value into a number
-		uint16 newop = 0;
+		uint32 newop = 0;
 		if(sscanf(sep->arg[3], "0x%x", &newop) != 1) {
 			c->Message(13, "Unable to read your opcode value. It hsould be of the form 0x0000");
 			return;
@@ -6011,7 +5630,7 @@ void command_opcode(Client *c, const Seperator *sep) {
 		if(newop == 0) {
 			c->Message(0, "Opcode '%s' has been cleared.");
 		} else {
-			c->Message(0, "Opcode '%s' has been set to 0x%.4x.", newop);
+			c->Message(0, "Opcode '%s' has been set to 0x%.4x.", sep->arg[2], newop);
 		}
 	} else {
 		c->Message(0, "Usage: #opcodes [command]");
@@ -6023,7 +5642,7 @@ void command_opcode(Client *c, const Seperator *sep) {
 		c->Message(0, "  search [value 0x..] - Try to find the name for an opcode.");
 	}
 	
-	
+	*/
 }
 
 void command_logsql(Client *c, const Seperator *sep) {
@@ -6287,7 +5906,7 @@ void command_fear(Client *c, const Seperator *sep) {
 		
 		if(target == NULL) {
 			//empty length packet == not found.
-			EQZonePacket outapp(OP_FindPersonReply, 0);
+			EQApplicationPacket outapp(OP_FindPersonReply, 0);
 			c->QueuePacket(&outapp);
 			return;
 		}
@@ -6313,13 +5932,13 @@ void command_fear(Client *c, const Seperator *sep) {
 		
 		if(points.size() == 0) {
 			//empty length packet == not found.
-			EQZonePacket outapp(OP_FindPersonReply, 0);
+			EQApplicationPacket outapp(OP_FindPersonReply, 0);
 			c->QueuePacket(&outapp);
 			return;
 		}
 		
 		int len = sizeof(FindPersonResult_Struct) + points.size() * sizeof(FindPerson_Point);
-		EQZonePacket *outapp = new EQZonePacket(OP_FindPersonReply, len);
+		EQApplicationPacket *outapp = new EQApplicationPacket(OP_FindPersonReply, len);
 		FindPersonResult_Struct* fpr=(FindPersonResult_Struct*)outapp->pBuffer;
 		
 		vector<FindPerson_Point>::iterator cur, end;
@@ -6545,7 +6164,7 @@ void command_path(Client *c, const Seperator *sep) {
 		if(npc == NULL)
 			c->Message(13, "Unable to spawn new NPC marker.");
 	} else {
-		c->Message(15, "Invalid action specified. use '#fear help' for help");
+		c->Message(15, "Invalid action specified. use '#path help' for help");
 	}
 }
 
@@ -6554,7 +6173,7 @@ void Client::Undye() {
 		int8 slot2=SlotConvert(cur_slot);
 		ItemInst* inst = m_inv.GetItem(slot2);
 		if(inst != NULL) {
-			inst->SetColor(inst->GetItem()->Common.Color);
+			inst->SetColor(inst->GetItem()->Color);
 			database.SaveInventory(CharacterID(), inst, slot2);
 		}
 		m_pp.item_tint[cur_slot].rgb.use_tint = 0;
@@ -6587,7 +6206,7 @@ void command_ginfo(Client *c, const Seperator *sep)
 		
 		c->Message(0, "Group #%lu:", g->GetID());
 		
-		int r;
+		uint32 r;
 		for(r = 0; r < MAX_GROUP_MEMBERS; r++) {
 			if(g->members[r] == NULL) {
 				if(g->membername[r][0] == '\0')
@@ -6636,14 +6255,12 @@ void command_pf(Client *c, const Seperator *sep)
 	{
 		Mob *who = c->GetTarget();
 		c->Message(0, "POS: (%.2f, %.2f, %.2f)", who->GetX(), who->GetY(), who->GetZ());
-		c->Message(0, "WP: (%.2f, %.2f, %.2f) (%d/%d)", who->GetCWPX(), who->GetCWPY(), who->GetCWPZ(), who->GetCWP(), who->GetMWP());
+		c->Message(0, "WP: (%.2f, %.2f, %.2f) (%d/%d)", who->GetCWPX(), who->GetCWPY(), who->GetCWPZ(), who->GetCWP(), who->IsNPC()?who->CastToNPC()->GetMaxWp():-1);
 		c->Message(0, "TAR: (%.2f, %.2f, %.2f)", who->tarx, who->tary, who->tarz);
 		c->Message(0, "TARV: (%.2f, %.2f, %.2f)", who->tar_vx, who->tar_vy, who->tar_vz);
-		c->Message(0, "|TV|=%.2f index=%d wpcount=%d", who->tar_vector, who->tar_ndx, who->Waypoints.ItemCount());
+		c->Message(0, "|TV|=%.2f index=%d", who->tar_vector, who->tar_ndx);
 		c->Message(0, "pause=%d RAspeed=%d", who->GetCWPP(), who->GetRunAnimSpeed());
-	}
-	else
-	{
+	} else {
 		c->Message(0, "ERROR: target required");
 	}
 }
@@ -6691,5 +6308,505 @@ void command_bestz(Client *c, const Seperator *sep) {
 }
 
 
+void command_reloadstatic(Client *c, const Seperator *sep) {
+	c->Message(0, "Reloading zone static data...");
+	zone->ReloadStaticData();
+}
 
+void command_flags(Client *c, const Seperator *sep) {
+	Client *t = c;
+	
+	if(c->Admin() >= minStatusToSeeOthersZoneFlags) {
+		Mob *tgt = c->GetTarget();
+		if(tgt != NULL && tgt->IsClient())
+			t = tgt->CastToClient();
+	}
+	
+	t->SendZoneFlagInfo(c);
+}
 
+void command_flagedit(Client *c, const Seperator *sep) {
+	//super-command for editing zone flags
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char *query = 0;
+	if(sep->arg[1][0] == '\0' || !strcasecmp(sep->arg[1], "help")) {
+		c->Message(0, "Syntax: #flagedit [lockzone|unlockzone|listzones|give|take].");
+		c->Message(0, "...lockzone [zone id/short] [flag name] - Set the specified flag name on the zone, locking the zone");
+		c->Message(0, "...unlockzone [zone id/short] - Removes the flag requirement from the specified zone");
+		c->Message(0, "...listzones - List all zones which require a flag, and their flag's name");
+		c->Message(0, "...give [zone id/short] - Give your target the zone flag for the specified zone.");
+		c->Message(0, "...take [zone id/short] - Take the zone flag for the specified zone away from your target");
+		c->Message(0, "...Note: use #flags to view flags on a person");
+		return;
+	}
+	
+	if(!strcasecmp(sep->arg[1], "lockzone")) {
+		uint32 zoneid = 0;
+		if(sep->arg[2][0] != '\0') {
+			zoneid = atoi(sep->arg[2]);
+			if(zoneid < 1) {
+				zoneid = database.GetZoneID(sep->arg[2]);
+			}
+		}
+		if(zoneid < 1) {
+			c->Message(13, "zone required. see help.");
+			return;
+		}
+		
+		char flag_name[128];
+		if(sep->argplus[3][0] == '\0') {
+			c->Message(13, "flag name required. see help.");
+			return;
+		}
+		database.DoEscapeString(flag_name, sep->argplus[3], 64);
+		flag_name[127] = '\0';
+		
+		if(!database.RunQuery(query, MakeAnyLenString(&query, 
+			"UPDATE zone SET flag_needed='%s' WHERE zoneidnumber=%d",
+			flag_name, zoneid), errbuf))
+		{
+			c->Message(13, "Error updating zone: %s", errbuf);
+		} else {
+			c->LogSQL(query);
+			c->Message(15, "Success! Zone %s now requires a flag, named %s", database.GetZoneName(zoneid), flag_name);
+		}
+		safe_delete(query);
+	} else if(!strcasecmp(sep->arg[1], "unlockzone")) {
+		uint32 zoneid = 0;
+		if(sep->arg[2][0] != '\0') {
+			zoneid = atoi(sep->arg[2]);
+			if(zoneid < 1) {
+				zoneid = database.GetZoneID(sep->arg[2]);
+			}
+		}
+		if(zoneid < 1) {
+			c->Message(13, "zone required. see help.");
+			return;
+		}
+		
+		if(!database.RunQuery(query, MakeAnyLenString(&query, 
+			"UPDATE zone SET flag_needed='' WHERE zoneidnumber=%d",
+			zoneid), errbuf))
+		{
+			c->Message(15, "Error updating zone: %s", errbuf);
+		} else {
+			c->LogSQL(query);
+			c->Message(15, "Success! Zone %s no longer requires a flag.", database.GetZoneName(zoneid));
+		}
+		safe_delete(query);
+	} else if(!strcasecmp(sep->arg[1], "listzones")) {
+		MYSQL_RES *result;
+		MYSQL_ROW row;
+		if (database.RunQuery(query, MakeAnyLenString(&query, 
+			"SELECT zoneidnumber,short_name,long_name,flag_needed FROM zone WHERE flag_needed != ''"
+			), errbuf, &result))
+		{
+			c->Message(0, "Zones which require flags:");
+			while ((row = mysql_fetch_row(result)))
+			{
+				c->Message(0, "Zone %s (%s,%s) requires key %s", row[2], row[0], row[1], row[3]);
+			}
+			mysql_free_result(result);
+		} else {
+			c->Message(13, "Unable to query zone flags: %s", errbuf);
+		}
+		safe_delete_array(query);
+	} else if(!strcasecmp(sep->arg[1], "give")) {
+		uint32 zoneid = 0;
+		if(sep->arg[2][0] != '\0') {
+			zoneid = atoi(sep->arg[2]);
+			if(zoneid < 1) {
+				zoneid = database.GetZoneID(sep->arg[2]);
+			}
+		}
+		if(zoneid < 1) {
+			c->Message(13, "zone required. see help.");
+			return;
+		}
+		
+		Mob *t = c->GetTarget();
+		if(t == NULL || !t->IsClient()) {
+			c->Message(13, "client target required");
+			return;
+		}
+		
+		t->CastToClient()->SetZoneFlag(zoneid);
+	} else if(!strcasecmp(sep->arg[1], "give")) {
+		uint32 zoneid = 0;
+		if(sep->arg[2][0] != '\0') {
+			zoneid = atoi(sep->arg[2]);
+			if(zoneid < 1) {
+				zoneid = database.GetZoneID(sep->arg[2]);
+			}
+		}
+		if(zoneid < 1) {
+			c->Message(13, "zone required. see help.");
+			return;
+		}
+		
+		Mob *t = c->GetTarget();
+		if(t == NULL || !t->IsClient()) {
+			c->Message(13, "client target required");
+			return;
+		}
+		
+		t->CastToClient()->ClearZoneFlag(zoneid);
+	} else {
+		c->Message(15, "Invalid action specified. use '#flagedit help' for help");
+	}
+}
+
+void command_mlog(Client *c, const Seperator *sep) {
+	//super-command for managing log settings
+	if(sep->arg[1][0] == '\0' || !strcasecmp(sep->arg[1], "help")) {
+		c->Message(0, "Syntax: #mlog [subcommand].");
+		c->Message(0, "-- Mob Logging Togglers --");
+		c->Message(0, "...target [on|off] - Set logging enabled for your target");
+		c->Message(0, "...all [on|off] - Set logging enabled for all mobs and clients (prolly a bad idea)");
+		c->Message(0, "...mobs [on|off] - Set logging enabled for all mobs");
+		c->Message(0, "...clients [on|off] - Set logging enabled for all clients");
+		c->Message(0, "...radius [on|off] [radius] - Set logging enable for all mobs and clients within `radius`");
+		c->Message(0, "-------------");
+		c->Message(0, "-- Log Settings --");
+		c->Message(0, "...list [category] - List all log types in specified category, or all categories if none specified.");
+		c->Message(0, "...setcat [category] [on|off] - Enable/Disable all types in a specified category");
+		c->Message(0, "...set [type] [on|off] - Enable/Disable the specified log type");
+		c->Message(0, "...load [filename] - Load log type settings from the file `filename`");
+		return;
+	}
+	bool onoff;
+	string on("on");
+	string off("off");
+	
+	if(!strcasecmp(sep->arg[1], "target")) {
+		if(on == sep->arg[2]) onoff = true;
+		else if(off == sep->arg[2]) onoff = false;
+		else { c->Message(13, "Invalid argument. Expected on/off."); return; }
+		
+		Mob *tgt = c->GetTarget();
+		if(tgt == NULL) {
+			c->Message(13, "You must have a target for this command.");
+			return;
+		}
+		
+		if(onoff)
+			tgt->EnableLogging();
+		else
+			tgt->DisableLogging();
+		
+		c->Message(0, "Logging has been enabled on %s", tgt->GetName());
+	} else if(!strcasecmp(sep->arg[1], "all")) {
+		if(on == sep->arg[2]) onoff = true;
+		else if(off == sep->arg[2]) onoff = false;
+		else { c->Message(13, "Invalid argument '%s'. Expected on/off.", sep->arg[2]); return; }
+		
+		entity_list.RadialSetLogging(c, onoff, true, true);
+		
+		c->Message(0, "Logging has been enabled for all entities");
+	} else if(!strcasecmp(sep->arg[1], "mobs")) {
+		if(on == sep->arg[2]) onoff = true;
+		else if(off == sep->arg[2]) onoff = false;
+		else { c->Message(13, "Invalid argument '%s'. Expected on/off.", sep->arg[2]); return; }
+		
+		entity_list.RadialSetLogging(c, onoff, false, true);
+		
+		c->Message(0, "Logging has been enabled for all mobs");
+	} else if(!strcasecmp(sep->arg[1], "clients")) {
+		if(on == sep->arg[2]) onoff = true;
+		else if(off == sep->arg[2]) onoff = false;
+		else { c->Message(13, "Invalid argument '%s'. Expected on/off.", sep->arg[2]); return; }
+		
+		entity_list.RadialSetLogging(c, onoff, true, false);
+		
+		c->Message(0, "Logging has been enabled for all clients");
+	} else if(!strcasecmp(sep->arg[1], "radius")) {
+		if(on == sep->arg[2]) onoff = true;
+		else if(off == sep->arg[2]) onoff = false;
+		else { c->Message(13, "Invalid argument '%s'. Expected on/off.", sep->arg[2]); return; }
+		
+		float radius = atof(sep->arg[3]);
+		if(radius <= 0) {
+			c->Message(13, "Invalid radius %f", radius);
+			return;
+		}
+		
+		entity_list.RadialSetLogging(c, onoff, false, true, radius);
+		
+		c->Message(0, "Logging has been enabled for all entities within %f", radius);
+	} else if(!strcasecmp(sep->arg[1], "list")) {
+		int r;
+		if(sep->arg[2][0] == '\0') {
+			c->Message(0, "Listing all log categories:");
+			for(r = 0; r < NUMBER_OF_LOG_CATEGORIES; r++) {
+				c->Message(0, "Category %d: %s", r, log_category_names[r]);
+			}
+		} else {
+			//first we have to find the category ID.
+			for(r = 0; r < NUMBER_OF_LOG_CATEGORIES; r++) {
+				if(!strcasecmp(log_category_names[r], sep->arg[2]))
+					break;
+			}
+			if(r == NUMBER_OF_LOG_CATEGORIES) {
+				c->Message(13, "Unable to find category '%s'", sep->arg[2]);
+				return;
+			}
+			int logcat = r;
+			c->Message(0, "Types for category %d: %s", logcat, log_category_names[logcat]);
+			for(r = 0; r < NUMBER_OF_LOG_TYPES; r++) {
+				if(log_type_info[r].category != logcat)
+					continue;
+				c->Message(0, "...%d: %s (%s)", r, log_type_info[r].name, is_log_enabled(LogType(r))?"enabled":"disabled");
+			}
+		}
+	} else if(!strcasecmp(sep->arg[1], "setcat")) {
+		if(on == sep->arg[3]) onoff = true;
+		else if(off == sep->arg[3]) onoff = false;
+		else { c->Message(13, "Invalid argument %s. Expected on/off.", sep->arg[3]); return; }
+		
+		int r;
+		//first we have to find the category ID.
+		for(r = 0; r < NUMBER_OF_LOG_CATEGORIES; r++) {
+			if(!strcasecmp(log_category_names[r], sep->arg[2]))
+				break;
+		}
+		if(r == NUMBER_OF_LOG_CATEGORIES) {
+			c->Message(13, "Unable to find category '%s'", sep->arg[2]);
+			return;
+		}
+		
+		LogCategory logcat = LogCategory(r);
+		for(r = 0; r < NUMBER_OF_LOG_TYPES; r++) {
+			if(log_type_info[r].category != logcat)
+				continue;
+			
+			if(onoff) {
+				log_enable(LogType(r));
+				c->Message(0, "Log type %s (%d) has been enabled", log_type_info[r].name, r);
+			} else {
+				log_disable(LogType(r));
+				c->Message(0, "Log type %s (%d) has been disabled", log_type_info[r].name, r);
+			}
+		}
+	} else if(!strcasecmp(sep->arg[1], "set")) {
+		if(on == sep->arg[3]) onoff = true;
+		else if(off == sep->arg[3]) onoff = false;
+		else { c->Message(13, "Invalid argument %s. Expected on/off.", sep->arg[3]); return; }
+		
+		//first we have to find the category ID.
+		int r;
+		for(r = 0; r < NUMBER_OF_LOG_TYPES; r++) {
+			if(!strcasecmp(log_type_info[r].name, sep->arg[2]))
+				break;
+		}
+		if(r == NUMBER_OF_LOG_TYPES) {
+			c->Message(13, "Unable to find log type %s", sep->arg[2]);
+			return;
+		}
+		
+		if(onoff) {
+			log_enable(LogType(r));
+			c->Message(0, "Log type %s (%d) has been enabled", log_type_info[r].name, r);
+		} else {
+			log_disable(LogType(r));
+			c->Message(0, "Log type %s (%d) has been disabled", log_type_info[r].name, r);
+		}
+	} else {
+		c->Message(15, "Invalid action specified. use '#mlog help' for help");
+	}
+}
+
+void command_serverrules(Client *c, const Seperator *sep)
+{
+	c->SendRules(c);
+}
+
+void command_acceptrules(Client *c, const Seperator *sep)
+{
+	if(!database.GetAgreementFlag(c->AccountID()))
+	{
+		database.SetAgreementFlag(c->AccountID());
+		c->SendAppearancePacket(AT_Anim, ANIM_STAND);
+		c->Message(0,"It is recorded you have agreed to the rules.");
+	}
+}
+
+void command_guildcreate(Client *c, const Seperator *sep)
+{
+	char founders[3];
+	if (database.GetVariable("GuildCreation", founders, 3));
+	{
+		if(strlen(sep->argplus[1])>4 && strlen(sep->argplus[1])<16)
+		{
+			guild_mgr.AddGuildApproval(sep->argplus[1],c);
+		}
+		else
+		{
+			c->Message(0,"Guild name must be more than 4 characters and less than 16.");
+		}
+	}
+}
+
+void command_guildapprove(Client *c, const Seperator *sep)
+{
+	guild_mgr.AddMemberApproval(atoi(sep->arg[1]),c);
+}
+
+void command_guildlist(Client *c, const Seperator *sep)
+{
+	GuildApproval* tmp = guild_mgr.FindGuildByIDApproval(atoi(sep->arg[1]));
+	if(tmp)
+	{
+		tmp->ApprovedMembers(c);
+	}
+	else
+		c->Message(0,"Could not find reference id.");
+}
+
+void command_rules(Client *c, const Seperator *sep) {
+	//super-command for managing rules settings
+	if(sep->arg[1][0] == '\0' || !strcasecmp(sep->arg[1], "help")) {
+		c->Message(0, "Syntax: #rules [subcommand].");
+		c->Message(0, "-- Rule Set Manipulation  --");
+		c->Message(0, "...listsets - List avaliable rule sets");
+		c->Message(0, "...current - gives the name of the ruleset currently running in this zone");
+		c->Message(0, "...reload - Reload the selected ruleset in this zone");
+		c->Message(0, "...switch (ruleset name) - Change the selected ruleset and load it");
+		c->Message(0, "...load (ruleset name)  - Load a ruleset in just this zone without changing the selected set");
+//too lazy to write this right now:
+//		c->Message(0, "...wload (ruleset name) - Load a ruleset in all zones without changing the selected set");
+		c->Message(0, "...store [ruleset name]  - Store the running ruleset as the specified name");
+		c->Message(0, "---------------------");
+		c->Message(0, "-- Running Rule Manipulation  --");
+		c->Message(0, "...reset - Reset all rules to their default values");
+		c->Message(0, "...set (rule) (value) - Set the specified rule to the specified value locally only");
+		c->Message(0, "...setdb (rule) (value) - Set the specified rule to the specified value locally and in the DB");
+		c->Message(0, "...list [catname] - List all rules in the specified category (or all categiries if omitted)");
+//		c->Message(0, "...values (catname) - List the value of all rules in the specified category");
+		return;
+	}
+	
+	if(!strcasecmp(sep->arg[1], "current")) {
+		c->Message(0, "Currently running ruleset '%s' (%d)", rules->GetActiveRuleset(), rules->GetActiveRulesetID());
+	} else if(!strcasecmp(sep->arg[1], "listsets")) {
+		std::map<int, std::string> sets;
+		if(!rules->ListRulesets(&database, sets)) {
+			c->Message(13, "Failed to list rule sets!");
+			return;
+		}
+		
+		c->Message(0, "Avaliable rule sets:");
+		std::map<int, std::string>::iterator cur, end;
+		cur = sets.begin();
+		end = sets.end();
+		for(; cur != end; cur++) {
+			c->Message(0, "(%d) %s", cur->first, cur->second.c_str());
+		}
+	} else if(!strcasecmp(sep->arg[1], "reload")) {
+		rules->LoadRules(&database);
+		c->Message(0, "The active ruleset (%s (%d)) has been reloaded", rules->GetActiveRuleset(), rules->GetActiveRulesetID());
+	} else if(!strcasecmp(sep->arg[1], "switch")) {
+		//make sure this is a valid rule set..
+		int rsid = rules->GetRulesetID(&database, sep->arg[2]);
+		if(rsid < 0) {
+			c->Message(13, "Unknown rule set '%s'", sep->arg[2]);
+			return;
+		}
+		if(!database.SetVariable("RuleSet", sep->arg[2])) {
+			c->Message(13, "Failed to update variables table to change selected rule set");
+			return;
+		}
+		
+		//TODO: we likely want to reload this ruleset everywhere...
+		rules->LoadRules(&database, sep->arg[2]);
+		
+		c->Message(0, "The selected ruleset has been changed to (%s (%d)) and reloaded locally", sep->arg[2], rsid);
+	} else if(!strcasecmp(sep->arg[1], "load")) {
+		//make sure this is a valid rule set..
+		int rsid = rules->GetRulesetID(&database, sep->arg[2]);
+		if(rsid < 0) {
+			c->Message(13, "Unknown rule set '%s'", sep->arg[2]);
+			return;
+		}
+		rules->LoadRules(&database, sep->arg[2]);
+		c->Message(0, "Loaded ruleset '%s' (%d) locally", sep->arg[2], rsid);
+	} else if(!strcasecmp(sep->arg[1], "store")) {
+		if(sep->argnum == 1) {
+			//store current rule set.
+			rules->SaveRules(&database);
+			c->Message(0, "Rules saved");
+		} else if(sep->argnum == 2) {
+			rules->SaveRules(&database, sep->arg[2]);
+			int prersid = rules->GetActiveRulesetID();
+			int rsid = rules->GetRulesetID(&database, sep->arg[2]);
+			if(rsid < 0) {
+				c->Message(13, "Unable to query ruleset ID after store, it most likely failed.");
+			} else {
+				c->Message(0, "Stored rules as ruleset '%s' (%d)", sep->arg[2], rsid);
+				if(prersid != rsid) {
+					c->Message(0, "Rule set %s (%d) is now active in this zone", sep->arg[2], rsid);
+				}
+			}
+		} else {
+			c->Message(13, "Invalid argument count, see help.");
+			return;
+		}
+	} else if(!strcasecmp(sep->arg[1], "reset")) {
+		rules->ResetRules();
+		c->Message(0, "The running ruleset has been set to defaults");
+	} else if(!strcasecmp(sep->arg[1], "set")) {
+		if(sep->argnum != 3) {
+			c->Message(13, "Invalid argument count, see help.");
+			return;
+		}
+		if(!rules->SetRule(sep->arg[2], sep->arg[3])) {
+			c->Message(13, "Failed to modify rule");
+		} else {
+			c->Message(0, "Rule modified locally.");
+		}
+	} else if(!strcasecmp(sep->arg[1], "setdb")) {
+		if(sep->argnum != 3) {
+			c->Message(13, "Invalid argument count, see help.");
+			return;
+		}
+		if(!rules->SetRule(sep->arg[2], sep->arg[3], &database, true)) {
+			c->Message(13, "Failed to modify rule");
+		} else {
+			c->Message(0, "Rule modified locally and in the database.");
+		}
+	} else if(!strcasecmp(sep->arg[1], "list")) {
+		if(sep->argnum == 1) {
+			std::vector<const char *> rule_list;
+			if(!rules->ListCategories(rule_list)) {
+				c->Message(13, "Failed to list categories!");
+				return;
+			}
+			c->Message(0, "Rule Categories:");
+			std::vector<const char *>::iterator cur, end;
+			cur = rule_list.begin();
+			end = rule_list.end();
+			for(; cur != end; cur++) {
+				c->Message(0, " %s", *cur);
+			}
+		} else if(sep->argnum == 2) {
+			const char *catfilt = NULL;
+			if(std::string("all") != sep->arg[2])
+				catfilt = sep->arg[2];
+			std::vector<const char *> rule_list;
+			if(!rules->ListRules(catfilt, rule_list)) {
+				c->Message(13, "Failed to list rules!");
+				return;
+			}
+			c->Message(0, "Rules in category %s:", sep->arg[2]);
+			std::vector<const char *>::iterator cur, end;
+			cur = rule_list.begin();
+			end = rule_list.end();
+			for(; cur != end; cur++) {
+				c->Message(0, " %s", *cur);
+			}
+		} else {
+			c->Message(13, "Invalid argument count, see help.");
+		}
+	} else {
+		c->Message(15, "Invalid action specified. use '#rules help' for help");
+	}
+}

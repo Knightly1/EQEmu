@@ -1,5 +1,5 @@
 /*  EQEMu:  Everquest Server Emulator
-    Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
+    Copyright (C) 2001-2005  EQEMu Development Team (http://eqemu.org)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,13 +15,12 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-#include "../common/debug.h"
+#include "debug.h"
 
-#include "../common/database.h"
-extern Database database;
-
-#include "../common/timer.h"
-#include "../common/ptimer.h"
+#include "timer.h"
+#include "ptimer.h"
+#include "database.h"
+#include "MiscFunctions.h"
 #include <stdio.h>
 
 #ifdef WIN32
@@ -88,10 +87,10 @@ CREATE TABLE timers (
 //#define DEBUG_PTIMERS
 
 
-PersistentTimer *PersistentTimer::LoadTimer(int32 char_id, pTimerType type) {
+PersistentTimer *PersistentTimer::LoadTimer(Database *db, int32 char_id, pTimerType type) {
 	PersistentTimer *p;
 	p = new PersistentTimer(char_id, type, 0);
-	if(p->Load())
+	if(p->Load(db))
 		return(p);
 	delete p;
 	return(NULL);
@@ -125,7 +124,7 @@ PersistentTimer::PersistentTimer(int32 char_id, pTimerType type, int32 in_start_
 #endif
 }
 
-bool PersistentTimer::Load() {
+bool PersistentTimer::Load(Database *db) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     MYSQL_RES *result;
     MYSQL_ROW row;
@@ -140,7 +139,7 @@ bool PersistentTimer::Load() {
 	printf("Loading timer: char %lu of type %u\n", _char_id, _type);
 #endif
 	
-	if (!database.RunQuery(query, qlen, errbuf, &result)) {
+	if (!db->RunQuery(query, qlen, errbuf, &result)) {
 		safe_delete_array(query);
 #if EQDEBUG > 5
 		LogFile->write(EQEMuLog::Error, "Error in PersistentTimer::Load, error: %s", errbuf);
@@ -163,7 +162,7 @@ bool PersistentTimer::Load() {
 	return(res);
 }
 
-bool PersistentTimer::Store() {
+bool PersistentTimer::Store(Database *db) {
 	if(Expired(false))	//dont need to store expired timers.
 		return(true);
 	
@@ -181,7 +180,7 @@ bool PersistentTimer::Store() {
 	printf("Storing timer: char %lu of type %u: '%s'\n", _char_id, _type, query);
 #endif
 	
-	if (!database.RunQuery(query, qlen, errbuf)) {
+	if (!db->RunQuery(query, qlen, errbuf)) {
 		safe_delete_array(query);
 #if EQDEBUG > 5
 		LogFile->write(EQEMuLog::Error, "Error in PersistentTimer::Store, error: %s", errbuf);
@@ -193,7 +192,7 @@ bool PersistentTimer::Store() {
 	return(true);
 }
 
-bool PersistentTimer::Clear() {
+bool PersistentTimer::Clear(Database *db) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	uint32 qlen = 0;
@@ -206,7 +205,7 @@ bool PersistentTimer::Clear() {
 	printf("Clearing timer: char %lu of type %u: '%s'\n", _char_id, _type, query);
 #endif
 	
-	if (!database.RunQuery(query, qlen, errbuf)) {
+	if (!db->RunQuery(query, qlen, errbuf)) {
 		safe_delete_array(query);
 #if EQDEBUG > 5
 		LogFile->write(EQEMuLog::Error, "Error in PersistentTimer::Clear, error: %s", errbuf);
@@ -220,7 +219,7 @@ bool PersistentTimer::Clear() {
 }
 
 /* This function checks if the timer triggered */
-bool PersistentTimer::Expired(bool iReset) {
+bool PersistentTimer::Expired(Database *db, bool iReset) {
     if (this == NULL) { 
 		LogFile->write(EQEMuLog::Error, "Null timer during ->Check()!?\n"); 
 		return(true);
@@ -230,7 +229,7 @@ bool PersistentTimer::Expired(bool iReset) {
 		if (iReset) {
 			start_time = current_time; // Reset timer
 		} else {
-			Clear();	//remove it from DB too
+			Clear(db);	//remove it from DB too
 		}
 		return(true);
     }
@@ -298,7 +297,14 @@ PTimerList::~PTimerList() {
 }
 
 
-bool PTimerList::Load() {
+bool PTimerList::Load(Database *db) {
+	map<pTimerType, PersistentTimer *>::iterator s;
+	s = _list.begin();
+	while(s != _list.end()) {
+		if(s->second != NULL)
+			delete s->second;
+		s++;
+	}
 	_list.clear();
 	
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -315,7 +321,7 @@ bool PTimerList::Load() {
 	printf("Loading all timers for char %lu\n", _char_id);
 #endif
 	
-	if (!database.RunQuery(query, qlen, errbuf, &result)) {
+	if (!db->RunQuery(query, qlen, errbuf, &result)) {
 		safe_delete_array(query);
 #if EQDEBUG > 5
 		LogFile->write(EQEMuLog::Error, "Error in PersistentTimer::Load, error: %s", errbuf);
@@ -349,7 +355,7 @@ bool PTimerList::Load() {
 	return(true);
 }
 
-bool PTimerList::Store() {
+bool PTimerList::Store(Database *db) {
 #ifdef DEBUG_PTIMERS
 	printf("Storing all timers for char %lu\n", _char_id);
 #endif
@@ -362,7 +368,7 @@ bool PTimerList::Store() {
 #ifdef DEBUG_PTIMERS
 	printf("Storing timer %u for char %lu\n", s->first, _char_id);
 #endif
-			if(!s->second->Store())
+			if(!s->second->Store(db))
 				res = false;
 		}
 		s++;
@@ -370,7 +376,7 @@ bool PTimerList::Store() {
 	return(res);
 }
 
-bool PTimerList::Clear() {
+bool PTimerList::Clear(Database *db) {
 	_list.clear();
 	
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -384,7 +390,7 @@ bool PTimerList::Clear() {
 	printf("Storing all timers for char %lu: '%s'\n", _char_id, query);
 #endif
 	
-	if (!database.RunQuery(query, qlen, errbuf)) {
+	if (!db->RunQuery(query, qlen, errbuf)) {
 		safe_delete_array(query);
 #if EQDEBUG > 5
 		LogFile->write(EQEMuLog::Error, "Error in PersistentTimer::Clear, error: %s", errbuf);
@@ -404,22 +410,22 @@ void PTimerList::Start(pTimerType type, int32 duration) {
 	}
 }
 
-void PTimerList::Clear(pTimerType type) {
+void PTimerList::Clear(Database *db, pTimerType type) {
 	if(_list.count(type) == 1) {
 		if(_list[type] != NULL) {
-			_list[type]->Clear();
+			_list[type]->Clear(db);
 			delete _list[type];
 		}
 		_list.erase(type);
 	}
 }
 
-bool PTimerList::Expired(pTimerType type, bool reset) {
+bool PTimerList::Expired(Database *db, pTimerType type, bool reset) {
 	if(_list.count(type) != 1)
 		return(true);
 	if(_list[type] == NULL)
 		return(true);
-	return(_list[type]->Expired(reset));
+	return(_list[type]->Expired(db, reset));
 }
 
 bool PTimerList::Enabled(pTimerType type) {
@@ -470,7 +476,7 @@ void PTimerList::ToVector(vector< pair<pTimerType, PersistentTimer *> > &out) {
 	}
 }
 
-bool PTimerList::ClearOffline(int32 char_id, pTimerType type) {
+bool PTimerList::ClearOffline(Database *db, int32 char_id, pTimerType type) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	uint32 qlen = 0;
@@ -481,7 +487,7 @@ bool PTimerList::ClearOffline(int32 char_id, pTimerType type) {
 	printf("Clearing timer (offline): char %lu of type %u: '%s'\n", char_id, type, query);
 #endif
 	
-	if (!database.RunQuery(query, qlen, errbuf)) {
+	if (!db->RunQuery(query, qlen, errbuf)) {
 		safe_delete_array(query);
 #if EQDEBUG > 5
 		LogFile->write(EQEMuLog::Error, "Error in PTimerList::ClearOffline, error: %s", errbuf);

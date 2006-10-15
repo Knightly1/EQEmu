@@ -22,10 +22,12 @@ public:
 	virtual ~mob_list();
 
 	void add( cmob* mob );
-	cmob* get( int pos ) const;
-	cmob* getmobbyid( int id, bool can_be_dead = false );
+	cmob* get( int pos );
+	const cmob* get( int pos )const ;
+	cmob* GetMobByEntityId( int id, bool can_be_dead = false );
 	void remove( cmob* mob );
 	int getsize() const { return list.size(); }
+	void clear() { list.clear(); }
 
 private:
 	vector<cmob*> list;

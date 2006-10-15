@@ -35,6 +35,7 @@ using namespace std;
 #include "masterentity.h"
 #include "worldserver.h"
 #include "PlayerCorpse.h"
+#include "../common/guilds.h"
 #include "../common/packet_dump.h"
 #include "../common/packet_functions.h"
 #include "petitions.h"
@@ -42,6 +43,8 @@ using namespace std;
 #include "features.h"
 #include "StringIDs.h"
 #include "parser.h"
+#include "../common/dbasync.h"
+#include "guild_mgr.h"
 
 #ifdef WIN32
 #define snprintf	_snprintf
@@ -54,13 +57,13 @@ extern Zone* zone;
 extern volatile bool ZoneLoaded;
 extern WorldServer worldserver;
 extern NetConnection net;
-extern GuildRanks_Struct guilds[512];
 extern int32 numclients;
 #ifndef NEW_LoadSPDat
 	extern SPDat_Spell_Struct spells[SPDAT_RECORDS];
 #endif
 extern bool spells_loaded;
 extern PetitionList petition_list;
+extern DBAsync *dbasync;
 
 extern char  errorname[32];
 extern int16 adverrornum;
@@ -176,6 +179,91 @@ Beacon* Entity::CastToBeacon() {
 	return static_cast<Beacon*>(this);
 }
 
+
+
+
+const Client* Entity::CastToClient() const {
+	if(this==0x00){
+		cout << "CastToClient error (NULL)" << endl;
+		DebugBreak();
+		return 0;
+	}
+#ifdef _EQDEBUG
+	if(!IsClient()) {
+		cout << "CastToClient error (not client?)" << endl;
+		DebugBreak();
+		return 0;
+	}
+#endif
+	return static_cast<const Client*>(this);
+}
+
+const NPC* Entity::CastToNPC() const {
+#ifdef _EQDEBUG
+	if(!IsNPC()) {	
+		cout << "CastToNPC error" << endl;
+		DebugBreak();
+		return 0;
+	}
+#endif
+	return static_cast<const NPC*>(this);
+}
+
+const Mob* Entity::CastToMob() const {
+#ifdef _EQDEBUG
+	if(!IsMob()) {	
+		cout << "CastToMob error" << endl;
+		DebugBreak();
+		return 0;
+	}
+#endif
+	return static_cast<const Mob*>(this);
+}
+
+
+const Trap* Entity::CastToTrap() const {
+#ifdef DEBUG
+	if(!IsTrap())
+	{
+		//cout << "CastToTrap error" << endl;
+		return 0;
+	}
+#endif
+	return static_cast<const Trap*>(this);
+}
+
+const Corpse* Entity::CastToCorpse() const {
+#ifdef _EQDEBUG
+	if(!IsCorpse()) {	
+		cout << "CastToCorpse error" << endl;
+		DebugBreak();
+		return 0;
+	}
+#endif
+	return static_cast<const Corpse*>(this);
+}
+
+const Object* Entity::CastToObject() const {
+#ifdef _EQDEBUG
+	if(!IsObject()) {	
+		cout << "CastToObject error" << endl;
+		DebugBreak();
+		return 0;
+	}
+#endif
+	return static_cast<const Object*>(this);
+}
+
+const Doors* Entity::CastToDoors() const {
+return static_cast<const Doors*>(this);
+}
+
+const Beacon* Entity::CastToBeacon() const {
+	return static_cast<const Beacon*>(this);
+}
+
+
+
 EntityList::EntityList() {
 	last_insert_id = 0;
 }
@@ -246,7 +334,7 @@ void EntityList::CheckGroupList (const char *fname, const int fline)
 
 	for (it = group_list.begin(); it != group_list.end(); it++)
 	{
-		if (it == NULL)
+		if (*it == NULL)
 		{
 			LogFile->write(EQEMuLog::Error, "NULL group, %s:%i", fname, fline);
 		}
@@ -414,23 +502,6 @@ void EntityList::AddGroup(Group* group, int32 gid) {
 #endif
 }
 
-void EntityList::GuildItemAward(int32 guilddbid, int16 itemid)
-{
-if(itemid != 0)
-{
-	LinkedListIterator<Client*> iterator(client_list);
-	
-	iterator.Reset();
-	while(iterator.MoreElements())
-	{
-		if (iterator.GetData()->GuildDBID() == guilddbid)
-		{
-			iterator.GetData()->SummonItem(itemid);
-		}
-		iterator.Advance();
-	}
-}
-}
 void EntityList::AddCorpse(Corpse* corpse, int32 in_id) {
 	if (corpse == 0)
 		return;
@@ -450,7 +521,7 @@ void EntityList::AddNPC(NPC* npc, bool SendSpawnPacket, bool dontqueue) {
 	
 	if (SendSpawnPacket) {
 		if (dontqueue) { // aka, SEND IT NOW BITCH!
-			EQZonePacket* app = new EQZonePacket;
+			EQApplicationPacket* app = new EQApplicationPacket;
 			npc->CreateSpawnPacket(app,npc);
 			QueueClients(npc, app);
 			safe_delete(app);
@@ -474,7 +545,7 @@ void EntityList::AddNPC(NPC* npc, bool SendSpawnPacket, bool dontqueue) {
 void EntityList::AddObject(Object* obj, bool SendSpawnPacket) {
 	obj->SetID(GetFreeID()); 
 	if (SendSpawnPacket) {
-		EQZonePacket app;
+		EQApplicationPacket app;
 		obj->CreateSpawnPacket(&app);
 		#if (EQDEBUG >= 6)
 			DumpPacket(&app);
@@ -522,11 +593,11 @@ void EntityList::CheckSpawnQueue() {
 	if (tsFirstSpawnOnQueue != 0xFFFFFFFF && (Timer::GetCurrentTime() - tsFirstSpawnOnQueue) > 50) {
 		//if (NumSpawnsOnQueue <= 5) {
 			LinkedListIterator<NewSpawn_Struct*> iterator(SpawnQueue);
-			EQZonePacket* outapp = 0;
+			EQApplicationPacket* outapp = 0;
 			
 			iterator.Reset();
 			while(iterator.MoreElements()) {
-				outapp = new EQZonePacket;
+				outapp = new EQApplicationPacket;
 				Mob::CreateSpawnPacket(outapp, iterator.GetData());
 //				cout << "Sending spawn packet: " << iterator.GetData()->spawn.name << endl;
 				QueueClients(0, outapp);
@@ -576,14 +647,14 @@ Doors* EntityList::FindDoor(int8 door_id)
 	return 0;
 }
 
-bool EntityList::MakeDoorSpawnPacket(EQZonePacket* app)
+bool EntityList::MakeDoorSpawnPacket(EQApplicationPacket* app)
 {
 	int32 count = door_list.Count();
 	if( !count || count>500)
 		return false;
 	int32 length = count * sizeof(Door_Struct);
 	uchar* packet_buffer = new uchar[length];
-	memset(packet_buffer,0,length);
+	memset(packet_buffer, 0, length);
 	uchar* ptr = packet_buffer;
 	Doors *door;
 	LinkedListIterator<Doors*> iterator(door_list);
@@ -846,7 +917,7 @@ void EntityList::ChannelMessage(Mob* from, int8 chan_num, int8 language, const c
 	while(iterator.MoreElements())
 	{
 		Client* client = iterator.GetData();
-		FilterType filter = FilterNone;
+		eqFilterType filter = FilterNone;
 		if(chan_num==3)//shout
 			filter=FILTER_SHOUT;
 		else if(chan_num==4) //auction
@@ -871,7 +942,7 @@ void EntityList::ChannelMessageSend(Mob* to, int8 chan_num, int8 language, const
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
-		Client* client = iterator.GetData()->CastToClient();
+		Client* client = iterator.GetData();
 		if (client->GetID() == to->GetID()) {
 			client->ChannelMessageSend(0, 0, chan_num, language, buffer);
 			break;
@@ -884,7 +955,7 @@ void EntityList::SendZoneSpawns(Client* client)
 {
 	LinkedListIterator<Mob*> iterator(mob_list);
 	
-	EQZonePacket* app;
+	EQApplicationPacket* app;
 	iterator.Reset();
 	while(iterator.MoreElements()) {
 		Mob* ent = iterator.GetData();
@@ -892,7 +963,7 @@ void EntityList::SendZoneSpawns(Client* client)
 			iterator.Advance();
 			continue;
 		}
-		app = new EQZonePacket;
+		app = new EQApplicationPacket;
 		iterator.GetData()->CastToMob()->CreateSpawnPacket(app); // TODO: Use zonespawns opcode instead
         client->QueuePacket(app, true, Client::CLIENT_CONNECTED);
 		safe_delete(app);
@@ -928,15 +999,28 @@ void EntityList::SendZoneSpawnsBulk(Client* client)
 	safe_delete(bzsp);
 }
 
+//this is a hack to handle a broken spawn struct
+void EntityList::SendZonePVPUpdates(Client *to) {
+	LinkedListIterator<Client*> iterator(client_list);
+	
+	iterator.Reset();
+	while(iterator.MoreElements()) {
+		Client *c = iterator.GetData();
+		if(c->GetPVP())
+			c->SendAppearancePacket(AT_PVP, c->GetPVP(), false, false, to);
+		iterator.Advance();
+	}
+}
+
 void EntityList::SendZoneCorpses(Client* client)
 {
-	EQZonePacket* app;
+	EQApplicationPacket* app;
 	LinkedListIterator<Corpse*> iterator(corpse_list);
 	
 	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
 	{
 		Corpse *ent = iterator.GetData();
-		app = new EQZonePacket;
+		app = new EQApplicationPacket;
 		ent->CreateSpawnPacket(app);
 		client->QueuePacket(app, true, Client::CLIENT_CONNECTED);
 		safe_delete(app);
@@ -970,12 +1054,12 @@ void EntityList::SendZoneCorpsesBulk(Client* client) {
 void EntityList::SendZoneObjects(Client* client)
 {
 	LinkedListIterator<Object*> iterator(object_list);
-	EQZonePacket app;
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
-		iterator.GetData()->CreateSpawnPacket(&app);
-		client->QueuePacket(&app);
+		EQApplicationPacket *app = new EQApplicationPacket;
+		iterator.GetData()->CreateSpawnPacket(app);
+		client->FastQueuePacket(&app);
 		iterator.Advance();
 	}
 }
@@ -1020,7 +1104,7 @@ void EntityList::RemoveFromTargets(Mob* mob)
 	}	
 }
 
-void EntityList::QueueClientsByTarget(Mob* sender, const EQZonePacket* app, bool iSendToSender, Mob* SkipThisMob, bool ackreq) {
+void EntityList::QueueClientsByTarget(Mob* sender, const EQApplicationPacket* app, bool iSendToSender, Mob* SkipThisMob, bool ackreq) {
 	LinkedListIterator<Client*> iterator(client_list);
 	
 	iterator.Reset();
@@ -1032,7 +1116,7 @@ void EntityList::QueueClientsByTarget(Mob* sender, const EQZonePacket* app, bool
 	}	
 }
 
-void EntityList::QueueCloseClients(Mob* sender, const EQZonePacket* app, bool ignore_sender, float dist, Mob* SkipThisMob, bool ackreq, FilterType filter) {
+void EntityList::QueueCloseClients(Mob* sender, const EQApplicationPacket* app, bool ignore_sender, float dist, Mob* SkipThisMob, bool ackreq, eqFilterType filter) {
 	if (sender == NULL) {
 		QueueClients(sender, app, ignore_sender);
 		return;
@@ -1050,7 +1134,7 @@ void EntityList::QueueCloseClients(Mob* sender, const EQZonePacket* app, bool ig
 		Client* ent = iterator.GetData();
 
 		if ((!ignore_sender || ent != sender) && (ent != SkipThisMob)) {
-			FilterMode filter2 = ent->GetFilter(filter);
+			eqFilterMode filter2 = ent->GetFilter(filter);
 			if(ent->Connected() && 
 				(  filter==FilterNone 
 				||  filter2 == FilterShow 
@@ -1066,7 +1150,7 @@ void EntityList::QueueCloseClients(Mob* sender, const EQZonePacket* app, bool ig
 }
 
 //sender can be null
-void EntityList::QueueClients(Mob* sender, const EQZonePacket* app, bool ignore_sender, bool ackreq) {
+void EntityList::QueueClients(Mob* sender, const EQApplicationPacket* app, bool ignore_sender, bool ackreq) {
 	LinkedListIterator<Client*> iterator(client_list);
 	
 	iterator.Reset();
@@ -1084,13 +1168,13 @@ void EntityList::QueueClients(Mob* sender, const EQZonePacket* app, bool ignore_
 
 /*
 rewrite of all the queue close methods to use the update manager
-void EntityList::FilterQueueCloseClients(int8 filter, int8 required, Mob* sender, const EQZonePacket* app, bool ignore_sender, float dist, Mob* SkipThisMob, bool ackreq){
+void EntityList::FilterQueueCloseClients(int8 filter, int8 required, Mob* sender, const EQApplicationPacket* app, bool ignore_sender, float dist, Mob* SkipThisMob, bool ackreq){
 	if(dist <= 0) {
 		dist = 600;
 	}
 
 #ifdef PACKET_UPDATE_MANAGER
-	EQZonePacket* tmp_app = app->CopyZonePacket();
+	EQApplicationPacket* tmp_app = app->Copy();
 #else
 	float dist2 = dist * dist; //pow(dist, 2);
 #endif
@@ -1121,11 +1205,11 @@ void EntityList::FilterQueueCloseClients(int8 filter, int8 required, Mob* sender
 		iterator.Advance();
 	}
 #ifdef PACKET_UPDATE_MANAGER
-	EQZonePacket::PacketUsed(&tmp_app);
+	EQApplicationPacket::PacketUsed(&tmp_app);
 #endif
 }
 
-void EntityList::QueueCloseClients(Mob* sender, const EQZonePacket* app, bool ignore_sender, float dist, Mob* SkipThisMob, bool ackreq,int8 filter) {
+void EntityList::QueueCloseClients(Mob* sender, const EQApplicationPacket* app, bool ignore_sender, float dist, Mob* SkipThisMob, bool ackreq,int8 filter) {
 	if (sender == 0) {
 		QueueClients(sender, app, ignore_sender);
 		return;
@@ -1134,7 +1218,7 @@ void EntityList::QueueCloseClients(Mob* sender, const EQZonePacket* app, bool ig
 		dist = 600;
 	}
 #ifdef PACKET_UPDATE_MANAGER
-	EQZonePacket* tmp_app = app->CopyZonePacket();
+	EQApplicationPacket* tmp_app = app->Copy();
 #else
 	float dist2 = dist * dist; //pow(dist, 2);
 #endif
@@ -1167,15 +1251,15 @@ void EntityList::QueueCloseClients(Mob* sender, const EQZonePacket* app, bool ig
 		iterator.Advance();
 	}
 #ifdef PACKET_UPDATE_MANAGER
-	EQZonePacket::PacketUsed(&tmp_app);
+	EQApplicationPacket::PacketUsed(&tmp_app);
 #endif
 }
 
-void EntityList::QueueClients(Mob* sender, const EQZonePacket* app, bool ignore_sender, bool ackreq) {
+void EntityList::QueueClients(Mob* sender, const EQApplicationPacket* app, bool ignore_sender, bool ackreq) {
 	LinkedListIterator<Client*> iterator(client_list);
 	
 #ifdef PACKET_UPDATE_MANAGER
-	EQZonePacket* tmp_app = app->CopyZonePacket();
+	EQApplicationPacket* tmp_app = app->Copy();
 #endif
 	
 	iterator.Reset();
@@ -1194,13 +1278,13 @@ void EntityList::QueueClients(Mob* sender, const EQZonePacket* app, bool ignore_
 		iterator.Advance();
 	}
 #ifdef PACKET_UPDATE_MANAGER
-	EQZonePacket::PacketUsed(&tmp_app);
+	EQApplicationPacket::PacketUsed(&tmp_app);
 #endif
 }
 */
 
 /*
-void EntityList::QueueManaged(Mob* sender, const EQZonePacket* app, bool ignore_sender, bool ackreq) {
+void EntityList::QueueManaged(Mob* sender, const EQApplicationPacket* app, bool ignore_sender, bool ackreq) {
 	LinkedListIterator<Client*> iterator(client_list);
 	
 	iterator.Reset();
@@ -1216,11 +1300,11 @@ void EntityList::QueueManaged(Mob* sender, const EQZonePacket* app, bool ignore_
 	}
 }*/
 
-void EntityList::QueueManaged(Mob* sender, const EQZonePacket* app, bool ignore_sender, bool ackreq) {
+void EntityList::QueueManaged(Mob* sender, const EQApplicationPacket* app, bool ignore_sender, bool ackreq) {
 	LinkedListIterator<Client*> iterator(client_list);
 	
 #ifdef PACKET_UPDATE_MANAGER
-	EQZonePacket* tmp_app = app->CopyZonePacket();
+	EQApplicationPacket* tmp_app = app->Copy();
 #endif
 	
 	iterator.Reset();
@@ -1239,12 +1323,12 @@ void EntityList::QueueManaged(Mob* sender, const EQZonePacket* app, bool ignore_
 		iterator.Advance();
 	}
 #ifdef PACKET_UPDATE_MANAGER
-	EQZonePacket::PacketUsed(&tmp_app);
+	EQApplicationPacket::PacketUsed(&tmp_app);
 #endif
 }
 
 
-void EntityList::QueueClientsStatus(Mob* sender, const EQZonePacket* app, bool ignore_sender, int8 minstatus, int8 maxstatus)
+void EntityList::QueueClientsStatus(Mob* sender, const EQApplicationPacket* app, bool ignore_sender, int8 minstatus, int8 maxstatus)
 {
 	LinkedListIterator<Client*> iterator(client_list);
 	
@@ -1460,27 +1544,26 @@ Client* EntityList::GetClientByID(int16 id) {
 	return 0; 
 } 
 
-void EntityList::ChannelMessageFromWorld(const char* from, const char* to, int8 chan_num, int32 guilddbid, int8 language, const char* message, ...) {
-	va_list argptr;
-	char buffer[4096];
-	
-	va_start(argptr, message);
-	vsnprintf(buffer, 4096, message, argptr);
-	va_end(argptr);
+void EntityList::ChannelMessageFromWorld(const char* from, const char* to, int8 chan_num, int32 guild_id, int8 language, const char* message) {
 	
 	LinkedListIterator<Client*> iterator(client_list);
 	
 	iterator.Reset();
-	while(iterator.MoreElements())
+	for(; iterator.MoreElements(); iterator.Advance())
 	{
 		Client* client = iterator.GetData();
-		if (chan_num != 0 || (client->GuildDBID() == guilddbid && client->GuildEQID() != 0xFFFFFF && guilds[client->GuildEQID()].rank[client->GuildRank()].heargu)){
-			if((chan_num!=0 && chan_num!=5) || 
-				(chan_num==0 && client->GetFilter(FILTER_GUILDSAY)!=FilterHide) ||
-				(chan_num==5 && client->GetFilter(FILTER_OOC)!=FilterHide))//ooc
-				client->ChannelMessageSend(from, to, chan_num, language, buffer);
+		if(chan_num == 0) {
+			if(!client->IsInGuild(guild_id))
+				continue;
+			if(!guild_mgr.CheckPermission(guild_id, client->GuildRank(), GUILD_HEAR))
+				continue;
+			if(client->GetFilter(FILTER_GUILDSAY) == FilterHide)
+				continue;
+		} else if(chan_num == 5) {
+			if(client->GetFilter(FILTER_OOC) == FilterHide)
+				continue;
 		}
-		iterator.Advance();
+		client->ChannelMessageSend(from, to, chan_num, language, message);
 	}
 }
 
@@ -1498,35 +1581,25 @@ void EntityList::Message(int32 to_guilddbid, int32 type, const char* message, ..
 	while(iterator.MoreElements())
 	{
 		Client* client = iterator.GetData();
-		if (to_guilddbid == 0 || client->GuildDBID() == to_guilddbid)
+		if (to_guilddbid == 0 || client->IsInGuild(to_guilddbid))
 			client->Message(type, buffer);
 		iterator.Advance();
 	}
 }
-void EntityList::QueueClientsGuild(Mob* sender, const EQZonePacket* app, bool ignore_sender, int32 guildeqid){
+
+void EntityList::QueueClientsGuild(Mob* sender, const EQApplicationPacket* app, bool ignore_sender, int32 guild_id){
 	LinkedListIterator<Client*> iterator(client_list);
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
 		Client* client = iterator.GetData()->CastToClient();
-		if (client->GuildEQID() == guildeqid)
+		if (client->IsInGuild(guild_id))
 			client->QueuePacket(app);
 		iterator.Advance();
 	}
 }
-void EntityList::SendGuildJoin(GuildJoin_Struct* gj){
-	LinkedListIterator<Client*> iterator(client_list);
-	
-	iterator.Reset();
-	while(iterator.MoreElements())
-	{
-		Client* client = iterator.GetData()->CastToClient();
-		if (client->GuildEQID() == gj->guildid)
-			client->SendGuildJoin(gj);
-		iterator.Advance();
-	}
-}
-void EntityList::MessageStatus(int32 to_guilddbid, int to_minstatus, int32 type, const char* message, ...) {
+
+void EntityList::MessageStatus(int32 to_guild_id, int to_minstatus, int32 type, const char* message, ...) {
 	va_list argptr;
 	char buffer[4096];
 	
@@ -1539,7 +1612,7 @@ void EntityList::MessageStatus(int32 to_guilddbid, int to_minstatus, int32 type,
 	iterator.Reset();
 	while(iterator.MoreElements()) {
 		Client* client = iterator.GetData();
-		if ((to_guilddbid == 0 || client->GuildDBID() == to_guilddbid) && client->Admin() >= to_minstatus)
+		if ((to_guild_id == 0 || client->IsInGuild(to_guild_id)) && client->Admin() >= to_minstatus)
 			client->Message(type, buffer);
 		iterator.Advance();
 	}
@@ -1983,14 +2056,14 @@ Client* highestrank = 0;
 return 0;
 }
 
-void EntityList::GuildIntervalPoints(int32 guildid,sint32 points)
+void EntityList::GuildIntervalPoints(int32 guild_id,sint32 points)
 {
 	LinkedListIterator<Client*> iterator(client_list);
 	
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
-		if (iterator.GetData()->IsClient() && iterator.GetData()->GuildDBID() == guildid && iterator.GetData()->Admin() == 0)
+		if (iterator.GetData()->IsClient() && iterator.GetData()->GuildDBID() == guild_id && iterator.GetData()->Admin() == 0)
 		{
 		iterator.GetData()->UpdateLDoNPoints(points,0);
 		iterator.GetData()->CastToClient()->Message(0,"You have received %i points for defending a location.",points);
@@ -2127,14 +2200,14 @@ void EntityList::SendPositionUpdates(Client* client, int32 cLastUpdate, float ra
 	range = range * range;
 	LinkedListIterator<Mob*> iterator(mob_list);
 	
-	EQZonePacket* outapp = 0;
+	EQApplicationPacket* outapp = 0;
 	PlayerPositionUpdateServer_Struct* ppu = 0;
 	Mob* mob = 0;
 	
 	iterator.Reset();
 	while(iterator.MoreElements()) {
 		if (outapp == 0) {
-			outapp = new EQZonePacket(OP_ClientUpdate, sizeof(PlayerPositionUpdateServer_Struct));
+			outapp = new EQApplicationPacket(OP_ClientUpdate, sizeof(PlayerPositionUpdateServer_Struct));
 			ppu = (PlayerPositionUpdateServer_Struct*)outapp->pBuffer;
 		}
 		mob = iterator.GetData()->CastToMob();
@@ -2328,7 +2401,7 @@ sint32 EntityList::DeletePlayerCorpses() {
 }
 void EntityList::SendPetitionToAdmins(){
 	LinkedListIterator<Client*> iterator(client_list);
-	EQZonePacket* outapp = new EQZonePacket(OP_PetitionUpdate,sizeof(PetitionUpdate_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_PetitionUpdate,sizeof(PetitionUpdate_Struct));
 	PetitionUpdate_Struct* pcus = (PetitionUpdate_Struct*) outapp->pBuffer;
 	pcus->petnumber = 0;		// Petition Number
 	pcus->color = 0;
@@ -2348,7 +2421,7 @@ void EntityList::SendPetitionToAdmins(){
 void EntityList::SendPetitionToAdmins(Petition* pet) {
 	LinkedListIterator<Client*> iterator(client_list);
 	
-	EQZonePacket* outapp = new EQZonePacket(OP_PetitionUpdate,sizeof(PetitionUpdate_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_PetitionUpdate,sizeof(PetitionUpdate_Struct));
 	PetitionUpdate_Struct* pcus = (PetitionUpdate_Struct*) outapp->pBuffer;
 	pcus->petnumber = pet->GetID();		// Petition Number
 	if (pet->CheckedOut()) {
@@ -2381,7 +2454,7 @@ void EntityList::SendPetitionToAdmins(Petition* pet) {
 }
 
 void EntityList::ClearClientPetitionQueue() {
-	EQZonePacket* outapp = new EQZonePacket(OP_PetitionUpdate,sizeof(PetitionUpdate_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_PetitionUpdate,sizeof(PetitionUpdate_Struct));
 	PetitionUpdate_Struct* pet = (PetitionUpdate_Struct*) outapp->pBuffer;
 	pet->color = 0x00;
 	pet->status = 0xFFFFFFFF;
@@ -2454,7 +2527,7 @@ void BulkZoneSpawnPacket::SendBuffer() {
 		return;
 	
 	int32 tmpBufSize = (index * sizeof(NewSpawn_Struct));
-	EQZonePacket* outapp = new EQZonePacket(OP_ZoneSpawns, (unsigned char *)data, tmpBufSize);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, (unsigned char *)data, tmpBufSize);
 	
 	if (pSendTo) {
 		pSendTo->FastQueuePacket(&outapp);
@@ -2496,12 +2569,31 @@ void EntityList::ClearFeignAggro(Mob* targ)
 	iterator.Reset();
 	while(iterator.MoreElements())
 	{
-		if (iterator.GetData()->CastToNPC()->CheckAggro(targ))
+		if (iterator.GetData()->CheckAggro(targ))
 		{
-			iterator.GetData()->CastToNPC()->RemoveFromHateList(targ);
-			if (iterator.GetData()->CastToMob()->GetLevel() >= 35)
-				iterator.GetData()->CastToNPC()->SetFeignMemory(targ->CastToMob()->GetName());
+			iterator.GetData()->RemoveFromHateList(targ);
+			// EverHood 6/24/06
+			// For client targets if the mob that hated us is 35+ 
+			// there is a 3 outta 5 chance he adds us to feign memory
+			if(targ->IsClient()){
+				if (iterator.GetData()->GetLevel() >= 35){
+					if(MakeRandomInt(1,100)<=60){
+						iterator.GetData()->AddFeignMemory(targ->CastToClient());
+					}
+				}
+			}
 		}
+		iterator.Advance();
+	}
+}
+// EverHood 6/17/06
+void EntityList::ClearZoneFeignAggro(Client* targ)
+{
+	LinkedListIterator<NPC*> iterator(npc_list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		iterator.GetData()->RemoveFromFeignMemory(targ);
 		iterator.Advance();
 	}
 }
@@ -2564,7 +2656,7 @@ bool EntityList::MakeTrackPacket(Client* client){
 			memcpy(&track_array->Entrys[array_counter], track_ent, sizeof(Track_Struct));
 			array_counter++;
 			if (array_counter >= (spe)){
-				EQZonePacket* outapp = new EQZonePacket(OP_Track,sizeof(Track_Struct)*spe);
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_Track,sizeof(Track_Struct)*spe);
 				memcpy(outapp->pBuffer, track_array,sizeof(Track_Struct)*spe);
 				outapp->priority = 6;
 				client->QueuePacket(outapp);
@@ -2576,7 +2668,7 @@ bool EntityList::MakeTrackPacket(Client* client){
 		iterator.Advance();
 	}
 	if ((array_counter!=0) && (ret==false)) {
-		EQZonePacket* outapp = new EQZonePacket(OP_Track,sizeof(Track_Struct)*(array_counter));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_Track,sizeof(Track_Struct)*(array_counter));
 		memcpy(outapp->pBuffer, track_array,sizeof(Track_Struct)*(array_counter));
 		outapp->priority = 6;
 		client->QueuePacket(outapp);
@@ -2639,7 +2731,7 @@ void EntityList::AddHealAggro(Mob* target, Mob* caster, int16 thedam)
 	while(iterator.MoreElements())
 	{
 		cur = iterator.GetData();
-		if (!cur->GetOwnerID() && !cur->IsMezzed() && !cur->IsStunned() 
+		if (!cur->HasPet() && !cur->IsMezzed() && !cur->IsStunned() 
 			&& cur->CheckAggro(target))
 		{
 			int16 tmpd = thedam;
@@ -2674,14 +2766,8 @@ void EntityList::OpenDoorsNear(NPC* who)
 	}
 }
 
-void EntityList::SendAlarm(Trap* trap, Mob* currenttarget) {
-
-	//this function is disabled for now. I do not think that
-	//all mobs in the area of effect should start attacking,
-	//there should be some faction check or something...
-return;
-
-
+void EntityList::SendAlarm(Trap* trap, Mob* currenttarget, int8 kos) 
+{
 	LinkedListIterator<NPC*> iterator(npc_list);
 	iterator.Reset();
 	
@@ -2702,7 +2788,18 @@ return;
 			!cur->IsEngaged() && 
 			curdist <= val2 )
 		{
-			cur->AddToHateList(currenttarget,1);
+			if(kos)
+			{
+				int8 factioncon = currenttarget->GetReverseFactionCon(cur);
+				if(factioncon == FACTION_THREATENLY || factioncon == FACTION_SCOWLS)
+				{
+					cur->AddToHateList(currenttarget,1);
+				}
+			}
+			else
+			{
+				cur->AddToHateList(currenttarget,1);
+			}
 		}
 		iterator.Advance();
 	}
@@ -2816,6 +2913,14 @@ void EntityList::LimitAddNPC(NPC *npc) {
 	npc_limit_list[eid] = r;
 }
 
+void EntityList::LimitRemoveNPC(NPC *npc) {
+	if(!npc)
+		return;
+	
+	int16 eid = npc->GetID();
+	npc_limit_list.erase(eid);
+}
+
 //check a limit over the entire zone.
 //returns true if the limit has not been reached
 bool EntityList::LimitCheckType(int32 npc_type, int count) {
@@ -2839,7 +2944,7 @@ bool EntityList::LimitCheckType(int32 npc_type, int count) {
 
 //check limits on an npc type in a given spawn group.
 //returns true if the limit has not been reached
-bool EntityList::LimitCheckGroup(int32 npc_type, int32 spawngroup_id, int count) {
+bool EntityList::LimitCheckGroup(int32 spawngroup_id, int count) {
 	if(count < 1)
 		return(true);
 	
@@ -2848,8 +2953,7 @@ bool EntityList::LimitCheckGroup(int32 npc_type, int32 spawngroup_id, int count)
 	end = npc_limit_list.end();
 	
 	for(; cur != end; cur++) {
-		if(cur->second.spawngroup_id == spawngroup_id 
-		  && cur->second.npc_type == npc_type) {
+		if(cur->second.spawngroup_id == spawngroup_id) {
 			count--;
 			if(count == 0) {
 				return(false);
@@ -2876,19 +2980,41 @@ bool EntityList::LimitCheckBoth(int32 npc_type, int32 spawngroup_id, int group_c
 			if(type_count == 0) {
 				return(false);
 			}
-			if(cur->second.spawngroup_id == spawngroup_id) {
-				group_count--;
-				if(group_count == 0) {
-					return(false);
-				}
+		}
+		if(cur->second.spawngroup_id == spawngroup_id) {
+			group_count--;
+			if(group_count == 0) {
+				return(false);
 			}
 		}
 	}
 	return(true);
 }
 
-
-
+void EntityList::RadialSetLogging(Mob *around, bool enabled, bool clients, bool non_clients, float range) {
+	float range2 = range * range;
+	
+	LinkedListIterator<Mob*> iterator(mob_list);
+	iterator.Reset();
+	while(iterator.MoreElements()) {
+		Mob* mob = iterator.GetData();
+		if(mob->IsClient()) {
+			if(!clients)
+				continue;
+		} else {
+			if(!non_clients)
+				continue;
+		}
+		
+		if(around->DistNoRoot(*mob) > range2)
+			continue;
+		
+		if(enabled)
+			mob->EnableLogging();
+		else
+			mob->DisableLogging();
+	}
+}
 
 
 

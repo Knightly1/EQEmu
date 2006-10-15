@@ -41,35 +41,34 @@ struct NPCType
     sint32  max_hp;
 	
 	float	size;
-	float	walkspeed;
 	float	runspeed;
     int8    gender;
     int16    race;
     int8    class_;
     int8    bodytype;   // added for targettype support - NEOTOKYO
-    int8    deity;
+    int8    deity;		//not loaded from DB
     int8    level;
 	int32   npc_id; // rembrant, Dec. 20, 2001
-	int8    skills[75]; // socket 12-29-01
+	int8    skills[75]; // socket 12-29-01, not loaded from DB
 	int8	texture;
 	int8	helmtexture;
 	int32	loottable_id;
 	int32	npc_spells_id;
 	sint32	npc_faction_id;
 	uint32	merchanttype;
-    int8    light;
-    int32    equipment[MAX_MATERIALS];
+    int8    light;		//not loaded from DB
+    int32    equipment[MAX_MATERIALS];		//not loaded from DB
 	
 	int16	AC;
-	int16	Mana;
-	int16	ATK;
-	int8	STR;
-	int8	STA;
-	int8	DEX;
-	int8	AGI;
-	int8	INT;
-	int8	WIS;
-	int8	CHA;
+	int16	Mana;	//not loaded from DB
+	int16	ATK;	//not loaded from DB
+	int16	STR;
+	int16	STA;
+	int16	DEX;
+	int16	AGI;
+	int16	INT;
+	int16	WIS;
+	int16	CHA;
 	sint16	MR;
 	sint16	FR;
 	sint16	CR;
@@ -82,18 +81,17 @@ struct NPCType
 	int8	hairstyle;
 	int8	luclinface; // and beard);
 	int8	beard;	// solar: this probably doesn't work right, was missing from here
-	int8	aa_title;
-	int8    banish;
+//	int8	aa_title;	////not loaded from DB
 	int16	min_dmg;
 	int16	max_dmg;
 	char	npc_attacks[30];
-	float	fixedZ;
+//	float	fixedZ;
     int16	d_meele_texture1;
 	int16	d_meele_texture2;
 	sint32	hp_regen;
 	sint32  mana_regen;
 	sint32	aggroradius; // added for AI improvement - neotokyo
-	bool	ipc;
+//	bool	ipc;
 	bool	see_invis;			// Mongrel: See Invis flag added
 	bool	see_invis_undead;   // Mongrel: See Invis vs. Undead flag added 
 	bool	qglobal;
@@ -194,9 +192,9 @@ float	pos_z;
 float	heading;
 int incline;
 int8	opentype;
-int32	guildid;
+int32	guild_id;
 int16	lockpick;
-int16	keyitem;
+uint32	keyitem;
 int8	trigger_door;
 int8	trigger_type;
 int32	door_param;

@@ -18,8 +18,9 @@ using namespace std;
 #endif
 #include "../common/MiscFunctions.h"
 
-EQEMuLog* LogFile = new EQEMuLog;
-AutoDelete<EQEMuLog> adlf(&LogFile);
+static volatile bool logFileValid = false;
+static EQEMuLog realLogFile;
+EQEMuLog *LogFile = &realLogFile;
 
 static const char* FileNames[EQEMuLog::MaxLogID] = { "logs/eqemu", "logs/eqemu", "logs/eqemu_error", "logs/eqemu_debug", "logs/eqemu_quest", "logs/eqemu_commands" };
 static const char* LogNames[EQEMuLog::MaxLogID] = { "Status", "Normal", "Error", "Debug", "Quest", "Command" };
@@ -39,6 +40,7 @@ EQEMuLog::EQEMuLog() {
 #endif
 		logCallbackFmt[i] = NULL;
 		logCallbackBuf[i] = NULL;
+		logCallbackPva[i] = NULL;
 	}
 // TODO: Make this read from an ini or something, everyone has different opinions on what it should be
 #if EQDEBUG < 2
@@ -47,13 +49,15 @@ EQEMuLog::EQEMuLog() {
 	pLogStatus[Quest] = 2;
 	pLogStatus[Commands] = 1;
 #endif
+	logFileValid = true;
 }
 
 EQEMuLog::~EQEMuLog() {
+	logFileValid = false;
 	for (int i=0; i<MaxLogID; i++) {
+		LockMutex lock(&MLog[i]);	//to prevent termination race
 		if (fp[i])
 			fclose(fp[i]);
-//		safe_delete(MLog[i]);
 	}
 //	safe_delete_array(fp);
 //	safe_delete_array(MLog);
@@ -62,6 +66,9 @@ EQEMuLog::~EQEMuLog() {
 }
 
 bool EQEMuLog::open(LogIDs id) {
+	if (!logFileValid) {
+		return false;
+    }
 	if (id >= MaxLogID) {
 		return false;
     }
@@ -79,6 +86,8 @@ bool EQEMuLog::open(LogIDs id) {
 	snprintf(exename, sizeof(exename), "_world");
 #elif defined(ZONE)
 	snprintf(exename, sizeof(exename), "_zone");
+#elif defined(LAUNCHER)
+	snprintf(exename, sizeof(exename), "_launch");
 #endif
 	char filename[200];
 #ifndef NO_PIDLOG
@@ -98,7 +107,7 @@ bool EQEMuLog::open(LogIDs id) {
 }
 
 bool EQEMuLog::write(LogIDs id, const char *fmt, ...) {
-	if (!this) {
+	if (!logFileValid) {
 		return false;
     }
 	if (id >= MaxLogID) {
@@ -111,6 +120,8 @@ bool EQEMuLog::write(LogIDs id, const char *fmt, ...) {
 	if (!(dofile || pLogStatus[id] & 2))
 		return false;
 	LockMutex lock(&MLog[id]);
+	if (!logFileValid)
+		return false;	//check again for threading race reasons (to avoid two mutexes)
 
     time_t aclock;
     struct tm *newtime;
@@ -147,6 +158,70 @@ bool EQEMuLog::write(LogIDs id, const char *fmt, ...) {
     if (dofile)
 		fprintf(fp[id], "\n");
     if (pLogStatus[id] & 2) {
+		if (pLogStatus[id] & 8) {
+			fprintf(stderr, "\n");
+			fflush(stderr);
+		} else {
+			fprintf(stdout, "\n");
+			fflush(stdout);
+		}
+	}
+    if(dofile)
+      fflush(fp[id]);
+    return true;
+}
+
+//write with Prefix and a VA_list
+bool EQEMuLog::writePVA(LogIDs id, const char *prefix, const char *fmt, va_list argptr) {
+	if (!logFileValid) {
+		return false;
+    }
+	if (id >= MaxLogID) {
+		return false;
+    }
+	bool dofile = false;
+	if (pLogStatus[id] & 1) {
+		dofile = open(id);
+	}
+	if (!(dofile || pLogStatus[id] & 2)) {
+		return false;
+	}
+	LockMutex lock(&MLog[id]);
+	if (!logFileValid)
+		return false;	//check again for threading race reasons (to avoid two mutexes)
+
+    time_t aclock;
+    struct tm *newtime;
+    
+    time( &aclock );                 /* Get time in seconds */
+    newtime = localtime( &aclock );  /* Convert time to struct */
+
+    if (dofile) {
+#ifndef NO_PIDLOG
+		fprintf(fp[id], "[%02d.%02d. - %02d:%02d:%02d] %s", newtime->tm_mon+1, newtime->tm_mday, newtime->tm_hour, newtime->tm_min, newtime->tm_sec, prefix);
+#else
+		fprintf(fp[id], "%04i [%02d.%02d. - %02d:%02d:%02d] %s", getpid(), newtime->tm_mon+1, newtime->tm_mday, newtime->tm_hour, newtime->tm_min, newtime->tm_sec, prefix);
+#endif
+		vfprintf( fp[id], fmt, argptr );
+    }
+	if(logCallbackPva[id]) {
+		msgCallbackPva p = logCallbackPva[id];
+		p(id, prefix, fmt, argptr );
+	}
+    if (pLogStatus[id] & 2) {
+		if (pLogStatus[id] & 8) {
+			fprintf(stderr, "[%s] %s", LogNames[id], prefix);
+			vfprintf( stderr, fmt, argptr );
+		}
+		else {
+			fprintf(stdout, "[%s] %s", LogNames[id], prefix);
+			vfprintf( stdout, fmt, argptr );
+		}
+	}
+	va_end(argptr);
+    if (dofile)
+		fprintf(fp[id], "\n");
+    if (pLogStatus[id] & 2) {
 		if (pLogStatus[id] & 8)
 			fprintf(stderr, "\n");
 		else
@@ -158,7 +233,7 @@ bool EQEMuLog::write(LogIDs id, const char *fmt, ...) {
 }
 
 bool EQEMuLog::writebuf(LogIDs id, const char *buf, int8 size, int32 count) {
-	if (!this) {
+	if (!logFileValid) {
 		return false;
     }
 	if (id >= MaxLogID) {
@@ -171,6 +246,8 @@ bool EQEMuLog::writebuf(LogIDs id, const char *buf, int8 size, int32 count) {
 	if (!(dofile || pLogStatus[id] & 2))
 		return false;
 	LockMutex lock(&MLog[id]);
+	if (!logFileValid)
+		return false;	//check again for threading race reasons (to avoid two mutexes)
 
     time_t aclock;
     struct tm *newtime;
@@ -225,7 +302,7 @@ bool EQEMuLog::writeNTS(LogIDs id, bool dofile, const char *fmt, ...) {
 };
 
 bool EQEMuLog::Dump(LogIDs id, int8* data, int32 size, int32 cols, int32 skip) {
-	if (!this) {
+	if (!logFileValid) {
 #if EQDEBUG >= 10
     cerr << "Error: Dump() from null pointer"<<endl;
 #endif
@@ -244,6 +321,9 @@ bool EQEMuLog::Dump(LogIDs id, int8* data, int32 size, int32 cols, int32 skip) {
 	if (!(dofile || pLogStatus[id] & 2))
 		return false;
 	LockMutex lock(&MLog[id]);
+	if (!logFileValid)
+		return false;	//check again for threading race reasons (to avoid two mutexes)
+	
 	write(id, "Dumping Packet: %i", size);
 	// Output as HEX
 	int j = 0; char* ascii = new char[cols+1]; memset(ascii, 0, cols+1);
@@ -280,7 +360,7 @@ bool EQEMuLog::Dump(LogIDs id, int8* data, int32 size, int32 cols, int32 skip) {
 }
 	
 void EQEMuLog::SetCallback(LogIDs id, msgCallbackFmt proc) {
-	if (!this)
+	if (!logFileValid)
 		return;
 	if (id >= MaxLogID) {
 		return;
@@ -289,7 +369,7 @@ void EQEMuLog::SetCallback(LogIDs id, msgCallbackFmt proc) {
 }
 
 void EQEMuLog::SetCallback(LogIDs id, msgCallbackBuf proc) {
-	if (!this)
+	if (!logFileValid)
 		return;
 	if (id >= MaxLogID) {
 		return;
@@ -297,8 +377,17 @@ void EQEMuLog::SetCallback(LogIDs id, msgCallbackBuf proc) {
     logCallbackBuf[id] = proc;
 }
 
+void EQEMuLog::SetCallback(LogIDs id, msgCallbackPva proc) {
+	if (!logFileValid)
+		return;
+	if (id >= MaxLogID) {
+		return;
+    }
+    logCallbackPva[id] = proc;
+}
+
 void EQEMuLog::SetAllCallbacks(msgCallbackFmt proc) {
-	if (!this)
+	if (!logFileValid)
 		return;
 	int r;
 	for(r = Status; r < MaxLogID; r++) {
@@ -307,7 +396,16 @@ void EQEMuLog::SetAllCallbacks(msgCallbackFmt proc) {
 }
 
 void EQEMuLog::SetAllCallbacks(msgCallbackBuf proc) {
-	if (!this)
+	if (!logFileValid)
+		return;
+	int r;
+	for(r = Status; r < MaxLogID; r++) {
+		SetCallback((LogIDs)r, proc);
+	}
+}
+
+void EQEMuLog::SetAllCallbacks(msgCallbackPva proc) {
+	if (!logFileValid)
 		return;
 	int r;
 	for(r = Status; r < MaxLogID; r++) {

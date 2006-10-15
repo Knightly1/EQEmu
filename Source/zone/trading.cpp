@@ -18,6 +18,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "../common/debug.h"
 #include "masterentity.h"
 #include "StringIDs.h"
+#include "../common/MiscFunctions.h"
 
 #ifdef EMBPERL
 #include "embparser.h"
@@ -89,9 +90,7 @@ void Trade::AddEntity(int16 from_slot_id, int16 trade_slot_id)
 		return;
 	}
 	
-	#if (EQDEBUG >= 9)
-		LogFile->write(EQEMuLog::Debug, "%s added item '%s' to trade slot %i", owner->GetName(), inst->GetItem()->Name, trade_slot_id);
-	#endif
+	_log(TRADING__HOLDER, "%s added item '%s' to trade slot %i", owner->GetName(), inst->GetItem()->Name, trade_slot_id);
 	
 	ItemInst* inst2 = client->GetInv().GetItem(trade_slot_id);
 	int new_charges = 0;
@@ -339,11 +338,12 @@ void Client::FinishTrade(NPC* with){
 	}
 	
 	//dont bother with this crap unless we have a quest...
-	//pets never have quests...
+	//pets can have quests! (especially charmed NPCs)
+	bool did_quest = false;
 #ifdef EMBPERL
-	if(!with->GetOwner() && ((PerlembParser *)parse)->HasQuestSub(with->GetNPCTypeID(), "EVENT_ITEM")) {
+	if(((PerlembParser *)parse)->HasQuestSub(with->GetNPCTypeID(), "EVENT_ITEM")) {
 #else
-	if(!with->GetOwner() && parse->HasQuestFile(with->GetNPCTypeID())) {
+	if(parse->HasQuestFile(with->GetNPCTypeID())) {
 #endif
 		char temp1[100];
 		memset(temp1,0x0,100);
@@ -382,46 +382,68 @@ void Client::FinishTrade(NPC* with){
 //		memset(temp1,0x0,100);
 //		memset(temp2,0x0,100);
 		parse->Event(EVENT_ITEM, with->GetNPCTypeID(), NULL, with, this);
-//		Message(0, "Quest NPC: eating items.");
-	} else {
+		did_quest = true;
+	}
 //		Message(0, "Normal NPC: keeping items.");
 		
-		//else, we do not have a quest, give the items to the NPC
+	//else, we do not have a quest, give the items to the NPC
+	if(did_quest) {
+		//only continue if we are a charmed NPC
+		if(!with->HasOwner() || with->GetPetType() != petCharmed)
+			return;
+	}
 		
-		int xy = with->CountLoot();
-		
-		for(int y=0; y < 4; y++) {
-			if (xy >= 20)
-				break;
-			xy++;
-			//NPC* npc=with->CastToNPC();
-			const Item_Struct* item2 = database.GetItem(items[y]);
-			if (item2) { //no "no drop" items for j00!
-				//if was not no drop item, let the NPC have it
-				if(GetGM() || item2->NoDrop != 0)
-					with->AddLootDrop(item2, &with->itemlist, charges[y], true, true);
-				//else 
-				//	with->AddLootDrop(item2, NULL, charges[y], false, true);
-				
-			}
+	int xy = with->CountLoot();
+	
+	for(int y=0; y < 4; y++) {
+		if (xy >= 20)
+			break;
+		xy++;
+		//NPC* npc=with->CastToNPC();
+		const Item_Struct* item2 = database.GetItem(items[y]);
+		if (item2) {
+			//if was not no drop item, let the NPC have it
+			if(GetGM() || item2->NoDrop != 0)
+				with->AddLootDrop(item2, &with->itemlist, charges[y], true, true);
+			//else 
+			//	with->AddLootDrop(item2, NULL, charges[y], false, true);
+			
 		}
 	}
 
 }
+
+
 void Client::FinishTrade(Client* other)
 {
 	sint16 slot_id;
 	if (!other)
 		return;
+
+	mlog(TRADING__CLIENT, "Finishing trade with client %s", other->GetName());
+	
 	// Move each trade slot into free inventory slot
 	for (sint16 i=3000; i<=3007; i++){
 		const ItemInst* inst = m_inv[i];
+		if(inst == NULL)
+			continue;
+
+		mlog(TRADING__CLIENT, "Giving %s (%d) in slot %d to %s", inst->GetItem()->Name, inst->GetItem()->ID, i, other->GetName());
 		
-		if (inst && (inst->GetItem()->NoDrop != 0 || other == this)) {
+		if (inst->GetItem()->NoDrop != 0 || other == this) {
 			slot_id = other->GetInv().FindFreeSlot(inst->IsType(ItemClassContainer), true, inst->GetItem()->Size);
-			
-			if (other->PutItemInInventory(slot_id, *inst, true))
-				this->DeleteItemInInventory(i);
+
+			mlog(TRADING__CLIENT, "Trying to put %s (%d) into slot %d", inst->GetItem()->Name, inst->GetItem()->ID, slot_id);
+			if (other->PutItemInInventory(slot_id, *inst, true)) {
+				mlog(TRADING__CLIENT, "Item  %s (%d) successfully transfered, deleting from trade slot.", inst->GetItem()->Name, inst->GetItem()->ID);
+			} else {
+				PushItemOnCursor(*inst, true);
+				mlog(TRADING__ERROR, "Unable to give item %d (%d) to %s, returning to giver.", inst->GetItem()->Name, inst->GetItem()->ID, other->GetName());
+			}
+			DeleteItemInInventory(i);
+		} else {
+			PushItemOnCursor(*inst, true);
+			DeleteItemInInventory(i);
 		}
 	}
 	
@@ -448,9 +470,7 @@ bool Client::CheckTradeLoreConflict(Client* other)
 }
 
 void Client::Trader_ShowItems(){
-	EQZonePacket* outapp= new EQZonePacket(OP_Trader,sizeof(Trader_Struct));
-	//outapp->pBuffer= new uchar[sizeof(Trader_Struct)]; // Not Necessary EQZonePacket handles
-	//memset(outapp->pBuffer,0,sizeof(Trader_Struct)); // Not Necessary EQZonePacket handles
+	EQApplicationPacket* outapp= new EQApplicationPacket(OP_Trader, sizeof(Trader_Struct));
 	Trader_Struct* outints = (Trader_Struct*)outapp->pBuffer;
 	Trader_Struct* outints2 = database.LoadTraderItem(this->CharacterID());
 	for(int i=0;i<160;i=i+2){
@@ -470,7 +490,7 @@ void Client::Trader_ShowItems(){
 }
 
 void Client::SendTraderPacket(Client* trader){
-	EQZonePacket* outapp= new EQZonePacket(OP_BecomeTrader,sizeof(BecomeTrader_Struct));
+	EQApplicationPacket* outapp= new EQApplicationPacket(OP_BecomeTrader,sizeof(BecomeTrader_Struct));
 	BecomeTrader_Struct* bts = (BecomeTrader_Struct*)outapp->pBuffer;
 	bts->code=1;
 	bts->id=trader->GetID();
@@ -481,13 +501,13 @@ void Client::SendTraderPacket(Client* trader){
 
 void Client::Trader_StartTrader(){
 	Trader=true;
-	EQZonePacket* outapp2= new EQZonePacket(OP_Trader,sizeof(Trader_ShowItems_Struct));
+	EQApplicationPacket* outapp2= new EQApplicationPacket(OP_Trader,sizeof(Trader_ShowItems_Struct));
 	Trader_ShowItems_Struct* sis = (Trader_ShowItems_Struct*)outapp2->pBuffer;
 	sis->code=1;
 	sis->traderid=this->GetID();
 	QueuePacket(outapp2);
 	safe_delete(outapp2);
-	EQZonePacket* outapp= new EQZonePacket(OP_BecomeTrader,sizeof(BecomeTrader_Struct));
+	EQApplicationPacket* outapp= new EQApplicationPacket(OP_BecomeTrader,sizeof(BecomeTrader_Struct));
 	BecomeTrader_Struct* bts = (BecomeTrader_Struct*)outapp->pBuffer;
 	bts->code=1;
 	bts->id=this->GetID();
@@ -496,13 +516,13 @@ void Client::Trader_StartTrader(){
 }
 void Client::Trader_EndTrader(){
 	database.DeleteTraderItem(this->CharacterID());
-	EQZonePacket* outapp= new EQZonePacket(OP_BecomeTrader,sizeof(BecomeTrader_Struct));
+	EQApplicationPacket* outapp= new EQApplicationPacket(OP_BecomeTrader,sizeof(BecomeTrader_Struct));
 	BecomeTrader_Struct* bts = (BecomeTrader_Struct*)outapp->pBuffer;
 	bts->code=0;
 	bts->id=this->GetID();
 	entity_list.QueueCloseClients(this,outapp,false,5000);
 	safe_delete(outapp);
-	EQZonePacket* outapp2= new EQZonePacket(OP_Trader,sizeof(Trader_ShowItems_Struct));
+	EQApplicationPacket* outapp2= new EQApplicationPacket(OP_Trader,sizeof(Trader_ShowItems_Struct));
 	Trader_ShowItems_Struct* sis = (Trader_ShowItems_Struct*)outapp2->pBuffer;
 	sis->code=2;
 	sis->traderid=0;
@@ -520,7 +540,7 @@ void Client::SendTraderItem(int32 item_id,int16 quantity){
 		return;
 	}
 	
-	ItemInst* inst = ItemInst::Create(item, quantity);
+	ItemInst* inst = database.CreateItem(item, quantity);
 	if (inst) {
 		freeslotid = m_inv.FindFreeSlot(false, true, inst->GetItem()->Size);
 		PutItemInInventory(freeslotid, *inst);
@@ -541,7 +561,7 @@ void Client::BulkSendTraderInventory(int32 char_id) {
 			item=database.GetItem(outints2->itemid[i]);
 		
 		if (item && (item->NoDrop!=0)) {
-			ItemInst* inst = ItemInst::Create(item);
+			ItemInst* inst = database.CreateItem(item);
 			if (inst) {
 				inst->SetPrice(outints2->itemcost[i]);
 				//inst->SetUnknown5(outints2->itemid[i]);
@@ -611,7 +631,7 @@ int16 Client::FindTraderItem(int32 item_id,int16 quantity){
 	return 0;
 }
 void Client::NukeTraderItem(int16 slot,int16 charges,int16 quantity,Client* customer,int16 traderslot){
-	EQZonePacket* outapp = new EQZonePacket(OP_TraderDelItem,sizeof(TraderDelItem_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_TraderDelItem,sizeof(TraderDelItem_Struct));
 	TraderDelItem_Struct* tdis = (TraderDelItem_Struct*)outapp->pBuffer;
 	tdis->quantity=0xFFFFFFFF;
 	tdis->unknown=0xFFFFFFFF;
@@ -621,7 +641,7 @@ void Client::NukeTraderItem(int16 slot,int16 charges,int16 quantity,Client* cust
 			this->QueuePacket(outapp);
 	}
 	else{
-		EQZonePacket* outapp2 = new EQZonePacket(OP_MoveItem,sizeof(MoveItem_Struct));
+		EQApplicationPacket* outapp2 = new EQApplicationPacket(OP_MoveItem,sizeof(MoveItem_Struct));
 		MoveItem_Struct* mis=(MoveItem_Struct*)outapp2->pBuffer;
 		mis->from_slot=slot;
 		mis->to_slot=0xFFFFFFFF;
@@ -633,7 +653,7 @@ void Client::NukeTraderItem(int16 slot,int16 charges,int16 quantity,Client* cust
 	safe_delete(outapp);
 }
 void Client::TraderUpdate(int16 slot_id,int32 trader_id){
-	EQZonePacket* outapp = new EQZonePacket(OP_TraderItemUpdate,sizeof(TraderItemUpdate_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_TraderItemUpdate,sizeof(TraderItemUpdate_Struct));
 	TraderItemUpdate_Struct* tus=(TraderItemUpdate_Struct*)outapp->pBuffer;
 	tus->charges=0xFFFF;
 	tus->fromslot=slot_id;
@@ -672,9 +692,9 @@ void Client::FindAndNukeTraderItem(int32 item_id,int16 quantity,Client* customer
 	}
 	printf("Could NOT find a match for Item: %i with a quantity of: %i on Trader: %s\n",item_id,quantity,this->GetName());
 }
-void Client::ReturnTraderReq(const EQZonePacket* app,int16 traderitemcharges){
+void Client::ReturnTraderReq(const EQApplicationPacket* app,int16 traderitemcharges){
 	TraderBuy_Struct* tbs=(TraderBuy_Struct*)app->pBuffer;
-	EQZonePacket* outapp = new EQZonePacket(OP_TraderBuy,sizeof(TraderBuy_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_TraderBuy,sizeof(TraderBuy_Struct));
 	TraderBuy_Struct* outtbs  = (TraderBuy_Struct*)outapp->pBuffer;
 	memcpy(outtbs,tbs,app->size);
 	outtbs->price=(tbs->price*traderitemcharges);
@@ -683,8 +703,8 @@ void Client::ReturnTraderReq(const EQZonePacket* app,int16 traderitemcharges){
 	this->QueuePacket(outapp);
 	safe_delete(outapp);
 }
-void Client::BuyTraderItem(TraderBuy_Struct* tbs,Client* trader,const EQZonePacket* app){
-	EQZonePacket* outapp = new EQZonePacket(OP_Trader,sizeof(TraderBuy_Struct));
+void Client::BuyTraderItem(TraderBuy_Struct* tbs,Client* trader,const EQApplicationPacket* app){
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Trader,sizeof(TraderBuy_Struct));
 	TraderBuy_Struct* outtbs  = (TraderBuy_Struct*)outapp->pBuffer;
 	outtbs->itemid=tbs->itemid;
 	outtbs->price=tbs->price;
@@ -713,7 +733,7 @@ void Client::BuyTraderItem(TraderBuy_Struct* tbs,Client* trader,const EQZonePack
 	int traderslot=0;
 	SendTraderItem(outtbs->itemid,outtbs->quantity);
 
-	EQZonePacket* outapp2 = new EQZonePacket(OP_MoneyUpdate,sizeof(MoneyUpdate_Struct));
+	EQApplicationPacket* outapp2 = new EQApplicationPacket(OP_MoneyUpdate,sizeof(MoneyUpdate_Struct));
 	MoneyUpdate_Struct* mus= (MoneyUpdate_Struct*)outapp2->pBuffer;
 	int32 itemcost=tbs->price;
 	this->TakeMoneyFromPP(tbs->price);
@@ -745,7 +765,7 @@ void Client::SendBazaarWelcome(){
 	if (database.RunQuery(query,MakeAnyLenString(&query, "select count(distinct char_id),count(char_id) from trader"),errbuf,&result)){
 		if(mysql_num_rows(result)==1){
 			row = mysql_fetch_row(result);
-			EQZonePacket* outapp = new EQZonePacket(OP_Bazaar,sizeof(BazaarWelcome_Struct));
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_Bazaar,sizeof(BazaarWelcome_Struct));
 			memset(outapp->pBuffer,0,outapp->size);
 			BazaarWelcome_Struct* bws = (BazaarWelcome_Struct*)outapp->pBuffer;
 			bws->beginning.action=9;
@@ -896,7 +916,7 @@ void Client::SendBazaarResults(int32 trader_id,int32 class_,int32 race,int32 sta
 		int32 id=0;
 		//BazaarSearchResults_Struct* brs= new BazaarSearchResults_Struct;
 		if(mysql_num_rows(result)==0){
-			EQZonePacket* outapp2 = new EQZonePacket(OP_Bazaar,sizeof(BazaarReturnDone_Struct));
+			EQApplicationPacket* outapp2 = new EQApplicationPacket(OP_Bazaar,sizeof(BazaarReturnDone_Struct));
 			BazaarReturnDone_Struct* brds = (BazaarReturnDone_Struct*)outapp2->pBuffer;
 			brds->traderid=id;
 			brds->type=0x0C;
@@ -951,14 +971,13 @@ void Client::SendBazaarResults(int32 trader_id,int32 class_,int32 race,int32 sta
 			bufptr+=64;
 		}
 		mysql_free_result(result);
-		EQZonePacket* outapp = new EQZonePacket(OP_Bazaar,size);
-		outapp->pBuffer=new uchar[outapp->size];
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_Bazaar,size);
 		memcpy(outapp->pBuffer,buffer,size);
 		this->QueuePacket(outapp);
 		safe_delete(outapp);
 		//free(buffer);
 		safe_delete_array(buffer);
-		EQZonePacket* outapp2 = new EQZonePacket(OP_Bazaar,sizeof(BazaarReturnDone_Struct));
+		EQApplicationPacket* outapp2 = new EQApplicationPacket(OP_Bazaar,sizeof(BazaarReturnDone_Struct));
 		BazaarReturnDone_Struct* brds = (BazaarReturnDone_Struct*)outapp2->pBuffer;
 		brds->traderid=id;
 		brds->type=0x0C;

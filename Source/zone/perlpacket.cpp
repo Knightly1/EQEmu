@@ -37,7 +37,11 @@ PerlPacket::~PerlPacket() {
 }
 
 bool PerlPacket::SetOpcode(const char *opcode) {
-	op = ZoneOpcodeManager->NameSearch(opcode);
+#ifndef WIN32
+#warning Rewrite this!
+#endif
+	op = OP_Unknown;
+//	op = ZoneOpcodeManager->NameSearch(opcode);
 	return(op != OP_Unknown);
 }
 
@@ -61,11 +65,14 @@ void PerlPacket::SendTo(Client *who) {
 	if(!who || op == OP_Unknown || (len > 0 && packet == NULL))
 		return;
 	
-	EQZonePacket *outapp = new EQZonePacket(op, len);
+	EQApplicationPacket *outapp = new EQApplicationPacket(op, len);
 	if(len > 0)
 		memcpy(outapp->pBuffer, packet, len);
 	
-	printf("Created this packet with PerlPacket: OP: %s\n", ZoneOpcodeManager->EmuToName(op));
+#ifndef WIN32
+#warning Rewrite this!
+#endif
+	//	printf("Created this packet with PerlPacket: OP: %s\n", ZoneOpcodeManager->EmuToName(op));
 	DumpPacket(outapp);
 	
 	who->FastQueuePacket(&outapp);
@@ -75,7 +82,7 @@ void PerlPacket::SendToAll() {
 	if(op == OP_Unknown || (len > 0 && packet == NULL))
 		return;
 	
-	EQZonePacket *outapp = new EQZonePacket(op, len);
+	EQApplicationPacket *outapp = new EQApplicationPacket(op, len);
 	if(len > 0)
 		memcpy(outapp->pBuffer, packet, len);
 	entity_list.QueueClients(NULL, outapp, false);

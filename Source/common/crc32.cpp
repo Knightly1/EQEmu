@@ -108,6 +108,10 @@ void CRC32::SetEQChecksum(uchar* in_data, int32 in_length)
 //#define i386	// If you are on a non-Intel based platform (Sparc/HP/NEC/etc), you will want to comment this define.
 //#endif
 
+#ifdef __APPLE__
+#undef i386	//darwin seems to think we are generating PIC, and we clobber ebx
+#endif
+
 uint32 CRC32::Update(const int8* buf, uint32 bufsize, uint32 crc32) {
 #if defined(WIN32)
 	// Register use:

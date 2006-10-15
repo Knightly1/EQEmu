@@ -73,6 +73,7 @@ IT10725_ACTORDEF=Shuriken
 // Object Types
 #define OT_DROPPEDITEM	0x01
 #define OT_MEDICINEBAG	0x09
+#define OT_TOOLBOX		0x0A
 #define OT_OVEN			0x0F
 #define OT_SEWINGKIT	0x10	//and loom
 #define OT_FORGE		0x11
@@ -86,15 +87,15 @@ IT10725_ACTORDEF=Shuriken
 #define OT_MAGELEX		0x19
 #define OT_NECROLEX		0x1A
 #define OT_ENCHLEX		0x1B
-// high elf forge is 0x1F
-#define OT_TEIRDALFORGE	0x20
-#define OT_OGGOKFORGE	0x21
-#define OT_STORMGUARDF	0x22
-// gnome forge 0x23
-// barbarian forge 0x24
+// high elf forge is 0x1F (Koada'dal forge)
+#define OT_TEIRDALFORGE	0x20	//dark elf
+#define OT_OGGOKFORGE	0x21	//ogre
+#define OT_STORMGUARDF	0x22	//dwarven
+// gnome forge 0x23 (ak'anon forge)
+// barbarian forge 0x24 (northman forge)
 // 
-// iksar forge 0x26
-// human forge 0x27 (qeynos or freeport?)
+// iksar forge 0x26	(cabilis forge)
+// human forge 0x27 (qeynos or freeport?) (royal qeynos forge or freeport forge)
 // human forge 0x28 (qeynos or freeport?)
 // halfling tailoring kit 0x29
 // erudite tailoring kit 0x2A
@@ -102,11 +103,14 @@ IT10725_ACTORDEF=Shuriken
 // wood elf fletching kit 0x2C
 // iksar pottery wheel 0x2D
 #define OT_TACKLEBOX	0x2e
-// troll forge 0x2F
+// troll forge 0x2F (grobb forge)
 #define OT_FIERDALFFORGE	0x30
-// halfling forge 0x31
-// erudite forge 0x32
+// halfling forge 0x31	(vale forge)
+// erudite forge 0x32 (erud forge)
 #define OT_AUGMENT		0x35
+//... (shar vahl forge)
+//... wood elf (fier'dal forge)
+//... (froglok forge)
 
 // Icon values:
 //0x0453 a pie
@@ -146,8 +150,8 @@ public:
 	static uint32 TypeToSkill(uint32 type);
 	
 	// Packet functions
-	void CreateSpawnPacket(EQZonePacket* app);
-	void CreateDeSpawnPacket(EQZonePacket* app);
+	void CreateSpawnPacket(EQApplicationPacket* app);
+	void CreateDeSpawnPacket(EQApplicationPacket* app);
 	
 	//Decay functions
 	void StartDecay() {decay_timer.Start();}
@@ -158,7 +162,7 @@ public:
 	ItemInst* PopItem(uint8 index); // Pop item out of container
 	
 	// Override base class implementations
-	virtual bool IsObject()	{ return true; }
+	virtual bool IsObject()	const { return true; }
 	virtual bool Save();
 	virtual void SetID(int16 set_id);
 	

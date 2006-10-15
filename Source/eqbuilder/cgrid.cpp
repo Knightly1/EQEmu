@@ -21,13 +21,13 @@ static char THIS_FILE[]=__FILE__;
 cgrid::cgrid()
 {
 	db = false;
-	this->id = 0;
+	this->db_id = 0;
 	this->waypoints = NULL;
 }
 
 cgrid::cgrid( cgrid* grid )
 {
-	this->id = grid->id;
+	this->db_id = grid->db_id;
 	this->db = grid->db;
 	if ( grid->waypoints == NULL ) {
 		this->waypoints = NULL;

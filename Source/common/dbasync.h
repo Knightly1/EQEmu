@@ -7,6 +7,7 @@
 class DBAsyncFinishedQueue;
 class DBAsyncWork;
 class DBAsyncQuery;
+class Database;
 
 // Big daddy that owns the threads and does the work
 class DBAsync : private Timeoutable {
@@ -72,7 +73,7 @@ typedef bool(*DBWorkCompleteCallBack)(DBAsyncWork*);
 
 class DBAsyncFinishedQueue {
 public:
-	DBAsyncFinishedQueue(DBAsync* iDBA, int32 iTimeout = 90000);
+	DBAsyncFinishedQueue(int32 iTimeout = 90000);
 	~DBAsyncFinishedQueue();
 
 	DBAsyncWork*	Pop();
@@ -90,8 +91,8 @@ private:
 // Container class for multiple queries
 class DBAsyncWork {
 public:
-	DBAsyncWork(DBAsyncFinishedQueue* iDBAFQ, int32 iWPT = 0, DBAsync::Type iType = DBAsync::Both, int32 iTimeout = 0);
-	DBAsyncWork(DBWorkCompleteCallBack iCB, int32 iWPT = 0, DBAsync::Type iType = DBAsync::Both, int32 iTimeout = 0);
+	DBAsyncWork(Database *db, DBAsyncFinishedQueue* iDBAFQ, int32 iWPT = 0, DBAsync::Type iType = DBAsync::Both, int32 iTimeout = 0);
+	DBAsyncWork(Database *db, DBWorkCompleteCallBack iCB, int32 iWPT = 0, DBAsync::Type iType = DBAsync::Both, int32 iTimeout = 0);
 	~DBAsyncWork();
 
 	bool			AddQuery(DBAsyncQuery** iDBAQ);
@@ -102,6 +103,8 @@ public:
 	// Pops finished queries off the work
 	DBAsyncQuery*	PopAnswer();
 	int32			QueryCount();
+	
+	Database *GetDB() const { return(m_db); }
 
 	bool			CheckTimeout(int32 iFQTimeout);
 	bool			SetWorkID(int32 iWorkID);
@@ -124,13 +127,14 @@ private:
 	int32	pWPT;
 	int32	pTimeout;
 	int32	pTSFinish; // timestamp when finished
-	DBAsyncFinishedQueue*	pDBAFQ;
+	DBAsyncFinishedQueue*	pDBAFQ;		//we do now own this pointer
 	DBWorkCompleteCallBack	pCB;
 	DBAsync::Status			pstatus;
 	DBAsync::Type			pType;
 	MyQueue<DBAsyncQuery>	todo;
 	MyQueue<DBAsyncQuery>	done;
 	MyQueue<DBAsyncQuery>	todel;
+	Database *const			m_db;		//we do now own this pointer
 };
 
 // Container class for the query information
@@ -165,13 +169,7 @@ protected:
 };
 
 
-
-
-
-extern DBAsync*					dbasync;
-extern DBAsyncFinishedQueue*	MTdbafq;
-
-void AsyncLoadVariables();
+void AsyncLoadVariables(DBAsync *dba, Database *db);
 
 
 #endif

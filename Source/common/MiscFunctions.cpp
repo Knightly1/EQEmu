@@ -102,16 +102,41 @@ bool strn0cpyt(char* dest, const char* source, int32 size) {
 
 const char *MakeUpperString(const char *source) {
     static char str[128];
+    if (!source)
+	    return NULL;
     MakeUpperString(source, str);
     return str;
 }
 
 void MakeUpperString(const char *source, char *target) {
-    if (!source || !target)
+    if (!source || !target) {
+	*target=0;
         return;
+    }
     while (*source)
     {
         *target = toupper(*source);
+        target++;source++;
+    }
+    *target = 0;
+}
+
+const char *MakeLowerString(const char *source) {
+    static char str[128];
+    if (!source)
+	    return NULL;
+    MakeLowerString(source, str);
+    return str;
+}
+
+void MakeLowerString(const char *source, char *target) {
+    if (!source || !target) {
+	*target=0;
+        return;
+    }
+    while (*source)
+    {
+        *target = tolower(*source);
         target++;source++;
     }
     *target = 0;
@@ -318,7 +343,7 @@ InitWinsock::~InitWinsock() {
 
 #endif
 
-#ifndef WIN32
+
 const char * itoa(int num) {
 		static char temp[_ITOA_BUFLEN];
 		memset(temp,0,_ITOA_BUFLEN);
@@ -326,7 +351,7 @@ const char * itoa(int num) {
 		return temp;
 }
 
-
+#ifndef WIN32
 const char * itoa(int num, char* a,int b) {
 		static char temp[_ITOA_BUFLEN];
 		memset(temp,0,_ITOA_BUFLEN);

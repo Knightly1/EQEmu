@@ -4,24 +4,20 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <set>
+#include <queue>
+#include <deque>
 #ifndef WIN32
 #include <netinet/in.h>
 #endif
 #include "EQStreamType.h"
 #include "EQPacket.h"
+#include "EQStreamIntf.h"
 #include "Mutex.h"
 #include "../common/opcodemgr.h"
 #include "../common/misc.h"
 #include "../common/Condition.h"
 
 using namespace std;
-
-typedef enum {
-	ESTABLISHED,
-	CLOSING,
-	CLOSED
-} EQStreamState;
 
 #define FLAG_COMPRESSED	0x01
 #define FLAG_ENCODED	0x04
@@ -62,12 +58,21 @@ struct SessionStats {
 #pragma pack()
 
 class OpcodeManager;    
-extern OpcodeManager *EQNetworkOpcodeManager;
+//extern OpcodeManager *EQNetworkOpcodeManager;
 
-class EQStreamFactory;
+//class EQStreamFactory;
+class EQStreamPair;
+class EQRawApplicationPacket;
 
-class EQStream {
+class EQStream : public EQStreamInterface {
+	friend class EQStreamPair;	//for collector.
 	protected:
+		typedef enum {
+			SeqPast,
+			SeqInOrder,
+			SeqFuture
+		} SeqOrder;
+		
 		uint32 remote_ip;
 		uint16 remote_port;
 		uint8 buffer[8192];
@@ -81,7 +86,6 @@ class EQStream {
 
 		uint32 Session, Key;
 		uint16 NextInSeq;
-		uint16 NextOutSeq;
 		uint32  MaxLen;
 		uint16 MaxSends;
 
@@ -94,31 +98,32 @@ class EQStream {
 		uint32 LastPacket;
 		Mutex MVarlock;
 
-		EQApplicationPacket* CombinedAppPacket;
-		Mutex MCombinedAppPacket;
-
-		long LastSeqSent;
-		Mutex MLastSeqSent;
-		void SetLastSeqSent(uint32);
 
 		// Ack sequence tracking.
-		long MaxAckReceived,NextAckToSend,LastAckSent;
-		long GetMaxAckReceived();
+		long NextAckToSend;
+		long LastAckSent;
 		long GetNextAckToSend();
 		long GetLastAckSent();
-		void SetMaxAckReceived(uint32 seq);
+		void AckPackets(uint16 seq);
 		void SetNextAckToSend(uint32);
 		void SetLastAckSent(uint32);
 
 		Mutex MAcks;
 
-		// Packets waiting to be sent
-		vector<EQProtocolPacket *> NonSequencedQueue;
-		map<uint16, EQProtocolPacket *> SequencedQueue;
+		// Packets waiting to be sent (all protected by MOutboundQueue)
+		queue<EQProtocolPacket *> NonSequencedQueue;
+		deque<EQProtocolPacket *> SequencedQueue;
+		uint16 NextOutSeq;
+		uint16 SequencedBase;	//the sequence number of SequencedQueue[0]
+		long NextSequencedSend;	//index into SequencedQueue
 		Mutex MOutboundQueue;
-
+		
+		//a buffer we use for compression/decompression
+		unsigned char _tempBuffer[2048];
+		
 		// Packes waiting to be processed
-		vector<EQApplicationPacket *> InboundQueue;
+		vector<EQRawApplicationPacket *> InboundQueue;
+		map<unsigned short,EQProtocolPacket *> PacketQueue;		//not mutex protected, only accessed by caller of Process()
 		Mutex MInboundQueue;
 
 		static uint16 MaxWindowSize;
@@ -129,97 +134,116 @@ class EQStream {
 		sint32 RateThreshold;
 		sint32 DecayRate;
 
-#ifdef COLLECTOR
-		map<unsigned short,EQProtocolPacket *> PacketQueue;
-#endif
+		
+		OpcodeManager **OpMgr;
+		
+//		EQStreamFactory *const Factory;
 
-		EQStreamFactory *Factory;
-
-		EQApplicationPacket *MakeApplicationPacket(EQProtocolPacket *p);
-		EQApplicationPacket *MakeApplicationPacket(const unsigned char *buf, uint32 len);
-
-	public:
-		EQStream() { init(); remote_ip = 0; remote_port = 0; State=CLOSED; StreamType=UnknownStream; compressed=true; encoded=false; app_opcode_size=2; }
-		EQStream(sockaddr_in addr) { init(); remote_ip=addr.sin_addr.s_addr; remote_port=addr.sin_port; State=CLOSED; StreamType=UnknownStream; compressed=true; encoded=false; app_opcode_size=2; }
-		virtual ~EQStream() { RemoveData(); }
-		inline void SetFactory(EQStreamFactory *f) { Factory=f; }
-		void init();
-		void SetMaxLen(uint32 length) { MaxLen=length; }
-
-		void QueuePacket(const EQApplicationPacket *p, bool ack_req=true);
-		void FastQueuePacket(EQApplicationPacket **p, bool ack_req=true);
-		void FlushCombinedPacket();
-		void SendPacket(EQApplicationPacket *p);
+		EQRawApplicationPacket *MakeApplicationPacket(EQProtocolPacket *p);
+		EQRawApplicationPacket *MakeApplicationPacket(const unsigned char *buf, uint32 len);
+		EQProtocolPacket *MakeProtocolPacket(const unsigned char *buf, uint32 len);
+		void SendPacket(uint16 opcode, EQApplicationPacket *p);
+		
+		void SetState(EQStreamState state);
+		
+		void SendSessionResponse();
+		void SendSessionRequest();
+		void SendAck(uint16 seq);
+		void SendOutOfOrderAck(uint16 seq);
 		void QueuePacket(EQProtocolPacket *p);
 		void SendPacket(EQProtocolPacket *p);
-		vector<EQProtocolPacket *> convert(EQApplicationPacket *p);
 		void NonSequencedPush(EQProtocolPacket *p);
 		void SequencedPush(EQProtocolPacket *p);
-		void Write(int eq_fd);
-
 		void WritePacket(int fd,EQProtocolPacket *p);
+		
 
 		uint32 GetKey() { return Key; }
 		void SetKey(uint32 k) { Key=k; }
 		void SetSession(uint32 s) { Session=s; }
-		void SetLastPacketTime(uint32 t) {LastPacket=t;}
 
-		void Process(const unsigned char *data, const uint32 length);
 		void ProcessPacket(EQProtocolPacket *p);
-		virtual void DispatchPacket(EQApplicationPacket *p) { p->DumpRaw(); }
+//		virtual void DispatchPacket(EQApplicationPacket *p) { p->DumpRaw(); }
 
-		void SendSessionResponse();
-		void SendSessionRequest();
-		void SendDisconnect();
-		void SendAck(uint16 seq);
-		void SendOutOfOrderAck(uint16 seq);
-		void SendSessionStatResponse(SessionStats *Stat);
 
-		bool CheckTimeout(uint32 now, uint32 timeout=30) { return  (LastPacket && (now-LastPacket) > timeout); }
 		bool Stale(uint32 now, uint32 timeout=30) { return  (LastPacket && (now-LastPacket) > timeout); }
 
-		void InboundQueuePush(EQApplicationPacket *p);
-		EQApplicationPacket *PopPacket(); // InboundQueuePop
-		EQApplicationPacket *EQStream::PeekPacket();
+		void InboundQueuePush(EQRawApplicationPacket *p);
+		EQRawApplicationPacket *PeekPacket();	//for collector.
+		EQRawApplicationPacket *PopRawPacket();	//for collector.
+		
 		void InboundQueueClear();
-
 		void OutboundQueueClear();
+		void PacketQueueClear();
+		
+		void ProcessQueue();
+		EQProtocolPacket *RemoveQueue(uint16 seq);
+		
+		void _SendDisconnect();
+		
+		void init();
+	public:
+		EQStream() { init(); remote_ip = 0; remote_port = 0; State=CLOSED; StreamType=UnknownStream; compressed=true; encoded=false; app_opcode_size=2; }
+		EQStream(sockaddr_in addr) { init(); remote_ip=addr.sin_addr.s_addr; remote_port=addr.sin_port; State=CLOSED; StreamType=UnknownStream; compressed=true; encoded=false; app_opcode_size=2; }
+		virtual ~EQStream() { RemoveData(); SetState(CLOSED); }
+//		inline void SetFactory(EQStreamFactory *f) { Factory=f; }
+		void SetMaxLen(uint32 length) { MaxLen=length; }
+
+		//interface used by application (EQStreamInterface)
+		virtual void QueuePacket(const EQApplicationPacket *p, bool ack_req=true);
+		virtual void FastQueuePacket(EQApplicationPacket **p, bool ack_req=true);
+		virtual EQApplicationPacket *PopPacket();
+		virtual void Close();
+		virtual uint32 GetRemoteIP() const { return remote_ip; }
+		virtual uint16 GetRemotePort() const { return remote_port; }
+		virtual void ReleaseFromUse() { MInUse.lock(); if(active_users > 0) active_users--; MInUse.unlock(); }
+		virtual void RemoveData() { InboundQueueClear(); OutboundQueueClear(); PacketQueueClear(); /*if (CombinedAppPacket) delete CombinedAppPacket;*/ }
+		virtual bool CheckState(EQStreamState state) { return GetState() == state; }
+		virtual std::string Describe() const { return("Direct EQStream"); }
+		
+		void SetOpcodeManager(OpcodeManager **opm) { OpMgr = opm; }
+		
+		void CheckTimeout(uint32 now, uint32 timeout=30);
 		bool HasOutgoingData();
-
-		void RemoveData() { InboundQueueClear(); OutboundQueueClear(); if (CombinedAppPacket) delete CombinedAppPacket; }
-
+		void Process(const unsigned char *data, const uint32 length);
+		void SetLastPacketTime(uint32 t) {LastPacket=t;}
+		void Write(int eq_fd);
+		
 		//
 		inline bool IsInUse() { bool flag; MInUse.lock(); flag=(active_users>0); MInUse.unlock(); return flag; }
 		inline void PutInUse() { MInUse.lock(); active_users++; MInUse.unlock(); }
-		inline void ReleaseFromUse() { MInUse.lock(); if(active_users > 0) active_users--; MInUse.unlock(); }
 		
 		inline EQStreamState GetState() { EQStreamState s; MState.lock(); s=State; MState.unlock(); return s; }
-		inline void SetState(EQStreamState state) { MState.lock(); State=state; MState.unlock(); }
+		
+//		static EQProtocolPacket *Read(int eq_fd, sockaddr_in *from);
+		static SeqOrder CompareSequence(uint16 expected_seq , uint16 seq);
 
-		inline uint32 GetRemoteIP() { return remote_ip; }
-		inline uint32 GetrIP() { return remote_ip; }
-		inline uint16 GetRemotePort() { return remote_port; }
-		inline uint16 GetrPort() { return remote_port; }
-
-
-		static EQProtocolPacket *Read(int eq_fd, sockaddr_in *from);
-		static sint8 CompareSequence(uint16 expected_seq , uint16 seq);
-
-		void Close() { SendDisconnect(); }
+//		void Close() { SendDisconnect(); }
 		bool CheckActive() { return GetState()==ESTABLISHED; }
 		bool CheckClosed() { return GetState()==CLOSED; }
 		void SetOpcodeSize(uint8 s) { app_opcode_size = s; }
 		void SetStreamType(EQStreamType t);
 		inline const EQStreamType GetStreamType() const { return StreamType; }
-		static string EQStream::StreamTypeString(EQStreamType t);
+		static const char *EQStream::StreamTypeString(EQStreamType t);
 
-		void EQStream::Decay();
-		void EQStream::AdjustRates(uint32 average_delta);
-
-#ifdef COLLECTOR
-		void ProcessQueue();
-		EQProtocolPacket *RemoveQueue(uint16 seq);
-#endif
+		void Decay();
+		void AdjustRates(uint32 average_delta);
+		
+		//used for dynamic stream identification
+		class Signature {
+		public:
+			//this object could get more complicated if needed...
+			uint16 ignore_eq_opcode;        //0=dont ignore
+			uint16 first_eq_opcode;
+			uint32 first_length;            //0=dont check length
+		};
+		typedef enum {
+			MatchNotReady,
+			MatchSuccessful,
+			MatchFailed
+		} MatchState;
+		MatchState CheckSignature(const Signature *sig);
+		
 };
+
 
 #endif

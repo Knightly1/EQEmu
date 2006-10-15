@@ -29,7 +29,9 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemulator.net)
 #include "../common/classes.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/packet_dump.h"
-#include "../common/database.h"
+#include "../common/MiscFunctions.h"
+#include "../common/logsys.h"
+#include "zonedb.h"
 #include "StringIDs.h"
 #ifndef NEW_LoadSPDat
 	extern SPDat_Spell_Struct spells[SPDAT_RECORDS];
@@ -92,7 +94,7 @@ void Client::ActivateAA(aaID activate){
 	if (activate_val == 0 || IsStunned() || IsMezzed() || IsSitting())
 		return;
 	
-	if(!p_timers.Expired(pTimerAAStart + activate)) {
+	if(!p_timers.Expired(&database, pTimerAAStart + activate)) {
 		return;
 	}
 	
@@ -386,12 +388,11 @@ void Client::HandleAAAction(aaID activate) {
 
 //Originally written by Branks
 //functionality rewritten by Father Nitwit
-void Client::TemporaryPets(int16 spell_id) {
+void Client::TemporaryPets(int16 spell_id, Mob *targ, const char *name_override, uint32 duration_override) {
 	
 	//It might not be a bad idea to put these into the database, eventually..
 	
 	//Dook- swarms and wards 
-	Mob* targ = GetTarget();	//if null, they dont get any hate
 	
 	if(AA_SwarmPets.count(spell_id) != 1) {
 		//log write
@@ -401,6 +402,8 @@ void Client::TemporaryPets(int16 spell_id) {
 	}
 	
 	const AA_SwarmPet &pet = AA_SwarmPets[spell_id];
+
+	NPCType *made_npc = NULL;
 	
 	const NPCType *npc_type = database.GetNPCType(pet.npc_id);
 	if(npc_type == NULL) {
@@ -408,6 +411,14 @@ void Client::TemporaryPets(int16 spell_id) {
 		LogFile->write(EQEMuLog::Error, "Unknown npc type for swarm pet spell id: %d", spell_id);
 		Message(0,"Unable to find pet!");
 		return;
+	}
+	
+	if(name_override != NULL) {
+		//we have to make a custom NPC type for this name change
+		made_npc = new NPCType; 
+		memcpy(made_npc, npc_type, sizeof(NPCType));
+		strcpy(made_npc->name, name_override);
+		npc_type = made_npc;
 	}
 	
 	int summon_count = 0;
@@ -424,18 +435,41 @@ void Client::TemporaryPets(int16 spell_id) {
 														8, 8, -8, -8 };
 	
 	while(summon_count > 0) {
-		NPC* npca = new NPC(npc_type, 0, 
+		int pet_duration = pet.duration;
+		if(duration_override > 0)
+			pet_duration = duration_override;
+		
+		//this is a little messy, but the only way to do it right
+		//it would be possible to optimize out this copy for the last pet, but oh well
+		NPCType *npc_dup = NULL;
+		if(made_npc != NULL) {
+			npc_dup = new NPCType;
+			memcpy(npc_dup, made_npc, sizeof(NPCType));
+		}
+		
+		NPC* npca = new NPC(
+				npc_dup==NULL?npc_dup:npc_type,	//make sure we give the NPC the correct data pointer
+				0, 
 				GetX()+swarm_pet_x[summon_count], GetY()+swarm_pet_y[summon_count], 
 				GetZ(), GetHeading());
-		npca->SetOwnerID(GetID());
-		entity_list.AddNPC(npca);
+
+		//give the pets somebody to "love"
 		if(targ != NULL)
 			npca->AddToHateList(targ, 1000, 1000);
-		npca->StartSwarmTimer(pet.duration);
+
+		//we allocated a new NPC type object, give the NPC ownership of that memory
+		if(npc_dup != NULL)
+			npca->GiveNPCTypeData(npc_dup);
+		
+		npca->SetOwnerID(GetID());
+		
+		entity_list.AddNPC(npca);
+		npca->StartSwarmTimer(pet_duration);
 		
 		summon_count--;
 	}
-	
+
+	//the target of these swarm pets will take offense to being cast on...
 	if(targ != NULL)
 		targ->AddToHateList(this, 1, 0);
 }
@@ -450,7 +484,7 @@ void Client::EnableAAEffect(aaEffectType type, int32 duration) {
 	if(duration > 0) {
 		p_timers.Start(pTimerAAEffectStart + type, duration);
 	} else {
-		p_timers.Clear(pTimerAAEffectStart + type);
+		p_timers.Clear(&database, pTimerAAEffectStart + type);
 	}
 }
 
@@ -461,7 +495,7 @@ void Client::DisableAAEffect(aaEffectType type) {
 	if(m_epp.aa_effects & bit) {
 		m_epp.aa_effects ^= bit;
 	}
-	p_timers.Clear(pTimerAAEffectStart + type);
+	p_timers.Clear(&database, pTimerAAEffectStart + type);
 }
 
 /*
@@ -473,7 +507,7 @@ bool Client::CheckAAEffect(aaEffectType type) {
 		return(false);	//for now, special logic needed.
 	if(m_epp.aa_effects & (1 << (type-1))) {	//is effect enabled?
 		//has our timer expired?
-		if(p_timers.Expired(pTimerAAEffectStart + type)) {
+		if(p_timers.Expired(&database, pTimerAAEffectStart + type)) {
 			DisableAAEffect(type);
 			return(false);
 		}
@@ -483,7 +517,7 @@ bool Client::CheckAAEffect(aaEffectType type) {
 }
 
 void Client::SendAAStats() {
-	EQZonePacket* outapp = new EQZonePacket(OP_AAExpUpdate, sizeof(AltAdvStats_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_AAExpUpdate, sizeof(AltAdvStats_Struct));
 	AltAdvStats_Struct *aps = (AltAdvStats_Struct *)outapp->pBuffer;
 	aps->experience = m_pp.expAA;
 	aps->experience = (int32)(((float)330.0f * (float)m_pp.expAA) / (float)max_AAXP);
@@ -494,48 +528,51 @@ void Client::SendAAStats() {
 }
 
 void Client::BuyAA(AA_Action* action){
-	
+	mlog(AA__MESSAGE, "Starting to buy AA %d", action->ability);
+		
 	//find the AA information from the database
 	SendAA_Struct* aa2 = zone->FindAA(action->ability);
 	if(!aa2) {
-		for(int i=1;i<15;i++){
-			if(((action->ability - i) <= 0) || (aa2 = zone->FindAA(action->ability-i)))
+		//hunt for a lower level...
+		int i;
+		int a;
+		for(i=1;i<15;i++){
+			a = action->ability - i;
+			if(a <= 0)
+				break;
+			mlog(AA__MESSAGE, "Could not find AA %d, trying potential parent %d", action->ability, a);
+			aa2 = zone->FindAA(a);
+			if(aa2 != NULL)
 				break;
 		}
 	}
-	if(!aa2)
+	if(aa2 == NULL)
 		return;	//invalid ability...
 	
 	int32 cur_level = GetAA(aa2->id);
-	if((aa2->id + cur_level) != action->ability) //got invalid AA
+	if((aa2->id + cur_level) != action->ability) { //got invalid AA
+		mlog(AA__ERROR, "Unable to find or match AA %d (found %d + lvl %d)", action->ability, aa2->id, cur_level);
 		return;
+	}
+	
 	if(m_pp.aapoints >= aa2->cost && cur_level < aa2->max_level) {
 		SetAA(aa2->id, cur_level+1);
+
+		mlog(AA__MESSAGE, "Set AA %d to level %d", aa2->id, cur_level+1);
 		
 		m_pp.aapoints -= aa2->cost;
 		Save();
 		
 		SendAA(aa2->id);
 		SendAATable();
-		char val1[20]={0};
-		char val2[20]={0};
-		char val3[20]={0};
-		char points[20]={0};
-		char point[20]={0};
-		const char* points2=ConvertArray(AA_POINTS,points);
-		const char* point2=ConvertArray(AA_POINT,point);
-		if(cur_level<1){
-			if(aa2->cost>1)
-				Message_StringID(15,AA_GAIN_ABILITY,ConvertArray(aa2->title_sid,val1),ConvertArray(aa2->cost,val2),points2);
-			else
-				Message_StringID(15,AA_GAIN_ABILITY,ConvertArray(aa2->title_sid,val1),ConvertArray(aa2->cost,val2),point2);
-		}
-		else{
-			if(aa2->cost>1)
-				Message_StringID(15,AA_IMPROVE,ConvertArray(aa2->title_sid,val1),ConvertArray(cur_level,val2),ConvertArray(aa2->cost,val3),points2);
-			else
-				Message_StringID(15,AA_IMPROVE,ConvertArray(aa2->title_sid,val1),ConvertArray(cur_level,val2),ConvertArray(aa2->cost,val3),point2);
-		}
+
+		//we are building these messages ourself instead of using the stringID to work around patch discrepencies
+		if(cur_level<1)
+			Message(15,"You have gained the ability \"%s\" at a cost of %d ability %s.", aa2->name, aa2->cost, (aa2->cost>1)?"points":"point");
+		else
+			Message(15,"You have improved %s %d at a cost of %d ability %s.", aa2->name, cur_level, aa2->cost, (aa2->cost>1)?"points":"point");
+
+		
 		SendAAStats();
 		
 		CalcBonuses();
@@ -543,7 +580,7 @@ void Client::BuyAA(AA_Action* action){
 }
 
 void Client::SendAATimer(int32 ability, int32 begin, int32 end) {
-	EQZonePacket* outapp = new EQZonePacket(OP_AAAction,sizeof(UseAA_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_AAAction,sizeof(UseAA_Struct));
 	UseAA_Struct* uaaout = (UseAA_Struct*)outapp->pBuffer;
 	uaaout->ability = ability;
 	uaaout->begin = begin;
@@ -554,43 +591,45 @@ void Client::SendAATimer(int32 ability, int32 begin, int32 end) {
 
 //sends all AA timers.
 void Client::SendAATimers() {
-	//we dont use SendAATimer because theres no reason to allocate the EQZonePacket every time
-	EQZonePacket* outapp = new EQZonePacket(OP_AAAction,sizeof(UseAA_Struct));
+	//we dont use SendAATimer because theres no reason to allocate the EQApplicationPacket every time
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_AAAction,sizeof(UseAA_Struct));
 	UseAA_Struct* uaaout = (UseAA_Struct*)outapp->pBuffer;
 	
 	PTimerList::iterator c,e;
 	c = p_timers.begin();
 	e = p_timers.end();
-	while(c != e) {
+	for(; c != e; c++) {
 		PersistentTimer *cur = c->second;
+		if(cur->GetType() < pTimerAAStart || cur->GetType() > pTimerAAEnd)
+			continue;	//not an AA timer
 		//send timer
 		uaaout->begin = cur->GetStartTime();
 		uaaout->end = uaaout->begin + cur->GetTimerTime();
 		uaaout->ability = cur->GetType();
 		QueuePacket(outapp);
-		
-		c++;
 	}
 	
 	safe_delete(outapp);
 }
 
 void Client::SendAATable() {
-    EQZonePacket* outapp = new EQZonePacket(OP_RespondAA, sizeof(AATable_Struct));
+    EQApplicationPacket* outapp = new EQApplicationPacket(OP_RespondAA, sizeof(AATable_Struct));
     
     AATable_Struct* aa2 = (AATable_Struct *)outapp->pBuffer;
-	for(int i=0;i < MAX_PP_AA_ARRAY;i++){
+    uint32 i;
+	for(i=0;i < MAX_PP_AA_ARRAY;i++){
 		aa2->aa_list[i].aa_skill = aa[i]->AA;
 		aa2->aa_list[i].aa_value = aa[i]->value;
 	}
     QueuePacket(outapp);
     safe_delete(outapp);
 }
+
 void Client::SendPreviousAA(int32 id, int seq){
 	uint32 value=0;
 	SendAA_Struct* saa2 = NULL;
 	if(id==0)
-		saa2 = zone->GetAAList()->aa[seq];
+		saa2 = zone->GetAABySequence(seq);
 	else
 		saa2 = zone->FindAA(id);
 	if(!saa2)
@@ -599,7 +638,7 @@ void Client::SendPreviousAA(int32 id, int seq){
 	uchar* buffer = new uchar[size];
 	SendAA_Struct* saa=(SendAA_Struct*)buffer;
 	value = GetAA(saa2->id);
-	EQZonePacket* outapp = new EQZonePacket(OP_SendAATable);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_SendAATable);
 	outapp->size=size;
 	outapp->pBuffer=(uchar*)saa;
 	value--;
@@ -616,16 +655,17 @@ void Client::SendPreviousAA(int32 id, int seq){
 		saa->current_level=value+1;
 		saa->cost2=saa->cost*saa->current_level;
 		if(saa->type==1) //general ability
-			saa->abilities[0].increase_amt*=value;
+			saa->abilities[0].increase_amt *= saa->current_level;
 	}
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
+
 void Client::SendAA(int32 id, int seq) {
 	uint32 value=0;
 	SendAA_Struct* saa2 = NULL;
 	if(id==0)
-		saa2 = zone->GetAAList()->aa[seq];
+		saa2 = zone->GetAABySequence(seq);
 	else
 		saa2 = zone->FindAA(id);
 	if(!saa2)
@@ -664,7 +704,7 @@ void Client::SendAA(int32 id, int seq) {
 		if(saa->type==1) //general ability
 			saa->abilities[0].increase_amt*=value;
 	}
-	EQZonePacket* outapp = new EQZonePacket(OP_SendAATable);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_SendAATable);
 	outapp->size=size;
 	outapp->pBuffer=(uchar*)saa;
 	if(id==0 && value && (orig_val < saa->max_level)) //send previous AA only on zone in
@@ -683,13 +723,19 @@ void Client::SendAAList(){
 	}
 }
 
-int32 Client::GetAA(int32 aa_id) {
-	return aa_points[aa_id];
+int32 Client::GetAA(int32 aa_id) const {
+	map<int32,int8>::const_iterator res;
+	res = aa_points.find(aa_id);
+	if(res != aa_points.end()) {
+		return(res->second);
+	}
+	return(0);
 }
 
 bool Client::SetAA(int32 aa_id, int32 new_value) {
 	aa_points[aa_id] = new_value;
-	for(int cur=0;cur < MAX_PP_AA_ARRAY;cur++){
+	uint32 cur;
+	for(cur=0;cur < MAX_PP_AA_ARRAY;cur++){
 		if((aa[cur]->value > 1) && ((aa[cur]->AA - aa[cur]->value + 1)== aa_id)){
 			aa[cur]->value = new_value;
 			aa[cur]->AA++;
@@ -715,24 +761,26 @@ SendAA_Struct* Zone::FindAA(int32 id) {
 
 void Zone::LoadAAs() {
 	LogFile->write(EQEMuLog::Status, "Loading AA information...");
-	int32 size=database.GetSizeAA();
-	if(size>=sizeof(SendAA_Struct)){
-		aa_buffer = new uchar[size];
-		aas=(AA_List*)aa_buffer;
-		database.LoadAAs(aas);
-		totalAAs=database.CountAAs();
-		for(int i=0;i<totalAAs;i++){
-			SendAA_Struct* aa = aas->aa[i];
-			aas_send[aa->id] = aa;
-		}
-	}
-	else{
+	totalAAs = database.CountAAs();
+	if(totalAAs == 0) {
 		LogFile->write(EQEMuLog::Error, "Failed to load AAs!");
-		aas=NULL;
+		aas = NULL;
+		return;
+	}
+	aas = new SendAA_Struct *[totalAAs];
+	
+	database.LoadAAs(aas);
+	
+	int i;
+	for(i=0; i < totalAAs;i++){
+		SendAA_Struct* aa = aas[i];
+		aas_send[aa->id] = aa;
 	}
 }
+
 void Client::ResetAA(){
-	for(int i=0;i<MAX_PP_AA_ARRAY;i++){
+	uint32 i;
+	for(i=0;i<MAX_PP_AA_ARRAY;i++){
 		aa[i]->AA = 0;
 		aa[i]->value = 0;
 	}
@@ -740,7 +788,8 @@ void Client::ResetAA(){
 	for(itr=aa_points.begin();itr!=aa_points.end();itr++)
 		aa_points[itr->first] = 0;
 }
-bool Database::LoadAAEffects() {
+
+bool ZoneDatabase::LoadAAEffects() {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     MYSQL_RES *result;
     MYSQL_ROW row;
@@ -780,7 +829,7 @@ bool Database::LoadAAEffects() {
 	return true;
 }
 
-bool Database::LoadSwarmSpells() {
+bool ZoneDatabase::LoadSwarmSpells() {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     MYSQL_RES *result;
     MYSQL_ROW row;
@@ -820,7 +869,7 @@ Get the name of the alternate advancement skill with the given 'index'.
 Return true if the name was found, otherwise false.
 False will also be returned if there is a database error.
 */
-int8 Database::GetTotalAALevels(int32 skill_id) {
+int8 ZoneDatabase::GetTotalAALevels(int32 skill_id) {
 char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -840,7 +889,7 @@ char errbuf[MYSQL_ERRMSG_SIZE];
 	return total;
 }
 
-int32 Database::CountAAs(){
+int32 ZoneDatabase::CountAAs(){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -851,13 +900,13 @@ int32 Database::CountAAs(){
 			count = atoi(row[0]);
 		mysql_free_result(result);
 	} else {
-		LogFile->write(EQEMuLog::Error, "Error in Database::CountAAs query '%s': %s", query, errbuf);		
+		LogFile->write(EQEMuLog::Error, "Error in ZoneDatabase::CountAAs query '%s': %s", query, errbuf);		
 	}
 	safe_delete_array(query);
 	return count;
 }
 
-int32 Database::CountAALevels(){
+int32 ZoneDatabase::CountAALevels(){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -869,19 +918,20 @@ int32 Database::CountAALevels(){
 		}
 		mysql_free_result(result);
 	} else {
-		LogFile->write(EQEMuLog::Error, "Error in Database::CountAALevels query '%s': %s", query, errbuf);		
+		LogFile->write(EQEMuLog::Error, "Error in ZoneDatabase::CountAALevels query '%s': %s", query, errbuf);		
 	}
 	safe_delete_array(query);
 	return count;
 }
-int32 Database::GetSizeAA(){
+
+int32 ZoneDatabase::GetSizeAA(){
 	int size=CountAAs()*sizeof(SendAA_Struct);
 	if(size>0)
 		size+=CountAALevels()*sizeof(AA_Ability);
 	return size;
 }
 
-void Database::LoadAAs(AA_List* load){
+void ZoneDatabase::LoadAAs(SendAA_Struct **load){
 	if(!load)
 		return;
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -892,18 +942,18 @@ void Database::LoadAAs(AA_List* load){
 		int skill=0,ndx=0;
 		while((row = mysql_fetch_row(result))!=NULL) {
 			skill=atoi(row[0]);
-			load->aa[ndx]=GetAASkillVars(skill);
-			load->aa[ndx]->seq=ndx+1;
+			load[ndx] = GetAASkillVars(skill);
+			load[ndx]->seq = ndx+1;
 			ndx++;
 		}
 		mysql_free_result(result);
 	} else {
-		LogFile->write(EQEMuLog::Error, "Error in Database::LoadAAs query '%s': %s", query, errbuf);		
+		LogFile->write(EQEMuLog::Error, "Error in ZoneDatabase::LoadAAs query '%s': %s", query, errbuf);		
 	}
 	safe_delete_array(query);
 }
 
-void Database::RetrieveAALevels(SendAA_Struct* aa_struct){
+void ZoneDatabase::RetrieveAALevels(SendAA_Struct* aa_struct){
 	if(!aa_struct)
 		return;
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -920,12 +970,12 @@ void Database::RetrieveAALevels(SendAA_Struct* aa_struct){
 		}
 		mysql_free_result(result);
 	} else {
-		LogFile->write(EQEMuLog::Error, "Error in Database::RetrieveAALevels query '%s': %s", query, errbuf);		
+		LogFile->write(EQEMuLog::Error, "Error in ZoneDatabase::RetrieveAALevels query '%s': %s", query, errbuf);		
 	}
 	safe_delete_array(query);
 }
 
-SendAA_Struct* Database::GetAASkillVars(int32 skill_id)
+SendAA_Struct* ZoneDatabase::GetAASkillVars(int32 skill_id)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
@@ -933,15 +983,20 @@ SendAA_Struct* Database::GetAASkillVars(int32 skill_id)
     MYSQL_ROW row;
 	SendAA_Struct* sendaa = NULL;
 	uchar* buffer;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT cost, max_level, hotkey_sid, hotkey_sid2, title_sid, desc_sid, type, prereq_skill, prereq_minpoints, spell_type, spell_refresh, classes, berserker,spellid FROM altadv_vars WHERE skill_id=%i", skill_id), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT cost, max_level, hotkey_sid, hotkey_sid2, "
+		"title_sid, desc_sid, type, prereq_skill, prereq_minpoints, spell_type, spell_refresh, "
+		"classes, berserker,spellid,class_type,name"
+		" FROM altadv_vars WHERE skill_id=%i", skill_id), errbuf, &result)) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {
 			int total_abilities = GetTotalAALevels(skill_id);
 			int totalsize = total_abilities * sizeof(AA_Ability) + sizeof(SendAA_Struct);
+			
 			buffer = new uchar[totalsize];
 			memset(buffer,0,totalsize);
-			row = mysql_fetch_row(result);
 			sendaa = (SendAA_Struct*)buffer;
+			
+			row = mysql_fetch_row(result);
 			
 			//ATOI IS NOT UNISGNED LONG-SAFE!!!
 			
@@ -962,29 +1017,16 @@ SendAA_Struct* Database::GetAASkillVars(int32 skill_id)
 			sendaa->berserker = atoul(row[12]);
 			sendaa->last_id = 0xFFFFFFFF;
 			sendaa->current_level=1;
-			sendaa->spellid = atoul(row[14]);
-			switch(sendaa->type){
-				case 1:
-					sendaa->class_type=0x33;
-					break;
-				case 2:
-					sendaa->class_type=0x37;
-					break;
-				case 3:
-					sendaa->class_type=0x3B;
-					break;
-				case 4:
-					sendaa->class_type=0x3D;
-					break;
-				case 5:
-					sendaa->class_type=0x3E;
-					break;
-			}
+			sendaa->spellid = atoul(row[13]);
+			sendaa->class_type = atoul(row[14]);
+			strcpy(sendaa->name,row[15]);
+			
 			sendaa->total_abilities=total_abilities;
-			if(sendaa->hotkey_sid==0xFFFFFFFF)
+			if(sendaa->max_level > 1)
 				sendaa->next_id=skill_id+1;
 			else
 				sendaa->next_id=0xFFFFFFFF;
+			
 			RetrieveAALevels(sendaa);
 		}
 		mysql_free_result(result);
@@ -1000,7 +1042,7 @@ Update the player alternate advancement table for the given account "account_id"
 Return true if the character was found, otherwise false.
 False will also be returned if there is a database error.
 */
-/*bool Database::SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa)
+/*bool ZoneDatabase::SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char query[256+sizeof(PlayerAA_Struct)*2+1];
@@ -1039,7 +1081,7 @@ Update the player alternate advancement table for the given account "account_id"
 Return true if the character was found, otherwise false.
 False will also be returned if there is a database error.
 */
-/*bool Database::SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa)
+/*bool ZoneDatabase::SetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char query[256+sizeof(PlayerAA_Struct)*2+1];
@@ -1068,7 +1110,7 @@ Get the player alternate advancement table for the given account "account_id" an
 Return true if the character was found, otherwise false.
 False will also be returned if there is a database error.
 */
-/*int32 Database::GetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa)
+/*int32 ZoneDatabase::GetPlayerAlternateAdv(int32 account_id, char* name, PlayerAA_Struct* aa)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;

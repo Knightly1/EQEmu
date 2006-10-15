@@ -20,8 +20,8 @@ public:
 	virtual ~PacketFileHandler();
 	
 	bool OpenFile();
-	virtual void ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *p);
-	virtual void ToServerPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *p);
+	virtual void ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *p);
+	virtual void ToServerPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *p);
 	
 protected:
 	PacketFileWriter *file;
@@ -67,7 +67,7 @@ bool PacketFileHandler::OpenFile() {
 	return(true);
 }
 
-void PacketFileHandler::ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *p) {
+void PacketFileHandler::ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *p) {
 	if(file != NULL)
 		file->WritePacket(p->GetRawOpcode(), p->size, p->pBuffer, false, p->timestamp);
 	
@@ -88,7 +88,7 @@ void PacketFileHandler::ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuO
 	}
 }
 
-void PacketFileHandler::ToServerPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *p) {
+void PacketFileHandler::ToServerPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *p) {
 	if(file != NULL)
 		file->WritePacket(p->GetRawOpcode(), p->size, p->pBuffer, true, p->timestamp);
 }
@@ -187,7 +187,7 @@ protected:
 
 PacketFileManager *pfm = NULL;
 
-void WriteClientPacket(const EQStreamPair *sp, const EQApplicationPacket *p)
+void WriteClientPacket(const EQStreamPair *sp, const EQRawApplicationPacket *p)
 {
 	if(pfm == NULL)
 		return;	//not initilized
@@ -199,7 +199,7 @@ void WriteClientPacket(const EQStreamPair *sp, const EQApplicationPacket *p)
 	out->WritePacket(p->opcode, p->size, p->pBuffer, false);
 }
 
-void WriteServerPacket(const EQStreamPair *sp, const EQApplicationPacket *p)
+void WriteServerPacket(const EQStreamPair *sp, const EQRawApplicationPacket *p)
 {
 	if(pfm == NULL)
 		return;	//not initilized

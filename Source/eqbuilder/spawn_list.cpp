@@ -39,3 +39,14 @@ cspawn* spawn_list::get( int pos ) {
 	return(list[pos]);
 }
 
+void spawn_list::remove(cspawn *spawn) {
+	vector<cspawn*>::iterator cur, end;
+	cur = list.begin();
+	end = list.end();
+	for(; cur != end; cur++) {
+		if(*cur == spawn) {
+			list.erase(cur);
+//			return;
+		}
+	}
+}

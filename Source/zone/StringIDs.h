@@ -83,6 +83,7 @@
 #define FINISHING_BLOW 1009 //%1 scores a Finishing Blow!!
 #define OTHER_HIT_NONMELEE 434 //%1 was hit by non-melee for %2 points of damage.
 #define YOU_HIT_NONMELEE 12481 //You were hit by non-melee for %1 damage.
+#define OTHER_HIT_DOT 9072 // %1 has taken %2 damage from your %3.
 #define BEAM_SMILE 12501 //%1 beams a smile at %2
 #define FACTION_WORST 469 //Your faction standing with %1 could not possibly get any worse.
 #define FACTION_WORSE 470 //Your faction standing with %1 got worse.
@@ -180,5 +181,6 @@
 #define OTHER_LOOTED_MESSAGE 466	//--%1 has looted a %2--
 #define EATING_MESSAGE 1091	//Chomp, chomp, chomp...  %1 takes a bite from a %2.
 #define DRINKING_MESSAGE 1093 //Glug, glug, glug...  %1 takes a drink from a %2.
+#define MORE_SKILLED_THAN_I 12931 //%1 tells you, 'You are more skilled than I!  What could I possibly teach you?'
 
 #endif

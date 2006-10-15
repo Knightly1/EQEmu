@@ -275,6 +275,16 @@ const char* GetEQClassName(int8 class_, int8 level) {
 			return "Berserker Guildmaster";
 	  case MERCHANT:
 			return "Merchant";
+		case ADVENTURERECRUITER:
+			return "Adventure Recruiter";
+		case ADVENTUREMERCHANT:
+			return "Adventure Merchant";
+		case CORPSE_CLASS:
+			return "Corpse Class";
+		case TRIBUTE_MASTER:
+			return "Tribute Master";
+		case GUILD_TRIBUTE_MASTER:
+			return "Guild Tribute Master";
 	  default:
 			return "Unknown";
 	}
@@ -320,9 +330,9 @@ int32 GetArrayEQClass(int8 eqclass) {
 }
 
 int8 GetEQArrayEQClass(int8 eqclass) {
-	if (eqclass >= WARRIOR && eqclass <= BEASTLORD)
+	if (eqclass >= WARRIOR && eqclass <= BERSERKER)
 		return eqclass - WARRIOR;
-	if (eqclass >= WARRIORGM && eqclass <= BEASTLORDGM)
+	if (eqclass >= WARRIORGM && eqclass <= BERSERKERGM)
 		return eqclass - WARRIORGM;
 	return WARRIOR;
 }

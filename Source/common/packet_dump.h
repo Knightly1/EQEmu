@@ -19,7 +19,6 @@
 #define PACKET_DUMP_H
 
 #include "../common/types.h"
-#include "EQPacket.h"
 
 class ServerPacket;
 

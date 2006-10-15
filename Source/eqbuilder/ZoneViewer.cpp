@@ -37,6 +37,7 @@ CZoneViewer::CZoneViewer()
 	m_scale = 0.2f;
 	m_bTrack = false;
 	m_drawPaths = false;
+	m_drawHilite = false;
 	m_drawPos = false;
 
 	m_min_spawn_radius = 5;
@@ -288,7 +289,7 @@ bool CZoneViewer::spawnContainsNPC(cspawn *spawn, cnpc *npc) {
 	int r;
 	for(r = 0; r < max; r++) {
 		cmob *mob = spawn->mobs->get(r);
-		if(npc->IsSameAs(mob->npc)) {
+		if(npc->IsSameAs(mob->npc, true)) {
 			return(true);
 		}
 	}
@@ -352,11 +353,12 @@ void CZoneViewer::RedrawZone(CDC *pDC) {
 		end = m_map->end_lines();
 		for(; cur != end; cur++) {
 			const TextMapLine &ml = *cur;
-
+			
+			//Sony's maps have inverted XY
 			DeleteObject(draw->SelectObject(CreatePen(PS_SOLID, 1, 
 				RGB(ml.color.r, ml.color.g, ml.color.b))));
-			draw->MoveTo(int((ml.start.x + xadd)*m_scale), int((ml.start.y + yadd)*m_scale));
-			draw->LineTo(int((ml.end.x + xadd)*m_scale), int((ml.end.y + yadd)*m_scale));
+			draw->MoveTo(int((ml.start.y + xadd)*m_scale), int((ml.start.x + yadd)*m_scale));
+			draw->LineTo(int((ml.end.y + xadd)*m_scale), int((ml.end.x + yadd)*m_scale));
 		}
 	}
 
@@ -366,7 +368,7 @@ void CZoneViewer::RedrawZone(CDC *pDC) {
 	vector<spawn_list *>::iterator cur, end;
 
 	//draw paths first if they are enabled.
-	if(m_drawPaths) {
+	if(m_drawPaths || m_drawHilite) {
 		//draw grids in gery
 		DeleteObject(draw->SelectObject(CreatePen(PS_SOLID, 1, RGB(0xCC, 0xCC, 0xCC))));
 
@@ -392,6 +394,14 @@ void CZoneViewer::RedrawZone(CDC *pDC) {
 				cwaypoint *lwp = wpl->get(0);
 				
 				int mode = 0;
+				
+				bool hilite;
+				if(m_drawHilite)
+					hilite = (spawn == m_hiliteSpawn || spawnContainsNPC(spawn, m_hiliteNPC));
+				else
+					hilite = false;
+				if(!m_drawPaths && !hilite)
+					continue;
 
 				for(i = 1; i < max; i++) {
 					cwaypoint *wp = wpl->get(i);
@@ -400,12 +410,7 @@ void CZoneViewer::RedrawZone(CDC *pDC) {
 					int ymin = int((lwp->loc->y+yadd)*m_scale);
 					int ymax = int((wp->loc->y+yadd)*m_scale);
 					
-					if(spawn == m_hiliteSpawn || spawnContainsNPC(spawn, m_hiliteNPC)) {
-						if(mode != 4) {
-							DeleteObject(draw->SelectObject(CreatePen(PS_SOLID, 1, RGB(0xBB, 0x22, 0xBB))));
-							mode = 4;
-						}
-					} else if(!wp->valid) {
+					if(!wp->valid) {
 						if(mode != 1) {
 							DeleteObject(draw->SelectObject(CreatePen(PS_SOLID, 1, RGB(0xCC, 0x44, 0x44))));
 							mode = 1;
@@ -414,6 +419,11 @@ void CZoneViewer::RedrawZone(CDC *pDC) {
 						if(mode != 2) {
 							DeleteObject(draw->SelectObject(CreatePen(PS_SOLID, 1, RGB(0x44, 0x44, 0xCC))));
 							mode = 2;
+						}
+					} else if(spawn == m_hiliteSpawn || hilite) {
+						if(mode != 4) {
+							DeleteObject(draw->SelectObject(CreatePen(PS_SOLID, 1, RGB(0xBB, 0x22, 0xBB))));
+							mode = 4;
 						}
 					} else {
 						if(mode != 3) {
@@ -443,7 +453,11 @@ void CZoneViewer::RedrawZone(CDC *pDC) {
 		max = l->getsize();
 		for(r = 0; r < max; r++) {
 			cspawn *spawn = l->get(r);
-			bool hilite = (spawn == m_hiliteSpawn || spawnContainsNPC(spawn, m_hiliteNPC));
+			bool hilite;
+			if(m_drawHilite)
+				hilite = (spawn == m_hiliteSpawn || spawnContainsNPC(spawn, m_hiliteNPC));
+			else
+				hilite = false;
 			
 			//select a color for this spawn.
 			if(hilite) {

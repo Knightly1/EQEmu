@@ -28,8 +28,14 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "map.h"
 #include "pathing.h"
 #include "zone.h"
+#include "../common/MiscFunctions.h"
 #ifdef WIN32
 #define snprintf	_snprintf
+#endif
+
+#ifndef WIN32
+//comment this out if your worried about zone boot times and your not using valgrind
+#define SLOW_AND_CRAPPY_MAKES_VALGRIND_HAPPY
 #endif
 
 
@@ -138,28 +144,81 @@ bool PathManager::loadPaths(FILE *fp) {
 	nodelists = new PathNodeRef[m_NodeLists];
 	path_finding = new PathLinkOffsetRef[m_Nodes*m_Nodes];
 	
+	
+	//this was changed to this loop from the single read because valgrind was
+	//hanging on this read otherwise... I dont pretend to understand it.
+#ifdef SLOW_AND_CRAPPY_MAKES_VALGRIND_HAPPY
+	unsigned long r;
+	for(r = 0; r < m_Nodes; r++) {
+		if(fread(nodes+r, sizeof(PathNode_Struct), 1, fp) != 1) {
+			printf("Unable to read %lu nodes from path file, got %lu.\n", m_Nodes, r);
+			return(false);
+		}
+	}
+#else
 	unsigned long count;
 	if((count=fread(nodes, sizeof(PathNode_Struct), m_Nodes , fp)) != m_Nodes) {
 		printf("Unable to read %lu nodes from path file, got %lu.\n", m_Nodes, count);
 		return(false);
 	}
+#endif
+	
+#ifdef SLOW_AND_CRAPPY_MAKES_VALGRIND_HAPPY
+	for(r = 0; r < m_Links; r++) {
+		if(fread(links+r, sizeof(PathLink_Struct), 1, fp) != 1) {
+			printf("Unable to read %lu links from path file, got %lu.\n", m_Links, r);
+			return(false);
+		}
+	}
+#else
 	if((count=fread(links, sizeof(PathLink_Struct), m_Links , fp)) != m_Links) {
-		printf("Unable to read %lu nodes from path file, got %lu.\n", m_Links, count);
+		printf("Unable to read %lu links from path file, got %lu.\n", m_Links, count);
 		return(false);
 	}
+#endif
 	
+#ifdef SLOW_AND_CRAPPY_MAKES_VALGRIND_HAPPY
+	for(r = 0; r < m_QTNodes; r++) {
+		if(fread(QTNodes+r, sizeof(PathTree_Struct), 1, fp) != 1) {
+			printf("Unable to read %lu qt nodes from map file, got %lu.\n", m_QTNodes, r);
+			return(false);
+		}
+	}
+#else
 	if((count=fread(QTNodes, sizeof(PathTree_Struct), m_QTNodes, fp)) != m_QTNodes) {
 		printf("Unable to read %lu qt nodes from path file.\n", m_Nodes);
 		return(false);
 	}
+#endif
+	
+#ifdef SLOW_AND_CRAPPY_MAKES_VALGRIND_HAPPY
+	for(r = 0; r < m_NodeLists; r++) {
+		if(fread(nodelists+r, sizeof(PathNodeRef), 1, fp) != 1) {
+			printf("Unable to read %lu node lists from path file, got %lu.\n", m_NodeLists, r);
+			return(false);
+		}
+	}
+#else
 	if((count=fread(nodelists, sizeof(PathNodeRef), m_NodeLists, fp)) != m_NodeLists) {
 		printf("Unable to read %lu node lists from path file. Got %lu.\n", m_NodeLists, count);
 		return(false);
 	}
+#endif
+	
+#ifdef SLOW_AND_CRAPPY_MAKES_VALGRIND_HAPPY
+	int nodes2 = m_Nodes*m_Nodes;
+	for(r = 0; r < nodes2; r++) {
+		if(fread(path_finding+r, sizeof(PathLinkOffsetRef), 1, fp) != 1) {
+			printf("Unable to read %lu faces from map file, got %lu.\n", nodes2, r);
+			return(false);
+		}
+	}
+#else
 	if((count=fread(path_finding, sizeof(PathLinkOffsetRef), m_Nodes*m_Nodes, fp)) != m_Nodes*m_Nodes) {
 		printf("Unable to read %lu path finding matrix from path file. Got %lu.\n", m_Nodes*m_Nodes, count);
 		return(false);
 	}
+#endif
 	
 	return(true);
 }
@@ -849,7 +908,7 @@ else {
 void Client::SendPathPacket(vector<FindPerson_Point> &points) {
 	if(points.size() < 2) {
 		//empty length packet == not found.
-		EQZonePacket outapp(OP_FindPersonReply, 0);
+		EQApplicationPacket outapp(OP_FindPersonReply, 0);
 		QueuePacket(&outapp);
 		return;
 	}
@@ -857,7 +916,7 @@ void Client::SendPathPacket(vector<FindPerson_Point> &points) {
 	printf("Sending a path packet with %d nodes.\n", points.size());
 	
 	int len = sizeof(FindPersonResult_Struct) + (points.size()+1) * sizeof(FindPerson_Point);
-	EQZonePacket *outapp = new EQZonePacket(OP_FindPersonReply, len);
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_FindPersonReply, len);
 	FindPersonResult_Struct* fpr=(FindPersonResult_Struct*)outapp->pBuffer;
 	
 printf("%d*%d + %d = %d\n", points.size(), sizeof(FindPerson_Point), sizeof(FindPersonResult_Struct), len);

@@ -18,8 +18,7 @@
 #include "../common/debug.h"
 #include "masterentity.h"
 #include "worldserver.h"
-#include "net.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "spdat.h"
 #include "../common/packet_dump.h"
 #include "../common/packet_functions.h"
@@ -28,18 +27,9 @@
 #include "../common/ZoneNumbers.h"
 #include "../common/moremath.h"
 #include "../common/guilds.h"
+#include "../common/logsys.h"
 #include "StringIDs.h"
 #include "NpcAI.h"
-
-#ifdef GUILDWARS
-#include "../GuildWars/GuildWars.h"
-extern GuildWars guildwars;
-#endif
-
-#ifdef RAIDADDICTS
-#include "RaidAddicts.h"
-extern RaidAddicts raidaddicts;
-#endif
 
 
 // Return max stat value for level
@@ -110,60 +100,72 @@ sint32 Client::LevelRegen()
 		else
 			hp+=1;
 	}
-	else if(level == 51) {
+	else if(level <= 55) {
 		if(sitting)
 			hp+=5;
 		else
 			hp+=2;
 	}
-	else if(level <= 56) {
+	else if(level <= 58) {
 		if(sitting)
 			hp+=6;
 		else
 			hp+=3;
 	}
-	else {
+	else if(level <= 65) {
 		if(sitting)
 			hp+=7;
 		else
 			hp+=4;
 	}
+	else {
+		if(sitting)
+			hp+=8;
+		else
+			hp+=5;
+	}
 	if(GetRace() == IKSAR || GetRace() == TROLL) {
 		if (level <= 19) {
 			if(sitting)
-				hp+=2;
+				hp+=4;
 			else
-				hp += 1;
+				hp += 2;
 		}
 		else if(level <= 49) {
 			if(sitting)
-				hp+=3;
+				hp+=6;
 			else
-				hp+=1;
+				hp+=2;
 		}
 		else if(level == 50) {
 			if(sitting)
-				hp+=4;
+				hp+=8;
 			else
-				hp+=1;
+				hp+=2;
 		}
 		else if(level == 51) {
 			if(sitting)
-				hp+=7;
+				hp+=12;
 			else
-				hp+=4;
+				hp+=6;
 		}
 		else if(level <= 56) {
 			if(sitting)
-				hp+=10;
+				hp+=16;
 			else
-				hp+=7;
+				hp+=10;
+		}
+		else if(level <= 65) {
+			if(sitting)
+				hp+=18;
+			else
+				hp+=12;
 		}
 		else {
 			if(sitting)
-				hp+=11;
+				hp+=20;
 			else
-				hp+=8;
+				hp+=10;
 		}
 	}
 	if (GetAA(aaInnateRegeneration) >= 1){
@@ -201,9 +203,101 @@ sint32 Client::CalcMaxHP() {
 	return max_hp;
 }
 
-// Note: The client calculates max hp separatly, we cant change this function
+int8 Mob::GetClassLevelFactor(){
+	int8 multiplier = 0;
+	int8 mlevel=GetLevel();
+	switch(GetClass())
+	{
+		case WARRIOR:
+		case BERSERKER:{
+			if (mlevel < 20)
+				multiplier = 22;
+			else if (mlevel < 30)
+				multiplier = 23;
+			else if (mlevel < 40)
+				multiplier = 25;
+			else if (mlevel < 53)
+				multiplier = 27;
+			else if (mlevel < 57)
+				multiplier = 28;
+			else
+				multiplier = 30;
+			break;
+		}
+		case DRUID:
+		case CLERIC:
+		case SHAMAN:{
+			multiplier = 15;
+			break;
+		}
+		case PALADIN:
+		case SHADOWKNIGHT:{
+			if (mlevel < 35)
+				multiplier = 21;
+			else if (mlevel < 45)
+				multiplier = 22;
+			else if (mlevel < 51)
+				multiplier = 23;
+			else if (mlevel < 56)
+				multiplier = 24;
+			else if (mlevel < 60)
+				multiplier = 25;
+			else
+				multiplier = 26;
+			break;
+		}
+		case MONK:
+		case BARD:
+		case ROGUE:
+		case BEASTLORD:{
+			if (mlevel < 51)
+				multiplier = 18;
+			else if (mlevel < 58)
+				multiplier = 19;
+			else
+				multiplier = 20;
+			break;
+		}
+		case RANGER:{
+			if (mlevel < 58)
+				multiplier = 20;
+			else
+				multiplier = 21;
+			break;
+		}
+		case MAGICIAN:
+		case WIZARD:
+		case NECROMANCER:
+		case ENCHANTER:{
+			multiplier = 12;
+			break;
+		}
+		default:{
+			if (mlevel < 35)
+				multiplier = 21;
+			else if (mlevel < 45)
+				multiplier = 22;
+			else if (mlevel < 51)
+				multiplier = 23;
+			else if (mlevel < 56)
+				multiplier = 24;
+			else if (mlevel < 60)
+				multiplier = 25;
+			else
+				multiplier = 26;
+			break;
+		}
+	}
+	if(mlevel >= 70)
+		multiplier += 3;
+	return multiplier;
+}
+
 sint32 Client::CalcBaseHP()
 {
+
+// Note: The client calculates max hp separatly, we cant change this function
+
 	int8 multiplier=GetClassLevelFactor();
 
 	if (multiplier == 0) {
@@ -237,7 +331,7 @@ sint16 Client::GetRawItemAC() {
 	for (sint16 slot_id=0; slot_id<21; slot_id++) {
 		const ItemInst* inst = m_inv[slot_id];
 		if (inst && inst->IsType(ItemClassCommon)) {
-			Total += inst->GetItem()->Common.AC;
+			Total += inst->GetItem()->AC;
 		}
 	}
 	
@@ -731,7 +825,7 @@ int16 Client::CalcCurrentWeight() {
 			}
 			ItemInst* baginst = GetInv().GetItem(bagslot);
 			if (baginst && baginst->GetItem() && baginst->IsType(ItemClassContainer))
-				reduction = baginst->GetItem()->Container.BagWR;
+				reduction = baginst->GetItem()->BagWR;
 			if (reduction > 0)
 				TmpWeight -= TmpWeight*reduction/100;
 			Total += TmpWeight;
@@ -749,6 +843,10 @@ sint16 Client::CalcSTR() {
 	if(val>255 && GetLevel() <= 60)
 		val = 255;
 	STR = val + mod;
+	
+	if(STR < 1)
+		STR = 1;
+	
 	return(STR);
 }
 
@@ -760,6 +858,10 @@ sint16 Client::CalcSTA() {
 	if(val>255 && GetLevel() <= 60)
 		val = 255;
 	STA = val + mod;
+	
+	if(STA < 1)
+		STA = 1;
+	
 	return(STA);
 }
 
@@ -777,6 +879,10 @@ sint16 Client::CalcAGI() {
 	if(val>255 && GetLevel() <= 60)
 		val = 255;
 	AGI = val + mod;
+	
+	if(AGI < 1)
+		AGI = 1;
+	
 	return(AGI);
 }
 
@@ -788,6 +894,10 @@ sint16 Client::CalcDEX() {
 	if(val>255 && GetLevel() <= 60)
 		val = 255;
 	DEX = val + mod;
+	
+	if(DEX < 1)
+		DEX = 1;
+	
 	return(DEX);
 }
 
@@ -799,6 +909,10 @@ sint16 Client::CalcINT() {
 	if(val>255 && GetLevel() <= 60)
 		val = 255;
 	INT = val + mod;
+	
+	if(INT < 1)
+		INT = 1;
+	
 	return(INT);
 }
 
@@ -810,6 +924,10 @@ sint16 Client::CalcWIS() {
 	if(val>255 && GetLevel() <= 60)
 		val = 255;
 	WIS = val + mod;
+	
+	if(WIS < 1)
+		WIS = 1;
+	
 	return(WIS);
 }
 
@@ -821,6 +939,10 @@ sint16 Client::CalcCHA() {
 	if(val>255 && GetLevel() <= 60)
 		val = 255;
 	CHA = val + mod;
+	
+	if(CHA < 1)
+		CHA = 1;
+	
 	return(CHA);
 }
 
@@ -919,6 +1041,9 @@ sint16	Client::CalcMR()
 		MR += GetLevel() / 2 + 1;
 	}
 	
+	if(MR < 1)
+		MR = 1;
+	
 	return(MR);
 }
 
@@ -983,7 +1108,10 @@ sint16	Client::CalcFR()
 	
     FR += itembonuses.FR + spellbonuses.FR;
     FR += (GetAA(aaInnateFireProtection) + GetAA(aaWardingofSolusek))*5;
-
+	
+	if(FR < 1)
+		FR = 1;
+	
 	return(FR);
 }
 
@@ -1055,6 +1183,9 @@ sint16	Client::CalcDR()
 	
     DR += itembonuses.DR + spellbonuses.DR;
     DR += (GetAA(aaInnateDiseaseProtection) + GetAA(aaBertoxxulousGift))*5;
+	
+	if(DR < 1)
+		DR = 1;
     
 	return(DR);
 }
@@ -1127,6 +1258,9 @@ sint16	Client::CalcPR()
 	
     PR += itembonuses.PR + spellbonuses.PR;
     PR += (GetAA(aaInnatePoisonProtection) + GetAA(aaShroudofTheFaceless))*5;
+	
+	if(PR < 1)
+		PR = 1;
     
 	return(PR);
 }
@@ -1192,6 +1326,9 @@ sint16	Client::CalcCR()
 	
     CR += itembonuses.CR + spellbonuses.CR;
     CR += (GetAA(aaInnateColdProtection) + GetAA(aaBlessingofEci))*5;
+	
+	if(CR < 1)
+		CR = 1;
     
 	return(CR);
 }
@@ -1205,7 +1342,7 @@ int16 Mob::GetInstrumentMod(int16 spell_id) {
 	if(GetClass() != BARD)
 		return(10);
 	
-	int16 effectmod = 0;
+	int16 effectmod = 10;
 	
 	//this should never use spell modifiers...
 	//if a spell grants better modifers, they are copied into the item mods
@@ -1214,50 +1351,60 @@ int16 Mob::GetInstrumentMod(int16 spell_id) {
 	//item mods are in 10ths of percent increases
 	switch(spells[spell_id].skill) {
 		case PERCUSSION_INSTRUMENTS:
-			if(itembonuses.percussionMod > spellbonuses.percussionMod)
+			if(itembonuses.percussionMod == 0 && spellbonuses.percussionMod == 0)
+				effectmod = 10;
+			else if(itembonuses.percussionMod > spellbonuses.percussionMod)
 				effectmod = itembonuses.percussionMod;
 			else
 				effectmod = spellbonuses.percussionMod;
 			break;
 		case STRINGED_INSTRUMENTS:
-			if(itembonuses.stringedMod > spellbonuses.stringedMod)
+			if(itembonuses.stringedMod == 0 && spellbonuses.stringedMod == 0)
+				effectmod = 10;
+			else if(itembonuses.stringedMod > spellbonuses.stringedMod)
 				effectmod = itembonuses.stringedMod;
 			else
 				effectmod = spellbonuses.stringedMod;
 			break;
 		case WIND_INSTRUMENTS:
-			if(itembonuses.windMod > spellbonuses.windMod)
+			if(itembonuses.windMod == 0 && spellbonuses.windMod == 0)
+				effectmod = 10;
+			else if(itembonuses.windMod > spellbonuses.windMod)
 				effectmod = itembonuses.windMod;
 			else
 				effectmod = spellbonuses.windMod;
 			break;
 		case BRASS_INSTRUMENTS:
-			if(itembonuses.brassMod > spellbonuses.brassMod)
+			if(itembonuses.brassMod == 0 && spellbonuses.brassMod == 0)
+				effectmod = 10;
+			else if(itembonuses.brassMod > spellbonuses.brassMod)
 				effectmod = itembonuses.brassMod;
 			else
 				effectmod = spellbonuses.brassMod;
 			break;
 		case SINGING:
-			if(itembonuses.singingMod > spellbonuses.singingMod)
+			if(itembonuses.singingMod == 0 && spellbonuses.singingMod == 0)
+				effectmod = 10;
+			else if(itembonuses.singingMod > spellbonuses.singingMod)
 				effectmod = itembonuses.singingMod;
 			else
 				effectmod = spellbonuses.singingMod;
 			break;
 		default:
+			effectmod = 10;
 			break;
 	}
 	
 	if(spells[spell_id].skill == SINGING)
-		effectmod += 20*GetAA(aaSingingMastery);
+		effectmod += 2*GetAA(aaSingingMastery);
 	else
-		effectmod += 20*GetAA(aaInstrumentMastery);
-	
+		effectmod += 2*GetAA(aaInstrumentMastery);
+
 	if(effectmod < 10)
 		effectmod = 10;
 	
-	#if EQDEBUG >= 5
-//		LogFile->write(EQEMuLog::Debug, "%s::GetInstrumentMod() spell=%d mod=%d\n", GetName(), spell_id, effectmod);
-	#endif
+	_log(SPELLS__BARDS, "%s::GetInstrumentMod() spell=%d mod=%d\n", GetName(), spell_id, effectmod);
+	
 	return(effectmod);
 }
 

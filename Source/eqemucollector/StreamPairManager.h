@@ -6,6 +6,7 @@
 #include "../common/EQStreamLocator.h"
 
 class EQStreamPair;
+class OpcodeManager;
 
 class StreamPairManager : public Timeoutable {
 public:
@@ -21,9 +22,13 @@ public:
 	
 	void SetQuietMode(bool q) { quiet = q; }
 	
+	bool LoadOpcodes(const char *opcode_mgr);
+	
 protected:
 	bool quiet;
 	void RemovePair(EQStreamPair *p);
+	
+	OpcodeManager *m_OpcodeManager;
 	
 	EQStreamLocator<EQStreamPair> streams;
 	vector<EQStreamPair *> pairs;

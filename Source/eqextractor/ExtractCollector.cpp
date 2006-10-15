@@ -1,7 +1,11 @@
 
+#include "../common/debug.h"
 #include "ExtractCollector.h"
 #include "ExtractDB.h"
 #include "../common/MiscFunctions.h"
+
+
+namespace EQExtractor {
 
 #define FLOAT_CLOSE_ENOUGH 0.01	//arbitrary
 
@@ -13,7 +17,7 @@ ExtractCollector::ExtractCollector(EmuOpcode interested_op, string itable_name)
 	
 //called with a packet of type 'my_op'
 //default implementation assumes it is a single item to extract
-void ExtractCollector::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) {
+void ExtractCollector::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
 	if(emu_op != my_op)
 		return;	//not interested
 	ExtractItem *item = NewItem();
@@ -30,11 +34,11 @@ void ExtractCollector::GenerateInserts(FILE *into, bool make_replaces) {
 	cur = collected.begin();
 	end = collected.end();
 	for(; cur != end; cur++) {
-		GenerateAnInsert(into, make_replaces, *cur);
+		GenerateAnInsert(into, make_replaces, false, *cur);
 	}
 }
 
-void ExtractCollector::GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item) {
+void ExtractCollector::GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item) {
 	map<uint16, FieldInfo>::iterator cur, end;
 	map<uint16, string>::iterator valres;
 	
@@ -191,7 +195,7 @@ void ExtractCollector::GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem
 	safe_delete_array(query);
 	if(!valid) {
 		//not found, generate an INSERT and were done.
-		GenerateAnInsert(into, false, item);
+		GenerateAnInsert(into, false, true, item);
 		return;
 	}
 	
@@ -224,7 +228,6 @@ void ExtractCollector::GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem
 		if(compare(value.c_str(), row[cur->first], cur->second.value_type))
 			continue;		//they are the same
 		
-//printf("Comparison(%s): '%s' is different than DB value '%s'\n", cur->second.name.c_str(), value.c_str(), row[cur->first]);
 		//the values differ, include it in the update
 		if(first_update)
 			first_update = false;
@@ -312,7 +315,7 @@ void ExtractCollector::GenerateAText(FILE *into, ExtractorDB *db, ExtractItem *i
 		}
 		
 		//compare our new value to this value in the DB
-		if(valid && compare(value.c_str(), row[cur->first], cur->second.value_type))
+		if(valid && row[cur->first] != NULL && compare(value.c_str(), row[cur->first], cur->second.value_type))
 			continue;		//they are the same
 		
 		//the values differ
@@ -321,7 +324,7 @@ void ExtractCollector::GenerateAText(FILE *into, ExtractorDB *db, ExtractItem *i
 			fprintf(into, "\nTable %s: key (%s)\n", table_name.c_str(), where_clause.c_str());
 		}
 		fprintf(into, "\t%s: DB: '%s', Live: '%s'\n", cur->second.name.c_str(), 
-			valid?row[cur->first]:"?", value.c_str());
+			valid?(row[cur->first]?row[cur->first]:"(null)"):"?", value.c_str());
 	}
 	if(valid)
 		mysql_free_result(result);
@@ -340,7 +343,7 @@ bool ExtractCollector::compare(const char *l, const char *r, VT vt) {
 		rf = atof(r);
 		lf -= rf;
 		if(lf < 0)
-			lf = 0 - rf;
+			lf = 0 - lf;
 		return(lf < FLOAT_CLOSE_ENOUGH);
 	}
 	case vFloatExact:
@@ -443,7 +446,9 @@ void ExtractCollector::SplitPacket(uint16 count, unsigned char *data, uint32 len
 	}
 }
 
-
+//these have to be duplicated for stupid visual studio which does
+//not bring a class which contains a class into the contained classes
+//scope
 string ExtractCollector::ultoa(uint32 n) {
 	static char nbuf[16];
 	sprintf(nbuf, "%lu", n);
@@ -463,7 +468,26 @@ string ExtractCollector::ftoa(float n) {
 }
 
 
+string ExtractCollector::ExtractItem::ultoa(uint32 n) {
+	static char nbuf[16];
+	sprintf(nbuf, "%lu", n);
+	return(string(nbuf));
+}
 
+string ExtractCollector::ExtractItem::itoa(sint32 n) {
+	static char nbuf[16];
+	sprintf(nbuf, "%ld", n);
+	return(string(nbuf));
+}
+
+string ExtractCollector::ExtractItem::ftoa(float n) {
+	static char nbuf[16];
+	sprintf(nbuf, "%f", n);
+	return(string(nbuf));
+}
+
+
+};
 
 
 

@@ -161,7 +161,7 @@ struct Before_June29th_PlayerProfile_Struct
 /*0200*/	float				bind_heading[4];		//
 /*0216*/	float				zone_safe_heading;
 /*0220*/	uint32				deity;				// deity
-/*0224*/	uint32				guildid;				
+/*0224*/	uint32				guild_id;				
 /*0228*/	uint32				birthday;			// characters bday
 /*0232*/	uint32				lastlogin;			// last login or zone time
 /*0236*/	uint32				timeplayed;			// in minutes
@@ -192,7 +192,7 @@ struct Before_June29th_PlayerProfile_Struct
 /*2352*/	char				servername[32];		// length probably not right
 /*2384*/	char				title[32];			//length might be wrong
 /*2416*/	char				suffix[32];			//length might be wrong
-/*2448*/	uint32				guildid2;		//
+/*2448*/	uint32				guild_id2;		//
 /*2452*/	uint32				exp;				// Current Experience
 /*2456*/	uint32				unknown1496;		
 /*2462*/	uint32				points;				// Unspent Practice points
@@ -319,7 +319,7 @@ struct Before_Dec15th_PlayerProfile_Struct
 /*0200*/	float				bind_heading[4];		//
 /*0216*/	float				zone_safe_heading;
 /*0220*/	uint32				deity;				// deity
-/*0224*/	uint32				guildid;				
+/*0224*/	uint32				guild_id;				
 /*0228*/	uint32				birthday;			// characters bday
 /*0232*/	uint32				lastlogin;			// last login or zone time
 /*0236*/	uint32				timeplayed;			// in minutes
@@ -349,7 +349,7 @@ struct Before_Dec15th_PlayerProfile_Struct
 /*1384*/	uint8				unknown1388[8];
 /*1392*/	char				servername[32];
 /*1424*/	char				title[64];
-/*1488*/	uint32				guildid2;		//
+/*1488*/	uint32				guild_id2;		//
 /*1492*/	uint32				exp;				// Current Experience
 /*1496*/	uint32				unknown1496;		
 /*1500*/	uint32				points;				// Unspent Practice points
@@ -456,7 +456,7 @@ struct Before_Sep14th_PlayerProfile_Struct
 /*0132*/	float				bind_z;				// Bind loc z coord
 /*0136*/	uint8				unknown0136[4];		//
 /*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
+/*0144*/	uint32				guild_id;				
 /*0148*/	uint32				birthday;			// characters bday
 /*0152*/	uint32				lastlogin;			// last login or zone time
 /*0156*/	uint32				timeplayed;			// in minutes
@@ -484,7 +484,7 @@ struct Before_Sep14th_PlayerProfile_Struct
 /*0308*/	Color_Struct		item_tint[9];
 /*0344*/	AA_Array			aa_array[120];
 /*1304*/	char				servername[64];		// length probably not right
-/*1368*/	uint32				guildid2;		//
+/*1368*/	uint32				guild_id2;		//
 /*1372*/	uint32				exp;				// Current Experience
 /*1376*/	uint32				points;				// Unspent Practice points
 /*1380*/	uint32				mana;				// current mana
@@ -579,7 +579,7 @@ struct Before_Aug13th_PlayerProfile_Struct
 /*0132*/	float				bind_z;				// Bind loc z coord
 /*0136*/	uint8				unknown0136[4];		//
 /*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
+/*0144*/	uint32				guild_id;				
 /*0148*/	uint32				birthday;			// characters bday
 /*0152*/	uint32				lastlogin;			// last login or zone time
 /*0156*/	uint32				timeplayed;			// in minutes
@@ -609,7 +609,7 @@ struct Before_Aug13th_PlayerProfile_Struct
 
 
 /*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
+/*0652*/	uint32				guild_id2;		//
 /*0656*/	uint32				exp;				// Current Experience
 /*0660*/	uint32				points;				// Unspent Practice points
 /*0664*/	uint32				mana;				// current mana
@@ -706,7 +706,7 @@ struct PlayerProfile_Struct_Before_May26th
 /*0132*/	float				bind_z;				// Bind loc z coord
 /*0136*/	uint8				unknown0136[4];		//
 /*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
+/*0144*/	uint32				guild_id;				
 /*0148*/	uint32				birthday;			// characters bday
 /*0152*/	uint32				lastlogin;			// last login or zone time
 /*0156*/	uint32				timeplayed;			// in minutes
@@ -735,7 +735,7 @@ struct PlayerProfile_Struct_Before_May26th
 /*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
 
 /*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
+/*0652*/	uint32				guild_id2;		//
 /*0656*/	uint32				exp;				// Current Experience
 /*0660*/	uint32				points;				// Unspent Practice points
 /*0664*/	uint32				mana;				// current mana
@@ -832,7 +832,7 @@ struct BeforeMay5th_PlayerProfile_Struct
 /*0132*/	float				bind_z;				// Bind loc z coord
 /*0136*/	uint8				unknown0136[4];		//
 /*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
+/*0144*/	uint32				guild_id;				
 /*0148*/	uint32				birthday;			// characters bday
 /*0152*/	uint32				lastlogin;			// last login or zone time
 /*0156*/	uint32				timeplayed;			// in minutes
@@ -861,7 +861,7 @@ struct BeforeMay5th_PlayerProfile_Struct
 /*0344*/	int16			aa_array[122];		// Length may not be right but i assume no class has more than this
 
 /*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
+/*0652*/	uint32				guild_id2;		//
 /*0656*/	uint32				exp;				// Current Experience
 /*0660*/	uint32				points;				// Unspent Practice points
 /*0664*/	uint32				mana;				// current mana
@@ -958,7 +958,7 @@ struct BeforeApr21st_PlayerProfile_Struct
 /*0132*/	float				bind_z;				// Bind loc z coord
 /*0136*/	uint8				unknown0136[4];		//
 /*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
+/*0144*/	uint32				guild_id;				
 /*0148*/	uint32				birthday;			// characters bday
 /*0152*/	uint32				lastlogin;			// last login or zone time
 /*0156*/	uint32				timeplayed;			// in minutes
@@ -987,7 +987,7 @@ struct BeforeApr21st_PlayerProfile_Struct
 /*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
 
 /*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
+/*0652*/	uint32				guild_id2;		//
 /*0656*/	uint32				exp;				// Current Experience
 /*0660*/	uint32				points;				// Unspent Practice points
 /*0664*/	uint32				mana;				// current mana
@@ -1083,7 +1083,7 @@ struct BeforeApril14th_PlayerProfile_Struct
 /*0132*/	float				bind_z;				// Bind loc z coord
 /*0136*/	uint8				unknown0136[4];		//
 /*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
+/*0144*/	uint32				guild_id;				
 /*0148*/	uint32				birthday;			// characters bday
 /*0152*/	uint32				lastlogin;			// last login or zone time
 /*0156*/	uint32				timeplayed;			// in minutes
@@ -1112,7 +1112,7 @@ struct BeforeApril14th_PlayerProfile_Struct
 /*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
 
 /*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
+/*0652*/	uint32				guild_id2;		//
 /*0656*/	uint32				exp;				// Current Experience
 /*0660*/	uint32				points;				// Unspent Practice points
 /*0664*/	uint32				mana;				// current mana
@@ -1209,7 +1209,7 @@ struct BeforeFeb18_PlayerProfile_Struct
 /*0132*/	float				bind_z;				// Bind loc z coord
 /*0136*/	uint8				unknown0136[4];		//
 /*0140*/	uint32				deity;				// deity
-/*0144*/	uint32				guildid;				
+/*0144*/	uint32				guild_id;				
 /*0148*/	uint32				birthday;			// characters bday
 /*0152*/	uint32				lastlogin;			// last login or zone time
 /*0156*/	uint32				timeplayed;			// in minutes
@@ -1238,7 +1238,7 @@ struct BeforeFeb18_PlayerProfile_Struct
 /*0344*/	int16				aa_array[122];		// Length may not be right but i assume no class has more than this
 
 /*0588*/	char				servername[64];		// length probably not right
-/*0652*/	uint32				guildid2;		//
+/*0652*/	uint32				guild_id2;		//
 /*0656*/	uint32				exp;				// Current Experience
 /*0660*/	uint32				points;				// Unspent Practice points
 /*0664*/	uint32				mana;				// current mana
@@ -1341,7 +1341,7 @@ struct Before_May12_PlayerProfile_Struct
 /*0200*/	float				bind_heading[4];		//
 /*0216*/	float				zone_safe_heading;
 /*0220*/	uint32				deity;				// deity
-/*0224*/	uint32				guildid;				
+/*0224*/	uint32				guild_id;				
 /*0228*/	uint32				birthday;			// characters bday
 /*0232*/	uint32				lastlogin;			// last login or zone time
 /*0236*/	uint32				timeplayed;			// in minutes
@@ -1371,7 +1371,7 @@ struct Before_May12_PlayerProfile_Struct
 /*0432*/	AA_Array			aa_array[120];
 /*1392*/	char				servername[32];		// length probably not right
 /*1424*/	char				title[64];			//length might be wrong
-/*1488*/	uint32				guildid2;		//
+/*1488*/	uint32				guild_id2;		//
 /*1492*/	uint32				exp;				// Current Experience
 /*1496*/	uint32				unknown1496;		
 /*1500*/	uint32				points;				// Unspent Practice points
@@ -1532,180 +1532,6 @@ struct Action_Struct
 };*/
 
 
-// @Bigpull: 0.4.4 item struct for InjectToRaw()
-struct OLDItem_Struct
-{
-/*0000*/ char      name[64];        // Name of item
-/*0064*/ char      lore[80];        // Lore text
-/*0144*/ char      idfile[30];      // This is the filename of the item graphic when held/worn.
-									// Changed to 30 bytes for correct item conversion
-/*0174*/ uint8	   weight;          // Weight of item
-/*0175*/ sint8     nosave;          // Nosave flag 1=normal, 0=nosave, -1=spell?
-/*0176*/ sint8     nodrop;          // Nodrop flag 1=normal, 0=nodrop, -1=??
-/*0177*/ uint8     size;            // Size of item
-/*0178*/ int8      type;
-/*0179*/ uint8     unknown0178;     // ***Placeholder
-/*0180*/ uint16    item_nr;         // Unique Item number
-/*0182*/ uint16    icon_nr;         // Icon Number
-/*0184*/ sint16    equipSlot;       // Current Equip slot
-/*0186*/ uint8     unknwn0186[2];   // Equip slot cont.?
-/*0188*/ uint32    equipableSlots;  // Slots where this item goes
-/*0192*/ sint32    cost;            // Item cost in copper
-/*0196*/ uint8     unknown0196[32]; // ***Placeholder
-union
-{
-	struct
-	{
-	// 0228- have different meanings depending on flags
-	/*0228*/ sint8    STR;              // Strength
-	/*0229*/ sint8    STA;              // Stamina
-	/*0230*/ sint8    CHA;              // Charisma
-	/*0231*/ sint8    DEX;              // Dexterity
-	/*0232*/ sint8    INT;              // Intelligence
-	/*0233*/ sint8    AGI;              // Agility
-	/*0234*/ sint8    WIS;              // Wisdom
-	/*0235*/ sint8    MR;               // Magic Resistance
-	/*0236*/ sint8    FR;               // Fire Resistance
-	/*0237*/ sint8    CR;               // Cold Resistance
-	/*0238*/ sint8    DR;               // Disease Resistance
-	/*0239*/ sint8    PR;               // Poison Resistance
-	/*0240*/ sint16   HP;               // Hitpoints
-	/*0242*/ sint16   MANA;             // Mana
-	/*0244*/ sint16   AC;               // Armor Class
-	/*0246*/ uint8    MaxCharges;       // Maximum number of charges, for rechargable? (Sept 25, 2002)
-	/*0247*/ sint8    GMFlag;           // GM flag 0  - normal item, -1 - gm item (Sept 25, 2002)
-	/*0248*/ uint8    light;            // Light effect of this item
-	/*0249*/ uint8    delay;            // Weapon Delay
-	/*0250*/ uint8    damage;           // Weapon Damage
-	/*0251*/ sint8    effecttype0;      // 0=combat, 1=click anywhere w/o class check, 2=latent/worn, 3=click anywhere EXPENDABLE, 4=click worn, 5=click anywhere w/ class check, -1=no effect
-	/*0252*/ uint8    range;            // Range of weapon
-	/*0253*/ uint8    skill;            // Skill of this weapon, refer to weaponskill chart
-	/*0254*/ sint8    magic;            // Magic flag
-                        //   00  (0000)  =   ???
-                        //   01  (0001)  =  magic
-                        //   12  (1100)  =   ???
-                        //   14  (1110)  =   ???
-                        //   15  (1111)  =   ???
-	/*0255*/ sint8    level0;           // Casting level
-	/*0256*/ uint8    material;         // Material?
-	/*0257*/ uint8    unknown0258[3];   // ***Placeholder
-	/*0260*/ uint32   color;            // Amounts of RGB in original color
-	/*0264*/ uint8    unknown0264[2];   // ***Placeholder (Asiel: Has to do with Diety, will unwrap later)
-	/*0266*/ uint16   spellId0;         // SpellID of special effect
-	/*0268*/ uint16   classes;          // Classes that can use this item
-	/*0270*/ uint8    unknown0270[2];   // ***Placeholder
-	union
-	{
-		struct
-		{
-		/*0272*/ uint16   races;            // Races that can use this item
-		/*0274*/ sint8    unknown0274[2];   // ***Placeholder
-		/*0276*/ sint8    stackable;        //  1= stackable, 3 = normal, 0 = ? (not stackable)
-		} normal;
-	};
-	/*0277*/ uint8    level;            // Casting level
-	union // 0278 has different meanings depending on an stackable
-	{
-	/*0278*/ sint8    number;          // Number of items in stack
-	/*0278*/ int8    charges;         // Number of charges (-1 = unlimited)
-	};
-	/*0279*/ sint8    effecttype;      // 0=combat, 1=click anywhere w/o class check, 2=latent/worn, 3=click anywhere EXPENDABLE, 4=click worn, 5=click anywhere w/ class check, -1=no effect
-		 uint16   spellId;         // spellId of special effect
-		 uint8    unknown0282[10]; // ***Placeholder 0288
-		 uint32   casttime;        // Cast time of clicky item in miliseconds
-		 uint8    unknown0296[16]; // ***Placeholder
-		 uint16   skillModId;
-		 sint16   skillModPercent;
-		 sint16   BaneDMGRace;
-		 sint16   BaneDMGBody;
-			 // 1 Humanoid, 2 Lycanthrope, 3 Undead, 4 Giant, 5 Construct, 6 Extraplanar, 7 Magical
-		 uint8    BaneDMG;
-		 uint8    unknown0316[3];
-		 uint8    RecLevel;         // max should be 65
-		 uint8    RecSkill;         // Max should be 252
-		 uint8    unknown0325[2];
-		 uint8    ElemDmgType; 
-			// 1 Magic, 2 Fire, 3 Cold, 4 Poison, 5 Disease
-		 uint8    ElemDmg;
-		 uint8    unknown0330[22];
-		 uint8    ReqLevel; // Required level
-		 uint8    unknown0352[5];
-	/*0358*/ int16    focusspellId;
-	} common;
-	struct // Book Structure (flag == 0x7669)
-	{
-	/*0228*/ sint8    unknown0172[6];      // ***Placeholder
-	/*0234*/ char     file[15];            // Filename of book text on server
-	/*0249*/ sint8    unknown0190[15];    // ***Placeholder
-	} book;
-	struct // containers flag == 0x5400 or 0x5450
-	{
-		/*0228*/ sint8    unknown0212[41];     // ***Placeholder
-		/*0269*/ uint8    numSlots;        // number of slots in container
-		/*0270*/ sint8    unknown0214;     // ***Placeholder
-		/*0271*/ sint8    sizeCapacity;    // Maximum size item container can hold
-		/*0272*/ uint8    weightReduction; // % weight reduction of container
-		/*0273*/ uint8    unknown0273[3];     // ***Placeholder
-		} container;
-};
-	inline bool	IsNormal() const		{ return (bool) (type == 0x00); } // ie, not book, not bag
-	inline bool	IsBook() const			{ return (bool) (type == 0x02); }
-	inline bool	IsBag() const			{ return (bool) (type == 0x01); }
-	inline bool	IsStackable() const		{ return (bool) ((type == 0x00) && (common.normal.stackable == 1 || (common.effecttype == 0 && common.normal.stackable == 2))); }
-inline bool	IsEquipable(int16 race, int16 class_) const		{
-	 if (!this) { /*LogFile->write(EQEMuLog::Debug, "Database error: IsEquipable() called on null item.");*/ return false; }
-	 bool israce = false,isclass = false;
-	 if (type != 0x00 && equipableSlots == 0) {
-	   //LogFile->write(EQEMuLog::Debug, "IsEquipable() type != 0x00 && equipableSlots == 0");
-      return false;
-     }
-     else if (common.classes == 0) {
-	   //LogFile->write(EQEMuLog::Debug, "IsEquipable() common.classes == 0");
-         return false;
-     }
-     else if(common.classes == 32767 && common.normal.races == 32767){
-         return true;
-     }
-  else {
-     int16 classes_ = common.classes;
-     int16 races_ = common.normal.races;
-
-     if(common.classes == 32767) {
-	      isclass = true;
-     }
-     if(common.normal.races == 32767) {
-   	      israce = true;
-     }
-     for (int cur_class = 1; cur_class <= 15; cur_class++) {
-        if (classes_ % 2 == 1) {
-    	    if(cur_class == class_) {
-    	        isclass = true;
-	        }
-        }
-        classes_ = classes_/2;
-     }
-     for (int cur_race = 1; cur_race <= 14; cur_race++) {
-        if (races_ %2 == 1) {
-    	    if(cur_race == race) {
-    		    israce = true;
-   		    }
-        }
-        races_ = races_/2;
-     }
-  }
-  //LogFile->write(EQEMuLog::Debug, "IsEquipable(%i,%i) israce:%i:%i isclass:%i:%i", race, class_, israce,common.normal.races, isclass, common.classes);
-     if(israce && isclass)
-          return true;
-     else
-          return false;
-	}
-	inline bool	IsExpendable() const	{ return (bool) (common.skill == 21 || common.skill == 11); }
-	inline bool	IsGM() const			{ return (bool) (common.GMFlag == -1); }
-	inline bool	IsLore() const			{ return (bool) (strstr(lore, "*") != 0); }
-	inline bool	IsPendingLore() const	{ return (bool) (strstr(lore, "~") != 0); }
-	inline bool	IsArtifact() const		{ return (bool) (strstr(lore, "#") != 0); }
-	inline bool IsWeapon() const	{ return (bool) common.damage; }
-};
 
 /*struct DyeColorStruct{
 	int8	blue;

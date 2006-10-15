@@ -1,7 +1,24 @@
+/*  EQEMu:  Everquest Server Emulator
+    Copyright (C) 2001-2006  EQEMu Development Team (http://eqemulator.net)
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+  
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY except by those people which sell it, which
+	are required to give you total support for your newly bought product;
+	without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+	A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+	
+	  You should have received a copy of the GNU General Public License
+	  along with this program; if not, write to the Free Software
+	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+#include "../common/debug.h"
 #include <iostream>
 using namespace std;
 #include "../common/types.h"
-#include "../common/debug.h"
 #include "EMuShareMem.h"
 
 #ifdef WIN32
@@ -39,12 +56,14 @@ LoadEMuShareMemDLL::~LoadEMuShareMemDLL() {
 }
 
 bool LoadEMuShareMemDLL::Load() {
+	if(loaded)
+		return(true);
+	
 	if(!SharedLibrary::Load(EmuLibName))
 		return(false);
 	
 	if (Loaded()) {
 		Items.GetItem = (DLLFUNC_GetItem) GetSym("GetItem");
-		Items.GetItemSerialization = (DLLFUNC_GetItemSerialization) GetSym("GetItemSerialization");
 		Items.IterateItems = (DLLFUNC_IterateItems) GetSym("IterateItems");
 		Items.cbAddItem = (DLLFUNC_AddItem) GetSym("AddItem");
 		Items.DLLLoadItems = (DLLFUNC_DLLLoadItems) GetSym("DLLLoadItems");
@@ -66,19 +85,9 @@ bool LoadEMuShareMemDLL::Load() {
 		Opcodes.SetOpcodePair = (DLLFUNC_SetOpcodePair) GetSym("SetOpcodePair");
 		Opcodes.DLLLoadOpcodes = (DLLFUNC_DLLLoadOpcodes) GetSym("DLLLoadOpcodes");
 		Opcodes.ClearEQOpcodes = (DLLFUNC_ClearEQOpcodes) GetSym("ClearEQOpcodes");
-		GuildList.GetGuild = (DLLFUNC_GetGuild) GetSym("GetGuild");
-		GuildList.GetMaxGuildID = (DLLFUNC_GetMaxGuildID) GetSym("GetMaxGuildID");
-		GuildList.cbAddGuild = (DLLFUNC_AddGuild) GetSym("AddGuild");
-		GuildList.DLLLoadGuildList = (DLLFUNC_DLLLoadGuildList) GetSym("DLLLoadGuildList");
 		if(Items.GetItem == NULL) {
 			Unload();
 			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Items.GetItem");
-			return(false);
-		}
-
-		if(Items.GetItemSerialization == NULL) {
-			Unload();
-			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Items.GetItemSerialization");
 			return(false);
 		}
 
@@ -207,28 +216,9 @@ bool LoadEMuShareMemDLL::Load() {
 			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Opcodes.ClearEQOpcodes");
 			return(false);
 		}
-		if(GuildList.GetGuild == NULL) {
-			Unload();
-			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach GuildList.GetGuild");
-			return(false);
-		}
-		if(GuildList.GetMaxGuildID == NULL) {
-			Unload();
-			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach GuildList.GetMaxGuildID");
-			return(false);
-		}
-		if(GuildList.cbAddGuild == NULL) {
-			Unload();
-			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach GuildList.cbAddGuild");
-			return(false);
-		}
-		if(GuildList.DLLLoadGuildList == NULL) {
-			Unload();
-			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach GuildList.DLLLoadGuildList");
-			return(false);
-		}
 		
 		LogFile->write(EQEMuLog::Status, "%s loaded", EmuLibName);
+		loaded = true;
 		return true;
 	}
 	else {
@@ -244,7 +234,6 @@ void LoadEMuShareMemDLL::Unload() {
 
 void LoadEMuShareMemDLL::ClearFunc() {
 	Items.GetItem = 0;
-	Items.GetItemSerialization = 0;
 	Items.IterateItems = 0;
 	Items.cbAddItem = 0;
 	Items.DLLLoadItems = 0;
@@ -265,8 +254,5 @@ void LoadEMuShareMemDLL::ClearFunc() {
 	Opcodes.SetOpcodePair = NULL;
 	Opcodes.DLLLoadOpcodes = NULL;
 	Opcodes.ClearEQOpcodes = NULL;
-	GuildList.GetMaxGuildID = NULL;
-	GuildList.GetGuild = 0;
-	GuildList.cbAddGuild = 0;
-	GuildList.DLLLoadGuildList = 0;
+	loaded = false;
 }

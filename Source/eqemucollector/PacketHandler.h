@@ -6,7 +6,7 @@
 #include "../common/emu_opcodes.h"
 
 class EQStreamPair;
-class EQApplicationPacket;
+class EQRawApplicationPacket;
 
 class PacketHandler;
 
@@ -23,8 +23,8 @@ public:
 	the packet object, the windows DLL will need to statically link the
 	code for that additional functionality.
 */
-	virtual void ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *app) = 0;
-	virtual void ToServerPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *app) = 0;
+	virtual void ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *app) = 0;
+	virtual void ToServerPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *app) = 0;
 	
 	PacketHandlerDeleteMethod GetDeleteMethod() const { return(_delete_proc); }
 	
@@ -43,7 +43,7 @@ protected:
 //returns a PacketAcceptor object to attach to this stream, or NULL for none 
 typedef StreamPacketHandler *(*StreamCreateHandler)(EQStreamType, const EQStreamPair *sp);
 
-//typedef void (*PacketHandler)(const EQStreamPair *sp, const EQApplicationPacket *app);
+//typedef void (*PacketHandler)(const EQStreamPair *sp, const EQRawApplicationPacket *app);
 typedef void (*StreamDestroyHandler)(const EQStreamPair *sp);
 
 

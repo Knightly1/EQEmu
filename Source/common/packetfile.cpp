@@ -24,6 +24,55 @@ PacketFileWriter::PacketFileWriter(bool _force_flush) {
 PacketFileWriter::~PacketFileWriter() {
 	CloseFile();
 }
+
+bool PacketFileWriter::SetPacketStamp(const char *name, uint32 stamp) {
+	FILE *in;
+	in = fopen(name, "r+b");
+	if(in == NULL) {
+		fprintf(stderr, "Error opening packet file '%s': %s\n", name, strerror(errno));
+		return(false);
+	}
+	
+	unsigned long magic = 0;
+	
+	if(fread(&magic, sizeof(magic), 1, in) != 1) {
+		fprintf(stderr, "Error reading header from packet file: %s\n", strerror(errno));
+		fclose(in);
+		return(false);
+	}
+	
+	PacketFileReader *ret = NULL;
+	if(magic == OLD_PACKET_FILE_MAGIC) {
+		OldPacketFileHeader *pos = 0;
+		uint32 stamp_pos = (uint32) &pos->packet_file_stamp;
+		fseek(in, stamp_pos, SEEK_SET);
+		OldPacketFileHeader hdr;
+		hdr.packet_file_stamp = stamp;
+		if(fwrite(&hdr.packet_file_stamp, sizeof(hdr.packet_file_stamp), 1, in) != 1) {
+			fprintf(stderr, "Error writting to packet file: %s\n", strerror(errno));
+			fclose(in);
+			return(false);
+		}
+	} else if(magic == PACKET_FILE_MAGIC) {
+		PacketFileHeader *pos = 0;
+		uint32 stamp_pos = (uint32) &pos->packet_file_stamp;
+		fseek(in, stamp_pos, SEEK_SET);
+		PacketFileHeader hdr;
+		hdr.packet_file_stamp = stamp;
+		if(fwrite(&hdr.packet_file_stamp, sizeof(hdr.packet_file_stamp), 1, in) != 1) {
+			fprintf(stderr, "Error writting to packet file: %s\n", strerror(errno));
+			fclose(in);
+			return(false);
+		}
+	} else {
+		fprintf(stderr, "Unknown packet file type 0x%.8x\n", magic);
+		fclose(in);
+		return(false);
+	}
+	
+	fclose(in);
+	return(true);
+}
 	
 bool PacketFileWriter::OpenFile(const char *name) {
 	CloseFile();

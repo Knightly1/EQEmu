@@ -17,7 +17,7 @@ public:
 
 	void setdbparams( CString host, CString user, CString password, CString db );
 	void setgeneralparams( CString eqmaps_path, CString eqemumaps_path );
-	void setsqlparams( int useopt, int zoneid, int npcid, int spawnid, int gridid, bool sqldelete, bool usedb );
+//	void setsqlparams( int useopt, int zoneid, int npcid, int spawnid, int gridid, bool sqldelete, bool usedb );
 
 	// database
 	CString host;
@@ -26,13 +26,13 @@ public:
 	CString db;
 
 	// sql options
-	int useopt;
+/*	int useopt;
 	int zoneid;
 	int npcid;
 	int spawnid;
 	int gridid;
 	bool sqldelete;
-	bool usedb;
+	bool usedb;*/
 	
 	//general options
 	CString eqmaps_path;

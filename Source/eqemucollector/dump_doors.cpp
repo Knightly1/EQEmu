@@ -7,7 +7,7 @@
 using namespace std;
 void dump_message(unsigned char *buffer, unsigned long length, string leader);
 
-void HandleDoors(const EQStreamPair *sp, const EQApplicationPacket *p)
+void HandleDoors(const EQStreamPair *sp, const EQRawApplicationPacket *p)
 {
 	int count=p->size/sizeof(Door_Struct);
 	int i;

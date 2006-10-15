@@ -27,10 +27,14 @@
 
 #include "features.h"
 #ifdef EMBPERL_XS_CLASSES
-#include "embperl.h"
 #include "../common/debug.h"
+#include "embperl.h"
 
 #include "client.h"
+
+#ifdef THIS		/* this macro seems to leak out on some systems */
+#undef THIS
+#endif
 
 XS(XS_Client_SendSound); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_SendSound)
@@ -1387,58 +1391,6 @@ XS(XS_Client_UpdateWho)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_Client_GuildEQID); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_GuildEQID)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Client::GuildEQID(THIS)");
-	{
-		Client *		THIS;
-		int32		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GuildEQID();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Client_GuildDBID); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_GuildDBID)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Client::GuildDBID(THIS)");
-	{
-		Client *		THIS;
-		int32		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GuildDBID();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
 XS(XS_Client_GuildRank); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_GuildRank)
 {
@@ -1465,17 +1417,16 @@ XS(XS_Client_GuildRank)
 	XSRETURN(1);
 }
 
-XS(XS_Client_SetGuild); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_SetGuild)
+XS(XS_Client_GuildID); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_GuildID)
 {
 	dXSARGS;
-	if (items != 3)
-		Perl_croak(aTHX_ "Usage: Client::SetGuild(THIS, in_guilddbid, in_rank)");
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Client::GuildID(THIS)");
 	{
 		Client *		THIS;
-		bool		RETVAL;
-		int32		in_guilddbid = (int32)SvUV(ST(1));
-		int8		in_rank = (int8)SvUV(ST(2));
+		int32		RETVAL;
+		dXSTARG;
 
 		if (sv_derived_from(ST(0), "Client")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -1486,38 +1437,10 @@ XS(XS_Client_SetGuild)
 		if(THIS == NULL)
 			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
-		RETVAL = THIS->SetGuild(in_guilddbid, in_rank);
-		ST(0) = boolSV(RETVAL);
-		sv_2mortal(ST(0));
+		RETVAL = THIS->GuildID();
+		XSprePUSH; PUSHu((UV)RETVAL);
 	}
 	XSRETURN(1);
-}
-
-XS(XS_Client_GuildChangeRank); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_GuildChangeRank)
-{
-	dXSARGS;
-	if (items != 5)
-		Perl_croak(aTHX_ "Usage: Client::GuildChangeRank(THIS, name, guildid, oldrank, newrank)");
-	{
-		Client *		THIS;
-		char*		name = (char *)SvPV_nolen(ST(1));
-		int32		guildid = (int32)SvUV(ST(2));
-		int32		oldrank = (int32)SvUV(ST(3));
-		int32		newrank = (int32)SvUV(ST(4));
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->GuildChangeRank(name, guildid, oldrank, newrank);
-	}
-	XSRETURN_EMPTY;
 }
 
 XS(XS_Client_GetFace); /* prototype to pass -Wmissing-prototypes */
@@ -2658,6 +2581,31 @@ XS(XS_Client_SetStats)
 	XSRETURN_EMPTY;
 }
 
+XS(XS_Client_IncStats); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_IncStats)
+{
+	dXSARGS;
+	if (items != 3)
+		Perl_croak(aTHX_ "Usage: Client::IncStats(THIS, type, increase_val)");
+	{
+		Client *		THIS;
+		int8		type = (int8)SvUV(ST(1));
+		sint16		increase_val = (sint16)SvIV(ST(2));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->IncStats(type, increase_val);
+	}
+	XSRETURN_EMPTY;
+}
+
 XS(XS_Client_DropItem); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_DropItem)
 {
@@ -3223,6 +3171,161 @@ XS(XS_Client_GetCharacterFactionLevel)
 	XSRETURN(1);
 }
 
+XS(XS_Client_SetZoneFlag); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_SetZoneFlag)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Client::SetZoneFlag(THIS, zone_id)");
+	{
+		Client *		THIS;
+		uint32		zone_id = (uint32)SvUV(ST(1));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->SetZoneFlag(zone_id);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_Client_ClearZoneFlag); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_ClearZoneFlag)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Client::ClearZoneFlag(THIS, zone_id)");
+	{
+		Client *		THIS;
+		uint32		zone_id = (uint32)SvUV(ST(1));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->ClearZoneFlag(zone_id);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_Client_HasZoneFlag); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_HasZoneFlag)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Client::HasZoneFlag(THIS, zone_id)");
+	{
+		Client *		THIS;
+		bool		RETVAL;
+		uint32		zone_id = (uint32)SvUV(ST(1));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		RETVAL = THIS->HasZoneFlag(zone_id);
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Client_SendZoneFlagInfo); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_SendZoneFlagInfo)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Client::SendZoneFlagInfo(THIS, to)");
+	{
+		Client *		THIS;
+		Client *		to;
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		if (sv_derived_from(ST(1), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(1)));
+			to = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "to is not of type Client");
+		if(to == NULL)
+			Perl_croak(aTHX_ "to is NULL, avoiding crash.");
+
+		THIS->SendZoneFlagInfo(to);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_Client_LoadZoneFlags); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_LoadZoneFlags)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: Client::LoadZoneFlags(THIS)");
+	{
+		Client *		THIS;
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->LoadZoneFlags();
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_Client_SetAATitle); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_SetAATitle)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Client::SetAATitle(THIS, txt)");
+	{
+		Client *		THIS;
+		char *		txt = (char *)SvPV_nolen(ST(1));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->SetAATitle(txt);
+	}
+	XSRETURN_EMPTY;
+}
+
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -3235,7 +3338,7 @@ XS(boot_Client)
 	file[255] = 0;
 	
 	if(items != 1)
-		LogFile->write(EQEMuLog::Error, "boot_quest does not take any arguments.");
+		fprintf(stderr, "boot_quest does not take any arguments.");
 	char buf[128];
 
 	//add the strcpy stuff to get rid of const warnings....
@@ -3294,11 +3397,8 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "CharacterID"), XS_Client_CharacterID, file, "$");
 		newXSproto(strcpy(buf, "UpdateAdmin"), XS_Client_UpdateAdmin, file, "$;$");
 		newXSproto(strcpy(buf, "UpdateWho"), XS_Client_UpdateWho, file, "$;$");
-		newXSproto(strcpy(buf, "GuildEQID"), XS_Client_GuildEQID, file, "$");
-		newXSproto(strcpy(buf, "GuildDBID"), XS_Client_GuildDBID, file, "$");
 		newXSproto(strcpy(buf, "GuildRank"), XS_Client_GuildRank, file, "$");
-		newXSproto(strcpy(buf, "SetGuild"), XS_Client_SetGuild, file, "$$$");
-		newXSproto(strcpy(buf, "GuildChangeRank"), XS_Client_GuildChangeRank, file, "$$$$$");
+		newXSproto(strcpy(buf, "GuildID"), XS_Client_GuildID, file, "$");
 		newXSproto(strcpy(buf, "GetFace"), XS_Client_GetFace, file, "$");
 		newXSproto(strcpy(buf, "TakeMoneyFromPP"), XS_Client_TakeMoneyFromPP, file, "$$");
 		newXSproto(strcpy(buf, "AddMoneyToPP"), XS_Client_AddMoneyToPP, file, "$$$$$$");
@@ -3341,6 +3441,7 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "DeleteItemInInventory"), XS_Client_DeleteItemInInventory, file, "$$;$$");
 		newXSproto(strcpy(buf, "SummonItem"), XS_Client_SummonItem, file, "$$;$");
 		newXSproto(strcpy(buf, "SetStats"), XS_Client_SetStats, file, "$$$");
+		newXSproto(strcpy(buf, "IncStats"), XS_Client_IncStats, file, "$$$");
 		newXSproto(strcpy(buf, "DropItem"), XS_Client_DropItem, file, "$$");
 		newXSproto(strcpy(buf, "BreakInvis"), XS_Client_BreakInvis, file, "$");
 		newXSproto(strcpy(buf, "GetGroup"), XS_Client_GetGroup, file, "$");
@@ -3362,6 +3463,12 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "UseDiscipline"), XS_Client_UseDiscipline, file, "$$$");
 		newXSproto(strcpy(buf, "SetLanguageSkill"), XS_Client_SetLanguageSkill, file, "$$$");
 		newXSproto(strcpy(buf, "GetCharacterFactionLevel"), XS_Client_GetCharacterFactionLevel, file, "$$");
+		newXSproto(strcpy(buf, "SetZoneFlag"), XS_Client_SetZoneFlag, file, "$$");
+		newXSproto(strcpy(buf, "ClearZoneFlag"), XS_Client_ClearZoneFlag, file, "$$");
+		newXSproto(strcpy(buf, "HasZoneFlag"), XS_Client_HasZoneFlag, file, "$$");
+		newXSproto(strcpy(buf, "SendZoneFlagInfo"), XS_Client_SendZoneFlagInfo, file, "$$");
+		newXSproto(strcpy(buf, "LoadZoneFlags"), XS_Client_LoadZoneFlags, file, "$");
+		newXSproto(strcpy(buf, "SetAATitle"), XS_Client_SetAATitle, file, "$$");
 	XSRETURN_YES;
 }
 

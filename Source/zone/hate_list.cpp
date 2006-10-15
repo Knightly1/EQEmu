@@ -175,6 +175,7 @@ void HateList::Add(Mob *ent, sint32 in_hate, sint32 in_dam, bool bFrenzy, bool i
 
 bool HateList::RemoveEnt(Mob *ent)
 {
+	bool found = false;
     LinkedListIterator<tHateEntry*> iterator(list);
     iterator.Reset();
 	while(iterator.MoreElements())
@@ -182,11 +183,12 @@ bool HateList::RemoveEnt(Mob *ent)
         if (iterator.GetData()->ent == ent)
         {
             iterator.RemoveCurrent();
+			found = true;
         }
         else
             iterator.Advance();
     }
-    return false;
+    return found;
 }
 
 void HateList::DoFactionHits(sint32 nfl_id) {
@@ -204,7 +206,7 @@ void HateList::DoFactionHits(sint32 nfl_id) {
             p = NULL;
 
         if (p)
-			p->SetFactionLevel(p->CharacterID(), nfl_id, p->GetClass(), p->GetRace(), p->GetDeity());
+			p->SetFactionLevel(p->CharacterID(), nfl_id, p->GetBaseClass(), p->GetBaseRace(), p->GetDeity());
         iterator.Advance();
     }
 }

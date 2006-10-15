@@ -27,10 +27,15 @@
 
 #include "features.h"
 #ifdef EMBPERL_XS_CLASSES
-#include "embperl.h"
 #include "../common/debug.h"
+#include "embperl.h"
 
 #include "groups.h"
+
+#ifdef THIS	 /* this macro seems to leak out on some systems */
+#undef THIS		
+#endif
+
 
 XS(XS_Group_DisbandGroup); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Group_DisbandGroup)
@@ -570,7 +575,7 @@ XS(boot_Group)
 	file[255] = 0;
 	
 	if(items != 1)
-		LogFile->write(EQEMuLog::Error, "boot_quest does not take any arguments.");
+		fprintf(stderr, "boot_quest does not take any arguments.");
 	char buf[128];
 
 	//add the strcpy stuff to get rid of const warnings....

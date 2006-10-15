@@ -16,11 +16,6 @@ struct MMFItems_Struct {
 	Item_Struct	Items[0];
 };
 
-struct MMFItemsSerialization_Struct {
-	uint32		SerializationOffset[MMF_EQMAX_ITEMS+1];
-	uint32		NextSerializationOffset;
-	unsigned char 	Serializations[0];
-};
 //#define MMF_MAX_ITEMS_MEMSIZE	sizeof(MMFItems_Struct) + 256
 
 

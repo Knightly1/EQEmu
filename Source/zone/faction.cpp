@@ -25,12 +25,13 @@ using namespace std;
 	#include <pthread.h>
 #endif
 #include "faction.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "masterentity.h"
 #include "zone.h"
+#include "../common/MiscFunctions.h"
 
 extern Zone* zone;
-extern Database database;
+
 
 #ifdef WIN32
 	#define snprintf	_snprintf
@@ -263,6 +264,32 @@ bool NPC::IsFactionListAlly(uint32 other_faction) {
 	return(CheckNPCFactionAlly(other_faction) == FACTION_ALLY);
 }
 
+// EverHood - Faction Mods for Alliance type spells
+void Mob::AddFactionBonus(uint32 pFactionID,sint32 bonus) {
+    map <uint32, sint32> :: const_iterator faction_bonus;
+	typedef std::pair <uint32, sint32> NewFactionBonus;
+
+	faction_bonus = faction_bonuses.find(pFactionID);
+	if(faction_bonus == faction_bonuses.end()){
+		faction_bonuses.insert(NewFactionBonus(pFactionID,bonus));
+	}else{
+		if(faction_bonus->second<bonus){
+			faction_bonuses.erase(pFactionID);
+			faction_bonuses.insert(NewFactionBonus(pFactionID,bonus));
+		}
+	}
+}
+
+sint32 Mob::GetFactionBonus(uint32 pFactionID) {
+    map <uint32, sint32> :: const_iterator faction_bonus;
+	faction_bonus = faction_bonuses.find(pFactionID);
+	if(faction_bonus != faction_bonuses.end()){
+			return (*faction_bonus).second;
+	}
+	return 0;
+}
+
+
 FACTION_VALUE Mob::GetSpecialFactionCon(Mob* iOther) {
 #if FACTIONS_DEBUG >= 5
 	LogFile->write(EQEMuLog::Debug, "called $s::GetSpecialFactionCon(%s)", GetName(), iOther->GetName());
@@ -430,6 +457,8 @@ FACTION_VALUE Client::GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race,
 		{
 			//Get the players current faction with pFaction
 			tmpFactionValue = GetCharacterFactionLevel(pFaction);
+			// Everhood - tack on any bonuses from Alliance type spell effects
+			tmpFactionValue += GetFactionBonus(pFaction);
 			//Return the faction to the client
 			fac = CalculateFaction(&fmods, tmpFactionValue);
 			//Message(0,"Faction: %i %i %i %i",fmods.base,fmods.class_mod,fmods.race_mod,fmods.deity_mod);
@@ -490,6 +519,8 @@ void  Client::SetFactionLevel(int32 char_id, int32 npc_id, int8 char_class, int8
 	_ZP(Client_SetFactionLevel);
 	sint32 faction_id[MAX_NPC_FACTIONS]={ 0,0,0,0,0,0,0,0,0,0 };
 	sint32 npc_value[MAX_NPC_FACTIONS]={ 0,0,0,0,0,0,0,0,0,0 };
+	sint32 mod;
+	sint32 t;
 	sint32 tmpValue;
 	sint32 current_value;
 	FactionMods fm;
@@ -505,10 +536,17 @@ void  Client::SetFactionLevel(int32 char_id, int32 npc_id, int8 char_class, int8
 		if(database.GetFactionData(&fm,char_class,char_race,char_deity,faction_id[i]))
 		{
 			// Get the characters current value with that faction
-			current_value = GetCharacterFactionLevel(faction_id[i]) + npc_value[i];
+			current_value = GetCharacterFactionLevel(faction_id[i]);
+			
+			//figure out their modifier
+			mod = fm.base + fm.class_mod + fm.race_mod + fm.deity_mod;
+			if(mod > MAX_FACTION)
+				mod = MAX_FACTION;
+			else if(mod < MIN_FACTION)
+				mod = MIN_FACTION;
 			
 			// Calculate the faction
-			tmpValue = current_value + fm.base + fm.class_mod + fm.race_mod + fm.deity_mod;
+			tmpValue = current_value + mod + npc_value[i];
 			
 			// Make sure faction hits don't go to GMs...
 			if (m_pp.gm==1 && (tmpValue < current_value)) {
@@ -518,21 +556,27 @@ void  Client::SetFactionLevel(int32 char_id, int32 npc_id, int8 char_class, int8
 			// Make sure we dont go over the min/max faction limits
 			if(tmpValue >= MAX_FACTION)
 			{
-				if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], MAX_FACTION,&factionvalue_list)))
+				t = MAX_FACTION - mod;
+				if(current_value == t) {
+					//do nothing, it is already maxed out
+				} else if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], t, factionvalues)))
 				{
 					return;
 				}
 			}
 			else if(tmpValue <= MIN_FACTION)
 			{
-				if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], MIN_FACTION,&factionvalue_list)))
+				t = MIN_FACTION - mod;
+				if(current_value == t) {
+					//do nothing, it is already maxed out
+				} else if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], t, factionvalues)))
 				{
 					return;
 				}
 			}
 			else
 			{
-				if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], current_value,&factionvalue_list)))
+				if(!(database.SetCharacterFactionLevel(char_id, faction_id[i], current_value, factionvalues)))
 				{
 					return;
 				}
@@ -559,7 +603,7 @@ void  Client::SetFactionLevel2(int32 char_id, sint32 faction_id, int8 char_class
 	if(faction_id > 0) {
 		//Get the faction modifiers
 		current_value = GetCharacterFactionLevel(faction_id) + value;
-		if(!(database.SetCharacterFactionLevel(char_id, faction_id, current_value,&factionvalue_list)))
+		if(!(database.SetCharacterFactionLevel(char_id, faction_id, current_value, factionvalues)))
 			return;
 		
 		char* msg = BuildFactionMessage(value, faction_id, current_value);
@@ -575,21 +619,14 @@ sint32 Client::GetCharacterFactionLevel(sint32 faction_id)
 {
 	if (faction_id <= 0)
 		return 0;
-	LinkedListIterator<FactionValue*> iterator(factionvalue_list);	
-	iterator.Reset();
-	while(iterator.MoreElements())
-	{
-		if ((sint32)(iterator.GetData()->factionID) == faction_id)
-		{
-			return iterator.GetData()->value;
-		}
-		iterator.Advance();
-	}
-	return 0;
-	cout << "error in GetCharacterFactionLevel" << endl;
+	faction_map::iterator res;
+	res = factionvalues.find(faction_id);
+	if(res == factionvalues.end())
+		return(0);
+	return(res->second);
 }
 
-bool Database::GetFactionData(FactionMods* fm, uint32 class_mod, uint32 race_mod, uint32 deity_mod, sint32 faction_id) {
+bool ZoneDatabase::GetFactionData(FactionMods* fm, uint32 class_mod, uint32 race_mod, uint32 deity_mod, sint32 faction_id) {
 	if (faction_id <= 0 || faction_id > (sint32) max_faction)
 		return false;	
 	uint32 modr_tmp =0;
@@ -628,21 +665,21 @@ bool Database::GetFactionData(FactionMods* fm, uint32 class_mod, uint32 race_mod
 	if ((class_mod-1) < (sizeof(faction_array[faction_id]->mod_c) / sizeof(faction_array[faction_id]->mod_c[0])))
 		fm->class_mod = faction_array[faction_id]->mod_c[class_mod-1];
 	else {
-//		LogFile->write(EQEMuLog::Error, "Error in Database::GetFactionData: class_mod-1[=%i] out of range", class_mod-1);
+//		LogFile->write(EQEMuLog::Error, "Error in ZoneDatabase::GetFactionData: class_mod-1[=%i] out of range", class_mod-1);
 		fm->class_mod = 0;
 		//return false;
 	}
 	if ((modr_tmp) < (sizeof(faction_array[faction_id]->mod_r) / sizeof(faction_array[faction_id]->mod_r[0])))
 		fm->race_mod = faction_array[faction_id]->mod_r[modr_tmp];
 	else {
-//		LogFile->write(EQEMuLog::Error, "Error in Database::GetFactionData: modr_tmp[=%i] out of range (race_mod=%i)", modr_tmp, race_mod);
+//		LogFile->write(EQEMuLog::Error, "Error in ZoneDatabase::GetFactionData: modr_tmp[=%i] out of range (race_mod=%i)", modr_tmp, race_mod);
 		fm->race_mod = 0;
 		//return false;
 	}
 	if ((modd_tmp) < (sizeof(faction_array[faction_id]->mod_d) / sizeof(faction_array[faction_id]->mod_d[0])))
 		fm->deity_mod = faction_array[faction_id]->mod_d[modd_tmp];
 	else {
-//		LogFile->write(EQEMuLog::Error, "Error in Database::GetFactionData: modd_tmp[=%i] out of range (deity_mod=%i)", modd_tmp, deity_mod);
+//		LogFile->write(EQEMuLog::Error, "Error in ZoneDatabase::GetFactionData: modd_tmp[=%i] out of range (deity_mod=%i)", modd_tmp, deity_mod);
 		fm->deity_mod = 0;
 		//return false;
 	}
@@ -653,7 +690,7 @@ bool Database::GetFactionData(FactionMods* fm, uint32 class_mod, uint32 race_mod
 }
 
 
-bool Database::LoadFactionValues(int32 char_id, LinkedList<FactionValue*>* val_list) {
+bool ZoneDatabase::LoadFactionValues(int32 char_id, faction_map & val_list) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -670,13 +707,10 @@ bool Database::LoadFactionValues(int32 char_id, LinkedList<FactionValue*>* val_l
 	return false;
 }
 
-bool Database::LoadFactionValues_result(MYSQL_RES* result, LinkedList<FactionValue*>* val_list) {
+bool ZoneDatabase::LoadFactionValues_result(MYSQL_RES* result, faction_map & val_list) {
     MYSQL_ROW row;
 	while((row = mysql_fetch_row(result))) {
-		FactionValue* facval = new FactionValue;
-		facval->factionID = atoi(row[0]);
-		facval->value = atoi(row[1]);
-		val_list->Insert(facval);
+		val_list[atoi(row[0])] = atoi(row[1]);
 	}
 	return true;
 }
@@ -736,7 +770,7 @@ some day.
 //| Notes: Retrieves the name of the specified faction
 //|        Returns false on failure.
 //o--------------------------------------------------------------
-bool Database::GetFactionName(sint32 faction_id, char* name, int32 buflen) {
+bool ZoneDatabase::GetFactionName(sint32 faction_id, char* name, int32 buflen) {
 	if ((faction_id <= 0) || faction_id > sint32(max_faction) ||(faction_array[faction_id] == 0))
 		return false;
 	if (faction_array[faction_id]->name[0] != 0) {
@@ -755,13 +789,13 @@ bool Database::GetFactionName(sint32 faction_id, char* name, int32 buflen) {
 //|          the npc_id.
 //|          Returns false on failure.
 //o--------------------------------------------------------------
-bool Database::GetNPCFactionList(int32 npcfaction_id, sint32* faction_id, sint32* value, sint32* primary_faction) {
+bool ZoneDatabase::GetNPCFactionList(uint32 npcfaction_id, sint32* faction_id, sint32* value, sint32* primary_faction) {
 	if (npcfaction_id <= 0) {
 		if (primary_faction)
 			*primary_faction = npcfaction_id;
 		return true;
 	}
-	const NPCFactionList* nfl = database.GetNPCFactionList(npcfaction_id);
+	const NPCFactionList* nfl = GetNPCFactionEntry(npcfaction_id);
 	if (!nfl)
 		return false;
 	if (primary_faction)
@@ -771,35 +805,6 @@ bool Database::GetNPCFactionList(int32 npcfaction_id, sint32* faction_id, sint32
 		value[i] = nfl->factionvalue[i];
 	}
 	return true;
-/*	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-
-	int i = 0;
-
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT faction_id, value FROM npc_faction WHERE npc_id = %i", npc_id), errbuf, &result)) {
-		delete[] query;
-		while ((row = mysql_fetch_row(result)))
-		{
-			faction_id[i] = atoi(row[0]);
-			value[i] = atoi(row[1]);
-			i++;
-			if (i >= MAX_NPC_FACTIONS) {
-				cerr << "Error in GetNPCFactionList: More than MAX_NPC_FACTIONS factions returned" << endl;
-				break;
-			}
-		}
-		mysql_free_result(result);
-		return true;
-	}
-	else
-	{
-		cerr << "Error in GetNPCFactionList query '" << query << "' " << errbuf << endl;
-		delete[] query;
-	}
-	return false;
-*/
 }
 
 //o--------------------------------------------------------------
@@ -809,19 +814,23 @@ bool Database::GetNPCFactionList(int32 npcfaction_id, sint32* faction_id, sint32
 //|          faction_id to specified value.
 //|          Returns false on failure.
 //o--------------------------------------------------------------
-bool Database::SetCharacterFactionLevel(int32 char_id, sint32 faction_id, sint32 value,LinkedList<FactionValue*>* val_list)
+bool ZoneDatabase::SetCharacterFactionLevel(int32 char_id, sint32 faction_id, sint32 value, faction_map &val_list)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	int32 affected_rows = 0;
 	
-	if (!RunQuery(query, MakeAnyLenString(&query, "DELETE FROM faction_values WHERE char_id=%i AND faction_id = %i", char_id, faction_id), errbuf)) {
+	if (!RunQuery(query, MakeAnyLenString(&query, 
+		"DELETE FROM faction_values WHERE char_id=%i AND faction_id = %i", 
+		char_id, faction_id), errbuf)) {
 		cerr << "Error in SetCharacterFactionLevel query '" << query << "' " << errbuf << endl;
 		safe_delete_array(query);
 		return false;
 	}
 	
-	if (!RunQuery(query, MakeAnyLenString(&query, "INSERT INTO faction_values (char_id,faction_id,current_value) VALUES (%i,%i,%i)", char_id, faction_id,value), errbuf, 0, &affected_rows)) {
+	if (!RunQuery(query, MakeAnyLenString(&query, 
+		"INSERT INTO faction_values (char_id,faction_id,current_value) VALUES (%i,%i,%i)", 
+		char_id, faction_id,value), errbuf, 0, &affected_rows)) {
 		cerr << "Error in SetCharacterFactionLevel query '" << query << "' " << errbuf << endl;
 		safe_delete_array(query);
 		return false;
@@ -834,25 +843,11 @@ bool Database::SetCharacterFactionLevel(int32 char_id, sint32 faction_id, sint32
 		return false;
 	}
 	
-	LinkedListIterator<FactionValue*> iterator(*val_list);	
-	iterator.Reset();
-	while(iterator.MoreElements())
-	{
-		if ((sint32)(iterator.GetData()->factionID) == faction_id)
-		{
-			iterator.GetData()->value = value;
-			return true;
-		}
-		iterator.Advance();
-	}
-	FactionValue* facval = new FactionValue;
-	facval->factionID = faction_id;
-	facval->value = value;
-	val_list->Insert(facval);	
-	return true;
+	val_list[faction_id] = value;
+	return(true);
 }
 
-bool Database::LoadFactionData()
+bool ZoneDatabase::LoadFactionData()
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
@@ -871,7 +866,7 @@ bool Database::LoadFactionData()
 			faction_array = new Faction*[max_faction+1];
 			for(unsigned int i=0; i<max_faction; i++)
 			{
-				faction_array[i] = 0;
+				faction_array[i] = NULL;
 			}
 			mysql_free_result(result);
 			
@@ -917,7 +912,7 @@ bool Database::LoadFactionData()
 	return true;
 }
 
-bool Database::GetFactionIdsForNPC(sint32 nfl_id, list<struct NPCFaction*> *faction_list, sint32* primary_faction) {
+bool ZoneDatabase::GetFactionIdsForNPC(uint32 nfl_id, list<struct NPCFaction*> *faction_list, sint32* primary_faction) {
 	if (nfl_id <= 0) {
 		list<struct NPCFaction*>::iterator cur,end;
 		cur = faction_list->begin();
@@ -932,7 +927,7 @@ bool Database::GetFactionIdsForNPC(sint32 nfl_id, list<struct NPCFaction*> *fact
 			*primary_faction = nfl_id;
 		return true;
 	}
-	const NPCFactionList* nfl = GetNPCFactionList(nfl_id);
+	const NPCFactionList* nfl = GetNPCFactionEntry(nfl_id);
 	if (!nfl)
 		return false;
 	if (primary_faction)
@@ -962,36 +957,5 @@ bool Database::GetFactionIdsForNPC(sint32 nfl_id, list<struct NPCFaction*> *fact
 		}
 	}
 	return true;
-/*	char errbuf[MYSQL_ERRMSG_SIZE];
-	char *query = 0;
-	MYSQL_RES *result; 
-	MYSQL_ROW row; 
-	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT faction_id, value, primary_faction FROM npc_faction WHERE npc_id=%d", npc_id), errbuf, &result)) 
-	{ 
-		delete [] query; 
-		
-		while ((row = mysql_fetch_row(result))) 
-		{ 
-			struct NPCFaction *pFac; 
-			
-			pFac = new struct NPCFaction; 
-			pFac->factionID = atoi(row[0]); 
-			pFac->value_mod = atoi(row[1]); 
-			if (atoi(row[2]) == 1) 
-				pFac->primary = true; 
-			else 
-				pFac->primary = false; 
-			faction_list->Insert(pFac); 
-		} 
-		mysql_free_result(result);
-		return true; 
-	} 
-	else 
-	{ 
-		cerr << "Error in Database::GetFactionIdsForNPC query '" << query << "' " << errbuf << endl; 
-		safe_delete_array(query); 
-	} 
-	return false; */
 }
 

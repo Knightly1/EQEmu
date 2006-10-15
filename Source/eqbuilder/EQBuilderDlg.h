@@ -1,5 +1,6 @@
 // EQBuilderDlg.h : header file
 //
+#pragma warning(disable:4786)
 #include <afxtempl.h>
 #include <afxdlgs.h>
 #include <afxcmn.h>
@@ -10,6 +11,7 @@
 #include "ZoneViewer.h"
 #include "../common/buildfile.h"
 #include "BrowseForFolder.h"
+#include "IDGenSet.h"
 
 #if !defined(AFX_EQBUILDERDLG_H__1E1249E5_39BC_4670_9353_17544F903F7F__INCLUDED_)
 #define AFX_EQBUILDERDLG_H__1E1249E5_39BC_4670_9353_17544F903F7F__INCLUDED_
@@ -28,6 +30,8 @@ struct filtre_struct {
 	float coord_error;
 	float camp_range;
 	float deltaz;
+	float path_error;
+	float fixedmerge_error;
 	int affirm;		//bonus probability when a mob is re-affirmed by another log
 
 };
@@ -68,6 +72,7 @@ public:
 // Dialog Data
 	//{{AFX_DATA(CEQBuilderDlg)
 	enum { IDD = IDD_EQBUILDER_DIALOG };
+	CEdit	m_progressText;
 	//}}AFX_DATA
 
 	// ClassWizard generated virtual function overrides
@@ -91,7 +96,8 @@ protected:
 	CMenu* m_pMenu;
 
 	// database
-	database *db;
+	database db_real;
+	database *db;	//points to db_real
 	DBConnect* dbconnectdlg;
 
 	// output options
@@ -102,11 +108,9 @@ protected:
 	int readresult;
 
 	// ids
-	int idmulti;
-	int gridstartid;
-	int npcstartid;
-	int npcid;
-	bool usezoneid;
+//	int npcstartid;
+//	int npcid;
+//	bool usezoneid;
 	
 	// zones
 	int zoneid;
@@ -220,6 +224,7 @@ protected:
 	void doMerchantItem(const PF_MerchantItem *it);
 
 	// scores
+	float buildpos;
 	int nbdoors();
 	int nbteleports();
 	int nbmobs();
@@ -239,6 +244,9 @@ protected:
 	void ResetScores();
 	void CountMerchants(int &msets, int &mcount);
 
+	//ID sources
+	IDGenSet m_ids;
+
 	//db loading
 	CButton* bLoadDBButton;
 
@@ -257,12 +265,12 @@ protected:
 	// npcs
 	npc_list* listNPCs;
 	void getNPCData();
-	cnpc *isNPCDejaSauve( cnpc* npc );	//do we allready have this npc?
+	cnpc *isNPCDejaSauve( const cnpc* npc );	//do we allready have this npc?
 	int getNPCid( cnpc* npc );
 	bool isMerchant ( CString cle );
-	bool isSameNPC( cnpc* npc1, cnpc* npc2 );
+	bool isSameNPC( const cnpc* npc1, const cnpc* npc2 );
 	CString getClassName(int id);
-	void processNPCData(cmob *mob, IntArray* usednpcids);
+	void processNPCData(const cmob *mob);
 	
 	// merchants
 	merchant_list *listShops;
@@ -277,21 +285,26 @@ protected:
 	bool IsValidSpawn( cmob* mob );
 //	void CreateSpawns();
 	void splitSpawnData();
-	spawn_list *CleanSpawnList(spawn_list *from, int &spawnid);
+	void splitSpawnList(const mob_list *list, int ci, int compcount, logType type);
+	spawn_list *CleanSpawnList(spawn_list *from);
 	//-------
 	//used by splitSpawnData for roaming mobs:
 	void updateSpawnPoint( cspawn *spawn, cmob* mob, bool addspawn, logType typelog );
 	cspawn *getSpawnPoint( spawn_list* list, cmob* mob, LocDifference &diff );
+	cspawn *getSpawnPointContaining( spawn_list *list, cmob* mob, LocDifference &diff );
 	int getSpawnProbability( cspawn* spawn, logType typelog );
 	void AddNewSpawn(spawn_list *list, cmob *mob, logType log_type, bool calc_prob);
 	void cleanMobMovement(cmob *mob);
+	void JoinFixedMobs();
+	void JoinPathingMobs();
 	//--------
 	//mob clustering stuff
 	void clusterFixedMobs();
 	float MobDistance(cmob *left, cmob *right);
 	float SpawnDistance(cmob *left, cspawn *right);
 	bool WillMergeSpawns(cspawn *left, cspawn *right);
-
+	bool spawnContainsLoc(cspawn *spawn, const cloc *loc);
+	
 
 	// filters
 	CEdit* eAroundEdit;
@@ -311,22 +324,30 @@ protected:
 	CButton* bCampCheck;
 	CEdit* eDeltazEdit;
 	CButton* bDeltazCheck;
+	CEdit* ePathingErrEdit;
+	CButton* bPathingErrCheck;
+	CEdit* eFixedMergeErrEdit;
+	CButton* bFixedMergeErrCheck;
 	filtre_struct filtres;
 
 	// movements
 	grid_list* listGrids;
 	bool isMovingAtInit( cmob* mob );
-	void getGridData(spawn_list *spawns);
+	void extractGridData();
+	void buildGridList();
 	cgrid* getGrid( cmob* mob );
 	int getGridIndex( cgrid* grid );
 //	bool isInGrid( cspawn* spawn, int &gridid, int &wpindex );
-	LocDifference isSameLoc( const cloc* loc1, const cloc* loc2 );
+	LocDifference isSameLoc( const cloc* loc1, const cloc* loc2 ) const;
+	bool isSameLoc( const cloc* loc1, const cloc* loc2, const float err2 ) const;
 	static bool isSameCoord( const cloc* loc1, const cloc* loc2 );
 	static bool arePointsColinear(const cloc *pt1, const cloc *pt2, const cloc *pt3);
+	bool pointCloseToLine( const cloc *Point, const cloc *LineStart, const cloc *LineEnd, float threshold2) const;
 
 
 	// memoire
 	void ReleaseMemory();
+	void ClearBuildResults();
 
 	// Generated message map functions
 	//{{AFX_MSG(CEQBuilderDlg)
@@ -390,6 +411,13 @@ protected:
 	afx_msg void OnCompileAllButton();
 	afx_msg void OnCloseupZoneCombo();
 	afx_msg void OnGoButton();
+	afx_msg void OnSaveIds();
+	afx_msg void OnResetIds();
+	afx_msg void OnLoadIds();
+	afx_msg void OnFixedMerge();
+	afx_msg void OnPathingMerge();
+	afx_msg void OnChangeFixedMergeEdit();
+	afx_msg void OnChangePathMergeEdit();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

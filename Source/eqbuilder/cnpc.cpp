@@ -21,7 +21,7 @@ cnpc::cnpc()
 {
 
 	this->db = false;
-	this->id = 0;
+	this->db_id = 0;
 	this->nom = "";
 	this->level = 0;
 	this->gender = 0;
@@ -47,12 +47,13 @@ cnpc::cnpc()
 
 }
 
-cnpc::cnpc( cnpc* npc )
+cnpc::cnpc( const cnpc* npc )
 {
 
 	this->db = npc->db;
-	this->id = npc->id;
+	this->db_id = npc->db_id;
 	this->nom = npc->nom;
+	this->last_name = npc->last_name;
 	this->level = npc->level;
 	this->gender = npc->gender;
 	this->size = npc->size;
@@ -88,14 +89,14 @@ cnpc::~cnpc()
 }
 
 
-bool cnpc::IsSameAs(const cnpc *npc2) const {
+bool cnpc::IsSameAs(const cnpc *npc2, bool compare_level) const {
 	const cnpc *npc1 = this;
 
-	if(npc1->id != 0 && npc1->id == npc2->id)
+	if(npc1->db_id != 0 && npc1->db_id == npc2->db_id)
 		return(true);
 	
 	return ( npc1->race == npc2->race )
-		&& ( npc1->level == npc2->level )
+		&& ( !compare_level || npc1->level == npc2->level )
 		&& ( npc1->gender == npc2->gender )
 		&& ( npc1->classe == npc2->classe )
 		&& ( abs(npc1->size - npc2->size) < 0.1 )
@@ -104,7 +105,7 @@ bool cnpc::IsSameAs(const cnpc *npc2) const {
 //		&& ( npc1->helmtexture == npc2->helmtexture )		//disabled because older logs have unreliable helm entries
 		&& ( abs(npc1->walkspeed - npc2->walkspeed) < 0.1 )
 		&& ( abs(npc1->runspeed - npc2->runspeed) < 0.1 )
-		&& ( npc1->nom == npc2->nom )
+		&& ( npc1->nom.CompareNoCase(npc2->nom) == 0 )
 		;
 }
 

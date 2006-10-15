@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "StreamPairManager.h"
 #include "EQStreamPair.h"
+#include "../common/opcodemgr.h"
 #ifndef WIN32
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -10,13 +11,15 @@
 using namespace std;
 
 StreamPairManager::StreamPairManager(bool be_quiet)
-: Timeoutable(CONNECTION_TIMEOUT/3)	//kinda arbitrary
+: Timeoutable(CONNECTION_TIMEOUT/3),	//kinda arbitrary
+  m_OpcodeManager(NULL)
 {
 	quiet = be_quiet;
 }
 
 	
 StreamPairManager::~StreamPairManager() {
+	delete m_OpcodeManager;
 }
 	
 void StreamPairManager::CloseAll() {
@@ -65,7 +68,7 @@ void StreamPairManager::Process(uint32 sip, uint16 sport, uint32 dip, uint16 dpo
 		}
 		
 		//new stream pair
-		spair = new EQStreamPair(quiet);
+		spair = new EQStreamPair(quiet, &m_OpcodeManager);
 
 /*string sips = inet_ntoa(*((struct in_addr *)&sip));
 string dips = inet_ntoa(*((struct in_addr *)&dip));
@@ -128,7 +131,18 @@ void StreamPairManager::RemovePair(EQStreamPair *p) {
 	
 	safe_delete(p);
 }
-	
+
+bool StreamPairManager::LoadOpcodes(const char *opcode_mgr) {
+	if(m_OpcodeManager != NULL)
+		delete m_OpcodeManager;
+	m_OpcodeManager = new RegularOpcodeManager();
+	if(!m_OpcodeManager->LoadOpcodes("opcodes.conf")) {
+		delete m_OpcodeManager;
+		m_OpcodeManager = new NullOpcodeManager();
+		return(false);
+	}
+	return(true);
+}
 
 
 

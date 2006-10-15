@@ -6,6 +6,9 @@ else
 	CC=gcc
 endif
 
+OUT=-o 
+LINKOUT=-o 
+NOLINK=-c
 LINKER=gcc
 MYSQL_FLAGS=-I/usr/include/mysql
 MYSQL_LIB=-L/usr/lib/mysql -L/usr/lib64/mysql -L/usr/lib64 -lmysqlclient -lz -lcrypt -lnsl -lm -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv
@@ -14,9 +17,9 @@ DFLAGS=-DEQDEBUG=5 -DCATCH_CRASH -DNO_PIDLOG -DSHAREMEM -DSPELL_EFFECT_SPAM -DFI
 PERL_FLAGS=perl -MExtUtils::Embed -e ccopts
 PERL_LIB=perl -MExtUtils::Embed -e ldopts
 DFLAGS+=-DEMBPERL -DEMBPERL_PLUGIN -DHAS_UNION_SEMUN
-WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual -Wno-deprecated  -Wcomment -Wcast-align
+WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual -Wno-deprecated  -Wcomment -Wcast-align -I../common/SocketLib
 COPTS=$(WFLAGS) -O -g -pg -march=athlon64 -pthread -pipe -D_GNU_SOURCE -DINVERSEXY -DFX -DZONE $(DFLAGS) $(MYSQL_FLAGS)
-LINKOPTS=-rdynamic -L. -lstdc++ -ldl $(MYSQL_LIB)
+LINKOPTS=$(COPTS) -rdynamic -L. -lstdc++ -ldl $(MYSQL_LIB)
 
 all: zone
 

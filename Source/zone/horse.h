@@ -26,15 +26,10 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 using namespace std;
 
 
-#define MOUNT_SLOW1_WALK	0.40000004
 #define MOUNT_SLOW1_RUN		0.75
-#define MOUNT_SLOW2_WALK	0.53333337
 #define MOUNT_SLOW2_RUN		1
-#define MOUNT_RUN1_WALK		0.66666669
 #define MOUNT_RUN1_RUN		1.25
-#define MOUNT_RUN2_WALK		0.80000002
 #define MOUNT_RUN2_RUN		1.5
-#define MOUNT_FAST_WALK		0.93333334
 #define MOUNT_FAST_RUN		1.75
 
 

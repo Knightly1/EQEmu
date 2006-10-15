@@ -28,7 +28,6 @@ using namespace std;
 
 #ifdef WIN32
 	#include <process.h>
-	#include <windows.h>
 
 	#define snprintf	_snprintf
 	#define vsnprintf	_vsnprintf
@@ -40,7 +39,7 @@ using namespace std;
 #include "worldserver.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/packet_dump.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "zone.h"
 #include "entity.h"
 #include "masterentity.h"
@@ -49,15 +48,11 @@ using namespace std;
 #include "../common/packet_functions.h"
 #include "../common/md5.h"
 #include "../common/files.h"
+#include "ZoneConfig.h"
 #include "StringIDs.h"
+#include "guild_mgr.h"
 
-#ifdef GUILDWARS
-#include "../GuildWars/GuildWars.h"
-extern GuildLocationList location_list;
-extern GuildWars guildwars;
-#endif
 
-extern Database database;
 extern EntityList    entity_list;
 extern Zone* zone;
 extern volatile bool ZoneLoaded;
@@ -65,33 +60,33 @@ extern void CatchSignal(int);
 extern WorldServer worldserver;
 extern NetConnection net;
 extern PetitionList petition_list;
-extern GuildRanks_Struct guilds[512];
 extern int32 numclients;
 extern volatile bool RunLoops;
 
-WorldServer::WorldServer() {
-	tcpc = new TCPConnection();
-	pTryReconnect = true;
-	pConnected = false;
+WorldServer::WorldServer()
+: WorldConnection(EmuTCPConnection::packetModeZone)
+{
 	cur_groupid = 0;
 	last_groupid = 0;
+	oocmuted = false;
 }
 
 WorldServer::~WorldServer() {
-	safe_delete(tcpc);
 }
-void WorldServer::SendGuildJoin(GuildJoin_Struct* gj){
+
+/*void WorldServer::SendGuildJoin(GuildJoin_Struct* gj){
 	ServerPacket* pack = new ServerPacket(ServerOP_GuildJoin, sizeof(GuildJoin_Struct));
 	GuildJoin_Struct* wgj = (GuildJoin_Struct*)pack->pBuffer;
 	wgj->class_=gj->class_;
-	wgj->guildid=gj->guildid;
+	wgj->guild_id=gj->guild_id;
 	wgj->level=gj->level;
 	strcpy(wgj->name,gj->name);
 	wgj->rank=gj->rank;
 	wgj->zoneid=gj->zoneid;
 	SendPacket(pack);
 	safe_delete(pack);
-}
+}*/
+
 void WorldServer::SetZone(int32 iZoneID) {
 	ServerPacket* pack = new ServerPacket(ServerOP_SetZone, sizeof(SetZone_Struct));
 	SetZone_Struct* szs = (SetZone_Struct*) pack->pBuffer;
@@ -103,63 +98,67 @@ void WorldServer::SetZone(int32 iZoneID) {
 	safe_delete(pack);
 }
 
-void WorldServer::SetConnectInfo() {
-	ServerPacket* pack = new ServerPacket(ServerOP_SetConnectInfo, sizeof(ServerConnectInfo));
+void WorldServer::OnConnected() {
+	WorldConnection::OnConnected();
+	
+	ServerPacket* pack;
+	
+	//tell the launcher what name we were started with.
+	pack = new ServerPacket(ServerOP_SetLaunchName,sizeof(LaunchName_Struct));
+	LaunchName_Struct* ln = (LaunchName_Struct*)pack->pBuffer;
+	strn0cpy(ln->launcher_name, m_launcherName.c_str(), 32);
+	strn0cpy(ln->zone_name, m_launchedName.c_str(), 16);
+	SendPacket(pack);
+	safe_delete(pack);
+
+	pack = new ServerPacket(ServerOP_SetConnectInfo, sizeof(ServerConnectInfo));
 	ServerConnectInfo* sci = (ServerConnectInfo*) pack->pBuffer;
-	sci->port = net.GetZonePort();
-	strcpy(sci->address, net.GetZoneAddress());
+	sci->port = ZoneConfig::get()->ZonePort;
+	SendPacket(pack);
+	safe_delete(pack);
+	
+	if (ZoneLoaded) {
+		this->SetZone(zone->GetZoneID());
+		entity_list.UpdateWho(true);
+		this->SendEmoteMessage(0, 0, 15, "Zone connect: %s", zone->GetLongName());
+	} else {
+		this->SetZone(0);
+	}
+	
+	pack = new ServerPacket(ServerOP_LSZoneBoot,sizeof(ZoneBoot_Struct));
+	ZoneBoot_Struct* zbs = (ZoneBoot_Struct*)pack->pBuffer;
+	strcpy(zbs->compile_time,LAST_MODIFIED);
 	SendPacket(pack);
 	safe_delete(pack);
 }
 
-bool WorldServer::SendPacket(ServerPacket* pack) {
-	if (!Connected())
-		return false;
-	return tcpc->SendPacket(pack);
-}
-
 void WorldServer::Process() {
-	if (this == 0)
-		return;
-	
 	_ZP(WorldServer_Process);
 	
-	if (!Connected()) {
-		pConnected = tcpc->Connected();
-		if (pConnected) {
-			cout << "Connected to worldserver: " << net.GetWorldAddress() << ":" << WORLDSERVER_PORT << endl;
-			char tmp[100];
-			if (database.GetVariable("ZSPassword", tmp, sizeof(tmp))) {
-				ServerPacket* pack = new ServerPacket(ServerOP_ZAAuth, 16);
-				MD5::Generate((uchar*) tmp, strlen(tmp), pack->pBuffer);
-				SendPacket(pack);
-				safe_delete(pack);
-			}
-			this->SetConnectInfo();
-			if (ZoneLoaded) {
-				this->SetZone(zone->GetZoneID());
-				entity_list.UpdateWho(true);
-				this->SendEmoteMessage(0, 0, 15, "Zone connect: %s", zone->GetLongName());
-			}
-			ServerPacket* pack = new ServerPacket(ServerOP_LSZoneBoot,sizeof(ZoneBoot_Struct));
-			ZoneBoot_Struct* zbs = (ZoneBoot_Struct*)pack->pBuffer;
-			strcpy(zbs->compile_time,LAST_MODIFIED);
-			SendPacket(pack);
-			safe_delete(pack);
-		}
-		else
-			return;
-	}
+	WorldConnection::Process();
+	
+	if (!Connected())
+		return;
 
 	ServerPacket *pack = 0;
-	while((pack = tcpc->PopPacket())) {
-		adverrornum = pack->opcode;
+	while((pack = tcpc.PopPacket())) {
+		_log(ZONE__WORLD_TRACE,"Got 0x%04x from world:",pack->opcode);
+		_hex(ZONE__WORLD_TRACE,pack->pBuffer,pack->size);
 		switch(pack->opcode) {
 		case 0: {
 			break;
 		}
 		case ServerOP_KeepAlive: {
 			// ignore this
+			break;
+		}
+		// World is tellins us what port to use.
+		case ServerOP_SetConnectInfo: {
+			if (pack->size != sizeof(ServerConnectInfo))
+				break; 
+			ServerConnectInfo* sci = (ServerConnectInfo*) pack->pBuffer;
+			_log(ZONE__WORLD,"World indicated port %d for this zone.",sci->port);
+			ZoneConfig::SetZonePort(sci->port);
 			break;
 		}
 		case ServerOP_ZAAuthFailed: {
@@ -228,7 +227,7 @@ void WorldServer::Process() {
 			else
 				wtz->response = 1;
 
-			worldserver.SendPacket(pack);
+			SendPacket(pack);
 			break;		
 		}
 		case ServerOP_ZoneToZoneRequest: {
@@ -236,7 +235,6 @@ void WorldServer::Process() {
 				break;
 			if (!ZoneLoaded)
 				break;
-			adverrornum = 351;
 			ZoneToZone_Struct* ztz = (ZoneToZone_Struct*) pack->pBuffer;
 			
 			if(ztz->current_zone_id == zone->GetZoneID()) {
@@ -245,11 +243,9 @@ void WorldServer::Process() {
 				if(entity == 0)
 					break;
 
-				EQZonePacket *outapp;
-				outapp = new EQZonePacket(OP_ZoneChange,sizeof(ZoneChange_Struct));
+				EQApplicationPacket *outapp;
+				outapp = new EQApplicationPacket(OP_ZoneChange,sizeof(ZoneChange_Struct));
 				ZoneChange_Struct* zc2=(ZoneChange_Struct*)outapp->pBuffer;
-
-				adverrornum = 352;
 
 				if(ztz->response <= 0) {
 					zc2->success = ZONE_ERROR_NOTREADY;
@@ -267,13 +263,9 @@ void WorldServer::Process() {
 						entity->CastToClient()->GoToSafeCoords(ztz->requested_zone_id);
 				}
 
-				adverrornum = 353;
-
 				outapp->priority = 6;
 				entity->CastToClient()->QueuePacket(outapp);
 				safe_delete(outapp);
-
-				adverrornum = 354;
 
 				switch(ztz->response)
 				{
@@ -292,7 +284,6 @@ void WorldServer::Process() {
 				}
 			}
 			else {
-			adverrornum = 355;
 				// it's a request
 				ztz->response = 0;
 
@@ -303,8 +294,6 @@ void WorldServer::Process() {
 					// since they asked about comming, lets assume they are on their way and not shut down.
 					zone->StartShutdownTimer(AUTHENTICATION_TIMEOUT * 1000);
 				}
-
-			adverrornum = 356;
 
 				SendPacket(pack);
 				break;
@@ -323,7 +312,7 @@ void WorldServer::Process() {
 					if(pack->size==64)//no results
 						client->Message_StringID(0,WHOALL_NO_RESULTS);
 					else{
-					EQZonePacket* outapp = new EQZonePacket(OP_WhoAllResponse, pack->size);
+					EQApplicationPacket* outapp = new EQApplicationPacket(OP_WhoAllResponse, pack->size);
 					memcpy(outapp->pBuffer, pack->pBuffer, pack->size);
 					client->QueuePacket(outapp);
 					//DumpPacket(outapp);
@@ -331,7 +320,7 @@ void WorldServer::Process() {
 				}
 				else {
 					#ifdef _EQDEBUG
-					LogFile->write(EQEMuLog::Debug, "Error: WhoAllReturnStruct did not point to a valid client!  "
+					_log(ZONE__WORLD, "Error: WhoAllReturnStruct did not point to a valid client!  "
 						"id=%i, playerineqstring=%i, playersinzonestring=%i.  Dumping WhoAllReturnStruct:",
 						wars->id, wars->playerineqstring, wars->playersinzonestring);
 					//DumpPacket(pack);
@@ -339,14 +328,7 @@ void WorldServer::Process() {
 				}
 			}
 			else
-				LogFile->write(EQEMuLog::Error, "WhoAllReturnStruct: Could not get return struct!");
-			break;
-		}
-		case ServerOP_GuildJoin:{
-			if (!ZoneLoaded)
-				break;
-			GuildJoin_Struct* gj=(GuildJoin_Struct*)pack->pBuffer;
-			entity_list.SendGuildJoin(gj);
+				_log(ZONE__WORLD_ERR, "WhoAllReturnStruct: Could not get return struct!");
 			break;
 		}
 		case ServerOP_EmoteMessage: {
@@ -385,72 +367,6 @@ void WorldServer::Process() {
 			CatchSignal(2);
 			break;
 		}
-#ifdef GUILDWARS
-		case ServerOP_GuildWarsCycle:
-			{
-
-			break;
-			}
-		case ServerOP_GWLocation:
-			{
-			if(!zone)
-				break;
-			if(pack->size != sizeof(GuildWarsLocationUpdate_Struct))
-				break;
-
-			GuildWarsLocationUpdate_Struct* gwl = (GuildWarsLocationUpdate_Struct*) pack->pBuffer;
-
-			switch(gwl->updatetype)
-			{
-			case 0:
-				{
-				if(gwl->current_zone == zone->GetZoneID())
-					break;
-
-				//Remove location
-				location_list.RemoveLocation(gwl->target_locationid);
-				break;
-				}
-			case 1:
-				{
-				if(gwl->current_zone == zone->GetZoneID())
-					break;
-
-				//Insert location
-				GuildLocation* gl = new GuildLocation(gwl->target_locationid,0,0,0,gwl->current_zone,gwl->target_locationtype,gwl->player_guildid);
-				location_list.AddLocation(gl);
-				break;
-				}
-			case 2:
-				{
-				//Change the guild owner of a location
-				if(gwl->current_zone == zone->GetZoneID())
-					break;
-
-				GuildLocation* gl = location_list.FindLocationByID(gwl->target_locationid);
-				if(gl)
-				gl->SetGuildOwner(gwl->player_guildid);
-				break;
-				}
-			case 3:
-				{
-				//Request transfer of funds, get guild location, check if the zone is the right zone, check if funds are available, respond
-				break;
-				}
-			case 4:
-				{
-				//Response to transfer of funds, successful, put amt of funds into the current_locationid
-				break;
-				}
-			case 5:
-				{
-				//Insignificant funds in transfer, report funds available
-				break;
-				}
-			}
-			break;
-			}
-#endif
 		case ServerOP_ZoneShutdown: {
 			if (pack->size != sizeof(ServerZoneStateChange_struct)) {
 				cout << "Wrong size on ServerOP_ZoneShutdown. Got: " << pack->size << ", Expected: " << sizeof(ServerZoneStateChange_struct) << endl;
@@ -461,7 +377,7 @@ void WorldServer::Process() {
 				SetZone(0);
 			}
 			else {
-				worldserver.SendEmoteMessage(0, 0, 15, "Zone shutdown: %s", zone->GetLongName());
+				SendEmoteMessage(0, 0, 15, "Zone shutdown: %s", zone->GetLongName());
 				
 				ServerZoneStateChange_struct* zst = (ServerZoneStateChange_struct *) pack->pBuffer;
 				cout << "Zone shutdown by " << zst->adminname << endl;
@@ -482,7 +398,7 @@ void WorldServer::Process() {
 					zone->StartShutdownTimer(AUTHENTICATION_TIMEOUT * 1000);
 				}
 				else {
-					worldserver.SendEmoteMessage(zst->adminname, 0, 0, "Zone bootup failed: Already running '%s'", zone->GetShortName());
+					SendEmoteMessage(zst->adminname, 0, 0, "Zone bootup failed: Already running '%s'", zone->GetShortName());
 				}
 				break;
 			}
@@ -491,11 +407,11 @@ void WorldServer::Process() {
 				cout << "Zone bootup by " << zst->adminname << endl;
 			
 			if (!(Zone::Bootup(zst->zoneid, zst->makestatic))) {
-				worldserver.SendChannelMessage(0, 0, 10, 0, 0, "%s:%i Zone::Bootup failed: %s", net.GetZoneAddress(), net.GetZonePort(), database.GetZoneName(zst->zoneid));
+				SendChannelMessage(0, 0, 10, 0, 0, "%s:%i Zone::Bootup failed: %s", net.GetZoneAddress(), net.GetZonePort(), database.GetZoneName(zst->zoneid));
 			}
 			// Moved annoucement to ZoneBootup() - Quagmire
 			//			else
-			//				worldserver.SendEmoteMessage(0, 0, 15, "Zone bootup: %s", zone->GetLongName());
+			//				SendEmoteMessage(0, 0, 15, "Zone bootup: %s", zone->GetLongName());
 			break;
 		}
 		case ServerOP_ZoneIncClient: {
@@ -530,7 +446,7 @@ void WorldServer::Process() {
 				else if (client->GetAnon() == 1 && client->Admin() > szp->adminrank)
 					break;
 				else {
-					worldserver.SendEmoteMessage(szp->adminname, 0, 0, "Summoning %s to %s %1.1f, %1.1f, %1.1f", szp->name, szp->zone, szp->x_pos, szp->y_pos, szp->z_pos);
+					SendEmoteMessage(szp->adminname, 0, 0, "Summoning %s to %s %1.1f, %1.1f, %1.1f", szp->name, szp->zone, szp->x_pos, szp->y_pos, szp->z_pos);
 				}
 				client->MovePC(szp->zone, szp->x_pos, szp->y_pos, szp->z_pos, szp->ignorerestrictions, true);
 			}
@@ -543,12 +459,12 @@ void WorldServer::Process() {
 				if (skp->adminrank >= client->Admin()) {
 					client->WorldKick();
 					if (ZoneLoaded)
-						worldserver.SendEmoteMessage(skp->adminname, 0, 0, "Remote Kick: %s booted in zone %s.", skp->name, zone->GetShortName());
+						SendEmoteMessage(skp->adminname, 0, 0, "Remote Kick: %s booted in zone %s.", skp->name, zone->GetShortName());
 					else
-						worldserver.SendEmoteMessage(skp->adminname, 0, 0, "Remote Kick: %s booted.", skp->name);
+						SendEmoteMessage(skp->adminname, 0, 0, "Remote Kick: %s booted.", skp->name);
 				}
 				else if (client->GetAnon() != 1)
-					worldserver.SendEmoteMessage(skp->adminname, 0, 0, "Remote Kick: Your avatar level is not high enough to kick %s", skp->name);
+					SendEmoteMessage(skp->adminname, 0, 0, "Remote Kick: Your avatar level is not high enough to kick %s", skp->name);
 			}
 			break;
 		}
@@ -559,248 +475,28 @@ void WorldServer::Process() {
 				if (skp->admin >= client->Admin()) {
 					client->GMKill();
 					if (ZoneLoaded)
-						worldserver.SendEmoteMessage(skp->gmname, 0, 0, "Remote Kill: %s killed in zone %s.", skp->target, zone->GetShortName());
+						SendEmoteMessage(skp->gmname, 0, 0, "Remote Kill: %s killed in zone %s.", skp->target, zone->GetShortName());
 					else
-						worldserver.SendEmoteMessage(skp->gmname, 0, 0, "Remote Kill: %s killed.", skp->target);
+						SendEmoteMessage(skp->gmname, 0, 0, "Remote Kill: %s killed.", skp->target);
 				}
 				else if (client->GetAnon() != 1)
-					worldserver.SendEmoteMessage(skp->gmname, 0, 0, "Remote Kill: Your avatar level is not high enough to kill %s", skp->target);
+					SendEmoteMessage(skp->gmname, 0, 0, "Remote Kill: Your avatar level is not high enough to kill %s", skp->target);
 			}
 			break;
 		}
-		case ServerOP_RefreshGuild: {
-			if (pack->size == 5) {
-				int32 guildeqid = 0;
-				memcpy(&guildeqid, pack->pBuffer, 4);
-				database.GetGuildRanks(guildeqid, &guilds[guildeqid]);
-				if (pack->pBuffer[4] == 1) {
-					// @merth: Guilds not yet fully functional
-					/*
-					EQZonePacket* outapp = new EQZonePacket(OP_GuildUpdate, sizeof(GuildUpdate_Struct));
-					GuildUpdate_Struct* gu = (GuildUpdate_Struct*) outapp->pBuffer;
-					gu->guildID = guildeqid;
-					gu->entry.guildID = guildeqid;
-					gu->entry.guildIDx = guildeqid;
-					gu->entry.unknown6[0] = 0xFF;
-					gu->entry.unknown6[1] = 0xFF;
-					gu->entry.unknown6[2] = 0xFF;
-					gu->entry.unknown6[3] = 0xFF;
-					gu->entry.exists = 0;
-					gu->entry.unknown10[0] = 0xFF;
-					gu->entry.unknown10[1] = 0xFF;
-					gu->entry.unknown10[2] = 0xFF;
-					gu->entry.unknown10[3] = 0xFF;
-					if (guilds[guildeqid].databaseID == 0) {
-						gu->entry.exists = 0; // = 0x01 if exists, 0x00 on empty
-					}
-					else {
-						gu->entry.unknown4[1] = 0x75;
-						gu->entry.unknown4[2] = 0x5B;
-						gu->entry.unknown4[3] = 0xF6;
-						gu->entry.unknown4[4] = 0x77;
-						gu->entry.unknown4[5] = 0x5C;
-						gu->entry.unknown4[6] = 0xEC;
-						gu->entry.unknown4[7] = 0x12;
-						gu->entry.unknown4[9] = 0xD4;
-						gu->entry.unknown4[10] = 0x2C;
-						gu->entry.unknown4[11] = 0xF9;
-						gu->entry.unknown4[12] = 0x77;
-						gu->entry.unknown4[13] = 0x90;
-						gu->entry.unknown4[14] = 0xD7;
-						gu->entry.unknown4[15] = 0xF9;
-						gu->entry.unknown4[16] = 0x77;
-						gu->entry.regguild[1] = 0xFF;
-						gu->entry.regguild[2] = 0xFF;
-						gu->entry.regguild[3] = 0xFF;
-						gu->entry.regguild[4] = 0xFF;
-						gu->entry.regguild[5] = 0x6C;
-						gu->entry.regguild[6] = 0xEC;
-						gu->entry.regguild[7] = 0x12;
-						
-						strcpy(gu->entry.name, guilds[guildeqid].name);
-						gu->entry.exists = 1; // = 0x01 if exists, 0x00 on empty
-					}
-					
-					entity_list.QueueClients(0, outapp, false);
-					safe_delete(outapp);
-					*/
-				}
-			}
-			else
-				cout << "Wrong size: ServerOP_RefreshGuild. size=" << pack->size << endl;
+		
+		//hand all the guild related packets to the guild manager for processing.
+		case ServerOP_RefreshGuild:
+//		case ServerOP_GuildInvite:
+		case ServerOP_DeleteGuild:
+		case ServerOP_GuildCharRefresh:
+		case ServerOP_GuildMemberUpdate:
+//		case ServerOP_GuildGMSet:
+//		case ServerOP_GuildGMSetRank:
+//		case ServerOP_GuildJoin:
+			guild_mgr.ProcessWorldPacket(pack);
 			break;
-		}
-		case ServerOP_GuildLeader: {
-			ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-			Client* client = entity_list.GetClientByName(sgc->target);
-			
-			if (client == 0) {
-				// do nothing
-			}
-			else if (client->GuildDBID() != sgc->guilddbid)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s is not in your guild.", client->GetName());
-			else if (client->GuildRank() != 0)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s is not rank 0.", client->GetName());
-			else {
-				if (database.SetGuildLeader(sgc->guilddbid, client->AccountID())) {
-					worldserver.SendEmoteMessage(0, sgc->guilddbid, MT_Guild, "%s is now the leader of your guild.", client->GetName());
-					ServerPacket* pack2 = new ServerPacket;
-					pack2->opcode = ServerOP_RefreshGuild;
-					pack2->size = 4;
-					pack2->pBuffer = new uchar[pack->size];
-					memcpy(pack2->pBuffer, &sgc->guildeqid, 4);
-					worldserver.SendPacket(pack2);
-					safe_delete(pack2);
-				}
-				else
-					worldserver.SendEmoteMessage(sgc->from, 0, 0, "Guild leadership transfer failed.");
-			}
-			break;
-		}
-		case ServerOP_GuildInvite: {
-			ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-			Client* client = entity_list.GetClientByName(sgc->target);
-			
-			if (client == 0) {
-				// do nothing
-			}
-			else if (!guilds[sgc->guildeqid].rank[sgc->fromrank].invite)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "You dont have permission to invite.");
-			else if (client->GuildDBID() != 0)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s is already in another guild.", client->GetName());
-			else if (client->PendingGuildInvite != 0 && !(client->PendingGuildInvite == sgc->guilddbid))
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s has another pending guild invite.", client->GetName());
-			else {
-				client->PendingGuildInvite = sgc->guilddbid;
-				EQZonePacket* outapp = new EQZonePacket(OP_GuildInvite);
-				outapp->size = sizeof(GuildCommand_Struct);
-				outapp->pBuffer = new uchar[outapp->size];
-				memset(outapp->pBuffer, 0, outapp->size);
-				GuildCommand_Struct* gc = (GuildCommand_Struct*) outapp->pBuffer;
-				gc->guildeqid = sgc->guildeqid;
-				strcpy(gc->othername, sgc->target);
-				strcpy(gc->myname, sgc->from);
-				client->FastQueuePacket(&outapp);
-				/*				
-				if (client->SetGuild(sgc->guilddbid, GUILD_MAX_RANK))
-				worldserver.SendEmoteMessage(0, sgc->guilddbid, MT_Guild, "%s has joined the guild. Rank: %s.", client->GetName(), guilds[sgc->guildeqid].rank[GUILD_MAX_RANK].rankname);
-				else
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "Guild invite failed.");
-				*/
-			}
-			break;
-		}
-		case ServerOP_GuildRemove: {
-			ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-			Client* client = entity_list.GetClientByName(sgc->target);
-			
-			if (client == 0) {
-				// do nothing
-			}
-			else if ((!guilds[sgc->guildeqid].rank[sgc->fromrank].remove) && !(strcasecmp(sgc->from, sgc->target) == 0))
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "You dont have permission to remove.");
-			else if (client->GuildDBID() != sgc->guilddbid)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s is not in your guild.", client->GetName());
-			else if (client->GuildRank() <= sgc->fromrank && !(sgc->fromaccountid == guilds[sgc->guildeqid].leader) && !(strcasecmp(sgc->from, sgc->target) == 0))
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s's rank is too high for you to remove them.", client->GetName());
-			else {
-				if (client->SetGuild(0, GUILD_MEMBER)) {
-					if (strcasecmp(sgc->from, sgc->target) == 0)
-						worldserver.SendEmoteMessage(0, sgc->guilddbid, MT_Guild, "%s has left the guild.", client->GetName());
-					else {
-						worldserver.SendEmoteMessage(0, sgc->guilddbid, MT_Guild, "%s has been removed from the guild by %s.", client->GetName(), sgc->from);
-						client->Message(MT_Guild, "You have been removed from the guild by %s.", sgc->from);
-					}
-				}
-				else
-					worldserver.SendEmoteMessage(sgc->from, 0, 0, "Guild remove failed.");
-			}
-			break;
-		}
-		case ServerOP_GuildPromote: {
-			ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-			Client* client = entity_list.GetClientByName(sgc->target);
-			
-			if (client == 0) {
-				// do nothing
-			}
-			else if (client->GuildDBID() != sgc->guilddbid)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s is not in your guild.", client->GetName());
-			else if ((!guilds[sgc->guildeqid].rank[sgc->fromrank].promote) && !(strcasecmp(sgc->from, sgc->target) == 0))
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "You dont have permission to promote.");
-			else if (client->GuildDBID() != sgc->guilddbid)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s isnt in your guild.", client->GetName());
-			else if (client->GuildRank() <= sgc->newrank)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s is already rank %i.", client->GetName(), client->GuildRank());
-			else if (sgc->newrank <= sgc->fromrank && sgc->fromaccountid != guilds[sgc->guildeqid].leader)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "You cannot promote people to a greater or equal rank than yourself.");
-			else {
-				if (client->SetGuild(sgc->guilddbid, sgc->newrank)) {
-					worldserver.SendEmoteMessage(0, sgc->guilddbid, MT_Guild, "%s has been promoted to %s by %s.", client->GetName(), guilds[sgc->guildeqid].rank[sgc->newrank].rankname, sgc->from);
-				}
-				else
-					worldserver.SendEmoteMessage(sgc->from, 0, 0, "Guild promote failed");
-			}
-			break;
-		}
-		case ServerOP_GuildDemote: {
-			ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-			Client* client = entity_list.GetClientByName(sgc->target);
-			
-			if (client == 0) {
-				// do nothing
-			}
-			else if (client->GuildDBID() != sgc->guilddbid)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s is not in your guild.", client->GetName());
-			else if (!guilds[sgc->guildeqid].rank[sgc->fromrank].demote)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "You dont have permission to demote.");
-			else if (client->GuildRank() >= sgc->newrank)
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "%s is already rank %i.", client->GetName(), client->GuildRank());
-			else if (sgc->newrank <= sgc->fromrank && sgc->fromaccountid != guilds[sgc->guildeqid].leader && !(strcasecmp(sgc->from, sgc->target) == 0))
-				worldserver.SendEmoteMessage(sgc->from, 0, 0, "You cannot demote people with a greater or equal rank than yourself.");
-			else {
-				if (client->SetGuild(sgc->guilddbid, sgc->newrank)) {
-					worldserver.SendEmoteMessage(0, sgc->guilddbid, MT_Guild, "%s has been demoted to %s by %s.", client->GetName(), guilds[sgc->guildeqid].rank[sgc->newrank].rankname, sgc->from);
-				}
-				else
-					worldserver.SendEmoteMessage(sgc->from, 0, 0, "Guild demote failed");
-			}
-			break;
-		}
-		case ServerOP_GuildGMSet: {
-			ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-			Client* client = entity_list.GetClientByName(sgc->target);
-			if (client != 0) {
-				if (client->GuildDBID() == 0 || sgc->guilddbid == 0) {
-					int32 tmpeq = database.GetGuildEQID(sgc->guilddbid);
-					if (tmpeq != 0xFFFFFFFF && guilds[tmpeq].minstatus > sgc->admin && sgc->admin < 250) {
-						worldserver.SendEmoteMessage(sgc->from, 0, 0, "Access denied.");
-					}
-					else if (!client->SetGuild(sgc->guilddbid, GUILD_MEMBER))
-						worldserver.SendEmoteMessage(sgc->from, 0, 0, "Error: Guild #%i not found", sgc->guilddbid);
-				}
-				else
-					worldserver.SendEmoteMessage(sgc->from, 0, 0, "Error: %s is already in a guild", sgc->target);
-			}
-			break;
-		}
-		case ServerOP_GuildGMSetRank: {
-			ServerGuildCommand_Struct* sgc = (ServerGuildCommand_Struct*) pack->pBuffer;
-			Client* client = entity_list.GetClientByName(sgc->target);
-			if (client != 0) {
-				if (client->GuildDBID() != 0) {
-					int32 tmpeq = database.GetGuildEQID(sgc->guilddbid);
-					if (guilds[tmpeq].minstatus > sgc->admin && sgc->admin < 250) {
-						worldserver.SendEmoteMessage(sgc->from, 0, 0, "Access denied.");
-					}
-					else if (!client->SetGuild(client->GuildDBID(), sgc->newrank))
-						worldserver.SendEmoteMessage(sgc->from, 0, 0, "Error: SetRank failed.", sgc->guilddbid);
-				}
-				else
-					worldserver.SendEmoteMessage(sgc->from, 0, 0, "Error: %s is not in a guild", sgc->target);
-			}
-			break;
-		}
+		
 		case ServerOP_FlagUpdate: {
 			Client* client = entity_list.GetClientByAccID(*((int32*) pack->pBuffer));
 			if (client != 0) {
@@ -818,7 +514,7 @@ void WorldServer::Process() {
 			ServerGMGoto_Struct* gmg = (ServerGMGoto_Struct*) pack->pBuffer;
 			Client* client = entity_list.GetClientByName(gmg->gotoname);
 			if (client != 0) {
-				worldserver.SendEmoteMessage(gmg->myname, 0, 13, "Summoning you to: %s @ %s, %1.1f, %1.1f, %1.1f", client->GetName(), zone->GetShortName(), client->GetX(), client->GetY(), client->GetZ());
+				SendEmoteMessage(gmg->myname, 0, 13, "Summoning you to: %s @ %s, %1.1f, %1.1f, %1.1f", client->GetName(), zone->GetShortName(), client->GetX(), client->GetY(), client->GetZ());
 				ServerPacket* outpack = new ServerPacket(ServerOP_ZonePlayer, sizeof(ServerZonePlayer_Struct));
 				ServerZonePlayer_Struct* szp = (ServerZonePlayer_Struct*) outpack->pBuffer;
 				strcpy(szp->adminname, gmg->myname);
@@ -827,11 +523,11 @@ void WorldServer::Process() {
 				szp->x_pos = client->GetX();
 				szp->y_pos = client->GetY();
 				szp->z_pos = client->GetZ();
-				worldserver.SendPacket(outpack);
+				SendPacket(outpack);
 				safe_delete(outpack);
 			}
 			else {
-				worldserver.SendEmoteMessage(gmg->myname, 0, 13, "Error: %s not found", gmg->gotoname);
+				SendEmoteMessage(gmg->myname, 0, 13, "Error: %s not found", gmg->gotoname);
 			}
 			break;
 		}
@@ -839,7 +535,7 @@ void WorldServer::Process() {
 			ServerMultiLineMsg_Struct* mlm = (ServerMultiLineMsg_Struct*) pack->pBuffer;
 			Client* client = entity_list.GetClientByName(mlm->to);
 			if (client) {
-				EQZonePacket* outapp = new EQZonePacket(OP_MultiLineMsg, strlen(mlm->message));
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_MultiLineMsg, strlen(mlm->message));
 				strcpy((char*) outapp->pBuffer, mlm->message);
 				client->QueuePacket(outapp);
 				safe_delete(outapp);
@@ -892,7 +588,7 @@ void WorldServer::Process() {
 					//client->SetZoneSummonCoords(srs->x_pos, srs->y_pos, srs->z_pos);
                     //client->pendingrezzexp = srs->exp;
                     if (srs->rez.spellid != 994) {
-                      LogFile->write(EQEMuLog::Debug, "Sending player cast rez spellid:%i", srs->rez.spellid);
+                      _log(ZONE__WORLD, "Sending player cast rez spellid:%i", srs->rez.spellid);
                       // Not gm resurrection
                         client->BuffFadeAll();
                         client->SpellOnTarget(756,client);
@@ -900,19 +596,16 @@ void WorldServer::Process() {
                     }
                     else {
                       // GM resurrection
-                      LogFile->write(EQEMuLog::Debug, "Sending gm cast rez");
+                      _log(ZONE__WORLD, "Sending gm cast rez");
                         client->AddEXP(srs->exp);
                     }
 					ServerPacket* pack = new ServerPacket(ServerOP_RezzPlayerAccept,sizeof(SimpleName_Struct));
 					SimpleName_Struct* corpse = (SimpleName_Struct*)pack->pBuffer;
 					strcpy(corpse->name,srs->rez.corpse_name);
-					worldserver.SendPacket(pack);
+					SendPacket(pack);
 					safe_delete(pack);
 
-                    pack = new ServerPacket;
-                    pack->opcode = ServerOP_ZonePlayer;
-                    pack->size = sizeof(ServerZonePlayer_Struct);
-                    pack->pBuffer = new uchar[pack->size];
+                    pack = new ServerPacket(ServerOP_ZonePlayer, sizeof(ServerZonePlayer_Struct));
                     ServerZonePlayer_Struct* szp = (ServerZonePlayer_Struct*) pack->pBuffer;
                     strcpy(szp->adminname, srs->rez.corpse_name);
                     szp->adminrank = 0;//entity_list.GetClientByName(rezz->rezzer_name)->Admin();
@@ -922,10 +615,10 @@ void WorldServer::Process() {
                     szp->x_pos = srs->rez.x;
                     szp->y_pos = srs->rez.y;
                     szp->z_pos = srs->rez.z;
-                    worldserver.SendPacket(pack);
+                    SendPacket(pack);
                     safe_delete(pack);
                     
-					//EQZonePacket* outapp = new EQZonePacket(srs->rezzopcode, sizeof(Resurrect_Struct));
+					//EQApplicationPacket* outapp = new EQApplicationPacket(srs->rezzopcode, sizeof(Resurrect_Struct));
 					//memcpy(outapp->pBuffer,srs->packet, sizeof(srs->packet));
 					//client->QueuePacket(outapp);
 					//safe_delete(outapp);
@@ -973,10 +666,7 @@ void WorldServer::Process() {
 				cout << "Received Message SyncWorldTime" << endl;
 				eqTimeOfDay* newtime = (eqTimeOfDay*) pack->pBuffer;
 				zone->zone_time.setEQTimeOfDay(newtime->start_eqtime, newtime->start_realtime);
-				EQZonePacket* outapp = new EQZonePacket(OP_TimeOfDay);
-				outapp->size = sizeof(TimeOfDay_Struct);
-				outapp->pBuffer = new uchar[outapp->size];
-				memset(outapp->pBuffer, 0, outapp->size);
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
 				TimeOfDay_Struct* tod = (TimeOfDay_Struct*)outapp->pBuffer;
 				zone->zone_time.getEQTimeOfDay(time(0), tod);
 				entity_list.QueueClients(0, outapp, false);
@@ -1029,12 +719,12 @@ void WorldServer::Process() {
 			Client* client = entity_list.GetClientByName(rev->name);
 			if (client)
 			{
-				worldserver.SendEmoteMessage(rev->adminname, 0, 0, "%s: %srevoking %s", zone->GetShortName(), rev->toggle?"":"un", client->GetName());
+				SendEmoteMessage(rev->adminname, 0, 0, "%s: %srevoking %s", zone->GetShortName(), rev->toggle?"":"un", client->GetName());
 				client->SetRevoked(rev->toggle);
 			}
 #if EQDEBUG >= 6
 			else
-				worldserver.SendEmoteMessage(rev->adminname, 0, 0, "%s: Can't find %s", zone->GetShortName(), rev->name);
+				SendEmoteMessage(rev->adminname, 0, 0, "%s: Can't find %s", zone->GetShortName(), rev->name);
 #endif
 			break;
 		}
@@ -1087,36 +777,35 @@ bool WorldServer::SendChannelMessage(Client* from, const char* to, int8 chan_num
 	if(!worldserver.Connected())
 		return false;
 	va_list argptr;
-	char buffer[256];
+	char buffer[512];
 	
 	va_start(argptr, message);
-	vsnprintf(buffer, 256, message, argptr);
+	vsnprintf(buffer, 512, message, argptr);
 	va_end(argptr);
+	buffer[511] = '\0';
 	
-	ServerPacket* pack = new ServerPacket;
-	
-	pack->size = sizeof(ServerChannelMessage_Struct) + strlen(buffer) + 1;
-	pack->pBuffer = new uchar[pack->size];
-    memset(pack->pBuffer, 0, pack->size);
+	ServerPacket* pack = new ServerPacket(ServerOP_ChannelMessage, sizeof(ServerChannelMessage_Struct) + strlen(buffer) + 1);
 	ServerChannelMessage_Struct* scm = (ServerChannelMessage_Struct*) pack->pBuffer;
 	
-	pack->opcode = ServerOP_ChannelMessage;
-	if (from == 0)
+	if (from == 0) {
 		strcpy(scm->from, "ZServer");
-	else {
+		scm->fromadmin = 0;
+	} else {
 		strcpy(scm->from, from->GetName());
 		scm->fromadmin = from->Admin();
 	}
-	if (to == 0)
+	if (to == 0) {
 		scm->to[0] = 0;
-	else {
+		scm->deliverto[0] = '\0';
+	} else {
 		strcpy(scm->to, to);
 		strcpy(scm->deliverto, to);
 	}
+	scm->noreply = false;
 	scm->chan_num = chan_num;
 	scm->guilddbid = guilddbid;
 	scm->language = language;
-	strcpy(&scm->message[0], buffer);
+	strcpy(scm->message, buffer);
 	
 	pack->Deflate();
 	bool ret = SendPacket(pack);
@@ -1163,7 +852,7 @@ bool WorldServer::SendEmoteMessage(const char* to, int32 to_guilddbid, sint16 to
 	return ret;
 }
 
-bool WorldServer::RezzPlayer(EQZonePacket* rpack,int32 rezzexp, int16 opcode) {
+bool WorldServer::RezzPlayer(EQApplicationPacket* rpack,int32 rezzexp, int16 opcode) {
 	ServerPacket* pack = new ServerPacket(ServerOP_RezzPlayer, sizeof(RezzPlayer_Struct));
 	RezzPlayer_Struct* sem = (RezzPlayer_Struct*) pack->pBuffer;
 	sem->rezzopcode = opcode;
@@ -1174,32 +863,11 @@ bool WorldServer::RezzPlayer(EQZonePacket* rpack,int32 rezzexp, int16 opcode) {
 	bool ret = SendPacket(pack);
 	safe_delete(pack);
 	if (ret)
-     LogFile->write(EQEMuLog::Debug, "Sending player rezz packet to world spellid:%i", sem->rez.spellid);
+     _log(ZONE__WORLD, "Sending player rezz packet to world spellid:%i", sem->rez.spellid);
     else
-     LogFile->write(EQEMuLog::Debug, "NOT Sending player rezz packet to world");
+     _log(ZONE__WORLD, "NOT Sending player rezz packet to world");
 	return ret;
 }
-
-void WorldServer::AsyncConnect() {
-	if (tcpc->ConnectReady())
-		tcpc->AsyncConnect(net.GetWorldAddress(), WORLDSERVER_PORT);
-}
-		
-bool WorldServer::Connect() {
-	char errbuf[TCPConnection_ErrorBufferSize];
-	if (tcpc->Connect(net.GetWorldAddress(), WORLDSERVER_PORT, errbuf)) {	
-		return true;
-	}
-	else {
-		cout << "WorldServer connect: Connecting to the server failed: " << errbuf << endl;
-	}
-	return false;
-}
-
-void WorldServer::Disconnect() {
-	tcpc->Disconnect();
-}
-
 
 int32 WorldServer::NextGroupID() {
 	//this system wastes a lot of potential group IDs (~5%), but
@@ -1208,7 +876,7 @@ int32 WorldServer::NextGroupID() {
 	if(cur_groupid >= last_groupid) {
 		//this is an error... This means that 50 groups were created before
 		//1 packet could make the zone->world->zone trip... so let it error.
-		LogFile->write(EQEMuLog::Error, "Ran out of group IDs before the server sent us more.");
+		_log(ZONE__WORLD_ERR, "Ran out of group IDs before the server sent us more.");
 		return(0);
 	}
 	if(cur_groupid > (last_groupid - /*50*/995)) {
@@ -1217,7 +885,7 @@ int32 WorldServer::NextGroupID() {
 		SendPacket(pack);
 		safe_delete(pack);
 	}
-	printf("Handing out new group id %lu\n", cur_groupid);
+	printf("Handing out new group id %d\n", cur_groupid);
 	return(cur_groupid++);
 }
 

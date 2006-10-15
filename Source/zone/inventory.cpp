@@ -19,7 +19,7 @@
 #include "masterentity.h"
 #include "worldserver.h"
 #include "net.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "spdat.h"
 #include "../common/packet_dump.h"
 #include "../common/packet_functions.h"
@@ -28,6 +28,7 @@
 #include "../common/ZoneNumbers.h"
 #include "../common/moremath.h"
 #include "../common/guilds.h"
+#include "../common/logsys.h"
 #include "StringIDs.h"
 #include "NpcAI.h"
 
@@ -41,7 +42,7 @@ extern GuildWars guildwars;
 extern RaidAddicts raidaddicts;
 #endif
 
-extern Database database;
+
 
 // @merth: this needs to be touched up
 uint32 Client::NukeItem(uint32 itemnum) {
@@ -110,12 +111,14 @@ void Client::SummonItem(uint32 item_id, sint8 charges, uint32 aug1, uint32 aug2,
 	// Checking to see if the Item is lore or not.
 	bool foundlore = CheckLoreConflict(item);
 	
+	//TODO: check for lore conflict on augments
+	
 	// Checking to see if it is a GM only Item or not.
 	//bool foundgm = (item->gm && (this->Admin() < 100));
 	bool foundgm = false;
 	
 	if (!foundlore && !foundgm) { // Okay, It isn't LORE, or if it is, it is not in player's inventory.
-		ItemInst* inst = ItemInst::Create(item, charges);
+		ItemInst* inst = database.CreateItem(item, charges);
 		if (inst) {
 			// Custom logic for SummonItem
 			if ((inst->GetCharges()==0))// && inst->IsStackable())
@@ -123,24 +126,19 @@ void Client::SummonItem(uint32 item_id, sint8 charges, uint32 aug1, uint32 aug2,
 			if ((inst->GetCharges()>0))
 				inst->SetCharges(inst->GetCharges());
 			if (aug1) {
-				ItemCommonInst aug(aug1);
-				((ItemCommonInst *)inst)->PutAugment(1,aug1);
+				inst->PutAugment(&database, 1, aug1);
 			}
 			if (aug2) {
-				ItemCommonInst aug(aug2);
-				((ItemCommonInst *)inst)->PutAugment(2,aug2);
+				inst->PutAugment(&database, 2, aug2);
 			}
 			if (aug3) {
-				ItemCommonInst aug(aug3);
-				((ItemCommonInst *)inst)->PutAugment(3,aug3);
+				inst->PutAugment(&database, 3, aug3);
 			}
 			if (aug4) {
-				ItemCommonInst aug(aug4);
-				((ItemCommonInst *)inst)->PutAugment(4,aug4);
+				inst->PutAugment(&database, 4, aug4);
 			}
 			if (aug5) {
-				ItemCommonInst aug(aug5);
-				((ItemCommonInst *)inst)->PutAugment(5,aug5);
+				inst->PutAugment(&database, 5, aug5);
 			}
 			//inst->SetCharges(
 			PushItemOnCursor(*inst);
@@ -247,7 +245,7 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 	if(client_update)
 	{
 /*
-		EQZonePacket *outapp = new EQZonePacket(OP_MoveItem, sizeof(MoveItem_Struct));
+		EQApplicationPacket *outapp = new EQApplicationPacket(OP_MoveItem, sizeof(MoveItem_Struct));
 		MoveItem_Struct *mi = (MoveItem_Struct *)outapp->pBuffer;
 		mi->from_slot = slot_id;
 		mi->to_slot = 256;
@@ -256,7 +254,7 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 		safe_delete(outapp);
 */
 		if (inst && inst->GetCharges()) {
-			EQZonePacket* outapp = new EQZonePacket(OP_DeleteItem, sizeof(MoveItem_Struct));
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_DeleteItem, sizeof(MoveItem_Struct));
 			DeleteItem_Struct* delitem	= (DeleteItem_Struct*)outapp->pBuffer;
 			delitem->from_slot			= slot_id;
 			delitem->to_slot			= 0xFFFFFFFF;
@@ -266,7 +264,7 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 			safe_delete(outapp);
 		}
 		else {
-			EQZonePacket* outapp = new EQZonePacket(OP_MoveItem, sizeof(MoveItem_Struct));
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoveItem, sizeof(MoveItem_Struct));
 			MoveItem_Struct* delitem	= (MoveItem_Struct*)outapp->pBuffer;
 			delitem->from_slot			= slot_id;
 			delitem->to_slot			= 0xFFFFFFFF;
@@ -283,9 +281,10 @@ void Client::DeleteItemInInventory(sint16 slot_id, sint8 quantity, bool client_u
 // client_update: Sends packet to client
 bool Client::PushItemOnCursor(const ItemInst& inst, bool client_update)
 {
+	mlog(INVENTORY__SLOTS, "Putting item %s (%d) on the cursor", inst.GetItem()->Name, inst.GetItem()->ID);
 	m_inv.PushCursor(inst);
 	
-	if (client_update && inst) {
+	if (client_update) {
 		SendItemPacket(SLOT_CURSOR, &inst, ItemPacketSummonItem);
 	}
 	
@@ -295,10 +294,11 @@ bool Client::PushItemOnCursor(const ItemInst& inst, bool client_update)
 
 bool Client::PutItemInInventory(sint16 slot_id, const ItemInst& inst, bool client_update)
 {
+	mlog(INVENTORY__SLOTS, "Putting item %s (%d) into slot %d", inst.GetItem()->Name, inst.GetItem()->ID, slot_id);
 	m_inv.PutItem(slot_id, inst);
 	
-	if (client_update && inst) {
-		SendItemPacket(slot_id, &inst, ItemPacketSummonItem);
+	if (client_update) {
+		SendItemPacket(slot_id, &inst, (slot_id==SLOT_CURSOR)?ItemPacketSummonItem:ItemPacketTrade);
 	}
 	
 	if (slot_id==SLOT_CURSOR) {
@@ -306,12 +306,17 @@ bool Client::PutItemInInventory(sint16 slot_id, const ItemInst& inst, bool clien
 		return database.SaveCursor(this->CharacterID(), s, e);
 	} else
 		return database.SaveInventory(this->CharacterID(), &inst, slot_id);
+	
+	CalcBonuses();
 }
 
 void Client::PutLootInInventory(sint16 slot_id, const ItemInst &inst, ServerLootItem_Struct** bag_item_data)
 {
+	mlog(INVENTORY__SLOTS, "Putting loot item %s (%d) into slot %d", inst.GetItem()->Name, inst.GetItem()->ID, slot_id);
 	m_inv.PutItem(slot_id, inst);
+	
 	SendLootItemInPacket(&inst, slot_id);
+	
 	if (slot_id==SLOT_CURSOR) {
 		list<ItemInst*>::const_iterator s=m_inv.cursor_begin(),e=m_inv.cursor_end();
 		database.SaveCursor(this->CharacterID(), s, e);
@@ -324,14 +329,15 @@ void Client::PutLootInInventory(sint16 slot_id, const ItemInst &inst, ServerLoot
 		// solar: our bag went into slot_id, now let's pack the contents in
 		for(int i = 0; i < 10; i++)
 		{
-			if(bag_item_data[i])
-			{
-				const ItemInst *bagitem = ItemInst::Create(bag_item_data[i]->item_id, bag_item_data[i]->charges);
-				interior_slot = Inventory::CalcSlotId(slot_id, i);
-				PutLootInInventory(interior_slot, *bagitem);
-			}
+			if(bag_item_data[i] == NULL)
+				continue;
+			const ItemInst *bagitem = database.CreateItem(bag_item_data[i]->item_id, bag_item_data[i]->charges);
+			interior_slot = Inventory::CalcSlotId(slot_id, i);
+			mlog(INVENTORY__SLOTS, "Putting bag loot item %s (%d) into slot %d (bag slot %d)", inst.GetItem()->Name, inst.GetItem()->ID, interior_slot, i);
+			PutLootInInventory(interior_slot, *bagitem);
 		}
 	}
+	
 	CalcBonuses();
 }
 bool Client::TryStacking(ItemInst* item, int8 type, bool try_worn, bool try_cursor){
@@ -374,7 +380,7 @@ bool Client::TryStacking(ItemInst* item, int8 type, bool try_worn, bool try_curs
 bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_cursor, ServerLootItem_Struct** bag_item_data)
 {
 	// #1: Try to auto equip
-	if (try_worn && inst.IsEquipable(GetRace(), GetClass()) && inst.GetItem()->Common.ReqLevel<=level)
+	if (try_worn && inst.IsEquipable(GetRace(), GetClass()) && inst.GetItem()->ReqLevel<=level)
 
 	{
 		for (sint16 i = 0; i < 22; i++)
@@ -383,7 +389,7 @@ bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_curs
 			{
 				if( i == SLOT_PRIMARY && inst.IsWeapon() ) // If item is primary slot weapon
 				{
-					if( (inst.GetItem()->Common.ItemType == ItemType2HS) || (inst.GetItem()->Common.ItemType == ItemType2HB) || (inst.GetItem()->Common.ItemType == ItemType2HPierce) ) // and uses 2hs \ 2hb \ 2hp
+					if( (inst.GetItem()->ItemType == ItemType2HS) || (inst.GetItem()->ItemType == ItemType2HB) || (inst.GetItem()->ItemType == ItemType2HPierce) ) // and uses 2hs \ 2hb \ 2hp
 					{
 						if( m_inv[SLOT_SECONDARY] ) // and if secondary slot is not empty
 						{
@@ -393,7 +399,7 @@ bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_curs
 				}
 				if( i== SLOT_SECONDARY && m_inv[SLOT_PRIMARY]) // check to see if primary slot is a two hander
 				{
-					int8 use = m_inv[SLOT_PRIMARY]->GetItem()->Common.ItemType;
+					int8 use = m_inv[SLOT_PRIMARY]->GetItem()->ItemType;
 					if(use == ItemType2HS || use == ItemType2HB || use == ItemType2HPierce)
 						continue;
 				}
@@ -475,7 +481,7 @@ packet with the item number in it, but I cant seem to find it right now
 	
 	const Item_Struct* item = inst->GetItem();
 	const char* name2 = &item->Name[0];
-	EQZonePacket* outapp = new EQZonePacket(OP_ItemLinkText,strlen(name2)+68);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ItemLinkText,strlen(name2)+68);
 	char buffer2[135] = {0};
 	char itemlink[135] = {0};
 	sprintf(itemlink,"%c0%06u0%05u-%05u-%05u-%05u-%05u00000000%c",
@@ -494,7 +500,7 @@ packet with the item number in it, but I cant seem to find it right now
 	if (send_to_all==false)
 		return;
 	const char* charname = this->GetName();
-	outapp = new EQZonePacket(OP_ItemLinkText,strlen(itemlink)+14+strlen(charname));
+	outapp = new EQApplicationPacket(OP_ItemLinkText,strlen(itemlink)+14+strlen(charname));
 	char buffer3[150] = {0};
 	sprintf(buffer3,"%c%c%c%c%c%c%c%c%c%c%c%c%6s%c%s",0x00,0x00,0x00,0x00,0xD2,0x01,0x00,0x00,0x00,0x00,0x00,0x00,charname,0x00,itemlink);
 	memcpy(outapp->pBuffer,buffer3,outapp->size);
@@ -514,6 +520,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 		return true; // Item summon, no further proccessing needed
 	
 	if (move_in->to_slot == (uint32)SLOT_INVALID) {
+		mlog(INVENTORY__SLOTS, "Deleted item from slot %d", move_in->from_slot);
 		DeleteItemInInventory(move_in->from_slot);
 		return true; // Item deletetion
 	}
@@ -544,6 +551,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	ItemInst* src_inst = m_inv.GetItem(src_slot_id);
 	ItemInst* dst_inst = m_inv.GetItem(dst_slot_id);
 	if (src_inst){
+		mlog(INVENTORY__SLOTS, "Src slot %d has item %s (%d) with %d charges in it.", src_slot_id, src_inst->GetItem()->Name, src_inst->GetItem()->ID, src_inst->GetCharges());
 		srcitemid = src_inst->GetItem()->ID;
 		SetTint(dst_slot_id,src_inst->GetColor());
 		if (src_inst->GetCharges() > 0 && (src_inst->GetCharges() < (sint16)move_in->number_in_stack || move_in->number_in_stack > 20))
@@ -553,6 +561,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 		}
 	}
 	if (dst_inst) {
+		mlog(INVENTORY__SLOTS, "Dest slot %d has item %s (%d) with %d charges in it.", dst_slot_id, dst_inst->GetItem()->Name, dst_inst->GetItem()->ID, dst_inst->GetCharges());
 		dstitemid = dst_inst->GetItem()->ID;
 	}
 	if (Trader && srcitemid>0){
@@ -662,10 +671,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	// Step 4: Check for entity trade
 	Mob* with = trade->With();
 	if (with && dst_slot_id>=3000 && dst_slot_id<=3007) {
-
-#if EQDEBUG>=5
-			LogFile->write(EQEMuLog::Debug, "Trade: %s adding item(s) to trade session with %s", GetName(), with->GetName());
-#endif		
+		mlog(INVENTORY__SLOTS, "Trade item move from slot %d to slot %d (trade with %s)", src_slot_id, dst_slot_id, with->GetName());
 		// Fill Trade list with items from cursor
 		if (!m_inv[SLOT_CURSOR]) {
 			Message(13, "Error: Cursor item not located on server!");
@@ -685,32 +691,47 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	// Step 5: Swap (or stack) items
 	if (move_in->number_in_stack > 0) {
 		// Determine if charged items can stack
-		if ((dst_inst) && (src_inst->GetItem()==dst_inst->GetItem()) && (dst_inst->GetCharges() < 20)) {
-			// Charges can be emptied into dst
-			uint8 usedcharges = 20 - dst_inst->GetCharges();
-			if (usedcharges > move_in->number_in_stack)
-				usedcharges = move_in->number_in_stack;
-			
-			dst_inst->SetCharges(dst_inst->GetCharges() + usedcharges);
-			src_inst->SetCharges(src_inst->GetCharges() - usedcharges);
-			
-			// Depleted all charges?
-			if (src_inst->GetCharges() < 1)
-			{
-				database.SaveInventory(CharacterID(),NULL,src_slot_id);
-				m_inv.DeleteItem(src_slot_id);
+		if (dst_inst) {
+			if(src_inst->GetID() != dst_inst->GetID()) {
+				mlog(INVENTORY__ERROR, "Move from %d to %d with stack size %d. Incompatible item types: %d != %d", src_slot_id, dst_slot_id, move_in->number_in_stack, src_inst->GetID(), dst_inst->GetID());
+				return(false);
+			}
+			if(dst_inst->GetCharges() < dst_inst->GetItem()->StackSize) {
+				//we have a chance of stacking.
+				mlog(INVENTORY__SLOTS, "Move from %d to %d with stack size %d. dest has %d/%d charges", src_slot_id, dst_slot_id, move_in->number_in_stack, dst_inst->GetCharges(), dst_inst->GetItem()->StackSize);
+				// Charges can be emptied into dst
+				uint8 usedcharges = dst_inst->GetItem()->StackSize - dst_inst->GetCharges();
+				if (usedcharges > move_in->number_in_stack)
+					usedcharges = move_in->number_in_stack;
+				
+				dst_inst->SetCharges(dst_inst->GetCharges() + usedcharges);
+				src_inst->SetCharges(src_inst->GetCharges() - usedcharges);
+				
+				// Depleted all charges?
+				if (src_inst->GetCharges() < 1)
+				{
+					mlog(INVENTORY__SLOTS, "Dest (%d) now has %d charges, source (%d) was entirely consumed. (%d moved)", dst_slot_id, dst_inst->GetCharges(), src_slot_id, usedcharges);
+					database.SaveInventory(CharacterID(),NULL,src_slot_id);
+					m_inv.DeleteItem(src_slot_id);
+				} else {
+					mlog(INVENTORY__SLOTS, "Dest (%d) now has %d charges, source (%d) has %d (%d moved)", dst_slot_id, dst_inst->GetCharges(), src_slot_id, src_inst->GetCharges(), usedcharges);
+				}
+			} else {
+				//stack is full, so 
 			}
 		}
 		else {
 			// Nothing in destination slot: split stack into two
 			if ((sint16)move_in->number_in_stack >= src_inst->GetCharges()) {
+				mlog(INVENTORY__SLOTS, "Move entire stack from %d to %d with stack size %d. Dest empty.", src_slot_id, dst_slot_id, move_in->number_in_stack);
 				// Move entire stack
 				m_inv.SwapItem(src_slot_id, dst_slot_id);
 			}
 			else {
 				// Split into two
 				src_inst->SetCharges(src_inst->GetCharges() - move_in->number_in_stack);
-				ItemInst* inst = ItemInst::Create(src_inst->GetItem(), move_in->number_in_stack);
+				mlog(INVENTORY__SLOTS, "Split stack of %s (%d) from slot %d to %d with stack size %d. Src keeps %d.", src_inst->GetItem()->Name, src_inst->GetItem()->ID, src_slot_id, dst_slot_id, move_in->number_in_stack, src_inst->GetCharges());
+				ItemInst* inst = database.CreateItem(src_inst->GetItem(), move_in->number_in_stack);
 				m_inv.PutItem(dst_slot_id, *inst);
 				safe_delete(inst);
 			}
@@ -720,6 +741,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 		// Not dealing with charges - just do direct swap
 		if(src_inst && dst_slot_id<22 && dst_slot_id>0)
 			SetMaterial(dst_slot_id,src_inst->GetItem()->ID);
+		mlog(INVENTORY__SLOTS, "Moving entire item from slot %d to slot %d", src_slot_id, dst_slot_id);
 		m_inv.SwapItem(src_slot_id, dst_slot_id);
 	}
 	
@@ -772,7 +794,7 @@ void Client::DyeArmor(DyeStruct* dye){
 			}
 		}
 	}
-	EQZonePacket* outapp=new EQZonePacket(OP_Dye,0);
+	EQApplicationPacket* outapp=new EQApplicationPacket(OP_Dye,0);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	Save();
@@ -788,7 +810,7 @@ void Client::DyeArmor(DyeStruct* dye){
 		ins = GetInv().GetItem(x);
 		if (ins)
 			TempItem = ins->GetItem();
-		if (TempItem && TempItem->Common.ItemType == type)
+		if (TempItem && TempItem->ItemType == type)
 		{
 			if (ins->GetCharges() < amt)
 			{
@@ -810,7 +832,7 @@ void Client::DyeArmor(DyeStruct* dye){
 		ins = GetInv().GetItem(x);
 		if (ins)
 			TempItem = ins->GetItem();
-		if (TempItem && TempItem->Common.ItemType == type)
+		if (TempItem && TempItem->ItemType == type)
 		{
 			if (ins->GetCharges() < amt)
 			{
@@ -996,7 +1018,7 @@ sint32 Client::GetEquipmentMaterial(int8 material_slot)
 	item = database.GetItem(GetEquipment(material_slot));
 	if(item != 0)
 	{
-		return item->Common.Material;
+		return item->Material;
 	}
 
 	return 0;
@@ -1017,7 +1039,7 @@ sint32 Client::GetEquipmentColor(int8 material_slot)
 	{
 		return m_pp.item_tint[material_slot].rgb.use_tint ?
 			m_pp.item_tint[material_slot].color :
-			item->Common.Color;
+			item->Color;
 	}
 
 	return 0;
@@ -1034,11 +1056,11 @@ bool Client::LootToStack(int32 itemid) {  //Loots stackable items to existing st
 			if (m_pp.invitemproperties[i].charges < 20 && item->ID == itemid)
 			{
 				m_pp.invitemproperties[i].charges += 1;
-				EQZonePacket* outapp = new EQZonePacket(OP_PlaceItem, sizeof(Item_Struct));
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_PlaceItem, sizeof(Item_Struct));
 				memcpy(outapp->pBuffer, item, outapp->size);
 				Item_Struct* outitem = (Item_Struct*) outapp->pBuffer;
 				outitem->equipSlot = i;
-				outitem->common.charges = m_pp.invitemproperties[i].charges;
+				outitem->charges = m_pp.invitemproperties[i].charges;
 				QueuePacket(outapp);
 				safe_delete(outapp);
 				return true;
@@ -1052,11 +1074,11 @@ bool Client::LootToStack(int32 itemid) {  //Loots stackable items to existing st
 			{
 				m_pp.bagitemproperties[i].charges += 1;
 
-				EQZonePacket* outapp = new EQZonePacket(OP_PlaceItem, sizeof(Item_Struct));
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_PlaceItem, sizeof(Item_Struct));
 				memcpy(outapp->pBuffer, item, outapp->size);
 				Item_Struct* outitem = (Item_Struct*) outapp->pBuffer;
 				outitem->equipSlot = 250+i;
-				outitem->common.charges = m_pp.bagitemproperties[i].charges;
+				outitem->charges = m_pp.bagitemproperties[i].charges;
 				QueuePacket(outapp);
 				safe_delete(outapp);
 				return true;
@@ -1077,12 +1099,12 @@ void Client::SendItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType
 	string packet = inst->Serialize(slot_id);
 	
 	EmuOpcode opcode = OP_Unknown;
-	EQZonePacket* outapp = NULL;
+	EQApplicationPacket* outapp = NULL;
 	ItemPacket_Struct* itempacket = NULL;
 	
 	// Construct packet
 	opcode = (packet_type==ItemPacketViewLink) ? OP_ItemLinkResponse : OP_ItemPacket;
-	outapp = new EQZonePacket(opcode, packet.length()+sizeof(ItemPacket_Struct));
+	outapp = new EQApplicationPacket(opcode, packet.length()+sizeof(ItemPacket_Struct));
 	itempacket = (ItemPacket_Struct*)outapp->pBuffer;
 	memcpy(itempacket->SerializedItem, packet.c_str(), packet.length());
 	itempacket->PacketType = packet_type;
@@ -1094,7 +1116,7 @@ void Client::SendItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType
 	FastQueuePacket(&outapp);
 }
 
-EQZonePacket* Client::ReturnItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type)
+EQApplicationPacket* Client::ReturnItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type)
 {
 	if (!inst)
 		return 0;
@@ -1103,12 +1125,12 @@ EQZonePacket* Client::ReturnItemPacket(sint16 slot_id, const ItemInst* inst, Ite
 	string packet = inst->Serialize(slot_id);
 	
 	EmuOpcode opcode = OP_Unknown;
-	EQZonePacket* outapp = NULL;
+	EQApplicationPacket* outapp = NULL;
 	BulkItemPacket_Struct* itempacket = NULL;
 	
 	// Construct packet
 	opcode = OP_ItemPacket;
-	outapp = new EQZonePacket(opcode, packet.length()+1);
+	outapp = new EQApplicationPacket(opcode, packet.length()+1);
 	itempacket = (BulkItemPacket_Struct*)outapp->pBuffer;
 	memcpy(itempacket->SerializedItem, packet.c_str(), packet.length());
 

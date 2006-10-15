@@ -9,18 +9,22 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
+#include "../common/classes.h"
+
 class cmerchant;
 
 class cnpc  
 {
 public:
 	cnpc();
-	cnpc( cnpc* npc );
+	cnpc( const cnpc* npc );
 	virtual ~cnpc();
 
 	bool db;
-	int id;
+	//int id;
+	int db_id;
 	CString nom;
+	CString last_name;
 	int level;
 	int gender;
 	double size;
@@ -44,7 +48,8 @@ public:
 	int loot_id;
 	int spells_id;
 
-	bool IsSameAs(const cnpc *other) const;
+	bool IsSameAs(const cnpc *other, bool compare_level) const;
+	bool IsSpecial() const { return(classe > PLAYER_CLASS_COUNT); }
 };
 
 #endif // !defined(AFX_CNPC_H__9DECED82_156F_4F4E_AEF6_5153F8EA4B73__INCLUDED_)

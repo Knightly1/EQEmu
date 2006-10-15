@@ -27,10 +27,15 @@
 
 #include "features.h"
 #ifdef EMBPERL_XS_CLASSES
-#include "embperl.h"
 #include "../common/debug.h"
+#include "embperl.h"
 
 #include "entity.h"
+
+#ifdef THIS	 /* this macro seems to leak out on some systems */
+#undef THIS		
+#endif
+
 
 XS(XS_EntityList_GetMobID); /* prototype to pass -Wmissing-prototypes */
 XS(XS_EntityList_GetMobID)
@@ -946,31 +951,6 @@ XS(XS_EntityList_RemoveAllObjects)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_EntityList_GuildItemAward); /* prototype to pass -Wmissing-prototypes */
-XS(XS_EntityList_GuildItemAward)
-{
-	dXSARGS;
-	if (items != 3)
-		Perl_croak(aTHX_ "Usage: EntityList::GuildItemAward(THIS, guilddbid, itemid)");
-	{
-		EntityList *		THIS;
-		int32		guilddbid = (int32)SvUV(ST(1));
-		int16		itemid = (int16)SvUV(ST(2));
-
-		if (sv_derived_from(ST(0), "EntityList")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(EntityList *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type EntityList");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->GuildItemAward(guilddbid, itemid);
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_EntityList_Message); /* prototype to pass -Wmissing-prototypes */
 XS(XS_EntityList_Message)
 {
@@ -1539,7 +1519,7 @@ XS(boot_EntityList)
 	file[255] = 0;
 	
 	if(items != 1)
-		LogFile->write(EQEMuLog::Error, "boot_quest does not take any arguments.");
+		fprintf(stderr, "boot_quest does not take any arguments.");
 	char buf[128];
 
 	//add the strcpy stuff to get rid of const warnings....
@@ -1582,7 +1562,6 @@ XS(boot_EntityList)
 		newXSproto(strcpy(buf, "RemoveAllDoors"), XS_EntityList_RemoveAllDoors, file, "$");
 		newXSproto(strcpy(buf, "RemoveAllTraps"), XS_EntityList_RemoveAllTraps, file, "$");
 		newXSproto(strcpy(buf, "RemoveAllObjects"), XS_EntityList_RemoveAllObjects, file, "$");
-		newXSproto(strcpy(buf, "GuildItemAward"), XS_EntityList_GuildItemAward, file, "$$$");
 		newXSproto(strcpy(buf, "Message"), XS_EntityList_Message, file, "$$$$;@");
 		newXSproto(strcpy(buf, "MessageStatus"), XS_EntityList_MessageStatus, file, "$$$$$;@");
 		newXSproto(strcpy(buf, "MessageClose"), XS_EntityList_MessageClose, file, "$$$$$$;@");

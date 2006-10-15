@@ -39,6 +39,7 @@ using namespace std;
 #include "spdat.h"
 #include "../common/bodytypes.h"
 #include "spawngroup.h"
+#include "../common/MiscFunctions.h"
 
 #ifdef GUILDWARS
 #include "../GuildWars/GuildWars.h"
@@ -48,7 +49,7 @@ extern GuildWars guildwars;
 
 //#define SPELLQUEUE //Use only if you want to be spammed by spell testing
 
-extern Database database;
+
 extern Zone* zone;
 extern volatile bool ZoneLoaded;
 extern EntityList entity_list;
@@ -70,7 +71,6 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	  d->npc_id, // rembrant, Dec. 20, 2001
 	  d->skills, // socket 12-29-01
 	  d->size,
-	  d->walkspeed,
 	  d->runspeed,
 	  heading,
 	  x,
@@ -97,8 +97,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 // vesuvias - appearence fix
 	  d->luclinface,
 	  d->beard,
-	  d->aa_title,
-	  d->fixedZ,
+	  0,
 	  d->d_meele_texture1,
 	  d->d_meele_texture2,
 	  d->see_invis,			// pass see_invis/see_ivu flags to mob constructor
@@ -108,13 +107,12 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	#ifdef IPC 
         interactive_timer(1000),
 	#endif
-	forget_timer(500),
 	attacked_timer(12000),
 	swarm_timer(100),
 	classattack_timer(1000),
-	taunt_timer(TauntReuseTime * 1000),
 	assist_timer(AIassistcheck_delay),
-	sendhpupdate_timer(1000)
+	sendhpupdate_timer(1000),
+	taunt_timer(TauntReuseTime * 1000)
 {
 	//What is the point of this, since the names get mangled..
 	Mob* mob = entity_list.GetMob(name);
@@ -125,47 +123,46 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	
 	NPCTypedata = d;
 	NPCTypedata_ours = NULL;
-//	NPCTypedata = new NPCType;
-//	memcpy(NPCTypedata, d, sizeof(NPCType));
 	respawn2 = in_respawn;
 	swarm_timer.Disable();
-
+	
+	taunting = false;
 	proximity = NULL;
 	copper = 0;
 	silver = 0;
 	gold = 0;
 	platinum = 0;
-	banishcapability=d->banish;
 	max_dmg=d->max_dmg;
 	min_dmg=d->min_dmg;
 	passengers =false;
 	grid = 0;
 	wp_m = 0;
+	max_wp=0;
+	save_wp = 0;
 	spawn_group = 0;
 // for quest signal() command
 	signaled = false;
 	signal_id = 0;
-	//Wandering
-   /* for (int l=0;l<50;l++)
-	{
-		wp_x[l] = 0;
-		wp_y[l] = 0;
-		wp_z[l] = 0;
-		wp_s[l] = 0;
-		if (l < 6)
-			wp_a[l] = 0;
-	}*/
+    guard_x = 0;
+	guard_y = 0;
+	guard_z = 0;
+	guard_heading = 0;
+	
+//	SaveSpawnSpot();
 
+	logging_enabled = NPC_DEFAULT_LOGGING_ENABLED;
 	
 	pAggroRange = d->aggroradius;
 	pAssistRange = GetAggroRange();
-	mana_regen=d->mana_regen;
 	findable = d->findable;
 
     // neotokyo: fix for lazy db-updaters
     if (GetCasterClass() != 'N' && mana_regen == 0)
         mana_regen = (GetLevel() / 10) + 4;
-	hp_regen=d->hp_regen;
+	else if(mana_regen < 0)
+		mana_regen = 0;
+	else
+		mana_regen=d->mana_regen;
 	
 	//Trumpcard:  Gives low end monsters no regen if set to 0 in database. Should make low end monsters killable
 	//Might want to lower this to /5 rather than 10.
@@ -189,9 +186,12 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
             hp_regen = 18;  
        else if(GetLevel() > 45 && GetLevel() <= 50)  
             hp_regen = 21;  
-       else if(GetLevel() > 50)  
+       else
             hp_regen = 30;
-	}
+	} else if(hp_regen < 0) {
+		hp_regen = 0;
+	} else
+		hp_regen = d->hp_regen;
 	
     CalcMaxMana();
     SetMana(GetMaxMana());
@@ -212,6 +212,18 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	org_x = x;
 	org_y = y;
 	org_z = z;
+	guard_x = -1;	//just some value we might be able to recongize as "unset"
+	guard_y = -1;
+	guard_z = -1;
+	guard_heading = 0;
+	roambox_distance = 0;
+	roambox_max_x = -2;
+	roambox_max_y = -2;
+	roambox_min_x = -2;
+	roambox_min_y = -2;
+	roambox_movingto_x = -2;
+	roambox_movingto_y = -2;
+	roambox_delay = 1000;
 	org_heading = heading;	
 	p_depop = false;
 	loottable_id = d->loottable_id;	
@@ -223,10 +235,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	
 	pet_spell_id = 0;
 	
-	ignore_target = 0;
 	delaytimer = false;
-    feign_memory = "0";
-	forgetchance = 0;
 	attack_event = false;
 	attack_speed = d->attack_speed;
 
@@ -276,6 +285,10 @@ NPC::~NPC()
 		entity_list.RemoveProximity(GetID());
 		safe_delete(proximity);
 	}
+
+	//clear our spawn limit record if we had one.
+	entity_list.LimitRemoveNPC(this);
+	
 //	safe_delete(NPCTypedata);
 	safe_delete(NPCTypedata_ours);
  #ifdef IPC	  
@@ -443,21 +456,13 @@ bool NPC::Process()
     SpellProcess();
     
     if (tic_timer.Check()) {
-        BuffProcess();
-	    #ifdef IPC
-        if(IsInteractive() )
-		    SendPosUpdate();
-        #endif
-        int32 bonus = 0;
-		#ifdef IPC
-        if(IsInteractive() && CurrentPosition() == 1)
-		    bonus+=3;
-        #else
-        if(CurrentPosition() == 1)
-           bonus+=3;
-        #endif
-        
-        if(GetHP() < GetMaxHP()) {
+		BuffProcess();
+		int32 bonus = 0;
+		
+		if(GetAppearance() == eaSitting)
+			bonus+=3;
+		
+		if(GetHP() < GetMaxHP()) {
 			if(GetOwnerID()!=0 && !IsEngaged()) //pet
 				SetHP(GetHP()+hp_regen+bonus+(GetLevel()/5));
 			else
@@ -467,55 +472,24 @@ bool NPC::Process()
 			SetMana(GetMana()+mana_regen+bonus);
 		}
     }
-		  
-    if (IsStunned()||IsMezzed())
-	    return true;
-
-	//Feign Death Memory
-	if (forget_timer.Check() && strstr(GetFeignMemory(),"0") == NULL) {
-		Client* remember_client = entity_list.GetClientByName(GetFeignMemory());
-		if (remember_client != 0)
-		{
-			if (!remember_client->CastToClient()->GetFeigned())
-			{
-				AddToHateList(remember_client,1);
-				SetFeignMemory("0");
-				forgetchance = 0;
-			}
-			else if (rand()%100 <= forgetchance)
-			{
-				SetFeignMemory("0");
-				forgetchance = 0;
-			}
-			else
-			{
-				forgetchance += 1;
-			}
-		}
-		else
-		{
-			SetFeignMemory("0");
-		}
-	}
 
 	if (sendhpupdate_timer.Check() && IsTargeted()) {
 		if(!IsFullHP || cur_hp<max_hp){
 			SendHPUpdate();
 		}
 	}
+		  
+    if (IsStunned()||IsMezzed())
+	    return true;
 	
 	//Handle assists...
-	Mob *hated = NULL;
-	if(assist_timer.Check() && (hated = hate_list.GetTop()) != NULL) {
+	Mob *hated = NULL;	//charmed NPCs dont ask for help.
+	if(assist_timer.Check() && !Charmed() && (hated = hate_list.GetTop()) != NULL) {
 		entity_list.AIYellForHelp(this, hated);
 	}
 	
-	adverrorinfo = 3;
 	AI_Process();
-	adverrorinfo = 0;
-    return true;
-
-	adverrorinfo = 0;
+	
     return true;
 }
 
@@ -578,7 +552,7 @@ bool NPC::DatabaseCastAccepted(int spell_id) {
 							  }
 		case SE_NecPet:
 		case SE_SummonPet: {
-			if(GetPetID() != 0){
+			if(HasPet()){
 #ifdef SPELLQUEUE
 				printf("%s: Attempted to make a second pet, denied.\n",GetName());
 #endif
@@ -586,7 +560,8 @@ bool NPC::DatabaseCastAccepted(int spell_id) {
 			}
 			break;
 						   }
-		case ST_Corpse: {
+		case SE_LocateCorpse:
+		case SE_SummonCorpse: {
 			return false; //Pfft, npcs don't need to summon corpses/locate corpses!
 			break;
 						}
@@ -606,7 +581,6 @@ NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z,
 	else {
 		Seperator sep(spawncommand);
 		//Lets see if someone didn't fill out the whole #spawn function properly 
-		sep.arg[0][63] = 0;
 		if (!sep.IsNumber(1))
 			sprintf(sep.arg[1],"1"); 
 		if (!sep.IsNumber(2))
@@ -754,8 +728,6 @@ NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z,
 		npc_type->loottable_id = 0;
 		npc_type->texture = atoi(sep.arg[3]);
 		npc_type->light = 0;
-		npc_type->fixedZ = 1;
-		npc_type->walkspeed = 0.67;
 		npc_type->runspeed = 1.25;
 		// Weapons are broke!!
 		npc_type->equipment[7] = atoi(sep.arg[7]);
@@ -783,7 +755,7 @@ NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z,
 }
 
 
-int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn, int32 extra) {
+int32 ZoneDatabase::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn, int32 extra) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
 	MYSQL_RES *result;
@@ -797,7 +769,7 @@ int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn
 			char tmpstr[64];
 			//char tmpstr2[64];
 			EntityList::RemoveNumbers(strn0cpy(tmpstr, spawn->GetName(), sizeof(tmpstr)));
-			if (!RunQuery(query, MakeAnyLenString(&query, "INSERT INTO npc_types (name, level, race, class, hp, gender, texture, helmtexture, size, loottable_id, merchant_id, face, walkspeed, runspeed) values(\"%s\",%i,%i,%i,%i,%i,%i,%i,%f,%i,%i,%i,%f,%f)", tmpstr, spawn->GetLevel(), spawn->GetRace(), spawn->GetClass(), spawn->GetMaxHP(), spawn->GetGender(), spawn->GetTexture(), spawn->GetHelmTexture(), spawn->GetSize(), spawn->GetLoottableID(), spawn->MerchantType, 0, spawn->GetWalkspeed(), spawn->GetRunspeed()), errbuf, 0, 0, &npc_type_id)) {
+			if (!RunQuery(query, MakeAnyLenString(&query, "INSERT INTO npc_types (name, level, race, class, hp, gender, texture, helmtexture, size, loottable_id, merchant_id, face, runspeed) values(\"%s\",%i,%i,%i,%i,%i,%i,%i,%f,%i,%i,%i,%f)", tmpstr, spawn->GetLevel(), spawn->GetRace(), spawn->GetClass(), spawn->GetMaxHP(), spawn->GetGender(), spawn->GetTexture(), spawn->GetHelmTexture(), spawn->GetSize(), spawn->GetLoottableID(), spawn->MerchantType, 0, spawn->GetRunspeed()), errbuf, 0, 0, &npc_type_id)) {
 				safe_delete(query);
 				return false;
 			}
@@ -867,7 +839,7 @@ int32 Database::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn
 #ifdef GWDEBUG
 			printf("Crash\n");
 #endif
-			SpawnGroup* newSpawnGroup = new SpawnGroup( last_insert_id, tmpstr);
+			SpawnGroup* newSpawnGroup = new SpawnGroup( last_insert_id, tmpstr, 0);
 			zone->spawn_group_list.AddSpawnGroup(newSpawnGroup);
 #ifdef GWDEBUG
 			printf("Crash2\n");
@@ -996,7 +968,7 @@ sint32 NPC::GetEquipmentMaterial(int8 material_slot)
 			item = database.GetItem(GetEquipment(material_slot));
 			if(item != 0)
 			{
-				return item->Common.Material;
+				return item->Material;
 			}
 	}
 	return 0;
@@ -1059,11 +1031,11 @@ void NPC::PickPocket(Client* thief) {
 			const Item_Struct* item = database.GetItem(citem->item_id);
 			if (item)
 			{
-				inst = ItemInst::Create(item, citem->charges);
+				inst = database.CreateItem(item, citem->charges);
 				int slot_id = thief->GetInv().FindFreeSlot(false, true, inst->GetItem()->Size);
 				if (/*!Equipped(item->ID) &&*/
-					 !item->LoreFlag && !item->Common.Magic && item->NoDrop != 0 && !inst->IsType(ItemClassContainer) && slot_id != SLOT_INVALID 
-					/*&& steal_skill > item->Common.StealSkill*/ )
+					 !item->LoreFlag && !item->Magic && item->NoDrop != 0 && !inst->IsType(ItemClassContainer) && slot_id != SLOT_INVALID 
+					/*&& steal_skill > item->StealSkill*/ )
 				{
 					slot[x] = slot_id;
 					steal_items[x] = item->ID;
@@ -1078,10 +1050,10 @@ void NPC::PickPocket(Client* thief) {
 		if (x > 0)
 		{
 			int random = MakeRandomInt(0, x-1);
-			inst = ItemInst::Create(steal_items[random], charges[random]);
+			inst = database.CreateItem(steal_items[random], charges[random]);
 			const Item_Struct* item = inst->GetItem();
 
-			if (/*item->Common.StealSkill || */steal_skill >= stealchance)
+			if (/*item->StealSkill || */steal_skill >= stealchance)
 			{
 				thief->Message_StringID(0,12903,item->Name,0);
 				thief->PutItemInInventory(slot[random], *inst);
@@ -1189,18 +1161,6 @@ void Mob::NPCSpecialAttacks(const char* parse, int permtag) {
     {
         switch(*parse)
         {
-        case 'Z':
-//			if (this->IsNPC())
- //   			this->CastToNPC()->interactive = true;
-            break;
-        case 'X':
-   // 		if (this->IsNPC())
-    //			this->CastToNPC()->citycontroller = true;
-            break;
-        case 'Y':
-    //		if (this->IsNPC())
-    //			this->CastToNPC()->guildbank = true;
-            break;
 	    case 'E':
     	    SpecAttacks[SPECATK_ENRAGE] = true;
     		break;
@@ -1220,6 +1180,8 @@ void Mob::NPCSpecialAttacks(const char* parse, int permtag) {
             SpecAttacks[SPECATK_TRIPLE] = true;
             break;
 	    case 'Q':
+	    	//quad requires triple to work properly
+            SpecAttacks[SPECATK_TRIPLE] = true;
             SpecAttacks[SPECATK_QUAD] = true;
             break;
 		case 'U':
@@ -1241,13 +1203,19 @@ void Mob::NPCSpecialAttacks(const char* parse, int permtag) {
 			SpecAttacks[UNFEARABLE] = true;
 			break;
 		case 'A':
-			SpecAttacks[IMMUNE_MEELE] = true;
+			SpecAttacks[IMMUNE_MELEE] = true;
 			break;
 		case 'B':
 			SpecAttacks[IMMUNE_MAGIC] = true;
 			break;
 		case 'f':
 			SpecAttacks[IMMUNE_FLEEING] = true;
+			break;
+		case 'O':
+			SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE] = true;
+			break;
+		case 'W':
+			SpecAttacks[IMMUNE_MELEE_NONMAGICAL] = true;
 			break;
         default:
             break;
@@ -1262,8 +1230,7 @@ void Mob::NPCSpecialAttacks(const char* parse, int permtag) {
 	}
 }
 
-void NPC::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
-{
+void NPC::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 	Mob::FillSpawnStruct(ns, ForWho);
 	
 	if(GetOwnerID()) {
@@ -1274,9 +1241,11 @@ void NPC::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 	ns->spawn.is_npc = 1;
 	
 	//not sure what this is, but all 'useable' npcs seem to have it set to 3 on live
-	if(GetClass() >= WARRIORGM) {
+//temp disabled until we find this again
+/*	if(GetClass() >= WARRIORGM) {
 		ns->spawn.unknown0167 = 3;
 	}
+*/
 }
 
 

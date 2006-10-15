@@ -13,11 +13,11 @@ public:
 	: PacketHandler(DelHandler) {
 	}
 
-	virtual void ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *p) {
+	virtual void ToClientPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *p) {
 		cout << EQStream::StreamTypeString(type) << "->Client: ";
 		p->DumpRaw();
 	}
-	virtual void ToServerPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQApplicationPacket *p) {
+	virtual void ToServerPacket(EQStreamType type, uint16 eq_opcode, EmuOpcode emu_opcode, const EQRawApplicationPacket *p) {
 		cout << "Client->" << EQStream::StreamTypeString(type) << ": ";
 		p->DumpRaw();
 	}

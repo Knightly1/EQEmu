@@ -15,6 +15,8 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
+#ifndef WIN32
+
 #include "unix.h"
 #include <string.h>
 #include <ctype.h>
@@ -39,4 +41,9 @@ char* strlwr(char* tmp) {
 	}
 	return tmp;
 }
+
+#else
+	 int joe = 1;
+#endif /* !WIN32 */
+
 

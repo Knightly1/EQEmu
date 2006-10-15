@@ -104,7 +104,7 @@ bool Database::DBLoadDoors(int32 iDoorCount, int32 iMaxDoorID) {
 						tmpDoor.pos_z = (float)atof(row[6]);
 						tmpDoor.heading = atoi(row[7]);
 						tmpDoor.opentype = atoi(row[8]);
-						tmpDoor.guildid = atoi(row[9]);
+						tmpDoor.guild_id = atoi(row[9]);
 						tmpDoor.lockpick = atoi(row[10]);
 						tmpDoor.keyitem = atoi(row[11]);
 						tmpDoor.trigger_door = atoi(row[12]);

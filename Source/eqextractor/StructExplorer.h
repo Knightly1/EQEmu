@@ -15,6 +15,8 @@ using namespace std;
  PrintQuadrent(#field , *((const uint32 *) &from->field))
 #define PrintBlock(from, field) \
  PrintBlockReal(#field , (const char *) &from->field, sizeof(from->field))
+#define PrintFloats(from, field) \
+ PrintFloatsReal(#field , (const char *) &from->field, sizeof(from->field))
 
 /*
 */
@@ -22,10 +24,11 @@ class StructExplorer {
 public:
 	virtual ~StructExplorer() {}
 	
-	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) = 0;
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) = 0;
 
 protected:
 	void PrintBlockReal(const char *field_name, const char *data, uint32 length);
+	void PrintFloatsReal(const char *field_name, const char *data, uint32 length);
 	void PrintQuadrentReal(const char *field_name, uint32 data);
 };
 

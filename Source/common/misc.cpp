@@ -2,6 +2,7 @@
 	// VS6 doesn't like the length of STL generated names: disabling
 	#pragma warning(disable:4786)
 #endif
+#include "debug.h"
 #include <string>
 #include <stdio.h>
 #include <stdlib.h>
@@ -388,80 +389,6 @@ void decode_chunk(char *in, char *out)
         *(out+1) = DEC(in[1]) << 4 | DEC(in[2]) >> 2;
         *(out+2) = DEC(in[2]) << 6 | DEC(in[3]);
 }
-	
-int Deflate(unsigned char* in_data, int in_length, unsigned char* out_data, int max_out_length)
-{
-z_stream zstream;
-int zerror;
-	
-	zstream.next_in   = in_data;
-	zstream.avail_in  = in_length;
-	zstream.zalloc    = Z_NULL;
-	zstream.zfree     = Z_NULL;
-	zstream.opaque    = Z_NULL;
-	deflateInit(&zstream, Z_FINISH);
-	zstream.next_out  = out_data;
-	zstream.avail_out = max_out_length;
-	zerror = deflate(&zstream, Z_FINISH);
-	
-	if (zerror == Z_STREAM_END)
-	{
-		deflateEnd(&zstream);
-		return zstream.total_out;
-	}
-	else
-	{
-		cout << "Error: Deflate: deflate() returned " << zerror << " '";
-		if (zstream.msg)
-			cout << zstream.msg;
-		cout << "'" << endl;
-		zerror = deflateEnd(&zstream);
-		return 0;
-	}
-}
-
-int Inflate(unsigned char* indata, int indatalen, unsigned char* outdata, int outdatalen, bool iQuiet)
-{
-z_stream zstream;
-int zerror = 0;
-int i;
-	
-	zstream.next_in		= indata;
-	zstream.avail_in	= indatalen;
-	zstream.next_out	= outdata;
-	zstream.avail_out	= outdatalen;
-	zstream.zalloc		= Z_NULL;
-	zstream.zfree		= Z_NULL;
-	zstream.opaque		= Z_NULL;
-	
-	i = inflateInit2( &zstream, 15 ); 
-	if (i != Z_OK) { 
-		return 0;
-	}
-	
-	zerror = inflate( &zstream, Z_FINISH );
-	
-	if(zerror == Z_STREAM_END) {
-		inflateEnd( &zstream );
-		return zstream.total_out;
-	}
-	else {
-		if (!iQuiet) {
-			cout << "Error: Inflate: inflate() returned " << zerror << " '";
-			if (zstream.msg)
-				cout << zstream.msg;
-			cout << "'" << endl;
-		}
-		
-		if (zerror == -4 && zstream.msg == 0)
-		{
-			return 0;
-		}
-		
-		zerror = inflateEnd( &zstream );
-		return 0;
-	}
-}
 
 void dump_message_column(unsigned char *buffer, unsigned long length, string leader, FILE *to)
 {
@@ -610,3 +537,27 @@ timeval now;
 #endif
 	return key;
 }
+
+void build_hex_line(const char *buffer, unsigned long length, unsigned long offset, char *out_buffer, unsigned char padding)
+{
+char *ptr=out_buffer;
+int i;
+char printable[17];
+	ptr+=sprintf(ptr,"%0*i:",padding,offset);
+	for(i=0;i<16; i++) {
+		if (i==8) {
+			strcpy(ptr," -");
+			ptr+=2;
+		}
+		if (i+offset < length) {
+			unsigned char c=*(const unsigned char *)(buffer+offset+i);
+			ptr+=sprintf(ptr," %02x",c);
+			printable[i]=isprint(c) ? c : '.';
+		} else {
+			ptr+=sprintf(ptr,"   ");
+			printable[i]=0;
+		}
+	}
+	sprintf(ptr,"  | %.16s",printable);
+}
+

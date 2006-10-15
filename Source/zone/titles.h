@@ -23,7 +23,7 @@
 #include <string>
 
 class Client;
-class EQZonePacket;
+class EQApplicationPacket;
 
 using namespace std;
 
@@ -33,7 +33,7 @@ public:
 
 	bool LoadTitles();
 	
-	EQZonePacket *MakeTitlesPacket(Client *who);
+	EQApplicationPacket *MakeTitlesPacket(Client *who);
 	
 	bool IsValidTitle(Client *who, const char *title);
 	

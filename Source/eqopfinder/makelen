@@ -1,0 +1,26 @@
+#!/bin/sh
+
+grep "^struct " ../common/eq_packet_structs.h \
+| cut -d\{ -f1 \
+| cut -d\  -f2 >.structs
+
+{
+
+echo "
+#include <stdio.h>
+#include \"../common/eq_packet_structs.h\"
+
+int main() {
+"
+sed 's/\(.*\)/	printf("$lengths{\1} = %d;\\n", sizeof(\1));/g' .structs
+
+echo "
+	return(0);
+}
+"
+} >.findlen.cpp
+
+g++ .findlen.cpp -o .findlen
+./.findlen >lengths.pl
+
+rm -f .findlen .findlen.cpp .structs

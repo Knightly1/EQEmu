@@ -1,7 +1,4 @@
-
-#ifdef WIN32
-	#include <windows.h>
-#endif
+#include "debug.h"
 #include "EQStreamFactory.h"
 #ifdef WIN32
 	#include <winsock.h>
@@ -20,21 +17,40 @@
 #include <iostream>
 #include "op_codes.h"
 #include "EQStream.h"
+#include "logsys.h"
 
 using namespace std;
 
 ThreadReturnType EQStreamFactoryReaderLoop(void *eqfs)
 {
 EQStreamFactory *fs=(EQStreamFactory *)eqfs;
+	
+#ifndef WIN32
+	_log(COMMON__THREADS, "Starting EQStreamFactoryReaderLoop with thread ID %d", pthread_self());
+#endif
+	
 	fs->ReaderLoop();
 
+#ifndef WIN32
+	_log(COMMON__THREADS, "Ending EQStreamFactoryReaderLoop with thread ID %d", pthread_self());
+#endif
+	
 	THREAD_RETURN(NULL);
 }
 
 ThreadReturnType EQStreamFactoryWriterLoop(void *eqfs)
 {
 	EQStreamFactory *fs=(EQStreamFactory *)eqfs;
+	
+#ifndef WIN32
+	_log(COMMON__THREADS, "Starting EQStreamFactoryWriterLoop with thread ID %d", pthread_self());
+#endif
+	
 	fs->WriterLoop();
+
+#ifndef WIN32
+	_log(COMMON__THREADS, "Ending EQStreamFactoryWriterLoop with thread ID %d", pthread_self());
+#endif
 
 	THREAD_RETURN(NULL);
 }
@@ -43,13 +59,18 @@ EQStreamFactory::EQStreamFactory(EQStreamType type, int port) : Timeoutable(5000
 {
 	StreamType=type;
 	Port=port;
+	sock=-1;
 }
 
 void EQStreamFactory::Close()
 {
 	Stop();
 
+#ifdef WIN32
+	closesocket(sock);
+#else
 	close(sock);
+#endif
 	sock=-1;
 }
 
@@ -147,9 +168,13 @@ timeval sleep_time;
 		sleep_time.tv_usec=0;
 		if ((num=select(sock+1,&readset,NULL,NULL,&sleep_time))<0) {
 			// What do we wanna do?
+			continue;
 		} else if (num==0)
 			continue;
-
+		
+		if(sock == -1)
+			break;		//somebody closed us while we were sleeping.
+		
 		if (FD_ISSET(sock,&readset)) {
 #ifdef WIN32
 			if ((length=recvfrom(sock,(char*)buffer,sizeof(buffer),0,(struct sockaddr*)&from,(int *)&socklen))<0)
@@ -163,10 +188,8 @@ timeval sleep_time;
 				sprintf(temp,"%u.%d",ntohl(from.sin_addr.s_addr),ntohs(from.sin_port));
 				MStreams.lock();
 				if ((stream_itr=Streams.find(temp))==Streams.end()) {
-					MStreams.unlock();
 					if (buffer[1]==OP_SessionRequest) {
-						EQStream *s=new EQStream(from);
-						s->SetFactory(this);
+						EQStream *s = new EQStream(from);
 						s->SetStreamType(StreamType);
 						Streams[temp]=s;
 						WriterWork.Signal();
@@ -174,6 +197,7 @@ timeval sleep_time;
 						s->Process(buffer,length);
 						s->SetLastPacketTime(Timer::GetCurrentTime());
 					}
+					MStreams.unlock();
 				} else {
 					EQStream *curstream = stream_itr->second;
 					//dont bother processing incoming packets for closed connections
@@ -181,7 +205,7 @@ timeval sleep_time;
 						curstream = NULL;
 					else
 						curstream->PutInUse();
-					MStreams.unlock();
+					MStreams.unlock();	//the in use flag prevents the stream from being deleted while we are using it.
 					
 					if(curstream) {
 						curstream->Process(buffer,length);
@@ -204,21 +228,11 @@ void EQStreamFactory::CheckTimeout()
 	
 	for(stream_itr=Streams.begin();stream_itr!=Streams.end();) {
 		EQStream *s = stream_itr->second;
+		
+		s->CheckTimeout(now, STREAM_TIMEOUT);
+		
 		EQStreamState state = s->GetState();
 		
-		if (state==CLOSING && !s->HasOutgoingData()) {
-			stream_itr->second->SetState(CLOSED);
-			state = CLOSED;
-		} else if (s->CheckTimeout(now, STREAM_TIMEOUT)) { 
-			cout << "Timeout up!, state=" << state << endl;
-			if (state==ESTABLISHED) {
-				s->Close();
-			} else if (state == CLOSING) {
-				//if we time out in the closing state, just give up
-				s->SetState(CLOSED);
-				state = CLOSED;
-			}
-		}
 		//not part of the else so we check it right away on state change
 		if (state==CLOSED) {
 			if (s->IsInUse()) {
@@ -274,7 +288,13 @@ Timer DecayTimer(20);
 			// If it's time to decay the bytes sent, then let's do it before we try to write
 			if (decay)
 				stream_itr->second->Decay();
-
+			
+			//bullshit checking, to see if this is really happening, GDB seems to think so...
+			if(stream_itr->second == NULL) {
+				fprintf(stderr, "ERROR: NULL Stream encountered in EQStreamFactory::WriterLoop for: %s", stream_itr->first.c_str());
+				continue;
+			}
+			
 			if (stream_itr->second->HasOutgoingData()) {
 				havework=true;
 				stream_itr->second->PutInUse();
@@ -290,6 +310,7 @@ Timer DecayTimer(20);
 			(*cur)->Write(sock);
 			(*cur)->ReleaseFromUse();
 		}
+		
 
 		Sleep(10);
 
@@ -303,4 +324,21 @@ Timer DecayTimer(20);
 		}
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

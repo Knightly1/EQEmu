@@ -10,32 +10,56 @@ Task Details
 
 
 */
-#ifndef EXTRACTORS_H
-#define EXTRACTORS_H
+extern PlayerProfile_Struct joe;
+//no macro guard on purpose
 
 #include "ExtractCollector.h"
 
 //special extractor to get zone info needed in the primary key
 //of many other exractors, but not avaliable in their packets
-class ZoneInfoExtractor : public ExtractBase {
+//inherits ExtractCollector to make my life easier
+class ZoneInfoExtractor : public ExtractCollector {
 public:
-	ZoneInfoExtractor();
-	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len);
+	ZoneInfoExtractor(const char *filename);
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server);
 	
 	uint16 GetZoneID() const { return(zone_id); }
 	const char *GetShortName() const { return(short_name.c_str()); }
 	const char *GetLongName() const { return(long_name.c_str()); }
+	
+	void EnableCatalog() { catalog_enabled = true; }
 	
 	//returns true if this extractor got all the info it needed
 	bool Complete() {
 		return(zone_id != 0xFFFF);
 	}
 	
+	virtual ExtractItem *NewItem() { return(new CrapItem()); }
 protected:
+	class CrapItem : public ExtractCollector::ExtractItem {
+		virtual uint32 FromPacket(unsigned char *data, uint32 len) {return(len);}
+	};
+	
 	//these default to invalid things until the zone packet is seen.
 	uint16 zone_id;
 	string short_name;
 	string long_name;
+	string file_name;	//.pf file we are reading from
+	bool catalog_enabled;
+};
+
+//special extractor to print a spawn list
+//inherits ExtractCollector to make my life easier
+class SpawnListExtractor : public ExtractCollector {
+public:
+	SpawnListExtractor();
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server);
+	
+	virtual ExtractItem *NewItem() { return(new CrapItem()); }
+protected:
+	class CrapItem : public ExtractCollector::ExtractItem {
+		virtual uint32 FromPacket(unsigned char *data, uint32 len){return(len);}
+	};
 };
 
 class DoorExtractor : public ExtractCollector {
@@ -43,17 +67,34 @@ public:
 	DoorExtractor(ZoneInfoExtractor *zi);
 	virtual ExtractItem *NewItem() { return(new DoorItem(zone_info)); }
 	
-	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len);
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server);
+	
+	virtual void GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item);
+	virtual void GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *item);
+	virtual void GenerateAText(FILE *into, ExtractorDB *db, ExtractItem *item);
 	
 protected:
 	ZoneInfoExtractor *zone_info;
 	
-	class DoorItem : public ExtractItem {
+	class zone_point {
+	public:
+		uint32 dest_zone;
+		float x;
+		float y;
+		float z;
+		float h;
+	};
+	map<uint32, zone_point> m_zonePoints;
+	
+	class DoorItem : public ExtractCollector::ExtractItem {
 	public:
 		ZoneInfoExtractor *zone_info;
 		DoorItem(ZoneInfoExtractor *zi) {
 			zone_info = zi;
 		}
+		
+		void LookupDest(map<uint32, zone_point> &zonePoints);
+		
 		//enum in here to form a kind of 'namespace'
 		enum {
 			doorid = 0,	//must start at 0
@@ -67,11 +108,15 @@ protected:
 			doorisopen,
 			door_param,
 			incline,
+			dest_zone,
+			dest_x,
+			dest_y,
+			dest_z,
+			dest_heading,
 			size
 		};
 		virtual uint32 FromPacket(unsigned char *data, uint32 len);
 	};
-	
 };
 
 class FuzzyDoorExtractor : public DoorExtractor {
@@ -90,7 +135,7 @@ public:
 	
 //	virtual void GivePacket(unsigned char *data, uint32 len);
 	
-	virtual void GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item);
+	virtual void GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item);
 	virtual void GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *item);
 	virtual void GenerateAText(FILE *into, ExtractorDB *db, ExtractItem *item);
 	
@@ -109,7 +154,7 @@ protected:
 		void SetAAID(uint32 aa_) { aa_id = aa_; }
 	protected:
 		uint32 aa_id;
-		class AAAbilityItem : public ExtractItem {
+		class AAAbilityItem : public ExtractCollector::ExtractItem {
 		public:
 			//enum in here to form a kind of 'namespace'
 			enum {
@@ -126,7 +171,7 @@ protected:
 	
 	
 	
-	class AAItem : public ExtractItem {
+	class AAItem : public ExtractCollector::ExtractItem {
 	public:
 		//enum in here to form a kind of 'namespace'
 		enum {
@@ -135,7 +180,7 @@ protected:
 			hotkey_sid2,
 			title_sid,
 			desc_sid,
-			//class_type?
+			class_type,
 			cost,
 			//seq?
 			//current_level
@@ -148,7 +193,7 @@ protected:
 			classes,
 			berserker,
 			max_level,
-			name,
+			//name,
 			//last_id,?
 			//next_id,?
 		};
@@ -161,13 +206,19 @@ protected:
 
 class ZoneHeaderExtractor : public ExtractCollector {
 public:
-	ZoneHeaderExtractor();
-	virtual ExtractItem *NewItem() { return(new ZoneHeaderItem()); }
+	ZoneHeaderExtractor(ZoneInfoExtractor *zi);
+	virtual ExtractItem *NewItem() { return(new ZoneHeaderItem(zone_info)); }
 	
 protected:
+	ZoneInfoExtractor *zone_info;
 	
-	class ZoneHeaderItem : public ExtractItem {
+	class ZoneHeaderItem : public ExtractCollector::ExtractItem {
 	public:
+		ZoneInfoExtractor *zone_info;
+		ZoneHeaderItem(ZoneInfoExtractor *zi) {
+			zone_info = zi;
+		}
+		
 		//enum in here to form a kind of 'namespace'
 		enum {
 			zone_short_name = 0,	//must start at 0
@@ -216,24 +267,25 @@ public:
 	ZonePointExtractor(ZoneInfoExtractor *zi);
 	virtual ExtractItem *NewItem() { return(new ZonePointItem(zone_info)); }
 	
-	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len);
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server);
 	
 protected:
 	ZoneInfoExtractor *zone_info;
 	
-	class ZonePointItem : public ExtractItem {
+	class ZonePointItem : public ExtractCollector::ExtractItem {
 	public:
 		ZoneInfoExtractor *zone_info;
 		ZonePointItem(ZoneInfoExtractor *zi) {
 			zone_info = zi;
 		}
+		
 		//enum in here to form a kind of 'namespace'
 		enum {
 			iterator = 0,	//must start at 0
-			x,
-			y,
-			z,
-			heading,
+			target_x,
+			target_y,
+			target_z,
+			target_heading,
 			target_zone,		//destination zone
 			zone_short		//zone the line is in
 		};
@@ -250,7 +302,7 @@ public:
 	
 protected:
 	
-	class ObjectItem : public ExtractItem {
+	class ObjectItem : public ExtractCollector::ExtractItem {
 	public:
 		//enum in here to form a kind of 'namespace'
 		enum {
@@ -295,9 +347,9 @@ public:
 	TributeExtractor();
 	virtual ExtractItem *NewItem() { return(new TributeItem()); }
 	
-	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len);
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server);
 	
-	virtual void GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item);
+	virtual void GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item);
 	virtual void GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *item);
 	virtual void GenerateAText(FILE *into, ExtractorDB *db, ExtractItem *item);
 	
@@ -316,7 +368,7 @@ protected:
 		void SetTributeID(uint32 v) { tribute_id = v; }
 	protected:
 		uint32 tribute_id;
-		class TributeAbilityItem : public ExtractItem {
+		class TributeAbilityItem : public ExtractCollector::ExtractItem {
 		public:
 			//enum in here to form a kind of 'namespace'
 			enum {
@@ -331,12 +383,12 @@ protected:
 	};
 	
 	
-	class TributeItem : public ExtractItem {
+	class TributeItem : public ExtractCollector::ExtractItem {
 	public:
 		//enum in here to form a kind of 'namespace'
 		enum {
 			tribute_id = 0,	//must start at 0
-			unknown,
+			tier_count,
 			name,
 			isguild
 		};
@@ -354,7 +406,7 @@ public:
 	
 protected:
 	
-	class TributeTextItem : public ExtractItem {
+	class TributeTextItem : public ExtractCollector::ExtractItem {
 	public:
 		//enum in here to form a kind of 'namespace'
 		enum {
@@ -377,7 +429,7 @@ public:
 protected:
 	string last_name;	//name of the last book request seen.
 	
-	class BookTextItem : public ExtractItem {
+	class BookTextItem : public ExtractCollector::ExtractItem {
 	public:
 		BookTextItem(string *ln);
 		//enum in here to form a kind of 'namespace'
@@ -397,11 +449,11 @@ public:
 	TitleExtractor();
 	virtual ExtractItem *NewItem() {  return(new TitleItem()); }
 	
-	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len);
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server);
 	
 protected:
 	
-	class TitleItem : public ExtractItem {
+	class TitleItem : public ExtractCollector::ExtractItem {
 	public:
 		//enum in here to form a kind of 'namespace'
 		enum {
@@ -420,7 +472,7 @@ public:
 	
 	//virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len);
 	
-	virtual void GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item);
+	virtual void GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item);
 	virtual void GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *item);
 	virtual void GenerateAText(FILE *into, ExtractorDB *db, ExtractItem *item);
 	
@@ -438,7 +490,7 @@ protected:
 		//virtual void GivePacket(unsigned char *data, uint32 len);
 		
 	protected:
-		class RecipeItemItem : public ExtractItem {
+		class RecipeItemItem : public ExtractCollector::ExtractItem {
 		public:
 			//enum in here to form a kind of 'namespace'
 			enum {
@@ -454,7 +506,7 @@ protected:
 	};
 	
 	
-	class RecipeItem : public ExtractItem {
+	class RecipeItem : public ExtractCollector::ExtractItem {
 	public:
 		//enum in here to form a kind of 'namespace'
 		enum {
@@ -478,7 +530,7 @@ public:
 	
 	//virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len);
 	
-	virtual void GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item);
+	virtual void GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item);
 	virtual void GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *item);
 	virtual void GenerateAText(FILE *into, ExtractorDB *db, ExtractItem *item);
 	
@@ -496,7 +548,7 @@ protected:
 		//virtual void GivePacket(unsigned char *data, uint32 len);
 		
 	protected:
-		class TaskActivityItem : public ExtractItem {
+		class TaskActivityItem : public ExtractCollector::ExtractItem {
 		public:
 			//enum in here to form a kind of 'namespace'
 			enum {
@@ -512,7 +564,7 @@ protected:
 	};
 	
 	
-	class TaskActivity : public ExtractItem {
+	class TaskActivity : public ExtractCollector::ExtractItem {
 	public:
 		//enum in here to form a kind of 'namespace'
 		enum {
@@ -535,11 +587,11 @@ public:
 	TaskHistoryExtractor();
 	virtual ExtractItem *NewItem() {  return(new TaskHistoryItem()); }
 	
-	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len);
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server);
 	
 protected:
 	
-	class TaskHistoryItem : public ExtractItem {
+	class TaskHistoryItem : public ExtractCollector::ExtractItem {
 	public:
 		//enum in here to form a kind of 'namespace'
 		enum {
@@ -558,9 +610,11 @@ public:
 	SpawnExtractor(ZoneInfoExtractor *zi);
 	virtual ExtractItem *NewItem() { return(new SpawnItem(zone_info, this)); }
 	
-	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len);
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server);
 	
-	virtual void GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item);
+	virtual void GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item);
+	virtual void GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *item);
+//	virtual void GenerateAText(FILE *into, ExtractorDB *db, ExtractItem *item);
 	
 	void RegisterSpawnID(uint16 spawn_id, SpawnItem *si);
 	
@@ -568,11 +622,12 @@ protected:
 	ZoneInfoExtractor *zone_info;
 	
 	class PathPoint {
+	public:
 		float x,y,z,h;
-		float dx, dy, dz, hd;	//deltas
+		float dx, dy, dz, dh;	//deltas
 	};
 	
-	class SpawnItem : public ExtractItem {
+	class SpawnItem : public ExtractCollector::ExtractItem {
 	public:
 		ZoneInfoExtractor *zone_info;
 		SpawnExtractor *parent;
@@ -590,8 +645,8 @@ protected:
 			equip_chest2,
 			race,
 			eyecolor1,
-			//eyecolor2,	//no home in DB
-			//beard,	//no home in DB
+			eyecolor2,
+			beard,
 			face,
 			level,
 			hairstyle,
@@ -610,16 +665,49 @@ protected:
 		
 		void GenerateSpawnInserts();
 		uint16 spawn_id;
+		uint32 npc_id;
 	};
 	
 	map<uint16, SpawnItem *> spawns;
 	
-	uint32 GetNextNPCID();
+	uint32 GetNextNPCID(ExtractorDB *db);
+	uint32 max_id;
 };
 
 
 
-#endif
+class CharacterExtractor : public ExtractCollector {
+public:
+	CharacterExtractor(uint32 charid, ZoneInfoExtractor *zi);
+	virtual ExtractItem *NewItem() { return(new CrapItem(zone_info)); }
+	
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server);
+
+	virtual void GenerateInserts(FILE *into, bool make_replaces);
+	virtual void GenerateUpdates(FILE *into, ExtractorDB *db);
+	virtual void GenerateTexts(FILE *into, ExtractorDB *db);
+	
+protected:
+	ZoneInfoExtractor *zone_info;
+	
+	const uint32 charid;
+	PlayerProfile_Struct m_pp;
+	bool got_it;
+	
+	class CrapItem : public ExtractCollector::ExtractItem {
+	public:
+		ZoneInfoExtractor *zone_info;
+		CrapItem(ZoneInfoExtractor *zi) {
+			zone_info = zi;
+		}
+		
+		virtual uint32 FromPacket(unsigned char *data, uint32 len) { return(len); }
+	};
+};
+
+
+
+
 
 
 

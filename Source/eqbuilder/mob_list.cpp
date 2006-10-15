@@ -46,19 +46,25 @@ void mob_list::add( cmob* mob ) {
 	list.push_back(mob);
 }
 
-cmob* mob_list::get( int pos ) const {
+cmob* mob_list::get( int pos ) {
 	if(pos >= getsize() || pos < 0)
 		return(NULL);
 	return(list[pos]);
 }
 
-cmob* mob_list::getmobbyid( int id, bool can_be_dead ) {
+const cmob* mob_list::get( int pos ) const {
+	if(pos >= getsize() || pos < 0)
+		return(NULL);
+	return(list[pos]);
+}
+
+cmob* mob_list::GetMobByEntityId( int id, bool can_be_dead ) {
 	vector<cmob*>::iterator cur, end;
 	cur = list.begin();
 	end = list.end();
 	for(; cur != end; cur++) {
 
-		if ( (*cur)->id == id ) {
+		if ( (*cur)->entity_id == id ) {
 			if(can_be_dead || !(*cur)->killed)
 				return *cur;
 		}

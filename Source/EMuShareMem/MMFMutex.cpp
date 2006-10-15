@@ -1,5 +1,7 @@
 #include "MMFMutex.h"
 
+#ifndef WIN32
+
 MMFMutex::MMFMutex( int key )
  {
     m_key = key;
@@ -119,5 +121,6 @@ void MMFMutex::Release(const MMF* pMMF)
         m_owner = 0;
     }
 }
+#endif //!WIN32
 
 

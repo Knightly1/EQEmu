@@ -76,8 +76,13 @@ extern volatile bool ZoneLoaded;
 #include "../common/version.h"
 #include "../common/files.h"
 #include "../common/EQEMuError.h"
+#include "ZoneConfig.h"
 #include "../common/packet_dump_file.h"
 #include "../common/opcodemgr.h"
+#include "../common/guilds.h"
+#include "../common/EQStreamIdent.h"
+#include "../common/patches/patches.h"
+#include "../common/rulesys.h"
 
 #include "masterentity.h"
 #include "worldserver.h"
@@ -91,11 +96,7 @@ extern volatile bool ZoneLoaded;
 #include "client_logs.h"
 #include "questmgr.h"
 #include "titles.h"
-
-#ifdef GUILDWARS
-#include "../GuildWars/GuildWars.h"
-extern GuildLocationList location_list;
-#endif
+#include "guild_mgr.h"
 
 NetConnection		net;
 EntityList			entity_list;
@@ -104,14 +105,15 @@ int32				numclients = 0;
 #ifdef CATCH_CRASH
 int8			error = 0;
 #endif
-GuildRanks_Struct	guilds[512];
 char errorname[32];
 int16 adverrornum = 0;
 extern Zone* zone;
 EQStreamFactory eqsf(ZoneStream);
 npcDecayTimes_Struct npcCorpseDecayTimes[100];
 TitleManager title_manager;
-
+DBAsyncFinishedQueue MTdbafq;
+DBAsync *dbasync = NULL;
+RuleManager *rules = new RuleManager();
 
 bool zoneprocess;
 
@@ -133,8 +135,6 @@ bool zoneprocess;
 
 #endif
 
-Database database;
-
 #ifdef WIN32
 #include <process.h>
 #else
@@ -154,141 +154,174 @@ extern  AddonCmd addonCmd;
 #endif
 
 int main(int argc, char** argv) {
+	const char *zone_name;
+	
+	if(argc == 3) {
+		worldserver.SetLauncherName(argv[2]);
+		worldserver.SetLaunchedName(argv[1]);
+		if(strncmp(argv[1], "dynamic_", 8) == 0) {
+			//dynamic zone with a launcher name correlation
+			zone_name = ".";
+		} else {
+			zone_name = argv[1];
+			worldserver.SetLaunchedName(zone_name);
+		}
+	} else if (argc == 2) {
+		worldserver.SetLauncherName("NONE");
+		worldserver.SetLaunchedName(argv[1]);
+		if(strncmp(argv[1], "dynamic_", 8) == 0) {
+			//dynamic zone with a launcher name correlation
+			zone_name = ".";
+		} else {
+			zone_name = argv[1];
+			worldserver.SetLaunchedName(zone_name);
+		}
+	} else {
+		zone_name = ".";
+		worldserver.SetLaunchedName(".");
+		worldserver.SetLauncherName("NONE");
+	}
+
+	_log(ZONE__INIT, "Loading server configuration..");
+	if (!ZoneConfig::LoadConfig()) {
+		_log(ZONE__INIT_ERR, "Loading server configuration failed.");
+		return(1);
+	}
+	const ZoneConfig *Config=ZoneConfig::get();
+
+	if(!load_log_settings(Config->LogSettingsFile.c_str()))
+		_log(ZONE__INIT, "Warning: Unable to read %s", Config->LogSettingsFile.c_str());
+	else
+		_log(ZONE__INIT, "Log settings loaded from %s", Config->LogSettingsFile.c_str());
+	
+	worldserver.SetPassword(Config->SharedKey.c_str());
+
+	_log(ZONE__INIT, "Connecting to MySQL...");
+	if (!database.Connect(
+		Config->DatabaseHost.c_str(),
+		Config->DatabaseUsername.c_str(),
+		Config->DatabasePassword.c_str(),
+		Config->DatabaseDB.c_str(),
+		Config->DatabasePort)) {
+		_log(ZONE__INIT_ERR, "Cannot continue without a database connection.");
+		return(1);
+	}
+	dbasync = new DBAsync(&database);
+	dbasync->AddFQ(&MTdbafq);
+	guild_mgr.SetDatabase(&database);
+
 #ifdef _EQDEBUG
 	_CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 //	_crtBreakAlloc = 2025;
 #endif
 	srand(time(NULL));
 	
-#if EQDEBUG > 5 
-		for (int logs = 0; logs < EQEMuLog::MaxLogID; logs++) 
-			LogFile->write((EQEMuLog::LogIDs)logs, "CURRENT_ZONE_VERSION: %s", CURRENT_ZONE_VERSION);
-#else
-		LogFile->write(EQEMuLog::Status, "CURRENT_ZONE_VERSION: %s", CURRENT_ZONE_VERSION);
-#endif
+	_log(ZONE__INIT, "CURRENT_ZONE_VERSION: %s", CURRENT_ZONE_VERSION);
 	
-	if (argc != 5)
-	{
-		cerr << "Usage: zone zone_name address port worldaddress" << endl;
-		exit(0);
-	}
-	char* filename = argv[0];
-	char* zone_name = argv[1];
-	char* address = argv[2];
-	int32 port = atoi(argv[3]);
-	char* worldaddress = argv[4];
-	
-	if (strlen(address) <= 0) {
-		cerr << "Invalid address" << endl;
-
-		exit(0);
-	}
-	if (port <= 0) {
-		cerr << "Bad port specified" << endl;
-		exit(0);
-	}
-	if (strlen(worldaddress) <= 0) {
-		cerr << "Invalid worldaddress" << endl;
-		exit(0);
-	}
-	if (signal(SIGINT, CatchSignal) == SIG_ERR) {
-		cerr << "Could not set signal handler" << endl;
+	/*
+	 * Setup nice signal handlers
+	 */
+	if (signal(SIGINT, CatchSignal) == SIG_ERR)	{
+		_log(ZONE__INIT_ERR, "Could not set signal handler");
 		return 0;
 	}
-#ifndef WIN32
-	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
-		cerr << "Could not set signal handler" << endl;
+	if (signal(SIGTERM, CatchSignal) == SIG_ERR)	{
+		_log(ZONE__INIT_ERR, "Could not set signal handler");
 		return 0;
 	}
-#endif
-	net.SaveInfo(address, port, worldaddress,filename);
-	
-	LogFile->write(EQEMuLog::Status, "Loading opcodes..");
-#ifdef DONT_SHARED_OPCODES
-	ZoneOpcodeManager = new RegularOpcodeManager();
-#else
-	ZoneOpcodeManager = new SharedOpcodeManager();
-#endif
-	if(!ZoneOpcodeManager->LoadOpcodes(OPCODES_FILE)) {
-		LogFile->write(EQEMuLog::Error, "Loading opcodes failed. I cant live like this!");
-		return(1);
+	#ifndef WIN32
+	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)	{
+		_log(ZONE__INIT_ERR, "Could not set signal handler");
+		return 0;
 	}
+	#endif
 	
-	LogFile->write(EQEMuLog::Status, "Mapping Incoming Opcodes");
+	if(!load_log_settings(LOG_INI_FILE))
+		_log(ZONE__INIT, "Warning: Unable to read %s", LOG_INI_FILE);
+	else
+		_log(ZONE__INIT, "Log settings loaded from %s", LOG_INI_FILE);
+	
+	_log(ZONE__INIT, "Mapping Incoming Opcodes");
 	MapOpcodes();
-	LogFile->write(EQEMuLog::Status, "Loading Variables");
+	_log(ZONE__INIT, "Loading Variables");
 	database.LoadVariables();
-	LogFile->write(EQEMuLog::Status, "Loading zone names");
+	_log(ZONE__INIT, "Loading zone names");
 	database.LoadZoneNames();
-	LogFile->write(EQEMuLog::Status, "Loading items");
+	_log(ZONE__INIT, "Loading items");
 	if (!database.LoadItems()) {
-		LogFile->write(EQEMuLog::Error, "Loading items FAILED!");
-		cout << "Failed.  But ignoring error and going on..." << endl;
+		_log(ZONE__INIT_ERR, "Loading items FAILED!");
+		_log(ZONE__INIT, "Failed.  But ignoring error and going on...");
 	}
-	LogFile->write(EQEMuLog::Status, "Loading npcs");
 /*
+	_log(ZONE__INIT, "Loading npcs");
 	if (!database.LoadNPCTypes()) {
-		LogFile->write(EQEMuLog::Error, "Loading npcs FAILED!");
+		_log(ZONE__INIT_ERR, "Loading npcs FAILED!");
 		CheckEQEMuErrorAndPause();
 		return 0;
 	}
 */
 #ifdef SHAREMEM
-	LogFile->write(EQEMuLog::Status, "Loading npc faction lists");
+	_log(ZONE__INIT, "Loading npc faction lists");
 	if (!database.LoadNPCFactionLists()) {
-		LogFile->write(EQEMuLog::Error, "Loading npcs faction lists FAILED!");
+		_log(ZONE__INIT_ERR, "Loading npcs faction lists FAILED!");
 		CheckEQEMuErrorAndPause();
 		return 0;
 	}
 #endif
-	LogFile->write(EQEMuLog::Status, "Loading loot tables");
+	_log(ZONE__INIT, "Loading loot tables");
 	if (!database.LoadLoot()) {
-		LogFile->write(EQEMuLog::Error, "Loading loot FAILED!");
+		_log(ZONE__INIT_ERR, "Loading loot FAILED!");
 		CheckEQEMuErrorAndPause();
 		return 0;
 	}
-	LogFile->write(EQEMuLog::Status, "Loading doors");
-	database.LoadDoors();
 	
 	LoadSPDat();
 
 	// New Load function.  keeping it commented till I figure out why its not working correctly in linux. Trump.
 	// NewLoadSPDat();
-	LogFile->write(EQEMuLog::Status, "Loading guilds");
-	database.LoadGuilds(guilds);
-	LogFile->write(EQEMuLog::Status, "Loading guild list");
-	database.LoadGuildList();
-	LogFile->write(EQEMuLog::Status, "Loading factions");
+	_log(ZONE__INIT, "Loading guilds");
+	guild_mgr.LoadGuilds();
+	_log(ZONE__INIT, "Loading factions");
 	database.LoadFactionData();
-	LogFile->write(EQEMuLog::Status, "Loading titles");
+	_log(ZONE__INIT, "Loading titles");
 	title_manager.LoadTitles();
-	LogFile->write(EQEMuLog::Status, "Loading AA effects");
+	_log(ZONE__INIT, "Loading AA effects");
 	database.LoadAAEffects();
-	LogFile->write(EQEMuLog::Status, "Loading swarm spells");
+	_log(ZONE__INIT, "Loading swarm spells");
 	database.LoadSwarmSpells();
-	LogFile->write(EQEMuLog::Status, "Loading tributes");
+	_log(ZONE__INIT, "Loading tributes");
 	database.LoadTributes();
-	LogFile->write(EQEMuLog::Status, "Loading corpse timers");
+	_log(ZONE__INIT, "Loading corpse timers");
 	database.GetDecayTimes(npcCorpseDecayTimes);
-	LogFile->write(EQEMuLog::Status, "Loading what ever is left");
-	database.ExtraOptions();
-	LogFile->write(EQEMuLog::Status, "Loading commands");
+	_log(ZONE__INIT, "Loading commands");
 	int retval=command_init();
 	if(retval<0)
-		LogFile->write(EQEMuLog::Status, "Command loading FAILED");
+		_log(ZONE__INIT_ERR, "Command loading FAILED");
 	else
-		LogFile->write(EQEMuLog::Status, "%d commands loaded", retval);
+		_log(ZONE__INIT, "%d commands loaded", retval);
+	//rules:
+	{
+		char tmp[64];
+		if (database.GetVariable("RuleSet", tmp, sizeof(tmp)-1)) {
+				_log(ZONE__INIT, "Loading rule set '%s'", tmp);
+			if(!rules->LoadRules(&database, tmp)) {
+				_log(ZONE__INIT_ERR, "Failed to load ruleset '%s', falling back to defaults.", tmp);
+			}
+		} else {
+			_log(ZONE__INIT, "No rule set configured, using default rules");
+		}
+	}
 
 
 #ifdef EMBPERL
 #ifdef EMBPERL_XS
-	LogFile->write(EQEMuLog::Status, "Loading embedded perl XS");
+	_log(ZONE__INIT, "Loading embedded perl XS");
  	AutoDelete<PerlXSParser> ADparse;
 	try {
 		ADparse.init((PerlXSParser **)(&parse), new PerlXSParser);
 	}
 #else //old EMBPERL
-	LogFile->write(EQEMuLog::Status, "Loading embedded perl");
+	_log(ZONE__INIT, "Loading embedded perl");
 	AutoDelete<PerlembParser> ADparse;
 	try {
 		ADparse.init((PerlembParser **)(&parse), new PerlembParser);
@@ -296,7 +329,7 @@ int main(int argc, char** argv) {
 #endif
 	catch(const char *err)
 	{//this should never happen, so if it does, it is something really serious (like a bad perl install), so we'll shutdown.
-		LogFile->write(EQEMuLog::Status, "Fatal error initializing perl: %s", err);
+		_log(ZONE__INIT_ERR, "Fatal error initializing perl: %s", err);
 		ADparse.ReallyClearIt();
 		return EXIT_FAILURE;
 	}
@@ -305,38 +338,23 @@ int main(int argc, char** argv) {
 #endif //EMBPERL
 	
 	//now we have our parser, load the quests
-	LogFile->write(EQEMuLog::Status, "Loading quests");
+	_log(ZONE__INIT, "Loading quests");
 	parse->ReloadQuests();
 	
 
 #ifdef ADDONCMD	
-	LogFile->write(EQEMuLog::Status, "Looding addon commands from dll");
+	_log(ZONE__INIT, "Looding addon commands from dll");
 	if ( !addonCmd.openLib() ) {
-		LogFile->write(EQEMuLog::Error, "Loading addons failed =(");
+		_log(ZONE__INIT_ERR, "Loading addons failed =(");
 	}
 #endif
 #ifdef CLIENT_LOGS
 	LogFile->SetAllCallbacks(ClientLogs::EQEmuIO_buf);
 	LogFile->SetAllCallbacks(ClientLogs::EQEmuIO_fmt);
+	LogFile->SetAllCallbacks(ClientLogs::EQEmuIO_pva);
 #endif
 	if (!worldserver.Connect()) {
-		LogFile->write(EQEMuLog::Error, "worldserver.Connect() FAILED!");
-	}
-	
-	LogFile->write(EQEMuLog::Status, "Starting EQ Network server.");
-	//start up the network server
-	if (!eqsf.Open(net.GetZonePort())) {
-		safe_delete(zone);
-		cerr << "eqsf.Open failed" << endl;
-		worldserver.SetZone(0);
-		return false;
-	}
-	
-	if (strcmp(zone_name, ".") == 0 || strcasecmp(zone_name, "sleep") == 0) {
-		LogFile->write(EQEMuLog::Status, "Entering sleep mode");
-	} else if (!Zone::Bootup(database.GetZoneID(zone_name), true)) {
-		LogFile->write(EQEMuLog::Error, "Zone bootup FAILED!");
-		zone = 0;
+		_log(ZONE__INIT_ERR, "worldserver.Connect() FAILED!");
 	}
 	
 	Timer InterserverTimer(INTERSERVER_TIMER); // does MySQL pings and auto-reconnect
@@ -346,10 +364,26 @@ int main(int argc, char** argv) {
 	profile_dump_timer.Start();
 #endif
 #endif
+	if (!strlen(zone_name) || !strcmp(zone_name,".")) {
+		_log(ZONE__INIT, "Entering sleep mode");
+	} else if (!Zone::Bootup(database.GetZoneID(zone_name), true)) {
+		_log(ZONE__INIT_ERR, "Zone bootup FAILED!");
+		zone = 0;
+	}
+	
+	//register all the patches we have avaliable with the stream identifier.
+	EQStreamIdentifier stream_identifier;
+	RegisterAllPatches(stream_identifier);
+	
+#ifndef WIN32
+	_log(COMMON__THREADS, "Main thread running with thread id %d", pthread_self());
+#endif
+	
 	Timer quest_timers(1000);	//highest resolution quest timer is 1 second
 	UpdateWindowTitle();
 	bool worldwasconnected = worldserver.Connected();
-	EQStream* eqs;
+	EQStream* eqss;
+	EQStreamInterface *eqsi;
 	Timer temp_timer(10);
 	temp_timer.Start();
 	while(RunLoops) {
@@ -368,20 +402,44 @@ int main(int argc, char** argv) {
 		}
 		catch(...){
 			error = 1;
-			adverrornum = worldserver.GetErrorNumber();
 			worldserver.Disconnect();
 			worldwasconnected = false;
 		}
 #endif
+		if (!eqsf.IsOpen() && Config->ZonePort!=0) {
+			_log(ZONE__INIT, "Starting EQ Network server on port %d",Config->ZonePort);
+			if (!eqsf.Open(Config->ZonePort)) {
+				_log(ZONE__INIT_ERR, "Failed to open port %d",Config->ZonePort);
+				ZoneConfig::SetZonePort(0);
+				worldserver.Disconnect();
+				worldwasconnected = false;
+			}
+		}
 		
-		//look for new connections
-		while ((eqs = eqsf.Pop())) {
+		//check the factory for any new incoming streams.
+		while ((eqss = eqsf.Pop())) {
+			//pull the stream out of the factory and give it to the stream identifier
+			//which will figure out what patch they are running, and set up the dynamic
+			//structures and opcodes for that patch.
 			struct in_addr	in;
-			in.s_addr = eqs->GetrIP();
-			LogFile->write(EQEMuLog::Status, "%i New client from ip:%s port:%i", Timer::GetCurrentTime(), inet_ntoa(in), ntohs(eqs->GetrPort()));
-			Client* client = new Client(eqs);
+			in.s_addr = eqss->GetRemoteIP();
+			_log(WORLD__CLIENT, "New connection from %s:%d", inet_ntoa(in),ntohs(eqss->GetRemotePort()));
+			stream_identifier.AddStream(eqss);	//takes the stream
+		}
+		
+		//give the stream identifier a chance to do its work....
+		stream_identifier.Process();
+		
+		//check the stream identifier for any now-identified streams
+		while((eqsi = stream_identifier.PopIdentified())) {
+			//now that we know what patch they are running, start up their client object
+			struct in_addr	in;
+			in.s_addr = eqsi->GetRemoteIP();
+			_log(WORLD__CLIENT, "New client from %s:%d", inet_ntoa(in), ntohs(eqsi->GetRemotePort()));
+			Client* client = new Client(eqsi);
 			entity_list.AddClient(client);
 		}
+		
 		
 		//check for timeouts in other threads
 		timeout_manager.CheckTimeouts();
@@ -428,14 +486,6 @@ int main(int argc, char** argv) {
 					entity_list.MobProcess();
 #endif
 					error2 = 94;
-#ifdef GUILDWARS
-					try{
-					location_list.ProcessLocations();
-					}
-					catch(...){
-						printf("GuildWars Location Crash.\n");
-					}
-#endif
 					entity_list.BeaconProcess();
 #ifdef CATCH_CRASH
 				}
@@ -444,9 +494,11 @@ int main(int argc, char** argv) {
 				}
 				try{
 #endif
-					zoneprocess= zone->Process();
-					if (!zoneprocess) {
-						Zone::Shutdown();
+					if (zone) {
+						zoneprocess= zone->Process();
+						if (!zoneprocess) {
+							Zone::Shutdown();
+						}
 					}
 #ifdef CATCH_CRASH
 				}
@@ -466,7 +518,7 @@ int main(int argc, char** argv) {
 			}
 		}
 		DBAsyncWork* dbaw = 0;
-		while ((dbaw = MTdbafq->Pop())) {
+		while ((dbaw = MTdbafq.Pop())) {
 			DispatchFinishedDBAsync(dbaw);
 		}
 		if (InterserverTimer.Check()
@@ -479,7 +531,7 @@ int main(int argc, char** argv) {
 #endif
 				InterserverTimer.Start();
 				database.ping();
-				AsyncLoadVariables();
+				AsyncLoadVariables(dbasync, &database);
 //				NPC::GetAILevel(true);
 				entity_list.UpdateWho();
 				if (worldserver.TryReconnect() && (!worldserver.Connected()))
@@ -530,7 +582,7 @@ int main(int argc, char** argv) {
 	
 #ifdef CATCH_CRASH
 	if (error)
-		FilePrint("eqemudebug.log",true,true,"Zone %i crashed. Errorcode: %i/%i. Current zone loaded:%s. Current clients:%i. Caused by: %s",net.GetZonePort(), error,adverrornum, zone->GetShortName(), numclients,errorname);
+		FilePrint("eqemudebug.log",true,true,"Zone %i crashed. Errorcode: %i/%i. Current zone loaded:%s. Current clients:%i. Caused by: %s",Config->ZonePort, error,adverrornum, zone->GetShortName(), numclients,errorname);
 	try{
 		entity_list.Message(0, 15, "ZONEWIDE_MESSAGE: This zone caused a fatal error and will shut down now. Your character will be restored to the last saved status. We are sorry for any inconvenience!");
 	}
@@ -566,12 +618,16 @@ int main(int argc, char** argv) {
 //	InflatePacket(NULL, 0, NULL, 0, false);
 	
 	CheckEQEMuErrorAndPause();
-	LogFile->write(EQEMuLog::Status, "Proper zone shutdown complete.");
+	_log(ZONE__INIT, "Proper zone shutdown complete.");
 	return 0;
 }
 
 void CatchSignal(int sig_num) {
-	LogFile->write(EQEMuLog::Status, "Recieved signal:%i", sig_num);
+#ifdef WIN32
+	_log(ZONE__INIT, "Recieved signal: %i", sig_num);
+#else
+	_log(ZONE__INIT, "Recieved signal: %i in thread %d", sig_num, pthread_self());
+#endif
 	RunLoops = false;
 }
 
@@ -581,7 +637,7 @@ void Shutdown()
 	RunLoops = false;
 	worldserver.Disconnect();
 	//	safe_delete(worldserver);
-	LogFile->write(EQEMuLog::Status, "Shutting down...");
+	_log(ZONE__INIT, "Shutting down...");
 }
 
 int32 NetConnection::GetIP()
@@ -654,7 +710,7 @@ NetConnection::~NetConnection() {
 }
 bool chrcmpI(const char* a, const char* b) {
 #if EQDEBUG >= 11
-    LogFile->write(EQEMuLog::Debug, "crhcmpl() a:%i b:%i", (int*) a, (int*) b);
+    _log(EQEMuLog::Debug, "crhcmpl() a:%i b:%i", (int*) a, (int*) b);
 #endif
 	if(((int)* a)==((int)* b))
 		return false;
@@ -669,19 +725,20 @@ sint32 GetMaxSpellID() {
 	char* spell_line = spell_line_start;
 	char token[64]="";
 	char seps[] = "^";
-	//ifstream in(SPELLS_FILE);
+	const char *spells_file=ZoneConfig::get()->SpellsFile.c_str();
+	//ifstream in(spells_file);
 	
 	/*struct stat s;
-	if(stat(SPELLS_FILE, &s) != 0) {
-		LogFile->write(EQEMuLog::Error, "File '%s' not found (stat failed) in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
+	if(stat(spells_file, &s) != 0) {
+		_log(SPELLS__LOAD_ERR, "File '%s' not found (stat failed), spell loading FAILED!", spells_file);
 		return(-1);
 	}
 	*/
 
-	FILE *sf = fopen(SPELLS_FILE, "r");
+	FILE *sf = fopen(spells_file, "r");
 	
 	if(sf == NULL) {
-		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
+		_log(SPELLS__LOAD_ERR, "File '%s' not found, spell loading FAILED!", spells_file);
 		return -1;
 	}
 	
@@ -701,10 +758,10 @@ sint32 GetMaxSpellID() {
 	
 	fclose(sf);
 	
-	/*ifstream in(SPELLS_FILE);
+	/*ifstream in(spells_file);
 	
 	if(!in) {
-		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
+		_log(SPELLS__LOAD_ERR, "File '%s' not found, spell loading FAILED!", spells_file);
 		return -1;
 	}
 	
@@ -732,11 +789,11 @@ extern "C" bool extFileLoadSPDat(void* sp, sint32 iMaxSpellID) { return FileLoad
 
 void LoadSPDat() {
 	if (SPDAT_RECORDS != -1) {
-		LogFile->write(EQEMuLog::Debug, "LoadSPDat() SPDAT_RECORDS:%i != -1, spells already loaded?", SPDAT_RECORDS);
+		_log(SPELLS__LOAD, "LoadSPDat() SPDAT_RECORDS:%i != -1, spells already loaded?", SPDAT_RECORDS);
 	}
 	sint32 MaxSpellID = GetMaxSpellID();
 	if (MaxSpellID == -1) {
-		LogFile->write(EQEMuLog::Debug, "LoadSPDat() MaxSpellID == -1, %s missing?", SPELLS_FILE);
+		_log(SPELLS__LOAD, "LoadSPDat() MaxSpellID == -1, %s missing?", ZoneConfig::get()->SpellsFile.c_str());
 		return;
 	}
 #ifdef SHAREMEM
@@ -748,7 +805,7 @@ void LoadSPDat() {
 	}
 	else {
 		SPDAT_RECORDS = -1;
-		LogFile->write(EQEMuLog::Error, "LoadSPDat() EMuShareMemDLL.Spells.DLLLoadSPDat() returned false");
+		_log(SPELLS__LOAD_ERR, "LoadSPDat() EMuShareMemDLL.Spells.DLLLoadSPDat() returned false");
 		return;
 	}
 #else
@@ -760,7 +817,7 @@ void LoadSPDat() {
 	}
 	else {
 		safe_delete(spells_delete);
-		LogFile->write(EQEMuLog::Error, "LoadSPDat() FileLoadSPDat() returned false");
+		_log(SPELLS__LOAD_ERR, "LoadSPDat() FileLoadSPDat() returned false");
 		return;
 	}
 #endif
@@ -770,22 +827,23 @@ bool FileLoadSPDat(SPDat_Spell_Struct* sp, sint32 iMaxSpellID) {
 	int tempid=0;
 	int16 counter=0;
 	char spell_line[2048];
-	LogFile->write(EQEMuLog::Status,"FileLoadSPDat() Loading spells from %s", SPELLS_FILE);
+	const char *spells_file=ZoneConfig::get()->SpellsFile.c_str();
+	_log(SPELLS__LOAD,"FileLoadSPDat() Loading spells from %s", spells_file);
 	
-	FILE *sf = fopen(SPELLS_FILE, "r");
+	FILE *sf = fopen(spells_file, "r");
 	
 	if(sf == NULL) {
-		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
+		_log(SPELLS__LOAD_ERR, "File '%s' not found, spell loading FAILED!", spells_file);
 		return false;
 	}
-/*	ifstream in(SPELLS_FILE);
+/*	ifstream in(spells_file);
 	if(!in) {
-		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
+		_log(SPELLS__LOAD_ERR, "File '%s' not found, spell loading FAILED!", spells_file);
 		return false;
 	}
 	*/
 	if (iMaxSpellID < 0) {
-		LogFile->write(EQEMuLog::Error,"FileLoadSPDat() Loading spells FAILED! iMaxSpellID:%i < 0", iMaxSpellID);
+		_log(SPELLS__LOAD_ERR,"FileLoadSPDat() Loading spells FAILED! iMaxSpellID:%i < 0", iMaxSpellID);
 		return false;
 	}
 /*
@@ -794,14 +852,14 @@ This is hanging on freebsd for me, not sure why...
 
 //#if EQDEBUG >= 1
 	else {
-		LogFile->write(EQEMuLog::Debug,"FileLoadSPDat() Highest spell ID:%i", iMaxSpellID);
+		_log(SPELLS__LOAD,"FileLoadSPDat() Highest spell ID:%i", iMaxSpellID);
 	}
 //#endif
 */
 /*	in.close();
-	in.open(SPELLS_FILE);
+	in.open(spells_file);
 	if(!in) {
-		LogFile->write(EQEMuLog::Error, "File '%s' not found in same directory as zone.exe, spell loading FAILED!", SPELLS_FILE);
+		_log(SPELLS__LOAD_ERR, "File '%s' not found, spell loading FAILED!", spells_file);
 		return false;
 	}
 	while(!in.eof()) {
@@ -813,7 +871,7 @@ This is hanging on freebsd for me, not sure why...
 		
 		tempid = atoi(sep.arg[0]);
 		if (tempid > iMaxSpellID) {
-			LogFile->write(EQEMuLog::Error, "FATAL FileLoadSPDat() tempid:%i >= iMaxSpellID:%i", tempid, iMaxSpellID);
+			_log(SPELLS__LOAD_ERR, "FATAL FileLoadSPDat() tempid:%i >= iMaxSpellID:%i", tempid, iMaxSpellID);
 			return false;
 		}
 		*/
@@ -829,7 +887,7 @@ This is hanging on freebsd for me, not sure why...
 		
 		tempid = atoi(sep.arg[0]);
 		if (tempid > iMaxSpellID) {
-			LogFile->write(EQEMuLog::Error, "FATAL FileLoadSPDat() tempid:%i >= iMaxSpellID:%i", tempid, iMaxSpellID);
+			_log(SPELLS__LOAD_ERR, "FATAL FileLoadSPDat() tempid:%i >= iMaxSpellID:%i", tempid, iMaxSpellID);
 			return false;
 		}
 		
@@ -886,14 +944,14 @@ This is hanging on freebsd for me, not sure why...
 		for(y=0; y< 12;y++)
 			sp[tempid].effectid[y]=atoi(sep.arg[86+y]);
 		
-		sp[tempid].targettype=atoi(sep.arg[98]);
+		sp[tempid].targettype = (SpellTargetType) atoi(sep.arg[98]);
 		sp[tempid].basediff=atoi(sep.arg[99]);
 		sp[tempid].skill=atoi(sep.arg[100]);
 		sp[tempid].zonetype=atoi(sep.arg[101]);
 		sp[tempid].EnvironmentType=atoi(sep.arg[102]);
 		sp[tempid].TimeOfDay=atoi(sep.arg[103]);
 		
-		for(y=0; y< 16;y++)
+		for(y=0; y < PLAYER_CLASS_COUNT;y++)
 			sp[tempid].classes[y]=atoi(sep.arg[104+y]);
 		
 		sp[tempid].CastingAnim=atoi(sep.arg[120]);
@@ -919,7 +977,7 @@ This is hanging on freebsd for me, not sure why...
 		for(y=0; y< 17;y++)
 			sp[tempid].Spacing4[y] = atoi(sep.arg[158+y]);
 	} 
-	LogFile->write(EQEMuLog::Status, "FileLoadSPDat() spells loaded: %i", counter);
+	_log(SPELLS__LOAD, "FileLoadSPDat() spells loaded: %i", counter);
 	//in.close();
 	fclose(sf);
 
@@ -932,21 +990,21 @@ void UpdateWindowTitle(char* iNewTitle) {
 #ifdef WIN32
 	char tmp[500];
 	if (iNewTitle) {
-		snprintf(tmp, sizeof(tmp), "%i: %s", net.GetZonePort(), iNewTitle);
+		snprintf(tmp, sizeof(tmp), "%i: %s", ZoneConfig::get()->ZonePort, iNewTitle);
 	}
 	else {
 		if (zone) {
 			#if defined(GOTFRAGS) || defined(_EQDEBUG)
-				snprintf(tmp, sizeof(tmp), "%i: %s, %i clients, %i", net.GetZonePort(), zone->GetShortName(), numclients, getpid());
+				snprintf(tmp, sizeof(tmp), "%i: %s, %i clients, %i", ZoneConfig::get()->ZonePort, zone->GetShortName(), numclients, getpid());
 			#else
-				snprintf(tmp, sizeof(tmp), "%i: %s, %i clients", net.GetZonePort(), zone->GetShortName(), numclients);
+				snprintf(tmp, sizeof(tmp), "%i: %s, %i clients", ZoneConfig::get()->ZonePort, zone->GetShortName(), numclients);
 			#endif
 		}
 		else {
 			#if defined(GOTFRAGS) || defined(_EQDEBUG)
-				snprintf(tmp, sizeof(tmp), "%i: sleeping, %i", net.GetZonePort(), getpid());
+				snprintf(tmp, sizeof(tmp), "%i: sleeping, %i", ZoneConfig::get()->ZonePort, getpid());
 			#else
-				snprintf(tmp, sizeof(tmp), "%i: sleeping", net.GetZonePort());
+				snprintf(tmp, sizeof(tmp), "%i: sleeping", ZoneConfig::get()->ZonePort);
 			#endif
 		}
 	}

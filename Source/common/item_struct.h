@@ -45,26 +45,63 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  04111-1307  USA
 #include "eq_constants.h"
 
 /*
-** Child struct of ItemCommon_Struct:
+** Child struct of Item_Struct:
 **	Effect data: Click, Proc, Focus, Worn, Scroll
 **
 */
 struct ItemEffect_Struct {
-	uint16	Effect;
+	sint16	Effect;
 	uint8	Type;
 	uint8	Level;
+	uint8	Level2;
+};
+
+class ItemInst;
+
+struct InternalSerializedItem_Struct {
+	sint16 slot_id;
+	uint32 inst;
 };
 
 #define MAX_AUGMENT_SLOTS 5
 
-/*
-** Child struct of Item_Struct:
-**	Common item data
-**
-*/
-struct ItemCommon_Struct {
-	//uint32	Unk012;
-	//uint32	Unk013;
+struct Item_Struct {
+	// Non packet based fields
+	uint8	MinStatus;
+
+	// Packet based fields
+	uint8	ItemClass;		// Item Type: 0=common, 1=container, 2=book
+	char	Name[64];		// Name
+	char	Lore[80];		// Lore Name: *=lore, &=summoned, #=artifact, ~=pending lore
+	char	IDFile[30];		// Visible model
+	uint32	ID;			// Unique ID (also PK for DB)
+	uint8	Weight;			// Item weight * 10
+	uint8	NoRent;			// No Rent: 0=norent, 255=not norent
+	uint8	NoDrop;			// No Drop: 0=nodrop, 255=not nodrop
+	uint8	Size;			// Size: 0=tiny, 1=small, 2=medium, 3=large, 4=giant
+	uint32	Slots;			// Bitfield for which slots this item can be used in
+	uint32	Price;			// Item cost (?)
+	uint32	Icon;			// Icon Number
+	uint32	LoreGroup;		// Later items use LoreGroup instead of LoreFlag
+	bool	LoreFlag;		// This will be true if LoreGroup is non-zero
+	bool	PendingLoreFlag;
+	bool	ArtifactFlag;
+	bool	SummonedFlag;
+	uint8   FVNoDrop;		// Firiona Vie nodrop flag
+	uint32	Favor;			// Individual favor
+	uint32	GuildFavor;		// Guild favor
+	uint32	PointType;
+
+	//uint32	Unk117;
+	//uint32	Unk118;
+	//uint32	Unk121;
+	//uint32	Unk124;
+
+	uint8	BagType;		// 0:Small Bag, 1:Large Bag, 2:Quiver, 3:Belt Pouch ... there are 50 types
+	uint8	BagSlots;		// Number of slots: can only be 2, 4, 6, 8, or 10
+	uint8	BagSize;		// 0:TINY, 1:SMALL, 2:MEDIUM, 3:LARGE, 4:GIANT 
+	uint8	BagWR;			// 0->100
+
 	bool	BenefitFlag;
 	bool	Tradeskills;		// Is this a tradeskill item?
 	sint8	CR;			// Save vs Cold
@@ -87,7 +124,7 @@ struct ItemCommon_Struct {
 	sint32	SkillModValue;		// % Mod to skill specified in SkillModType
 	uint32	SkillModType;		// Type of skill for SkillModValue to apply to
 	uint32	BaneDmgRace;		// Bane Damage Race
-	sint8	BaneDmgAmt;		// Bane Damage
+	sint8	BaneDmgAmt;		// Bane Damage Body Amount
 	uint32	BaneDmgBody;		// Bane Damage Body
 	bool	Magic;			// True=Magic Item, False=not
 	sint32	CastTime_;
@@ -138,6 +175,7 @@ struct ItemCommon_Struct {
 	char	CharmFile[32];		// ?
 	uint32	AugType;
 	uint8	AugSlotType[MAX_AUGMENT_SLOTS];		// LDoN: Augment Slot 1-5 Type
+	uint8	AugSlotUnk[MAX_AUGMENT_SLOTS];		// LDoN: Augment Slot 1-5 Unknown
 	uint32	LDoNTheme;
 	uint32	LDoNPrice;
 	uint32	LDoNSold;
@@ -148,6 +186,7 @@ struct ItemCommon_Struct {
 	uint32	Attack;
 	uint32	Regen;
 	uint32	ManaRegen;
+	uint32	EnduranceRegen;
 	uint32	Haste;
 	uint32	DamageShield;
 	uint32	RecastDelay;
@@ -156,76 +195,15 @@ struct ItemCommon_Struct {
 	bool	Attuneable;
 	bool	NoPet;
 	bool	PotionBelt;
+	bool	Stackable;
+	bool	NoTransfer;
 	uint8	StackSize;
+	uint8	PotionBeltSlots;
 	ItemEffect_Struct Click, Proc, Worn, Focus, Scroll;
-};
 
-/*
-** Child struct of Item_Struct:
-**	Book item data
-**
-*/
-struct ItemBook_Struct {
 	uint8	Book;			// 0=Not bool, 1=Book
 	uint32	BookType;
 	char	Filename[15];		// Filename for book data
-};
-
-/*
-** Child struct of Item_Struct:
-**	Container item data
-**
-*/
-struct ItemContainer_Struct { 
-	uint8	BagType;		// 0:Small Bag, 1:Large Bag, 2:Quiver, 3:Belt Pouch ... there are 50 types
-	uint8	BagSlots;		// Number of slots: can only be 2, 4, 6, 8, or 10
-	uint8	BagSize;		// 0:TINY, 1:SMALL, 2:MEDIUM, 3:LARGE, 4:GIANT 
-	uint8	BagWR;			// 0->100
-};
-
-/*
-** Item data
-** Items are no longer sent as a struct; they are sent as a |-delimited string
-** The following is the order in which they appear - some lines have been
-** commented out to show the element should go there, but doesn't belong here
-**
-*/
-struct Item_Struct {
-	// Non packet based fields
-	uint8	MinStatus;
-
-	// Packet based fields
-	uint8	ItemClass;		// Item Type: 0=common, 1=container, 2=book
-	char	Name[64];		// Name
-	char	Lore[80];		// Lore Name: *=lore, &=summoned, #=artifact, ~=pending lore
-	char	IDFile[30];		// Visible model
-	uint32	ID;			// Unique ID (also PK for DB)
-	uint8	Weight;			// Item weight * 10
-	uint8	NoRent;			// No Rent: 0=norent, 255=not norent
-	uint8	NoDrop;			// No Drop: 0=nodrop, 255=not nodrop
-	uint8	Size;			// Size: 0=tiny, 1=small, 2=medium, 3=large, 4=giant
-	uint32	Slots;			// Bitfield for which slots this item can be used in
-	uint32	Price;			// Item cost (?)
-	uint32	Icon;			// Icon Number
-	bool	LoreFlag;
-	bool	PendingLoreFlag;
-	bool	ArtifactFlag;
-	bool	SummonedFlag;
-	uint8   FVNoDrop;		// Firiona Vie nodrop flag
-	uint32	Favor;			// Individual favor
-	uint32	GuildFavor;		// Guild favor
-	uint32	PointType;
-
-	//uint32	Unk117;
-	//uint32	Unk118;
-	//uint32	Unk121;
-	//uint32	Unk124;
-
-	union   {
-		ItemCommon_Struct		Common;
-		ItemContainer_Struct	Container;
-		ItemBook_Struct			Book;
-	};
 };
 
 #endif

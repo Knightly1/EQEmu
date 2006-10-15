@@ -17,6 +17,9 @@
 */
 #ifndef WorldTCPCONNECTION_H
 #define WorldTCPCONNECTION_H
+
+#include "../common/types.h"
+
 class WorldTCPConnection
 {
 public:

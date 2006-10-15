@@ -101,7 +101,7 @@ public:
     void clear()
     {
 		T* d = 0;
-        while(d = pop()) {
+        while((d = pop())) {
 			delete d;
 		}
         return;

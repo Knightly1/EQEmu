@@ -11,69 +11,7 @@
 	</Platforms>
 	<Configurations>
 		<Configuration
-			Name="Raid Addicts|Win32"
-			OutputDirectory=".\../Build"
-			IntermediateDirectory=".\../Build/Zone/Release"
-			ConfigurationType="1"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
-			<Tool
-				Name="VCCLCompilerTool"
-				InlineFunctionExpansion="2"
-				PreprocessorDefinitions="i386,SHAREMEM,CATCH_CRASH,_WIN32_WINNT=0x0400,NDEBUG,ZONESERVER,ZONE,INVERSEXY,WIN32,_CONSOLE,FIELD_ITEMS,EQDEBUG=0"
-				StringPooling="TRUE"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="TRUE"
-				UsePrecompiledHeader="2"
-				PrecompiledHeaderFile=".\../Build/Zone/Release/Zone.pch"
-				AssemblerListingLocation=".\../Build/Zone/Release/"
-				ObjectFile=".\../Build/Zone/Release/"
-				ProgramDataBaseFileName=".\../Build/Zone/Release/"
-				BrowseInformation="1"
-				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"/>
-			<Tool
-				Name="VCCustomBuildTool"/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalOptions="/MACHINE:I386"
-				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
-				OutputFile=".\../Build/Zone.exe"
-				LinkIncremental="1"
-				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames="libc"
-				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\../Build/Zone.pdb"
-				GenerateMapFile="TRUE"
-				MapFileName="../Build/Zone.map"
-				SubSystem="1"/>
-			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../Build/Zone.tlb"/>
-			<Tool
-				Name="VCPostBuildEventTool"/>
-			<Tool
-				Name="VCPreBuildEventTool"/>
-			<Tool
-				Name="VCPreLinkEventTool"/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
-		</Configuration>
-		<Configuration
-			Name="DebugPerl|Win32"
+			Name="Debug|Win32"
 			OutputDirectory=".\..\Build"
 			IntermediateDirectory=".\..\Build\ZonePerl"
 			ConfigurationType="1"
@@ -134,71 +72,7 @@
 				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 		<Configuration
-			Name="Debug|Win32"
-			OutputDirectory=".\../build"
-			IntermediateDirectory=".\../Build/Zone/Debug"
-			ConfigurationType="1"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="0"
-				EnableIntrinsicFunctions="TRUE"
-				ImproveFloatingPointConsistency="FALSE"
-				OptimizeForWindowsApplication="FALSE"
-				PreprocessorDefinitions="SHAREMEM;i386;_WIN32_WINNT=0x0400;_EQDEBUG;ZONE;INVERSEXY;WIN32;_CONSOLE;FIELD_ITEMS"
-				StringPooling="TRUE"
-				MinimalRebuild="TRUE"
-				BasicRuntimeChecks="0"
-				RuntimeLibrary="1"
-				EnableFunctionLevelLinking="TRUE"
-				PrecompiledHeaderFile=".\../Build/Zone/Debug/Zone.pch"
-				AssemblerListingLocation=".\../Build/Zone/Debug/"
-				ObjectFile=".\../Build/Zone/Debug/"
-				ProgramDataBaseFileName=".\../Build/Zone/Debug/"
-				BrowseInformation="1"
-				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"/>
-			<Tool
-				Name="VCCustomBuildTool"/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalOptions="/MACHINE:I386"
-				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
-				OutputFile="../build/ZoneDebug.exe"
-				LinkIncremental="2"
-				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames="LIBCMT,LIBC,MSVCRT"
-				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\../build/ZoneDebug.pdb"
-				SubSystem="1"/>
-			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\../build/Zone.tlb"/>
-			<Tool
-				Name="VCPostBuildEventTool"/>
-			<Tool
-				Name="VCPreBuildEventTool"/>
-			<Tool
-				Name="VCPreLinkEventTool"/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
-		</Configuration>
-		<Configuration
-			Name="Release|Win32"
+			Name="ReleasePerl|Win32"
 			OutputDirectory=".\../Build"
 			IntermediateDirectory=".\../Build/Zone/Release"
 			ConfigurationType="1"
@@ -208,7 +82,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="2"
-				PreprocessorDefinitions="SHAREMEM,i386,CATCH_CRASH,_WIN32_WINNT=0x0400,NDEBUG,ZONESERVER,ZONE,INVERSEXY,WIN32,_CONSOLE,FIELD_ITEMS,EQDEBUG=0"
+				AdditionalIncludeDirectories="C:\perl\lib\core"
+				PreprocessorDefinitions="EMBPERL,EMBPERL_PLUGIN,SHAREMEM,i386,CATCH_CRASH,_WIN32_WINNT=0x0400,NDEBUG,ZONESERVER,ZONE,INVERSEXY,WIN32,_CONSOLE,FIELD_ITEMS,EQDEBUG=0"
 				StringPooling="TRUE"
 				RuntimeLibrary="0"
 				BufferSecurityCheck="FALSE"
@@ -232,6 +107,7 @@
 				SuppressStartupBanner="TRUE"
 				IgnoreDefaultLibraryNames="libc,MSVCRT"
 				GenerateDebugInformation="FALSE"
+				AdditionalLibraryDirectories="C:\perl\lib\core"
 				ProgramDatabaseFile=".\../Build/Zone.pdb"
 				GenerateMapFile="FALSE"
 				MapFileName="../Build/Zone.map"
@@ -337,7 +213,7 @@
 				RelativePath=".\groups.cpp">
 			</File>
 			<File
-				RelativePath=".\guilds.cpp">
+				RelativePath=".\guild.cpp">
 			</File>
 			<File
 				RelativePath=".\hate_list.cpp">
@@ -391,7 +267,13 @@
 				RelativePath=".\perl_npc.cpp">
 			</File>
 			<File
+				RelativePath=".\perl_perlpacket.cpp">
+			</File>
+			<File
 				RelativePath=".\perl_PlayerCorpse.cpp">
+			</File>
+			<File
+				RelativePath=".\perlpacket.cpp">
 			</File>
 			<File
 				RelativePath=".\perlparser.cpp">
@@ -445,6 +327,9 @@
 				RelativePath=".\tribute.cpp">
 			</File>
 			<File
+				RelativePath=".\zone_logsys.cpp">
+			</File>
+			<File
 				RelativePath=".\waypoints.cpp">
 			</File>
 			<File
@@ -458,6 +343,15 @@
 			</File>
 			<File
 				RelativePath=".\zoning.cpp">
+			</File>
+			<File
+				RelativePath=".\zonedb.cpp">
+			</File>
+			<File
+				RelativePath=".\guild_mgr.cpp">
+			</File>
+			<File
+				RelativePath=".\ZoneConfig.cpp">
 			</File>
 		</Filter>
 		<Filter
@@ -703,6 +597,22 @@
 			</File>
 		</Filter>
 		<Filter
+			Name="Patches"
+			Filter="">
+			<File
+				RelativePath="..\common\patches\Client62.cpp">
+			</File>
+			<File
+				RelativePath="..\common\patches\Titanium.cpp">
+			</File>
+			<File
+				RelativePath="..\common\patches\Live.cpp">
+			</File>
+			<File
+				RelativePath="..\common\patches\patches.cpp">
+			</File>
+		</Filter>
+		<Filter
 			Name="Common Source Files"
 			Filter="">
 			<File
@@ -719,21 +629,15 @@
 			</File>
 			<File
 				RelativePath="..\common\database.cpp">
-				<FileConfiguration
-					Name="DebugPerl|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="2"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="2"/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\common\dbasync.cpp">
+			</File>
+			<File
+				RelativePath="..\common\guild_base.cpp">
+			</File>
+			<File
+				RelativePath="..\common\guilds.cpp">
 			</File>
 			<File
 				RelativePath="..\common\dbcore.cpp">
@@ -754,7 +658,25 @@
 				RelativePath="..\common\EQPacket.cpp">
 			</File>
 			<File
+				RelativePath="..\common\logsys.cpp">
+			</File>
+			<File
+				RelativePath="..\common\rulesys.cpp">
+			</File>
+			<File
+				RelativePath="..\common\worldconn.cpp">
+			</File>
+			<File
+				RelativePath="..\common\StructStrategy.cpp">
+			</File>
+			<File
 				RelativePath="..\common\EQStream.cpp">
+			</File>
+			<File
+				RelativePath="..\common\EQStreamProxy.cpp">
+			</File>
+			<File
+				RelativePath="..\common\EQStreamIdent.cpp">
 			</File>
 			<File
 				RelativePath="..\common\EQStreamFactory.cpp">
@@ -817,19 +739,40 @@
 				RelativePath="..\common\timer.cpp">
 			</File>
 			<File
+				RelativePath="..\common\shareddb.cpp">
+			</File>
+			<File
+				RelativePath="..\common\EQEmuConfig.cpp">
+			</File>
+			<File
+				RelativePath="..\common\XMLParser.cpp">
+			</File>
+			<File
+				RelativePath="..\common\tinyxml\tinystr.cpp">
+			</File>
+			<File
+				RelativePath="..\common\tinyxml\tinyxml.cpp">
+			</File>
+			<File
+				RelativePath="..\common\tinyxml\tinyxmlerror.cpp">
+			</File>
+			<File
+				RelativePath="..\common\tinyxml\tinyxmlparser.cpp">
+			</File>
+			<File
+				RelativePath="..\common\BasePacket.cpp">
+			</File>
+			<File
+				RelativePath="..\common\EmuTCPServer.cpp">
+			</File>
+			<File
+				RelativePath="..\common\TCPServer.cpp">
+			</File>
+			<File
+				RelativePath="..\common\EmuTCPConnection.cpp">
+			</File>
+			<File
 				RelativePath="..\common\unix.cpp">
-				<FileConfiguration
-					Name="Raid Addicts|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="DebugPerl|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
 					ExcludedFromBuild="TRUE">
@@ -837,7 +780,7 @@
 						Name="VCCLCompilerTool"/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="ReleasePerl|Win32"
 					ExcludedFromBuild="TRUE">
 					<Tool
 						Name="VCCLCompilerTool"/>

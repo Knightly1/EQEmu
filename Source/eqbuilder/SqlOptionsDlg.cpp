@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "EQBuilder.h"
 #include "SqlOptionsDlg.h"
+#include "IDGenerator.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -15,40 +16,26 @@ static char THIS_FILE[] = __FILE__;
 // SqlOptionsDlg dialog
 
 
-SqlOptionsDlg::SqlOptionsDlg( int useopt, int zoneid, int npcid, int spawnid, int gridid, bool sqldelete, bool usedb, CString eqmaps_path, CString eqemumaps_path, CWnd* pParent /*=NULL*/)
+SqlOptionsDlg::SqlOptionsDlg(/* int useopt, int zoneid, int npcid, int spawnid, int gridid, 
+		 bool sqldelete, bool usedb, */CString eqmaps_path, CString eqemumaps_path,
+		IDGenSet *ids, CWnd* pParent /*=NULL*/)
 	: CDialog(SqlOptionsDlg::IDD, pParent)
 {
+//	m_sqldelete = sqldelete?TRUE:FALSE;
 	//{{AFX_DATA_INIT(SqlOptionsDlg)
-	m_spawnid = spawnid;
-	m_npcid = npcid;
-	m_gridid = gridid;
-	m_zoneid = zoneid;
-	m_sqldelete = sqldelete?TRUE:FALSE;
-	m_useopt = 0;
-	m_usedb = usedb?TRUE:FALSE;
 	m_EQMaps = eqmaps_path;
 	m_EQEmuMaps = eqemumaps_path;
 	//}}AFX_DATA_INIT
+	m_ids = ids;
 }
-
 
 void SqlOptionsDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
-	//{{AFX_DATA_MAP(SqlOptionsDlg)
-	DDX_Text(pDX, IDC_SPAWNID, m_spawnid);
-	DDV_MinMaxInt(pDX, m_spawnid, 0, 400000);
-	DDX_Text(pDX, IDC_NPCID, m_npcid);
-	DDV_MinMaxInt(pDX, m_npcid, 0, 400000);
-	DDX_Text(pDX, IDC_GRIDID, m_gridid);
-	DDV_MinMaxInt(pDX, m_gridid, 0, 400000);
-	DDX_Text(pDX, IDC_ZONEID, m_zoneid);
-	DDV_MinMaxInt(pDX, m_zoneid, 0, 1000);
 	DDX_Check(pDX, IDC_DELETE_CHECK, m_sqldelete);
-	DDX_Radio(pDX, IDC_USEZONEID, m_useopt);
-	DDX_Check(pDX, IDC_USEDBID, m_usedb);
 	DDX_Text(pDX, IDC_EQMAPS, m_EQMaps);
 	DDX_Text(pDX, IDC_EQEMUMAPS, m_EQEmuMaps);
+	//{{AFX_DATA_MAP(SqlOptionsDlg)
 	//}}AFX_DATA_MAP
 }
 
@@ -60,6 +47,14 @@ BEGIN_MESSAGE_MAP(SqlOptionsDlg, CDialog)
 	ON_BN_CLICKED(IDC_USESPECID, OnUsespecid)
 	ON_BN_CLICKED(IDC_BrowseMaps, OnBrowseMaps)
 	ON_BN_CLICKED(IDC_BrowseEmuMaps, OnBrowseEmuMaps)
+
+	ON_BN_CLICKED(IDC_NPCID_DB, OnNpcidDb)
+	ON_BN_CLICKED(IDC_NPCID_FIXED, OnNpcidFixed)
+	ON_EN_CHANGE(IDC_NPCID, OnChangeNpcid)
+	ON_BN_CLICKED(IDC_NPCID_FLOAT, OnNpcidFloat)
+	ON_EN_CHANGE(IDC_NPCID_FVAL, OnChangeNpcidFval)
+	ON_BN_CLICKED(IDC_NPCID_ZID, OnNpcidZid)
+	ON_EN_CHANGE(IDC_NPCID_ZVAL, OnChangeNpcidZval)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -70,14 +65,14 @@ BOOL SqlOptionsDlg::OnInitDialog()
 {
 	CDialog::OnInitDialog();
 	
-	eNpcID = static_cast<CEdit*>(GetDlgItem(IDC_NPCID));
+/*	eNpcID = static_cast<CEdit*>(GetDlgItem(IDC_NPCID));
 	eSpawnID = static_cast<CEdit*>(GetDlgItem(IDC_SPAWNID)); 
 	eGridID = static_cast<CEdit*>(GetDlgItem(IDC_GRIDID));
 	eZoneID = static_cast<CEdit*>(GetDlgItem(IDC_ZONEID));
-	eEQMPath = static_cast<CEdit*>(GetDlgItem(IDC_EQMAPS));
+*/	eEQMPath = static_cast<CEdit*>(GetDlgItem(IDC_EQMAPS));
 	eEQEMPath = static_cast<CEdit*>(GetDlgItem(IDC_EQEMUMAPS));
 
-	switch( m_useopt ) {
+/*	switch( m_useopt ) {
 		case 0: 
 			CheckDlgButton(IDC_USEZONEID,1);
 			eNpcID->EnableWindow( FALSE );
@@ -98,7 +93,7 @@ BOOL SqlOptionsDlg::OnInitDialog()
 			eSpawnID->EnableWindow( FALSE );
 			eGridID->EnableWindow( FALSE );
 			eZoneID->EnableWindow( TRUE );
-	}
+	}*/
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 	              // EXCEPTION: OCX Property Pages should return FALSE
@@ -146,4 +141,57 @@ void SqlOptionsDlg::OnBrowseEmuMaps() {
 		m_EQEmuMaps = BrowseForDirectory.GetFolderPath();
 		eEQEMPath->SetWindowText(m_EQEmuMaps);
 	}
+}
+
+void SqlOptionsDlg::OnNpcidDb() 
+{
+//	Npcids->SetToDB();
+}
+
+void SqlOptionsDlg::OnNpcidFixed() 
+{
+//	Npcids->SetToFixed();
+}
+
+void SqlOptionsDlg::OnChangeNpcid() 
+{
+	// TODO: If this is a RICHEDIT control, the control will not
+	// send this notification unless you override the CDialog::OnInitDialog()
+	// function and call CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+	
+	// TODO: Add your control notification handler code here
+	
+}
+
+void SqlOptionsDlg::OnNpcidFloat() 
+{
+//	Npcids->SetToFloating();
+}
+
+void SqlOptionsDlg::OnChangeNpcidFval() 
+{
+	// TODO: If this is a RICHEDIT control, the control will not
+	// send this notification unless you override the CDialog::OnInitDialog()
+	// function and call CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+	
+	// TODO: Add your control notification handler code here
+	
+}
+
+void SqlOptionsDlg::OnNpcidZid() 
+{
+//	Npcids->SetToZone();
+}
+
+void SqlOptionsDlg::OnChangeNpcidZval() 
+{
+	// TODO: If this is a RICHEDIT control, the control will not
+	// send this notification unless you override the CDialog::OnInitDialog()
+	// function and call CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+	
+	// TODO: Add your control notification handler code here
+	
 }

@@ -6,7 +6,7 @@
 #endif // _MSC_VER > 1000
 // ZoneViewer1.h : header file
 //
-
+#pragma warning(disable:4786)
 #include <vector>
 using namespace std;
 
@@ -40,6 +40,7 @@ public:
 	void SetMinSpawnRadius(float err) { m_min_spawn_radius = err; }
 	void SetMapReader(TextMapReader *tmr) { m_map = tmr; m_redraw = true; }
 	void ToggleDrawPaths() { m_drawPaths = !m_drawPaths; m_redraw = true; }
+	void ToggleDrawHilite() { m_drawHilite = !m_drawHilite; m_redraw = true; }
 
 // Operations
 public:
@@ -92,6 +93,7 @@ protected:
 	float m_scale;		//number of times to scale up the main image.
 						//this should be < 1 so we do not make massive bitmaps
 	bool m_drawPaths;
+	bool m_drawHilite;
 
 
 	float m_min_spawn_radius;	//radius of points which builder considers the same point

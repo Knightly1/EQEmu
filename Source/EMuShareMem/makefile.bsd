@@ -1,8 +1,8 @@
-APP=libEMuShareMem.so
-SF=MMFMutex.o Doors.o Items.o Spells.o NPCFactionLists.o MMF.o Loot.o .obj/timer.o .obj/unix.o .obj/EMuShareMem.o Opcodes.o GuildList.o
 
-CC=gcc
-LD=ld
+CC=g++
+LINKER=g++
+OUT=-o 
+NOLINK=-c
 
 #this does not need to link with mysql
 
@@ -14,7 +14,7 @@ DFLAGS=-DDEBUG=1 -DSHAREMEM -DCATCH_CRASH -DEMUSHAREMEM -DFREEBSD
 #MYSQL_CFLAGS=`mysql_config --cflags`
 #DFLAGS=-DDEBUG=1 -DSHAREMEM -DCATCH_CRASH -DEMUSHAREMEM
 
-WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual -Wstrict-prototypes -Wno-deprecated -Wcomment -Wcast-align
+WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual -Wno-deprecated -Wcomment -Wcast-align
 
 #pthreads
 #COPTS=$(WFLAGS) $(DFLAGS) -g -fPIC -O2 -D_GNU_SOURCE -DINVERSEXY -DFX $(MYSQL_CFLAGS)
@@ -29,20 +29,11 @@ LINKOPTS=-L. -L/usr/local/lib -llstdc++
 #COPTS+=-pg
 #LINKOPTS=-L. -L/usr/local/lib -llstdc++_p -pg
 
-all: $(APP)
+LIB=libEMuShareMem.so
+LINKRES=-g -shared -Wl,-soname,$(LIB) -o $(LIB)
 
-	
+all: $(LIB)
 
-$(APP): $(SF)
-	$(CC) -g -shared -Wl,-soname,$(APP) -o $(APP) $(SF) $(LINKOPTS)
+include makefile.common
 
-clean:
-	rm -f $(SF) $(APP)
-
-%.o: %.cpp
-	$(CC) $(COPTS) -c $< -o $@
-
-.obj/%.o: ../common/%.cpp ../common/%.h
-	mkdir -p .obj
-	$(CC) $(COPTS) -c $< -o $@
 

@@ -8,7 +8,7 @@
 #include "../common/eq_packet_structs.h"
 
 #define SERVER_TIMEOUT	45000	// how often keepalive gets sent
-#define INTERSERVER_TIMER					90000
+#define INTERSERVER_TIMER					10000
 #define LoginServer_StatusUpdateInterval	15000
 #define LoginServer_AuthStale				60000
 #define AUTHCHANGE_TIMEOUT					900	// in seconds
@@ -26,15 +26,17 @@
 #define ServerOP_Who				0x000B	// #who
 #define ServerOP_ZonePlayer			0x000C  // #zone, or #summon
 #define ServerOP_KickPlayer			0x000D  // #kick
-#define ServerOP_RefreshGuild		0x000E	// Notice to all zoneservers to refresh their guild cache for ID# in packet
-#define ServerOP_GuildKickAll		0x000F	// Remove all clients from this guild
-#define ServerOP_GuildInvite		0x0010
-#define ServerOP_GuildRemove		0x0011
-#define ServerOP_GuildPromote		0x0012
-#define ServerOP_GuildDemote		0x0013
-#define ServerOP_GuildLeader		0x0014
-#define ServerOP_GuildGMSet			0x0015
-#define ServerOP_GuildGMSetRank		0x0016
+
+#define ServerOP_RefreshGuild		0x000E	// Notice to all zoneservers to refresh their guild cache for ID# in packet (ServerGuildRefresh_Struct)
+//#define ServerOP_GuildKickAll		0x000F	// Remove all clients from this guild
+//#define ServerOP_GuildInvite		0x0010
+#define ServerOP_DeleteGuild		0x0011	// ServerGuildID_Struct
+//#define ServerOP_GuildJoin		0x0012
+#define ServerOP_GuildCharRefresh	0x0013
+#define ServerOP_GuildMemberUpdate	0x0014
+//#define ServerOP_GuildGMSet		0x0015
+//#define ServerOP_GuildGMSetRank	0x0016
+
 #define ServerOP_FlagUpdate			0x0018	// GM Flag updated for character, refresh the memory cache
 #define ServerOP_GMGoto				0x0019
 #define ServerOP_MultiLineMsg		0x001A
@@ -58,13 +60,17 @@
 #define ServerOP_ItemStatus			0x002C
 #define ServerOP_OOCMute			0x002D
 #define ServerOP_Revoke				0x002E
-#define ServerOP_GuildJoin			0x002F
+//#define 			0x002F
 #define ServerOP_GroupIDReq			0x0030
 #define ServerOP_GroupIDReply		0x0031
 #define ServerOP_GroupLeave			0x0032	// for disbanding out of zone folks
 #define ServerOP_RezzPlayerAccept	0x0033
 #define ServerOP_SpawnCondition		0x0034
 #define ServerOP_SpawnEvent			0x0035
+#define ServerOP_SetLaunchName		0x0036
+//#define ServerOP_DeleteGuild		0x0037	//ServerGuildID_Struct
+
+#define ServerOP_WhoAll				0x0210
 
 #define ServerOP_LSInfo				0x1000
 #define ServerOP_LSStatus			0x1001
@@ -73,6 +79,16 @@
 #define ServerOP_SystemwideMessage	0x1005
 #define ServerOP_ListWorlds			0x1006
 #define ServerOP_PeerConnect		0x1007
+#define ServerOP_NewLSInfo			0x1008
+#define ServerOP_LSRemoteAddr		0x1009
+
+#define ServerOP_EncapPacket		0x2007	// Packet within a packet
+#define ServerOP_WorldListUpdate	0x2008
+#define ServerOP_WorldListRemove	0x2009
+#define ServerOP_TriggerWorldListRefresh	0x200A
+#define ServerOP_SetWorldTime		0x200B
+#define ServerOP_GetWorldTime		0x200C
+#define ServerOP_SyncWorldTime		0x200E
 
 #define ServerOP_LSZoneInfo			0x3001
 #define ServerOP_LSZoneStart		0x3002
@@ -86,19 +102,9 @@
 #define	ServerOP_UsertoWorldReq		0xAB00
 #define	ServerOP_UsertoWorldResp	0xAB01
 
-#define ServerOP_EncapPacket		0x2007	// Packet within a packet
-#define ServerOP_WorldListUpdate	0x2008
-#define ServerOP_WorldListRemove	0x2009
-#define ServerOP_TriggerWorldListRefresh	0x200A
-
-#define ServerOP_WhoAll				0x0210
-
-#define ServerOP_SetWorldTime		0x200B
-#define ServerOP_GetWorldTime		0x200C
-#define ServerOP_SyncWorldTime		0x200E
-
-#define ServerOP_GuildWarsCycle		0x200F
-#define ServerOP_GWLocation			0x2020
+#define ServerOP_LauncherConnectInfo	0x3000
+#define ServerOP_LauncherZoneRequest	0x3001
+#define ServerOP_LauncherZoneStatus		0x3002
 
 /************ PACKET RELATED STRUCT ************/
 class ServerPacket
@@ -247,8 +253,7 @@ struct ServerClientList_Struct {
 	int8	level;
 	int8	anon;
 	bool	tellsoff;
-	int32	guilddbid;
-	int32	guildeqid;
+	int32	guild_id;
 	bool	LFG;
 	int8	gm;
 };
@@ -295,20 +300,21 @@ struct ServerKickPlayer_Struct {
 	int32 AccountID;
 };
 
-struct ServerGuildCommand_Struct {
-	int32 guilddbid;
-	int32 guildeqid;
-	char from[64];
-	int8 fromrank;
-	int32 fromaccountid;
-	char target[64];
-	int8 newrank;
-	sint16 admin;
-};
-
 struct ServerLSInfo_Struct {
 	char	name[201];				// name the worldserver wants
 	char	address[250];			// DNS address of the server
+	char	account[31];			// account name for the worldserver
+	char	password[31];			// password for the name
+	char	protocolversion[25];	// Major protocol version number
+	char	serverversion[64];		// minor server software version number
+	int8	servertype;				// 0=world, 1=chat, 2=login, 3=MeshLogin
+};
+
+struct ServerNewLSInfo_Struct {
+	char	name[201];				// name the worldserver wants
+	char	shortname[50];				// shortname the worldserver wants
+	char	remote_address[125];			// DNS address of the server
+	char	local_address[125];			// DNS address of the server
 	char	account[31];			// account name for the worldserver
 	char	password[31];			// password for the name
 	char	protocolversion[25];	// Major protocol version number
@@ -362,6 +368,7 @@ struct ServerLSClientAuth {
 	int8	lsadmin;		// login server admin level
 	sint16	worldadmin;		// login's suggested worldadmin level setting for this user, up to the world if they want to obey it
 	int32	ip;
+	uint8	local;			// 1 if the client is from the local network
 };
 
 struct ServerSystemwideMessage {
@@ -506,20 +513,6 @@ struct ServerLockZone_Struct {
 	int16	zoneID;
 };
 
-struct GuildWarsLocationUpdate_Struct {
-	int8	updatetype;			// 0) Remove Location, 1) Add Location, 2) Change Guild Owner, 3) Request Fund Transfer, 4) Transfer Funds, 5) Insignificant Funds (shows funds available), 6) Request Guild Location Listing
-	int32	current_locationid;	// Current Location ID (Used for transfer of funds)
-	int32	target_locationid;	// Target Location ID (Use this for adding,removing location or changing guildid of location, also use for target of fund transfer)
-	int8	target_locationtype;// Target Location Type (used in add location)
-	int32	player_id;			// Players Current ID (Use this for changing guildid, request transfers, guild location information)
-	char	player_name[64];	// Players Name (Use this for changing guildid, request transfers, guild location information)
-	sint16	player_status;		// Players Admin Status (if applicable)
-	int32	player_guildid;		// Players Guild ID (Use this for adding location, changing guildid, request transfers, guild location information)
-	int8	rank;				// Players Guild Rank (Use this for changing guildid, request transfers, guild location information)
-	int32	current_zone;		// Zone sending ID (Use this for changing guildid, request transfers, guild location information)
-	int32	target_zone;		// Zone receiving ID (Use this for changing guildid, request transfers, guild location information)
-};
-
 struct RevokeStruct {
 	char adminname[64];
 	char name[64];
@@ -549,6 +542,59 @@ struct ServerSpawnEvent_Struct {
 	int32	zoneID;
 	uint32	event_id;
 };
+
+//zone->world
+struct LaunchName_Struct {
+	char launcher_name[32];
+	char zone_name[16];
+};
+
+struct LauncherConnectInfo {
+	char name[64];
+};
+
+typedef enum {
+	ZR_Start,
+	ZR_Restart,
+	ZR_Stop
+} ZoneRequestCommands;
+struct LauncherZoneRequest {
+	uint8 command;
+	char short_name[17];
+};
+
+struct LauncherZoneStatus {
+	char short_name[17];
+	uint32 start_count;
+	uint8 running;
+};
+
+
+struct ServerGuildID_Struct {
+	int32 guild_id;
+};
+
+struct ServerGuildRefresh_Struct {
+	int32 guild_id;
+	int8 name_change;
+	int8 motd_change;
+	int8 rank_change;
+	int8 relation_change;
+};
+
+struct ServerGuildCharRefresh_Struct {
+	int32 guild_id;
+	int32 old_guild_id;
+	int32 char_id;
+};
+
+//not sure what needs to go in here.
+struct ServerGuildMemberUpdate_Struct {
+	int32 guild_id;
+	int32 char_id;
+	//...
+};
+
 
 #pragma pack()
 

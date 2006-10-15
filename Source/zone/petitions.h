@@ -20,9 +20,10 @@
 
 #include "../common/linked_list.h"
 #include "../common/types.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "client.h"
 #include "../common/Mutex.h"
+#include "../common/MiscFunctions.h"
 
 class Petition
 {

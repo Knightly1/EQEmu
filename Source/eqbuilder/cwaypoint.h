@@ -17,8 +17,7 @@ public:
 	cwaypoint();
 	cwaypoint( const cwaypoint* wp );
 	virtual ~cwaypoint();
-
-	int id;
+	
 	cloc *loc;
 	bool pause;
 	bool db;

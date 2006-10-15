@@ -46,12 +46,12 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "worldserver.h"
 
 PetitionList petition_list;
-extern Database database;
+
 extern WorldServer worldserver;
 
 
 void Petition::SendPetitionToPlayer(Client* clientto) {
-	EQZonePacket* outapp = new EQZonePacket(OP_PetitionCheckout,sizeof(Petition_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_PetitionCheckout,sizeof(Petition_Struct));
 	Petition_Struct* pet = (Petition_Struct*) outapp->pBuffer;
 	strcpy(pet->accountid,this->GetAccountName());
 	strcpy(pet->lastgm,this->GetLastGM());
@@ -143,11 +143,7 @@ bool PetitionList::DeletePetitionByCharName(char* charname) {
 	return false; 
 }
 void PetitionList::UpdateZoneListQueue() {
-	ServerPacket* pack = new ServerPacket;
-	pack->opcode = ServerOP_Petition;
-	pack->size = sizeof(ServerPetitionUpdate_Struct);
-	pack->pBuffer = new uchar[pack->size];
-	memset(pack->pBuffer, 0, sizeof(pack->pBuffer));
+	ServerPacket* pack = new ServerPacket(ServerOP_Petition, sizeof(ServerPetitionUpdate_Struct));
 	ServerPetitionUpdate_Struct* pupdate = (ServerPetitionUpdate_Struct*) pack->pBuffer;
 	pupdate->petid = 0x00;
 	pupdate->status = 0x00;
@@ -219,7 +215,7 @@ void PetitionList::UpdatePetition(Petition* pet) {
 	return;
 }
 
-void Database::DeletePetitionFromDB(Petition* wpet) {
+void ZoneDatabase::DeletePetitionFromDB(Petition* wpet) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	int32 affected_rows = 0;
@@ -234,7 +230,7 @@ void Database::DeletePetitionFromDB(Petition* wpet) {
 	return;
 }
 
-void Database::UpdatePetitionToDB(Petition* wpet) {
+void ZoneDatabase::UpdatePetitionToDB(Petition* wpet) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	int32 affected_rows = 0;
@@ -250,7 +246,7 @@ void Database::UpdatePetitionToDB(Petition* wpet) {
 
 
 
-void Database::InsertPetitionToDB(Petition* wpet)
+void ZoneDatabase::InsertPetitionToDB(Petition* wpet)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
@@ -277,7 +273,7 @@ void Database::InsertPetitionToDB(Petition* wpet)
 	return;
 }
 
-void Database::RefreshPetitionsFromDB()
+void ZoneDatabase::RefreshPetitionsFromDB()
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;

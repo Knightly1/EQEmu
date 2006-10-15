@@ -298,6 +298,7 @@ int8 Mob::MaxSkill_offensive(int16 skillid, int16 class_, int16 level){
       switch (class_) {
         // Melee
         case WARRIOR: case WARRIORGM:
+        case BERSERKER: case BERSERKERGM:
         case ROGUE: case ROGUEGM:{
           // 210 252 5*level+5
           r_value = ((level*5) + 5);
@@ -1618,6 +1619,7 @@ int8 Mob::MaxSkill_arcane(int16 skillid, int16 class_, int16 level){
     r_value = 252;
   return r_value;
 }
+
 int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
   int16 r_value = 0;
   switch(skillid) {
@@ -1682,14 +1684,40 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
    break;
     }
       // Monk
+    case BLOCKSKILL: {
+        switch(class_){
+        case BEASTLORD: case BEASTLORDGM:{
+			r_value = (((level-25)*5) + 5);
+			  // 12 200 230
+			  if (level < 25)
+			    r_value = 0;
+			  if (level < 51 && r_value > 200)
+			    r_value = 200;
+			  if (r_value > 230)
+			    r_value = 230;
+			  break;
+        }
+        case MONK: case MONKGM:{
+ 			r_value = ((level*5) + 5);
+              // 12 200 230
+              if (level < 12)
+                r_value = 0;
+              if (level < 51 && r_value > 200)
+                r_value = 200;
+              if (r_value > 230)
+                r_value = 230;
+              break;
+        }
+        }
+    	break;
+    }
     case FEIGN_DEATH:
     case MEND:
     case DRAGON_PUNCH:
     case EAGLE_STRIKE:
     case FLYING_KICK:
     case ROUND_KICK:
-    case TIGER_CLAW:
-    case BLOCKSKILL:{
+    case TIGER_CLAW:{
         switch(class_){
         case MONK: case MONKGM:{
           r_value = ((level*5) + 5);
@@ -1719,16 +1747,6 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
                 r_value = 200;
               if (r_value > 225)
                 r_value = 225;
-              break;
-              }
-              case BLOCKSKILL:{
-              // 12 200 230
-              if (level < 12)
-                r_value = 0;
-              if (level < 51 && r_value > 200)
-                r_value = 200;
-              if (r_value > 230)
-                r_value = 230;
               break;
               }
               case FEIGN_DEATH:{
@@ -1890,6 +1908,14 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
 		 }
 		 break;
 		}
+        case BEASTLORD: case BEASTLORDGM:{ //50 cap
+		 if(level >= 50) {
+			r_value = (((level-50)*5) + 5);
+			if(r_value > 50)
+			 r_value = 50;
+		 }
+		 break;
+		}
 		default:
 		 r_value = 0;
 		break;
@@ -1996,12 +2022,21 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
 		 r_value = 0;
 		break;
 	 }// Class Switch
+	 break;
 	}
 	 // Druid/Ranger/Bard
 	case FORAGE:{
 	 switch(class_) {
-		case DRUID: case DRUIDGM:
 		case RANGER: case RANGERGM:{
+		 if(level > 3) {
+			 r_value = (((level-3)*5) + 5);
+			 if (r_value > 200)
+				r_value = 200;
+		 }
+		 break;
+		}
+		case DRUID: case DRUIDGM:{
+		 r_value = ((level*5) + 5);
 		 if (r_value > 200)
 			r_value = 200;
 			break;

@@ -15,6 +15,8 @@
 #include "mob_list.h"
 #include "loc_list.h"
 
+
+//a spawn group
 class cspawn  
 {
 public:
@@ -23,7 +25,7 @@ public:
 	virtual ~cspawn();
 
 	bool db;
-	int id;
+	int db_id;
 	CString name;
 	int spawngroupID;
 	int nbmobs;
@@ -36,12 +38,16 @@ public:
 	
 	bool roaming;
 	bool is_camp;
+	bool is_special;	//contains a special-class mob (non-playable class)
 	
 	cloc center;
-	loc_list *locs;
+	spawnpoint_list *locs;
 	
 	//used by zone viewer
 	int r,g,b;	//spawn color
+
+	bool ContainsNPC(const cnpc *npc, bool compare_level);
+	void takeMobs(cspawn *from);
 
 };
 

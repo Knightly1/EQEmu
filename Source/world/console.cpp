@@ -25,17 +25,22 @@ using namespace std;
 
 #include "../common/version.h"
 #include "console.h"
-#include "net.h"
 #include "zoneserver.h"
-#include "../common/database.h"
+#include "worlddb.h"
 #include "../common/packet_dump.h"
 #include "../common/seperator.h"
 #include "../common/eq_packet_structs.h"
-#include "../common/EQWorldPacket.h"
+#include "../common/EQPacket.h"
 #include "LoginServer.h"
 #include "../common/serverinfo.h"
 #include "../common/md5.h"
 #include "../common/files.h"
+#include "../common/opcodemgr.h"
+#include "WorldConfig.h"
+#include "zoneserver.h"
+#include "zonelist.h"
+#include "clientlist.h"
+#include "LauncherList.h"
 
 #ifdef WIN32
 	#define snprintf	_snprintf
@@ -44,28 +49,29 @@ using namespace std;
 	#define strcasecmp  _stricmp
 #endif
 
-extern Database database;
-extern NetConnection net;
 extern ZSList	zoneserver_list;
 extern uint32	numzones;
 extern LoginServer loginserver;
+extern ClientList client_list;
+extern LauncherList launcher_list;
 
 ConsoleList console_list;
 
-Console::Console(TCPConnection* itcpc) : WorldTCPConnection() {
+Console::Console(EmuTCPConnection* itcpc)
+: WorldTCPConnection(),
+  timeout_timer(CONSOLE_TIMEOUT),
+  prompt_timer(1000)
+{
 	tcpc = itcpc;
 	tcpc->SetEcho(true);
-	timeout_timer = new Timer(CONSOLE_TIMEOUT);
 	state = 0;
 	paccountid = 0;
 	memset(paccountname, 0, sizeof(paccountname));
 	admin = 0;
 	pAcceptMessages = false;
-	tcpc->Send((const uchar*) "Username: ", strlen("Username: "));
 }
 
 Console::~Console() {
-	delete timeout_timer;
 	if (tcpc)
 		tcpc->Free();
 }
@@ -74,7 +80,7 @@ void Console::Die() {
 	state = CONSOLE_STATE_CLOSED;
 	struct in_addr  in;
 	in.s_addr = GetIP();
-	cout << "Removing console from ip: " << inet_ntoa(in) << " port:" << GetPort() << endl;
+	_log(WORLD__CONSOLE,"Removing console from %s:%d",inet_ntoa(in),GetPort());
 	tcpc->Disconnect();
 }
 
@@ -97,7 +103,7 @@ bool Console::SendChannelMessage(const ServerChannelMessage_Struct* scm) {
 			ServerChannelMessage_Struct* scm2 = (ServerChannelMessage_Struct*) pack->pBuffer;
 			strcpy(scm2->deliverto, scm2->from);
 			scm2->noreply = true;
-			zoneserver_list.SendPacket(scm->from, pack);
+			client_list.SendPacket(scm->from, pack);
 			safe_delete(pack);
 			break;
 		}
@@ -195,30 +201,46 @@ bool Console::Process() {
 	if (!tcpc->Connected()) {
 		struct in_addr  in;
 		in.s_addr = GetIP();
-		cout << Timer::GetCurrentTime() << " Removing console (!tcpc->Connected): " << inet_ntoa(in) << ":" << tcpc->GetrPort() << endl;
+		_log(WORLD__CONSOLE,"Removing console (!tcpc->Connected) from %s:%d",inet_ntoa(in),GetPort());
 		return false;
 	}
-	if (timeout_timer->Check()) {
+	//if we have not gotten the special markers after this timer, send login prompt
+	if(prompt_timer.Check()) {
+		prompt_timer.Disable();
+		if(tcpc->GetMode() == EmuTCPConnection::modeConsole)
+			tcpc->Send((const uchar*) "Username: ", strlen("Username: "));
+	}
+	
+	if (timeout_timer.Check()) {
 		SendMessage(1, 0);
 		SendMessage(1, "Timeout, disconnecting...");
 		struct in_addr  in;
 		in.s_addr = GetIP();
-		cout << "TCP connection timeout: " << inet_ntoa(in) << ":" << GetPort() << endl;
+		_log(WORLD__CONSOLE,"TCP connection timeout from %s:%d",inet_ntoa(in),GetPort());
 		return false;
 	}
-	if (tcpc->GetMode() == modePacket) {
+	
+	if (tcpc->GetMode() == EmuTCPConnection::modePacket) {
 		struct in_addr	in;
 		in.s_addr = GetIP();
-		ZoneServer* zs = new ZoneServer(tcpc);
-		cout << "New zoneserver: #" << zs->GetID() << " " << inet_ntoa(in) << ":" << GetPort() << endl;
-		zoneserver_list.Add(zs);
-		numzones++;
-		tcpc = 0;
+		if(tcpc->GetPacketMode() == EmuTCPConnection::packetModeZone) {
+			ZoneServer* zs = new ZoneServer(tcpc);
+			_log(WORLD__CONSOLE,"New zoneserver #%d from %s:%d", zs->GetID(), inet_ntoa(in), GetPort());
+			zoneserver_list.Add(zs);
+			numzones++;
+			tcpc = 0;
+		} else if(tcpc->GetPacketMode() == EmuTCPConnection::packetModeLauncher) {
+			_log(WORLD__CONSOLE,"New launcher from %s:%d", inet_ntoa(in), GetPort());
+			launcher_list.Add(tcpc);
+			tcpc = 0;
+		} else {
+			_log(WORLD__CONSOLE,"Unsupported packet mode from %s:%d", inet_ntoa(in), GetPort());
+		}
 		return false;
 	}
 	char* command = 0;
 	while ((command = tcpc->PopLine())) {
-		timeout_timer->Start();
+		timeout_timer.Start();
 		ProcessCommand(command);
 		delete command;
 	}
@@ -369,7 +391,7 @@ void Console::ProcessCommand(const char* command) {
 				state = CONSOLE_STATE_CLOSED;
 				return;
 			}
-			cout << "TCP console authenticated: Username=" << paccountname << ", Admin=" << (sint16) admin << endl;
+			_log(WORLD__CONSOLE,"TCP console authenticated: Username=%s, Admin=%d",paccountname,admin);
 			SendMessage(1, 0);
 			SendMessage(2, "Login accepted.");
 			state = CONSOLE_STATE_CONNECTED;
@@ -378,7 +400,7 @@ void Console::ProcessCommand(const char* command) {
 			break;
 		}
 		case CONSOLE_STATE_CONNECTED: {
-//			cout << "TCP command: " << paccountname << ": \"" << command << "\"" << endl;
+			_log(WORLD__CONSOLE,"TCP command: %s: \"%s\"",paccountname,command);
 			Seperator sep(command);
 			if (strcasecmp(sep.arg[0], "help") == 0 || strcmp(sep.arg[0], "?") == 0) {
 				SendMessage(1, "  whoami");
@@ -394,8 +416,6 @@ void Console::ProcessCommand(const char* command) {
 				SendMessage(1, "  ooc [message]");
 				if (admin >= consoleKickStatus)
 					SendMessage(1, "  kick [charname]");
-				if (admin >= consoleOpcodesStatus)
-					SendMessage(1, "  reloadops");
 				if (admin >= consoleLockStatus)
 					SendMessage(1, "  lock/unlock");
 				if (admin >= consoleZoneStatus) {
@@ -546,7 +566,7 @@ void Console::ProcessCommand(const char* command) {
 						SendMessage(1, "You cannot set people's status to higher than your own");
 					else if (atoi(sep.arg[1]) < 0 && this->Admin() < consoleFlagStatus)
 							SendMessage(1, "You have too low of status to change flags");
-					else if (!database.SetGMFlag(sep.arg[2], atoi(sep.arg[1])))
+					else if (!database.SetAccountStatus(sep.arg[2], atoi(sep.arg[1])))
 							SendMessage(1, "Unable to flag account!");
 					else
 							SendMessage(1, "Account Flaged");
@@ -591,8 +611,7 @@ void Console::ProcessCommand(const char* command) {
 					else
 						strn0cpy(whom->whom, sep.arg[i], sizeof(whom->whom));
 				}
-				//zoneserver_list.SendWhoAll(0,0, admin, whom, this);
-				zoneserver_list.ConsoleSendWhoAll(0, admin, whom, this);
+				client_list.ConsoleSendWhoAll(0, admin, whom, this);
 				delete whom;
 			}
 			else if (strcasecmp(sep.arg[0], "zonestatus") == 0) {
@@ -646,8 +665,8 @@ void Console::ProcessCommand(const char* command) {
 					tmpname[0] = '*';
 					strcpy(&tmpname[1], paccountname);
 
-					cout << "Console ZoneBootup: " << tmpname << ", " << sep.arg[2] << ", " << sep.arg[1] << endl;
-					ZSList::SOPZoneBootup(tmpname, atoi(sep.arg[1]), sep.arg[2], (bool) (strcasecmp(sep.arg[3], "static") == 0));
+					_log(WORLD__CONSOLE,"Console ZoneBootup: %s, %s, %s",tmpname,sep.arg[2],sep.arg[1]);
+					zoneserver_list.SOPZoneBootup(tmpname, atoi(sep.arg[1]), sep.arg[2], (bool) (strcasecmp(sep.arg[3], "static") == 0));
 				}
 			}
 			else if (strcasecmp(sep.arg[0], "worldshutdown") == 0 && admin >= consoleWorldStatus) {
@@ -657,16 +676,8 @@ void Console::ProcessCommand(const char* command) {
 				SendMessage(1, "Sending shutdown packet... goodbye.");
 				CatchSignal(0);
 			}
-			else if (strcasecmp(sep.arg[0], "reloadops") == 0 && admin >= consoleOpcodesStatus) {
-				if(WorldOpcodeManager == NULL) {
-					SendMessage(1, "It seems that the server is not using an opcode translator.");
-				} else {
-					WorldOpcodeManager->ReloadOpcodes(OPCODES_FILE);
-					SendMessage(1, "Opcodes reloaded.");
-				}
-			}
 			else if (strcasecmp(sep.arg[0], "lock") == 0 && admin >= consoleLockStatus) {
-				net.world_locked = true;
+				WorldConfig::LockWorld();
 				if (loginserver.Connected()) {
 					loginserver.SendStatus();
 					SendMessage(1, "World locked.");
@@ -676,7 +687,7 @@ void Console::ProcessCommand(const char* command) {
 				}
 			}
 			else if (strcasecmp(sep.arg[0], "unlock") == 0 && admin >= consoleLockStatus) {
-				net.world_locked = false;
+				WorldConfig::UnlockWorld();
 				if (loginserver.Connected()) {
 					loginserver.SendStatus();
 					SendMessage(1, "World unlocked.");
@@ -714,7 +725,7 @@ void Console::ProcessCommand(const char* command) {
 				}
 			}
 			else if (strcasecmp(sep.arg[0], "IPLookup") == 0 && admin >= 201) {
-				zoneserver_list.SendCLEList(admin, 0, this, sep.argplus[1]);
+				client_list.SendCLEList(admin, 0, this, sep.argplus[1]);
 			}
 			else if (strcasecmp(sep.arg[0], "zonelock") == 0 && admin >= consoleZoneStatus) {
 				if (strcasecmp(sep.arg[1], "list") == 0) {

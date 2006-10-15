@@ -208,6 +208,21 @@ bool IsGroupOnlySpell(int16 spell_id)
 
 bool IsBeneficialSpell(int16 spell_id)
 {
+	// EverHood - These spells are actually detrimental
+	if(spells[spell_id].goodEffect == 1){
+		SpellTargetType tt = spells[spell_id].targettype;
+		if(tt == ST_Target || tt == ST_AETarget || tt == ST_Animal || tt == ST_Undead || tt == ST_Pet) {
+			int16 sai = spells[spell_id].SpellAffectIndex;
+			if(spells[spell_id].resisttype == RESIST_MAGIC){
+				if(sai == SAI_Calm || sai == SAI_Dispell_Sight || sai == SAI_Memory_Blur || sai == SAI_Calm_Song)
+					return false;
+			}else{
+				// Bind Sight and Cast Sight
+				if(sai == SAI_Dispell_Sight && spells[spell_id].skill == 18)
+					return false;
+			}
+		}
+	}
 	return spells[spell_id].goodEffect != 0 || IsGroupSpell(spell_id);
 }
 
@@ -439,7 +454,7 @@ bool IsValidSpell(int16 spellid)
 //returns the lowest level of any caster which can use the spell
 int GetMinLevel(int16 spell_id) {
 	int r;
-	int min = LEVEL_CAP+1;
+	int min = 255;
 	const SPDat_Spell_Struct &spell = spells[spell_id];
 	for(r = 0; r < PLAYER_CLASS_COUNT; r++) {
 		if(spell.classes[r] < min)

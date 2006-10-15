@@ -1,15 +1,9 @@
-APP=world
-SF=.obj/EQStreamFactory.o .obj/EQPacket.o ../common/CRC16.o .obj/EQStream.o \
-   ../common/timer.o ../common/packet_dump.o ../common/races.o ../common/unix.o \
-   ../common/Mutex.o ../common/MiscFunctions.o ../common/serverinfo.o ../common/packet_functions.o \
-   ../common/classes.o ../common/TCPConnection.o ../common/eqtime.o ../common/crc32.o \
-   client.o net.o console.o zoneserver.o LoginServer.o ../common/md5.o ../common/dbcore.o \
-   ../common/dbasync.o ../common/EMuShareMem.o ../common/EQEMuError.o ../common/misc.o \
-   .obj/debug.o .obj/database.o .obj/Item.o ../common/extprofile.o ../common/timeoutmgr.o \
-   ../common/Condition.o .obj/opcodemgr.o ../common/emu_opcodes.o ../common/SharedLibrary.o
 
 MYSQL_CFLAGS=-I'/usr/local/include/mysql'
 
+OUT=-o 
+LINKOUT=-o 
+NOLINK=-c
 CC=gcc
 LINKER=gcc
 DFLAGS=-DDEBUG=5 -DSHAREMEM -DCATCH_CRASH -DNO_PIDLOG -DFIELD_ITEMS -DFREEBSD -D__USE_UNIX98 -Di386
@@ -17,29 +11,20 @@ WFLAGS=-Wall -Wuninitialized -Wwrite-strings -Wcast-qual  -Wstrict-prototypes -W
 
 #pthreads
 #MYSQL_LIBS=-L'/usr/local/lib/mysql' -lmysqlclient -lz -lcrypt -lm
-#LINKOPTS=-rdynamic -L. -lm -lz -pthread $(MYSQL_LIBS)
+#LINKOPTS=$(COPTS) -rdynamic -L. -lm -lz -pthread $(MYSQL_LIBS)
 #COPTS= $(WFLAGS) -g -O -pipe -DFX -D_GNU_SOURCE -DINVERSEXY -DWORLD $(DFLAGS) $(MYSQL_CFLAGS)
 
 #linux threads
 MYSQL_LIBS=-L'/usr/local/lib/mysql' -llmysqlclient -lz -lcrypt -lm
-LINKOPTS=-rdynamic -L. -lm -lz $(MYSQL_LIBS) -L/usr/local/lib -llthread -llgcc_r -llstdc++ -llsupc++
+LINKOPTS=$(COPTS) -rdynamic -L. -lm -lz $(MYSQL_LIBS) -L/usr/local/lib -llthread -llgcc_r -llstdc++ -llsupc++
 COPTS=-I/usr/local/include/pthread/linuxthreads $(WFLAGS) -g -O -pipe -DFX -D_GNU_SOURCE -DINVERSEXY -DWORLD $(DFLAGS) $(MYSQL_CFLAGS)
 
+all: world
+
+include makefile.common
 
 
-all: $(APP)
 
-$(APP): $(SF)
-	$(LINKER) $(COPTS) $(OBJS) $^ $(LINKOPTS) -o $@
 
-clean:
-	rm -f $(SF) $(APP)
-
-%.o: %.cpp
-	$(CC) -c $(COPTS) $< -o $@
-
-.obj/%.o: ../common/%.cpp ../common/%.h
-	mkdir -p .obj
-	$(CC) $(COPTS) -c $< -o $@
 
 

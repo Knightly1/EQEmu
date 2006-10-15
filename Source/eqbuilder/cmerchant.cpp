@@ -21,7 +21,7 @@ static char THIS_FILE[]=__FILE__;
 cmerchant::cmerchant()
 {
 	db = false;
-	this->id = 0;
+	this->db_id = 0;
 	owner = NULL;
 	rate = 1;
 }
@@ -29,7 +29,7 @@ cmerchant::cmerchant()
 cmerchant::cmerchant( cmerchant* merchant )
 {
 	this->db = merchant->db;
-	this->id = merchant->id;
+	this->db_id = merchant->db_id;
 	this->rate = merchant->rate;
 	this->owner = merchant->owner;
 	
@@ -38,4 +38,15 @@ cmerchant::cmerchant( cmerchant* merchant )
 
 cmerchant::~cmerchant()
 {
+}
+
+void cmerchant::mergeFrom(const cmerchant *them) {
+	map<uint16, uint32>::const_iterator scur, send;
+	map<uint16, uint32>::iterator cur, end;
+	
+	scur = them->items.begin();
+	send = them->items.end();
+	for(; scur != send; scur++) {
+		//TODO: finish this..
+	}
 }

@@ -146,6 +146,10 @@ SOURCE=.\cnpc.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\combining.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\CPathSplit.cpp
 # End Source File
 # Begin Source File
@@ -195,6 +199,14 @@ SOURCE=.\eqbuilderini.cpp
 # Begin Source File
 
 SOURCE=.\grid_list.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\IDGenerator.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\IDGenSet.cpp
 # End Source File
 # Begin Source File
 
@@ -371,6 +383,14 @@ SOURCE=.\grid_list.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\IDGenerator.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\IDGenSet.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\kill_list.h
 # End Source File
 # Begin Source File
@@ -470,6 +490,10 @@ SOURCE=.\regex32\Regexp.cpp
 SOURCE=.\regex32\Regexp.h
 # End Source File
 # End Group
+# Begin Source File
+
+SOURCE=.\o.txt
+# End Source File
 # Begin Source File
 
 SOURCE=.\ReadMe.txt

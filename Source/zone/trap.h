@@ -28,7 +28,7 @@ public:
 	Trap();
 	virtual ~Trap();
 	virtual bool Process();
-    virtual bool IsTrap() { return true; }
+    virtual bool IsTrap() const { return true; }
 	void	Trigger(Mob* trigger);
 	
 	//Trap data, leave this unprotected
@@ -48,6 +48,7 @@ public:
 	uint8	skill; //Skill to detect/disarm with rogue.
 	bool	detected;
 	bool	disarmed;
+	std::string message;
 protected:
 };
 

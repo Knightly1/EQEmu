@@ -12,12 +12,12 @@ class Doors : public Entity
 public:
 	Doors(const Door* door);
 	~Doors();
-	bool	IsDoor()			{ return true; }
-	void	HandleClick(Client* sender);
+	bool	IsDoor()			const { return true; }
+	void	HandleClick(Client* sender, int8 trigger);
 	bool	Process();
 	int8	GetDoorID() { return door_id; }
 	int32	GetDoorDBID() { return db_id; }
-	int32	GetGuildID() { return guildid; }
+	int32	GetGuildID() { return guild_id; }
 	int8	GetOpenType() { return opentype; }
 	char*	GetDoorName() { return door_name; }
 	int32	GetDoorParam() { return door_param; }
@@ -34,10 +34,10 @@ public:
 	int8	GetTriggerDoorID() { return trigger_door; }
 	int8	GetTriggerType() { return trigger_type; }
  
-	int16 GetKeyItem() {return keyitem;} 
+	uint32 GetKeyItem() {return keyitem;} 
 	int16 GetLockpick() {return lockpick;} 
 	int16 GetSize() { return size; }
-	void	SetGuildID(int32 guild_id) { guildid = guild_id; }
+	void	SetGuildID(int32 guild_id) { guild_id = guild_id; }
 
 	int32	GetEntityID() { return entity_id; }
 	void	SetEntityID(int32 entity) { entity_id = entity; }
@@ -61,9 +61,9 @@ float	pos_z;
 float	heading;
 int incline;
 int8	opentype;
-int32	guildid;
+int32	guild_id;
 int16	lockpick;
-int16	keyitem;
+uint32	keyitem;
 int8	trigger_door;
 int8	trigger_type;
 int32	door_param;

@@ -24,20 +24,6 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 extern EntityList entity_list;
 extern WorldServer worldserver;
 
-#ifdef GUILDWARS
-#include "StringIDs.h"
-#include "../GuildWars/GuildWars.h"
-extern GuildLocationList location_list;
-extern GuildWars guildwars;
-#include "../common/guilds.h"
-extern GuildRanks_Struct guilds[512];
-#endif
-
-#ifdef RAIDADDICTS
-#include "RaidAddicts.h"
-extern RaidAddicts raidaddicts;
-#endif
-
 //
 // Xorlac: This will need proper synchronization to make it work correctly.
 //			Also, should investigate client ack for packet to ensure proper synch.
@@ -99,10 +85,6 @@ void Group::SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinu
 	//avoid unneeded work
 	if(copper == 0 && silver == 0 && gold == 0 && platinum == 0)
 		return;
-  
-  //I could not get MoneyOnCorpse to work
-  EQZonePacket* outapp = new EQZonePacket(OP_MoneyUpdate,sizeof(MoneyUpdate_Struct));
-  MoneyUpdate_Struct* mus= (MoneyUpdate_Struct*)outapp->pBuffer;  
 	
   int i;
   int8 membercount = 0;
@@ -183,20 +165,12 @@ void Group::SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinu
   for (i = 0; i < MAX_GROUP_MEMBERS; i++) { 
 	  if (members[i] != NULL && members[i]->IsClient()) { // If Group Member is Client
 	  	Client *c = members[i]->CastToClient();
-		  c->AddMoneyToPP(cpsplit, spsplit, gpsplit, ppsplit, false);
+		//I could not get MoneyOnCorpse to work, so we use this
+		c->AddMoneyToPP(cpsplit, spsplit, gpsplit, ppsplit, true);
 		  
-		  mus->platinum = c->GetPP().platinum;
-		  mus->gold = c->GetPP().gold;
-		  mus->silver = c->GetPP().silver;
-		  mus->copper = c->GetPP().copper;
-		  if(c == splitter)
-		  	mus->copper += sc;
-		  c->QueuePacket(outapp);
-		  
-		  c->Message(2, msg.c_str());
+		c->Message(2, msg.c_str());
 	  }
   }
-  safe_delete(outapp);
 }
 
 bool Group::AddMember(Mob* newmember)
@@ -220,7 +194,7 @@ bool Group::AddMember(Mob* newmember)
 	int x=1;
 	
 	//build the template join packet	
-	EQZonePacket* outapp = new EQZonePacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 	GroupJoin_Struct* gj = (GroupJoin_Struct*) outapp->pBuffer;	
 	strcpy(gj->membername, newmember->GetName());
 	gj->action = 0;
@@ -258,7 +232,7 @@ bool Group::AddMember(Mob* newmember)
 	return true;
 }
 
-void Group::QueuePacket(const EQZonePacket *app, bool ack_req)
+void Group::QueuePacket(const EQApplicationPacket *app, bool ack_req)
 {
 	for(int i = 0; i < MAX_GROUP_MEMBERS; i++)
 		if(members[i] && members[i]->IsClient())
@@ -270,7 +244,7 @@ void Group::QueuePacket(const EQZonePacket *app, bool ack_req)
 // call it
 void Group::SendHPPacketsTo(Mob *member)
 {
-	EQZonePacket hpapp;
+	EQApplicationPacket hpapp;
 	int i;
 
 	if(!member || !member->IsClient())
@@ -288,7 +262,7 @@ void Group::SendHPPacketsTo(Mob *member)
 
 void Group::SendHPPacketsFrom(Mob *member)
 {
-	EQZonePacket hp_app;
+	EQApplicationPacket hp_app;
 	if(!member)
 		return;
 
@@ -359,7 +333,7 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 		  	//handle leader quitting group gracefully
 			if (oldmember == GetLeader() && GroupCount() > 2)
 			{
-				EQZonePacket* outapp = new EQZonePacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 
 				GroupJoin_Struct* gu = (GroupJoin_Struct*) outapp->pBuffer;
 				gu->action = 8;
@@ -385,7 +359,7 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 		  }
 	 }
 	 memset(membername[i],0,64);
-	EQZonePacket* outapp = new EQZonePacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 
 	GroupJoin_Struct* gu = (GroupJoin_Struct*) outapp->pBuffer;
 	gu->action = groupActLeave;
@@ -427,8 +401,7 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 }
 
 // does the caster + group
-void Group::CastGroupSpell(Mob* caster, uint16 spell_id)
-{
+void Group::CastGroupSpell(Mob* caster, uint16 spell_id) {
 	int z;
 	float range, distance;
 
@@ -436,48 +409,7 @@ void Group::CastGroupSpell(Mob* caster, uint16 spell_id)
 		return;
 
 	castspell = true;
-	
-	range = spells[spell_id].aoerange;
-	
-	float mod = 0;
-	if (caster->IsClient() && IsBardSong(spell_id)) {
-		switch (caster->GetAA(aaExtendedNotes) + caster->GetAA(aaExtendedNotes2))
-		{
-			case 1:
-				mod += range * 0.10;
-				break;
-			case 2:
-				mod += range * 0.15;
-				break;
-			case 3:
-			case 4:
-			case 5:
-			case 6:
-				mod += range * 0.25;
-				break;
-		}
-		switch (caster->GetAA(aaSionachiesCrescendo)+caster->GetAA(aaSionachiesCrescendo2))
-		{
-			case 1:
-				mod += range * 0.05;
-				break;
-			case 2:
-				mod += range * 0.10;
-				break;
-			case 3:
-			case 4:
-			case 5:
-			case 6:
-				mod += range * 0.15;
-				break;
-		}
-		range += mod;
-	}
-	
-	if(caster->IsClient())
-	{
-		range = caster->CastToClient()->GetActSpellRange(spell_id, range);
-	}
+	range = caster->GetAOERange(spell_id);
 	
 	float range2 = range*range;
 
@@ -488,7 +420,7 @@ void Group::CastGroupSpell(Mob* caster, uint16 spell_id)
 		if(members[z] == caster) {
 			caster->SpellOnTarget(spell_id, caster);
 #ifdef GROUP_BUFF_PETS
-			if(caster->GetPet() != NULL)
+			if(caster->HasPet())
 				caster->SpellOnTarget(spell_id, caster->GetPet());
 #endif
 		}
@@ -498,20 +430,18 @@ void Group::CastGroupSpell(Mob* caster, uint16 spell_id)
 			if(distance <= range2) {
 				caster->SpellOnTarget(spell_id, members[z]);
 #ifdef GROUP_BUFF_PETS
-				if(members[z]->GetPet() != NULL)
+				if(members[z]->HasPet())
 					caster->SpellOnTarget(spell_id, members[z]->GetPet());
 #endif
-			}
-#if EQDEBUG >= 5
-			else
-				caster->Message(0, "Group spell: %s is out of range %f at distance %f", members[z]->GetName(), range, distance);
-#endif
+			} else
+				_log(SPELLS__CASTING, "Group spell: %s is out of range %f at distance %f from %s", members[z]->GetName(), range, distance, caster->GetName());
 		}
 	}
 
 	castspell = false;
 	disbandcheck = true;
 	
+/*
 #ifdef ENABLE_GROUP_LINKING
 	//dont give links with short spells...
 	//if(spells[spellid].buffduration < 150)
@@ -546,7 +476,43 @@ void Group::CastGroupSpell(Mob* caster, uint16 spell_id)
 			}
 		}
 	}
+#endif*/
+}
+
+// does the caster + group
+void Group::GroupBardPulse(Mob* caster, uint16 spell_id) {
+	int z;
+	float range, distance;
+
+	if(!caster)
+		return;
+
+	castspell = true;
+	range = caster->GetAOERange(spell_id);
+	
+	float range2 = range*range;
+
+	for(z=0; z < MAX_GROUP_MEMBERS; z++) {
+		if(members[z] == caster) {
+			caster->BardPulse(spell_id, caster);
+#ifdef GROUP_BUFF_PETS
+			if(caster->HasPet())
+				caster->BardPulse(spell_id, caster->GetPet());
 #endif
+		}
+		else if(members[z] != NULL)
+		{
+			distance = caster->DistNoRoot(*members[z]);
+			if(distance <= range2) {
+				members[z]->BardPulse(spell_id, caster);
+#ifdef GROUP_BUFF_PETS
+				if(members[z]->HasPet())
+					members[z]->GetPet()->BardPulse(spell_id, caster);
+#endif
+			} else
+				_log(SPELLS__BARDS, "Group bard pulse: %s is out of range %f at distance %f from %s", members[z]->GetName(), range, distance, caster->GetName());
+		}
+	}
 }
 
 bool Group::IsGroupMember(Mob* client)
@@ -626,7 +592,7 @@ int32 Group::GetTotalGroupDamage(Mob* other) {
 }
 
 void Group::DisbandGroup() {
-	EQZonePacket* outapp = new EQZonePacket(OP_GroupUpdate,sizeof(GroupUpdate_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupUpdate_Struct));
 
 	GroupUpdate_Struct* gu = (GroupUpdate_Struct*) outapp->pBuffer;
 	gu->action = groupActDisband;
@@ -674,7 +640,7 @@ bool Group::Process() {
 void Group::SendUpdate(int32 type, Mob* member){
 	if(!member->IsClient())
 		return;
-	EQZonePacket* outapp = new EQZonePacket(OP_GroupUpdate,sizeof(GroupUpdate2_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupUpdate2_Struct));
 	GroupUpdate2_Struct* gu = (GroupUpdate2_Struct*)outapp->pBuffer;	
 	gu->action = type;
 	strcpy(gu->yourname,member->GetName());

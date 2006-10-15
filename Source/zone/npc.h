@@ -19,7 +19,7 @@
 #define NPC_H
 
 class NPC;
-#include "../common/database.h"
+#include "zonedb.h"
 #include "mob.h"
 //#include "spawn.h"
 
@@ -33,7 +33,6 @@ using namespace std;
 #ifdef WIN32
 	#define  M_PI	3.141592
 #endif
-extern Database database;
 
 //typedef LinkedList<Item_Struct*> ItemList;
 
@@ -51,15 +50,18 @@ class NPC : public Mob
 public:
 	static NPC* SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z, float in_heading = 0, Client* client = 0);
 	static sint8 GetAILevel(bool iForceReRead = false);
-
+	
 	NPC(const NPCType* data, Spawn2* respawn, float x, float y, float z, float heading, bool IsCorpse = false);
+	
 	virtual ~NPC();
 
-	virtual bool IsNPC() { return true; }
+	virtual bool IsNPC() const { return true; }
 
 	virtual bool Process();
-	void	AI_Init();
-	void	AI_Start(int32 iMoveDelay = 0);
+	virtual void	AI_Init();
+	virtual void	AI_Start(int32 iMoveDelay = 0);
+	virtual void	AI_Stop();
+	void			AI_DoMovement();
 	
 	virtual void SetTarget(Mob* mob);
 
@@ -117,7 +119,7 @@ public:
 	bool	passengers;
 	void	DumpLoot(int32 npcdump_index, ZSDump_NPC_Loot* npclootdump, int32* NPCLootindex);
 	inline int32	GetLoottableID()	{ return loottable_id; }
-	void	SetPetType(int16 in_type)	{ typeofpet = in_type; } // put this here because only NPCs can be anything but charmed pets
+//	void	SetPetType(int16 in_type)	{ typeofpet = in_type; } // put this here because only NPCs can be anything but charmed pets
 
 	inline uint32	GetCopper()		{ return copper; }
 	inline uint32	GetSilver()		{ return silver; }
@@ -132,12 +134,12 @@ public:
 	sint32 GetEquipmentMaterial(int8 material_slot);
 
 
-	void SetGrid(int16 grid_){ grid=grid_; }
+	void SetGrid(int32 grid_){ grid=grid_; }
 	void SetSp2(int32 sg2){ spawn_group=sg2; }
 	void SetWaypointMax(int16 wp_){ wp_m=wp_; }
 
 	int16 GetWaypointMax(){ return wp_m; }
-	sint16 GetGrid(){ return grid; }
+	int32 GetGrid(){ return grid; }
 	int32 GetSp2(){ return spawn_group; }
 
 	uint32	MerchantType;
@@ -151,26 +153,19 @@ public:
        inline bool	IsInteractive() { return interactive; }
 	#endif
     inline bool	IsPVP() { return pvp; }
-	inline int8	CurrentPosition() { return position; }
-
-	inline int8	HasBanishCapability() { return banishcapability; }
+//	inline int8	CurrentPosition() { return position; }
 
 	inline const sint32&	GetNPCFactionID()	{ return npc_faction_id; }
 	inline sint32			GetPrimaryFaction()	{ return primary_faction; }
-	inline Mob*	GetIgnoreTarget() { return ignore_target; }
-	inline void	SetIgnoreTarget(Mob* mob) {ignore_target = mob; }
 	sint32	GetNPCHate(Mob* in_ent)  {return hate_list.GetEntHate(in_ent);}
     bool    IsOnHatelist(Mob*p) { return hate_list.IsOnHateList(p);}
 
 	void	SetNPCFactionID(sint32 in) { npc_faction_id = in; database.GetFactionIdsForNPC(npc_faction_id, &faction_list, &primary_faction); }
-	void	SetFeignMemory(const char* num) {feign_memory = num;}
-
-	inline const char*    GetFeignMemory()	{ return feign_memory; }
 
 	float   org_x, org_y, org_z, org_heading;
 	
 	int16	GetMaxDMG() {return max_dmg;}
-	bool	IsAnimal() { return(bodytype == 21); }
+	bool	IsAnimal() { return(bodytype == BT_Animal); }
 	int16   GetPetSpellID() {return pet_spell_id;}
 	void    SetPetSpellID(int16 amt) {pet_spell_id = amt;}
 	int32	GetMaxDamage(int8 tlevel);
@@ -180,6 +175,34 @@ public:
 	void	AddLootDrop(const Item_Struct*dbitem, ItemList* itemlistconst, sint8 charges, bool equipit, bool wearchange = false);
 	void	DoClassAttacks(Mob *target);
 	void	CheckSignal();
+	
+	//waypoint crap
+	int		GetMaxWp() const { return max_wp; }
+	void				DisplayWaypointInfo(Client *to);
+	void				CalculateNewWaypoint();
+//	int8				CalculateHeadingToNextWaypoint();
+//	float				CalculateDistanceToNextWaypoint();
+	void				AssignWaypoints(int32 grid);
+	void				SetWaypointPause();
+	void				UpdateWaypoint(int wp_index);
+	// quest wandering commands
+	void				StopWandering();
+	void				ResumeWandering();
+	void				PauseWandering(int pausetime);
+	void				MoveTo(float mtx, float mty, float mtz);
+	
+	void				NextGuardPosition();
+	void				SaveGuardSpot(bool iClearGuardSpot = false);
+	inline bool			IsGuarding() const { return(guard_heading != 0); }
+/*	void				SaveSpawnSpot();
+	inline const float	GetSpawnX() const { return spawn_x; }
+	inline const float	GetSpawnY() const { return spawn_y; }
+	inline const float	GetSpawnZ() const { return spawn_z; }
+	inline const float	GetSpawnHeading() const { return spawn_heading; }
+	*/
+	void				AI_SetRoambox(float iDist, float iRoamDist, int32 iDelay = 2500);
+	void				AI_SetRoambox(float iDist, float iMaxX, float iMinX, float iMaxY, float iMinY, int32 iDelay = 2500);
+	
 	
 	inline bool WillAggroNPCs() const { return(npc_aggro); }
 	
@@ -199,55 +222,60 @@ protected:
 
 	friend class EntityList;
 	list<struct NPCFaction*> faction_list;
-	Mob*	ignore_target;
 	uint32	copper;
 	uint32	silver;
 	uint32	gold;
 	uint32	platinum;
-	sint16   grid;
+	int32   grid;
 	int32   spawn_group;
 	int16	wp_m;
 
 	sint32	npc_faction_id;
 	sint32	primary_faction;
 	
-	Timer	forget_timer;
 	Timer	attacked_timer;
     Timer	swarm_timer;
     Timer	classattack_timer;
-    Timer	taunt_timer;		//for pet taunting
     Timer	assist_timer;		//ask for help from nearby mobs
 
-	bool		attack_event;
+	bool	attack_event;
 
     bool	evader;
-	int8	position;	// 0 - Standing, 1 - Sitting, 2 - Crouching, 4 - Looting
+//	int8	position;	// 0 - Standing, 1 - Sitting, 2 - Crouching, 4 - Looting
 	bool	pvp;
-	#ifdef IPC
-           int8	tired;
-           int8	tiredmax;
-	       Timer	interactive_timer;
-	#endif
     Timer	sendhpupdate_timer;
-
-	int8	banishcapability;
+	
 	int16	max_dmg;
 	int16	min_dmg;
-	const char*	feign_memory;
-	int8    forgetchance;
-
+	
+	//pet crap:
 	int16	pet_spell_id;
 	bool	taunting;
-
+    Timer	taunt_timer;		//for pet taunting
+	
 	bool npc_aggro;
 	
 	int		signal_id;
 	bool	signaled;	// used by quest signal() command
-		
+	
+	//waypoint crap:
+	//MyList <wplist> Waypoints;
+	vector<wplist> Waypoints;
+	void _ClearWaypints();
+	int		max_wp;
+	int		save_wp;
+    float guard_x, guard_y, guard_z, guard_heading;
+//    float spawn_x, spawn_y, spawn_z, spawn_heading;
+	float roambox_max_x;
+	float roambox_max_y;
+	float roambox_min_x;
+	float roambox_min_y;
+	float roambox_distance;
+	float roambox_movingto_x;
+	float roambox_movingto_y;
+	int32 roambox_delay;
+	
 private:
-#ifdef GUILDWARS
-	int32	guildlocationid;
-#endif
 	int32	loottable_id;
 	bool	p_depop;
 };

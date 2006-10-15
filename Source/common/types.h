@@ -21,6 +21,7 @@
 // TODO: If we require signed or unsigned we should the s and u types..
 
 typedef unsigned char		int8;
+typedef unsigned char		byte;
 typedef unsigned short		int16;
 typedef unsigned int		int32;
 
@@ -48,9 +49,15 @@ typedef signed long long	sint64;
 //typedef __s64				sint64;
 #endif
 
+#ifndef __cplusplus
+typedef enum { true, false } bool;
+#endif
+
 typedef unsigned long		ulong;
 typedef unsigned short		ushort;
 typedef unsigned char		uchar;
+
+typedef const char Const_char;	//for perl XS
 
 #ifdef WIN32
 	#define snprintf	_snprintf
@@ -62,7 +69,7 @@ typedef unsigned char		uchar;
 	#define THREAD_RETURN(x) _endthread(); return; 
 #else
 	typedef void* ThreadReturnType;
-	typedef int SOCKET;
+//	typedef int SOCKET;
 	#define THREAD_RETURN(x) return(x);
 #endif
 
@@ -96,103 +103,6 @@ typedef unsigned char		uchar;
 #define DLLFUNC extern "C"
 #endif
 
-
-#pragma pack(1)
-struct uint16_breakdown {
-	union {
-		uint16 all;
-		struct {
-			uint8 b1;
-			uint8 b2;
-		} bytes;
-	};
-	inline uint16&	operator=(const uint16& val) { return (all=val); }
-	inline uint16*	operator&() { return &all; }
-	inline operator	uint16&() { return all; }
-	inline uint8&	b1()	{ return bytes.b1; }
-	inline uint8&	b2()	{ return bytes.b2; }
-};
-
-struct uint32_breakdown {
-	union {
-		uint32 all;
-		struct {
-			uint16 w1;
-			uint16 w2;
-		} words;
-		struct {
-			uint8 b1;
-			union {
-				struct {
-					uint8 b2;
-					uint8 b3;
-				} middle;
-				uint16 w2_3; // word bytes 2 to 3
-			};
-			uint8 b4;
-		} bytes;
-	};
-	inline uint32&	operator=(const uint32& val) { return (all=val); }
-	inline uint32*	operator&() { return &all; }
-	inline operator	uint32&() { return all; }
-
-	inline uint16&	w1()	{ return words.w1; }
-	inline uint16&	w2()	{ return words.w2; }
-	inline uint16&	w2_3()	{ return bytes.w2_3; }
-	inline uint8&	b1()	{ return bytes.b1; }
-	inline uint8&	b2()	{ return bytes.middle.b2; }
-	inline uint8&	b3()	{ return bytes.middle.b3; }
-	inline uint8&	b4()	{ return bytes.b4; }
-};
-/*
-struct uint64_breakdown {
-	union {
-		uint64	all;
-		struct {
-			uint16	w1;	// 1 2
-			uint16	w2;	// 3 4
-			uint16	w3; // 5 6
-			uint16	w4; // 7 8
-		};
-		struct {
-			uint32	dw1; // 1 4
-			uint32	dw2; // 5 6
-		};
-		struct {
-			uint8	b1;
-			union {
-				struct {
-					uint16	w2_3;
-					uint16	w4_5;
-					uint16	w6_7;
-				};
-				uint32	dw2_5;
-				struct {
-					uint8	b2;
-					union {
-						uint32	dw3_6;
-						struct {
-							uint8	b3;
-							union {
-								uint32	dw4_7;
-								struct {
-									uint8	b4;
-									uint8	b5;
-									uint8	b6;
-									uint8	b7;
-								};
-							};
-						};
-					};
-				};
-			};
-		};
-	};
-	inline uint64* operator&() { return &all; }
-	inline operator uint64&() { return all; }
-};
-*/
-#pragma pack()
 
 
 #endif

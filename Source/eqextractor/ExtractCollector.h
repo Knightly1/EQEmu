@@ -5,6 +5,8 @@
 #include "../common/emu_opcodes.h"
 
 #include <stdio.h>
+#include <cstddef>
+#include <cstdlib>
 #include <map>
 #include <string>
 #include <vector>
@@ -12,6 +14,10 @@
 using namespace std;
 
 class ExtractorDB;
+
+namespace EQExtractor {
+
+using namespace std;
 
 /*
 	In its simplest form, an extractor just accepts packets.
@@ -22,7 +28,7 @@ public:
 	//ExtractBase();
 	virtual ~ExtractBase() {}
 	
-	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len) = 0;
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) = 0;
 };
 
 class ExtractCollector : public ExtractBase {
@@ -41,6 +47,12 @@ public:
 		
 		map<uint16, string> data;
 		bool valid;
+	
+	protected:
+		//number to string converters
+		static string ultoa(uint32 n);
+		static string itoa(sint32 n);
+		static string ftoa(float n);
 	};
 	
 	
@@ -50,7 +62,7 @@ public:
 	virtual ~ExtractCollector() {}
 	
 	//default implementation assumes it is a single item to extract
-	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len);
+	virtual void GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server);
 	
 	//inline EmuOpcode GetInterestedOp() const { return(my_op); }
 	
@@ -58,7 +70,7 @@ public:
 	virtual ExtractItem *NewItem() = 0;
 	
 	virtual void GenerateInserts(FILE *into, bool make_replaces);
-	virtual void GenerateAnInsert(FILE *into, bool make_replaces, ExtractItem *item);
+	virtual void GenerateAnInsert(FILE *into, bool make_replaces, bool was_update, ExtractItem *item);
 	
 	virtual void GenerateUpdates(FILE *into, ExtractorDB *db);
 	virtual void GenerateAnUpdate(FILE *into, ExtractorDB *db, ExtractItem *item);
@@ -111,14 +123,15 @@ protected:
 	const string table_name;
 	
 	//escape a string for mysql
-	void EscapeString(string &to, const char *from, int len);
-	int EscapeBlock(char *buf, const char *from, int len);
+	static void EscapeString(string &to, const char *from, int len);
+	static int EscapeBlock(char *buf, const char *from, int len);
 	//number to string converters
 	static string ultoa(uint32 n);
 	static string itoa(sint32 n);
 	static string ftoa(float n);
 };
 
+};	//end namespace EQExtractor
 
 #endif
 

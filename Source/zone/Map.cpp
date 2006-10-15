@@ -21,6 +21,11 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include <string.h>
 #include <float.h>
 
+#ifndef WIN32
+//comment this out if your worried about zone boot times and your not using valgrind
+#define SLOW_AND_CRAPPY_MAKES_VALGRIND_HAPPY
+#endif
+
 #include "../common/files.h"
 #include "zone_profile.h"
 #include "map.h"
@@ -130,19 +135,52 @@ bool Map::loadMap(FILE *fp) {
 	mFaceLists = new unsigned long[m_FaceLists];
 	
 //	fread(mFinalVertex, m_Vertex, sizeof(VERTEX), fp);
+	
+	//this was changed to this loop from the single read because valgrind was
+	//hanging on this read otherwise... I dont pretend to understand it.
+#ifdef SLOW_AND_CRAPPY_MAKES_VALGRIND_HAPPY
+	unsigned long r;
+	for(r = 0; r < m_Faces; r++) {
+		if(fread(mFinalFaces+r, sizeof(FACE), 1, fp) != 1) {
+			printf("Unable to read %lu faces from map file, got %lu.\n", m_Faces, r);
+			return(false);
+		}
+	}
+#else
 	unsigned long count;
 	if((count=fread(mFinalFaces, sizeof(FACE), m_Faces , fp)) != m_Faces) {
-		printf("Unable to read %lu faces from map file, got %lu.\n", m_Faces, count);
+		printf("Unable to read %lu face bytes from map file, got %lu.\n", m_Faces, count);
 		return(false);
 	}
+#endif
+	
+#ifdef SLOW_AND_CRAPPY_MAKES_VALGRIND_HAPPY
+	for(r = 0; r < m_Nodes; r++) {
+		if(fread(mNodes+r, sizeof(NODE), 1, fp) != 1) {
+			printf("Unable to read %lu nodes from map file, got %lu.\n", m_Nodes, r);
+			return(false);
+		}
+	}
+#else
 	if(fread(mNodes, sizeof(NODE), m_Nodes, fp) != m_Nodes) {
-		printf("Unable to read %lu faces from map file.\n", m_Nodes);
+		printf("Unable to read %lu nodes from map file.\n", m_Nodes);
 		return(false);
 	}
+#endif
+	
+#ifdef SLOW_AND_CRAPPY_MAKES_VALGRIND_HAPPY
+	for(r = 0; r < m_FaceLists; r++) {
+		if(fread(mFaceLists+r, sizeof(unsigned long), 1, fp) != 1) {
+			printf("Unable to read %lu face lists from map file, got %lu.\n", m_FaceLists, r);
+			return(false);
+		}
+	}
+#else
 	if(fread(mFaceLists, sizeof(unsigned long), m_FaceLists, fp) != m_FaceLists) {
-		printf("Unable to read %lu faces from map file.\n", m_FaceLists);
+		printf("Unable to read %lu face lists from map file.\n", m_FaceLists);
 		return(false);
 	}
+#endif
 	
 	
 /*	mRoot = new NODE();
@@ -247,29 +285,33 @@ if(_node->node4 != NULL) {
 		//follow ordering rules from map.h...
 		if(x < midx) {
 			if(y < midy) { //quad 3
-				if(_node->nodes[2] != NODE_NONE)
+				if(_node->nodes[2] != NODE_NONE && _node->nodes[2] != node_r)
 					tmp = SeekNode( _node->nodes[2], x, y );
 			} else {	//quad 2
-				if(_node->nodes[2] != NODE_NONE)
+				if(_node->nodes[2] != NODE_NONE && _node->nodes[1] != node_r)
 					tmp = SeekNode( _node->nodes[1], x, y );
 			}
 		} else {
 			if(y < midy) {  //quad 4
-				if(_node->nodes[2] != NODE_NONE)
+				if(_node->nodes[2] != NODE_NONE && _node->nodes[3] != node_r)
 					tmp = SeekNode( _node->nodes[3], x, y );
 			} else {	//quad 1
-				if(_node->nodes[2] != NODE_NONE)
+				if(_node->nodes[2] != NODE_NONE && _node->nodes[0] != node_r)
 					tmp = SeekNode( _node->nodes[0], x, y );
 			}
 		}
 		if( tmp != NODE_NONE ) return tmp;
 #else
+		if(_node->nodes[0] == node_r) return(NODE_NONE); 	//prevent infinite recursion
 		tmp = SeekNode( _node->nodes[0], x, y );
 		if( tmp != NODE_NONE ) return tmp;
+		if(_node->nodes[1] == node_r) return(NODE_NONE); 	//prevent infinite recursion
 		tmp = SeekNode( _node->nodes[1], x, y );
 		if( tmp != NODE_NONE ) return tmp;
+		if(_node->nodes[2] == node_r) return(NODE_NONE); 	//prevent infinite recursion
 		tmp = SeekNode( _node->nodes[2], x, y );
 		if( tmp != NODE_NONE ) return tmp;
+		if(_node->nodes[3] == node_r) return(NODE_NONE); 	//prevent infinite recursion
 		tmp = SeekNode( _node->nodes[3], x, y );
 		if( tmp != NODE_NONE ) return tmp;
 #endif
@@ -340,7 +382,7 @@ bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *r
 	step.x = end.x - start.x;
 	step.y = end.y - start.y;
 	step.z = end.z - start.z;
-	float factor = step_mag / sqrt(step.x*step.x + step.y*step.y + step.z*step.z);
+	float factor = step_mag / sqrtf(step.x*step.x + step.y*step.y + step.z*step.z);
 	step.x *= factor;
 	step.y *= factor;
 	step.z *= factor;
@@ -355,10 +397,12 @@ bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *r
 	do {
 		//look at current location
 		cnode = SeekNode(GetRoot(), cur.x, cur.y);
-		if(cnode != NODE_NONE && cnode != lnode) {
+		if(cnode == lnode)
+			return(false);	//we are looping, get outta here
+		lnode = cnode;
+		if(cnode != NODE_NONE) {
 			if(LineIntersectsNode(cnode, start, end, result, on))
 				return(true);
-			lnode = cnode;
 		}
 		if(cnode == finalnode)
 			return(false);	//we checked in the node the end point is in
@@ -790,7 +834,7 @@ bool Map::LineIntersectsFace( PFACE cface, VERTEX p1, VERTEX p2, VERTEX *result)
 }
 
 void Map::Normalize(VERTEX *p) {
-	float len = sqrt(p->x*p->x + p->y*p->y + p->z*p->z);
+	float len = sqrtf(p->x*p->x + p->y*p->y + p->z*p->z);
 	p->x /= len;
 	p->y /= len;
 	p->z /= len;

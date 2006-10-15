@@ -22,8 +22,7 @@
 
 // Disgrace: for windows compile
 #ifdef WIN32
-	#include <windows.h>
-	#include <winsock.h>
+	#include "debug.h"
 	int gettimeofday (timeval *tp, ...);
 #endif
 
@@ -49,8 +48,9 @@ public:
 	inline int32 GetStartTime() { return(start_time); }
 	inline int32 GetDuration() { return(timer_time); }
 
-	static const int32& SetCurrentTime();
-	static const int32& GetCurrentTime();
+	static const int32 SetCurrentTime();
+	static const int32 GetCurrentTime();
+	static const int32 GetTimeSeconds();
 
 private:
 	int32	start_time;

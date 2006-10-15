@@ -31,6 +31,14 @@ void CEQBuilderDlg::load_build_file()
 		//TODO: report the damned error...
 		return;
 	}
+
+	if ( currentlog->mobinit == NULL ) {
+		currentlog->mobinit = new mob_list();
+	}
+
+	if ( currentlog->mobadd == NULL ) {
+		currentlog->mobadd = new mob_list();
+	}
 	
 	PF_SectionType t;
 	uint16 packlen;
@@ -83,26 +91,18 @@ void CEQBuilderDlg::load_build_file()
 
 void CEQBuilderDlg::doMobInit(const PF_MobSpawn *it, bool is_add) {
 
-	if ( currentlog->mobinit == NULL ) {
-		currentlog->mobinit = new mob_list();
-	}
-
-	if ( currentlog->mobadd == NULL ) {
-		currentlog->mobadd = new mob_list();
-	}
-
 	//hack... if we spawn a mob who's ID is taken, assume the old mob with that ID was killed and we missed it some how...
 	cmob* existing_mob = NULL;
-	existing_mob = currentlog->mobinit->getmobbyid( it->spawn_id );
+	existing_mob = currentlog->mobinit->GetMobByEntityId( it->spawn_id );
 	if ( existing_mob == NULL && currentlog->mobadd != NULL) {
-		existing_mob = currentlog->mobadd->getmobbyid( it->spawn_id );
+		existing_mob = currentlog->mobadd->GetMobByEntityId( it->spawn_id );
 	}
 	if(existing_mob != NULL) {
 		if(!existing_mob->killed)
 			existing_mob->killed = true;
 	}
 
-//if(string(it->name).find("#Vigilum") == string::npos)
+//if(string(it->name).find("Chialle") == string::npos)
 //	return;
 
 
@@ -110,7 +110,7 @@ void CEQBuilderDlg::doMobInit(const PF_MobSpawn *it, bool is_add) {
 	cmob* mob = new cmob();
 	mob->npc = new cnpc();
 
-	mob->id = it->spawn_id;
+	mob->entity_id = it->spawn_id;
 	mob->npc->type = it->bodytype;
 
 	CString mobnom;
@@ -119,6 +119,7 @@ void CEQBuilderDlg::doMobInit(const PF_MobSpawn *it, bool is_add) {
 	//could prolly get last name here if we wanted...
 	mob->npc->nom = mobnom.Left(numpos);
 //	mob->npc->nom = mobnom.Left( mobnom.GetLength() - 2 );
+	mob->npc->last_name = it->last_name;
 	
 	mob->npc->level = it->level;
 	mob->npc->gender = it->gender;
@@ -193,8 +194,6 @@ void CEQBuilderDlg::doMovement(const PF_MobMovement *it)
 
 	cwaypoint* move = new cwaypoint();
 
-	move->id = it->spawn_id;
-
 	move->loc = new cloc();
 	move->loc->x = it->x;
 	move->loc->y = it->y;
@@ -203,9 +202,9 @@ void CEQBuilderDlg::doMovement(const PF_MobMovement *it)
 
 	cmob* mob = NULL;
 
-	mob = currentlog->mobinit->getmobbyid( move->id );
+	mob = currentlog->mobinit->GetMobByEntityId( it->spawn_id );
 	if ( mob == NULL && currentlog->mobadd != NULL) {
-		mob = currentlog->mobadd->getmobbyid( move->id );
+		mob = currentlog->mobadd->GetMobByEntityId( it->spawn_id );
 	}
 
 	if ( mob != NULL ) {
@@ -231,9 +230,9 @@ void CEQBuilderDlg::doKilled(const PF_Death *it)
 
 	cmob* mob = NULL;
 
-	mob = currentlog->mobinit->getmobbyid( it->spawn_id );
+	mob = currentlog->mobinit->GetMobByEntityId( it->spawn_id );
 	if ( mob == NULL ) {
-		mob = currentlog->mobadd->getmobbyid( it->spawn_id );
+		mob = currentlog->mobadd->GetMobByEntityId( it->spawn_id );
 	}
 
 	if ( mob != NULL ) {
@@ -246,9 +245,9 @@ void CEQBuilderDlg::doDeleted(const PF_DeleteSpawn *it)
 
 	cmob* mob = NULL;
 
-	mob = currentlog->mobinit->getmobbyid( it->spawn_id );
+	mob = currentlog->mobinit->GetMobByEntityId( it->spawn_id );
 	if ( mob == NULL ) {
-		mob = currentlog->mobadd->getmobbyid( it->spawn_id );
+		mob = currentlog->mobadd->GetMobByEntityId( it->spawn_id );
 	}
 
 	if ( mob != NULL ) {
@@ -261,9 +260,9 @@ void CEQBuilderDlg::doWaypoint(const PF_MobLocation *it) {
 		return;
 
 	cmob* mob = NULL;
-	mob = currentlog->mobinit->getmobbyid( it->spawn_id );
+	mob = currentlog->mobinit->GetMobByEntityId( it->spawn_id );
 	if ( mob == NULL ) {
-		mob = currentlog->mobadd->getmobbyid( it->spawn_id );
+		mob = currentlog->mobadd->GetMobByEntityId( it->spawn_id );
 	}
 	if(mob == NULL)
 		return;
@@ -276,8 +275,6 @@ void CEQBuilderDlg::doWaypoint(const PF_MobLocation *it) {
 	}
 
 	cwaypoint* wp = new cwaypoint();
-
-	wp->id = it->spawn_id;
 
 	wp->loc = new cloc();
 	wp->loc->x = it->y;		//inverted x,y... not sure why exactly...
@@ -326,17 +323,15 @@ void CEQBuilderDlg::doMerchantBegin(const PF_MerchantBegin *it) {
 	cmob* mob = NULL;
 	
 	if(currentlog->mobinit != NULL)
-		mob = currentlog->mobinit->getmobbyid( mobid );
+		mob = currentlog->mobinit->GetMobByEntityId( mobid );
 	if ( mob == NULL && currentlog->mobadd != NULL) {
-		mob = currentlog->mobadd->getmobbyid( mobid );
+		mob = currentlog->mobadd->GetMobByEntityId( mobid );
 	}
 
 	if ( mob == NULL ) {
 		delete m;
 		return;
 	}
-	
-	m->id = db->getNextMerchantID();
 
 	mob->npc->merchant = m;
 	m->owner = mob->npc;

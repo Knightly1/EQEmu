@@ -213,7 +213,7 @@ void CEQBuilderDlg::getMobInitData()
 		
 		if ( IsValidSpawn( mob ) ) {
 			
-//if(string(mob->npc->nom).find(string("Questioner_Uila")) == string::npos)
+//if(string(mob->npc->nom).find(string("Chialle")) == string::npos)
 //	continue;
 			currentlog->mobinit->add( mob );
 			currentlog->nbmobinit++;
@@ -241,7 +241,7 @@ void CEQBuilderDlg::getMobAddData()
 	getMobGeneralData(mob);
 
 	if ( IsValidSpawn( mob ) ) {
-//if(string(mob->npc->nom).find(string("Questioner_Uila")) == string::npos)
+//if(string(mob->npc->nom).find(string("Chialle")) == string::npos)
 //	return;
 		currentlog->mobadd->add( mob );
 		currentlog->nbmobadd++;
@@ -257,7 +257,7 @@ void CEQBuilderDlg::getMobGeneralData(cmob* mob) {
 		CString mobidhexa = getkey(1);
 		int mobid; 
 		sscanf(mobidhexa, "%x", &mobid); 
-		mob->id = mobid;
+		mob->entity_id = mobid;
 	
 		mob->npc->type = atoi( getkey(2) );
 
@@ -265,11 +265,14 @@ void CEQBuilderDlg::getMobGeneralData(cmob* mob) {
 		int dec = levelpos-4;
 		CString mobnom;
 		if ( levelpos != 4 ) {
-			if ( isMerchant( getkey(4) ) ) {
+/*			if ( isMerchant( getkey(4) ) ) {
 				mobnom = getkey(3);
 			} else {
 				mobnom = value( 3, dec+1 );
 			}
+*/
+			mobnom = getkey(3);
+			mob->npc->last_name = value(4, dec);
 		} else {
 			mobnom = getkey(3);
 		}
@@ -328,14 +331,16 @@ void CEQBuilderDlg::getMobGeneralData(cmob* mob) {
 		parseread();
 
 		mob->loc = new cloc();
-		mob->loc->x = atof( getkey(2) );
-		mob->loc->y = atof( getkey(3) );
-		mob->loc->z = atof( getkey(4) ) / 10.0f;	//eqcollector seems to log this Z coord high
+		//XY inverted
+		mob->loc->y = atof( getkey(2) );
+		mob->loc->x = atof( getkey(3) );
+		mob->loc->z = atof( getkey(4) );
 		mob->loc->heading = atof( getkey(9) ) / 2;
 
 		mob->speed = new cloc();
-		mob->speed->x = atof( getkey(13) );
-		mob->speed->y = atof( getkey(14) );
+		//XY inverted
+		mob->speed->y = atof( getkey(13) );
+		mob->speed->x = atof( getkey(14) );
 		mob->speed->z = atof( getkey(15) );
 		mob->speed->heading = atof( getkey(11) ) / 2;
 
@@ -403,9 +408,9 @@ void CEQBuilderDlg::getMobGeneralData(cmob* mob) {
 		
 	//hack... if we spawn a mob who's ID is taken, assume the old mob with that ID was killed and we missed it some how...
 	cmob* existing_mob = NULL;
-	existing_mob = currentlog->mobinit->getmobbyid( mob->id );
+	existing_mob = currentlog->mobinit->GetMobByEntityId( mob->entity_id );
 	if ( existing_mob == NULL && currentlog->mobadd != NULL) {
-		existing_mob = currentlog->mobadd->getmobbyid( mob->id );
+		existing_mob = currentlog->mobadd->GetMobByEntityId( mob->entity_id );
 	}
 	if(existing_mob != NULL) {
 		if(!existing_mob->killed)
@@ -445,8 +450,9 @@ void CEQBuilderDlg::getDoorData()
 //		afficherkeys();
 
 		door->loc = new cloc();
-		door->loc->x = atof( getkey(1) );
-		door->loc->y = atof( getkey(2) );
+		//XY inverted
+		door->loc->y = atof( getkey(1) );
+		door->loc->x = atof( getkey(2) );
 		door->loc->z = atof( getkey(3) );	//this might need to be divided by 10 like everything else...
 		door->loc->heading = atof( getkey(4) );
 
@@ -494,13 +500,19 @@ void CEQBuilderDlg::getTeleporterData()
 		sscanf(zoneidhexa, "%x", &zoneid); 
 		tp->zone = db->getZoneName( zoneid );
 
-		tp->loc = new cloc();
-		tp->loc->x = atof( getkey(5) );
-		tp->loc->y = atof( getkey(6) );
-		tp->loc->z = atof( getkey(7) );	//this might need to be divided by 10 like everything else...
-		tp->loc->heading = atof( getkey(8) );
+		//we get an empty string if we cannot find the zone...
+		if(tp->zone != "") {
+			tp->loc = new cloc();
+			//XY inverted
+			tp->loc->y = atof( getkey(5) );
+			tp->loc->x = atof( getkey(6) );
+			tp->loc->z = atof( getkey(7) );	//this might need to be divided by 10 like everything else...
+			tp->loc->heading = atof( getkey(8) );
 
-		teleports->add( tp );
+			teleports->add( tp );
+		}
+			
+
 
 		parsenext();
 		parseread();
@@ -518,20 +530,21 @@ void CEQBuilderDlg::getMovementData()
 	CString mobidhexa = getkey(2);
 	int mobid;
 	sscanf(mobidhexa, "%x", &mobid );
-	move->id = mobid;
+	//move->id = mobid;
 
 	move->loc = new cloc();
-	move->loc->x = atof( getkey(5) );
-	move->loc->y = atof( getkey(6) );
-	move->loc->z = atof( getkey(7) ) / 10.0f;	//eqcollector seems to log this Z coord high;
+	//XY inverted
+	move->loc->y = atof( getkey(5) );
+	move->loc->x = atof( getkey(6) );
+	move->loc->z = atof( getkey(7) );
 	move->loc->heading = atof( getkey(12) );
 
 	cmob* mob = NULL;
 
 	if(currentlog->mobinit != NULL)
-		mob = currentlog->mobinit->getmobbyid( move->id );
+		mob = currentlog->mobinit->GetMobByEntityId( mobid );
 	if ( mob == NULL && currentlog->mobadd != NULL) {
-		mob = currentlog->mobadd->getmobbyid( move->id );
+		mob = currentlog->mobadd->GetMobByEntityId( mobid );
 	}
 
 	if ( mob!=NULL ) {
@@ -571,9 +584,9 @@ void CEQBuilderDlg::getKilledData()
 	cmob* mob = NULL;
 
 	if(currentlog->mobinit != NULL)
-		mob = currentlog->mobinit->getmobbyid( killid );
+		mob = currentlog->mobinit->GetMobByEntityId( killid );
 	if ( mob == NULL && currentlog->mobadd != NULL) {
-		mob = currentlog->mobadd->getmobbyid( killid );
+		mob = currentlog->mobadd->GetMobByEntityId( killid );
 	}
 
 	if ( mob != NULL ) {
@@ -592,12 +605,13 @@ void CEQBuilderDlg::getWaypointData() {
 	CString mobidhexa = getkey(2);
 	int mobid;
 	sscanf(mobidhexa, "%x", &mobid );
-	wp->id = mobid;
+	//wp->id = mobid;
 
 	wp->loc = new cloc();
-	wp->loc->x = atof( getkey(5) );
-	wp->loc->y = atof( getkey(6) );
-	wp->loc->z = atof( getkey(7) ) / 10.0f;	//eqcollector seems to log this Z coord high
+	//XY inverted
+	wp->loc->y = atof( getkey(5) );
+	wp->loc->x = atof( getkey(6) );
+	wp->loc->z = atof( getkey(7) ) * 10.0;		//for some reason this Z coord is /10
 	wp->loc->heading = atof( getkey(10) );
 
 	wp->pause = true;
@@ -605,9 +619,9 @@ void CEQBuilderDlg::getWaypointData() {
 	cmob* mob = NULL;
 	
 	if(currentlog->mobinit != NULL)
-		mob = currentlog->mobinit->getmobbyid( wp->id );
+		mob = currentlog->mobinit->GetMobByEntityId( mobid );
 	if ( mob == NULL && currentlog->mobadd != NULL) {
-		mob = currentlog->mobadd->getmobbyid( wp->id );
+		mob = currentlog->mobadd->GetMobByEntityId( mobid );
 	}
 
 	if ( mob != NULL ) {
@@ -664,9 +678,9 @@ void CEQBuilderDlg::getShopOpenData() {
 	cmob* mob = NULL;
 	
 	if(currentlog->mobinit != NULL)
-		mob = currentlog->mobinit->getmobbyid( mobid );
+		mob = currentlog->mobinit->GetMobByEntityId( mobid );
 	if ( mob == NULL && currentlog->mobadd != NULL) {
-		mob = currentlog->mobadd->getmobbyid( mobid );
+		mob = currentlog->mobadd->GetMobByEntityId( mobid );
 	}
 
 	if ( mob == NULL ) {
@@ -674,7 +688,6 @@ void CEQBuilderDlg::getShopOpenData() {
 		return;
 	}
 	
-	m->id = db->getNextMerchantID();
 	mob->npc->merchant = m;
 	m->owner = mob->npc;
 	cur_merchant = m;

@@ -29,13 +29,14 @@ using namespace std;
 #include "masterentity.h"
 #include "npc.h"
 #include "StringIDs.h"
+#include "../common/MiscFunctions.h"
 
-#include "../common/database.h"
+#include "zonedb.h"
 #ifdef WIN32
 #define snprintf	_snprintf
 #endif
 
-extern Database database;
+
 
 //max number of items which can be in the foraging table
 //for a given zone.
@@ -79,7 +80,7 @@ CREATE TABLE fishing (
 */
 
 // This allows EqEmu to have zone specific foraging - BoB
-int32 Database::GetZoneForage(int32 ZoneID, int8 skill) {
+int32 ZoneDatabase::GetZoneForage(int32 ZoneID, int8 skill) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
@@ -133,7 +134,7 @@ LogFile->write(EQEMuLog::Error, "Possible Forage: %d with a %d chance", item[ind
 	return ret;
 }
 
-int32 Database::GetZoneFishing(int32 ZoneID, int8 skill, uint32 &npc_id, uint8 &npc_chance)
+int32 ZoneDatabase::GetZoneFishing(int32 ZoneID, int8 skill, uint32 &npc_id, uint8 &npc_chance)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
@@ -254,19 +255,19 @@ void Client::GoFish()
 		return;
 	}
 	
-	if(!Pole->IsType(ItemClassCommon) || Pole->GetItem()->Common.ItemType != ItemTypeFishingPole) {
+	if(!Pole->IsType(ItemClassCommon) || Pole->GetItem()->ItemType != ItemTypeFishingPole) {
 		Message(0, "You do not have a fishing pole equipped.");
 		return;
 	}
 	
-	if(!Bait->IsType(ItemClassCommon) || Bait->GetItem()->Common.ItemType != ItemTypeFishingBait) {
+	if(!Bait->IsType(ItemClassCommon) || Bait->GetItem()->ItemType != ItemTypeFishingBait) {
 		Message(0, "You do not have any bait.");
 		return;
 	}
 	
 	//if the bait isnt equipped, need to add its skill bonus
-	if(bslot >= IDX_INV && Bait->GetItem()->Common.SkillModType == FISHING) {
-		fishing_skill += Bait->GetItem()->Common.SkillModValue;
+	if(bslot >= IDX_INV && Bait->GetItem()->SkillModType == FISHING) {
+		fishing_skill += Bait->GetItem()->SkillModValue;
 	}
 	
 	if (fishing_skill > 100)
@@ -312,7 +313,7 @@ void Client::GoFish()
 		const Item_Struct* food_item = database.GetItem(food_id);
 		
 		Message_StringID(MT_Skills, FISHING_SUCCESS);
-		const ItemInst* inst = ItemInst::Create(food_item, 1);
+		const ItemInst* inst = database.CreateItem(food_item, 1);
 		if(inst != NULL) {
 			PutItemInInventory(SLOT_CURSOR, *inst);
 			SendItemPacket(SLOT_CURSOR,inst,ItemPacketSummonItem);
@@ -391,7 +392,7 @@ void Client::ForageItem() {
 		const Item_Struct* food_item = database.GetItem(foragedfood);
 		
 		Message_StringID(MT_Skills, stringid);
-		const ItemInst* inst = ItemInst::Create(food_item, 1);
+		const ItemInst* inst = database.CreateItem(food_item, 1);
 		if(inst != NULL) {
 			PutItemInInventory(SLOT_CURSOR,*inst);
 			SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);

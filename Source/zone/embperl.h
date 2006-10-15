@@ -13,6 +13,7 @@ Eglin
 #include <string>
 #include <vector>
 #include <stdio.h>
+#include <string.h>
 
 //headers from the Perl distribution
 #include <EXTERN.h> 
@@ -25,6 +26,9 @@ extern "C" {	//the perl headers dont do this for us...
 #include <XSUB.h>
 #ifndef WIN32
 };
+#endif
+#ifdef WIN32
+#define snprintf        _snprintf
 #endif
 
 //perl defines these macros and dosent clean them up, lazy bastards. --  I hate them too!
@@ -72,9 +76,15 @@ private:
 protected:
 	//the embedded interpreter
 	PerlInterpreter * my_perl;
+	
+	void DoInit();
+	
 public:
 	Embperl(void); //This can throw errors!  Buyer beware
 	~Embperl(void);
+	
+	void Reinit();
+	
 	//return the last error msg
 	std::string lasterr(void) const { return errmsg;};
 	//evaluate an expression. throws string errors on fail
@@ -86,8 +96,8 @@ public:
 	//all varnames here should be of the form package::name
 	//returns the contents of the perl variable named in varname as a c int
 	int geti(const char * varname) { return SvIV(my_get_sv(varname)); };
-	//returns the contents of the perl variable named in varname as a c double
-	double getd(const char * varname) { return SvNV(my_get_sv(varname));};
+	//returns the contents of the perl variable named in varname as a c float
+	float getd(const char * varname) { return SvNV(my_get_sv(varname));};
 	//returns the contents of the perl variable named in varname as a string
 	std::string getstr(const char * varname) {
 		SV * temp = my_get_sv(varname);
@@ -100,7 +110,7 @@ public:
 		sv_setiv(t, val);
 	}
 	//put a real into a perl varable
-	void setd(const char *varname, double val) const {
+	void setd(const char *varname, float val) const {
 		SV *t = get_sv(varname, true);
 		sv_setnv(t, val);
 	}

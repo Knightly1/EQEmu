@@ -270,7 +270,11 @@ SOURCE=.\groups.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\guilds.cpp
+SOURCE=.\guild.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\guild_mgr.cpp
 # End Source File
 # Begin Source File
 
@@ -431,6 +435,18 @@ SOURCE=.\worldserver.cpp
 # Begin Source File
 
 SOURCE=.\zone.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\zone_logsys.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\ZoneConfig.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\zonedb.cpp
 # End Source File
 # Begin Source File
 
@@ -666,6 +682,14 @@ SOURCE=..\common\linked_list.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\logsys.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\logtypes.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\md5.h
 # End Source File
 # Begin Source File
@@ -767,6 +791,10 @@ SOURCE=..\common\version.h
 # PROP Default_Filter ""
 # Begin Source File
 
+SOURCE=..\common\BasePacket.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\classes.cpp
 # End Source File
 # Begin Source File
@@ -832,15 +860,15 @@ SOURCE=..\common\EMuShareMem.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\EQChatPacket.cpp
+SOURCE=..\common\EmuTCPConnection.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\EQLoginPacket.cpp
+SOURCE=..\common\EmuTCPServer.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\EQMailPacket.cpp
+SOURCE=..\common\EQEmuConfig.cpp
 # End Source File
 # Begin Source File
 
@@ -856,15 +884,15 @@ SOURCE=..\common\EQStreamFactory.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\EQStreamIdent.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\EQStreamProxy.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\eqtime.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\common\EQWorldPacket.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\common\EQZonePacket.cpp
 # End Source File
 # Begin Source File
 
@@ -872,7 +900,23 @@ SOURCE=..\common\extprofile.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\guild_base.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\guilds.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\Item.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\rulesys.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\logsys.cpp
 # End Source File
 # Begin Source File
 
@@ -945,11 +989,23 @@ SOURCE=..\common\serverinfo.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\shareddb.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\SharedLibrary.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\StructStrategy.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\TCPConnection.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\TCPServer.cpp
 # End Source File
 # Begin Source File
 
@@ -958,6 +1014,22 @@ SOURCE=..\common\timeoutmgr.cpp
 # Begin Source File
 
 SOURCE=..\common\timer.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\tinyxml\tinystr.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\tinyxml\tinyxml.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\tinyxml\tinyxmlerror.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\tinyxml\tinyxmlparser.cpp
 # End Source File
 # Begin Source File
 
@@ -988,6 +1060,14 @@ SOURCE=..\common\unix.cpp
 
 !ENDIF 
 
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\worldconn.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\XMLParser.cpp
 # End Source File
 # End Group
 # Begin Group "Text Files"
@@ -1022,6 +1102,78 @@ SOURCE=..\readme.txt
 
 !ENDIF 
 
+# End Source File
+# End Group
+# Begin Group "Patches"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\common\patches\Client62.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Client62.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Client62_itemfields.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Client62_ops.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Client62_structs.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Live_itemfields.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\patches.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\patches.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\SSDeclare.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\SSDefine.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\SSRegister.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Titanium.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Live.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Titanium.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Titanium_itemfields.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Titanium_ops.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\common\patches\Titanium_structs.h
 # End Source File
 # End Group
 # End Target

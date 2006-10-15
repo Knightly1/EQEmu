@@ -155,6 +155,12 @@ Zone extensions and features
 //New aggro system to reduce overhead.
 #define REVERSE_AGGRO
 
+//Uncomment this to enable the live-like behaviour to kill your pet if you feign death
+//#define FEIGN_KILLS_PET
+
+//Uncomment this to enable Race and Class based XP modifiers (removed from live)
+//#define USE_RACE_CLASS_XP_MODS
+
 //Enable spacial queue to manage NPC update packets
 //#define PACKET_UPDATE_MANAGER
 //#define MANAGE_HP_UPDATES
@@ -168,43 +174,45 @@ Zone Numerical configuration
 //Reuse times for various skills, here for convenience, in sec
 //set to 0 to disable server side checking of timers.
 enum {	//reuse times
-	FeignDeathReuseTime = 10,
-	SneakReuseTime = 8,
-	HideReuseTime = 10,
-	TauntReuseTime = 6,
-	InstillDoubtReuseTime = 10,
-	FishingReuseTime = 12,
-	ForagingReuseTime = 75,		//this is wrong
-	MendReuseTime = 300,
-	TrackingReuseTime = 10,
+	FeignDeathReuseTime = 9,
+	SneakReuseTime = 7,
+	HideReuseTime = 9,
+	TauntReuseTime = 5,
+	InstillDoubtReuseTime = 9,
+	FishingReuseTime = 11,
+	ForagingReuseTime = 50,
+	MendReuseTime = 290,
+	TrackingReuseTime = 9,
 	BashReuseTime = 5,
-	BackstabReuseTime = 10,
-	KickReuseTime = 8,
+	BackstabReuseTime = 9,
+	KickReuseTime = 5,
 	TailRakeReuseTime = 6,
 	EagleStrikeReuseTime = 5,
 	RoundKickReuseTime = 9,
 	TigerClawReuseTime = 6,
-	FlyingKickReuseTime = 8,
-	SenseTrapsReuseTime = 10,
-	DisarmTrapsReuseTime = 10,
-	HarmTouchReuseTime = 4320,
-	LayOnHandsReuseTime = 4320
+	FlyingKickReuseTime = 7,
+	SenseTrapsReuseTime = 9,
+	DisarmTrapsReuseTime = 9,
+	HarmTouchReuseTime = 4300,
+	LayOnHandsReuseTime = 4300
 };
 
 enum {	//various hard caps
 	eqManaRegenItemCap = 15,
-	eqHPRegenItemCap = 15
+	eqHPRegenItemCap = 35 // EverHood - 15 was totally wrong.
 };
 
 enum {	//timer settings, all in milliseconds
 	AImovement_duration = 100,
 	AIthink_duration = 50,
 	AIscanarea_delay = 500,
+	AIfeignremember_delay = 500,
 	AIClientScanarea_delay = 750,	//used in REVERSE_AGGRO
 	AIassistcheck_delay = 3000,		//now often a fighting NPC will yell for help
 	ClientProximity_interval = 1000,
 	Tribute_duration = 600000,
-	ZoneTimerResolution = 3			//sleep time between zone main loop runs
+	ZoneTimerResolution = 3,			//sleep time between zone main loop runs (milliseconds)
+	FeignMemoryDuration = 120000 // EverHood - Duration player must feign death to clear zonewide agro.
 };
 
 enum {	//some random constants
@@ -214,10 +222,6 @@ enum {	//some random constants
 	NPCTripleAttackModifier = 0,
 	NPCQuadAttackModifier = -20
 };
-
-//max number of people per group.
-//is pretty much tied to what the client supports
-#define MAX_GROUP_MEMBERS 6
 
 //Max number of groups you can link with. Not tied to the client.
 //if group linking is enabled above
@@ -244,10 +248,13 @@ enum {	//some random constants
 #define NPC_RUNANIM_RATIO 34
 
 //this is used to multiply an NPCs movement rate, yeilding map units..
-#define NPC_SPEED_MULTIPLIER 2.8
+#define NPC_SPEED_MULTIPLIER 46		//used to be 2.8... no idea why it changed
 
 //minimum level to do alchemy
 #define MIN_LEVEL_ALCHEMY 25
+
+//Pets this level and higher are considered to have a magical attack
+#define PET_ATTACK_MAGICAL_LEVEL 30
 
 //chance ratio that a 
 #define THREATENLY_ARRGO_CHANCE 32 // 32/128 (25%) chance that a mob will arrgo on con Threatenly
@@ -260,7 +267,7 @@ enum {	//some random constants
 #define MIN_FACTION -1500
 
 //The Level Cap:
-#define LEVEL_CAP 65
+//#define LEVEL_CAP RuleI(Character, MaxLevel)	//hard cap is 127
 
 //the square of the maximum range at whihc you could possibly use NPC services (shop, tribute, etc)
 #define USE_NPC_RANGE2 200*200		//arbitrary right now
@@ -268,6 +275,8 @@ enum {	//some random constants
 //the formula for experience for killing a mob.
 //level is the only valid variable to use
 #define EXP_FORMULA level*level*75*35/10
+
+#define HIGHEST_AA_VALUE 11
 
 //Leadership AA experience points
 #define GROUP_EXP_PER_POINT 1000
@@ -280,6 +289,9 @@ enum {
 	minStatusToKick = 150,
 	minStatusToAvoidFalling = 100,
 	minStatusToHaveInvalidSpells = 80,
+	minStatusToIgnoreZoneFlags = 100,
+	minStatusToSeeOthersZoneFlags = 100,
+	minStatusToEditOtherGuilds = 100,
 	commandMovecharSelfOnly = 80,	//below this == only self move allowed
 	commandMovecharToSpecials = 200,	//ability to send people to cshom/load zones
 	commandZoneToSpecials = 80,		//zone to cshome, out of load zones
@@ -309,6 +321,9 @@ enum {
 //Maximum distance from a zone point if zone was specified
 #define ZONEPOINT_ZONE_RANGE 40000.0f
 
+//default states for logging flag on NPCs and clients (having NPCs on by default is prolly a bad idea)
+#define CLIENT_DEFAULT_LOGGING_ENABLED true
+#define NPC_DEFAULT_LOGGING_ENABLED false
 
 /*
 

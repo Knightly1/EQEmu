@@ -1,13 +1,12 @@
-#ifdef WIN32
-#include <windows.h>
-#endif
 #include "../common/debug.h"
 #include <iostream>
 using namespace std;
 #include "entity.h"
 #include "masterentity.h"
+#include "../common/MiscFunctions.h"
+#include "../common/breakdowns.h"
 #include <stdlib.h>
-extern Database database;
+
 extern EntityList entity_list;
 
 void DispatchFinishedDBAsync(DBAsyncWork* dbaw) {
@@ -109,7 +108,10 @@ bool DBAsyncCB_CharacterBackup(DBAsyncWork* iWork) { // return true means delete
 				needtoinsert = true;
 		}
 		if (needtoinsert) {
-			if (!database.RunQuery(query, MakeAnyLenString(&query, "Insert Delayed into character_backup (charid, account_id, name, profile, guild, guildrank, x, y, z, zoneid, alt_adv) select id, account_id, name, profile, guild, guildrank, x, y, z, zoneid, alt_adv from character_ where id=%u", iWork->WPT()), errbuf)) {
+			if (!database.RunQuery(query, MakeAnyLenString(&query, 
+				"Insert Delayed into character_backup (charid, account_id, name, profile, level, class, x, y, z, zoneid) "
+				"select id, account_id, name, profile, level, class, x, y, z, zoneid "
+				"from character_ where id=%u", iWork->WPT()), errbuf)) {
 				cout << "Error in DBAsyncCB_CharacterBackup query3 '" << query << "' " << errbuf << endl;
 				safe_delete_array(query);
 				return true;

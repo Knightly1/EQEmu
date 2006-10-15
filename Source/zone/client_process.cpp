@@ -43,7 +43,7 @@
 #endif
 
 #include "masterentity.h"
-#include "../common/database.h"
+#include "zonedb.h"
 #include "../common/packet_functions.h"
 #include "../common/packet_dump.h"
 #include "worldserver.h"
@@ -58,27 +58,15 @@
 #include "event_codes.h"
 #include "faction.h"
 #include "../common/crc32.h"
+#include "../common/rulesys.h"
 #include "StringIDs.h"
 #include "map.h"
 using namespace std;
 
-#ifdef GUILDWARS
-#include "../GuildWars/GuildWars.h"
-extern GuildWars guildwars;
-extern GuildLocationList location_list;
-extern int32 numclients;
-#endif
 
-#ifdef RAIDADDICTS
-#include "RaidAddicts.h"
-extern RaidAddicts raidaddicts;
-#endif
-
-extern Database database;
 extern Zone* zone;
 extern volatile bool ZoneLoaded;
 extern WorldServer worldserver;
-extern GuildRanks_Struct guilds[512];
 #ifndef NEW_LoadSPDat
 	extern SPDat_Spell_Struct spells[SPDAT_RECORDS];
 #endif
@@ -118,26 +106,26 @@ bool Client::Process() {
 		if(mana_timer.Check())
 			SendManaUpdatePacket();
 		if(dead && dead_timer.Check()) {
-			database.MoveCharacterToZone(GetName(),database.GetZoneName(m_pp.bind_zone_id));
-			m_pp.zone_id = m_pp.bind_zone_id;
-			m_pp.x = m_pp.bind_x[0];
-			m_pp.y = m_pp.bind_y[0];
-			m_pp.z = m_pp.bind_z[0];
+			database.MoveCharacterToZone(GetName(),database.GetZoneName(m_pp.binds[0].zoneId));
+			m_pp.zone_id = m_pp.binds[0].zoneId;
+			m_pp.x = m_pp.binds[0].x;
+			m_pp.y = m_pp.binds[0].y;
+			m_pp.z = m_pp.binds[0].z;
 			Save();
 			
 			Group *mygroup = GetGroup();
-			if (mygroup)	// && zone.GetZoneID() != m_pp.bind_zone_id
+			if (mygroup)	// && zone.GetZoneID() != m_pp.binds[0].zoneId
 			{
 				entity_list.MessageGroup(this,true,15,"%s died.", GetName());
 				mygroup->MemberZoned(this);
 			}
 			return(false);
 		}
-		if((p_timers.Get(pTimerAdventureTimer) && p_timers.Expired(pTimerAdventureTimer,false))){
+		if((p_timers.Get(pTimerAdventureTimer) && p_timers.Expired(&database, pTimerAdventureTimer,false))){
 			p_timers.Disable(pTimerAdventureTimer);
 			SendAdventureFinish(0,0);
 		}
-		else if(p_timers.Get(pTimerStartAdventureTimer) && p_timers.Expired(pTimerStartAdventureTimer,false)){
+		else if(p_timers.Get(pTimerStartAdventureTimer) && p_timers.Expired(&database, pTimerStartAdventureTimer,false)){
 			p_timers.Disable(pTimerStartAdventureTimer);
 			SendAdventureFinish(0,0);
 		}		
@@ -161,11 +149,21 @@ bool Client::Process() {
 		}
 		
 		if (bardsong_timer.Check() && bardsong != 0) {
-			//WR: need to figure out how to tell if they are dead...
-			if (!bardsong_target /*|| bardsong_target->dead*/) {
-				StopSong();
+			//NOTE: this is kinda a heavy-handed check to make sure the mob still exists before
+			//doing the next pulse on them...
+			Mob *song_target;
+			if(bardsong_target_id == GetID()) {
+				song_target = this;
 			} else {
-				SpellFinished(bardsong, bardsong_target->GetID(), bardsong_slot, spells[bardsong].mana);
+				song_target = entity_list.GetMob(bardsong_target_id);
+			}
+			
+			if (song_target == NULL) {
+				InterruptSpell(SONG_ENDS_ABRUPTLY, 0x121, bardsong);
+			} else {
+				if(!ApplyNextBardPulse(bardsong, song_target, bardsong_slot))
+					InterruptSpell(SONG_ENDS_ABRUPTLY, 0x121, bardsong);
+//				SpellFinished(bardsong, bardsong_target, bardsong_slot, spells[bardsong].mana);
 			}
 		}
 		
@@ -415,6 +413,7 @@ bool Client::Process() {
 					entity_list.SendPositionUpdates(this, pLastUpdateWZ, 450, 0, true);
 				else
 					entity_list.SendPositionUpdates(this, pLastUpdateWZ, 150, 0, true);
+				}
 			*/
 				pLastUpdate = Timer::GetCurrentTime();
 				pLastUpdateWZ = pLastUpdate;
@@ -467,7 +466,7 @@ bool Client::Process() {
 			BuffProcess();
 			
 			if(stamina_timer.Check()){
-				EQZonePacket* outapp = new EQZonePacket(OP_Stamina, sizeof(Stamina_Struct));
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_Stamina, sizeof(Stamina_Struct));
 				Stamina_Struct* sta = (Stamina_Struct*)outapp->pBuffer;
 				if (m_pp.hunger_level > 0)
 					m_pp.hunger_level-=32;
@@ -500,7 +499,7 @@ bool Client::Process() {
 		return false;
 	}
 	
-	if (client_state != CLIENT_LINKDEAD && !eqs->CheckActive()) {
+	if (client_state != CLIENT_LINKDEAD && !eqs->CheckState(ESTABLISHED)) {
 		cout << "Client linkdead: " << name << endl;
 		OnDisconnect(true);
 
@@ -517,13 +516,15 @@ bool Client::Process() {
 	/************ Get all packets from packet manager out queue and process them ************/
 	adverrorinfo = 5;
 	
-	EQZonePacket *app = 0;
-	if(eqs->GetState()==CLOSING && eqs->CheckActive()){
+	EQApplicationPacket *app = 0;
+//	if(eqs->GetState()==CLOSING && eqs->CheckActive())
+	if(eqs->CheckState(CLOSING))
+	{
 		//eqs->Close();
 		//return false;
 		//handled below 
 	} else {
-		while(ret && (app = (EQZonePacket *)eqs->PopPacket())) {
+		while(ret && (app = (EQApplicationPacket *)eqs->PopPacket())) {
 			if(app)
 				ret = HandlePacket(app);
 			safe_delete(app);
@@ -533,12 +534,13 @@ bool Client::Process() {
 #ifdef REVERSE_AGGRO
 	//At this point, we are still connected, everything important has taken
 	//place, now check to see if anybody wants to aggro us.
-	if(ret && scanarea_timer.Check()) {
+	// Everhood 6/15/06 - only if client is not feigned
+	if(ret && !GetFeigned() && scanarea_timer.Check()) {
 		entity_list.CheckClientAggro(this);
 	}
 #endif	
 	
-	if (client_state != CLIENT_LINKDEAD && (client_state == CLIENT_ERROR || client_state == DISCONNECTED || client_state == CLIENT_KICKED || !eqs->CheckActive())) {
+	if (client_state != CLIENT_LINKDEAD && (client_state == CLIENT_ERROR || client_state == DISCONNECTED || client_state == CLIENT_KICKED || !eqs->CheckState(ESTABLISHED))) {
 		//client logged out or errored out
 		if (!zoning) {
 			RemoveNoRent(); //Get rid of ze no rent stuff if logging out
@@ -576,7 +578,12 @@ bool Client::Process() {
 		}
 		OnDisconnect(true);
 	}
-	
+	// EverHood Feign Death 2 minutes and zone forgets you
+	if (forget_timer.Check()) {
+		forget_timer.Disable();
+		entity_list.ClearZoneFeignAggro(this);
+		Message(0,"Your enemies have forgotten you!");
+	}
 	
 	return ret;
 }
@@ -594,7 +601,7 @@ void Client::OnDisconnect(bool hard_disconnect) {
 		DeleteCharInAdventure(CharacterID(),GetAdventureID());
 	
 	
-	EQZonePacket *outapp = new EQZonePacket(OP_LogoutReply);
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_LogoutReply);
 	FastQueuePacket(&outapp);
 	
 	Disconnect();
@@ -616,7 +623,7 @@ void Client::BulkSendInventoryItems()
 	//new item. It should be changed to loop through once, gather the
 	//lengths, and item packet pointers into an array (fixed length), and
 	//then loop again to build the packet.
-	//EQZonePacket *packets[50];
+	//EQApplicationPacket *packets[50];
 	//unsigned long buflen = 0;
 	//unsigned long pos = 0;
 	//memset(packets, 0, sizeof(packets));
@@ -641,7 +648,7 @@ void Client::BulkSendInventoryItems()
 		if (inst){
 			string packet = inst->Serialize(slot_id);
 			ser_items[i++] = packet;
-			size+=packet.length() + 1;
+			size+=packet.length();
 		}
 	}
 	// Bank items
@@ -652,7 +659,7 @@ void Client::BulkSendInventoryItems()
 		if (inst){
 			string packet = inst->Serialize(slot_id);
 			ser_items[i++] = packet;
-			size+=packet.length() + 1;
+			size+=packet.length();
 		}
 	}
 	// Shared Bank items
@@ -663,16 +670,16 @@ void Client::BulkSendInventoryItems()
 		if (inst){
 			string packet = inst->Serialize(slot_id);
 			ser_items[i++] = packet;
-			size+=packet.length() + 1;
+			size+=packet.length();
 		}
 	}
-	EQZonePacket* outapp = new EQZonePacket(OP_CharInventory,size);
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_CharInventory,size);
 	uchar* ptr = outapp->pBuffer;
 	for(itr=ser_items.begin();itr!=ser_items.end();itr++){
 		int length = itr->second.length();
 		if(length>5){
 			memcpy(ptr,itr->second.c_str(),length);
-			ptr+=length+1;
+			ptr+=length;
 		}
 	}
 	//DumpPacket(outapp);
@@ -735,9 +742,6 @@ void Client::BulkSendInventoryItems()
 	}
 }
 #endif*/
-void Client::RemoveData() {
-	eqs->RemoveData();
-}
 
 void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 	const Item_Struct* handyitem = NULL;
@@ -768,8 +772,8 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 				handychance--;
 			int charges=1;
 			if(item->ItemClass==ItemClassCommon)
-				charges=item->Common.MaxCharges;
-			ItemInst* inst = ItemInst::Create(item, charges);
+				charges=item->MaxCharges;
+			ItemInst* inst = database.CreateItem(item, charges);
 			if (inst) {
 				inst->SetPrice(item->Price*127/100);
 				inst->SetMerchantSlot(ml.slot);
@@ -796,11 +800,11 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 			else
 				handychance--;
 			int charges=1;
-			if(item->ItemClass==ItemClassCommon && (sint16)ml.charges <= item->Common.MaxCharges)
+			if(item->ItemClass==ItemClassCommon && (sint16)ml.charges <= item->MaxCharges)
 				charges=ml.charges;
 			else
-				charges = item->Common.MaxCharges;
-			ItemInst* inst = ItemInst::Create(item, charges);
+				charges = item->MaxCharges;
+			ItemInst* inst = database.CreateItem(item, charges);
 			if (inst) {
 				inst->SetPrice(item->Price*127/100);
 				inst->SetMerchantSlot(ml.slot);
@@ -863,7 +867,7 @@ int8 Client::WithCustomer(){
 		return 1;
 	}
 }
-void Client::OPRezzAnswer(const EQZonePacket* app) {
+void Client::OPRezzAnswer(const EQApplicationPacket* app) {
 	if (!pendingrezzexp)
 		return;
 	const Resurrect_Struct* ra = (const Resurrect_Struct*) app->pBuffer;
@@ -872,7 +876,7 @@ void Client::OPRezzAnswer(const EQZonePacket* app) {
 		this->BuffFadeAll();
 		SetMana(0);
 		SetHP(GetMaxHP()/5);
-		EQZonePacket* outapp = app->CopyZonePacket();
+		EQApplicationPacket* outapp = app->Copy();
 		outapp->SetOpcode(OP_RezzComplete);
 		worldserver.RezzPlayer(outapp,0,OP_RezzComplete);
 		cout << "pe: " << pendingrezzexp << endl;
@@ -890,7 +894,7 @@ void Client::OPRezzAnswer(const EQZonePacket* app) {
 	}
 }
 
-void Client::OPTGB(const EQZonePacket *app)
+void Client::OPTGB(const EQApplicationPacket *app)
 {
 	if(!app) return;
 	if(!app->pBuffer) return;
@@ -902,7 +906,7 @@ void Client::OPTGB(const EQZonePacket *app)
 		tgb = tgb_flag;
 }
 
-void Client::OPMemorizeSpell(const EQZonePacket* app)
+void Client::OPMemorizeSpell(const EQApplicationPacket* app)
 {
 	if(app->size != sizeof(MemorizeSpell_Struct))
 	{
@@ -940,12 +944,12 @@ void Client::OPMemorizeSpell(const EQZonePacket* app)
 			{
 				const Item_Struct* item = inst->GetItem();
 				
-				if(item && item->Common.Scroll.Effect == (uint32)(memspell->spell_id))
+				if(item && item->Scroll.Effect == (uint32)(memspell->spell_id))
 				{
 					ScribeSpell(memspell->spell_id, memspell->slot);
 
 					// Destroy scroll on cursor
-					EQZonePacket* outapp = new EQZonePacket(OP_MoveItem, sizeof(MoveItem_Struct));
+					EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoveItem, sizeof(MoveItem_Struct));
 					MoveItem_Struct* spellmoveitem = (MoveItem_Struct*) outapp->pBuffer;
 					spellmoveitem->from_slot = SLOT_CURSOR;
 					spellmoveitem->to_slot = SLOT_INVALID;
@@ -981,7 +985,7 @@ void Client::BreakInvis()
 {
 	if (invisible)
 	{
-		EQZonePacket* outapp = new EQZonePacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
 		SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
 		sa_out->spawn_id = GetID();
 		sa_out->type = 0x03;
@@ -992,7 +996,7 @@ void Client::BreakInvis()
 	}
 }
 
-void Client::OPMoveCoin(const EQZonePacket* app)
+void Client::OPMoveCoin(const EQApplicationPacket* app)
 {
 	MoveCoin_Struct* mc = (MoveCoin_Struct*)app->pBuffer;
 	int value = 0, amount_to_take = 0, amount_to_add = 0;
@@ -1034,13 +1038,13 @@ void Client::OPMoveCoin(const EQZonePacket* app)
 			switch(mc->cointype1)
 			{
 				case COINTYPE_PP:
-					from_bucket = &m_pp.platinum_cursor; break;
+					from_bucket = (sint32 *) &m_pp.platinum_cursor; break;
 				case COINTYPE_GP:
-					from_bucket = &m_pp.gold_cursor; break;
+					from_bucket = (sint32 *) &m_pp.gold_cursor; break;
 				case COINTYPE_SP:
-					from_bucket = &m_pp.silver_cursor; break;
+					from_bucket = (sint32 *) &m_pp.silver_cursor; break;
 				case COINTYPE_CP:
-					from_bucket = &m_pp.copper_cursor; break;
+					from_bucket = (sint32 *) &m_pp.copper_cursor; break;
 			}
 			break;
 		}
@@ -1049,13 +1053,13 @@ void Client::OPMoveCoin(const EQZonePacket* app)
 			switch(mc->cointype1)
 			{
 				case COINTYPE_PP:
-					from_bucket = &m_pp.platinum; break;
+					from_bucket = (sint32 *) &m_pp.platinum; break;
 				case COINTYPE_GP:
-					from_bucket = &m_pp.gold; break;
+					from_bucket = (sint32 *) &m_pp.gold; break;
 				case COINTYPE_SP:
-					from_bucket = &m_pp.silver; break;
+					from_bucket = (sint32 *) &m_pp.silver; break;
 				case COINTYPE_CP:
-					from_bucket = &m_pp.copper; break;
+					from_bucket = (sint32 *) &m_pp.copper; break;
 			}
 			break;
 		}
@@ -1064,13 +1068,13 @@ void Client::OPMoveCoin(const EQZonePacket* app)
 			switch(mc->cointype1)
 			{
 				case COINTYPE_PP:
-					from_bucket = &m_pp.platinum_bank; break;
+					from_bucket = (sint32 *) &m_pp.platinum_bank; break;
 				case COINTYPE_GP:
-					from_bucket = &m_pp.gold_bank; break;
+					from_bucket = (sint32 *) &m_pp.gold_bank; break;
 				case COINTYPE_SP:
-					from_bucket = &m_pp.silver_bank; break;
+					from_bucket = (sint32 *) &m_pp.silver_bank; break;
 				case COINTYPE_CP:
-					from_bucket = &m_pp.copper_bank; break;
+					from_bucket = (sint32 *) &m_pp.copper_bank; break;
 			}
 			break;
 		}
@@ -1082,7 +1086,7 @@ void Client::OPMoveCoin(const EQZonePacket* app)
 		case 4:	// shared bank
 		{
 			if(mc->cointype1 == COINTYPE_PP)	// there's only platinum here
-				from_bucket = &m_pp.platinum_shared;
+				from_bucket = (sint32 *) &m_pp.platinum_shared;
 			break;
 		}
 	}
@@ -1099,13 +1103,13 @@ void Client::OPMoveCoin(const EQZonePacket* app)
 			switch(mc->cointype2)
 			{
 				case COINTYPE_PP:
-					to_bucket = &m_pp.platinum_cursor; break;
+					to_bucket = (sint32 *) &m_pp.platinum_cursor; break;
 				case COINTYPE_GP:
-					to_bucket = &m_pp.gold_cursor; break;
+					to_bucket = (sint32 *) &m_pp.gold_cursor; break;
 				case COINTYPE_SP:
-					to_bucket = &m_pp.silver_cursor; break;
+					to_bucket = (sint32 *) &m_pp.silver_cursor; break;
 				case COINTYPE_CP:
-					to_bucket = &m_pp.copper_cursor; break;
+					to_bucket = (sint32 *) &m_pp.copper_cursor; break;
 			}
 			break;
 		}
@@ -1114,13 +1118,13 @@ void Client::OPMoveCoin(const EQZonePacket* app)
 			switch(mc->cointype2)
 			{
 				case COINTYPE_PP:
-					to_bucket = &m_pp.platinum; break;
+					to_bucket = (sint32 *) &m_pp.platinum; break;
 				case COINTYPE_GP:
-					to_bucket = &m_pp.gold; break;
+					to_bucket = (sint32 *) &m_pp.gold; break;
 				case COINTYPE_SP:
-					to_bucket = &m_pp.silver; break;
+					to_bucket = (sint32 *) &m_pp.silver; break;
 				case COINTYPE_CP:
-					to_bucket = &m_pp.copper; break;
+					to_bucket = (sint32 *) &m_pp.copper; break;
 			}
 			break;
 		}
@@ -1129,13 +1133,13 @@ void Client::OPMoveCoin(const EQZonePacket* app)
 			switch(mc->cointype2)
 			{
 				case COINTYPE_PP:
-					to_bucket = &m_pp.platinum_bank; break;
+					to_bucket = (sint32 *) &m_pp.platinum_bank; break;
 				case COINTYPE_GP:
-					to_bucket = &m_pp.gold_bank; break;
+					to_bucket = (sint32 *) &m_pp.gold_bank; break;
 				case COINTYPE_SP:
-					to_bucket = &m_pp.silver_bank; break;
+					to_bucket = (sint32 *) &m_pp.silver_bank; break;
 				case COINTYPE_CP:
-					to_bucket = &m_pp.copper_bank; break;
+					to_bucket = (sint32 *) &m_pp.copper_bank; break;
 			}
 			break;
 		}
@@ -1146,13 +1150,13 @@ void Client::OPMoveCoin(const EQZonePacket* app)
 				switch(mc->cointype2)
 				{
 					case COINTYPE_PP:
-						to_bucket = &trade->pp; break;
+						to_bucket = (sint32 *) &trade->pp; break;
 					case COINTYPE_GP:
-						to_bucket = &trade->gp; break;
+						to_bucket = (sint32 *) &trade->gp; break;
 					case COINTYPE_SP:
-						to_bucket = &trade->sp; break;
+						to_bucket = (sint32 *) &trade->sp; break;
 					case COINTYPE_CP:
-						to_bucket = &trade->cp; break;
+						to_bucket = (sint32 *) &trade->cp; break;
 				}
 			}
 			break;
@@ -1160,7 +1164,7 @@ void Client::OPMoveCoin(const EQZonePacket* app)
 		case 4:	// shared bank
 		{
 			if(mc->cointype2 == COINTYPE_PP)	// there's only platinum here
-				to_bucket = &m_pp.platinum_shared;
+				to_bucket = (sint32 *) &m_pp.platinum_shared;
 			break;
 		}
 	}
@@ -1220,7 +1224,7 @@ void Client::OPMoveCoin(const EQZonePacket* app)
 			trade->sp, trade->cp
 		);
 
-		EQZonePacket* outapp = new EQZonePacket(OP_TradeCoins,sizeof(TradeCoin_Struct));
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_TradeCoins,sizeof(TradeCoin_Struct));
 		TradeCoin_Struct* tcs = (TradeCoin_Struct*)outapp->pBuffer;
 		tcs->trader = trader->GetID();
 		tcs->slot = mc->cointype2;
@@ -1234,11 +1238,11 @@ void Client::OPMoveCoin(const EQZonePacket* app)
 	Save();
 }
 
-void Client::OPGMTraining(const EQZonePacket *app)
+void Client::OPGMTraining(const EQApplicationPacket *app)
 {
 	int cur_skill;
 
-	EQZonePacket* outapp = app->CopyZonePacket();
+	EQApplicationPacket* outapp = app->Copy();
 	GMTrainee_Struct* gmtrain = (GMTrainee_Struct*) outapp->pBuffer;
 
 	Mob* pTrainer = entity_list.GetMob(gmtrain->npcid);
@@ -1273,9 +1277,9 @@ void Client::OPGMTraining(const EQZonePacket *app)
 	}
 }
 
-void Client::OPGMEndTraining(const EQZonePacket *app)
+void Client::OPGMEndTraining(const EQApplicationPacket *app)
 {
-	EQZonePacket *outapp = new EQZonePacket(OP_GMEndTrainingResponse, 0);
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_GMEndTrainingResponse, 0);
 	GMTrainEnd_Struct *p = (GMTrainEnd_Struct *)app->pBuffer;
 
 	FastQueuePacket(&outapp);
@@ -1300,7 +1304,7 @@ void Client::OPGMEndTraining(const EQZonePacket *app)
 	}
 }
 
-void Client::OPGMTrainSkill(const EQZonePacket *app)
+void Client::OPGMTrainSkill(const EQApplicationPacket *app)
 {
 	if(!m_pp.points)
 		return;
@@ -1355,7 +1359,7 @@ void Client::OPGMTrainSkill(const EQZonePacket *app)
 
 			int16 t_level = database.GetTrainlevel(GetClass(), gmskill->skill_id);
 			cout<<"t_level:"<<t_level<<endl;
-			if (t_level == 66 || t_level == 0)
+			if (t_level == SKILL_UNTRAINABLE || t_level == 0)
 			{
 				return;
 			}
@@ -1364,7 +1368,24 @@ void Client::OPGMTrainSkill(const EQZonePacket *app)
 		}
 		else if (skilllevel <= 251)
 		{
-			// Client train a valid skill
+			switch(gmskill->skill_id) {
+			case BREWING:
+			case MAKE_POISON:
+			case TINKERING:
+			case RESEARCH:
+			case ALCHEMY:
+			case BAKING:
+			case TAILORING:
+			case BLACKSMITHING:
+			case FLETCHING:
+			case JEWELRY_MAKING:
+			case POTTERY:
+				if(skilllevel >= RuleI(Skills, MaxTrainTradeskills)) {
+					Message_StringID(13, MORE_SKILLED_THAN_I, pTrainer->GetCleanName());
+					return;
+				}
+			}
+            // Client train a valid skill
 			// FIXME If the client doesn't do the "You are more skilled than I" check we should do it here
 			SetSkill(gmskill->skill_id, skilllevel + 1);
 		}
@@ -1379,7 +1400,7 @@ void Client::OPGMTrainSkill(const EQZonePacket *app)
 }
 
 // this is used for /summon and /corpse
-void Client::OPGMSummon(const EQZonePacket *app)
+void Client::OPGMSummon(const EQApplicationPacket *app)
 {
 	GMSummon_Struct* gms = (GMSummon_Struct*) app->pBuffer;
 	Mob* st = entity_list.GetMob(gms->charname);
@@ -1411,11 +1432,7 @@ void Client::OPGMSummon(const EQZonePacket *app)
 			}
 			else if (tmp < '0' || tmp > '9') // dont send to world if it's not a player's name
 			{
-				ServerPacket* pack = new ServerPacket;
-				pack->opcode = ServerOP_ZonePlayer;
-				pack->size = sizeof(ServerZonePlayer_Struct);
-				pack->pBuffer = new uchar[pack->size];
-				memset(pack->pBuffer, 0, pack->size);
+				ServerPacket* pack = new ServerPacket(ServerOP_ZonePlayer, sizeof(ServerZonePlayer_Struct));
 				ServerZonePlayer_Struct* szp = (ServerZonePlayer_Struct*) pack->pBuffer;
 				strcpy(szp->adminname, this->GetName());
 				szp->adminrank = this->Admin();

@@ -33,12 +33,14 @@
 //   i     : source - allocated null-terminated string
 //   return: pointer to static buffer with the target string
 const char *MakeUpperString(const char *source);
+const char *MakeLowerString(const char *source);
 //////////////////////////////////////////////////////////////////////
 //
 //  MakeUpperString
 //   i : source - allocated null-terminated string
 //   io: target - allocated buffer, at least of size strlen(source)+1
 void MakeUpperString(const char *source, char *target);
+void MakeLowerString(const char *source, char *target);
 
 
 int		MakeAnyLenString(char** ret, const char* format, ...);
@@ -69,13 +71,10 @@ int FloatToEQH(float d);
 
 
 
-
-#ifndef WIN32
 #define _ITOA_BUFLEN	25
-
-const char *itoa(int num);
+const char *itoa(int num);	//not thread safe
+#ifndef WIN32
 const char *itoa(int num, char* a,int b);
-
 #endif
 
 class InitWinsock {

@@ -1,5 +1,6 @@
 #include "../common/debug.h"
-#include "../common/EQWorldPacket.h"
+#include "../common/EQPacket.h"
+#include "../common/EQStreamIntf.h"
 #include <iostream>
 using namespace std;
 #include <iomanip>
@@ -34,39 +35,40 @@ using namespace std;
 #include "../common/emu_opcodes.h"
 #include "../common/eq_packet_structs.h"
 #include "../common/packet_dump.h"
-#include "../common/database.h"
+#include "../common/EQStreamIntf.h"
+#include "worlddb.h"
 #include "../common/Item.h"
 #include "../common/races.h"
 #include "../common/classes.h"
 #include "../common/languages.h"
 #include "../common/skills.h"
 #include "../common/extprofile.h"
+#include "WorldConfig.h"
 #include "LoginServer.h"
 #include "zoneserver.h"
-#include "net.h"
+#include "zonelist.h"
+#include "clientlist.h"
+#include "wguild_mgr.h"
 
-extern Database database;
-extern const char* ZONE_NAME;
-extern GuildRanks_Struct guilds[512];
 extern ZSList zoneserver_list;
 extern LoginServer loginserver;
+extern ClientList client_list;
 extern uint32 numclients;
-extern NetConnection net;
 extern volatile bool RunLoops;
 
-Client::Client(EQStream* ieqs) {
-	eqs = ieqs;
+Client::Client(EQStreamInterface* ieqs)
+: autobootup_timeout(10000),
+  CLE_keepalive_timer(15000),
+  connect(1000),
+  eqs(ieqs)
+{
 	// Live does not send datarate as of 3/11/2005
 	//eqs->SetDataRate(7);
-	ip = eqs->GetrIP();
-	port = ntohs(eqs->GetrPort());
+	ip = eqs->GetRemoteIP();
+	port = ntohs(eqs->GetRemotePort());
 
-	autobootup_timeout = new Timer(10000);
-	autobootup_timeout->Disable();
-	
-	CLE_keepalive_timer = new Timer(15000);
-	connect = new Timer(1000);
-	connect->Disable();
+	autobootup_timeout.Disable();
+	connect.Disable();
 	seencharsel = false;
 	cle = 0;
 	zoneID = 0;
@@ -83,19 +85,15 @@ Client::~Client() {
 	//let the stream factory know were done with this stream
 	eqs->Close();
 	eqs->ReleaseFromUse();
-	eqs = NULL;
 	
-	safe_delete(autobootup_timeout);
-	safe_delete(CLE_keepalive_timer);
-	safe_delete(connect);
 	numclients--;
 }
 
 void Client::SendLogServer()
 {
-	EQWorldPacket *outapp = new EQWorldPacket(OP_LogServer, sizeof(LogServer_Struct)); 
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_LogServer, sizeof(LogServer_Struct)); 
 	LogServer_Struct *l=(LogServer_Struct *)outapp->pBuffer;
-	char *wsn=net.GetWorldShortName();
+	const char *wsn=WorldConfig::get()->ShortName.c_str();
 	memcpy(l->worldshortname,wsn,strlen(wsn));
 	QueuePacket(outapp);
 	safe_delete(outapp);
@@ -109,18 +107,18 @@ char char_name[32]= { 0 };
 			eqs->Close();
 			return;
 		} else {
-			cout << "Telling client to continue session with: " << char_name << endl;
+			clog(WORLD__CLIENT,"Telling client to continue session.");
 		}
 	}
 
-	EQWorldPacket *outapp = new EQWorldPacket(OP_EnterWorld, strlen(char_name)+1); 
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_EnterWorld, strlen(char_name)+1); 
 	memcpy(outapp->pBuffer,char_name,strlen(char_name)+1);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
 
 void Client::SendExpansionInfo() {
-	EQWorldPacket *outapp = new EQWorldPacket(OP_ExpansionInfo, 4);
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_ExpansionInfo, 4);
 	uint32 *v = (uint32 *) outapp->pBuffer;
 	char val[20] = {0};
 	if (database.GetVariable("Expansions", val, 20)) {
@@ -142,7 +140,7 @@ void Client::SendCharInfo() {
 	
 
 	// Send OP_SendCharInfo
-	EQWorldPacket *outapp = new EQWorldPacket(OP_SendCharInfo, sizeof(CharacterSelect_Struct));
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_SendCharInfo, sizeof(CharacterSelect_Struct));
 	CharacterSelect_Struct* cs = (CharacterSelect_Struct*)outapp->pBuffer;
 	
 	database.GetCharSelectInfo(GetAccountID(), cs);
@@ -152,39 +150,34 @@ void Client::SendCharInfo() {
 }
 
 void Client::SendPostEnterWorld() {
-	EQWorldPacket *outapp = new EQWorldPacket(OP_PostEnterWorld, 1);
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_PostEnterWorld, 1);
 	outapp->size=0;
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
 
-bool Client::HandlePacket(const EQWorldPacket *app) {
+bool Client::HandlePacket(const EQApplicationPacket *app) {
+	const WorldConfig *Config=WorldConfig::get();
 	EmuOpcode opcode = app->GetOpcode();
-	#if DEBUG == 9
-		cout << "Received 0x" << hex << setfill('0') << setw(4) << opcode << dec << endl;
-		DumpPacket(app);
-	#endif
-	
+
+	clog(WORLD__CLIENT_TRACE,"Recevied EQApplicationPacket");
+	_pkt(WORLD__CLIENT_TRACE,app);
+
 	bool ret = true;
 	
-	if (!eqs->CheckActive()) {
-		cout << "Client disconnected" << endl;
+	if (!eqs->CheckState(ESTABLISHED)) {
+		clog(WORLD__CLIENT,"Client disconnected (net inactive on send)");
 		return false;
 	}
 	
 	if (GetAccountID() == 0 && opcode != OP_SendLoginInfo) {
 		// Got a packet other than OP_SendLoginInfo when not logged in
-		LogFile->write(EQEMuLog::Error, "Expecting OP_SendLoginInfo, got %x", opcode);
+		clog(WORLD__CLIENT_ERR,"Expecting OP_SendLoginInfo, got %s", OpcodeNames[opcode]);
 		return false;
 	}
 	else if (opcode == OP_AckPacket) {
 		return true;
 	}
-	
-	#ifdef MERTHALICIOUS
-		//@merth: this just here temporarily for my debugging
-		cout << "Received 0x" << hex << setw(4) << setfill('0') << opcode << ", size=" << dec << app->size << endl;
-	#endif
 	
 	switch(opcode)
 	{
@@ -207,7 +200,7 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 
 			if (strlen(password) <= 1) {
 				// TODO: Find out how to tell the client wrong username/password
-				cerr << "Login without a password" << endl;
+				clog(WORLD__CLIENT_ERR,"Login without a password");
 				ret = false;
 				break;
 			}
@@ -233,34 +226,35 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 			if ((cle = zoneserver_list.CheckAuth(inet_ntoa(tmpip), password)))
 #else
 			if (loginserver.Connected() == false && !pZoning) {
-				cout << "Error: Login server login while not connected to login server." << endl;
+				clog(WORLD__CLIENT_ERR,"Error: Login server login while not connected to login server.");
 				ret = false;
 				break;
 			}
-			if ((minilogin && (cle = zoneserver_list.CheckAuth(id,password,ip))) || (cle = zoneserver_list.CheckAuth(id, password)))
+			if ((minilogin && (cle = client_list.CheckAuth(id,password,ip))) || (cle = client_list.CheckAuth(id, password)))
 #endif
 			{
 				if (cle->AccountID() == 0 || (!minilogin && cle->LSID()==0)) {
-					cout << "ERROR! ID is 0!!!\nIs this server connected to minilogin?\n";
+					clog(WORLD__CLIENT_ERR,"ID is 0.  Is this server connected to minilogin?");
 					if(!minilogin)
-						cout << "If so you forget the minilogin variable...\n";
+						clog(WORLD__CLIENT_ERR,"If so you forget the minilogin variable...");
 					else
-						cout << "Could not find a minilogin account, verify ip address logging into minilogin is the same that is in your account table.\n";
+						clog(WORLD__CLIENT_ERR,"Could not find a minilogin account, verify ip address logging into minilogin is the same that is in your account table.");
 					ret = false;
 					break;
 				}
 				
 				cle->SetOnline();
 				
-				cout << "Logged in: " << (pZoning ? "(Zoning) " : "(CharSel) ");
+				clog(WORLD__CLIENT,"Logged in. Mode=%s",pZoning ? "(Zoning)" : "(CharSel)");
 				
 				if(minilogin){
-					net.UpdateStats = false;
-					cout << "Account #" << cle->AccountID() << ": " << cle->AccountName() << endl;
+					WorldConfig::DisableStats();
+					clog(WORLD__CLIENT,"MiniLogin Account #%d",cle->AccountID());
 				}
-				else
-					cout << "LS#" << cle->LSID() << ": " << cle->LSName() << endl;
-				if(net.UpdateStats){
+				else {
+					clog(WORLD__CLIENT,"LS Account #%d",cle->LSID());
+				}
+				if(Config->UpdateStats){
 					ServerPacket* pack = new ServerPacket;
 					pack->opcode = ServerOP_LSPlayerJoinWorld;
 					pack->size = sizeof(ServerLSPlayerJoinWorld_Struct);
@@ -286,8 +280,7 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 			}
 			else {
 				// TODO: Find out how to tell the client wrong username/password
-				//cerr << "Bad/expired session key: " << name << ", k=" << password << endl;
-				cerr << "Bad/expired session key: " << name << endl;
+				clog(WORLD__CLIENT_ERR,"Bad/Expired session key '%s'",name);
 				ret = false;
 				break;
 			}
@@ -295,38 +288,35 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 			if (!cle)
 				break;
 			cle->SetIP(GetIP());
-		    break;
+			break;
 		}
 		case OP_ApproveName: //Name approval
 		{
 			if (GetAccountID() == 0) {
-				cerr << "Name approval with no logged in account" << endl;
+				clog(WORLD__CLIENT_ERR,"Name approval request with no logged in account");
 				ret = false;
 				break;
 			}
-			char name[64] = {0};
-			snprintf(name, 64, "%s", (char*)app->pBuffer);
-		    uchar race = app->pBuffer[64];
-		    uchar clas = app->pBuffer[68];
+			snprintf(char_name, 64, "%s", (char*)app->pBuffer);
+			uchar race = app->pBuffer[64];
+			uchar clas = app->pBuffer[68];
 			
-		    cout << "Name approval request for:" << name; 
-		    cout << " race:" << (int)race;
-		    cout << " class:" << (int)clas << endl;
+			clog(WORLD__CLIENT,"Name approval request.  Name=%s, race=%s, class=%s",char_name,GetRaceName(race),GetEQClassName(clas));
 
-			EQWorldPacket *outapp;
-			outapp = new EQWorldPacket;
+			EQApplicationPacket *outapp;
+			outapp = new EQApplicationPacket;
 			outapp->SetOpcode(OP_ApproveName);
-		   	outapp->pBuffer = new uchar[1];
-		   	outapp->size = 1;
-		   	bool valid;
-			if (database.CheckNameFilter(name)) {
+			outapp->pBuffer = new uchar[1];
+			outapp->size = 1;
+			bool valid;
+			if (database.CheckNameFilter(char_name)) {
 				valid = false;
 			}
-			else if(name[0] < 'A' && name[0] > 'Z') {
+			else if(char_name[0] < 'A' && char_name[0] > 'Z') {
 				//name must begin with an upper-case letter.
 				valid = false;
 			}
-			else if (database.ReserveName(GetAccountID(), name)) {
+			else if (database.ReserveName(GetAccountID(), char_name)) {
 				valid = true;
 			}
 			else {
@@ -335,7 +325,7 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 			outapp->pBuffer[0] = valid? 1 : 0;
 			QueuePacket(outapp);
 			safe_delete(outapp);
-		    break;			
+			break;			
 		}
 		case OP_RandomNameGenerator:
 		{
@@ -427,22 +417,22 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 		{
 			if (GetAccountID() == 0)
 			{
-				cerr << "Account ID not set; unable to create character." << endl;
+				clog(WORLD__CLIENT_ERR,"Account ID not set; unable to create character.");
 				ret = false;
 				break;
 			}
 			else if (app->size != sizeof(CharCreate_Struct))
 			{
-				cout << "Wrong size on OP_CharacterCreate. Got: " << app->size << ", Expected: " << sizeof(CharCreate_Struct) << endl;
+				clog(WORLD__CLIENT_ERR,"Wrong size on OP_CharacterCreate. Got: %d, Expected: %d",app->size,sizeof(CharCreate_Struct));
 				DumpPacket(app);
 				break;
 			}
 
 			CharCreate_Struct *cc = (CharCreate_Struct*)app->pBuffer;
-			if(OPCharCreate(cc) == false)
+			if(OPCharCreate(char_name,cc) == false)
 			{
-				database.DeleteCharacter(cc->name);
-				EQWorldPacket *outapp = new EQWorldPacket(OP_ApproveName, 1);
+				database.DeleteCharacter(char_name);
+				EQApplicationPacket *outapp = new EQApplicationPacket(OP_ApproveName, 1);
 				outapp->pBuffer[0] = 0;
 				QueuePacket(outapp);
 				safe_delete(outapp);
@@ -455,31 +445,31 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 		case OP_EnterWorld: // Enter world
 		{
 			if (GetAccountID() == 0) {
-				cerr << "Enter world with no logged in account" << endl;
+				clog(WORLD__CLIENT_ERR,"Enter world with no logged in account");
 				eqs->Close();
 				break;
 			}
 			if(GetAdmin() < 0)
 			{
-				cerr << "Banned or suspended." << endl;
+				clog(WORLD__CLIENT,"Account banned or suspended.");
 				eqs->Close();
 				break;
 			}
 			EnterWorld_Struct *ew=(EnterWorld_Struct *)app->pBuffer;
 			strncpy(char_name, ew->name, 64);
 			
-			EQWorldPacket *outapp;
+			EQApplicationPacket *outapp;
 			int32 tmpaccid = 0;
 			charid = database.GetCharacterInfo(char_name, &tmpaccid, &zoneID);
 			if (charid == 0 || tmpaccid != GetAccountID()) {
-				cerr << "Could not get CharInfo for " << char_name << endl;
+				clog(WORLD__CLIENT_ERR,"Could not get CharInfo for '%s'",char_name);
 				eqs->Close();
 				break;
 			}
 			
 			// Make sure this account owns this character
 			if (tmpaccid != GetAccountID()) {
-				cerr << "This account does not own this character" << endl;
+				clog(WORLD__CLIENT_ERR,"This account does not own the character named '%s'",char_name);
 				eqs->Close();
 				break;
 			}
@@ -487,7 +477,7 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 			if (zoneID == 0 || !database.GetZoneName(zoneID)) {
 				// This is to save people in an invalid zone, once it's removed from the DB
 				database.MoveCharacterToZone(charid, "arena");
-				LogFile->write(EQEMuLog::Error, "Zone not found in database zone_id=%i, moveing char to arena character:%s", zoneID, char_name);
+				clog(WORLD__CLIENT_ERR, "Zone not found in database zone_id=%i, moveing char to arena character:%s", zoneID, char_name);
 			}
 			
 			if(!pZoning)
@@ -498,7 +488,7 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 					char* leader=0;
 					char leaderbuf[64]={0};
 					if((leader=database.GetGroupLeaderForLogin(char_name,leaderbuf)) && strlen(leader)>1){
-						EQWorldPacket* outapp3 = new EQWorldPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+						EQApplicationPacket* outapp3 = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 						GroupJoin_Struct* gj=(GroupJoin_Struct*)outapp3->pBuffer;
 						gj->action=8;
 						strcpy(gj->yourname,char_name);
@@ -509,7 +499,7 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 				}
 			}
 
-			outapp = new EQWorldPacket(OP_MOTD);
+			outapp = new EQApplicationPacket(OP_MOTD);
 			char tmp[500] = {0};
 			if (database.GetVariable("MOTD", tmp, 500)) {
 				outapp->size = strlen(tmp)+1;
@@ -526,25 +516,32 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 			QueuePacket(outapp);
 			safe_delete(outapp);
 
-			EQWorldPacket *outapp2 = new EQWorldPacket(OP_SetChatServer);
+			EQApplicationPacket *outapp2 = new EQApplicationPacket(OP_SetChatServer);
 			char buffer[112];
-			sprintf(buffer,"%s,%i,%s.%s,%s",net.GetChatAddress(),net.GetChatPort(),net.GetWorldShortName(),this->GetCharName(),"067a79d4");
+			sprintf(buffer,"%s,%i,%s.%s,%s",
+				Config->ChatHost.c_str(),
+				Config->ChatPort,
+				Config->ShortName.c_str(),
+				this->GetCharName(),"067a79d4"
+			);
 			outapp2->size=strlen(buffer)+1;
 			outapp2->pBuffer = new uchar[outapp2->size];
 			memcpy(outapp2->pBuffer,buffer,outapp2->size);
 			QueuePacket(outapp2);
-			safe_delete(outapp);
+			safe_delete(outapp2);
 
-			outapp2 = new EQWorldPacket(OP_SetChatServer);
-			sprintf(buffer,"192.168.0.5,7775,%s.%s,%s",net.GetWorldShortName(),this->GetCharName(),"067a79d4");
+			outapp2 = new EQApplicationPacket(OP_SetChatServer2);
+			sprintf(buffer,"%s,%i,%s.%s,%s",
+				Config->MailHost.c_str(),
+				Config->MailPort,
+				Config->ShortName.c_str(),
+				this->GetCharName(),"067a79d4"
+			);
 			outapp2->size=strlen(buffer)+1;
 			outapp2->pBuffer = new uchar[outapp2->size];
 			memcpy(outapp2->pBuffer,buffer,outapp2->size);
-
-			outapp2->SetOpcode(OP_SetChatServer2);
 			QueuePacket(outapp2);
-			safe_delete(outapp);
-			//DumpPacket(outapp2);
+			safe_delete(outapp2);
 			
 			EnterWorld();
 			break;
@@ -553,7 +550,7 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 			break;
 		}
 		case OP_DeleteCharacter: {
-			cout << "Delete character: " << app->pBuffer << endl;
+			clog(WORLD__CLIENT,"Delete character: %s",app->pBuffer);
 			database.DeleteCharacter((char *)app->pBuffer);
 			SendCharInfo();
 			break;
@@ -562,23 +559,19 @@ bool Client::HandlePacket(const EQWorldPacket *app) {
 		{
 			break;
 		}
+		case OP_WorldClientReady:
 		case OP_World_Client_CRC1:
 		case OP_World_Client_CRC2:
 		case OP_WearChange: { // User has selected a different character
 			break;
 		}
 		case OP_WorldComplete: {
-			eqs->SendDisconnect();
+			eqs->Close();
 			break;
 		}
 		default: {
-			cout << "Received unknown opcode: 0x" << hex << setfill('0') << setw(4) << opcode << dec;
-			cout << " size:" << app->size << " bytes" << endl;
-#if DEBUG >= 5
-			DumpPacket(app);
-#else
-			DumpPacket(app->pBuffer, app->size > 32 ? 32 : app->size);
-#endif
+			clog(WORLD__CLIENT_ERR,"Received unknown EQApplicationPacket");
+			_pkt(WORLD__CLIENT_ERR,app);
 			break;
 		}
 	}
@@ -595,29 +588,30 @@ bool Client::Process() {
     to.sin_port = port;
     to.sin_addr.s_addr = ip;
 
-	if (autobootup_timeout->Check()) {
+	if (autobootup_timeout.Check()) {
+		clog(WORLD__CLIENT_ERR, "Zone bootup timer expired, bootup failed or too slow.");
 		ZoneUnavail();
 	}
-	if(connect->Check()){
+	if(connect.Check()){
 		SendGuildList();// Send OPCode: OP_GuildsList
 		SendApproveWorld();
-		connect->Disable();
+		connect.Disable();
 	}
-	if (CLE_keepalive_timer->Check()) {
+	if (CLE_keepalive_timer.Check()) {
 		if (cle)
 			cle->KeepAlive();
 	}
     
 	/************ Get all packets from packet manager out queue and process them ************/
-	EQWorldPacket *app = 0;
-	while(ret && (app = (EQWorldPacket *)eqs->PopPacket())) {
+	EQApplicationPacket *app = 0;
+	while(ret && (app = (EQApplicationPacket *)eqs->PopPacket())) {
 		ret = HandlePacket(app);
 
 		delete app;
 	}    
 
-	if (!eqs->CheckActive()) {
-		if(net.UpdateStats){
+	if (!eqs->CheckState(ESTABLISHED)) {
+		if(WorldConfig::get()->UpdateStats){
 			ServerPacket* pack = new ServerPacket;
 			pack->opcode = ServerOP_LSPlayerLeftWorld;
 			pack->size = sizeof(ServerLSPlayerLeftWorld_Struct);
@@ -629,7 +623,7 @@ bool Client::Process() {
 			loginserver.SendPacket(pack);
 			safe_delete(pack);
 		}
-		cout << "Client disconnected" << endl;
+		clog(WORLD__CLIENT,"Client disconnected (not active in process)");
 		return false;
 	}
 
@@ -643,22 +637,23 @@ void Client::EnterWorld(bool TryBootup) {
 		return;
 	
 	ZoneServer* zs = zoneserver_list.FindByZoneID(zoneID);
+	const char *zone_name=database.GetZoneName(zoneID, true);
 	if (zs) {
 		// warn the world we're comming, so it knows not to shutdown
 		zs->IncommingClient(this);
 	}
 	else {
 		if (TryBootup) {
-			autobootup_timeout->Start();
-			cout << "Attempting autobootup of " << database.GetZoneName(zoneID, true) << " (" << zoneID << ") for " << char_name << endl;
+			clog(WORLD__CLIENT,"Attempting autobootup of %s (%d)",zone_name,zoneID);
+			autobootup_timeout.Start();
 			if (!(pwaitingforbootup = zoneserver_list.TriggerBootup(zoneID))) {
-				cout << "Error: No zoneserver to bootup " << database.GetZoneName(zoneID, true) << " (" << zoneID << ") for " << char_name << endl;
+				clog(WORLD__CLIENT_ERR,"No zoneserver available to boot up.");
 				ZoneUnavail();
 			}
 			return;
 		}
 		else {
-			cout << "Error: Player '" << char_name << "' requested zone status for " << database.GetZoneName(zoneID, true) << " (" << zoneID << ") but it's not up." << endl;
+			clog(WORLD__CLIENT_ERR,"Requested zone %s is no running.",zone_name);
 			ZoneUnavail();
 			return;
 		}
@@ -667,13 +662,12 @@ void Client::EnterWorld(bool TryBootup) {
 	
 	cle->SetChar(charid, char_name);
 	database.UpdateLiveChar(char_name, GetAccountID());
-	cout << "Enter world: " << char_name << ": " << database.GetZoneName(zoneID, true) << " (" << zoneID << ")" << (seencharsel?" (EnterWorld)":" (ZoneToZone)")<< endl;
+	clog(WORLD__CLIENT,"%s %s (%d)",seencharsel ? "Entering zone" : "Zoning to",zone_name,zoneID);
 //	database.SetAuthentication(account_id, char_name, zone_name, ip);
 	
 	if (seencharsel) {
 		if (GetAdmin() < 80 && zoneserver_list.IsZoneLocked(zoneID)) {
-			cout << "Enter world for " << char_name << " failed. zone is locked." << endl;
-			bool locked = zoneserver_list.IsZoneLocked(zoneID);
+			clog(WORLD__CLIENT_ERR,"Enter world failed.  Zone is locked.");
 			ZoneUnavail();
 			return;
 		}
@@ -703,30 +697,32 @@ void Client::Clearance(sint8 response)
     {
         if (zs == 0)
         {
-            cout << "Unable to find zoneserver in Client::Clearance!!" << endl;
+            clog(WORLD__CLIENT_ERR,"Unable to find zoneserver in Client::Clearance!!");
+        } else {
+        	clog(WORLD__CLIENT_ERR, "Invalid response %d in Client::Clearance", response);
         }
 		
         ZoneUnavail();
         return;
     }
 	
-	EQWorldPacket* outapp;
+	EQApplicationPacket* outapp;
 	
     if (zs->GetCAddress() == NULL) {
-        cout << "Unable to do zs->GetCAddress() in Client::Clearance!!" << endl;
+        clog(WORLD__CLIENT_ERR, "Unable to do zs->GetCAddress() in Client::Clearance!!");
         ZoneUnavail();
         return;    
     }
 	
     if (zoneID == 0) {
-        cout << "zoneID is NULL in Client::Clearance!!" << endl;
+        clog(WORLD__CLIENT_ERR, "zoneID is NULL in Client::Clearance!!");
         ZoneUnavail();
         return;
     }
 	
 	const char* zonename = database.GetZoneName(zoneID);
     if (zonename == 0) {
-        cout << "zonename is NULL in Client::Clearance!!" << endl;
+        clog(WORLD__CLIENT_ERR, "zonename is NULL in Client::Clearance!!");
         ZoneUnavail();
         return;
     }
@@ -734,19 +730,30 @@ void Client::Clearance(sint8 response)
 	// @bp This is the chat server
 	/*
 	char packetData[] = "64.37.148.34.9876,MyServer,Testchar,23cd2c95";
-	outapp = new EQWorldPacket(OP_0x0282, sizeof(packetData));
+	outapp = new EQApplicationPacket(OP_0x0282, sizeof(packetData));
 	strcpy((char*)outapp->pBuffer, packetData);
 	QueuePacket(outapp);
 	delete outapp;
 	*/
 	
 	// Send zone server IP data
-	outapp = new EQWorldPacket(OP_ZoneServerInfo, sizeof(ZoneServerInfo_Struct));
+	outapp = new EQApplicationPacket(OP_ZoneServerInfo, sizeof(ZoneServerInfo_Struct));
 	ZoneServerInfo_Struct* zsi = (ZoneServerInfo_Struct*)outapp->pBuffer;
-    strcpy(zsi->ip, zs->GetCAddress());
-    //strcpy(zsi->ip, "199.108.5.10");
-    cout << "Zoneport=" << zs->GetCPort() << endl;
+	const char *zs_addr=zs->GetCAddress();
+	if (!zs_addr[0]) {
+		if (cle->IsLocalClient()) {
+			struct in_addr  in;
+			in.s_addr = zs->GetIP();
+			zs_addr=inet_ntoa(in);
+			if (!strcmp(zs_addr,"127.0.0.1"))
+				zs_addr=WorldConfig::get()->LocalAddress.c_str();
+		} else {
+			zs_addr=WorldConfig::get()->WorldAddress.c_str();
+		}
+	}
+	strcpy(zsi->ip, zs_addr);
 	zsi->port =zs->GetCPort();
+    	clog(WORLD__CLIENT,"Sending client to zone %s (%d) at %s:%d",zonename,zoneID,zsi->ip,zsi->port);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	
@@ -755,7 +762,7 @@ void Client::Clearance(sint8 response)
 }
 
 void Client::ZoneUnavail() {
-	EQWorldPacket* outapp = new EQWorldPacket(OP_ZoneUnavail, sizeof(ZoneUnavail_Struct));
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneUnavail, sizeof(ZoneUnavail_Struct));
 	ZoneUnavail_Struct* ua = (ZoneUnavail_Struct*)outapp->pBuffer;
 	const char* zonename = database.GetZoneName(zoneID);
 	if (zonename)
@@ -765,7 +772,7 @@ void Client::ZoneUnavail() {
 	
 	zoneID = 0;
 	pwaitingforbootup = 0;
-	autobootup_timeout->Disable();
+	autobootup_timeout.Disable();
 }
 
 bool Client::GenPassKey(char* key) {
@@ -776,145 +783,38 @@ bool Client::GenPassKey(char* key) {
 	return true;
 }
 
-void Client::QueuePacket(const EQWorldPacket* app, bool ack_req) {
-	//#if DEBUG == 9
-		#ifdef MERTHALICIOUS // just temporary
-			cout << "Sending: 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec << endl;
-			//DumpPacket(app);
-		#endif
-	//#endif
+void Client::QueuePacket(const EQApplicationPacket* app, bool ack_req) {
+	clog(WORLD__CLIENT_TRACE, "Sending EQApplicationPacket OpCode 0x%04x",app->GetOpcode());
+	_pkt(WORLD__CLIENT_TRACE, app);
 	
 	ack_req = true;	// It's broke right now, dont delete this line till fix it. =P
 	eqs->QueuePacket(app, ack_req);
 }
 
 void Client::SendGuildList() {
-	EQWorldPacket *outapp;
-	outapp = new EQWorldPacket(OP_GuildsList, sizeof(GuildsList_Struct));
-	memset(outapp->pBuffer,0,sizeof(GuildsList_Struct));
-	GuildsList_Struct* gl = (GuildsList_Struct*) outapp->pBuffer;
-	uint32 max_id=database.GetMaxGuildID();
-	const char *ptr;
+	EQApplicationPacket *outapp;
+	outapp = new EQApplicationPacket(OP_GuildsList);
 	
-	for (uint32 i=0; i < max_id; i++) {
-		if ((ptr=database.GetGuild(i+1))!=NULL) {
-			strcpy(gl->Guilds[i].name, ptr);
-		}
+	//ask the guild manager to build us a nice guild list packet
+	outapp->pBuffer = guild_mgr.MakeGuildList("", outapp->size);
+	if(outapp->pBuffer == NULL) {
+		clog(GUILDS__ERROR, "Unable to make guild list!");
+		return;
 	}
-	this->QueuePacket(outapp);
-	//delete outapp;
-}
-
-ClientList::ClientList() {
-}
-
-ClientList::~ClientList() {
-}
-
-void ClientList::Add(Client* client) {
-	list.Insert(client);
-}
-
-Client* ClientList::FindByAccountID(int32 account_id) {
-	LinkedListIterator<Client*> iterator(list);
-
-	iterator.Reset();
-	while(iterator.MoreElements()) {
-		LogFile->write(EQEMuLog::Debug, "World: ClientList[0x%08x]::FindByAccountID(%p) iterator.GetData()[%p]", this, account_id, iterator.GetData());
-		if (iterator.GetData()->GetAccountID() == account_id) {
-			Client* tmp = iterator.GetData();
-			return tmp;
-		}
-		iterator.Advance();
-	}
-	return 0;
-}
-
-Client* ClientList::FindByName(char* charname) {
-	LinkedListIterator<Client*> iterator(list);
-
-	iterator.Reset();
-	while(iterator.MoreElements()) {
-		if (iterator.GetData()->GetCharName() == charname) {
-			Client* tmp = iterator.GetData();
-			return tmp;
-		}
-		iterator.Advance();
-	}
-	return 0;
-}
-
-Client* ClientList::Get(int32 ip, int16 port) {
-	LinkedListIterator<Client*> iterator(list);
-
-	iterator.Reset();
-	while(iterator.MoreElements())
-	{
-		if (iterator.GetData()->GetIP() == ip && iterator.GetData()->GetPort() == port)
-		{
-			Client* tmp = iterator.GetData();
-			return tmp;
-		}
-		iterator.Advance();
-	}
-	return 0;
-}
-
-void ClientList::Process() {
-	LinkedListIterator<Client*> iterator(list);
-
-	iterator.Reset();
-	while(iterator.MoreElements()) {
-		if (!iterator.GetData()->Process()) {
-			struct in_addr  in;
-			in.s_addr = iterator.GetData()->GetIP();
-			cout << "Removing client from ip:" << inet_ntoa(in) << " port:" << iterator.GetData()->GetPort() << endl;
-//the client destructor should take care of this.
-//			iterator.GetData()->Free();
-			iterator.RemoveCurrent();
-		}
-		else
-			iterator.Advance();
-	}
-}
-
-void ClientList::ZoneBootup(ZoneServer* zs) {
-	LinkedListIterator<Client*> iterator(list);
-
-	iterator.Reset();
-	while(iterator.MoreElements())
-	{
-		if (iterator.GetData()->WaitingForBootup()) {
-			if (iterator.GetData()->GetZoneID() == zs->GetZoneID()) {
-				iterator.GetData()->EnterWorld(false);
-			}
-			else if (iterator.GetData()->WaitingForBootup() == zs->GetID()) {
-				iterator.GetData()->ZoneUnavail();
-			}
-		}
-		iterator.Advance();
-	}
-}
-
-void ClientList::RemoveCLEReferances(ClientListEntry* cle) {
-	LinkedListIterator<Client*> iterator(list);
-
-	iterator.Reset();
-	while(iterator.MoreElements()) {
-		if (iterator.GetData()->GetCLE() == cle) {
-			iterator.GetData()->SetCLE(0);
-		}
-		iterator.Advance();
-	}
+	
+	clog(GUILDS__OUT_PACKETS, "Sending OP_GuildsList of length %d", outapp->size);
+//	_pkt(GUILDS__OUT_PACKET_TRACE, outapp);
+	
+	eqs->FastQueuePacket((EQApplicationPacket **)&outapp);
 }
 
 // @merth: I have no idea what this struct is for, so it's hardcoded for now
 void Client::SendApproveWorld()
 {
-	EQWorldPacket* outapp;
+	EQApplicationPacket* outapp;
 	
 	// Send OPCode: OP_ApproveWorld, size: 544
-	outapp = new EQWorldPacket(OP_ApproveWorld, sizeof(ApproveWorld_Struct));
+	outapp = new EQApplicationPacket(OP_ApproveWorld, sizeof(ApproveWorld_Struct));
 	ApproveWorld_Struct* aw = (ApproveWorld_Struct*)outapp->pBuffer;
 	uchar foo[] = {
 //0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x95,0x5E,0x30,0xA5,0xCA,0xD4,0xEA,0xF5,
@@ -969,17 +869,17 @@ void Client::SendApproveWorld()
 };
 	memcpy(aw->unknown544, foo, sizeof(foo));
 	QueuePacket(outapp);
-	//safe_delete(outapp);
+	safe_delete(outapp);
 }
 
-bool Client::OPCharCreate(CharCreate_Struct *cc)
+bool Client::OPCharCreate(char *name, CharCreate_Struct *cc)
 {
 	PlayerProfile_Struct pp; 
 	ExtendedProfile_Struct ext;
 	Inventory inv;
 	time_t bday = time(NULL);
 	char startzone[50]={0};
-	int i;
+	uint32 i;
 	struct in_addr	in;
 
 			
@@ -987,22 +887,22 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 		cc->WIS + cc->INT + cc->CHA;
 
 	in.s_addr = GetIP();
-	printf("Character creation request from %s LS#%d (%s:%d) : \n", GetCLE()->LSName(), GetCLE()->LSID(), inet_ntoa(in), GetPort());
-	printf("Name: %s\n", cc->name);
-	printf("Race: %d  Class: %d  Gender: %d  Deity: %d  Start zone: %d\n",
+	clog(WORLD__CLIENT,"Character creation request from %s LS#%d (%s:%d) : ", GetCLE()->LSName(), GetCLE()->LSID(), inet_ntoa(in), GetPort());
+	clog(WORLD__CLIENT,"Name: %s", name);
+	clog(WORLD__CLIENT,"Race: %d  Class: %d  Gender: %d  Deity: %d  Start zone: %d",
 		cc->race, cc->class_, cc->gender, cc->deity, cc->start_zone);
-	printf("STR  STA  AGI  DEX  WIS  INT  CHA    Total\n");
-	printf("%3d  %3d  %3d  %3d  %3d  %3d  %3d     %3d\n",
+	clog(WORLD__CLIENT,"STR  STA  AGI  DEX  WIS  INT  CHA    Total");
+	clog(WORLD__CLIENT,"%3d  %3d  %3d  %3d  %3d  %3d  %3d     %3d",
 		cc->STR, cc->STA, cc->AGI, cc->DEX, cc->WIS, cc->INT, cc->CHA, 
 		stats_sum);
-	printf("Face: %d  Eye colors: %d %d\n", cc->face, cc->eyecolor1, cc->eyecolor2);
-	printf("Hairstyle: %d  Haircolor: %d\n", cc->hairstyle, cc->haircolor);
-	printf("Beard: %d  Beardcolor: %d\n", cc->beard, cc->beardcolor);
+	clog(WORLD__CLIENT,"Face: %d  Eye colors: %d %d", cc->face, cc->eyecolor1, cc->eyecolor2);
+	clog(WORLD__CLIENT,"Hairstyle: %d  Haircolor: %d", cc->hairstyle, cc->haircolor);
+	clog(WORLD__CLIENT,"Beard: %d  Beardcolor: %d", cc->beard, cc->beardcolor);
 
 	// validate the char creation struct
 	if(!CheckCharCreateInfo(cc))
 	{
-		printf("CheckCharCreateInfo did not validate the request (bad race/class/stats)\n");
+		clog(WORLD__CLIENT_ERR,"CheckCharCreateInfo did not validate the request (bad race/class/stats)");
 		return false;
 	}
 
@@ -1011,7 +911,7 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 	
 	InitExtendedProfile(&ext);
 	
-	strncpy(pp.name, cc->name, 63);
+	strncpy(pp.name, name, 63);
 	// clean the capitalization of the name
 #if 0	// on second thought, don't - this will just make the creation fail
 // because the name won't match what was already reserved earlier
@@ -1060,7 +960,7 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 	pp.skills[SENSE_HEADING + 1] = 200;
 	// Some one fucking fix this to use a field name. -Doodman
 	//pp.unknown3596[28] = 15; // @bp: This is to enable disc usage
-	strcpy(pp.servername, net.GetWorldShortName());
+//	strcpy(pp.servername, WorldConfig::get()->ShortName.c_str());
 			
 
 	for(i = 0; i < MAX_PP_SPELLBOOK; i++)
@@ -1072,9 +972,7 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 	for(i = 0; i < BUFF_COUNT; i++)
 		pp.buffs[i].spellid = 0xFFFF;
 
-
-	memset(pp.unknown3224, 0xff, 448);
-	memset(pp.unknown3704, 0xff, 32);
+	
 	//was memset(pp.unknown3704, 0xffffffff, 8);
 	//but I dont think thats what you really wanted to do...
 	//memset is byte based
@@ -1085,12 +983,12 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 	// if there's a startzone variable put them in there
 	if(database.GetVariable("startzone", startzone, 50))
 	{
-		printf("Found 'startzone' variable setting: %s\n", startzone);
+		clog(WORLD__CLIENT,"Found 'startzone' variable setting: %s", startzone);
 		pp.zone_id = database.GetZoneID(startzone);
 		if(pp.zone_id)
 			database.GetSafePoints(pp.zone_id, &pp.x, &pp.y, &pp.z);
 		else
-			printf("Error getting zone id for '%s'\n", startzone);
+			clog(WORLD__CLIENT_ERR,"Error getting zone id for '%s'", startzone);
 	}
 	else	// otherwise use normal starting zone logic
 	{
@@ -1103,18 +1001,20 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 		pp.x = pp.y = pp.z = -1;
 	}
 
-	if(!pp.bind_zone_id)
+	if(!pp.binds[0].zoneId)
 	{
-		pp.bind_zone_id = pp.zone_id;
-		pp.bind_x[0] = pp.x;
-		pp.bind_y[0] = pp.y;
-		pp.bind_z[0] = pp.z;
+		pp.binds[0].zoneId = pp.zone_id;
+		pp.binds[0].x = pp.x;
+		pp.binds[0].y = pp.y;
+		pp.binds[0].z = pp.z;
+		pp.binds[0].heading = pp.heading;
  	}
+
 		
-	printf("Current location: %s  %0.2f, %0.2f, %0.2f\n",
+	clog(WORLD__CLIENT,"Current location: %s  %0.2f, %0.2f, %0.2f",
 		database.GetZoneName(pp.zone_id), pp.x, pp.y, pp.z);
-	printf("Bind location: %s  %0.2f, %0.2f, %0.2f\n",
-		database.GetZoneName(pp.bind_zone_id), pp.bind_x[0], pp.bind_y[0], pp.bind_z[0]);
+	clog(WORLD__CLIENT,"Bind location: %s  %0.2f, %0.2f, %0.2f",
+		database.GetZoneName(pp.binds[0].zoneId), pp.binds[0].x, pp.binds[0].y, pp.binds[0].z);
 
 
 	// Starting Items inventory
@@ -1125,12 +1025,12 @@ bool Client::OPCharCreate(CharCreate_Struct *cc)
 	// to see if we can store it
 	if (!database.StoreCharacter(GetAccountID(), &pp, &inv, &ext))
 	{
-		printf("Character creation failed: %s\n", pp.name);
+		clog(WORLD__CLIENT_ERR,"Character creation failed: %s", pp.name);
 		return false;
 	}
 	else
 	{
-		printf("Character creation successful: %s\n", pp.name);
+		clog(WORLD__CLIENT,"Character creation successful: %s", pp.name);
 		return true;
 	}
 }
@@ -1147,7 +1047,7 @@ bool CheckCharCreateInfo(CharCreate_Struct *cc)
 // table below
 #define _TABLE_RACES	15
 
-	int BaseRace[_TABLE_RACES][7] =
+	static const int BaseRace[_TABLE_RACES][7] =
 	{            /* STR  STA  AGI  DEX  WIS  INT  CHR */
 	{ /*Human*/      75,  75,  75,  75,  75,  75,  75},
 	{ /*Barbarian*/ 103,  95,  82,  70,  70,  60,  55},
@@ -1166,7 +1066,7 @@ bool CheckCharCreateInfo(CharCreate_Struct *cc)
 	{ /*Froglok*/    70,  80, 100, 100,  75,  75,  50} 
 	};
 
-	int BaseClass[PLAYER_CLASS_COUNT][8] =
+	static const int BaseClass[PLAYER_CLASS_COUNT][8] =
 	{              /* STR  STA  AGI  DEX  WIS  INT  CHR  ADD*/
 	{ /*Warrior*/      10,  10,   5,   0,   0,   0,   0,  25},
 	{ /*Cleric*/        5,   5,   0,   0,  10,   0,   0,  30},
@@ -1186,19 +1086,19 @@ bool CheckCharCreateInfo(CharCreate_Struct *cc)
 	{ /*Berserker*/    10,   5,   0,  10,   0,   0,   0,  25}
 	};
 
-	bool ClassRaceLookupTable[PLAYER_CLASS_COUNT][_TABLE_RACES]= 
+	static const bool ClassRaceLookupTable[PLAYER_CLASS_COUNT][_TABLE_RACES]= 
 	{                   /*Human  Barbarian Erudite Woodelf Highelf Darkelf Halfelf Dwarf  Troll  Ogre   Halfling Gnome  Iksar  Vahshir Froglok*/
 	{ /*Warrior*/         true,  true,     false,  true,   false,  true,   true,   true,  true,  true,  true,    true,  true,  true,   true},
 	{ /*Cleric*/          true,  false,    true,   false,  true,   true,   true,   true,  false, false, true,    true,  false, false,  true},  
 	{ /*Paladin*/         true,  false,    true,   false,  true,   false,  true,   true,  false, false, true,    true,  false, false,  true},
 	{ /*Ranger*/          true,  false,    false,  true,   false,  false,  true,   false, false, false, true,    false, false, false,  false},
-	{ /*ShadowKnight*/    true,  false,    true,   false,  false,  true,   false,  false, true,  true,  false,   true,  true,  false,  false},
+	{ /*ShadowKnight*/    true,  false,    true,   false,  false,  true,   false,  false, true,  true,  false,   true,  true,  false,  true},
 	{ /*Druid*/           true,  false,    false,  true,   false,  false,  true,   false, false, false, true,    false, false, false,  false},    
 	{ /*Monk*/            true,  false,    false,  false,  false,  false,  false,  false, false, false, false,   false, true,  false,  false},
 	{ /*Bard*/            true,  false,    false,  true,   false,  false,  true,   false, false, false, false,   false, false, true,   false},
-	{ /*Rogue*/           true,  true,     false,  true,   false,  true,   true,   true,  false, false, true,    true,  false, true,   false},
+	{ /*Rogue*/           true,  true,     false,  true,   false,  true,   true,   true,  false, false, true,    true,  false, true,   true},
 	{ /*Shaman*/          false, true,     false,  false,  false,  false,  false,  false, true,  true,  false,   false, true,  true,   true},
-	{ /*Necromancer*/     true,  false,    true,   false,  false,  true,   false,  false, false, false, false,   true,  true,  false,  false},
+	{ /*Necromancer*/     true,  false,    true,   false,  false,  true,   false,  false, false, false, false,   true,  true,  false,  true},
 	{ /*Wizard*/          true,  false,    true,   false,  true,   true,   false,  false, false, false, false,   true,  false, false,  true},
 	{ /*Magician*/        true,  false,    true,   false,  true,   true,   false,  false, false, false, false,   true,  false, false,  false},
 	{ /*Enchanter*/       true,  false,    true,   false,  true,   true,   false,  false, false, false, false,   true,  false, false,  false},  
@@ -1208,7 +1108,7 @@ bool CheckCharCreateInfo(CharCreate_Struct *cc)
 
 	if(!cc) return false;
 
-	printf("Validating char creation info...\n");
+	_log(WORLD__CLIENT,"Validating char creation info...");
 
 	classtemp = cc->class_ - 1;
 	racetemp = cc->race - 1;
@@ -1221,37 +1121,22 @@ bool CheckCharCreateInfo(CharCreate_Struct *cc)
 	// so we return from these
 	if(classtemp >= PLAYER_CLASS_COUNT)
 	{
-		printf("  class is out of range\n");
+		_log(WORLD__CLIENT_ERR,"  class is out of range");
 		return false;
 	}
 	if(racetemp >= _TABLE_RACES)
 	{
-		printf("  race is out of range\n");
+		_log(WORLD__CLIENT_ERR,"  race is out of range");
 		return false;
 	}
 
 	if(!ClassRaceLookupTable[classtemp][racetemp]) //Lookup table better than a bunch of ifs?
 	{
-		printf("  invalid race/class combination\n");
+		_log(WORLD__CLIENT_ERR,"  invalid race/class combination");
 		// we return from this one, since if it's an invalid combination our table
 		// doesn't have meaningful values for the stats
 		return false;
 	}
-
-#ifdef GUILDWARS
-	if
-	(
-		cc->race == FROGLOK ||
-		cc->race == VAHSHIR ||
-		cc->race == IKSAR ||
-		cc->class_ == BEASTLORD ||
-		cc->class_ == BERSERKER
-	)
-	{
-		printf("  GuildWars rules disallow this character\n");
-		Charerrors++;
-	}
-#endif
 
 	// solar: add up the base values for this class/race
 	// this is what they start with, and they have stat_points more
@@ -1276,50 +1161,50 @@ bool CheckCharCreateInfo(CharCreate_Struct *cc)
 
 	if(bTOTAL + stat_points != cTOTAL)
 	{
-		printf("  stat points total doesn't match expected value: expecting %d got %d\n", bTOTAL + stat_points, cTOTAL);
+		_log(WORLD__CLIENT_ERR,"  stat points total doesn't match expected value: expecting %d got %d", bTOTAL + stat_points, cTOTAL);
 		Charerrors++;
 	}
 
 	if(cc->STR > bSTR + stat_points || cc->STR < bSTR)
 	{
-		printf("  stat STR is out of range\n");
+		_log(WORLD__CLIENT_ERR,"  stat STR is out of range");
 		Charerrors++;
 	}
 	if(cc->STA > bSTA + stat_points || cc->STA < bSTA)
 	{
-		printf("  stat STA is out of range\n");
+		_log(WORLD__CLIENT_ERR,"  stat STA is out of range");
 		Charerrors++;
 	}
 	if(cc->AGI > bAGI + stat_points || cc->AGI < bAGI)
 	{
-		printf("  stat AGI is out of range\n");
+		_log(WORLD__CLIENT_ERR,"  stat AGI is out of range");
 		Charerrors++;
 	}
 	if(cc->DEX > bDEX + stat_points || cc->DEX < bDEX)
 	{
-		printf("  stat DEX is out of range\n");
+		_log(WORLD__CLIENT_ERR,"  stat DEX is out of range");
 		Charerrors++;
 	}
 	if(cc->WIS > bWIS + stat_points || cc->WIS < bWIS)
 	{
-		printf("  stat WIS is out of range\n");
+		_log(WORLD__CLIENT_ERR,"  stat WIS is out of range");
 		Charerrors++;
 	}
 	if(cc->INT > bINT + stat_points || cc->INT < bINT)
 	{
-		printf("  stat INT is out of range\n");
+		_log(WORLD__CLIENT_ERR,"  stat INT is out of range");
 		Charerrors++;
 	}
 	if(cc->CHA > bCHA + stat_points || cc->CHA < bCHA)
 	{
-		printf("  stat CHA is out of range\n");
+		_log(WORLD__CLIENT_ERR,"  stat CHA is out of range");
 		Charerrors++;
 	}
 
 	/*TODO: Check for deity/class/race.. it'd be nice, but probably of any real use to hack(faction, deity based items are all I can think of)
 	I am NOT writing those tables - kathgar*/
 
-	printf("Found %d errors in character creation request\n", Charerrors);
+	_log(WORLD__CLIENT,"Found %d errors in character creation request", Charerrors);
 
 	return Charerrors == 0;
 }

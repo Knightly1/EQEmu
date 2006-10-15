@@ -24,10 +24,12 @@ public:
 	cmerchant();
 	cmerchant( cmerchant* m );
 	virtual ~cmerchant();
+
+	void mergeFrom(const cmerchant *them);
 	
 	bool db;
 	cnpc *owner;
-	int id;
+	int db_id;
 	float rate;
 	map<uint16, uint32> items;	//slot -> item id
 	

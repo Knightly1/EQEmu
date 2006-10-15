@@ -17,11 +17,12 @@ class cmob
 {
 public:
 	cmob();
-	cmob( cmob* mob );
+	cmob( const cmob* mob );
 	virtual ~cmob();
 
 	bool db;
-	int id;
+	int entity_id;
+	int db_spawnentry_id;
 	cnpc* npc;
 	int hp;
 	bool owned;

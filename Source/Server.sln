@@ -1,27 +1,20 @@
 Microsoft Visual Studio Solution File, Format Version 7.00
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EMuShareMem", "EMuShareMem\EMuShareMem.vcproj", "{21168136-6906-4039-B486-6086E164E743}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "World", "World\World.vcproj", "{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Zone", "Zone\Zone.vcproj", "{197A661B-390A-46D6-94FC-E99F93280695}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfiguration) = preSolution
-		Apathing - Debug = Apathing - Debug
-		Debug = Debug
-		DebugPerl = DebugPerl
-		Raid Addicts = Raid Addicts
-		Release = Release
+		ConfigName.0 = Debug
+		ConfigName.1 = DebugPerl
+		ConfigName.2 = Raid Addicts
+		ConfigName.3 = Release
+	EndGlobalSection
+	GlobalSection(ProjectDependencies) = postSolution
 	EndGlobalSection
 	GlobalSection(ProjectConfiguration) = postSolution
-		{21168136-6906-4039-B486-6086E164E743}.Apathing - Debug.ActiveCfg = Debug|Win32
-		{21168136-6906-4039-B486-6086E164E743}.Apathing - Debug.Build.0 = Debug|Win32
 		{21168136-6906-4039-B486-6086E164E743}.Debug.ActiveCfg = Debug|Win32
 		{21168136-6906-4039-B486-6086E164E743}.Debug.Build.0 = Debug|Win32
 		{21168136-6906-4039-B486-6086E164E743}.DebugPerl.ActiveCfg = Debug|Win32
@@ -30,8 +23,6 @@ Global
 		{21168136-6906-4039-B486-6086E164E743}.Raid Addicts.Build.0 = Release|Win32
 		{21168136-6906-4039-B486-6086E164E743}.Release.ActiveCfg = Release|Win32
 		{21168136-6906-4039-B486-6086E164E743}.Release.Build.0 = Release|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Apathing - Debug.ActiveCfg = Debug|Win32
-		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Apathing - Debug.Build.0 = Debug|Win32
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Debug.ActiveCfg = Debug|Win32
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Debug.Build.0 = Debug|Win32
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.DebugPerl.ActiveCfg = Debug|Win32
@@ -40,8 +31,6 @@ Global
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Raid Addicts.Build.0 = Raid Addicts|Win32
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Release.ActiveCfg = Release|Win32
 		{0FD472B1-CCB8-4ED2-8F4E-A1FC34E668EC}.Release.Build.0 = Release|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.Apathing - Debug.ActiveCfg = Debug|Win32
-		{197A661B-390A-46D6-94FC-E99F93280695}.Apathing - Debug.Build.0 = Debug|Win32
 		{197A661B-390A-46D6-94FC-E99F93280695}.Debug.ActiveCfg = Debug|Win32
 		{197A661B-390A-46D6-94FC-E99F93280695}.Debug.Build.0 = Debug|Win32
 		{197A661B-390A-46D6-94FC-E99F93280695}.DebugPerl.ActiveCfg = DebugPerl|Win32

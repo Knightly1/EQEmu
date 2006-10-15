@@ -18,18 +18,24 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include "../common/EQStream.h"
+#include <string>
+
+//#include "../common/EQStream.h"
 #include "../common/linked_list.h"
 #include "../common/timer.h"
-#include "zoneserver.h"
+//#include "zoneserver.h"
+#include "../common/logsys.h"
+#include "../common/eq_packet_structs.h"
+#include "cliententry.h"
 
 #define CLIENT_TIMEOUT 30000
 
-class Client;
+class EQApplicationPacket;
+class EQStreamInterface;
 
 class Client {
 public:
-	Client(EQStream* ieqs);
+	Client(EQStreamInterface* ieqs);
     ~Client();
 	
 	bool	Process();
@@ -37,10 +43,10 @@ public:
 	void	SendCharInfo();
 	void	EnterWorld(bool TryBootup = true);
 	void	ZoneUnavail();
-	void	QueuePacket(const EQWorldPacket* app, bool ack_req = true);
+	void	QueuePacket(const EQApplicationPacket* app, bool ack_req = true);
 	void	Clearance(sint8 response);
 	void	SendGuildList();
-	void	SendEnterWorld(string name);
+	void	SendEnterWorld(std::string name);
 	void	SendExpansionInfo();
 	void	SendLogServer();
 	void	SendApproveWorld();
@@ -51,56 +57,45 @@ public:
 	inline int16		GetPort()			{ return port; }
 	inline int32		GetZoneID()			{ return zoneID; }
 	inline int32		WaitingForBootup()	{ return pwaitingforbootup; }
+	inline const char *	GetAccountName()	{ if (cle) { return cle->AccountName(); } return "NOCLE"; }
 	inline sint16		GetAdmin()			{ if (cle) { return cle->Admin(); } return 0; }
 	inline int32		GetAccountID()		{ if (cle) { return cle->AccountID(); } return 0; }
 	inline int32		GetWID()			{ if (cle) { return cle->GetID(); } return 0; }
 	inline int32		GetLSID()			{ if (cle) { return cle->LSID(); } return 0; }
-	inline const char*	GetLSKey()			{ if (cle) { return cle->GetLSKey(); } return 0; }
+	inline const char*	GetLSKey()			{ if (cle) { return cle->GetLSKey(); } return "NOKEY"; }
 	inline int32		GetCharID()			{ return charid; }
 	inline const char*	GetCharName()		{ return char_name; }
 	inline ClientListEntry* GetCLE()		{ return cle; }
 	inline void			SetCLE(ClientListEntry* iCLE)			{ cle = iCLE; }
 private:
+	//used by wlog() for VC6
+	#ifdef NO_VARIADIC_MACROS
+	void world_log(LogType type, const char *fmt, ...);
+	#endif
+	
 	int32	ip;
 	int16	port;
 	int32	charid; 
 	char	char_name[64];
 	int32	zoneID;
 	bool	pZoning;
-	Timer*	autobootup_timeout;
+	Timer	autobootup_timeout;
 	int32	pwaitingforbootup;
 
-	bool OPCharCreate(CharCreate_Struct *cc);
+	bool OPCharCreate(char *name, CharCreate_Struct *cc);
 
 	void SetClassStartingSkills( PlayerProfile_Struct *pp );
 	void SetRaceStartingSkills( PlayerProfile_Struct *pp );
 	void SetRacialLanguages( PlayerProfile_Struct *pp );
 
 	ClientListEntry* cle;
-	Timer*	CLE_keepalive_timer;
-	Timer*	connect;
+	Timer	CLE_keepalive_timer;
+	Timer	connect;
 	bool firstlogin;
 	bool seencharsel;
 	bool realfirstlogin;
-	bool HandlePacket(const EQWorldPacket *app);
-	EQStream* eqs;
-};
-
-class ClientList {
-public:
-	ClientList();
-	~ClientList();
-	
-	void	Add(Client* client);
-	Client*	Get(int32 ip, int16 port);
-	Client* FindByAccountID(int32 account_id);
-	Client* FindByName(char* charname);
-	void	Process();
-
-	void	ZoneBootup(ZoneServer* zs);
-	void	RemoveCLEReferances(ClientListEntry* cle);
-private:
-	LinkedList<Client*> list;
+	bool HandlePacket(const EQApplicationPacket *app);
+	EQStreamInterface* const eqs;
 };
 
 
