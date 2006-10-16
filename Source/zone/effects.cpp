@@ -509,18 +509,19 @@ bool Client::UseDiscipline(int32 spell_id, int32 target) {
 	}
 	if(r == MAX_PP_DISCIPLINES)
 		return(false);	//not found.
-	
-	//check the discipline timer
-	if(!p_timers.Expired(&database, pTimerDisciplineReuse)) {
+
+	//Check the disc timer
+	pTimerType DiscTimer = pTimerDisciplineReuseStart + spells[spell_id].EndurTimerIndex;
+	if(!p_timers.Expired(&database, DiscTimer)) {
 		char val1[20]={0};
 		char val2[20]={0};
-		int32 remain = p_timers.GetRemainingTime(pTimerDisciplineReuse);
-		Message_StringID(0, DISCIPLINE_CANUSEIN, ConvertArray((remain)/60,val1), ConvertArray(remain%60,val2));
+		int32 remain = p_timers.GetRemainingTime(DiscTimer);
+		//Message_StringID(0, DISCIPLINE_CANUSEIN, ConvertArray((remain)/60,val1), ConvertArray(remain%60,val2));
+		Message(0, "You can use this discipline in %d minutes %d seconds.", ((remain)/60), (remain%60));
 		return(false);
 	}
 	
 	//make sure we can use it..
-	
 	if(!IsValidSpell(spell_id)) {
 		Message(13, "This tome contains invalid knowledge.");
 		return(false);
@@ -541,15 +542,19 @@ bool Client::UseDiscipline(int32 spell_id, int32 target) {
 		return(false);
 	}
 	
-//	MemorizeSpell(DISCIPLINE_SPELL_SLOT, spell_id, memSpellSpellbar);
-	
-	//check some stamina condition???
-	//should send an op manachange as well
+	if(GetEndurance() > spell.EndurCost) {
+		SetEndurance(GetEndurance() - spell.EndurCost);
+	} else {
+		Message(11, "You are too fatigued to use this skill right now.");
+		return(false);
+	}
 	
 	CastSpell(spell_id, target, DISCIPLINE_SPELL_SLOT);
-	
-	p_timers.Start(pTimerDisciplineReuse, spell.recast_time / 1000);
-	
+
+	if(spell.recast_time > 0)
+	{
+		p_timers.Start(DiscTimer, spell.recast_time / 1000);
+	}
 	return(true);
 }
 

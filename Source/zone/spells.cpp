@@ -2959,7 +2959,7 @@ void Mob::SendSpellBarEnable(int16 spell_id)
 	ManaChange_Struct* manachange = (ManaChange_Struct*)outapp->pBuffer;
 	manachange->new_mana = GetMana();
 	manachange->spell_id = spell_id;
-	manachange->stamina = 6000;
+	manachange->stamina = CastToClient()->GetEndurance();
 	outapp->priority = 6;
 	CastToClient()->QueuePacket(outapp);
 	safe_delete(outapp);
@@ -3653,7 +3653,7 @@ void Mob::_StopSong()
 			manachange->spell_id = casting_spell_id;
 		else
 			manachange->spell_id = bardsong;
-		manachange->stamina = 6000;
+		manachange->stamina = CastToClient()->GetEndurance();
 		if (CastToClient()->Hungry())
 			manachange->stamina = 0;
 		CastToClient()->QueuePacket(outapp);

@@ -313,22 +313,22 @@ public:
 	
 	virtual void CalcBonuses();
 	//these are all precalculated now
-	inline virtual int16	GetAC()		{ return AC; }
-	inline virtual int16	GetATK()	{ return ATK; }
-	inline virtual int	GetHaste() { return Haste; }
+	inline virtual int16	GetAC()		const { return AC; }
+	inline virtual int16	GetATK()	const { return ATK; }
+	inline virtual int	GetHaste() const { return Haste; }
 	
-	inline virtual sint16	GetSTR()	{ return STR; }
-	inline virtual sint16	GetSTA()	{ return STA; }
-	inline virtual sint16	GetDEX()	{ return DEX; }
-	inline virtual sint16	GetAGI()	{ return AGI; }
-	inline virtual sint16	GetINT()	{ return INT; }
-	inline virtual sint16	GetWIS()	{ return WIS; }
-	inline virtual sint16	GetCHA()	{ return CHA; }
-	inline virtual sint16	GetMR() { return MR; }
-	inline virtual sint16	GetFR()	{ return FR; }
-	inline virtual sint16	GetDR()	{ return DR; }
-	inline virtual sint16	GetPR()	{ return PR; }
-	inline virtual sint16	GetCR() { return CR; }
+	inline virtual sint16	GetSTR()	const { return STR; }
+	inline virtual sint16	GetSTA()	const { return STA; }
+	inline virtual sint16	GetDEX()	const { return DEX; }
+	inline virtual sint16	GetAGI()	const { return AGI; }
+	inline virtual sint16	GetINT()	const { return INT; }
+	inline virtual sint16	GetWIS()	const { return WIS; }
+	inline virtual sint16	GetCHA()	const { return CHA; }
+	inline virtual sint16	GetMR() const { return MR; }
+	inline virtual sint16	GetFR()	const { return FR; }
+	inline virtual sint16	GetDR()	const { return DR; }
+	inline virtual sint16	GetPR()	const { return PR; }
+	inline virtual sint16	GetCR() const { return CR; }
 	
 	int16    CalcAC();
 	int16    CalcATK();
@@ -357,13 +357,13 @@ public:
     sint16  GetMaxINT();
     sint16  GetMaxWIS();
     sint16  GetMaxCHA();
-	inline int8	GetBaseSTR()	{ return m_pp.STR; }
-	inline int8	GetBaseSTA()	{ return m_pp.STA; }
-	inline int8	GetBaseCHA()	{ return m_pp.CHA; }
-	inline int8	GetBaseDEX()	{ return m_pp.DEX; }
-	inline int8	GetBaseINT()	{ return m_pp.INT; }
-	inline int8	GetBaseAGI()	{ return m_pp.AGI; }
-	inline int8	GetBaseWIS()	{ return m_pp.WIS; }
+	inline int8	GetBaseSTR()	const { return m_pp.STR; }
+	inline int8	GetBaseSTA()	const { return m_pp.STA; }
+	inline int8	GetBaseCHA()	const { return m_pp.CHA; }
+	inline int8	GetBaseDEX()	const { return m_pp.DEX; }
+	inline int8	GetBaseINT()	const { return m_pp.INT; }
+	inline int8	GetBaseAGI()	const { return m_pp.AGI; }
+	inline int8	GetBaseWIS()	const { return m_pp.WIS; }
 	
 	float  GetActSpellRange(int16 spell_id, float range);
 	sint32  GetActSpellDamage(int16 spell_id, sint32 value);
@@ -385,6 +385,21 @@ public:
 	int16 GetWeight() const { return(weight); }
 	inline void RecalcWeight() { weight = CalcCurrentWeight(); }
 	int16 CalcCurrentWeight();	
+
+
+	/*Endurance and such*/
+	//This calculates the maximum endurance we can have
+	void	CalcMaxEndurance();
+	//This gets our current endurance
+	sint32	GetEndurance()	const {return cur_end;}
+	//This gets our endurance from the last CalcMaxEndurance() call
+	sint32	GetMaxEndurance() const {return max_end;}
+	//This sets the current endurance to the new value
+	void SetEndurance(sint32 newEnd);
+	//This Regenerates endurance
+	void DoEnduranceRegen();
+	//does the endurance upkeep
+	void DoEnduranceUpkeep();
 	
 	
     bool Flurry();
@@ -720,6 +735,9 @@ private:
 	bool				auto_split;
 	int16				weight;
 
+	sint32				max_end;
+	sint32				cur_end;
+
 	PlayerProfile_Struct		m_pp;
 	ExtendedProfile_Struct		m_epp;
 	Inventory					m_inv;
@@ -766,6 +784,7 @@ private:
 	Timer	ooc_timer;
 	Timer	shield_timer;
 	Timer	fishing_timer;
+	Timer	endupkeep_timer;
 	// EverHood 6/16/06
 	// our 2 min everybody forgets you timer
 	Timer	forget_timer;
@@ -803,6 +822,7 @@ private:
 	bool tgb;
 	bool instalog;
 	sint32	last_reported_mana;
+	sint32	last_reported_endur;
 	
 	set<uint32> zone_flags;
 	

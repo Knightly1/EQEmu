@@ -1082,12 +1082,7 @@ void Client::Handle_OP_Shielding(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Jump(const EQApplicationPacket *app)
 {
-	// neotokyo: here we could reduce fatigue, if we knew how
-	/*
-	m_pp.fatigue += 10;
-	if(m_pp.fatigue > 100)
-		m_pp.fatigue = 100;
-	*/
+	SetEndurance(GetEndurance() - (GetLevel()<20?(225*GetLevel()/100):50));
 	return;
 }
 
@@ -5996,7 +5991,8 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	
 	SetHP(m_pp.cur_hp);
 	Mob::SetMana(m_pp.mana);
-	
+	SetEndurance(m_pp.endurance);
+
 //currently lost
 //	m_pp.zone_change_count++;
 	
@@ -6082,9 +6078,11 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	if(!p_timers.Load(&database)) {
 		//report it...
 	}
-	if(!p_timers.Expired(&database, pTimerDisciplineReuse)) {
+
+	//TODO: this needs to be updated to take account of the multiple discipline timers!
+	if(!p_timers.Expired(&database, pTimerDisciplineReuseStart)) {
 		//reset this so they get the avaliable message.
-		disc_timer.Start(p_timers.GetRemainingTime(pTimerDisciplineReuse)*1000);
+		disc_timer.Start(p_timers.GetRemainingTime(pTimerDisciplineReuseStart)*1000);
 	}
 #ifdef _EQDEBUG	
 	printf("Dumping inventory on load:\n");

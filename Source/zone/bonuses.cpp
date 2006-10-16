@@ -58,6 +58,7 @@ void Client::CalcBonuses()
 	
 	CalcMaxHP();
 	CalcMaxMana();
+	CalcMaxEndurance();
 	
 	CalcAC();
 	CalcATK();
@@ -141,6 +142,7 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 		newbon->AC += item->AC;
 		newbon->HP += item->HP;
 		newbon->Mana += item->Mana;
+		newbon->Endurance += item->Endur;
 		newbon->STR += item->AStr;
 		newbon->STA += item->ASta;
 		newbon->DEX += item->ADex;
@@ -163,6 +165,7 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 		newbon->AC += CalcRecommendedLevelBonus( lvl, reclvl, item->AC );
 		newbon->HP += CalcRecommendedLevelBonus( lvl, reclvl, item->HP );
 		newbon->Mana += CalcRecommendedLevelBonus( lvl, reclvl, item->Mana );
+		newbon->Endurance += CalcRecommendedLevelBonus( lvl, reclvl, item->Endur );
 		newbon->STR += CalcRecommendedLevelBonus( lvl, reclvl, item->AStr );
 		newbon->STA += CalcRecommendedLevelBonus( lvl, reclvl, item->ASta );
 		newbon->DEX += CalcRecommendedLevelBonus( lvl, reclvl, item->ADex );
@@ -187,6 +190,9 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 	}
 	if(item->ManaRegen > 0) {
 		newbon->ManaRegen += item->ManaRegen;
+	}
+	if(item->EnduranceRegen > 0){
+		newbon->EnduranceRegen += item->EnduranceRegen;
 	}
 	if(item->DamageShield > 0) {
 		newbon->DamageShield += item->DamageShield;
@@ -406,6 +412,12 @@ void Mob::ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newb
 				break;
 			}
 
+			case SE_Stamina:
+			{
+				newbon->EnduranceReduction += effect_value;
+				break;
+			}
+			
 			case SE_ArmorClass:
 			{
 				newbon->AC += effect_value;

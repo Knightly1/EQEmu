@@ -133,7 +133,9 @@ struct StatBonuses {
 	sint32	HP;
 	sint32	HPRegen;
 	sint32	ManaRegen;
+	sint32	EnduranceRegen;
 	sint16	Mana;
+	sint32	Endurance;
 	sint16	ATK;
 	sint16	STR;
 	sint16	STA;
@@ -164,6 +166,7 @@ struct StatBonuses {
 	int16	windMod;
 	int16	stringedMod;
 	sint8	hatemod;
+	sint32	EnduranceReduction;
 
 	//PoP effects:
 	sint16   StrikeThrough;          // PoP: Strike Through %

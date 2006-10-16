@@ -458,11 +458,17 @@ bool Client::Process() {
 		adverrorinfo = 3;
 		SpellProcess();
 		adverrorinfo = 4;
+		if (endupkeep_timer.Check() && !dead){
+			DoEnduranceUpkeep();
+		}
+
 		if (tic_timer.Check() && !dead) {
 			CalcMaxHP();
 			CalcMaxMana();
+			CalcMaxEndurance();
 			DoHPRegen();
 			DoManaRegen();
+			DoEnduranceRegen();
 			BuffProcess();
 			
 			if(stamina_timer.Check()){
@@ -1483,5 +1489,45 @@ void Client::DoManaRegen() {
 	SendManaUpdatePacket();
 }
 
+void Client::DoEnduranceRegen()
+{
+	if(GetEndurance() >= GetMaxEndurance())
+		return;
 
+	int32 level=GetLevel();
+	int32 regen = 0;
+
+	regen = int(level*4/10) + 2;
+	regen += spellbonuses.EnduranceRegen + itembonuses.EnduranceRegen;
+
+	SetEndurance(GetEndurance() + regen);
+}
+
+void Client::DoEnduranceUpkeep() {
+	int upkeep_sum = 0;
+
+	int cost_redux = spellbonuses.EnduranceReduction + itembonuses.EnduranceReduction;
+	
+	for (int buffs_i=0; buffs_i<BUFF_COUNT; buffs_i++) {
+		if (buffs[buffs_i].spellid != SPELL_UNKNOWN) {
+			int upkeep = spells[buffs[buffs_i].spellid].EndurUpkeep;
+			if(upkeep > 0) {
+				if(cost_redux > 0) {
+					if(upkeep <= cost_redux)
+						continue;	//reduced to 0
+					upkeep -= cost_redux;
+				}
+				if((upkeep+upkeep_sum) > GetEndurance()) {
+					//they do not have enough to keep this one going.
+					BuffFadeBySlot(buffs_i);
+				} else {
+					upkeep_sum += upkeep;
+				}
+			}
+		}
+	}
+	
+	if(upkeep_sum != 0)
+		SetEndurance(GetEndurance() - upkeep_sum);
+}
 

@@ -2,6 +2,8 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
 ==10/15/2006
+FatherNitwit: (KLS) Implemented Endurance
+FatherNitwit: (KLS) Implemented support for seperate discipline timers
 FatherNitwit: (KLS) Fix for haste & slow issue on NPCs
 FatherNitwit: (KLS) Fixed faction not changing issue (caused by min/max sticking fix)
 FatherNitwit: (KLS) Changed con level code to be more accurate

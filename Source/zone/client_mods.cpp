@@ -846,6 +846,10 @@ sint16 Client::CalcSTR() {
 	
 	if(STR < 1)
 		STR = 1;
+
+	int m = GetMaxSTR();
+	if(STR > m)
+		STR = m;
 	
 	return(STR);
 }
@@ -861,6 +865,10 @@ sint16 Client::CalcSTA() {
 	
 	if(STA < 1)
 		STA = 1;
+
+	int m = GetMaxSTA();
+	if(STA > m)
+		STA = m;
 	
 	return(STA);
 }
@@ -882,6 +890,10 @@ sint16 Client::CalcAGI() {
 	
 	if(AGI < 1)
 		AGI = 1;
+
+	int m = GetMaxAGI();
+	if(AGI > m)
+		AGI = m;
 	
 	return(AGI);
 }
@@ -897,6 +909,10 @@ sint16 Client::CalcDEX() {
 	
 	if(DEX < 1)
 		DEX = 1;
+
+	int m = GetMaxDEX();
+	if(DEX > m)
+		DEX = m;
 	
 	return(DEX);
 }
@@ -912,6 +928,10 @@ sint16 Client::CalcINT() {
 	
 	if(INT < 1)
 		INT = 1;
+
+	int m = GetMaxINT();
+	if(INT > m)
+		INT = m;
 	
 	return(INT);
 }
@@ -927,6 +947,10 @@ sint16 Client::CalcWIS() {
 	
 	if(WIS < 1)
 		WIS = 1;
+
+	int m = GetMaxWIS();
+	if(WIS > m)
+		WIS = m;
 	
 	return(WIS);
 }
@@ -942,6 +966,10 @@ sint16 Client::CalcCHA() {
 	
 	if(CHA < 1)
 		CHA = 1;
+
+	int m = GetMaxCHA();
+	if(CHA > m)
+		CHA = m;
 	
 	return(CHA);
 }
@@ -1408,6 +1436,41 @@ int16 Mob::GetInstrumentMod(int16 spell_id) {
 	return(effectmod);
 }
 
+//Info taken from magelo, it's a *little* off but accurate enough.
+void Client::CalcMaxEndurance()
+{
+	int Stats = GetSTR()+GetSTA()+GetDEX()+GetAGI();
+
+	int LevelBase = GetLevel() * 15;
+
+	int at_most_800 = Stats;
+	if(at_most_800 > 800)
+		at_most_800 = 800;
+	
+	int Bonus400to800 = 0;
+	int HalfBonus400to800 = 0;
+	int Bonus800plus = 0;
+	int HalfBonus800plus = 0;
+	
+	int BonusUpto800 = int( at_most_800 / 4 ) ;
+	if(Stats > 400) {
+		Bonus400to800 = int( (at_most_800 - 400) / 4 );
+		HalfBonus400to800 = int( max( ( at_most_800 - 400 ), 0 ) / 8 );
+		
+		if(Stats > 800) {
+			Bonus800plus = int( (Stats - 800) / 8 ) * 2;
+			HalfBonus800plus = int( (Stats - 800) / 16 );
+		}
+	}
+	int bonus_sum = BonusUpto800 + Bonus400to800 + HalfBonus400to800 + Bonus800plus + HalfBonus800plus;
+	
+	max_end = LevelBase;
+
+	//take all of the sums from above, then multiply by level*0.075
+	max_end += ( bonus_sum * 3 * GetLevel() ) / 40;
+	
+	max_end += spellbonuses.Endurance + itembonuses.Endurance;
+}
 
 
 

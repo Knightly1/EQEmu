@@ -255,7 +255,7 @@ typedef enum {
 #define SE_DamageModifier			185
 #define SE_MinDamageModifier		186
 #define SE_IncreaseBlockChance		188	//not implemented
-#define SE_CurrentEndurance			189	//not implemented
+#define SE_CurrentEndurance			189
 #define SE_Amnesia					191	//Amnesia (Silence vs Melee Effect)
 #define SE_Hate2					192	//not implemented
 
@@ -406,7 +406,12 @@ struct SPDat_Spell_Struct
 /* 155 */	int			descnum; // eqstr of description of spell
 /* 156 */	int			typedescnum; // eqstr of type description
 /* 157 */	int			effectdescnum; // eqstr of effect description
-/* 158 */	int			Spacing5[17];
+/* 158 */	int			Spacing5;
+/* 159 */	int			EndurCost;
+/* 160 */	int			EndurTimerIndex;
+/* 161 */	int			Spacing6[7];
+/* 168 */	int			EndurUpkeep;
+/* 169 */	int			Spacing7[6];
 /* 175 */	// last field is 174
 /*
 Some fields which should be in here somewhere (MQ2):

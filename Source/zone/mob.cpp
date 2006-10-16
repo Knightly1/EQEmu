@@ -880,6 +880,7 @@ void Mob::ShowStats(Client* client) {
 		client->Message(0, "  EntityID: %i  PetID: %i  OwnerID: %i  AIControlled: %i", this->GetID(), this->GetPetID(), this->GetOwnerID(), this->IsAIControlled());
 		if (this->IsClient()) {
 			client->Message(0, "  CharID: %i  PetID: %i", this->CastToClient()->CharacterID(), this->GetPetID());
+			client->Message(0, "  Endurance: %i, Max Endurance %i",client->GetEndurance(), client->GetMaxEndurance());
 		}
 		else if (this->IsCorpse()) {
 			if (this->IsPlayerCorpse()) {

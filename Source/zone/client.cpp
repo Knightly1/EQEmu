@@ -144,6 +144,7 @@ Client::Client(EQStreamInterface* ieqs)
 	fishing_timer(8000),
 	// EverHood 6/16/06
 	forget_timer(0),
+	endupkeep_timer(1000),
 #ifdef REVERSE_AGGRO
 	scanarea_timer(AIClientScanarea_delay),
 #endif
@@ -180,6 +181,7 @@ Client::Client(EQStreamInterface* ieqs)
 	strcpy(account_name, "");
 	tellsoff = false;
 	last_reported_mana = 0;
+	last_reported_endur = 0;
 	gmhideme = false;
 	AFK = false;
 	LFG = false;
@@ -393,6 +395,7 @@ bool Client::Save(int8 iCommitNow) {
 	else
 		m_pp.cur_hp = GetHP();
 	m_pp.mana = cur_mana;
+	m_pp.endurance = cur_end;
 		
 	for (int i=0; i < BUFF_COUNT; i++) {
 		if (buffs[i].spellid != SPELL_UNKNOWN) {
@@ -1259,19 +1262,21 @@ const sint32& Client::SetMana(sint32 amount) {
 void Client::SendManaUpdatePacket() {
 	if (!Connected() || IsCasting())
 		return;
+	
 	//cout << "Sending mana update: " << (cur_mana - last_reported_mana) << endl;
-	if (last_reported_mana != cur_mana) {
+	if (last_reported_mana != cur_mana || last_reported_endur != cur_end) {
 		
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ManaChange, sizeof(ManaChange_Struct));
 		ManaChange_Struct* manachange = (ManaChange_Struct*)outapp->pBuffer;
 		manachange->new_mana = cur_mana;
-		manachange->stamina = 6000;
-		manachange->spell_id = casting_spell_id;
+		manachange->stamina = cur_end;
+		manachange->spell_id = casting_spell_id;	//always going to be 0... since we check IsCasting()
 		outapp->priority = 6;
 		QueuePacket(outapp);
 		safe_delete(outapp);
 
-		last_reported_mana=cur_mana;
+		last_reported_mana = cur_mana;
+		last_reported_endur = cur_end;
 	}
 }
 
@@ -3112,4 +3117,29 @@ void Client::SendRules(Client* client)
 	}
 	safe_delete_array(rules);
 }
+
+void Client::SetEndurance(sint32 newEnd)
+{
+	/*Endurance can't be less than 0 or greater than max*/
+	if(newEnd < 0)
+		newEnd = 0;
+	else if(newEnd > GetMaxEndurance()){
+		newEnd = GetMaxEndurance();
+	}
+	
+	cur_end = newEnd;
+	SendManaUpdatePacket();
+}
+
+
+
+
+
+
+
+
+
+
+
+
 

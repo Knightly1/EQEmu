@@ -1147,9 +1147,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 			case SE_Stamina:
 			{
 #ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Stamina: %+i", effect_value);
+				snprintf(effect_desc, _EDLEN, "Stamina Use Reduction: %+i", effect_value);
 #endif
-				// solar: handled with bonuses - this is stamina regen, like CurrentHP
+				//handled with bonuses
 				break;
 			}
 
@@ -1905,6 +1905,16 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #endif
 				break;
 			}
+
+			case SE_CurrentEndurance: {
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Current Endurance: %+i", effect_value);
+#endif
+				if(IsClient()) {
+					CastToClient()->SetEndurance(CastToClient()->GetEndurance() + effect_value);
+				}
+				break;
+			}
 			
 			//currently missing effects:
 			//SE_SummonItem2
@@ -2180,102 +2190,112 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 		
 		switch(effect)
 		{
-			case SE_CurrentHP:
-			{
-				effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
-				
-				//TODO: account for AAs and stuff
-				
-				//dont know what the signon this should be... - makes sense
-				if (caster && caster->IsClient() && 
-					spells[spell_id].SpellAffectIndex != 86 
-					&& /*!BeneficialSpell(spell_id)*/ effect_value < 0) {
-					sint32 modifier = 100;
-					modifier += caster->CastToClient()->GetFocusEffect(focusImprovedDOT, spell_id);
-				
-					effect_value = effect_value * modifier / 100;
-				}
-				
-				if(effect_value < 0) {
-					effect_value = -effect_value;
-					Damage(caster, effect_value, spell_id, SPELL_ATTACK_SKILL, false, i, true);
-				} else if(effect_value > 0) {
-					//healing spell...
-					if(caster)
-						effect_value = caster->GetActSpellHealing(spell_id, effect_value);
-					HealDamage(effect_value);
-				}
-				
-				break;
-			}
-			case SE_HealOverTime:
-			{
-				effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
-				
-				//is this affected by stuff like GetActSpellHealing??
-				HealDamage(effect_value);
-				break;
-			}
-
-			case SE_CurrentMana:
-			{
-				effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
-				
-				SetMana(GetMana() + effect_value);
-				break;
-			}
-			case SE_BardAEDot:
-			{
-				effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
-				
-				if (invulnerable || /*effect_value > 0 ||*/ DivineAura())
-					break;
-				
-				if(effect_value < 0) {
-					effect_value = -effect_value;
-					Damage(caster, effect_value, spell_id, SPELL_ATTACK_SKILL, false, i, true);
-				} else if(effect_value > 0) {
-					//healing spell...
-					HealDamage(effect_value);
-				}
-				break;
-			}
-
-       /* case SE_Charm: { //Do it once in Effect instead of every tic
-            bool bBreak = false;
-
-            // define spells with fixed duration
-            // this is handled by the server, and not by the spell database
-            switch(spell_id) {
-            case 3371://call of the banshee
-            case 1707://dictate
-                bBreak = true;
-            }
+		case SE_CurrentHP:
+		{
+			effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
 			
-            if (!bBreak && caster) {
-                int cha = caster->GetCHA();
-                float r1 = (float)rand()/(float)RAND_MAX;
-                float r2 = (float)cha  + (caster->GetLevel()/3) / 255.0f;
+			//TODO: account for AAs and stuff
+			
+			//dont know what the signon this should be... - makes sense
+			if (caster && caster->IsClient() && 
+				spells[spell_id].SpellAffectIndex != 86 
+				&& /*!BeneficialSpell(spell_id)*/ effect_value < 0) {
+				sint32 modifier = 100;
+				modifier += caster->CastToClient()->GetFocusEffect(focusImprovedDOT, spell_id);
+			
+				effect_value = effect_value * modifier / 100;
+			}
+			
+			if(effect_value < 0) {
+				effect_value = -effect_value;
+				Damage(caster, effect_value, spell_id, SPELL_ATTACK_SKILL, false, i, true);
+			} else if(effect_value > 0) {
+				//healing spell...
+				if(caster)
+					effect_value = caster->GetActSpellHealing(spell_id, effect_value);
+				HealDamage(effect_value);
+			}
+			
+			break;
+		}
+		case SE_HealOverTime:
+		{
+			effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
+			
+			//is this affected by stuff like GetActSpellHealing??
+			HealDamage(effect_value);
+			break;
+		}
 
-                if (r1 > r2) {
-                    BuffFadeByEffect(SE_Charm);
-                }
-            }
-            break;
-        }*/
+		case SE_CurrentMana:
+		{
+			effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
+			
+			SetMana(GetMana() + effect_value);
+			break;
+		}
 
-			// solar: TODO get this outta here
-			case SE_Root: {
-				float r1 = (float)rand()/RAND_MAX;
-				float r2 = (float)(GetMR() - caster_level)/512.0f;//Need to move to Effect and use partial when resists are updated
-				// cout<<"Root:"<<(float)r1<<":"<<r2<<endl;
-				if ( r1 < r2 )
-					BuffFadeByEffect(SE_Root);
+		case SE_CurrentEndurance: {
+			if(IsClient()) {
+				effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
+				
+				CastToClient()->SetEndurance(CastToClient()->GetEndurance() + effect_value);
+			}
+			break;
+		}
+		
+		case SE_BardAEDot:
+		{
+			effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
+			
+			if (invulnerable || /*effect_value > 0 ||*/ DivineAura())
 				break;
+			
+			if(effect_value < 0) {
+				effect_value = -effect_value;
+				Damage(caster, effect_value, spell_id, SPELL_ATTACK_SKILL, false, i, true);
+			} else if(effect_value > 0) {
+				//healing spell...
+				HealDamage(effect_value);
 			}
-			default: {
-				// do we need to do anyting here?
+			break;
+		}
+
+   /* case SE_Charm: { //Do it once in Effect instead of every tic
+		bool bBreak = false;
+
+		// define spells with fixed duration
+		// this is handled by the server, and not by the spell database
+		switch(spell_id) {
+		case 3371://call of the banshee
+		case 1707://dictate
+			bBreak = true;
+		}
+		
+		if (!bBreak && caster) {
+			int cha = caster->GetCHA();
+			float r1 = (float)rand()/(float)RAND_MAX;
+			float r2 = (float)cha  + (caster->GetLevel()/3) / 255.0f;
+
+			if (r1 > r2) {
+				BuffFadeByEffect(SE_Charm);
 			}
+		}
+		break;
+	}*/
+
+		// solar: TODO get this outta here
+		case SE_Root: {
+			float r1 = (float)rand()/RAND_MAX;
+			float r2 = (float)(GetMR() - caster_level)/512.0f;//Need to move to Effect and use partial when resists are updated
+			// cout<<"Root:"<<(float)r1<<":"<<r2<<endl;
+			if ( r1 < r2 )
+				BuffFadeByEffect(SE_Root);
+			break;
+		}
+		default: {
+			// do we need to do anyting here?
+		}
 		}
 	}
 }
