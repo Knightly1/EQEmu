@@ -217,8 +217,14 @@ bool SharedDatabase::SaveInventory(uint32 char_id, const ItemInst* inst, sint16 
 			else
 				charges = 255;
 
-			uint32 len_query =  MakeAnyLenString(&query, "REPLACE INTO sharedbank (acctid,slotid,itemid,charges,augslot1,augslot2,augslot3,augslot4,augslot5) VALUES(%i,%i,%i,%i,%i,%i,%i,%i,%i)",
-				account_id, slot_id, inst->GetItem()->ID, charges ,augslot[0],augslot[1],augslot[2],augslot[3],augslot[4]);
+			uint32 len_query =  MakeAnyLenString(&query, 
+				"REPLACE INTO sharedbank "
+				"	(acctid,slotid,itemid,charges,"
+				"	augslot1,augslot2,augslot3,augslot4,augslot5)"
+				" VALUES(%lu,%lu,%lu,%lu,"
+				"	%lu,%lu,%lu,%lu,%lu)",
+				account_id, slot_id, inst->GetItem()->ID, charges ,
+				augslot[0],augslot[1],augslot[2],augslot[3],augslot[4]);
 
 			
 			ret = RunQuery(query, len_query, errbuf);
@@ -247,8 +253,14 @@ bool SharedDatabase::SaveInventory(uint32 char_id, const ItemInst* inst, sint16 
 			else
 				charges = 255;
 			// Update/Insert item
-			uint32 len_query = MakeAnyLenString(&query, "REPLACE INTO inventory (charid,slotid,itemid,charges,instnodrop,color,augslot1,augslot2,augslot3,augslot4,augslot5) VALUES(%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i)",
-				char_id, slot_id, inst->GetItem()->ID, charges, inst->IsInstNoDrop() ? 1:0,inst->GetColor(),augslot[0],augslot[1],augslot[2],augslot[3],augslot[4],augslot[5] );
+			uint32 len_query = MakeAnyLenString(&query, 
+				"REPLACE INTO inventory "
+				"	(charid,slotid,itemid,charges,instnodrop,color,"
+				"	augslot1,augslot2,augslot3,augslot4,augslot5)"
+				" VALUES(%lu,%lu,%lu,%lu,%lu,%lu,"
+				"	%lu,%lu,%lu,%lu,%lu)",
+				char_id, slot_id, inst->GetItem()->ID, charges, inst->IsInstNoDrop() ? 1:0,inst->GetColor(),
+				augslot[0],augslot[1],augslot[2],augslot[3],augslot[4] );
 			
 			ret = RunQuery(query, len_query, errbuf);
 		}
@@ -405,10 +417,10 @@ bool SharedDatabase::GetInventory(uint32 char_id, Inventory* inv) {
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges,color,augslot1,augslot2,augslot3,augslot4,augslot5,instnodrop FROM inventory WHERE charid=%i ORDER BY slotid", char_id), errbuf, &result)) {
 
 		while ((row = mysql_fetch_row(result))) {	
-			sint16 slot_id	= (sint16)atoi(row[0]);
-			uint32 item_id	= (uint32)atoi(row[1]);
-			int16 charges	= (int16)atoi(row[2]);
-			uint32 color		= (uint32)atoi(row[3]);
+			sint16 slot_id	= atoi(row[0]);
+			uint32 item_id	= atoi(row[1]);
+			int16 charges	= atoi(row[2]);
+			uint32 color		= atoul(row[3]);
 			uint32 aug[5];
 			aug[0]	= (uint32)atoul(row[4]);
 			aug[1]	= (uint32)atoul(row[5]);
@@ -485,10 +497,10 @@ bool SharedDatabase::GetInventory(uint32 account_id, char* name, Inventory* inv)
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT slotid,itemid,charges,color,augslot1,augslot2,augslot3,augslot4,augslot5,instnodrop FROM inventory INNER JOIN character_ ch ON ch.id=charid WHERE ch.name='%s' AND ch.account_id=%i ORDER BY slotid", name, account_id), errbuf, &result))
 	{
 		while ((row = mysql_fetch_row(result))) {
-			sint16 slot_id	= (sint16)atoi(row[0]);
-			uint32 item_id	= (uint32)atoi(row[1]);
-			sint8 charges	= (sint8)atoi(row[2]);
-			uint32 color		= (uint32)atoi(row[3]);
+			sint16 slot_id	= atoi(row[0]);
+			uint32 item_id	= atoi(row[1]);
+			sint8 charges	= atoi(row[2]);
+			uint32 color		= atoul(row[3]);
 			uint32 aug[5];
 			aug[0]	= (uint32)atoi(row[4]);
 			aug[1]	= (uint32)atoi(row[5]);

@@ -1,6 +1,10 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==10/18/2006
+FatherNitwit: Maybe fixed issue with losing items when zoning in mysql 5.
+FatherNitwit: Fixed issue with color saving properly.
+
 ==10/15/2006
 FatherNitwit: (KLS) Implemented Endurance
 FatherNitwit: (KLS) Implemented support for seperate discipline timers
