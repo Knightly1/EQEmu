@@ -609,7 +609,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 {
 	_ZP(Client_Attack);
 	
-	mlog(COMBAT__ATTACKS, "Attacking %s with hand %d %s", other->GetName(), Hand, bRiposte?"(this is a riposte)":"");
+	mlog(COMBAT__ATTACKS, "Attacking %s with hand %d %s", other?other->GetName():"(NULL)", Hand, bRiposte?"(this is a riposte)":"");
 	
 	//SetAttackTimer();
 	if (

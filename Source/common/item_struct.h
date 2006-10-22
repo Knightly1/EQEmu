@@ -203,7 +203,7 @@ struct Item_Struct {
 
 	uint8	Book;			// 0=Not bool, 1=Book
 	uint32	BookType;
-	char	Filename[15];		// Filename for book data
+	char	Filename[33];		// Filename for book data
 };
 
 #endif
