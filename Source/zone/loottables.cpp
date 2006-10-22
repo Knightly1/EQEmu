@@ -475,8 +475,6 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 		}
 
 		if ((item2->Slots & (1 << SLOT_PRIMARY)) && (equipment[MATERIAL_PRIMARY]==0)) {
-			
-			d_meele_texture1 = atoi(newid);
 			if (item2->Proc.Effect != 0)
 				CastToMob()->AddProcToWeapon(item2->Proc.Effect, true);
 			
@@ -485,7 +483,6 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 		else if (item2->Slots & (1 << SLOT_SECONDARY) && (equipment[MATERIAL_SECONDARY]==0) 
 			&& (GetOwner() != NULL || (GetLevel() >= 13 && MakeRandomInt(0,99) < NPC_DW_CHANCE) || (item2->Damage==0)))
 		{
-			d_meele_texture2 = atoi(newid);
 			if (item2->Proc.Effect!=0)
 				CastToMob()->AddProcToWeapon(item2->Proc.Effect, true);
 			

@@ -404,7 +404,9 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	
 	// if we got here we didn't fizzle, and are starting our cast
 
-	pDontCastBefore_casting_spell = oSpellWillFinish;
+	if(IsNPC()) {
+		CastToNPC()->AI_SetCastingTimerPtr(oSpellWillFinish);
+	}
 	if (oSpellWillFinish)
 		*oSpellWillFinish = Timer::GetCurrentTime() + cast_time + 100;
 
@@ -657,8 +659,9 @@ void Mob::InterruptSpell(int16 message, int16 color, int16 spellid)
 	if (spellid == SPELL_UNKNOWN)
 		spellid = casting_spell_id;
 
-	if(casting_spell_id)
-		AI_Event_SpellCastFinished(false, casting_spell_slot);
+	if(casting_spell_id && IsNPC()) {
+		CastToNPC()->AI_Event_SpellCastFinished(false, casting_spell_slot);
+	}
 	
 	ZeroCastingVars();	// resets all the state keeping stuff
 	
@@ -1451,8 +1454,9 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 			SpellOnTarget(recourse_spell, this);
 		}
 	}
-	
-	AI_Event_SpellCastFinished(true, slot);
+
+	if(IsNPC())
+		CastToNPC()->AI_Event_SpellCastFinished(true, slot);
 
 	return true;	
 }

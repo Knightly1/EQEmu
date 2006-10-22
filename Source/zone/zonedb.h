@@ -272,7 +272,7 @@ public:
 	 * PLEASE DO NOT ADD TO THIS COLLECTION OF CRAP UNLESS YOUR METHOD 
 	 * REALLY HAS NO BETTER SECTION
 	 */
-	bool    logevents(char* accountname,int32 accountid,int8 status,const char* charname,const char* target, const char* descriptiontype, const char* description,int event_nid);
+	bool    logevents(const char* accountname,int32 accountid,int8 status,const char* charname,const char* target, const char* descriptiontype, const char* description,int event_nid);
 	void	GetEventLogs(const char* name,char* target,int32 account_id=0,int8 eventid=0,char* detail=0,char* timestamp=0, CharacterEventLog_Struct* cel=0);
 	
 	

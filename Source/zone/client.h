@@ -172,21 +172,12 @@ public:
 	void	Trader_ShowItems();
 	void	Trader_EndTrader();
 	void	Trader_StartTrader();
-	bool	Trader;
 	int8	WithCustomer();
-	bool	cheater;
 	bool	CheckCheat();
-	float	cheat_x;
-	float	cheat_y;
-	bool	AbilityTimer;
-	int8	cheatcount;
 	virtual bool IsClient() const { return true; }
 	virtual void DBAWComplete(int8 workpt_b1, DBAsyncWork* dbaw);
 	bool	FinishConnState2(DBAsyncWork* dbaw);
 	void	CompleteConnect();
-	bool	IsOnBoat;
-	bool	IsTracking;
-	bool	withcustomer;
 	bool	TryStacking(ItemInst* item, int8 type = ItemPacketTrade, bool try_worn = true, bool try_cursor = true);
 	void	SendTraderPacket(Client* trader);
 	GetItems_Struct* GetTraderItems(); 
@@ -216,7 +207,7 @@ public:
 	void	Message(int32 type, const char* message, ...);
 	void	SendSound();
 
-	int32   GetAdventureID(){return 0/*m_pp.adventure_id*/; }
+	int32   GetAdventureID() const {return 0/*m_pp.adventure_id*/; }
 	void    SetAdventureID(int32 i){ /*m_pp.adventure_id=i;*/ }
 	void	SendAdventureFinish(uint32 state=0,uint32 points=0,bool grouptoo=false);
 	void	SendAdventureInfoRequest(const EQApplicationPacket* app);
@@ -227,40 +218,35 @@ public:
 
 	EQApplicationPacket*	ReturnItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type);
 	
-	bool	GetRevoked() { return revoked; }
+	bool	GetRevoked() const { return revoked; }
 	void	SetRevoked(bool rev) { revoked = rev; }
-	inline int32	GetIP()			{ return ip; }
-	inline bool	GetHideMe()			{ return gmhideme; }
+	inline int32	GetIP()			const { return ip; }
+	inline bool	GetHideMe()			const { return gmhideme; }
 	void	SetHideMe(bool hm);
-	inline int16	GetPort()		{ return port; }
-	bool	berserk;
+	inline int16	GetPort()		const { return port; }
 	bool	IsDead() const { return(dead); }
-	bool	dead;
 	
 	virtual bool	Save() { return Save(0); }
 			bool	Save(int8 iCommitNow); // 0 = delayed, 1=async now, 2=sync now
 			void	SaveBackup();
 	
-	inline bool ClientDataLoaded() { return client_data_loaded; }
-	inline bool	Connected()		{ return (client_state == CLIENT_CONNECTED); }
-	inline bool	InZone()		{ return (client_state == CLIENT_CONNECTED || client_state == CLIENT_LINKDEAD); }
+	inline bool ClientDataLoaded() const { return client_data_loaded; }
+	inline bool	Connected()		const { return (client_state == CLIENT_CONNECTED); }
+	inline bool	InZone()		const { return (client_state == CLIENT_CONNECTED || client_state == CLIENT_LINKDEAD); }
 	inline void	Kick()			{ client_state = CLIENT_KICKED; }
 	inline void	Disconnect()	{ eqs->Close(); client_state = DISCONNECTED; }
-	inline bool IsLD()			{ return (bool) (client_state == CLIENT_LINKDEAD); }
+	inline bool IsLD()			const { return (bool) (client_state == CLIENT_LINKDEAD); }
 	void	WorldKick();
-	inline int8	GetAnon()		{  return m_pp.anon; }
+	inline int8	GetAnon()		const {  return m_pp.anon; }
 	inline PlayerProfile_Struct& GetPP()	{ return m_pp; }
 	inline ExtendedProfile_Struct& GetEPP()	{ return m_epp; }
 	inline Inventory& GetInv()				{ return m_inv; }
+	inline const Inventory& GetInv() const	{ return m_inv; }
 	bool	CheckAccess(sint16 iDBLevel, sint16 iDefaultLevel);
 	
-	bool IsEnd(char* string);
-	bool IsCommented(char* string);
-	char * rmnl(char* nstring);
 	void CheckQuests(const char* zonename, const char* message, uint32 npc_id, uint32 item_id, Mob* other);
-	char * strreplace(const char* searchstring, const char* searchquery, const char* replacement);
 	void LogLoot(Client* player,Corpse* corpse,const Item_Struct* item);
-	bool	AutoAttackEnabled() { return auto_attack; }
+	bool	AutoAttackEnabled() const { return auto_attack; }
 	bool	Attack(Mob* other, int Hand = 13, bool bRiposte = false);	// 13 = Primary (default), 14 = secondary
 	void	Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill = 0x04, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false);
 	void	Death(Mob* other, sint32 damage, int16 spell_id = 0xFFFF, int8 attack_skill = 0x04);
@@ -277,18 +263,18 @@ public:
 	void	SetGM(bool toggle);
 	void	SetPVP(bool toggle);
 
-	inline bool	GetPVP()	{ return zone->GetZoneID() == 77 ? true : m_pp.pvp; }
-	inline bool	GetGM()		{ return (bool) m_pp.gm; }
+	inline bool	GetPVP()	const { return zone->GetZoneID() == 77 ? true : m_pp.pvp; }
+	inline bool	GetGM()		const { return (bool) m_pp.gm; }
 	
 	inline void	SetBaseClass(uint32 i) { m_pp.class_=i; }
 	inline void	SetBaseRace(uint32 i) { m_pp.race=i; }
 	inline void	SetBaseGender(uint32 i) { m_pp.gender=i; }
 	inline  void SetDeity(uint32 i) {m_pp.deity=i;}
 
-	inline int16	GetBaseRace()	{ return m_pp.race; }
-	inline int16	GetBaseClass()	{ return m_pp.class_; }
-	inline int8	GetBaseGender()	{ return m_pp.gender; }
-	inline int8	GetBaseFace()	{ return m_pp.face; }
+	inline int16	GetBaseRace()	const { return m_pp.race; }
+	inline int16	GetBaseClass()	const { return m_pp.class_; }
+	inline int8	GetBaseGender()	const { return m_pp.gender; }
+	inline int8	GetBaseFace()	const { return m_pp.face; }
 	sint32	CalcMaxMana();
 	const sint32&	SetMana(sint32 amount);
 	
@@ -296,15 +282,15 @@ public:
 	void	BulkSendTraderInventory(int32 char_id);
 	void	BulkSendMerchantInventory(int merchant_id, int16 npcid);
 	
-	inline int8	GetLanguageSkill(int16 n)	{ return m_pp.languages[n]; }
+	inline int8	GetLanguageSkill(int16 n)	const { return m_pp.languages[n]; }
 
 	
-	inline char*	GetLastName()	{ return lastname; }
+	inline const char*	GetLastName() const	{ return lastname; }
 	inline int32	GetLDoNPoints() { return 0; }
 	
-	inline float ProximityX() { return(proximity_x); }
-	inline float ProximityY() { return(proximity_y); }
-	inline float ProximityZ() { return(proximity_z); }
+	inline float ProximityX() const { return(proximity_x); }
+	inline float ProximityY() const { return(proximity_y); }
+	inline float ProximityZ() const { return(proximity_z); }
 	inline void ClearAllProximities() { entity_list.ProcessMove(this, FLT_MAX, FLT_MAX, FLT_MAX); proximity_x = FLT_MAX; proximity_y = FLT_MAX; proximity_z = FLT_MAX; }
 	
 	/*
@@ -333,7 +319,6 @@ public:
 	int16    CalcAC();
 	int16    CalcATK();
 	int      CalcHaste();
-	int Haste;  //precalced value
 	
 	sint16   CalcSTR();
 	sint16   CalcSTA();
@@ -349,14 +334,14 @@ public:
 	sint16	CalcPR();
 	sint16	CalcCR();
     
-	sint16	GetMaxStat();
-	sint16  GetMaxSTR();
-    sint16  GetMaxSTA();
-    sint16  GetMaxDEX();
-    sint16  GetMaxAGI();
-    sint16  GetMaxINT();
-    sint16  GetMaxWIS();
-    sint16  GetMaxCHA();
+	sint16	GetMaxStat() const;
+	sint16  GetMaxSTR() const;
+    sint16  GetMaxSTA() const;
+    sint16  GetMaxDEX() const;
+    sint16  GetMaxAGI() const;
+    sint16  GetMaxINT() const;
+    sint16  GetMaxWIS() const;
+    sint16  GetMaxCHA() const;
 	inline int8	GetBaseSTR()	const { return m_pp.STR; }
 	inline int8	GetBaseSTA()	const { return m_pp.STA; }
 	inline int8	GetBaseCHA()	const { return m_pp.CHA; }
@@ -374,9 +359,7 @@ public:
 	sint32  GetDotFocus(int16 spell_id, sint32 value);
 	virtual bool CheckFizzle(int16 spell_id);
 	
-	inline const sint32&	GetHP()			{ return cur_hp; }
-	inline const sint32&	GetMaxHP()		{ return max_hp; }
-	inline const sint32&	GetBaseHP()		{ return base_hp; }
+	inline const sint32	GetBaseHP() const { return base_hp; }
 	sint32	CalcMaxHP();
 	sint32	CalcBaseHP();
 	void DoHPRegen(/*SpawnAppearance_Struct* sa*/);
@@ -384,7 +367,11 @@ public:
 	
 	int16 GetWeight() const { return(weight); }
 	inline void RecalcWeight() { weight = CalcCurrentWeight(); }
-	int16 CalcCurrentWeight();	
+	int16 CalcCurrentWeight();
+	inline uint32	GetCopper()		const { return m_pp.copper; }
+	inline uint32	GetSilver()		const { return m_pp.silver; }
+	inline uint32	GetGold()		const { return m_pp.gold; }
+	inline uint32	GetPlatinum()	const { return m_pp.platinum; }
 
 
 	/*Endurance and such*/
@@ -405,7 +392,7 @@ public:
     bool Flurry();
     bool Rampage();
 	
-	inline uint32	GetEXP()		{ return m_pp.exp; }
+	inline uint32	GetEXP()		const { return m_pp.exp; }
 	
 	
 	bool	UpdateLDoNPoints(sint32 points, int32 theme);
@@ -444,13 +431,13 @@ public:
 	sint16	GetRawItemAC();
 	int16	GetCombinedAC_TEST();
 	
-	inline int32	LSAccountID()	{ return lsaccountid; }
-	inline int32	GetWID()		{ return WID; }
+	inline int32	LSAccountID()	const { return lsaccountid; }
+	inline int32	GetWID()		const { return WID; }
 	inline void		SetWID(int32 iWID) { WID = iWID; }
-	inline int32	AccountID()		{ return account_id; }
-	inline char*	AccountName()	{ return account_name; }
-	inline sint16	Admin()			{ return admin; }
-	inline int32	CharacterID()	{ return character_id; }
+	inline int32	AccountID()		const { return account_id; }
+	inline const char* AccountName()const { return account_name; }
+	inline sint16	Admin()			const { return admin; }
+	inline int32	CharacterID()	const { return character_id; }
 	void	UpdateAdmin(bool iFromDB = true);
 	void	UpdateWho(int8 remove = 0);
 	bool	GMHideMe(Client* client = 0);
@@ -460,7 +447,7 @@ public:
 //	inline int32	GuildEQID()		{ return guildeqid; }
 //	inline int32	GuildDBID()		{ return guilddbid; }
 	inline int32	GuildID() const { return guild_id; }
-	inline int8	GuildRank()		{ return guildrank; }
+	inline int8	GuildRank()		const { return guildrank; }
 //	bool	SetGuild(int32 in_guilddbid, int8 in_rank);
 //	void	GuildChangeRank(int32 guild_id,int32 oldrank,int32 newrank);
 //	void	GuildChangeRank(const char* name,int32 guild_id,int32 oldrank,int32 newrank);
@@ -475,7 +462,7 @@ public:
 	void	SendManaUpdatePacket();
     // Disgrace: currently set from database.CreateCharacter. 
 	// Need to store in proper position in PlayerProfile...
-	int8	GetFace()		{ return m_pp.face; } 
+	int8	GetFace()		const { return m_pp.face; } 
 	int32	PendingGuildInvite; // Used for /guildinvite
 	void	WhoAll(Who_All_Struct* whom);
 	
@@ -498,8 +485,8 @@ public:
 	void	SetSkillPoints(int inp) {m_pp.points = inp;}
 	void	IncreaseSkill(int skill_id, int value = 1) { if (skill_id <= HIGHEST_SKILL) { m_pp.skills[skill_id] += value; } }
 	void	IncreaseLanguageSkill(int skill_id, int value = 1) { if (skill_id < 26) { m_pp.languages[skill_id] += value; } }
-	uint32		GetSkill(int skill_id) { if (skill_id <= HIGHEST_SKILL) { return((itembonuses.skillmod[skill_id] > 0)? m_pp.skills[skill_id]*(100 + itembonuses.skillmod[skill_id])/100 : m_pp.skills[skill_id]); } return 0; }
-	uint32		GetRawSkill(int skill_id) { if (skill_id <= HIGHEST_SKILL) { return(m_pp.skills[skill_id]); } return 0; }
+	uint32		GetSkill(int skill_id) const { if (skill_id <= HIGHEST_SKILL) { return((itembonuses.skillmod[skill_id] > 0)? m_pp.skills[skill_id]*(100 + itembonuses.skillmod[skill_id])/100 : m_pp.skills[skill_id]); } return 0; }
+	uint32		GetRawSkill(int skill_id) const { if (skill_id <= HIGHEST_SKILL) { return(m_pp.skills[skill_id]); } return 0; }
 	
 	void TradeskillSearchResults(const char *query, unsigned long qlen, unsigned long objtype, unsigned long someid);
 	void SendTradeskillDetails(unsigned long  recipe_id);
@@ -508,9 +495,9 @@ public:
 	
 	int32	pendingrezzexp;
 	void	GMKill();
-	inline bool	IsMedding()	{return medding;}
-	inline int16	GetDuelTarget() { return duel_target; }
-	inline bool	IsDueling() { return duelaccepted; }
+	inline bool	IsMedding()	const {return medding;}
+	inline int16	GetDuelTarget() const { return duel_target; }
+	inline bool	IsDueling() const { return duelaccepted; }
 	inline void	SetDuelTarget(int16 set_id) { duel_target=set_id; }
 	inline void	SetDueling(bool duel) { duelaccepted = duel; }
 	// use this one instead
@@ -521,25 +508,23 @@ public:
 	void UnscribeSpell(int slot, bool update_client = true);
 	void UnscribeSpellAll(bool update_client = true);
 	
-	inline bool	IsSitting() {return (playeraction == 1);}
-	inline bool	IsBecomeNPC() { return npcflag; }
-	inline int8	GetBecomeNPCLevel() { return npclevel; }
+	inline bool	IsSitting() const {return (playeraction == 1);}
+	inline bool	IsBecomeNPC() const { return npcflag; }
+	inline int8	GetBecomeNPCLevel() const { return npclevel; }
 	inline void	SetBecomeNPC(bool flag) { npcflag = flag; }
 	inline void	SetBecomeNPCLevel(int8 level) { npclevel = level; }
 	bool	LootToStack(uint32 itemid);
 	void	SetFeigned(bool in_feigned);
 	// EverHood 6/16/06
 	/// this cures timing issues cuz dead animation isn't done but server side feigning is?
-	inline bool    GetFeigned()	{return(feigned); }
+	inline bool    GetFeigned()	const {return(feigned); }
 	EQStreamInterface* Connection() { return eqs; }
 #ifdef PACKET_PROFILER
 	void DumpPacketProfile() { if(eqs) eqs->DumpPacketProfile(); }
 #endif
-	int8	guildchange;
-	int16	otherleaderid;
-	sint32 GetEquipment(int8 material_slot);	// returns item id
+	int32 GetEquipment(int8 material_slot) const;	// returns item id
 	//sint32 GetEquipmentMaterial(int8 material_slot);
-	sint32 GetEquipmentColor(int8 material_slot);
+	uint32 GetEquipmentColor(int8 material_slot) const;
 	
 	inline bool AutoSplitEnabled() { return(auto_split); }
 	
@@ -553,7 +538,7 @@ public:
 */
 	void SummonHorse(int16 spell_id);
 	void SetHorseId(int16 horseid_in);
-	int16 GetHorseId() { return horseId; }
+	int16 GetHorseId() const { return horseId; }
 	
 	bool BindWound(Mob* bindmob, bool start, bool fail = false);
 	void SetTradeskillObject(Object* object) { m_tradeskill_object = object; }
@@ -581,8 +566,8 @@ public:
 	// solar: this function is used by some AA stuff
 	void MemorizeSpell(int32 slot,int32 spellid,int32 scribing);
 	void	SetAATitle(const char *txt) { strncpy(m_pp.title, txt, 48); }
-	inline int32	GetMaxAAXP(void) { return max_AAXP; }
-	inline uint32  GetAAXP()   { return m_pp.expAA; }
+	inline int32	GetMaxAAXP(void) const { return max_AAXP; }
+	inline uint32  GetAAXP()   const { return m_pp.expAA; }
 	void SendAAStats();
 	void SendAATable();
 	void SendAATimers();
@@ -619,9 +604,8 @@ public:
 	void	SendItemLink(const ItemInst* inst, bool sendtoall=false);
 	void	SendLootItemInPacket(const ItemInst* inst, sint16 slot_id);
 	void	SendItemPacket(sint16 slot_id, const ItemInst* inst, ItemPacketType packet_type);
-	
-	int8 guildfaction; // 0 = Peace, 1 = War
-	Client* guildtarget;
+
+	bool	IsTrader() const { return(Trader); }
 	eqFilterMode	GetFilter(eqFilterType filter_id) const { return ClientFilters[filter_id]; }
 	void	SetFilter(eqFilterType filter_id, eqFilterMode value) { ClientFilters[filter_id]=value; }
 
@@ -629,12 +613,12 @@ public:
 	Group*	GetGroup() { return entity_list.GetGroupByClient(this); }
 	void	LeaveGroup();
 		
-	bool	Hungry() {if (GetGM()) return false; return m_pp.hunger_level <= 3000;}
-	bool	Thirsty() {if (GetGM()) return false; return m_pp.thirst_level <= 3000;}
+	bool	Hungry() const {if (GetGM()) return false; return m_pp.hunger_level <= 3000;}
+	bool	Thirsty() const {if (GetGM()) return false; return m_pp.thirst_level <= 3000;}
 	
 	bool	CheckTradeLoreConflict(Client* other);
 	void	LinkDead();
-	bool	CanUseSkill(uint8 skillid) { if (GetSkill(skillid) < 254) return true; return false; }
+	bool	CanUseSkill(uint8 skillid) const { if (GetSkill(skillid) < 254) return true; return false; }
 	void	Insight(int32 t_id);
 	bool	CheckDoubleAttack(bool AAadd = false, bool Triple = false);
 	//remove charges/multiple objects from inventory:
@@ -734,6 +718,18 @@ private:
 	int16				pClientSideTarget;
 	bool				auto_split;
 	int16				weight;
+	bool				berserk;
+	bool				dead;
+	bool				IsOnBoat;
+	bool				IsTracking;
+	bool				withcustomer;
+	bool	Trader;
+	bool	cheater;
+	float	cheat_x;
+	float	cheat_y;
+	bool	AbilityTimer;
+	int8	cheatcount;
+	int Haste;  //precalced value
 
 	sint32				max_end;
 	sint32				cur_end;

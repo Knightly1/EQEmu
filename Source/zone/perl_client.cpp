@@ -561,7 +561,7 @@ XS(XS_Client_GetLastName)
 		Perl_croak(aTHX_ "Usage: Client::GetLastName(THIS)");
 	{
 		Client *		THIS;
-		char *		RETVAL;
+		Const_char *		RETVAL;
 		dXSTARG;
 
 		if (sv_derived_from(ST(0), "Client")) {
@@ -1261,7 +1261,7 @@ XS(XS_Client_AccountName)
 		Perl_croak(aTHX_ "Usage: Client::AccountName(THIS)");
 	{
 		Client *		THIS;
-		char *		RETVAL;
+		Const_char *		RETVAL;
 		dXSTARG;
 
 		if (sv_derived_from(ST(0), "Client")) {
@@ -3171,6 +3171,31 @@ XS(XS_Client_GetCharacterFactionLevel)
 	XSRETURN(1);
 }
 
+XS(XS_Client_SetSkill); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_SetSkill)
+{
+	dXSARGS;
+	if (items != 3)
+		Perl_croak(aTHX_ "Usage: Client::SetSkill(THIS, in_skill_num, in_skill_value)");
+	{
+		Client *		THIS;
+		int		in_skill_num = (int)SvIV(ST(1));
+		int8		in_skill_value = (int8)SvUV(ST(2));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->SetSkill(in_skill_num, in_skill_value);
+	}
+	XSRETURN_EMPTY;
+}
+
 XS(XS_Client_SetZoneFlag); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_SetZoneFlag)
 {
@@ -3463,6 +3488,7 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "UseDiscipline"), XS_Client_UseDiscipline, file, "$$$");
 		newXSproto(strcpy(buf, "SetLanguageSkill"), XS_Client_SetLanguageSkill, file, "$$$");
 		newXSproto(strcpy(buf, "GetCharacterFactionLevel"), XS_Client_GetCharacterFactionLevel, file, "$$");
+		newXSproto(strcpy(buf, "SetSkill"), XS_Client_SetSkill, file, "$$$");
 		newXSproto(strcpy(buf, "SetZoneFlag"), XS_Client_SetZoneFlag, file, "$$");
 		newXSproto(strcpy(buf, "ClearZoneFlag"), XS_Client_ClearZoneFlag, file, "$$");
 		newXSproto(strcpy(buf, "HasZoneFlag"), XS_Client_HasZoneFlag, file, "$$");

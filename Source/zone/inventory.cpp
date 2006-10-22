@@ -984,20 +984,20 @@ void Client::RemoveNoRent() {
 }
 
 // these functions operate with a material slot, which is from 0 to 8
-sint32 Client::GetEquipment(int8 material_slot)
+int32 Client::GetEquipment(int8 material_slot) const
 {
 	int invslot;
 	const ItemInst *item;
 
 	if(material_slot > 8)
 	{
-		return -1;
+		return 0;
 	}
 
 	invslot = Inventory::CalcSlotFromMaterial(material_slot);
 	if(invslot == -1)
 	{
-		return -1;
+		return 0;
 	}
 	
 	item = m_inv.GetItem(invslot);
@@ -1007,7 +1007,7 @@ sint32 Client::GetEquipment(int8 material_slot)
 		return item->GetItem()->ID;
 	}
 
-	return -1;
+	return 0;
 }
 
 /*
@@ -1025,13 +1025,13 @@ sint32 Client::GetEquipmentMaterial(int8 material_slot)
 }
 */
 
-sint32 Client::GetEquipmentColor(int8 material_slot)
+uint32 Client::GetEquipmentColor(int8 material_slot) const
 {
 	const Item_Struct *item;
 
 	if(material_slot > 8)
 	{
-		return -1;
+		return 0;
 	}
 
 	item = database.GetItem(GetEquipment(material_slot));

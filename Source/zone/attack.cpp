@@ -1280,6 +1280,13 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		return false;
 	}
 	
+	if(!combat_event) {
+		mlog(COMBAT__HITS, "Triggering EVENT_COMBAT due to attack on %s", other->GetName());
+		parse->Event(EVENT_COMBAT, this->GetNPCTypeID(), "1", this, other);
+		combat_event = true;
+	}
+	combat_event_timer.Start(CombatEventTimer_expire);
+	
 	//figure out what weapon they are using, if any
 	const Item_Struct* weapon = NULL;
 	if (Hand == 13 && equipment[7] > 0)
@@ -1578,7 +1585,13 @@ void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, b
 		parse->Event(EVENT_ATTACK, this->GetNPCTypeID(), 0, this, other);
 		attack_event = true;
 	}
-	attacked_timer.Start(12000,true);
+	if(!combat_event) {
+		mlog(COMBAT__HITS, "Triggering EVENT_COMBAT due to attack by %s", other->GetName());
+		parse->Event(EVENT_COMBAT, this->GetNPCTypeID(), "1", this, other);
+		combat_event = true;
+	}
+	attacked_timer.Start(CombatEventTimer_expire - 1);	//-1 to solidify an assumption in NPC::Process
+	combat_event_timer.Start(CombatEventTimer_expire);
     
 	if (!IsEngaged())
 		zone->AddAggroMob();
@@ -1658,7 +1671,7 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill) {
     if (give_exp_client && !IsCorpse() && MerchantType == 0)
 	{
 		Group *kg = entity_list.GetGroupByClient(give_exp_client);
-		if (give_exp_client->isgrouped && kg != NULL)
+		if (give_exp_client->IsGrouped() && kg != NULL)
 		{
 			if(give_exp_client->GetAdventureID()>0){
 				AdventureInfo AF = database.GetAdventureInfo(give_exp_client->GetAdventureID());
@@ -1692,7 +1705,7 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill) {
 			killer = killer->GetOwner();
 		if(killer != 0 && killer->IsClient()) {
 			corpse->AllowMobLoot(killer, 0);
-			if(killer->CastToClient()->isgrouped) {
+			if(killer->IsGrouped()) {
 				Group* group = entity_list.GetGroupByClient(killer->CastToClient());
 				if(group != 0) {
 					for(int i=0;i<6;i++) { // Doesnt work right, needs work
@@ -1993,7 +2006,7 @@ sint16 Mob::ReduceDamage(sint16 damage){
 	return damage;
 }
 
-bool Mob::HasProcs()
+bool Mob::HasProcs() const
 {
     for (int i = 0; i < MAX_PROCS; i++)
         if (PermaProcs[i].spellID != SPELL_UNKNOWN || SpellProcs[i].spellID != SPELL_UNKNOWN)

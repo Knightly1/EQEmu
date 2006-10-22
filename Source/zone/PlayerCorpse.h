@@ -56,9 +56,9 @@ public:
 	inline char*	GetOwnerName()	{ return orgname;}
 
 	void	SetDecayTimer(int32 decaytime);
-	bool	IsEmpty();
+	bool	IsEmpty() const;
 	void	AddItem(uint32 itemnum, int8 charges, sint16 slot = 0, uint32 aug1=0, uint32 aug2=0, uint32 aug3=0, uint32 aug4=0, uint32 aug5=0);
-	uint32	GetWornItem(sint16 equipSlot);
+	uint32	GetWornItem(sint16 equipSlot) const;
 	ServerLootItem_Struct* GetItem(int16 lootslot, ServerLootItem_Struct** bag_item_data = 0);
 	void	RemoveItem(int16 lootslot);
 	void	RemoveItem(ServerLootItem_Struct* item_data);
@@ -90,9 +90,9 @@ public:
 	void Rezzed(bool in_rez) { rez = in_rez; }
 
 	char		orgname[64];
-	bool IsRezzed() { return isrezzed; }
-	sint32 GetEquipment(int8 material_slot);	// returns item id
-	sint32 GetEquipmentColor(int8 material_slot);
+	bool IsRezzed() const { return isrezzed; }
+	int32 GetEquipment(int8 material_slot) const;	// returns item id
+	uint32 GetEquipmentColor(int8 material_slot) const;
 protected:
 	void MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot);
 private:

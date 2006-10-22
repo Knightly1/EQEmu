@@ -144,7 +144,7 @@ void ZoneDatabase::UpdateSpawn2Timeleft(int32 id, int32 timeleft)
 	return;
 }
 
-bool ZoneDatabase::logevents(char* accountname,int32 accountid,int8 status,const char* charname, const char* target,const char* descriptiontype, const char* description,int event_nid){
+bool ZoneDatabase::logevents(const char* accountname,int32 accountid,int8 status,const char* charname, const char* target,const char* descriptiontype, const char* description,int event_nid){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	uint32 len = strlen(description);

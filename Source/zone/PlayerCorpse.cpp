@@ -107,7 +107,11 @@ Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname
 Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, const NPCType** in_npctypedata, int32 in_decaytime)
 // vesuvias - appearence fix
  : Mob("Unnamed_Corpse","",0,0,in_npc->GetGender(),in_npc->GetRace(),in_npc->GetClass(),BT_Humanoid//bodytype added
-       ,in_npc->GetDeity(),in_npc->GetLevel(),in_npc->GetNPCTypeID(),0,in_npc->GetSize(),0,in_npc->GetHeading(),in_npc->GetX(),in_npc->GetY(),in_npc->GetZ(),0,0,in_npc->GetTexture(),in_npc->GetHelmTexture(),0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0,0,0,0,0),
+       ,in_npc->GetDeity(),in_npc->GetLevel(),in_npc->GetNPCTypeID(),in_npc->GetSize(),0,
+	 in_npc->GetHeading(),in_npc->GetX(),in_npc->GetY(),in_npc->GetZ(),0,
+	 in_npc->GetTexture(),in_npc->GetHelmTexture(),
+	 0,0,0,0,0,0,0,0,0,
+	 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0,0,0),
 	corpse_decay_timer(in_decaytime),
 	corpse_delay_timer(in_decaytime/2)
 {
@@ -160,14 +164,12 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 	client->GetDeity(),
 	client->GetLevel(),
 	0,
-	0,
 	client->GetSize(),
 	0,
 	client->GetHeading(),	// heading
 	client->GetX(),
 	client->GetY(),
 	client->GetZ(),
-	0,
 	0,
 	client->GetTexture(),
 	client->GetHelmTexture(),
@@ -188,8 +190,6 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 	client->GetPP().face,
 	client->GetPP().beard,
 	0xff,	// aa title
-	0,
-	0,
 	0,
 	0,
 	0	// qglobal
@@ -290,7 +290,10 @@ void Corpse::MoveItemToCorpse(Client *client, ItemInst *item, sint16 equipslot)
 // Mongrel: added see_invis and see_invis_undead
 Corpse::Corpse(int32 in_dbid, int32 in_charid, char* in_charname, ItemList* in_itemlist, int32 in_copper, int32 in_silver, int32 in_gold, int32 in_plat, float in_x, float in_y, float in_z, float in_heading, float in_size, int8 in_gender, int16 in_race, int8 in_class, int8 in_deity, int8 in_level, int8 in_texture, int8 in_helmtexture,int32 in_rezexp)
 // vesuvias - appearence fix
- : Mob("Unnamed_Corpse","",0,0,in_gender, in_race, in_class, BT_Humanoid, in_deity, in_level,0,0, in_size, 0, in_heading, in_x, in_y, in_z,0,0,in_texture,in_helmtexture,0,0,0,0,0,0,0,0,0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0,0,0,0,0),
+ : Mob("Unnamed_Corpse","",0,0,in_gender, in_race, in_class, BT_Humanoid, in_deity, in_level,0, in_size, 0, in_heading, in_x, in_y, in_z,0,in_texture,in_helmtexture,
+	 0,0,0,0,0,0,0,0,0,
+	 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+	 0,0,0),
 	corpse_decay_timer(RuleI(Character, CorpseDecayTimeMS)),
 	corpse_delay_timer(600000)
 {
@@ -468,8 +471,8 @@ ServerLootItem_Struct* Corpse::GetItem(int16 lootslot, ServerLootItem_Struct** b
 	return sitem;
 }
 
-uint32 Corpse::GetWornItem(sint16 equipSlot) {
-	ItemList::iterator cur,end;
+uint32 Corpse::GetWornItem(sint16 equipSlot) const {
+	ItemList::const_iterator cur,end;
 	cur = itemlist.begin();
 	end = itemlist.end();
 	for(; cur != end; cur++) {
@@ -543,7 +546,7 @@ void Corpse::RemoveCash() {
 	pIsChanged = true;
 }
 
-bool Corpse::IsEmpty() {
+bool Corpse::IsEmpty() const {
 	if (copper != 0 || silver != 0 || gold != 0 || platinum != 0)
 		return false;
 	return(itemlist.size() == 0);
@@ -697,7 +700,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQApplicationPacket* a
 				if (this->GetPlatinum()>10000)
 					this->RemoveCash();
 			#endif
-			if(client->isgrouped && client->AutoSplitEnabled() && client->GetGroup()) {
+			if(client->IsGrouped() && client->AutoSplitEnabled() && client->GetGroup()) {
 				d->copper		= 0;
 				d->silver		= 0;
 				d->gold			= 0;
@@ -1134,29 +1137,27 @@ bool ZoneDatabase::DeletePlayerCorpse(int32 dbid) {
 }
 
 // these functions operate with a material slot, which is from 0 to 8
-sint32 Corpse::GetEquipment(int8 material_slot)
-{
+int32 Corpse::GetEquipment(int8 material_slot) const {
 	int invslot;
 	
 	if(material_slot > 8)
 	{
-		return -1;
+		return 0;
 	}
 
 	invslot = Inventory::CalcSlotFromMaterial(material_slot);
 	if(invslot == -1)
-		return -1;
+		return 0;
 
 	return GetWornItem(invslot);
 }
 
-sint32 Corpse::GetEquipmentColor(int8 material_slot)
-{
+uint32 Corpse::GetEquipmentColor(int8 material_slot) const {
 	const Item_Struct *item;
 
 	if(material_slot > 8)
 	{
-		return -1;
+		return 0;
 	}
 
 	item = database.GetItem(GetEquipment(material_slot));

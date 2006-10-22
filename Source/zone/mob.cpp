@@ -56,7 +56,6 @@ Mob::Mob(const char*   in_name,
          int8    in_deity,
          int8    in_level,
          int32	 in_npctype_id, // rembrant, Dec. 20, 2001
-         const int8*	 in_skills, // socket 12-29-01
 		 float	in_size,
 		 float	in_runspeed,
          float	in_heading,
@@ -65,7 +64,6 @@ Mob::Mob(const char*   in_name,
          float	in_z_pos,
 
          int8    in_light,
-         const int32*   in_equipment,
 		 int8	 in_texture,
 		 int8	 in_helmtexture,
 		 int16	 in_ac,
@@ -87,8 +85,6 @@ Mob::Mob(const char*   in_name,
 		 int8	in_beard,
 
 		 int8	in_aa_title,
-		 int16	in_d_meele_texture1,
-		 int16	in_d_meele_texture2,
 		 int8	in_see_invis,			// Mongrel: see through invis/ivu
 		 int8  in_see_invis_undead,
 		 int8	in_qglobal
@@ -158,8 +154,6 @@ Mob::Mob(const char*   in_name,
 	light		= in_light;
 	texture		= in_texture;
 	helmtexture	= in_helmtexture;
-	d_meele_texture1 = in_d_meele_texture1;
-	d_meele_texture2= in_d_meele_texture2;
 	haircolor	= in_haircolor;
 	beardcolor	= in_beardcolor;
 	eyecolor1	= in_eyecolor1;
@@ -203,28 +197,6 @@ Mob::Mob(const char*   in_name,
 
 	int i = 0;
 
-	for (i=0; i < MAX_MATERIALS; i++)
-	{
-		if (in_equipment == NULL)
-		{
-			equipment[i] = 0;
-		}
-		else
-		{
-			equipment[i] = in_equipment[i];
-		}
-	}
-
-	if(in_d_meele_texture1)
-		equipment[MATERIAL_PRIMARY] = in_d_meele_texture1;
-	if(in_d_meele_texture2)
-		equipment[MATERIAL_SECONDARY] = in_d_meele_texture2;
-
-	if (in_skills) {
-		memcpy(skills, in_skills, sizeof(skills));
-	} else {
-		memset(skills, 0, sizeof(skills));
-	}
 	uint32 j;
 	for (j = 0; j < BUFF_COUNT; j++) {
 		buffs[j].spellid = SPELL_UNKNOWN;
@@ -388,7 +360,7 @@ void Mob::SetInvisible(bool state)
 }
 
 //check to see if `this` is invisible to `other`
-bool Mob::IsInvisible(Mob* other)
+bool Mob::IsInvisible(Mob* other) const
 {
 	if(!other)
 		return(false);
@@ -491,7 +463,7 @@ sint32 Mob::CalcMaxMana()
 	return max_mana;
 }
 
-char Mob::GetCasterClass() {
+char Mob::GetCasterClass() const {
 	switch(class_)
 	{
 	case CLERIC:
@@ -604,7 +576,7 @@ void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 
 	strcpy(ns->spawn.name, name);
 	if(IsClient())
-		strncpy(ns->spawn.lastName,lastname,32);
+		strncpy(ns->spawn.lastName,lastname,sizeof(lastname));
 	ns->spawn.heading	= FloatToEQ19(heading);
 	ns->spawn.x			= FloatToEQ19(x_pos);//((sint32)x_pos)<<3;
 	ns->spawn.y			= FloatToEQ19(y_pos);//((sint32)y_pos)<<3;
@@ -656,7 +628,7 @@ void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 	
 	ns->spawn.lastName[0] = '\0';
 	
-	strncpy(ns->spawn.lastName, lastname, 32);
+	strncpy(ns->spawn.lastName, lastname, sizeof(lastname));
 
 	for(i = 0; i < 7; i++)
 	{
@@ -894,7 +866,7 @@ void Mob::ShowStats(Client* client) {
 			int32 spawngroupid = 0;
 			if(this->CastToNPC()->respawn2 != 0)
 				spawngroupid = this->CastToNPC()->respawn2->SpawnGroupID();
-			client->Message(0, "  NPCID: %u  SpawnGroupID: %u LootTable: %u  FactionID: %i  SpellsID: %u MerchantID: %i", this->GetNPCTypeID(),spawngroupid, this->CastToNPC()->GetLoottableID(), this->CastToNPC()->GetNPCFactionID(), this->GetNPCSpellsID(),this->CastToNPC()->MerchantType);
+			client->Message(0, "  NPCID: %u  SpawnGroupID: %u LootTable: %u  FactionID: %i  SpellsID: %u MerchantID: %i", this->GetNPCTypeID(),spawngroupid, this->CastToNPC()->GetLoottableID(), this->CastToNPC()->GetNPCFactionID(), this->CastToNPC()->GetNPCSpellsID(),this->CastToNPC()->MerchantType);
 		}
 		if (this->IsAIControlled()) {
 			client->Message(0, "  AIControlled: AggroRange: %1.0f  AssistRange: %1.0f", this->GetAggroRange(), this->GetAssistRange());
@@ -1211,7 +1183,7 @@ void Mob::SetOwnerID(int16 NewOwnerID) {
 }
 
 //heko: for backstab
-bool Mob::BehindMob(Mob* other, float playerx, float playery) {
+bool Mob::BehindMob(Mob* other, float playerx, float playery) const {
     if (!other)
         return true; // sure your behind your invisible friend?? (fall thru for sneak)
 	//see if player is behind mob
@@ -1285,9 +1257,10 @@ void Mob::SetAttackTimer() {
 			ItemInst* ci = CastToClient()->GetInv().GetItem(i);
 			if (ci)
 				ItemToUse = ci->GetItem();
-		} else {
-			if(equipment[i] != 0)
-				ItemToUse = database.GetItem(equipment[i]);
+		} else if(IsNPC()) {
+			int32 eid = CastToNPC()->GetEquipment(i);
+			if(eid != 0)
+				ItemToUse = database.GetItem(eid);
 		}
 		
 		//special offhand stuff
@@ -1390,7 +1363,7 @@ void Mob::SetAttackTimer() {
 	}
 }
 
-bool Mob::CanThisClassDualWield(void) //Dual wield not Duel, busy someone else fix it (fixed! bUsh)
+bool Mob::CanThisClassDualWield(void) const //Dual wield not Duel, busy someone else fix it (fixed! bUsh)
 {
 	// All npcs over level 13 can dual wield
 	if (this->IsNPC() && (this->GetLevel() >= 13))
@@ -1453,7 +1426,7 @@ bool Mob::CanThisClassDualWield(void) //Dual wield not Duel, busy someone else f
 						//and are at the right level, and are NPC
 }
 
-bool Mob::CanThisClassDoubleAttack(void)
+bool Mob::CanThisClassDoubleAttack(void) const
 {
     // All npcs over level 26 can double attack
     if (IsNPC() && GetLevel() >= 26)
@@ -1501,7 +1474,7 @@ bool Mob::CanThisClassDoubleAttack(void)
 						//and are at the right level, and are NPC
 }
 
-bool Mob::IsWarriorClass(void)
+bool Mob::IsWarriorClass(void) const
 {
 	switch(GetClass())
 	{
@@ -1534,7 +1507,7 @@ bool Mob::IsWarriorClass(void)
 
 }
 
-bool Mob::CanThisClassParry(void)
+bool Mob::CanThisClassParry(void) const
 {
 	// Trumpcard
 	switch(GetClass()) // Lets make sure they are the right level! -image
@@ -1583,7 +1556,7 @@ bool Mob::CanThisClassParry(void)
 		return false;
 }
 
-bool Mob::CanThisClassDodge(void)
+bool Mob::CanThisClassDodge(void) const
 {
 	// Trumpcard
 	switch(GetClass()) // Lets make sure they are the right level! -image
@@ -1649,7 +1622,7 @@ bool Mob::CanThisClassDodge(void)
 		return false;
 }
 
-bool Mob::CanThisClassRiposte(void) //Could just check if they have the skill?
+bool Mob::CanThisClassRiposte(void) const //Could just check if they have the skill?
 {
 	// Trumpcard
 	switch(GetClass()) // Lets make sure they are the right level! -image
@@ -1700,7 +1673,7 @@ bool Mob::CanThisClassRiposte(void) //Could just check if they have the skill?
 		return false;
 }
 
-float Mob::Dist(const Mob &other) {
+float Mob::Dist(const Mob &other) const {
 	_ZP(Mob_Dist);
 	float xDiff = other.x_pos - x_pos;
 	float yDiff = other.y_pos - y_pos;
@@ -1711,7 +1684,7 @@ float Mob::Dist(const Mob &other) {
 		       + (zDiff * zDiff) );
 }
 
-float Mob::DistNoZ(const Mob &other) {
+float Mob::DistNoZ(const Mob &other) const {
 	_ZP(Mob_DistNoZ);
 	float xDiff = other.x_pos - x_pos;
 	float yDiff = other.y_pos - y_pos;
@@ -1720,7 +1693,7 @@ float Mob::DistNoZ(const Mob &other) {
 		       + (yDiff * yDiff) );
 }
 
-float Mob::DistNoRoot(const Mob &other) {
+float Mob::DistNoRoot(const Mob &other) const {
 	_ZP(Mob_DistNoRoot);
 	float xDiff = other.x_pos - x_pos;
 	float yDiff = other.y_pos - y_pos;
@@ -1731,7 +1704,7 @@ float Mob::DistNoRoot(const Mob &other) {
 	       + (zDiff * zDiff) );
 }
 
-float Mob::DistNoRootNoZ(const Mob &other) {
+float Mob::DistNoRootNoZ(const Mob &other) const {
 	_ZP(Mob_DistNoRootNoZ);
 	float xDiff = other.x_pos - x_pos;
 	float yDiff = other.y_pos - y_pos;
@@ -1855,10 +1828,10 @@ int32 Mob::RandomTimer(int min,int max) {
 	return r;
 }
 
-sint32 Mob::GetEquipment(int8 material_slot)
+int32 NPC::GetEquipment(int8 material_slot) const
 {
 	if(material_slot > 8)
-		return -1;
+		return 0;
 
 	return equipment[material_slot];
 }
@@ -1877,7 +1850,7 @@ void Mob::SendWearChange(int8 material_slot)
 	safe_delete(outapp);
 }
 
-sint32 Mob::GetEquipmentMaterial(int8 material_slot)
+sint32 Mob::GetEquipmentMaterial(int8 material_slot) const
 {
 	const Item_Struct *item;
 	
@@ -1902,7 +1875,7 @@ sint32 Mob::GetEquipmentMaterial(int8 material_slot)
 	return 0;
 }
 
-sint32 Mob::GetEquipmentColor(int8 material_slot)
+uint32 Mob::GetEquipmentColor(int8 material_slot) const
 {
 	const Item_Struct *item;
 	
@@ -2008,7 +1981,7 @@ void Mob::Warp( float x, float y, float z )
 
 }
 
-bool Mob::DivineAura()
+bool Mob::DivineAura() const
 {
 	uint32 l;
 	for (l = 0; l < BUFF_COUNT; l++)
@@ -2057,7 +2030,7 @@ bool Mob::SeeInvisible()
 	return false;
 }*/
 
-sint16 Mob::GetResist(int8 type)
+sint16 Mob::GetResist(int8 type) const
 {
 	if (IsNPC())
 	{

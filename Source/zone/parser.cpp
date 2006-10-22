@@ -443,6 +443,10 @@ void Parser::Event(QuestEventID event, int32 npcid, const char * data, NPC* npcm
 			SendCommands("event_attack", qstID, npcmob, mob);
 			break;
 		}
+		case EVENT_COMBAT: {
+			SendCommands("event_combat", qstID, npcmob, mob);
+			break;
+		}
 		case EVENT_SLAY: {
 			SendCommands("event_slay", qstID, npcmob, mob);
 			break;

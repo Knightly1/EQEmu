@@ -62,9 +62,19 @@ public:
 	virtual void	AI_Start(int32 iMoveDelay = 0);
 	virtual void	AI_Stop();
 	void			AI_DoMovement();
+	bool			AI_AddNPCSpells(int32 iDBSpellsID);
+	virtual bool	AI_EngagedCastCheck();
+	virtual bool	AI_PursueCastCheck();
+	virtual bool	AI_IdleCastCheck();
+	virtual void	AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot);
+	void AI_SetCastingTimerPtr(int32 *ptr) { pDontCastBefore_casting_spell = ptr; }
 	
 	virtual void SetTarget(Mob* mob);
+	virtual uint32 GetSkill(int skill_num) const { if (skill_num <= HIGHEST_SKILL) { return skills[skill_num + 1]; } return 0; }
+/*  virtual void SetSkill(int in_skill_num, int8 in_skill_value) { // socket 12-29-01
+        if (in_skill_num <= HIGHEST_SKILL) { skills[in_skill_num + 1] = in_skill_value; } }*/
 
+	
 #ifdef GUILDWARS
 	int32	GetGuildLocationID() { return guildlocationid; }
 #endif
@@ -131,7 +141,6 @@ public:
 	inline void	SetGold(uint32 amt)			{ gold = amt; }
 	inline void	SetPlatinum(uint32 amt)		{ platinum = amt; }
 
-	sint32 GetEquipmentMaterial(int8 material_slot);
 
 
 	void SetGrid(int32 grid_){ grid=grid_; }
@@ -156,7 +165,7 @@ public:
 //	inline int8	CurrentPosition() { return position; }
 
 	inline const sint32&	GetNPCFactionID()	{ return npc_faction_id; }
-	inline sint32			GetPrimaryFaction()	{ return primary_faction; }
+	inline sint32			GetPrimaryFaction()	const { return primary_faction; }
 	sint32	GetNPCHate(Mob* in_ent)  {return hate_list.GetEntHate(in_ent);}
     bool    IsOnHatelist(Mob*p) { return hate_list.IsOnHateList(p);}
 
@@ -191,6 +200,9 @@ public:
 	void				PauseWandering(int pausetime);
 	void				MoveTo(float mtx, float mty, float mtz);
 	
+	int32				GetEquipment(int8 material_slot) const;	// returns item id
+	sint32				GetEquipmentMaterial(int8 material_slot) const;
+	
 	void				NextGuardPosition();
 	void				SaveGuardSpot(bool iClearGuardSpot = false);
 	inline bool			IsGuarding() const { return(guard_heading != 0); }
@@ -207,6 +219,7 @@ public:
 	inline bool WillAggroNPCs() const { return(npc_aggro); }
 	
 	inline void GiveNPCTypeData(NPCType *ours) { NPCTypedata_ours = ours; }
+	inline const int32 GetNPCSpellsID()	const { return npc_spells_id; }
 	
 	ItemList	itemlist; //kathgar - why is this public?  Doing other things or I would check the code
 	
@@ -234,16 +247,36 @@ protected:
 	sint32	primary_faction;
 	
 	Timer	attacked_timer;
+	Timer	combat_event_timer;
     Timer	swarm_timer;
     Timer	classattack_timer;
     Timer	assist_timer;		//ask for help from nearby mobs
 
 	bool	attack_event;
+	bool	combat_event;
 
     bool	evader;
 //	int8	position;	// 0 - Standing, 1 - Sitting, 2 - Crouching, 4 - Looting
 	bool	pvp;
     Timer	sendhpupdate_timer;
+
+	int32	npc_spells_id;
+	struct AISpells_Struct {
+		int16	type;			// 0 = never, must be one (and only one) of the defined values
+		uint16	spellid;		// <= 0 = no spell
+		sint16	manacost;		// -1 = use spdat, -2 = no cast time
+		int32	time_cancast;	// when we can cast this spell next
+		sint32	recast_delay;
+		sint16	priority;
+	};
+	int8	casting_spell_AIindex;
+	Timer*	AIautocastspell_timer;
+	int32*	pDontCastBefore_casting_spell;
+	AISpells_Struct	AIspells[MAX_AISPELLS]; // expected to be pre-sorted, best at low index
+	void AddSpellToNPCList(AISpells_Struct* AIspells, sint16 iPriority, sint16 iSpellID, uint16 iType, sint16 iManaCost, sint32 iRecastDelay);
+	bool AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes);
+	void AIDoSpellCast(int8 i, Mob* tar, sint32 mana_cost, int32* oDontDoAgainBefore = 0);
+	
 	
 	int16	max_dmg;
 	int16	min_dmg;
@@ -274,6 +307,11 @@ protected:
 	float roambox_movingto_x;
 	float roambox_movingto_y;
 	int32 roambox_delay;
+	
+	int16    skills[HIGHEST_SKILL+1];
+	int32   equipment[MAX_MATERIALS];
+	int16	d_meele_texture1;
+	int16	d_meele_texture2;
 	
 private:
 	int32	loottable_id;

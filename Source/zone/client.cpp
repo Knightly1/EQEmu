@@ -91,7 +91,6 @@ Client::Client(EQStreamInterface* ieqs)
 	0,	// deity
 	0,	// level
 	0,	// npctypeid
-	0,	// skills
 	0,	// size
 	0.7,	// runspeed
 	0,	// heading
@@ -99,7 +98,6 @@ Client::Client(EQStreamInterface* ieqs)
 	0,	// y
 	0,	// z
 	0,	// light
-	NULL,	// equip
 	0xFF,	// texture
 	0xFF,	// helmtexture
 	0,	// ac
@@ -121,8 +119,6 @@ Client::Client(EQStreamInterface* ieqs)
 
 	0xff,	// Luclin Face
 	0xff,	// AA Title
-	0, // standart text1
-	0, // standart text2
 	0,	// see_invis
 	0, // see_invis_undead 
 	0	// qglobal
@@ -142,9 +138,8 @@ Client::Client(EQStreamInterface* ieqs)
 	ooc_timer(1000),
 	shield_timer(500),
 	fishing_timer(8000),
-	// EverHood 6/16/06
-	forget_timer(0),
 	endupkeep_timer(1000),
+	forget_timer(0),
 #ifdef REVERSE_AGGRO
 	scanarea_timer(AIClientScanarea_delay),
 #endif
@@ -227,7 +222,6 @@ Client::Client(EQStreamInterface* ieqs)
 	UpdateWindowTitle();
 	horseId = 0;
 	tgb = false;
-	AbilityTimer=false;
 	tribute_master_id = 0xFFFFFFFF;
 	tribute_timer.Disable();
 	

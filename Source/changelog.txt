@@ -1,6 +1,16 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==10/22/2006
+FatherNitwit: added EVENT_COMBAT triggered when an NPC engages any form of 
+FatherNitwit: 	combat and when combat is over. $combat_state signals which.
+FatherNitwit: Hopefully fixed d_meele_texture
+FatherNitwit: Cleaned up a lot of const related issues (attrs, AAs, and more)
+FatherNitwit: Moved a lot of NPC specific stuff from Mob into NPC
+FatherNitwit: Reworked special attacks a bit (monk, kick, backstab):
+FatherNitwit:   they now use the standard combat hit chance forumals based on offense/defense instead of always hitting
+FatherNitwit:   they are now subject to damage avoidance (parry, riposte, etc.) like normal attacks
+
 ==10/21/2006
 FatherNitwit: Hopefully fixed spawn timer variance.
 

@@ -33,7 +33,7 @@
 
 
 // Return max stat value for level
-sint16 Client::GetMaxStat() {
+sint16 Client::GetMaxStat() const {
 	int level = GetLevel();
 	
 	sint16 base = 0;
@@ -53,25 +53,25 @@ sint16 Client::GetMaxStat() {
 	return(base);
 }
 
-sint16 Client::GetMaxSTR() {
+sint16 Client::GetMaxSTR() const {
 	return GetMaxStat();
 }
-sint16 Client::GetMaxSTA() {
+sint16 Client::GetMaxSTA() const {
 	return GetMaxStat();
 }
-sint16 Client::GetMaxDEX() {
+sint16 Client::GetMaxDEX() const {
 	return GetMaxStat();
 }
-sint16 Client::GetMaxAGI() {
+sint16 Client::GetMaxAGI() const {
 	return GetMaxStat();
 }
-sint16 Client::GetMaxINT() {
+sint16 Client::GetMaxINT() const {
 	return GetMaxStat();
 }
-sint16 Client::GetMaxWIS() {
+sint16 Client::GetMaxWIS() const {
 	return GetMaxStat();
 }
-sint16 Client::GetMaxCHA() {
+sint16 Client::GetMaxCHA() const {
 	return GetMaxStat();
 }
 
@@ -1366,7 +1366,7 @@ int16  Client::CalcATK() {
 	return(ATK);
 }
 
-int16 Mob::GetInstrumentMod(int16 spell_id) {
+int16 Mob::GetInstrumentMod(int16 spell_id) const {
 	if(GetClass() != BARD)
 		return(10);
 	

@@ -2011,10 +2011,10 @@ void command_ai(Client *c, const Seperator *sep)
 	}
 	else if (strcasecmp(sep->arg[1], "spellslist") == 0) {
 		if (target && sep->IsNumber(2) && atoi(sep->arg[2]) >= 0) {
-			if (target->IsAIControlled())
-				target->AI_AddNPCSpells(atoi(sep->arg[2]));
+			if (target->IsNPC())
+				target->CastToNPC()->AI_AddNPCSpells(atoi(sep->arg[2]));
 			else
-				c->Message(0, "%s is not AI Controlled.", target->GetName());
+				c->Message(0, "%s is not an NPC.", target->GetName());
 		}
 		else
 			c->Message(0, "Usage: (targeted) #ai spellslist [npc_spells_id]");
@@ -2452,8 +2452,11 @@ void command_setlanguage(Client *c, const Seperator *sep)
 
 void command_setskill(Client *c, const Seperator *sep)
 {
-	if (c->GetTarget() == 0) {
+	if (c->GetTarget() == NULL) {
 		c->Message(0, "Error: #setskill: No target.");
+	}
+	else if (!c->GetTarget()->IsClient()) {
+		c->Message(0, "Error: #setskill: Target must be a client.");
 	}
 	else if (	
 						!sep->IsNumber(1) || atoi(sep->arg[1]) < 0 || atoi(sep->arg[1]) > 73 ||
@@ -2469,7 +2472,7 @@ void command_setskill(Client *c, const Seperator *sep)
 		LogFile->write(EQEMuLog::Normal,"Set skill request from %s, target:%s skill_id:%i value:%i", c->GetName(), c->GetTarget()->GetName(), atoi(sep->arg[1]), atoi(sep->arg[2]) );
 		int skill_num = atoi(sep->arg[1]);
 		int8 skill_id = (int8)atoi(sep->arg[2]);
-		c->GetTarget()->SetSkill(skill_num, skill_id);
+		c->GetTarget()->CastToClient()->SetSkill(skill_num, skill_id);
 	}
 }
 
@@ -2477,6 +2480,8 @@ void command_setskillall(Client *c, const Seperator *sep)
 {
 	if (c->GetTarget() == 0)
 		c->Message(0, "Error: #setallskill: No target.");
+	else if (!c->GetTarget()->IsClient())
+		c->Message(0, "Error: #setskill: Target must be a client.");
 	else if (!sep->IsNumber(1) || atoi(sep->arg[1]) < 0 || atoi(sep->arg[1]) > 252) {
 		c->Message(0, "Usage: #setskillall value ");
 		c->Message(0, "       value = 0 to 252");
@@ -2486,7 +2491,7 @@ void command_setskillall(Client *c, const Seperator *sep)
 			LogFile->write(EQEMuLog::Normal,"Set ALL skill request from %s, target:%s", c->GetName(), c->GetTarget()->GetName());
 			int8 level = atoi(sep->arg[1]);
 			for(int skill_num=0;skill_num <= HIGHEST_SKILL;skill_num++) {
-				c->GetTarget()->SetSkill(skill_num, level);
+				c->GetTarget()->CastToClient()->SetSkill(skill_num, level);
 			}
 		}
 		else

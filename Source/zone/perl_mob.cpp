@@ -630,31 +630,6 @@ XS(XS_Mob_SetLevel)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_Mob_SetSkill); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_SetSkill)
-{
-	dXSARGS;
-	if (items != 3)
-		Perl_croak(aTHX_ "Usage: Mob::SetSkill(THIS, in_skill_num, in_skill_value)");
-	{
-		Mob *		THIS;
-		int		in_skill_num = (int)SvIV(ST(1));
-		int8		in_skill_value = (int8)SvUV(ST(2));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->SetSkill(in_skill_num, in_skill_value);
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_Mob_GetSkill); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_GetSkill)
 {
@@ -2838,32 +2813,6 @@ XS(XS_Mob_GetNPCTypeID)
 			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetNPCTypeID();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_GetNPCSpellsID); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetNPCSpellsID)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetNPCSpellsID(THIS)");
-	{
-		Mob *		THIS;
-		int32		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetNPCSpellsID();
 		XSprePUSH; PUSHu((UV)RETVAL);
 	}
 	XSRETURN(1);
@@ -5842,7 +5791,6 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "RogueAssassinate"), XS_Mob_RogueAssassinate, file, "$$");
 		newXSproto(strcpy(buf, "BehindMob"), XS_Mob_BehindMob, file, "$;$$$");
 		newXSproto(strcpy(buf, "SetLevel"), XS_Mob_SetLevel, file, "$$;$");
-		newXSproto(strcpy(buf, "SetSkill"), XS_Mob_SetSkill, file, "$$$");
 		newXSproto(strcpy(buf, "GetSkill"), XS_Mob_GetSkill, file, "$$");
 		newXSproto(strcpy(buf, "SendWearChange"), XS_Mob_SendWearChange, file, "$$");
 		newXSproto(strcpy(buf, "GetEquipment"), XS_Mob_GetEquipment, file, "$$");
@@ -5922,7 +5870,6 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "ResistSpell"), XS_Mob_ResistSpell, file, "$$$$");
 		newXSproto(strcpy(buf, "GetSpecializeSkill"), XS_Mob_GetSpecializeSkill, file, "$$");
 		newXSproto(strcpy(buf, "GetNPCTypeID"), XS_Mob_GetNPCTypeID, file, "$");
-		newXSproto(strcpy(buf, "GetNPCSpellsID"), XS_Mob_GetNPCSpellsID, file, "$");
 		newXSproto(strcpy(buf, "IsTargeted"), XS_Mob_IsTargeted, file, "$");
 		newXSproto(strcpy(buf, "GetX"), XS_Mob_GetX, file, "$");
 		newXSproto(strcpy(buf, "GetY"), XS_Mob_GetY, file, "$");

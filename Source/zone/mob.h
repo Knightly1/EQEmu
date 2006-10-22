@@ -258,21 +258,14 @@ class MobFearState;
 #define MAX_AISPELLS 16
 class Mob : public Entity
 {
+	friend class NPC;	//why do I have to do this for a child to access protected members with ->?
 public:
 bool logpos;
 	enum CLIENT_CONN_STATUS { CLIENT_CONNECTING, CLIENT_CONNECTED, CLIENT_LINKDEAD,
                           CLIENT_KICKED, DISCONNECTED, CLIENT_ERROR, CLIENT_CONNECTINGALL };
 	enum eStandingPetOrder { SPO_Follow, SPO_Sit, SPO_Guard };
-	struct AISpells_Struct {
-		int16	type;			// 0 = never, must be one (and only one) of the defined values
-		sint16	spellid;		// <= 0 = no spell
-		sint16	manacost;		// -1 = use spdat, -2 = no cast time
-		int32	time_cancast;	// when we can cast this spell next
-		sint32	recast_delay;
-		sint16	priority;
-	};
-	bool	IsFullHP;
-	bool	moved;
+
+	//all of this shit is public due to #pf:
 	float	tarx;
 	float	tary;
 	float	tarz;
@@ -282,25 +275,26 @@ bool logpos;
 	float	tar_vy;
 	float	tar_vz;
 	float	test_vector;
+	
 
 	int32	GetPRange(float x, float y, float z);
 	static	int32	RandomTimer(int min, int max);
 	static	int8	GetDefaultGender(int16 in_race, int8 in_gender = 0xFF);
 	static	void	CreateSpawnPacket(EQApplicationPacket* app, NewSpawn_Struct* ns);
 //	static	int		CheckEffectIDMatch(int8 effectindex, int16 spellid1, int8 caster_level1, int16 spellid2, int8 caster_level2);
-			int8	MaxSkill(int16 skillid, int16 class_, int16 level);
-    inline	int8	MaxSkill(int16 skillid) { return MaxSkill(skillid, GetClass(), GetLevel()); }
+	int16	MaxSkill(int16 skillid, int16 class_, int16 level) const;
+    inline	int16	MaxSkill(int16 skillid) const { return MaxSkill(skillid, GetClass(), GetLevel()); }
     // Util functions for MaxSkill
-    int8	MaxSkill_weapon(int16 skillid, int16 class_, int16 level);
-    int8	MaxSkill_offensive(int16 skillid, int16 class_, int16 level);
-    int8	MaxSkill_defensive(int16 skillid, int16 class_, int16 level);
-    int8	MaxSkill_arcane(int16 skillid, int16 class_, int16 level);
-    int8	MaxSkill_class(int16 skillid, int16 class_, int16 level);
+    int16	MaxSkill_weapon(int16 skillid, int16 class_, int16 level) const;
+    int16	MaxSkill_offensive(int16 skillid, int16 class_, int16 level) const;
+    int16	MaxSkill_defensive(int16 skillid, int16 class_, int16 level) const;
+    int16	MaxSkill_arcane(int16 skillid, int16 class_, int16 level) const;
+    int16	MaxSkill_class(int16 skillid, int16 class_, int16 level) const;
 	
 	
 	void	RogueBackstab(Mob* other, const Item_Struct* weapon, int8 bs_skill, bool min_damage = false);
 	void	RogueAssassinate(Mob* other); // solar
-	bool	BehindMob(Mob* other = 0, float playerx = 0.0f, float playery = 0.0f);
+	bool	BehindMob(Mob* other = 0, float playerx = 0.0f, float playery = 0.0f) const;
 	
 	Mob(const char*   in_name,
 	    const char*   in_lastname,
@@ -313,7 +307,6 @@ bool logpos;
 	    int8    in_deity,
 	    int8    in_level,
 		int32   in_npctype_id, // rembrant, Dec. 20, 2001
-		const int8*	in_skills, // socket 12-29-01
 		float	in_size,
 		float	in_runspeed,
 	    float   in_heading,
@@ -321,7 +314,6 @@ bool logpos;
 	    float	in_y_pos,
 	    float	in_z_pos,
 	    int8    in_light,
-	    const	int32* in_equipment,
 		int8	in_texture,
 		int8	in_helmtexture,
 		int16	in_ac,
@@ -343,8 +335,6 @@ bool logpos;
 		int8	in_beard,
 		int8	in_aa_title,
 		
-		int16	in_d_meele_texture1,
-		int16	in_d_meele_texture2,
 		int8	in_see_invis,			// Mongrel: see through invis
 		int8	in_see_invis_undead,		// Mongrel: see through invis vs. undead
 		int8	in_qglobal
@@ -353,21 +343,19 @@ bool logpos;
 	virtual ~Mob();
 	
 	inline virtual bool IsMob() const { return true; }
-	inline virtual bool InZone() { return true; }
+	inline virtual bool InZone() const { return true; }
 	void	BuffProcess();
 	virtual void SetLevel(uint8 in_level, bool command = false) { level = in_level; }
 	
 	virtual inline sint32 GetPrimaryFaction() { return 0; }
-	virtual void SetSkill(int in_skill_num, int8 in_skill_value) { // socket 12-29-01
-		if (in_skill_num <= HIGHEST_SKILL) { skills[in_skill_num + 1] = in_skill_value; } }
-	virtual uint32 GetSkill(int skill_num) { if (skill_num <= HIGHEST_SKILL) { return skills[skill_num + 1]; } return 0; } // socket 12-29-01
+	virtual uint32 GetSkill(int skill_num) const { return 0; } //overloaded by things which actually have skill (NPC|client)
 	virtual void SendWearChange(int8 material_slot);
-	virtual sint32 GetEquipment(int8 material_slot);	// returns item id
-	virtual sint32 GetEquipmentMaterial(int8 material_slot);
-	virtual sint32 GetEquipmentColor(int8 material_slot);
+	virtual int32 GetEquipment(int8 material_slot) const { return(0); }
+	virtual sint32 GetEquipmentMaterial(int8 material_slot) const;
+	virtual uint32 GetEquipmentColor(int8 material_slot) const;
 
 	void Warp( float x, float y, float z );
-	inline virtual bool IsMoving() { return moving; }
+	inline bool IsMoving() const { return moving; }
 	virtual void SetMoving(bool move) { moving = move; delta_x=0; delta_y=0; delta_z=0; delta_heading=0; }
 	virtual void GoToBind() {}
 	virtual void Gate();
@@ -378,10 +366,9 @@ bool logpos;
 	virtual void SetMaxHP() { cur_hp = max_hp; }
 	virtual void Death(Mob* killer, sint32 damage, int16 spell_id = 0xFFFF, int8 attack_skill = 0x04) {}
 	static int32 GetLevelCon(int8 mylevel, int8 iOtherLevel);
-	inline int32 GetLevelCon(int8 iOtherLevel) { return(this?GetLevelCon(GetLevel(), iOtherLevel):CON_GREEN); }
+	inline int32 GetLevelCon(int8 iOtherLevel) const { return(this?GetLevelCon(GetLevel(), iOtherLevel):CON_GREEN); }
 	
 	inline virtual void SetHP(sint32 hp) { if (hp >= max_hp) cur_hp = max_hp; else cur_hp = hp;} 
-	int16   equipment[9];
 	bool ChangeHP(Mob* other, sint32 amount, int16 spell_id = 0, sint8 buffslot = -1, bool iBuffTic = false);
 	int MonkSpecialAttack(Mob* other, int8 skill_used);
 	void TryBackstab(Mob *other, const Item_Struct* weapon);
@@ -404,15 +391,15 @@ bool logpos;
 		
 	bool AddProcToWeapon(int16 spell_id, bool bPerma = false, int8 iChance = 3);
 	bool RemoveProcFromWeapon(int16 spell_id, bool bAll = false);
-	bool HasProcs();
+	bool HasProcs() const;
 	
-	inline bool SeeInvisible() { return see_invis; }				// Mongrel: Now using the flags
-	inline bool SeeInvisibleUndead() { return see_invis_undead; }   // Mongrel: Now using the flags
+	inline bool SeeInvisible() const { return see_invis; }				// Mongrel: Now using the flags
+	inline bool SeeInvisibleUndead() const { return see_invis_undead; }   // Mongrel: Now using the flags
 	bool CheckLos(Mob* other);
 	bool CheckLosFN(Mob* other);
-	inline bool GetQglobal() {return qglobal;}		// SCORPIOUS2K - return quest global flag
+	inline bool GetQglobal() const {return qglobal;}		// SCORPIOUS2K - return quest global flag
 
-	bool IsInvisible(Mob* other = 0);
+	bool IsInvisible(Mob* other = 0) const;
 	void SetInvisible(bool state);
    
 	bool AttackAnimation(int &attack_skill, int16 &skillinuse, int Hand, const ItemInst* weapon);
@@ -431,9 +418,9 @@ bool logpos;
 	bool	CombatRange(Mob* other);
 //	int8	flag[60];		//this is for quests or something...
 	
-	virtual inline int16	GetBaseRace()		{ return base_race; }
-	virtual inline int8	GetBaseGender()		{ return base_gender; }
-	virtual inline int8	GetDeity()			{ return deity; }
+	virtual inline int16	GetBaseRace()	const { return base_race; }
+	virtual inline int8	GetBaseGender()		const { return base_gender; }
+	virtual inline int8	GetDeity()			const { return deity; }
 	inline int16	GetRace()				const { return race; }
 	inline int8	GetGender()					const { return gender; }
 	inline int8	GetTexture()				const { return texture; }
@@ -444,55 +431,55 @@ bool logpos;
 	const char *GetCleanName();
 	inline Mob*			GetTarget()			const { return target; }
 	virtual inline void	SetTarget(Mob* mob)	{ target = mob; }
-	virtual inline float		GetHPRatio()		{ return max_hp == 0 ? 0 : ((float)cur_hp/max_hp*100); }
+	virtual inline float		GetHPRatio() const { return max_hp == 0 ? 0 : ((float)cur_hp/max_hp*100); }
 	
 	bool IsLoggingEnabled() const { return(logging_enabled); }
 	void EnableLogging() { logging_enabled = true; }
 	void DisableLogging() { logging_enabled = false; }
-	bool IsWarriorClass();
+	bool IsWarriorClass() const;
 	bool IsAttackAllowed(Mob *target);
 	bool IsBeneficialAllowed(Mob *target);
 	
-	virtual inline const sint32&	GetHP()			{ return cur_hp; }
-	virtual inline const sint32&	GetMaxHP()		{ return max_hp; }
-	virtual inline sint32			CalcMaxHP()		{ return max_hp = (base_hp  + itembonuses.HP + spellbonuses.HP); }
+	inline sint32	GetHP()			const { return cur_hp; }
+	inline sint32	GetMaxHP()		const { return max_hp; }
+	virtual inline sint32	CalcMaxHP()		{ return max_hp = (base_hp  + itembonuses.HP + spellbonuses.HP); }
 	float GetWalkspeed() const { return(_GetMovementSpeed(-47)); }
 	float GetRunspeed() const { return(_GetMovementSpeed(0)); }
 	virtual int GetCasterLevel(int16 spell_id);
 	void ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newbon, int16 casterID = 0);
 	
-	virtual inline const sint32&	GetMaxMana()	{ return max_mana; }
-	virtual inline const sint32&	GetMana()		{ return cur_mana; }
+	inline sint32	GetMaxMana()	const { return max_mana; }
+	inline sint32	GetMana()		const { return cur_mana; }
 	virtual const sint32& SetMana(sint32 amount);
-	virtual inline float			GetManaRatio()	{ return max_mana == 0 ? 100 : (((float)cur_mana/max_mana)*100); }
+	inline float	GetManaRatio()	const { return max_mana == 0 ? 100 : (((float)cur_mana/max_mana)*100); }
 	void			SetZone(int32 zone_id);
 	
 	// neotokyo: moved from client to use in NPC too
-	char GetCasterClass();
+	char GetCasterClass() const;
 	virtual sint32 CalcMaxMana();
 	
-	inline virtual int16	GetAC()		{ return AC + itembonuses.AC + spellbonuses.AC; } // Quagmire - this is NOT the right math
-	inline virtual int16	GetATK()	{ return ATK + itembonuses.ATK + spellbonuses.ATK; }
-	inline virtual sint16	GetSTR()	{ return STR + itembonuses.STR + spellbonuses.STR; }
-	inline virtual sint16	GetSTA()	{ return STA + itembonuses.STA + spellbonuses.STA; }
-	inline virtual sint16	GetDEX()	{ return DEX + itembonuses.DEX + spellbonuses.DEX; }
-	inline virtual sint16	GetAGI()	{ return AGI + itembonuses.AGI + spellbonuses.AGI; }
-	inline virtual sint16	GetINT()	{ return INT + itembonuses.INT + spellbonuses.INT; }
-	inline virtual sint16	GetWIS()	{ return WIS + itembonuses.WIS + spellbonuses.WIS; }
-	inline virtual sint16	GetCHA()	{ return CHA + itembonuses.CHA + spellbonuses.CHA; }
-	inline virtual sint16	GetMR() { return MR + itembonuses.MR + spellbonuses.MR; }
-	inline virtual sint16	GetFR()	{ return FR + itembonuses.FR + spellbonuses.FR; }
-	inline virtual sint16	GetDR()	{ return DR + itembonuses.DR + spellbonuses.DR; }
-	inline virtual sint16	GetPR()	{ return PR + itembonuses.PR + spellbonuses.PR; }
-	inline virtual sint16	GetCR() { return CR + itembonuses.CR + spellbonuses.CR; }
+	inline virtual int16	GetAC()		const { return AC + itembonuses.AC + spellbonuses.AC; } // Quagmire - this is NOT the right math
+	inline virtual int16	GetATK()	const { return ATK + itembonuses.ATK + spellbonuses.ATK; }
+	inline virtual sint16	GetSTR()	const { return STR + itembonuses.STR + spellbonuses.STR; }
+	inline virtual sint16	GetSTA()	const { return STA + itembonuses.STA + spellbonuses.STA; }
+	inline virtual sint16	GetDEX()	const { return DEX + itembonuses.DEX + spellbonuses.DEX; }
+	inline virtual sint16	GetAGI()	const { return AGI + itembonuses.AGI + spellbonuses.AGI; }
+	inline virtual sint16	GetINT()	const { return INT + itembonuses.INT + spellbonuses.INT; }
+	inline virtual sint16	GetWIS()	const { return WIS + itembonuses.WIS + spellbonuses.WIS; }
+	inline virtual sint16	GetCHA()	const { return CHA + itembonuses.CHA + spellbonuses.CHA; }
+	inline virtual sint16	GetMR() const { return MR + itembonuses.MR + spellbonuses.MR; }
+	inline virtual sint16	GetFR()	const { return FR + itembonuses.FR + spellbonuses.FR; }
+	inline virtual sint16	GetDR()	const { return DR + itembonuses.DR + spellbonuses.DR; }
+	inline virtual sint16	GetPR()	const { return PR + itembonuses.PR + spellbonuses.PR; }
+	inline virtual sint16	GetCR() const { return CR + itembonuses.CR + spellbonuses.CR; }
 	
-	inline virtual sint16  GetMaxSTR() { return GetSTR(); }
-	inline virtual sint16  GetMaxSTA() { return GetSTA(); }
-	inline virtual sint16  GetMaxDEX() { return GetDEX(); }
-	inline virtual sint16  GetMaxAGI() { return GetAGI(); }
-	inline virtual sint16  GetMaxINT() { return GetINT(); }
-	inline virtual sint16  GetMaxWIS() { return GetWIS(); }
-	inline virtual sint16  GetMaxCHA() { return GetCHA(); }
+	inline virtual sint16  GetMaxSTR() const { return GetSTR(); }
+	inline virtual sint16  GetMaxSTA() const { return GetSTA(); }
+	inline virtual sint16  GetMaxDEX() const { return GetDEX(); }
+	inline virtual sint16  GetMaxAGI() const { return GetAGI(); }
+	inline virtual sint16  GetMaxINT() const { return GetINT(); }
+	inline virtual sint16  GetMaxWIS() const { return GetWIS(); }
+	inline virtual sint16  GetMaxCHA() const { return GetCHA(); }
 	
 	virtual float GetActSpellRange(int16 spell_id, float range){ return range;}
 	virtual sint32  GetActSpellDamage(int16 spell_id, sint32 value) { return value; }
@@ -505,27 +492,26 @@ bool logpos;
 	
 	void ShowStats(Client* client);
 	void ShowBuffs(Client* client);
-	int32 GetNPCTypeID()			{ return npctype_id; } // rembrant, Dec. 20, 2001
-	inline const int32& GetNPCSpellsID()	{ return npc_spells_id; }
+	int32 GetNPCTypeID()			const { return npctype_id; } // rembrant, Dec. 20, 2001
 	
-	float Dist(const Mob &);
-	float DistNoZ(const Mob &);
-	float DistNoRoot(const Mob &);
-	float DistNoRootNoZ(const Mob &);
+	float Dist(const Mob &) const;
+	float DistNoZ(const Mob &) const;
+	float DistNoRoot(const Mob &) const;
+	float DistNoRootNoZ(const Mob &) const;
 	
-	bool IsTargeted() { return targeted; }
+	bool IsTargeted() const { return targeted; }
 	void IsTargeted(bool in_tar) { targeted = in_tar; }
 
-	inline const float&	GetX()				{ return x_pos; }
-	inline const float&	GetY()				{ return y_pos; }
-	inline const float&	GetZ()				{ return z_pos; }
-	inline const float&	GetHeading()		{ return heading; }
-	inline const float&	GetSize()			{ return size; }
+	inline const float	GetX() const		{ return x_pos; }
+	inline const float	GetY() const		{ return y_pos; }
+	inline const float	GetZ() const		{ return z_pos; }
+	inline const float	GetHeading() const	{ return heading; }
+	inline const float	GetSize() const		{ return size; }
 	inline void			SetChanged()		{ pLastChange = Timer::GetCurrentTime(); }
-	inline const int32&	LastChange()		{ return pLastChange; }
+	inline const int32	LastChange() const	{ return pLastChange; }
 	
 	void	SetFollowID(int32 id) { follow = id; }
-	int32	GetFollowID()		  { return follow; }
+	int32	GetFollowID()		  const { return follow; }
 	
 	virtual void	Message(int32 type, const char* message, ...) {} // fake so dont have to worry about typecasting
 	virtual void	Message_StringID(int32 type, int32 string_id, int32 distance = 0) {}
@@ -562,8 +548,8 @@ bool logpos;
 	void	BuffFadeDetrimental();
 	void	BuffFadeBySlot(int slot, bool iRecalcBonuses = true);
 	int		CanBuffStack(int16 spellid, int8 caster_level, bool iFailIfOverwrite = false);
-	inline	bool	IsCasting() { return((casting_spell_id != 0)); }
-	int16	CastingSpellID() { return casting_spell_id; }
+	inline	bool	IsCasting() const { return((casting_spell_id != 0)); }
+	int16	CastingSpellID() const { return casting_spell_id; }
 	float	GetAOERange(uint16 spell_id);
 	
 // vesuvias - appearence fix
@@ -573,7 +559,7 @@ bool logpos;
 	void	SendAppearancePacket(int32 type, int32 value, bool WholeZone = true, bool iIgnoreSelf = false, Client *specific_target=NULL);
 	void	SetAppearance(EmuAppearance app, bool iIgnoreSelf = true);
 	inline EmuAppearance	GetAppearance()	const { return _appearance; }
-	inline const int8&	GetRunAnimSpeed()			{ return pRunAnimSpeed; }
+	inline const int8	GetRunAnimSpeed()	const { return pRunAnimSpeed; }
 	inline void			SetRunAnimSpeed(sint8 in)	{ if (pRunAnimSpeed != in) { pRunAnimSpeed = in; pLastChange = Timer::GetCurrentTime(); } }
 	
 	Mob*	GetPet();
@@ -622,11 +608,11 @@ bool logpos;
 	int		GetWeaponDamageBonus(const Item_Struct* Weapon);
 	int		GetMonkHandToHandDamage(void);
 	
-	bool	CanThisClassDoubleAttack(void);
-	bool	CanThisClassDualWield(void);
-	bool	CanThisClassRiposte(void);
-	bool	CanThisClassDodge(void);
-	bool	CanThisClassParry(void);
+	bool	CanThisClassDoubleAttack(void) const;
+	bool	CanThisClassDualWield(void) const;
+	bool	CanThisClassRiposte(void) const;
+	bool	CanThisClassDodge(void) const;
+	bool	CanThisClassParry(void) const;
 	
 	int	GetMonkHandToHandDelay(void);
 	int8	GetClassLevelFactor();
@@ -645,10 +631,8 @@ bool logpos;
    	inline int16 GetMagicRune() const { return magicrune; }
 	void	SetMagicRune(int16 in_rune) { magicrune = in_rune; }
 	
-    bool SpecAttacks[SPECATK_MAXNUM];
 #define MAX_RAMPAGE_TARGETS 3
 #define MAX_FLURRY_HITS 2
-    char RampageArray[MAX_RAMPAGE_TARGETS][64];
     bool Flurry();
     bool Rampage();
     bool AddRampage(Mob*);
@@ -663,19 +647,15 @@ bool logpos;
 	void				AI_Process();
 	void				AI_Event_Engaged(Mob* attacker, bool iYellForHelp = true);
 	void				AI_Event_NoLongerEngaged();
-	void				AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot);
-	bool				AI_AddNPCSpells(int32 iDBSpellsID);
 	
 	FACTION_VALUE		GetSpecialFactionCon(Mob* iOther);
 	inline const bool	IsAIControlled() const { return pAIControlled; }
-	inline const float GetAggroRange() { return (spellbonuses.AggroRange == -1) ? pAggroRange : spellbonuses.AggroRange; }
-	inline const float GetAssistRange() { return (spellbonuses.AssistRange == -1) ? pAssistRange : spellbonuses.AssistRange; }
+	inline const float GetAggroRange() const { return (spellbonuses.AggroRange == -1) ? pAggroRange : spellbonuses.AggroRange; }
+	inline const float GetAssistRange() const { return (spellbonuses.AssistRange == -1) ? pAssistRange : spellbonuses.AssistRange; }
 
 	
-	bool				AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes);
-	void				AIDoSpellCast(int8 i, Mob* tar, sint32 mana_cost, int32* oDontDoAgainBefore = 0);
 	inline void			SetPetOrder(eStandingPetOrder i) { pStandingPetOrder = i; }
-	inline const eStandingPetOrder& GetPetOrder() { return pStandingPetOrder; }
+	inline const eStandingPetOrder GetPetOrder() const { return pStandingPetOrder; }
 	inline const bool	IsRoamer() const { return roamer; }
 	inline const bool   IsRooted() const { return rooted || permarooted; }
 
@@ -718,75 +698,74 @@ bool logpos;
 	void				SendTo(float new_x, float new_y, float new_z);
 	void				SendToFixZ(float new_x, float new_y, float new_z);
 	void				NPCSpecialAttacks(const char* parse, int permtag);
-	inline int32&		DontHealMeBefore() { return pDontHealMeBefore; }
-	inline int32&		DontBuffMeBefore() { return pDontBuffMeBefore; }
-	inline int32&		DontDotMeBefore() { return pDontDotMeBefore; }
-	inline int32&		DontRootMeBefore() { return pDontRootMeBefore; }
-	inline int32&		DontSnareMeBefore() { return pDontSnareMeBefore; }
+	inline int32		DontHealMeBefore() const { return pDontHealMeBefore; }
+	inline int32		DontBuffMeBefore() const { return pDontBuffMeBefore; }
+	inline int32		DontDotMeBefore() const { return pDontDotMeBefore; }
+	inline int32		DontRootMeBefore() const { return pDontRootMeBefore; }
+	inline int32		DontSnareMeBefore() const { return pDontSnareMeBefore; }
 	
 	// calculate interruption of spell via movement of mob
 	void SaveSpellLoc() {spell_x = x_pos; spell_y = y_pos; spell_z = z_pos; }
-	inline float GetSpellX() {return spell_x;}
-	inline float GetSpellY() {return spell_y;}
-	inline float GetSpellZ() {return spell_z;}
-	inline bool	IsGrouped()	{ return isgrouped; } //Why have an accessor for a public variable?
+	inline float GetSpellX() const {return spell_x;}
+	inline float GetSpellY() const {return spell_y;}
+	inline float GetSpellZ() const {return spell_z;}
+	inline bool	IsGrouped()	 const { return isgrouped; }
+	void SetGrouped(bool v) { isgrouped = v; }
 	
 	bool CheckWillAggro(Mob *mob);
 	
 	void	InstillDoubt(Mob *who);
-	sint16	GetResist(int8 type);
-	Mob*	GetShieldTarget()			{ return shield_target; }
+	sint16	GetResist(int8 type) const;
+	Mob*	GetShieldTarget()			const { return shield_target; }
 	void	SetShieldTarget(Mob* mob)	{ shield_target = mob; }
 //	Mob*	GetSongTarget()			{ return bardsong_target; }
 //	void	SetSongTarget(Mob* mob)	{ bardsong_target = mob; }
 	bool	HasActiveSong() const { return(bardsong != 0); }
-	bool	Charmed() { return charmed; }
-	int32	GetLevelHP(int8 tlevel);
+	bool	Charmed() const { return charmed; }
+	static int32	GetLevelHP(int8 tlevel);
 	int32	GetZoneID() const;	//for perl
 	int16	CheckAggroAmount(int16 spellid);
 	int16	CheckHealAggroAmount(int16 spellid);
-	virtual int32 GetAA(int32 aa_id) { return(0); }
+	virtual int32 GetAA(int32 aa_id) const { return(0); }
 	
-	int16	GetInstrumentMod(int16 spell_id);
+	int16	GetInstrumentMod(int16 spell_id) const;
 	int CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level = 1, Mob *caster = NULL);
 	int CalcSpellEffectValue_formula(int formula, int base, int max, int caster_level, int16 spell_id);
 	int CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, int caster_level2, Mob* caster1 = NULL, Mob* caster2 = NULL);
 
-	inline EGNode *GetEGNode() { return(_egnode); }
-	inline void SetEGNode(EGNode *s) { _egnode = s; }
+//	inline EGNode *GetEGNode() { return(_egnode); }
+//	inline void SetEGNode(EGNode *s) { _egnode = s; }
 	
-	bool	isgrouped; //These meant to be private?
-	bool	pendinggroup;
-	int16	d_meele_texture1;
-	int16	d_meele_texture2;
-	int8	texture;
-	int8	helmtexture;
-	Shielders_Struct shielder[MAX_SHIELDERS];
-	
-	Trade* trade;
 	
   // HP Event 
-   inline int& GetNextHPEvent() { return nexthpevent; } 
+   inline int GetNextHPEvent() const { return nexthpevent; } 
    void SetNextHPEvent( int hpevent );
 	void SendItemAnimation(Mob *to, const Item_Struct *item);
 	inline int& GetNextIncHPEvent() { return nextinchpevent; }
 	void SetNextIncHPEvent( int inchpevent );
 	
-	bool DivineAura();
+	bool DivineAura() const;
+    bool SpecAttacks[SPECATK_MAXNUM];
+	Shielders_Struct shielder[MAX_SHIELDERS];
+	Trade* trade;
 	
 	//temporary:
 	bool fix_pathing;
-	inline float GetCWPX() { return(cur_wp_x); }
-	inline float GetCWPY() { return(cur_wp_y); }
-	inline float GetCWPZ() { return(cur_wp_z); }
-	inline float GetCWPP() { return(cur_wp_pause); }
-	inline int GetCWP() { return(cur_wp); }
+	inline float GetCWPX() const { return(cur_wp_x); }
+	inline float GetCWPY() const { return(cur_wp_y); }
+	inline float GetCWPZ() const { return(cur_wp_z); }
+	inline float GetCWPP() const { return(cur_wp_pause); }
+	inline int GetCWP() const { return(cur_wp); }
 	virtual FACTION_VALUE GetReverseFactionCon(Mob* iOther) { return FACTION_INDIFFERENT; }
 	
 protected:
 	void CommonDamage(Mob* other, sint32 &damage, const int16 spell_id, const int8 attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic);
 	static uint16 GetProcID(uint16 spell_id, uint8 effect_index);
 	float _GetMovementSpeed(int mod) const;
+
+	virtual bool AI_EngagedCastCheck() { return(false); }
+	virtual bool AI_PursueCastCheck() { return(false); }
+	virtual bool AI_IdleCastCheck() { return(false); }
 	
 	//used by mlog() for VC6
 	#ifdef NO_VARIADIC_MACROS
@@ -794,6 +773,15 @@ protected:
 	void mob_hex(LogType type, const char *data, unsigned long length, unsigned char padding=4);
 	#endif
 	
+	bool	IsFullHP;
+	bool	moved;
+	
+    char RampageArray[MAX_RAMPAGE_TARGETS][64];
+	
+	bool	isgrouped; //These meant to be private?
+	bool	pendinggroup;
+	int8	texture;
+	int8	helmtexture;
 	
 	int	AC;
 	sint16	ATK;
@@ -838,7 +826,6 @@ protected:
 	int16	deity;
 	uint8    level;
 	int32   npctype_id; // rembrant, Dec. 20, 2001
-	int8    skills[75];
 	float	x_pos;
 	float	y_pos;
 	float	z_pos;
@@ -854,14 +841,17 @@ protected:
 	void ExecWeaponProc(uint16 spell_id, Mob *on);
 	float GetProcChances(float &ProcBonus, float &ProcChance);
 	int GetWeaponDamage(Mob *against, const Item_Struct *weapon_item, bool &was_bane);
-	
+	int GetKickDamage() const;
+	int GetBashDamage() const;
+	void DoSpecialAttackDamage(Mob *who, int8 skill, sint32 max_damage);
+
 	enum {MAX_PROCS = 4};
 	tProc PermaProcs[MAX_PROCS];
 	tProc SpellProcs[MAX_PROCS];
 	
 	char    name[64];
 	char		clean_name[64];
-	char    lastname[70];
+	char    lastname[32];
 	
     bool bEnraged;
     Timer *SpecAttackTimers[SPECATK_MAXNUM];
@@ -889,7 +879,6 @@ protected:
 	//spell casting vars
 	Timer spellend_timer;
 	int16	casting_spell_id;
-	int8	casting_spell_AIindex;
     float spell_x, spell_y, spell_z;
 	int	attacked_count;
 	bool	delaytimer;
@@ -938,13 +927,10 @@ protected:
 	Timer*	AImovement_timer;
 	bool	movetimercompleted;
 	bool   permarooted;
-	Timer*	AIautocastspell_timer;
 	Timer*	AIscanarea_timer;
 	Timer*	AIwalking_timer;
 	Timer*	AIfeignremember_timer;
 	int32	pLastFightingDelayMoving;
-	int32	npc_spells_id;
-	AISpells_Struct	AIspells[MAX_AISPELLS]; // expected to be pre-sorted, best at low index
 	HateList hate_list;
 	std::set<int32> feign_memory_list;
 	// EverHood - This is to keep track of mobs we cast faction mod spells on
@@ -983,7 +969,6 @@ protected:
 	int32	pDontDotMeBefore;
 	int32	pDontRootMeBefore;
 	int32	pDontSnareMeBefore;
-	int32*	pDontCastBefore_casting_spell;
 	
 	// Bind wound
 	Timer  bindwound_timer;

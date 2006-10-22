@@ -1,4 +1,4 @@
-int8 Mob::MaxSkill_weapon(int16 skillid, int16 class_, int16 level){
+int16 Mob::MaxSkill_weapon(int16 skillid, int16 class_, int16 level) const{
 	if (skillid > HIGHEST_SKILL)
 		return 0;
   int16 r_value = 0;
@@ -290,7 +290,7 @@ int8 Mob::MaxSkill_weapon(int16 skillid, int16 class_, int16 level){
   return r_value;
 }
 
-int8 Mob::MaxSkill_offensive(int16 skillid, int16 class_, int16 level){
+int16 Mob::MaxSkill_offensive(int16 skillid, int16 class_, int16 level) const{
   int16 r_value = 0;
   switch(skillid) {
 
@@ -820,7 +820,8 @@ int8 Mob::MaxSkill_offensive(int16 skillid, int16 class_, int16 level){
     r_value = 252;
   return r_value;
 }
-int8 Mob::MaxSkill_defensive(int16 skillid, int16 class_, int16 level){
+
+int16 Mob::MaxSkill_defensive(int16 skillid, int16 class_, int16 level) const{
   int16 r_value = 0;
   switch(skillid) {
     case DEFENSE:{
@@ -1358,7 +1359,8 @@ int8 Mob::MaxSkill_defensive(int16 skillid, int16 class_, int16 level){
     r_value = 252;
   return r_value;
 }
-int8 Mob::MaxSkill_arcane(int16 skillid, int16 class_, int16 level){
+
+int16 Mob::MaxSkill_arcane(int16 skillid, int16 class_, int16 level) const{
   int16 r_value = 0;
   switch(skillid) {
     case MEDITATE:
@@ -1620,7 +1622,7 @@ int8 Mob::MaxSkill_arcane(int16 skillid, int16 class_, int16 level){
   return r_value;
 }
 
-int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
+int16 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level) const{
   int16 r_value = 0;
   switch(skillid) {
       // Rogue
@@ -2076,7 +2078,7 @@ int8 Mob::MaxSkill_class(int16 skillid, int16 class_, int16 level){
   return r_value;
 }
 
-int8 Mob::MaxSkill(int16 skillid, int16 class_, int16 level) {
+int16 Mob::MaxSkill(int16 skillid, int16 class_, int16 level) const {
   int16 r_value = 0;
   switch (skillid) {
     case _1H_BLUNT:

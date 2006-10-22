@@ -3,19 +3,20 @@
 
 typedef enum {
 	EVENT_SAY = 0,
-	EVENT_ITEM,
-	EVENT_DEATH,
-	EVENT_SPAWN,
-	EVENT_ATTACK,
-	EVENT_SLAY,
-	EVENT_NPC_SLAY,
-	EVENT_WAYPOINT,
+	EVENT_ITEM,			//being given an item
+	EVENT_DEATH,		//being killed
+	EVENT_SPAWN,		//triggered when we first spawn
+	EVENT_ATTACK,		//being attacked (resets after an interval of not being attacked)
+	EVENT_COMBAT,		//being attacked or attacking (resets after an interval of not being attacked)
+	EVENT_AGGRO,		//entering combat mode due to a PC attack
+	EVENT_SLAY,			//killing a PC
+	EVENT_NPC_SLAY,		//killing an NPC
+	EVENT_WAYPOINT,		//reaching a waypoint on a grid
 	EVENT_TIMER,
 	EVENT_SIGNAL,
 	EVENT_HP,
-	EVENT_AGGRO,
-	EVENT_ENTER,
-	EVENT_EXIT,
+	EVENT_ENTER,		//PC entering your set proximity
+	EVENT_EXIT,			//PC leaving your set proximity
 	
 	_LargestEventID
 } QuestEventID;

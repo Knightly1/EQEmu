@@ -41,13 +41,14 @@ const char *QuestEventSubroutines[_LargestEventID] = {
 	"EVENT_DEATH",
 	"EVENT_SPAWN",
 	"EVENT_ATTACK",
+	"EVENT_COMBAT",
+	"EVENT_AGGRO",
 	"EVENT_SLAY",
 	"EVENT_NPC_SLAY",
 	"EVENT_WAYPOINT",
 	"EVENT_TIMER",
 	"EVENT_SIGNAL",
 	"EVENT_HP",
-	"EVENT_AGGRO",
 	"EVENT_ENTER",
 	"EVENT_EXIT"
 };
@@ -386,6 +387,10 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 		}
 		case EVENT_NPC_SLAY: {
 			ExportVar(packagename.c_str(), "killed", mob->GetNPCTypeID());
+			break;
+		}
+		case EVENT_COMBAT: {
+			ExportVar(packagename.c_str(), "combat_state", data);
 			break;
 		}
 		//nothing special about these events

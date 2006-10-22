@@ -69,7 +69,6 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	  d->deity,
 	  d->level,
 	  d->npc_id, // rembrant, Dec. 20, 2001
-	  d->skills, // socket 12-29-01
 	  d->size,
 	  d->runspeed,
 	  heading,
@@ -77,7 +76,6 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	  y,
 	  z,
 	  d->light,
-	  d->equipment,
 	  d->texture,
 	  d->helmtexture,
 	  d->AC,
@@ -98,16 +96,12 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	  d->luclinface,
 	  d->beard,
 	  0,
-	  d->d_meele_texture1,
-	  d->d_meele_texture2,
 	  d->see_invis,			// pass see_invis/see_ivu flags to mob constructor
 	  d->see_invis_undead,
 // SCORPIOUS2K - qglobal
 	  d->qglobal ),
-	#ifdef IPC 
-        interactive_timer(1000),
-	#endif
-	attacked_timer(12000),
+	attacked_timer(11000),
+	combat_event_timer(CombatEventTimer_expire),
 	swarm_timer(100),
 	classattack_timer(1000),
 	assist_timer(AIassistcheck_delay),
@@ -196,18 +190,6 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
     CalcMaxMana();
     SetMana(GetMaxMana());
 
-	d_meele_texture1=d->equipment[7];
-	d_meele_texture2=d->equipment[8];
-#ifdef IPC
-	if(IsInteractive())
-	{
-	//	tiredmax = RandomTimer(45,135);
-		pvp = true;
-	//	
-	//	for(int i = 0 ; i < 9; i++) // neotokyo: out of bounds again :-/
-	//		equipment[i] = RandomTimer(1000,12000);
-	}
-#endif	
 	MerchantType=d->merchanttype; // Yodason: merchant stuff
 	org_x = x;
 	org_y = y;
@@ -232,11 +214,19 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 //		DebugBreak();
 	primary_faction = 0;
 	SetNPCFactionID(d->npc_faction_id);
+
+	npc_spells_id = 0;
+	memset(AIspells, 0, sizeof(AIspells));
+	for (int i=0; i<MAX_AISPELLS; i++) {
+		AIspells[i].spellid = SPELL_UNKNOWN;
+		AIspells[i].type = 0;
+	}
 	
 	pet_spell_id = 0;
 	
 	delaytimer = false;
 	attack_event = false;
+	combat_event = false;
 	attack_speed = d->attack_speed;
 
 	EntityList::RemoveNumbers(name);
@@ -267,6 +257,10 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	npc_aggro = d->npc_aggro;
 
 	AI_Start();
+
+	d_meele_texture1 = d->d_meele_texture1;
+	d_meele_texture2 = d->d_meele_texture2;
+	memset(equipment, 0, sizeof(equipment));
 	
 	//give NPCs skill values...
 	int r;
@@ -426,10 +420,6 @@ void NPC::RemoveCash() {
 bool NPC::Process()
 {
 	_ZP(NPC_Process);
-    if (attack_event && attacked_timer.Check())
-	{
-		attack_event = false;
-	}
 	
     adverrorinfo = 1;
 	if (IsStunned() && stunned_timer.Check())
@@ -456,6 +446,19 @@ bool NPC::Process()
     SpellProcess();
     
     if (tic_timer.Check()) {
+		if(combat_event) {
+			//cannot have an attack event expire without a combat event at least active
+			if (attack_event && attacked_timer.Check()) {
+				attack_event = false;
+			}
+
+			//do not fire the EVENT_COMBAT(0) until our hate list is empty and the idle timer is up.
+			if(!IsEngaged() && combat_event_timer.Check()) {
+				parse->Event(EVENT_COMBAT, this->GetNPCTypeID(), "0", this, NULL);
+				combat_event = false;
+			}
+		}
+	
 		BuffProcess();
 		int32 bonus = 0;
 		
@@ -716,6 +719,7 @@ NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z,
 		//Time to create the NPC!! 
 		NPCType* npc_type = new NPCType;
 		memset(npc_type, 0, sizeof(NPCType));
+		
 		strcpy(npc_type->name,sep.arg[0]);
 		npc_type->cur_hp = atoi(sep.arg[4]); 
 		npc_type->max_hp = atoi(sep.arg[4]); 
@@ -729,13 +733,10 @@ NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z,
 		npc_type->texture = atoi(sep.arg[3]);
 		npc_type->light = 0;
 		npc_type->runspeed = 1.25;
-		// Weapons are broke!!
-		npc_type->equipment[7] = atoi(sep.arg[7]);
-		npc_type->equipment[8] = atoi(sep.arg[8]);
+		npc_type->d_meele_texture1 = atoi(sep.arg[7]);
+		npc_type->d_meele_texture2 = atoi(sep.arg[8]);
 		npc_type->merchanttype = atoi(sep.arg[9]);	
 		npc_type->bodytype = atoi(sep.arg[10]);
-		//for (int i=0; i<9; i++)
-		//	npc_type->equipment[i] = atoi(sep.arg[7]);
 		
 		npc_type->STR = 150;
 		npc_type->STA = 150;
@@ -950,26 +951,28 @@ int32 ZoneDatabase::NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* s
 	return false;
 }
 
-sint32 NPC::GetEquipmentMaterial(int8 material_slot)
+sint32 NPC::GetEquipmentMaterial(int8 material_slot) const
 {
 	const Item_Struct *item;
 
-	switch(material_slot)
-	{
-		case MATERIAL_HEAD:
-			return helmtexture;
-		case MATERIAL_CHEST:
-			return texture;
-		case MATERIAL_PRIMARY:
+	switch(material_slot) {
+	case MATERIAL_HEAD:
+		return helmtexture;
+	case MATERIAL_CHEST:
+		return texture;
+	case MATERIAL_PRIMARY:
+		if(equipment[MATERIAL_PRIMARY] == 0)
 			return d_meele_texture1;
-		case MATERIAL_SECONDARY:
+		//somewhat contrived fallthrough
+	case MATERIAL_SECONDARY:
+		if(material_slot == MATERIAL_SECONDARY && equipment[MATERIAL_SECONDARY] == 0)
 			return d_meele_texture2;
-		default:
-			item = database.GetItem(GetEquipment(material_slot));
-			if(item != 0)
-			{
-				return item->Material;
-			}
+		//fall through and use our equipped item instead.
+	default:
+		item = database.GetItem(GetEquipment(material_slot));
+		if(item != NULL) {
+			return item->Material;
+		}
 	}
 	return 0;
 }

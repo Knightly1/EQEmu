@@ -26,6 +26,51 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemulator.net)
 #include "StringIDs.h"
 #include "../common/MiscFunctions.h"
 
+int Mob::GetKickDamage() const {
+	float multiple=(GetLevel()/5);
+	multiple++;
+	float dmg=(
+			    (
+				 (GetSkill(KICK) + GetSTR() + GetLevel()) / 90
+				) * multiple
+			  )
+			  + 1.0;	//base 10 damage???
+	if(GetClass() == WARRIOR || GetClass() == WARRIORGM
+	 ||GetClass() == BERSERKER || GetClass() == BERSERKERGM) {
+		dmg*=1.2f;//small increase for warriors
+	}
+	return(int(dmg));
+}
+
+int Mob::GetBashDamage() const {
+	float multiple=(GetLevel()/5);
+	multiple++;
+
+	//this is complete shite
+	float dmg=(
+			    (
+				 (GetSkill(KICK) + GetSTR() + GetLevel()/2) / 100
+				) * multiple
+			  )
+			  + 1.0;
+	return(int(dmg));
+}
+
+void Mob::DoSpecialAttackDamage(Mob *who, int8 skill, sint32 max_damage) {
+	//this really should go through the same code as normal melee damage to
+	//pick up all the special behavior there
+	if(target->SpecAttacks[IMMUNE_MELEE] || target->SpecAttacks[IMMUNE_MELEE_NONMAGICAL] || target->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]) {
+		max_damage = -5;
+	}
+	
+	if(max_damage > 0) {
+		target->AvoidDamage(this, max_damage);
+	}
+	
+	target->Damage(this, max_damage, SPELL_UNKNOWN, skill);
+}
+
+
 void Client::OPCombatAbility(const EQApplicationPacket *app) {
 	if(!target)
 		return;
@@ -69,60 +114,48 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 	
 	if ((ca_atk->m_atk == 100) 
 	  && (ca_atk->m_skill == BASH)) {    // SLAM - Bash without a shield equipped
-		DoAnim(animTailRake);
-		float chance = (level+GetSkill(BASH)+GetSTR())/5;
-		sint32 dmg = 0;
-		if(chance<20)
-			chance=20;
-		else if(chance>90)
-			chance=90;
+		if (target!=this) {
+			sint32 dmg = GetBashDamage();
+			
+			if(!target->IsClient())
+				dmg = (dmg * 76) / 100;	//scale down for PVP
+			else {
+				CheckIncreaseSkill(BASH);
+			}
+			DoAnim(animTailRake);
 
-		//this formula is just a hack, its not perfect by any means
-		if((rand()%100)<chance)//success figure damage
-			dmg = ((((level/10)*(rand()%7))+GetSkill(BASH)*5+GetSTR())/100)*(rand()%10);
-		target->Damage(this, dmg, 0xffff, BASH);
-		CheckIncreaseSkill(BASH);
+			if(target->CheckHitChance(this, BASH, 0, BASH)) {
+				DoSpecialAttackDamage(target, BASH, dmg);
+			}
 		
-		/* using CheckIncreaseSkill now
-		if (GetClass()==WARRIOR&&(GetRace()==BARBARIAN||GetRace()==TROLL||GetRace()==OGRE)) { // large race warriors only *
-			float wisebonus =  (m_pp.WIS > 200) ? 20 + ((m_pp.WIS - 200) * 0.05) : m_pp.WIS * 0.1;
-			if (((55-(GetSkill(BASH)*0.240))+wisebonus > MakeRandomFloat(0, 100))&& (GetSkill(BASH)<(m_pp.level+1)*5))
-					this->SetSkill(BASH,GetRawSkill(BASH)+1);
-		}*/
-		
-		p_timers.Start(pTimerCombatAbility, BashReuseTime-1);
+			p_timers.Start(pTimerCombatAbility, BashReuseTime-1);
+		}
 		return;
 	}
 	
-	float multiple=(GetLevel()/5);
-	multiple++;
 	switch(GetClass())
 	{
 	case BERSERKER:
 	case WARRIOR:
-		if (target!=this) {
-			float dmg=((((GetSkill(KICK) + GetSTR() + GetLevel())/90)*multiple)+10) * ( MakeRandomFloat(0, 1) );
-			if(target->IsClient())
-				dmg*=.76;
-			else{
-				CheckIncreaseSkill(KICK);
-				dmg*=1.2f;//small increase for warriors
-			}
-			target->Damage(this, (int32)dmg, 0xffff, 0x1e);
-			DoAnim(animKick);
-			p_timers.Start(pTimerCombatAbility, KickReuseTime-1);
-		}
-		break;
 	case RANGER:
 	case BEASTLORD:
+		if (ca_atk->m_atk != 100 || ca_atk->m_skill != KICK) {
+			break;
+		}
 		if (target!=this) {
-			float dmg=((((GetSkill(KICK) + GetSTR() + GetLevel())/250)*multiple)+5) * ( MakeRandomFloat(0, 1) );
-			if(target->IsClient())
-				dmg*=.67f;
-			else
+			sint32 dmg = GetKickDamage();
+			
+			if(!target->IsClient())
+				dmg = (dmg * 76) / 100;	//scale down for PVP
+			else {
 				CheckIncreaseSkill(KICK);
-			target->Damage(this, (int32)dmg, 0xffff, 0x1e);
+			}
 			DoAnim(animKick);
+
+			if(target->CheckHitChance(this, KICK, 0, KICK)) {
+				DoSpecialAttackDamage(target, KICK, dmg);
+			}
+			
 			p_timers.Start(pTimerCombatAbility, KickReuseTime-1);
 		}
 		break;
@@ -152,6 +185,8 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 
 
 //returns the reuse time in sec for the special attack used.
+//this code is so messed up... it does not appear to check
+// hit chance at all... it seems like every attack always hits....
 int Mob::MonkSpecialAttack(Mob* other, int8 type)
 {
 	bool candamage = true;
@@ -206,12 +241,12 @@ int Mob::MonkSpecialAttack(Mob* other, int8 type)
 #if EQDEBUG >= 11
     LogFile->write(EQEMuLog::Debug,"MonkSpecialAttack() 3 - %d", hitsuccess);
 #endif
-	hitsuccess += (float)rand()/RAND_MAX;
+	hitsuccess += MakeRandomFloat(0,1);
 #if EQDEBUG >= 11
     LogFile->write(EQEMuLog::Debug,"MonkSpecialAttack() 4 - %d", hitsuccess);
 #endif
 	float ackwardtest = 2.4f;
-	float random = (float)rand()/RAND_MAX;
+	float random = MakeRandomFloat(0,1);
 	if(random <= 0.2)
 	{
 		ackwardtest = 4.5;
@@ -253,13 +288,13 @@ int Mob::MonkSpecialAttack(Mob* other, int8 type)
 	
 	int reuse = 0;
 	
-	ackwardtest += (float)rand()/RAND_MAX;
+	ackwardtest += MakeRandomFloat(0,1);
 	ackwardtest = abs((long)ackwardtest);
 	if (type == FLYING_KICK) {
 		ndamage = (sint32) (((level/10) + hitmodifier) * (10 * ackwardtest) * (GetSkill(FLYING_KICK) + GetSTR() + level) / 600);
 		if(other->IsClient())
 			ndamage = ndamage * 3 / 4;
-		if ((float)rand()/RAND_MAX < 0.2) {
+		if (MakeRandomFloat(0,1) < 0.2) {
 			ndamage = (sint32) (ndamage * 1.9);
 			
 			//I dont know how this can ever get to be negative...
@@ -280,7 +315,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 type)
 		}
 		
 		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x1A);
+			DoSpecialAttackDamage(other, type, ndamage);
 		DoAnim(animFlyingKick);
 		reuse = FlyingKickReuseTime;
 	}
@@ -289,7 +324,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 type)
 		if(other->IsClient())
 			ndamage = ndamage * 7 / 10;
 		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x34);
+			DoSpecialAttackDamage(other, type, ndamage);
 		DoAnim(animTigerClaw);
 		reuse = TigerClawReuseTime;
 	}
@@ -298,7 +333,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 type)
 		if(other->IsClient())
 			ndamage = ndamage * 9 / 10;
 		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x26);
+			DoSpecialAttackDamage(other, type, ndamage);
 		DoAnim(animRoundKick);
 		reuse = RoundKickReuseTime;
 	}
@@ -316,7 +351,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 type)
 		}
 		
 		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x17);
+			DoSpecialAttackDamage(other, type, ndamage);
 		DoAnim(animEagleStrike);
 		reuse = EagleStrikeReuseTime;
 	}
@@ -333,7 +368,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 type)
 		}
 		
 		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x15);
+			DoSpecialAttackDamage(other, type, ndamage);
 		DoAnim(animTailRake);
 		reuse = TailRakeReuseTime;
 	}
@@ -342,7 +377,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 type)
 		if(other->IsClient())
 			ndamage = ndamage * 7 / 10;
 		if(candamage)
-			other->Damage(this, ndamage, 0xffff, 0x1e);
+			DoSpecialAttackDamage(other, type, ndamage);
 		DoAnim(animKick);
 		reuse = KickReuseTime;
 	}
@@ -472,13 +507,16 @@ void Mob::RogueBackstab(Mob* other, const Item_Struct* weapon, int8 bs_skill, bo
 //checked elsewhere	
 //	if (!BehindMob(other, GetX(), GetY()))
 //		ndamage = min_hit;
-	other->Damage(this, ndamage, 0xffff, BACKSTAB);
+	//other->Damage(this, ndamage, 0xffff, BACKSTAB);
+	DoSpecialAttackDamage(other, BACKSTAB, ndamage);
 	DoAnim(animPiercing);	//piercing animation
 }
 
 // solar - assassinate
 void Mob::RogueAssassinate(Mob* other)
 {
+	//can you dodge, parry, etc.. an assassinate??
+	//if so, use DoSpecialAttackDamage(other, BACKSTAB, 32000); instead
 	other->Damage(this, 32000, 0xffff, BACKSTAB);
 	DoAnim(animPiercing);	//piercing animation
 }
@@ -923,6 +961,7 @@ void NPC::DoClassAttacks(Mob *target) {
 	
 	int level = GetLevel();
 	int reuse = TauntReuseTime * 1000;	//make this very long since if they dont use it once, they prolly never will
+	bool did_attack;
 	//class specific stuff...
 	switch(GetClass()) {
 		case ROGUE: case ROGUEGM:
@@ -933,6 +972,7 @@ void NPC::DoClassAttacks(Mob *target) {
 //					weapon = database.GetItem(equipment[MATERIAL_PRIMARY]);
 				TryBackstab(target, weapon);
 				reuse = BackstabReuseTime * 1000;
+				did_attack = true;
 			}
 			break;
 		case MONK: case MONKGM: {
@@ -950,37 +990,30 @@ void NPC::DoClassAttacks(Mob *target) {
 			}
 			reuse = MonkSpecialAttack(target, satype);
 			reuse *= 1000;
+			did_attack = true;
 			break;
 		}
 		case BERSERKER: case BERSERKERGM:
-		case WARRIOR: case WARRIORGM: {
+		case WARRIOR: case WARRIORGM:
+		case RANGER: case RANGERGM:
+		case BEASTLORD: case BEASTLORDGM: {
 			//kick
-			float dmg = (((float(GetSkill(KICK) + GetSTR() + GetLevel())/90.0)*(GetLevel()/5.0+1))+10) * ( MakeRandomFloat(0, 1) );
-			if(target->IsClient())
-				dmg = (dmg * 76) / 100;
-			else {
-				dmg = (dmg * 120) / 100;//small increase for warriors
-			}
-			target->Damage(this, (int32)dmg, 0xffff, 0x1e);
+			
 			DoAnim(animKick);
+			
+			sint32 dmg = GetKickDamage();
+			if(target->CheckHitChance(this, KICK, 0, KICK)) {
+				DoSpecialAttackDamage(target, KICK, dmg);
+			}
+			
 			reuse = KickReuseTime * 1000;
+			did_attack = true;
 			break;
 		}
-		case RANGER: case RANGERGM:
-		case BEASTLORD: case BEASTLORDGM:
-			if(GetClass() == WARRIOR || level > 5) {
-				//kick
-				float dmg = (((float(GetSkill(KICK) + GetSTR() + GetLevel())/90.0)*(GetLevel()/5.0+1))+10) * ( MakeRandomFloat(0, 1) );
-				if(target->IsClient())
-					dmg = (dmg * 76) / 100;
-				target->Damage(this, (int32)dmg, 0xffff, 0x1e);
-				DoAnim(animKick);
-				reuse = KickReuseTime * 1000;
-			}
-			break;
 		case SHADOWKNIGHT: case SHADOWKNIGHTGM:
 			CastSpell(SPELL_NPC_HARM_TOUCH, target->GetID());
 			reuse = HarmTouchReuseTime * 1000;
+			did_attack = true;
 			break;
 		case PALADIN: case PALADINGM:
 			if(GetHPRatio() < 20) {
@@ -990,6 +1023,15 @@ void NPC::DoClassAttacks(Mob *target) {
 				reuse = 1000 * 5;	//check again in 5 seconds
 			}
 			break;
+	}
+
+	if(did_attack) {
+		if(!combat_event) {
+			mlog(COMBAT__HITS, "Triggering EVENT_COMBAT due to attack on %s", target->GetName());
+			parse->Event(EVENT_COMBAT, this->GetNPCTypeID(), "1", this, target);
+			combat_event = true;
+		}
+		combat_event_timer.Start(CombatEventTimer_expire);
 	}
 	
 	classattack_timer.Start(reuse);

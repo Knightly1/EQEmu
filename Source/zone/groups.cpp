@@ -45,7 +45,7 @@ Group::Group(int32 gid)
 : GroupIDConsumer(gid)
 {
 	memset(members,0,sizeof(Mob*) * MAX_GROUP_MEMBERS);
-	int i;
+	uint32 i;
 	for(i=0;i<MAX_GROUP_MEMBERS;i++)
 		memset(membername[i],0,64);
 #ifdef ENABLE_GROUP_LINKING
@@ -63,11 +63,11 @@ Group::Group(int32 gid)
 Group::Group(Mob* leader)
 : GroupIDConsumer()
 {
-	memset(members,0,sizeof(Mob*) * MAX_GROUP_MEMBERS);
+	memset(members, 0, sizeof(members));
 	members[0] = leader;
-	 leader->CastToClient()->isgrouped = true;
+	leader->SetGrouped(true);
 	SetLeader(leader);
-	int i;
+	uint32 i;
 #ifdef ENABLE_GROUP_LINKING
 	for (i = 0; i < MAX_GROUP_LINKS; i++) {
 		link[i] = 0;
@@ -86,7 +86,7 @@ void Group::SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinu
 	if(copper == 0 && silver == 0 && gold == 0 && platinum == 0)
 		return;
 	
-  int i;
+  uint32 i;
   int8 membercount = 0;
   for (i = 0; i < MAX_GROUP_MEMBERS; i++) { 
 	  if (members[i] != NULL) {
@@ -175,7 +175,7 @@ void Group::SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinu
 
 bool Group::AddMember(Mob* newmember)
 {
-	int i=0;
+	uint32 i=0;
 	//see if they are allready in the group
 	 for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if(members[i] != NULL && !strcasecmp(members[i]->GetName(),newmember->GetName()))
@@ -221,7 +221,7 @@ bool Group::AddMember(Mob* newmember)
 	
 	//put new member in his own list.
 	strcpy(newmember->CastToClient()->GetPP().groupMembers[x],newmember->GetName());
-	newmember->isgrouped = true;
+	newmember->SetGrouped(true);
 	
 	if(newmember->IsClient()) {
 		newmember->CastToClient()->Save();
@@ -234,7 +234,8 @@ bool Group::AddMember(Mob* newmember)
 
 void Group::QueuePacket(const EQApplicationPacket *app, bool ack_req)
 {
-	for(int i = 0; i < MAX_GROUP_MEMBERS; i++)
+	uint32 i;
+	for(i = 0; i < MAX_GROUP_MEMBERS; i++)
 		if(members[i] && members[i]->IsClient())
 			members[i]->CastToClient()->QueuePacket(app, ack_req);
 }
@@ -245,7 +246,7 @@ void Group::QueuePacket(const EQApplicationPacket *app, bool ack_req)
 void Group::SendHPPacketsTo(Mob *member)
 {
 	EQApplicationPacket hpapp;
-	int i;
+	uint32 i;
 
 	if(!member || !member->IsClient())
 		return;
@@ -268,7 +269,8 @@ void Group::SendHPPacketsFrom(Mob *member)
 
  	member->CreateHPPacket(&hp_app);
 
-	for(int i = 0; i < MAX_GROUP_MEMBERS; i++)
+	uint32 i;
+	for(i = 0; i < MAX_GROUP_MEMBERS; i++)
 		if(members[i] && members[i] != member && members[i]->IsClient())
 			members[i]->CastToClient()->QueuePacket(&hp_app);
 }
@@ -278,7 +280,7 @@ void Group::SendHPPacketsFrom(Mob *member)
 bool Group::UpdatePlayer(Mob* update){
 	VerifyGroup();
 	
-	int i=0;
+	uint32 i=0;
 	if(update->IsClient()) {
 		//update their player profile
 		PlayerProfile_Struct &pp = update->CastToClient()->GetPP();
@@ -295,7 +297,7 @@ bool Group::UpdatePlayer(Mob* update){
 		if (!strcasecmp(membername[i],update->GetName()))
 		{
 			members[i] = update;
-			members[i]->isgrouped = true;
+			members[i]->SetGrouped(true);
 			return true;
 		}
 	}
@@ -304,7 +306,7 @@ bool Group::UpdatePlayer(Mob* update){
 
 
 void Group::MemberZoned(Mob* removemob) {
-	int i;
+	uint32 i;
 
 	if (removemob == NULL)
 		return;
@@ -319,7 +321,7 @@ void Group::MemberZoned(Mob* removemob) {
 }
 
 bool Group::DelMember(Mob* oldmember,bool ignoresender){
-	int i;
+	uint32 i;
 
 	if (oldmember == NULL)
 	 {
@@ -337,12 +339,14 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 
 				GroupJoin_Struct* gu = (GroupJoin_Struct*) outapp->pBuffer;
 				gu->action = 8;
-				for (int nl = 0; nl < MAX_GROUP_MEMBERS; nl++) {
+				uint32 nl;
+				for (nl = 0; nl < MAX_GROUP_MEMBERS; nl++) {
 					if (members[nl] && members[nl] != oldmember) {
 						strcpy(gu->membername, members[nl]->GetName());
 						strcpy(gu->yourname, oldmember->GetName());
 						SetLeader(members[nl]);
-						for (int ld = 0; ld < MAX_GROUP_MEMBERS; ld++) {
+						uint32 ld;
+						for (ld = 0; ld < MAX_GROUP_MEMBERS; ld++) {
 							if (members[ld] && members[ld] != oldmember) {
 								members[ld]->CastToClient()->QueuePacket(outapp);
 							}
@@ -393,7 +397,7 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 
 	database.SetGroupID(oldmember->GetName(), 0);
 	
-	oldmember->isgrouped = false;
+	oldmember->SetGrouped(false);
 	disbandcheck = true;
 
 	 safe_delete(outapp);
@@ -402,7 +406,7 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 
 // does the caster + group
 void Group::CastGroupSpell(Mob* caster, uint16 spell_id) {
-	int z;
+	uint32 z;
 	float range, distance;
 
 	if(!caster)
@@ -481,7 +485,7 @@ void Group::CastGroupSpell(Mob* caster, uint16 spell_id) {
 
 // does the caster + group
 void Group::GroupBardPulse(Mob* caster, uint16 spell_id) {
-	int z;
+	uint32 z;
 	float range, distance;
 
 	if(!caster)
@@ -517,7 +521,8 @@ void Group::GroupBardPulse(Mob* caster, uint16 spell_id) {
 
 bool Group::IsGroupMember(Mob* client)
 {
-	for (int i = 0; i < MAX_GROUP_MEMBERS; i++)
+	uint32 i;
+	for (i = 0; i < MAX_GROUP_MEMBERS; i++)
 	 {
 		if (members[i] == client)
 		  {
@@ -529,7 +534,7 @@ bool Group::IsGroupMember(Mob* client)
 }
 
 void Group::GroupMessage(Mob* sender,const char* message) {
-	int i;
+	uint32 i;
 	for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if(!members[i]) {
 			//they are not in zone, send using world.
@@ -549,7 +554,7 @@ void Group::GroupMessage(Mob* sender,const char* message) {
 	}
 	
 #ifdef ENABLE_GROUP_LINKING
-	int j;
+	uint32 j;
 	for (j = 0; j < MAX_GROUP_LINKS; j++) {
 		if (link[j] == 0)
 			continue;
@@ -581,8 +586,9 @@ void Group::GroupMessage(Mob* sender,const char* message) {
 
 int32 Group::GetTotalGroupDamage(Mob* other) {
 	 int32 total = 0;
-	
-	for (int i = 0; i < MAX_GROUP_MEMBERS; i++) {
+
+	uint32 i;
+	for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if(!members[i])
 			continue;
 		if (other->CheckAggro(members[i]))
@@ -596,8 +602,9 @@ void Group::DisbandGroup() {
 
 	GroupUpdate_Struct* gu = (GroupUpdate_Struct*) outapp->pBuffer;
 	gu->action = groupActDisband;
-	
-	 for (int i = 0; i < MAX_GROUP_MEMBERS; i++) {
+
+	uint32 i;
+	 for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if (members[i] == NULL) {
 			if(membername[i][0] == '\0')
 				continue;	//no member at all
@@ -617,7 +624,7 @@ void Group::DisbandGroup() {
 			database.SetGroupID(members[i]->GetName(), 0);
 			members[i]->CastToClient()->QueuePacket(outapp);
 		}
-		members[i]->isgrouped = false;
+		members[i]->SetGrouped(false);
 		members[i] = NULL;
 		membername[i][0] = '\0';
 	}
@@ -646,7 +653,7 @@ void Group::SendUpdate(int32 type, Mob* member){
 	strcpy(gu->yourname,member->GetName());
 	
 	int x=0;
-	int i=0;
+	uint32 i=0;
 	for (i = 0;i < MAX_GROUP_MEMBERS; i++) {
 		if (members[i] != NULL && members[i] != member) {
 			if(IsLeader(members[i])){
@@ -667,7 +674,8 @@ void Group::SendUpdate(int32 type, Mob* member){
 
 int8 Group::GroupCount() {
 	int count = 0;
-	for (int i = 0; i < MAX_GROUP_MEMBERS; i++)
+	uint32 i;
+	for (i = 0; i < MAX_GROUP_MEMBERS; i++)
 	 {
 		if (strlen(membername[i])>0)
 		  {
@@ -681,7 +689,8 @@ int8 Group::GroupCount() {
 int32 Group::GetHighestLevel()
 {
 int32 level = 1;
-	for (int i = 0; i < MAX_GROUP_MEMBERS; i++)
+uint32 i;
+	for (i = 0; i < MAX_GROUP_MEMBERS; i++)
 	 {
 		if (members[i])
 		  {
@@ -694,7 +703,8 @@ int32 level = 1;
 int32 Group::GetLowestLevel()
 {
 int32 level = 255;
-	for (int i = 0; i < MAX_GROUP_MEMBERS; i++)
+uint32 i;
+	for (i = 0; i < MAX_GROUP_MEMBERS; i++)
 	 {
 		if (members[i])
 		  {
@@ -708,7 +718,8 @@ int32 level = 255;
 #ifdef ENABLE_GROUP_LINKING
 void Group::ClearLink(int32 clear_id, bool all)
 {
-	for (int m = 0; m < 8; m++)
+	uint32 m;
+	for (m = 0; m < 8; m++)
 	{
 		if (all)
 		{
@@ -724,7 +735,8 @@ void Group::ClearLink(int32 clear_id, bool all)
 
 bool Group::IsLinked(int32 link_id)
 {
-	for (int m = 0; m < 8; m++)
+	uint32 m;
+	for (m = 0; m < 8; m++)
 	{
 		if (link[m] == link_id)
 		{
@@ -736,7 +748,8 @@ bool Group::IsLinked(int32 link_id)
 
 void Group::EstablishLink(int32 link_id)
 {
-	for (int m = 0; m < 8; m++)
+	uint32 m;
+	for (m = 0; m < 8; m++)
 	{
 		if (link[m] == 0)
 		{
@@ -747,87 +760,11 @@ void Group::EstablishLink(int32 link_id)
 }
 #endif
 
-#ifdef GUILDWARS
-void Group::CauseEXPLoss() {
-	for(int i=0;i<MAX_GROUP_MEMBERS;i++)
-	{
-		if(!members[i])
-			continue;
-		else if(members[i]->IsClient())
-			members[i]->CastToClient()->SetEXP((int32)(members[i]->CastToClient()->GetEXP() - members[i]->GetLevel()*((float)members[i]->GetLevel()/18)*1000 > 0)? (int32)(members[i]->CastToClient()->GetEXP() - members[i]->GetLevel()*((float)members[i]->GetLevel()/18)*1000) : 1,members[i]->CastToClient()->GetAAXP());
-	}
-}
-
-void Group::GivePoints(Client* killed) {
-for(int i=0;i<MAX_GROUP_MEMBERS;i++)
-{
-if(!members[i])
-continue;
-else if(members[i]->IsClient())
-{
-sint32 points = guildwars.PlayerPointsEarned(members[i]->CastToClient(),killed);
-
-				if(points > 0 && members[i]->CastToClient()->GuildDBID() != 0)
-				{
-				members[i]->CastToClient()->UpdateLDoNPoints(points,0);
-
-				members[i]->CastToClient()->Message(0,"You received %i points killing %s",points,GetName());
-				}
-				else if(points == -1)
-				members[i]->CastToClient()->Message(0,"You have killed %s within the last 10 minutes, you receive no points.",GetName());
-				else if(points == 0)
-				members[i]->CastToClient()->Message(0,"You received no points killing %s.",GetName());
-}
-}
-}
-#endif
-
-#ifdef RAIDADDICTS
-void Group::RASplitPointsAndEXP(uint32 exp, Mob* other)
-{
-	/* 3.0 Code
-	int i;
-	for (i = 0; i < MAX_GROUP_MEMBERS; i++)
-	{
-		if (members[i] != NULL && members[i]->IsClient())
-    		{
-				raidaddicts.NPCDeathProcess(npcid, members[i]);
-		}
-	} */
-
-	int i; 
-	uint32 groupexp = exp; 
-	int8 membercount = 0; 
-	int8 maxlevel = 1; 
-	for (i = 0; i < MAX_GROUP_MEMBERS; i++) { 
-		if (members[i] != NULL) { 
-			if(members[i]->GetLevel() > maxlevel) maxlevel = members[i]->GetLevel();
-			membercount++;
-		}
-	}
-
-	if (membercount == 0) 
-		return; 
-
-	for (i = 0; i < MAX_GROUP_MEMBERS; i++) { 
-		if (members[i] != NULL && members[i]->IsClient()) { // If Group Member is Client
-			if(members[i]->GetLevelCon(other->GetLevel()) != CON_GREEN) {// If Mob doesn't con green
-				sint16 diff = members[i]->GetLevel() - maxlevel; 
-				if (diff >= -8){
-					if (!raidaddicts.NPCDeathProcess(other->GetNPCTypeID(), members[i], ((members[i]->GetLevel()+3) * (members[i]->GetLevel()+3) * 75*3.5f < groupexp/membercount ) ? (int32)(members[i]->GetLevel() * members[i]->GetLevel() * 75*3.5f):(int32)(groupexp/membercount))) {
-						members[i]->CastToClient()->AddEXP(((members[i]->GetLevel()+3) * (members[i]->GetLevel()+3) * 75*3.5f < groupexp/membercount ) ? (int32)(members[i]->GetLevel() * members[i]->GetLevel() * 75*3.5f):(int32)(groupexp/membercount) ); 
-						members[i]->CastToClient()->Message(15, "You did not recieve any points from this creature.");
-					}
-				} 
-			} 
-		}
-	} 
-}
-#endif
 
 void Group::TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z)
 {
-	 for (int i = 0; i < MAX_GROUP_MEMBERS; i++)
+	uint32 i;
+	 for (i = 0; i < MAX_GROUP_MEMBERS; i++)
 	 {
 	 #ifdef IPC
 		if (members[i] != NULL && (members[i]->IsClient() || (members[i]->IsNPC() && members[i]->CastToNPC()->IsInteractive())) && members[i] != sender)
@@ -871,8 +808,9 @@ void Group::VerifyGroup() {
 		is in a valid state, to prevent dangling pointers.
 		Only called every once in a while (on member re-join for now).
 	*/
-	
-	for (int i = 0; i < MAX_GROUP_MEMBERS; i++) {
+
+	uint32 i;
+	for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if (membername[i][0] == '\0') {
 #if EQDEBUG >= 7
 LogFile->write(EQEMuLog::Debug, "Group %lu: Verify %d: Empty.\n", id, i);
@@ -908,7 +846,8 @@ LogFile->write(EQEMuLog::Debug, "Group %lu: Verify %d: Empty.\n", id, i);
 
 
 void Group::GroupMessage_StringID(Mob* sender, int32 type, int32 string_id, const char* message,const char* message2,const char* message3,const char* message4,const char* message5,const char* message6,const char* message7,const char* message8,const char* message9, int32 distance) {
-	for (int i = 0; i < MAX_GROUP_MEMBERS; i++) {
+	uint32 i;
+	for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if(members[i] == NULL)
 			continue;
 		

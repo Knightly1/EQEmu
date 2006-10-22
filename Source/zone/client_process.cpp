@@ -950,7 +950,7 @@ void Client::OPMemorizeSpell(const EQApplicationPacket* app)
 			{
 				const Item_Struct* item = inst->GetItem();
 				
-				if(item && item->Scroll.Effect == (uint32)(memspell->spell_id))
+				if(item && item->Scroll.Effect == (sint32)(memspell->spell_id))
 				{
 					ScribeSpell(memspell->spell_id, memspell->slot);
 
@@ -1000,6 +1000,21 @@ void Client::BreakInvis()
 		safe_delete(outapp);
 		invisible = false;
 	}
+}
+
+static int CoinTypeCoppers(uint32 type) {
+	switch(type) {
+	case COINTYPE_PP:
+		return(1000);
+	case COINTYPE_GP:
+		return(100);
+	case COINTYPE_SP:
+		return(10);
+	case COINTYPE_CP:
+	default:
+		break;
+	}
+	return(1);
 }
 
 void Client::OPMoveCoin(const EQApplicationPacket* app)
@@ -1187,13 +1202,13 @@ void Client::OPMoveCoin(const EQApplicationPacket* app)
 	// will say 11, but the client will have 1 left on their cursor, so we have
 	// to figure out the conversion ourselves
 
-	value = amount_to_take * (int)pow(10.0, mc->cointype1);
-	amount_to_add = value / (int)pow(10.0, mc->cointype2);
+	value = amount_to_take * CoinTypeCoppers(mc->cointype1);
+	amount_to_add = value / CoinTypeCoppers(mc->cointype2);
 
 	// the amount we're adding could be different than what was requested, so
 	// we have to adjust the amount we take as well
-	value = amount_to_add * (int)pow(10.0, mc->cointype2);
-	amount_to_take = value / (int)pow(10.0, mc->cointype1);
+	value = amount_to_add * CoinTypeCoppers(mc->cointype2);
+	amount_to_take = value / CoinTypeCoppers(mc->cointype1);
 
 	// solar: now we should have a from_bucket, a to_bucket, an amount_to_take
 	// and an amount_to_add

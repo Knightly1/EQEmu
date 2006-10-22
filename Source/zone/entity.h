@@ -79,7 +79,6 @@ public:
 	Mob*    CastToMob();
 	Corpse*	CastToCorpse();
 	Object* CastToObject();
-//	Group*	CastToGroup();
 	Doors*	CastToDoors();
 	Trap*	CastToTrap();
 	Beacon*	CastToBeacon();
@@ -278,7 +277,7 @@ public:
 	void	CheckClientAggro(Client *around);
 	Mob*	AICheckCloseAggro(Mob* sender, float iAggroRange, float iAssistRange);
 	void	AIYellForHelp(Mob* sender, Mob* attacker);
-	bool	AICheckCloseSpells(Mob* caster, int8 iChance, float iRange, int16 iSpellTypes);
+	bool	AICheckCloseSpells(NPC* caster, int8 iChance, float iRange, int16 iSpellTypes);
 protected:
 	friend class Zone;
 	void	Depop();

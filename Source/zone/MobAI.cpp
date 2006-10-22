@@ -60,7 +60,7 @@ const int SpellType_DOT=256;
 	#define MobAI_DEBUG_Spells	-1
 #endif
 
-bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
+bool NPC::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 	_ZP(Mob_AICastSpell);
 // Faction isnt checked here, it's assumed you wouldnt pass a spell type you wouldnt want casted on the mob
 	if (!tar)
@@ -128,7 +128,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 								|| (!IsEngaged() && hpr <= 50)
 								|| (tar->IsClient() && hpr <= 99)
 								) {
-								AIDoSpellCast(i, tar, mana_cost, &tar->DontHealMeBefore());
+								AIDoSpellCast(i, tar, mana_cost, &tar->pDontHealMeBefore);
 								return true;
 							}
 						}
@@ -140,7 +140,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 							&& tar->DontRootMeBefore() < Timer::GetCurrentTime()
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
-							AIDoSpellCast(i, tar, mana_cost, &tar->DontRootMeBefore());
+							AIDoSpellCast(i, tar, mana_cost, &tar->pDontRootMeBefore);
 							return true;
 						}
 						break;
@@ -153,7 +153,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							&& !(tar->IsPet() && tar->GetOwner()->IsClient() && this != tar)	//no buffing PC's pets, but they can buff themself
 							) {
-							AIDoSpellCast(i, tar, mana_cost, &tar->DontBuffMeBefore());
+							AIDoSpellCast(i, tar, mana_cost, &tar->pDontBuffMeBefore);
 							return true;
 						}
 						break;
@@ -203,7 +203,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 							&& tar->DontSnareMeBefore() < Timer::GetCurrentTime()
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
-							AIDoSpellCast(i, tar, mana_cost, &tar->DontSnareMeBefore());
+							AIDoSpellCast(i, tar, mana_cost, &tar->pDontSnareMeBefore);
 							return true;
 						}
 						break;
@@ -214,7 +214,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 							&& tar->DontDotMeBefore() < Timer::GetCurrentTime()
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
-							AIDoSpellCast(i, tar, mana_cost, &tar->DontDotMeBefore());
+							AIDoSpellCast(i, tar, mana_cost, &tar->pDontDotMeBefore);
 							return true;
 						}
 						break;
@@ -235,7 +235,7 @@ bool Mob::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 	return false;
 }
 
-void Mob::AIDoSpellCast(int8 i, Mob* tar, sint32 mana_cost, int32* oDontDoAgainBefore) {
+void NPC::AIDoSpellCast(int8 i, Mob* tar, sint32 mana_cost, int32* oDontDoAgainBefore) {
 #if MobAI_DEBUG_Spells >= 1
 	cout << "Mob::AIDoSpellCast: spellid=" << AIspells[i].spellid << ", tar=" << tar->GetName() << ", mana=" << mana_cost << ", Name: " << spells[AIspells[i].spellid].name << endl;
 #endif
@@ -248,10 +248,25 @@ void Mob::AIDoSpellCast(int8 i, Mob* tar, sint32 mana_cost, int32* oDontDoAgainB
 		SetMoving(false);
 	}
 	
+	if(		AIspells[i].type == SpellType_Nuke 
+	   ||	AIspells[i].type == SpellType_Root
+	   ||	AIspells[i].type == SpellType_Lifetap
+	   ||	AIspells[i].type == SpellType_Snare
+	   ||	AIspells[i].type == SpellType_DOT
+	  ) {
+		//we are attacking somebody, handle event_combat
+		if(!combat_event) {
+			mlog(COMBAT__HITS, "Triggering EVENT_COMBAT due to spell index %d (id %d) of type %d on %s", i, AIspells[i].spellid, AIspells[i].type, tar->GetName());
+			parse->Event(EVENT_COMBAT, this->GetNPCTypeID(), "1", this, tar);
+			combat_event = true;
+		}
+		combat_event_timer.Start(CombatEventTimer_expire);
+	}
+	
 	CastSpell(AIspells[i].spellid, tar->GetID(), 1, AIspells[i].manacost == -2 ? 0 : -1, mana_cost, oDontDoAgainBefore);
 }
 
-bool EntityList::AICheckCloseSpells(Mob* caster, int8 iChance, float iRange, int16 iSpellTypes) {
+bool EntityList::AICheckCloseSpells(NPC* caster, int8 iChance, float iRange, int16 iSpellTypes) {
 	_ZP(EntityList_AICheckCloseSpells);
 	if (iChance < 100) {
 		int8 tmp = MakeRandomInt(0, 99);
@@ -309,26 +324,25 @@ void Mob::AI_Init() {
 	AIthink_timer = 0;
 	AIwalking_timer = 0;
 	AImovement_timer = 0;
-	AIautocastspell_timer = 0;
 	AIfeignremember_timer = NULL;
 	AIscanarea_timer = 0;
 	pLastFightingDelayMoving = 0;
 	minLastFightingDelayMoving = 10000;
 	maxLastFightingDelayMoving = 20000;
-	memset(AIspells, 0, sizeof(AIspells));
-	casting_spell_AIindex = MAX_AISPELLS;
-	npc_spells_id = 0;
 
 	pDontHealMeBefore = 0;
 	pDontBuffMeBefore = 0;
 	pDontDotMeBefore = 0;
 	pDontRootMeBefore = 0;
 	pDontSnareMeBefore = 0;
-	pDontCastBefore_casting_spell = 0;
 }
 
 void NPC::AI_Init() {
 	Mob::AI_Init();
+	
+	AIautocastspell_timer = 0;
+	casting_spell_AIindex = MAX_AISPELLS;
+	pDontCastBefore_casting_spell = 0;
 
 	roambox_max_x = 0;
 	roambox_max_y = 0;
@@ -358,19 +372,12 @@ void Mob::AI_Start(int32 iMoveDelay) {
 	AIthink_timer->Trigger();
 	AIwalking_timer = new Timer(0);
 	AImovement_timer = new Timer(AImovement_duration);
-	AIautocastspell_timer = new Timer(750);
-	AIautocastspell_timer->Start(RandomTimer(0, 15000), false);
 	AIfeignremember_timer = new Timer(AIfeignremember_delay);
 	AIscanarea_timer = new Timer(AIscanarea_delay);
 #ifdef REVERSE_AGGRO
 	if(IsNPC() && !CastToNPC()->WillAggroNPCs())
 		AIscanarea_timer->Disable();
 #endif
-	
-	for (int i=0; i<MAX_AISPELLS; i++) {
-		AIspells[i].spellid = 0xFFFF;
-		AIspells[i].type = 0;
-	}
 
 	if (GetAggroRange() == 0)
 		pAggroRange = 70;
@@ -403,9 +410,7 @@ void Client::AI_Start(int32 iMoveDelay) {
     {
 		group->DelMember(CastToMob(),true);
     }
-
-	if (AIspells[0].spellid == 0)
-		AIautocastspell_timer->Disable();
+	
 //	SaveSpawnSpot();
 	pClientSideTarget = target ? target->GetID() : 0;
 	SendAppearancePacket(AT_Anim, ANIM_FREEZE);	// this freezes the client
@@ -417,12 +422,20 @@ void NPC::AI_Start(int32 iMoveDelay) {
 	Mob::AI_Start(iMoveDelay);
 	if (!pAIControlled)
 		return;
+	
+	if (AIspells[0].spellid == 0 || AIspells[0].spellid == SPELL_UNKNOWN) {
+		AIautocastspell_timer = new Timer(1000);
+		AIautocastspell_timer->Disable();
+	} else {
+		AIautocastspell_timer = new Timer(750);
+		AIautocastspell_timer->Start(RandomTimer(0, 15000), false);
+	}
+	
 	if (NPCTypedata) {
 		AI_AddNPCSpells(NPCTypedata->npc_spells_id);
 		NPCSpecialAttacks(NPCTypedata->npc_attacks,0);
 	}
-	if (AIspells[0].spellid == 0)
-		AIautocastspell_timer->Disable();
+	
 	SendTo(GetX(), GetY(), GetZ());
 	SetChanged();
 //	SaveSpawnSpot();
@@ -436,7 +449,6 @@ void Mob::AI_Stop() {
 	safe_delete(AIthink_timer);
 	safe_delete(AIwalking_timer);
 	safe_delete(AImovement_timer);
-	safe_delete(AIautocastspell_timer);
 	safe_delete(AIscanarea_timer);
 	safe_delete(AIfeignremember_timer);
 	hate_list.Wipe();
@@ -445,6 +457,7 @@ void Mob::AI_Stop() {
 void NPC::AI_Stop() {
 	Mob::AI_Stop();
 	Waypoints.clear();
+	safe_delete(AIautocastspell_timer);
 }
 
 void Client::AI_Stop() {
@@ -632,7 +645,7 @@ void Mob::AI_Process() {
 				{
 					int myclass = GetClass();
 					//can only dual weild without a weapon if your a monk
-					if((equipment[8] && GetLevel() > 39) || myclass == MONK || myclass == MONKGM) {
+					if((GetEquipment(MATERIAL_SECONDARY) != 0 && GetLevel() > 39) || myclass == MONK || myclass == MONKGM) {
 						float DualWieldProbability = (GetSkill(DUAL_WIELD) + GetLevel()) / 400.0f;
 						DualWieldProbability -= MakeRandomFloat(0, 1);
 						if(DualWieldProbability < 0){
@@ -653,13 +666,7 @@ void Mob::AI_Process() {
 				if(IsNPC())
 					CastToNPC()->DoClassAttacks(target);
 			}
-			if (AIautocastspell_timer->Check()) 
-			{
-				mlog(AI__SPELLS, "Engaged autocast check triggered. Trying to cast healing spells then maybe offensive spells.");
-				if (!AICastSpell(this, 100, SpellType_Heal | SpellType_Escape)) // try casting a heal or gate
-					if (!entity_list.AICheckCloseSpells(this, 25, MobAISpellRange, SpellType_Heal)) // try casting a heal on nearby
-						AICastSpell(target, 20, SpellType_Nuke | SpellType_Lifetap | SpellType_DOT);
-			}
+			AI_EngagedCastCheck();
 		}	//end is within combat range
 		else {
 			//we cannot reach our target...
@@ -668,10 +675,8 @@ void Mob::AI_Process() {
 			{
 				//could not summon them, start pursuing...
 // TODO: Check here for another person on hate list with close hate value
-				if (AIautocastspell_timer->Check()) 
-				{
-					mlog(AI__SPELLS, "Engaged (pursuing) autocast check triggered. Trying to cast offensive spells.");
-					AICastSpell(target, 90, SpellType_Root | SpellType_Nuke | SpellType_Lifetap | SpellType_Snare);
+				if(AI_PursueCastCheck()){
+					//we did something, so do not process movement.
 				}
 				else if (AImovement_timer->Check()) 
 				{
@@ -725,15 +730,9 @@ void Mob::AI_Process() {
 				}
 			}
 		}
-		if (AIautocastspell_timer->Check()) 
+		if (AI_IdleCastCheck()) 
 		{
-			_ZP(Mob_AI_Process_autocast);
-#if MobAI_DEBUG_Spells >= 25
-			cout << "Non-Engaged autocast check triggered: " << this->GetName() << endl;
-#endif
-			AIautocastspell_timer->Start(2500, false);
-			if (!AICastSpell(this, 100, SpellType_Heal | SpellType_Buff | SpellType_Pet))
-				entity_list.AICheckCloseSpells(this, 33, MobAISpellRange, SpellType_Heal | SpellType_Buff);
+			//we processed a spell action, so do nothing else.
 		}
 		else if (AIscanarea_timer->Check()) 
 		{
@@ -1061,9 +1060,7 @@ void Mob::AI_Event_NoLongerEngaged() {
 	}
 }
 
-void Mob::AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot) {
-	if (!IsAIControlled())
-		return;
+void NPC::AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot) {
 	if (slot == 1) {
 		if (pDontCastBefore_casting_spell) {
 			*pDontCastBefore_casting_spell = 0;
@@ -1090,6 +1087,41 @@ void Mob::AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot) {
 			AIautocastspell_timer->Start(800, false);
 		casting_spell_AIindex = MAX_AISPELLS;
 	}
+}
+
+
+bool NPC::AI_EngagedCastCheck() {
+	if (AIautocastspell_timer->Check()) {
+		mlog(AI__SPELLS, "Engaged autocast check triggered. Trying to cast healing spells then maybe offensive spells.");
+		if (!AICastSpell(this, 100, SpellType_Heal | SpellType_Escape)) // try casting a heal or gate
+			if (!entity_list.AICheckCloseSpells(this, 25, MobAISpellRange, SpellType_Heal)) // try casting a heal on nearby
+				AICastSpell(target, 20, SpellType_Nuke | SpellType_Lifetap | SpellType_DOT);
+		return(true);
+	}
+	return(false);
+}
+
+bool NPC::AI_PursueCastCheck() {
+	if (AIautocastspell_timer->Check()) {
+		mlog(AI__SPELLS, "Engaged (pursuing) autocast check triggered. Trying to cast offensive spells.");
+		AICastSpell(target, 90, SpellType_Root | SpellType_Nuke | SpellType_Lifetap | SpellType_Snare);
+		return(true);
+	}
+	return(false);
+}
+
+bool NPC::AI_IdleCastCheck() {
+	if (AIautocastspell_timer->Check()) {
+		_ZP(Mob_AI_Process_autocast);
+#if MobAI_DEBUG_Spells >= 25
+		cout << "Non-Engaged autocast check triggered: " << this->GetName() << endl;
+#endif
+		AIautocastspell_timer->Start(2500, false);
+		if (!AICastSpell(this, 100, SpellType_Heal | SpellType_Buff | SpellType_Pet))
+			entity_list.AICheckCloseSpells(this, 33, MobAISpellRange, SpellType_Heal | SpellType_Buff);
+		return(true);
+	}
+	return(false);
 }
 
 void Mob::StartEnrage()
@@ -1119,7 +1151,7 @@ void Mob::StartEnrage()
     entity_list.MessageClose(this, true, 600, 13, "%s has become ENRAGED.", GetName());
 }
 
-bool Mob::IsEnraged()
+bool Mob::IsEnraged() 
 {
     // check the timer and set to false if time is up
     if (bEnraged && SpecAttackTimers[SPECATK_ENRAGE] && SpecAttackTimers[SPECATK_ENRAGE]->Check())
@@ -1382,9 +1414,8 @@ create table npc_spells_entries (
 */ 
 
 bool IsSpellInList(DBnpcspells_Struct* spell_list, sint16 iSpellID);
-void AddSpellToNPCList(Mob::AISpells_Struct* AIspells, sint16 iPriority, sint16 iSpellID, uint16 iType, sint16 iManaCost, sint32 iRecastDelay);
 
-bool Mob::AI_AddNPCSpells(int32 iDBSpellsID) {
+bool NPC::AI_AddNPCSpells(int32 iDBSpellsID) {
 	// ok, this function should load the list, and the parent list then shove them into the struct and sort
 	npc_spells_id = iDBSpellsID;
 	memset(AIspells, 0, sizeof(AIspells));
@@ -1466,7 +1497,7 @@ bool IsSpellInList(DBnpcspells_Struct* spell_list, sint16 iSpellID) {
 }
 
 // adds a spell to the list, taking into account priority and resorting list as needed.
-void AddSpellToNPCList(Mob::AISpells_Struct* AIspells, sint16 iPriority, sint16 iSpellID, uint16 iType, sint16 iManaCost, sint32 iRecastDelay) {
+void NPC::AddSpellToNPCList(AISpells_Struct* AIspells, sint16 iPriority, sint16 iSpellID, uint16 iType, sint16 iManaCost, sint32 iRecastDelay) {
 	if (iSpellID <= 0 || iSpellID > SPDAT_RECORDS) {
 
 #if MobAI_DEBUG_Spells >= 1

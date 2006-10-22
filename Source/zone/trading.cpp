@@ -746,10 +746,10 @@ void Client::BuyTraderItem(TraderBuy_Struct* tbs,Client* trader,const EQApplicat
 	mus->copper=itemcost;
 	//trader->AddMoneyToPP(tbs->price,true);
 	trader->AddMoneyToPP(mus->copper,mus->silver,mus->gold,mus->platinum,false);
-	mus->platinum=trader->GetPP().platinum;
-	mus->gold=trader->GetPP().gold;
-	mus->silver=trader->GetPP().silver;
-	mus->copper=trader->GetPP().copper;
+	mus->platinum=trader->GetPlatinum();
+	mus->gold=trader->GetGold();
+	mus->silver=trader->GetSilver();
+	mus->copper=trader->GetCopper();
 	traderslot=trader->FindTraderItem(tbs->itemid,outtbs->quantity);
 	trader->QueuePacket(outapp2);
 	trader->FindAndNukeTraderItem(tbs->itemid,outtbs->quantity,this,tbs->slot_num);

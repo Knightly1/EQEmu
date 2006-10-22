@@ -1274,8 +1274,8 @@ struct MoveCoin_Struct
 {
 		 sint32 from_slot;
 		 sint32 to_slot;
-		 sint32 cointype1;
-		 sint32 cointype2;
+		 uint32 cointype1;
+		 uint32 cointype2;
 		 sint32	amount;
 };
 struct TradeCoin_Struct{

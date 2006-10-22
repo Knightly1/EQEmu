@@ -49,7 +49,7 @@ struct NPCType
     int8    deity;		//not loaded from DB
     int8    level;
 	int32   npc_id; // rembrant, Dec. 20, 2001
-	int8    skills[75]; // socket 12-29-01, not loaded from DB
+//	int8    skills[75]; // socket 12-29-01, not loaded from DB
 	int8	texture;
 	int8	helmtexture;
 	int32	loottable_id;
@@ -57,7 +57,7 @@ struct NPCType
 	sint32	npc_faction_id;
 	uint32	merchanttype;
     int8    light;		//not loaded from DB
-    int32    equipment[MAX_MATERIALS];		//not loaded from DB
+//    int32    equipment[MAX_MATERIALS];		//not loaded from DB
 	
 	int16	AC;
 	int16	Mana;	//not loaded from DB

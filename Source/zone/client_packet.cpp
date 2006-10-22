@@ -2932,9 +2932,6 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d, inv
 			}
 			spell_to_cast = SPELL_LAY_ON_HANDS;
 			p_timers.Start(pTimerLayHands, LayOnHandsReuseTime);
-			//database.UpdateAATimers(CharacterID(),LayOnHandsReuseTime,0, 87);//72 minutes
-			AbilityTimer=true;
-			
 		} else if(castspell->slot == ABILITY_SPELL_SLOT &&
 			(castspell->spell_id == SPELL_HARM_TOUCH
 				|| castspell->spell_id == SPELL_HARM_TOUCH2
@@ -2951,8 +2948,6 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d, inv
 			else
 				spell_to_cast = SPELL_HARM_TOUCH2;
 			p_timers.Start(pTimerHarmTouch, HarmTouchReuseTime);
-			//database.UpdateAATimers(CharacterID(),HarmTouchReuseTime,0, 89);//72 minutes
-			AbilityTimer=true;
 		}
 		
 		//handle disciplines, OLD, they keep changing this
@@ -2994,7 +2989,6 @@ LogFile->write(EQEMuLog::Debug, "OP CastSpell: slot=%d, spell=%d, target=%d, inv
 			}
 			else*/
 			//try disciplines
-		AbilityTimer=true;
 		
 		CastSpell(spell_to_cast, castspell->target_id, castspell->slot);
 	}

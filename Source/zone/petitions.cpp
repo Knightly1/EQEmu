@@ -116,7 +116,7 @@ int32 PetitionList::GetTotalPetitions(){
 	}
 	return total; 
 }
-bool PetitionList::FindPetitionByAccountName(char* acctname) {
+bool PetitionList::FindPetitionByAccountName(const char* acctname) {
 	LinkedListIterator<Petition*> iterator(list); 
 	
 	iterator.Reset(); 
@@ -127,7 +127,7 @@ bool PetitionList::FindPetitionByAccountName(char* acctname) {
 	} 
 	return false; 
 }
-bool PetitionList::DeletePetitionByCharName(char* charname) {
+bool PetitionList::DeletePetitionByCharName(const char* charname) {
 	LinkedListIterator<Petition*> iterator(list); 
 	
 	iterator.Reset(); 

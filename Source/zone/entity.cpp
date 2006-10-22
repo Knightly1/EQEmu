@@ -2167,7 +2167,7 @@ void EntityList::SendTraders(Client* client){
 	Client* trader;
 	while(iterator.MoreElements()) {
 		trader=iterator.GetData();
-		if(trader->Trader)
+		if(trader->IsTrader())
 			client->SendTraderPacket(trader);
 		iterator.Advance();
 	}

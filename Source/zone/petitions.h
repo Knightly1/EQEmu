@@ -108,8 +108,8 @@ public:
 	void ReadDatabase();
 	void UpdatePetition(Petition* pet);
 	void UpdateZoneListQueue();
-	bool FindPetitionByAccountName(char* acctname);
-	bool DeletePetitionByCharName(char* charname);
+	bool FindPetitionByAccountName(const char* acctname);
+	bool DeletePetitionByCharName(const char* charname);
 
 private:
 	LinkedList<Petition*> list;
