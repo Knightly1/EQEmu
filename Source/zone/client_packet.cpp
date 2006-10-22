@@ -3184,7 +3184,7 @@ void Client::Handle_OP_TradeAcceptClick(const EQApplicationPacket *app)
 			this->FastQueuePacket(&outapp);
 		}
 	}
-	else if(with){
+	else if(with && with->IsNPC()){
 		//trading with an NPC
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_FinishTrade,0);
 		QueuePacket(outapp);

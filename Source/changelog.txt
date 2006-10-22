@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==10/21/2006
+FatherNitwit: Hopefully fixed spawn timer variance.
+
 ==10/18/2006
 FatherNitwit: Maybe fixed issue with losing items when zoning in mysql 5.
 FatherNitwit: Fixed issue with color saving properly.

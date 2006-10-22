@@ -105,16 +105,12 @@ int32 Spawn2::resetTimer()
 	int32 rspawn = respawn_ * 1000;
 	
 	if (variance_ != 0) {
-		int32 vardir = (rand()%50);
-		int32 variance = (rand()%variance_);
-		float varper = variance*0.01;
-		float varvalue = varper*(rspawn);
-		if (vardir < 50)
-		{
-			varvalue = varvalue * -1;
-		}
+		int var_over_2 = variance_/2;
+		rspawn = MakeRandomInt(rspawn - var_over_2, rspawn + var_over_2);
 		
-		rspawn += (int32) varvalue;
+		//put a lower bound on it, not a lot of difference below 100, so set that as the bound.
+		if(rspawn < 100)
+			rspawn = 100;
 	}
 	
 	return (rspawn);
