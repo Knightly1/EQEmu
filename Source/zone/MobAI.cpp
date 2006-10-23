@@ -342,7 +342,6 @@ void NPC::AI_Init() {
 	
 	AIautocastspell_timer = 0;
 	casting_spell_AIindex = MAX_AISPELLS;
-	pDontCastBefore_casting_spell = 0;
 
 	roambox_max_x = 0;
 	roambox_max_y = 0;
@@ -1062,10 +1061,6 @@ void Mob::AI_Event_NoLongerEngaged() {
 
 void NPC::AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot) {
 	if (slot == 1) {
-		if (pDontCastBefore_casting_spell) {
-			*pDontCastBefore_casting_spell = 0;
-			pDontCastBefore_casting_spell = 0;
-		}
 		int32 recovery_time = 0;
 		if (iCastSucceeded) {
 			if (casting_spell_AIindex < MAX_AISPELLS) {

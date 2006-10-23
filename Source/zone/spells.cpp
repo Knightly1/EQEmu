@@ -403,10 +403,6 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	}
 	
 	// if we got here we didn't fizzle, and are starting our cast
-
-	if(IsNPC()) {
-		CastToNPC()->AI_SetCastingTimerPtr(oSpellWillFinish);
-	}
 	if (oSpellWillFinish)
 		*oSpellWillFinish = Timer::GetCurrentTime() + cast_time + 100;
 

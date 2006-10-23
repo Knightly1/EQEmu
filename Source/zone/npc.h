@@ -67,7 +67,6 @@ public:
 	virtual bool	AI_PursueCastCheck();
 	virtual bool	AI_IdleCastCheck();
 	virtual void	AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot);
-	void AI_SetCastingTimerPtr(int32 *ptr) { pDontCastBefore_casting_spell = ptr; }
 	
 	virtual void SetTarget(Mob* mob);
 	virtual uint32 GetSkill(int skill_num) const { if (skill_num <= HIGHEST_SKILL) { return skills[skill_num + 1]; } return 0; }
