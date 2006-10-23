@@ -347,7 +347,7 @@ bool logpos;
 	void	BuffProcess();
 	virtual void SetLevel(uint8 in_level, bool command = false) { level = in_level; }
 	
-	virtual inline sint32 GetPrimaryFaction() { return 0; }
+	virtual inline sint32 GetPrimaryFaction() const { return 0; }
 	virtual uint32 GetSkill(int skill_num) const { return 0; } //overloaded by things which actually have skill (NPC|client)
 	virtual void SendWearChange(int8 material_slot);
 	virtual int32 GetEquipment(int8 material_slot) const { return(0); }
