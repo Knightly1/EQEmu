@@ -83,7 +83,6 @@ public:
 	void	Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill = 0x04, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false);
 	void	Death(Mob* other, sint32 damage, int16 spell_id = SPELL_UNKNOWN, int8 attack_skill = 0x04);
 	bool	DatabaseCastAccepted(int spell_id);
-	int32	spelllimit;
 	bool	IsFactionListAlly(uint32 other_faction);
 	FACTION_VALUE CheckNPCFactionAlly(sint32 other_faction);
 	FACTION_VALUE GetReverseFactionCon(Mob* iOther);
@@ -112,8 +111,6 @@ public:
 	void    HateSummon();
 */	
 
-	bool	IsRanger() { return rangerstance; }
-
 	void	DescribeAggro(Client *towho, Mob *mob, bool verbose);
 	void    RemoveItem(uint16 item_id, int16 quantity = 0, int16 slot = 0);
 //	bool	AddNPCSpells(int32 iDBSpellsID, AISpells_Struct* AIspells);
@@ -125,15 +122,14 @@ public:
 	void	RemoveCash();
 	void	QueryLoot(Client* to);
 	int32	CountLoot();
-	bool	passengers;
 	void	DumpLoot(int32 npcdump_index, ZSDump_NPC_Loot* npclootdump, int32* NPCLootindex);
-	inline int32	GetLoottableID()	{ return loottable_id; }
+	inline int32	GetLoottableID()	const { return loottable_id; }
 //	void	SetPetType(int16 in_type)	{ typeofpet = in_type; } // put this here because only NPCs can be anything but charmed pets
 
-	inline uint32	GetCopper()		{ return copper; }
-	inline uint32	GetSilver()		{ return silver; }
-	inline uint32	GetGold()		{ return gold; }
-	inline uint32	GetPlatinum()	{ return platinum; }
+	inline uint32	GetCopper()		const { return copper; }
+	inline uint32	GetSilver()		const { return silver; }
+	inline uint32	GetGold()		const { return gold; }
+	inline uint32	GetPlatinum()	const { return platinum; }
 
 	inline void	SetCopper(uint32 amt)		{ copper = amt; }
 	inline void	SetSilver(uint32 amt)		{ silver = amt; }
@@ -146,24 +142,17 @@ public:
 	void SetSp2(int32 sg2){ spawn_group=sg2; }
 	void SetWaypointMax(int16 wp_){ wp_m=wp_; }
 
-	int16 GetWaypointMax(){ return wp_m; }
-	int32 GetGrid(){ return grid; }
-	int32 GetSp2(){ return spawn_group; }
+	int16 GetWaypointMax() const { return wp_m; }
+	int32 GetGrid() const { return grid; }
+	int32 GetSp2() const { return spawn_group; }
 
 	uint32	MerchantType;
 	void	Depop(bool StartSpawnTimer = true);
 	void	Stun(int duration);
 	
 	inline void SignalNPC(int _signal_id) { signaled = true; signal_id = _signal_id; }
-
-
-	#ifdef IPC
-       inline bool	IsInteractive() { return interactive; }
-	#endif
-    inline bool	IsPVP() { return pvp; }
-//	inline int8	CurrentPosition() { return position; }
-
-	inline const sint32&	GetNPCFactionID()	{ return npc_faction_id; }
+	
+	inline sint32	GetNPCFactionID()	const { return npc_faction_id; }
 	inline sint32			GetPrimaryFaction()	const { return primary_faction; }
 	sint32	GetNPCHate(Mob* in_ent)  {return hate_list.GetEntHate(in_ent);}
     bool    IsOnHatelist(Mob*p) { return hate_list.IsOnHateList(p);}
@@ -172,9 +161,9 @@ public:
 
 	float   org_x, org_y, org_z, org_heading;
 	
-	int16	GetMaxDMG() {return max_dmg;}
-	bool	IsAnimal() { return(bodytype == BT_Animal); }
-	int16   GetPetSpellID() {return pet_spell_id;}
+	int16	GetMaxDMG() const {return max_dmg;}
+	bool	IsAnimal() const { return(bodytype == BT_Animal); }
+	int16   GetPetSpellID() const {return pet_spell_id;}
 	void    SetPetSpellID(int16 amt) {pet_spell_id = amt;}
 	int32	GetMaxDamage(int8 tlevel);
 	void    SetTaunting(bool tog) {taunting = tog;}
@@ -223,8 +212,6 @@ public:
 	ItemList	itemlist; //kathgar - why is this public?  Doing other things or I would check the code
 	
 	NPCProximity* proximity;
-	
-	bool	rangerstance;
 
 	Spawn2*	respawn2;
 protected:
@@ -245,18 +232,16 @@ protected:
 	sint32	npc_faction_id;
 	sint32	primary_faction;
 	
-	Timer	attacked_timer;
-	Timer	combat_event_timer;
+	Timer	attacked_timer;		//running while we are being attacked (damaged)
+	Timer	combat_event_timer;	//running while we are engaged in offensive or defensive combat activities
     Timer	swarm_timer;
     Timer	classattack_timer;
     Timer	assist_timer;		//ask for help from nearby mobs
 
-	bool	attack_event;
-	bool	combat_event;
+	bool	attack_event;	//true if we have fired an EVENT_ATTACK and our attacked timer has not gone off
+	bool	combat_event;	//true if we have fired an EVENT_COMBAT and our combat activity timer has not gone off
 
-    bool	evader;
 //	int8	position;	// 0 - Standing, 1 - Sitting, 2 - Crouching, 4 - Looting
-	bool	pvp;
     Timer	sendhpupdate_timer;
 
 	int32	npc_spells_id;
@@ -307,10 +292,10 @@ protected:
 	float roambox_movingto_y;
 	int32 roambox_delay;
 	
-	int16    skills[HIGHEST_SKILL+1];
-	int32   equipment[MAX_MATERIALS];
-	int16	d_meele_texture1;
-	int16	d_meele_texture2;
+	int16   skills[HIGHEST_SKILL+1];
+	int32   equipment[MAX_MATERIALS];	//this is an array of item IDs
+	int16	d_meele_texture1;		//this is an item Material value
+	int16	d_meele_texture2;		//this is an item Material value (offhand)
 	
 private:
 	int32	loottable_id;

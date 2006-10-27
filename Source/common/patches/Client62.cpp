@@ -17,7 +17,7 @@ static const char *name = "6.2";
 static OpcodeManager *opcodes = NULL;
 static Strategy struct_strategy;
 
-char *SerializeItem(ItemInst *inst, sint16 slot_id, uint32 *length, uint8 depth);
+char *SerializeItem(const ItemInst *inst, sint16 slot_id, uint32 *length, uint8 depth);
 	
 void Register(EQStreamIdentifier &into) {
 	//create our opcode manager if we havent already
@@ -479,7 +479,7 @@ ENCODE(OP_ItemPacket) {
 	InternalSerializedItem_Struct *int_struct=(InternalSerializedItem_Struct *)(old_item_pkt->SerializedItem);
 
 	uint32 length;
-	char *serialized=SerializeItem((ItemInst *)int_struct->inst,int_struct->slot_id,&length,0);
+	char *serialized=SerializeItem((const ItemInst *)int_struct->inst,int_struct->slot_id,&length,0);
 
 	if (!serialized) {
 		_log(NET__STRUCTS, "Serialization failed on item slot %d.",int_struct->slot_id);
@@ -704,7 +704,7 @@ DECODE(OP_CharacterCreate) {
 
 
 
-char *SerializeItem(ItemInst *inst, sint16 slot_id, uint32 *length, uint8 depth) {
+char *SerializeItem(const ItemInst *inst, sint16 slot_id, uint32 *length, uint8 depth) {
 	char *serialization = NULL;
 	char *instance = NULL;
 	const char *protection=(const char *)"\\\\\\\\\\";

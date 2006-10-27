@@ -435,7 +435,7 @@ public:
 	
 	bool IsSlotAllowed(sint16 slot_id) const;
 
-	string Serialize(sint16 slot_id) const { InternalSerializedItem_Struct s; s.slot_id=slot_id; s.inst=(uint32)this; string ser; ser.assign((char *)&s,sizeof(InternalSerializedItem_Struct)); return ser; }
+	string Serialize(sint16 slot_id) const { InternalSerializedItem_Struct s; s.slot_id=slot_id; s.inst=(const void *)this; string ser; ser.assign((char *)&s,sizeof(InternalSerializedItem_Struct)); return ser; }
 
 
 protected:

@@ -60,7 +60,7 @@ class ItemInst;
 
 struct InternalSerializedItem_Struct {
 	sint16 slot_id;
-	uint32 inst;
+	const void * inst;
 };
 
 #define MAX_AUGMENT_SLOTS 5

@@ -660,32 +660,6 @@ XS(XS_NPC_GetSp2)
 	XSRETURN(1);
 }
 
-XS(XS_NPC_IsPVP); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_IsPVP)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: NPC::IsPVP(THIS)");
-	{
-		NPC *		THIS;
-		bool		RETVAL;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->IsPVP();
-		ST(0) = boolSV(RETVAL);
-		sv_2mortal(ST(0));
-	}
-	XSRETURN(1);
-}
-
 XS(XS_NPC_GetNPCFactionID); /* prototype to pass -Wmissing-prototypes */
 XS(XS_NPC_GetNPCFactionID)
 {
@@ -1511,7 +1485,6 @@ XS(boot_NPC)
 		newXSproto(strcpy(buf, "GetWaypointMax"), XS_NPC_GetWaypointMax, file, "$");
 		newXSproto(strcpy(buf, "GetGrid"), XS_NPC_GetGrid, file, "$");
 		newXSproto(strcpy(buf, "GetSp2"), XS_NPC_GetSp2, file, "$");
-		newXSproto(strcpy(buf, "IsPVP"), XS_NPC_IsPVP, file, "$");
 		newXSproto(strcpy(buf, "GetNPCFactionID"), XS_NPC_GetNPCFactionID, file, "$");
 		newXSproto(strcpy(buf, "GetPrimaryFaction"), XS_NPC_GetPrimaryFaction, file, "$");
 		newXSproto(strcpy(buf, "GetNPCHate"), XS_NPC_GetNPCHate, file, "$$");

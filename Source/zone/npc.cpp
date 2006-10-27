@@ -128,7 +128,6 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	platinum = 0;
 	max_dmg=d->max_dmg;
 	min_dmg=d->min_dmg;
-	passengers =false;
 	grid = 0;
 	wp_m = 0;
 	max_wp=0;

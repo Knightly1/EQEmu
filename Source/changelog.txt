@@ -1,6 +1,11 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==10/26/2006
+FatherNitwit: WildcardX's name cleanup.
+FatherNitwit: Tweak for 64 bit pointer support in the item code of the struct strategy.
+FatherNitwit: More const cleanup in npc.h
+
 ==10/22/2006
 FatherNitwit: added EVENT_COMBAT triggered when an NPC engages any form of 
 FatherNitwit: 	combat and when combat is over. $combat_state signals which.

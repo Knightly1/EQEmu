@@ -17,7 +17,7 @@ static const char *name = "Titanium";
 static OpcodeManager *opcodes = NULL;
 static Strategy struct_strategy;
 
-char *SerializeItem(ItemInst *inst, sint16 slot_id, uint32 *length, uint8 depth);
+char *SerializeItem(const ItemInst *inst, sint16 slot_id, uint32 *length, uint8 depth);
 	
 void Register(EQStreamIdentifier &into) {
 	//create our opcode manager if we havent already
@@ -565,7 +565,7 @@ ENCODE(OP_CharInventory) {
 	string serial_string;
 	for(r = 0; r < itemcount; r++, eq++) {
 		uint32 length;
-		char *serialized=SerializeItem((ItemInst*)eq->inst,eq->slot_id,&length,0);
+		char *serialized=SerializeItem((const ItemInst*)eq->inst,eq->slot_id,&length,0);
 		if (serialized) {
 			serial_string.append(serialized,length+1);
 			safe_delete_array(serialized);
@@ -739,7 +739,7 @@ DECODE(OP_CharacterCreate) {
 
 
 
-char *SerializeItem(ItemInst *inst, sint16 slot_id, uint32 *length, uint8 depth) {
+char *SerializeItem(const ItemInst *inst, sint16 slot_id, uint32 *length, uint8 depth) {
 	char *serialization = NULL;
 	char *instance = NULL;
 	const char *protection=(const char *)"\\\\\\\\\\";

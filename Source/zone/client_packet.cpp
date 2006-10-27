@@ -3198,10 +3198,7 @@ void Client::Handle_OP_BoardBoat(const EQApplicationPacket *app)
 	memset(boatname, 0, app->size-4);
 	memcpy(boatname, app->pBuffer, app->size-4);
 	printf("%s has gotten on the boat %s\n",GetName(),boatname);
-	Mob* boat = entity_list.GetMob(boatname);
-	if (boat){
-		boat->CastToNPC()->passengers=true;
-	}
+	//Mob* boat = entity_list.GetMob(boatname);
 	safe_delete(boatname);
 	return;
 }
@@ -4574,12 +4571,12 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 		break;
 	}
 	case PET_TAUNT: {
-		Message(0,"%s says, 'Now taunting foes, Master!",mypet->GetName());
+		Message(0,"%s says, 'Now taunting foes, Master!",mypet->GetCleanName());
 		mypet->CastToNPC()->SetTaunting(true);
 		break;
 	}
 	case PET_NOTAUNT: {
-		Message(0,"%s says, 'No longer taunting foes, Master!",mypet->GetName());
+		Message(0,"%s says, 'No longer taunting foes, Master!",mypet->GetCleanName());
 		mypet->CastToNPC()->SetTaunting(false);
 		break;
 	}

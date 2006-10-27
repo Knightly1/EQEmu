@@ -1553,7 +1553,7 @@ bool Mob::CanThisClassParry(void) const
 	if (this->IsClient())
 		return(this->CastToClient()->GetSkill(PARRY) != 0);	// No skill = no chance
 	else
-		return false;
+		return true;
 }
 
 bool Mob::CanThisClassDodge(void) const
@@ -1619,7 +1619,7 @@ bool Mob::CanThisClassDodge(void) const
 	if (this->IsClient())
 		return(this->CastToClient()->GetSkill(DODGE) != 0);	// No skill = no chance
 	else
-		return false;
+		return true;
 }
 
 bool Mob::CanThisClassRiposte(void) const //Could just check if they have the skill?
@@ -1670,7 +1670,7 @@ bool Mob::CanThisClassRiposte(void) const //Could just check if they have the sk
 	if (this->IsClient())
 		return(this->CastToClient()->GetSkill(RIPOSTE) != 0);	// No skill = no chance
 	else
-		return false;
+		return true;
 }
 
 float Mob::Dist(const Mob &other) const {
@@ -1736,7 +1736,7 @@ bool Mob::HateSummon() {
     {
 		if (target->IsClient())
 			target->CastToClient()->Message(15,"You have been summoned!");
-		entity_list.MessageClose(this, true, 500, 10, "%s says,'You will not evade me, %s!' ", GetName(), GetHateTop()->GetName() );
+		entity_list.MessageClose(this, true, 500, 10, "%s says,'You will not evade me, %s!' ", GetCleanName(), GetHateTop()->GetName() );
 
 		// RangerDown - GMMove doesn't seem to be working well with players, so use MovePC for them, GMMove for NPC's
 		if (target->IsClient())

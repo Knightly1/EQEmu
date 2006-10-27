@@ -431,7 +431,7 @@ bool Client::Process() {
 			{
 				if (!CombatRange(shield_target))
 				{
-					entity_list.MessageClose(this,false,100,0,"%s ceases shielding %s.",GetName(),shield_target->GetName());
+					entity_list.MessageClose(this,false,100,0,"%s ceases shielding %s.",GetCleanName(),shield_target->GetCleanName());
 					for (int y = 0; y < 2; y++)
 					{
 						if (shield_target->shielder[y].shielder_id == GetID())

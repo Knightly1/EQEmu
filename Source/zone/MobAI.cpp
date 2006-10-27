@@ -1143,7 +1143,7 @@ void Mob::StartEnrage()
     // start the timer. need to call IsEnraged frequently since we dont have callback timers :-/
     SpecAttackTimers[SPECATK_ENRAGE]->Start();
     bEnraged = true;
-    entity_list.MessageClose(this, true, 600, 13, "%s has become ENRAGED.", GetName());
+	entity_list.MessageClose(this, true, 600, 13, "%s has become ENRAGED.", GetCleanName());
 }
 
 bool Mob::IsEnraged() 
@@ -1151,7 +1151,7 @@ bool Mob::IsEnraged()
     // check the timer and set to false if time is up
     if (bEnraged && SpecAttackTimers[SPECATK_ENRAGE] && SpecAttackTimers[SPECATK_ENRAGE]->Check())
     {
-        entity_list.MessageClose(this, true, 600, 13, "%s is no longer enraged.", GetName());
+		entity_list.MessageClose(this, true, 600, 13, "%s is no longer enraged.", GetCleanName());
         safe_delete(SpecAttackTimers[SPECATK_ENRAGE]);
         SpecAttackTimers[SPECATK_ENRAGE] = new Timer(360000);
         SpecAttackTimers[SPECATK_ENRAGE]->Start();
@@ -1191,7 +1191,7 @@ bool Mob::AddRampage(Mob *mob)
 bool Mob::Rampage()
 {
 
-    entity_list.MessageClose(this, true, 600, 13, "%s goes on a RAMPAGE!", GetName());
+	entity_list.MessageClose(this, true, 600, 13, "%s goes on a RAMPAGE!", GetCleanName());
     for (int i = 0; i < MAX_RAMPAGE_TARGETS; i++)
     {
         // range is important

@@ -1273,7 +1273,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	
 	if (!IsAttackAllowed(other)) {
 		if (this->GetOwnerID())
-			entity_list.MessageClose(this, 1, 200, 10, "%s says, 'That is not a legal target master.'", this->GetName());
+			entity_list.MessageClose(this, 1, 200, 10, "%s says, 'That is not a legal target master.'", this->GetCleanName());
 		if(other)
 			RemoveFromHateList(other);
 		mlog(COMBAT__ATTACKS, "I am not allowed to attack %s", other->GetName());
@@ -2240,7 +2240,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 				if ((spell_id != SPELL_UNKNOWN || (attack_skill>200 && attack_skill<250)) && damage>0) {
 					//special crap for spell damage, looks hackish to me
 					char val1[20]={0};
-					owner->Message_StringID(4,OTHER_HIT_NONMELEE,GetName(),ConvertArray(damage,val1));
+					owner->Message_StringID(4,OTHER_HIT_NONMELEE,GetCleanName(),ConvertArray(damage,val1));
 			    } else {
 			    	if(damage > 0) {
 						if(spell_id != SPELL_UNKNOWN)
@@ -2263,7 +2263,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 				if ((spell_id != SPELL_UNKNOWN || (attack_skill>200 && attack_skill<250)) && damage>0) {
 					//special crap for spell damage, looks hackish to me
 					char val1[20]={0};
-					attacker->Message_StringID(4,OTHER_HIT_NONMELEE,GetName(),ConvertArray(damage,val1));
+					attacker->Message_StringID(4,OTHER_HIT_NONMELEE,GetCleanName(),ConvertArray(damage,val1));
 			    } else {
 			    	if(damage > 0) {
 						if(spell_id != SPELL_UNKNOWN)
