@@ -145,32 +145,6 @@ XS(XS_NPC_AddLootTable)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_NPC_IsRanger); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_IsRanger)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: NPC::IsRanger(THIS)");
-	{
-		NPC *		THIS;
-		bool		RETVAL;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->IsRanger();
-		ST(0) = boolSV(RETVAL);
-		sv_2mortal(ST(0));
-	}
-	XSRETURN(1);
-}
-
 XS(XS_NPC_RemoveItem); /* prototype to pass -Wmissing-prototypes */
 XS(XS_NPC_RemoveItem)
 {
@@ -1465,7 +1439,6 @@ XS(boot_NPC)
 		newXSproto(strcpy(buf, "CheckNPCFactionAlly"), XS_NPC_CheckNPCFactionAlly, file, "$$");
 		newXSproto(strcpy(buf, "AddItem"), XS_NPC_AddItem, file, "$$$;$");
 		newXSproto(strcpy(buf, "AddLootTable"), XS_NPC_AddLootTable, file, "$");
-		newXSproto(strcpy(buf, "IsRanger"), XS_NPC_IsRanger, file, "$");
 		newXSproto(strcpy(buf, "RemoveItem"), XS_NPC_RemoveItem, file, "$$;$$");
 		newXSproto(strcpy(buf, "ClearItemList"), XS_NPC_ClearItemList, file, "$");
 		newXSproto(strcpy(buf, "AddCash"), XS_NPC_AddCash, file, "$$$$$");
