@@ -1865,6 +1865,8 @@ sint32 Mob::GetEquipmentMaterial(int8 material_slot) const
 		{
 			if(strlen(item->IDFile) > 2)
 				return atoi(&item->IDFile[2]);
+			else	//may as well try this, since were going to 0 anyways
+				return item->Material;
 		}
 		else
 		{

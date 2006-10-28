@@ -954,26 +954,24 @@ sint32 NPC::GetEquipmentMaterial(int8 material_slot) const
 {
 	const Item_Struct *item;
 
-	switch(material_slot) {
-	case MATERIAL_HEAD:
-		return helmtexture;
-	case MATERIAL_CHEST:
-		return texture;
-	case MATERIAL_PRIMARY:
-		if(equipment[MATERIAL_PRIMARY] == 0)
+	if(equipment[material_slot] == 0) {
+		switch(material_slot) {
+		case MATERIAL_HEAD:
+			return helmtexture;
+		case MATERIAL_CHEST:
+			return texture;
+		case MATERIAL_PRIMARY:
 			return d_meele_texture1;
-		//somewhat contrived fallthrough
-	case MATERIAL_SECONDARY:
-		if(material_slot == MATERIAL_SECONDARY && equipment[MATERIAL_SECONDARY] == 0)
+		case MATERIAL_SECONDARY:
 			return d_meele_texture2;
-		//fall through and use our equipped item instead.
-	default:
-		item = database.GetItem(GetEquipment(material_slot));
-		if(item != NULL) {
-			return item->Material;
+		default:
+			//they have nothing in the slot, and its not a special slot... they get nothing.
+			return(0);
 		}
 	}
-	return 0;
+	
+	//they have some loot item in this slot, pass it up to the default handler
+	return(Mob::GetEquipmentMaterial(material_slot));
 }
 
 int32 NPC::GetMaxDamage(int8 tlevel)

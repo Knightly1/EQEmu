@@ -2,6 +2,7 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
 ==10/28/2006
+FatherNitwit: Fix for NPC weapon appearance due to loot items.
 aza77: Fixed SendAppearancePacket
 aza77: Fixed a PvP bug that caused the zone to crash on death
 
