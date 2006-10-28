@@ -1143,7 +1143,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 
 			char tmp[20];
 			database.GetVariable("ServerType", tmp, 9);
-			if(atoi(tmp)==1 && other->IsClient()){
+			if(atoi(tmp)==1 && other != NULL && other->IsClient()){
 				char tmp2[10] = {0};
 				database.GetVariable("PvPreward", tmp, 9);
 				int reward = atoi(tmp);
