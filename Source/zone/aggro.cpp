@@ -24,6 +24,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "spdat.h"
 #include "../common/skills.h"
 #include "../common/MiscFunctions.h"
+#include "../common/rulesys.h"
 #include "StringIDs.h"
 #include <iostream>
 
@@ -981,92 +982,158 @@ int16 Mob::CheckAggroAmount(int16 spellid) {
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
 				if (val < 0)
 				{
-					AggroAmount+=slevel*4;
-					//AggroAmount += val*-4;
+					AggroAmount+=slevel*7; //Eqiv 455 melee damage at 65
 					break;
 				}
 				break;
 			}
-			case SE_AttackSpeed: {
+			case SE_AttackSpeed:
+			case SE_AttackSpeed2:
+			case SE_AttackSpeed3:{
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
 				if (val < 100)
 				{
-					//AggroAmount += (100-val)*15;
-					AggroAmount+=slevel*6;
+					AggroAmount+=slevel*15; //Eqiv 975 melee damage at 65
 				}
 				break;
 			}
 			case SE_Stun: {
 				if (spells[spell_id].base[o] > 1)
-					AggroAmount+=slevel*6;
+					AggroAmount+=slevel*10; //Eqiv 650 melee damage at 65
 				else
-					AggroAmount+=slevel*2;
+					AggroAmount+=slevel*5; //Eqiv 325 melee damage at 65
 				break;
 			}
 			case SE_Blind: {
-				AggroAmount+=slevel*3;
+				AggroAmount+=slevel*8; //Eqiv 520 melee damage at 65
 				break;
 			}
 			case SE_Mez: {
-				int mez_amount = slevel*10;
-				switch (GetAA(aaJewelCraftMastery))
-				{
-					case 1:
-						mez_amount = mez_amount * 90 / 100;
-						break;
-					case 2:
-						mez_amount = mez_amount * 75 / 100;
-						break;
-					case 3:
-						mez_amount = mez_amount * 60 / 100;
-						break;
-				}
-				AggroAmount+=mez_amount;
+				AggroAmount+=slevel*18; //Eqiv 1170 melee damage at 65
 				break;
 			}
 			case SE_Charm: {
-				AggroAmount+=slevel*15;
+				AggroAmount+=slevel*15; //Eqiv 975 melee damage at 65
 				break;
 			}
 			case SE_Root: {
-				AggroAmount+=slevel*2;
+				AggroAmount+=slevel*4; //Eqiv 260 melee damage at 65
 				break;
 			}
 			case SE_Fear: {
-				AggroAmount+=slevel*4;
+				AggroAmount+=slevel*8; //Eqiv 520 melee damage at 65
 				break;
 			}
-			case SE_ArmorClass:
+			case SE_ATK:
+			case SE_ArmorClass:	{
+				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
+				if (val < 0)
+				{
+					AggroAmount+=(slevel*8) - (val/2);				
+				}				
+				break;
+			}
 			case SE_ResistMagic:
-			case SE_ResistAll:
 			case SE_ResistFire:
 			case SE_ResistCold:
 			case SE_ResistPoison:
-			case SE_ResistDisease:
+			case SE_ResistDisease:{
+					int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
+					if (val < 0)
+					{
+						AggroAmount -= val*4;
+					}
+					break;
+			}
+			case SE_ResistAll:{
+					int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
+					if (val < 0)
+					{
+						AggroAmount -= val*12;
+					}
+					break;
+			}
 			case SE_STR:
 			case SE_STA:
 			case SE_DEX:
 			case SE_AGI:
 			case SE_INT:
 			case SE_WIS:
-			case SE_CHA:
-			case SE_ATK:
-		//	case SE_DiseaseCounters:
-		//	case SE_PoisonCounters:
-			{
+			case SE_CHA:{
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
 				if (val < 0)
 				{
-					AggroAmount += val*-2;
+					AggroAmount -= val*2;
 				}
+				break;
+			}
+			case SE_AllStats:{
+					int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
+					if (val < 0)
+					{
+						AggroAmount -= val*6;
+					}
+					break;
+			}
+			case SE_BardAEDot:{
+					AggroAmount += slevel*2;
+					break;
+			}
+			case SE_SpinTarget:{
+					AggroAmount += slevel*6;
+					break;
+			}
+			case SE_Amnesia:
+			case SE_Silence:{
+				AggroAmount += slevel*6;			
+				break;
+			}
+			case SE_Destroy:{
+				AggroAmount += slevel*3;
+				break;
+			}
+			case SE_CastingLevel:
+			case SE_MeleeMitigation:
+			case SE_CriticalHitChance:
+			case SE_AvoidMeleeChance:
+			case SE_RiposteChance:
+			case SE_DodgeChance:
+			case SE_ParryChance:
+			case SE_DualWeildChance:
+			case SE_DoubleAttackChance:
+			case SE_MeleeSkillCheck:
+			case SE_HitChance:
+			case SE_DamageModifier:
+			case SE_MinDamageModifier:
+			case SE_IncreaseBlockChance:
+			case SE_Accuracy:{
+				AggroAmount += slevel*3;
+				break;
+			}
+			case SE_CurrentMana:	
+			case SE_ManaPool:
+			case SE_CurrentEndurance:{
+				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
+				if (val < 0)
+				{
+					AggroAmount -= val*2;
+				}
+				break;
+			}
+			case SE_CancelMagic:
+			case SE_DispelDetrimental:{
+				AggroAmount += slevel;			
 				break;
 			}
 		}
 	}
 	if (IsBardSong(spell_id))
-		AggroAmount /= 3;
+		AggroAmount /= RuleI(Spells, BardSpellAggroMod);
 	if (GetOwner())
-		AggroAmount /= 10;
+		AggroAmount /= RuleI(Spells, PetSpellAggroMod);
+
+	AggroAmount += spells[spell_id].HateAdded; 
+	AggroAmount = (AggroAmount * RuleI(Spells, SpellAggroModifier))/100;
 	return AggroAmount;
 }
 
@@ -1075,62 +1142,33 @@ int16 Mob::CheckAggroAmount(int16 spellid) {
 int16 Mob::CheckHealAggroAmount(int16 spellid) {
 	int16 spell_id = spellid;
 	int16 AggroAmount = 1;
-//	int16 slevel = GetLevel();
+	int16 slevel = GetLevel();
 
 	for (int o = 0; o < EFFECT_COUNT; o++) {
 		switch(spells[spell_id].effectid[o]) {
-			case SE_MovementSpeed: {
-				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
-				if (val > 0)
-				{
-					AggroAmount += val;
-					break;
-				}
-				break;
-			}
-			case SE_AttackSpeed: {
-				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
-				if (val > 100)
-				{
-					AggroAmount += val-100;
-				}
-				break;
-			}
 			case SE_Rune:
+			case SE_CurrentHP:{
+				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
+				AggroAmount += val/3;
+				break;
+			}
 			case SE_HealOverTime: {
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
-				AggroAmount += val/4;
+				AggroAmount += val/6;
 				break;
 			}
-			case SE_ArmorClass:
-			case SE_ResistMagic:
-			case SE_ResistAll:
-			case SE_ResistFire:
-			case SE_ResistCold:
-			case SE_ResistPoison:
-			case SE_ResistDisease:
-			case SE_STR:
-			case SE_STA:
-			case SE_DEX:
-			case SE_AGI:
-			case SE_INT:
-			case SE_WIS:
-			case SE_CHA:
-			case SE_ATK:
-			{
-				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
-				if (val < 0)
-				{
-					AggroAmount += val/2;
-				}
-				break;
-			}
+			default:{
+				AggroAmount += (slevel / 2);
+ 				break;
+ 			}
 		}
 	}
 	if (IsBardSong(spell_id))
-		AggroAmount /= 3;
+		AggroAmount /= RuleI(Spells, BardSpellAggroMod);
 	if (GetOwner())
-		AggroAmount /= 10;
+		AggroAmount /= RuleI(Spells, PetSpellAggroMod);
+
+	AggroAmount = (AggroAmount * RuleI(Spells, SpellAggroModifier))/100;
 	return AggroAmount;
 }
 

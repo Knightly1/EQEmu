@@ -45,6 +45,12 @@ RULE_CATEGORY( World )
 RULE_INT ( World, ZoneAutobootTimeoutMS, 60000 )
 RULE_INT ( World, ClientKeepaliveTimeoutMS, 65000 )
 
+RULE_CATEGORY( Spells )
+RULE_INT (Spells, SpellAggroModifier, 100)
+RULE_INT (Spells, BardSpellAggroMod, 3)
+RULE_INT (Spells, PetSpellAggroMod, 10)
+RULE_CATEGORY_END()
+
 #undef RULE_CATEGORY
 #undef RULE_INT
 #undef RULE_REAL

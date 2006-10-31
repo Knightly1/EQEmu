@@ -781,8 +781,7 @@ void Client::Message(uint32 type, const char* message, ...) {
 	sm->header[0] = 0x00; // Header used for #emote style messages..
 	sm->header[1] = 0x00; // Play around with these to see other types
 	sm->header[2] = 0x00;
-	//sm->msg_type = type;
-	sm->msg_type = 0x0A;
+	sm->msg_type = type;
 	memcpy(sm->message, buffer, len+1);
 	
 	FastQueuePacket(&app);

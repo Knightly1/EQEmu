@@ -1172,6 +1172,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 			}
 			
 			entity_list.AddCorpse(new_corpse, GetID());
+			SetID(0);
 			
 			//send the become corpse packet to everybody else in the zone.
 			entity_list.QueueClients(this, &app2, true);
@@ -1745,6 +1746,16 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 	Mob* mypet = this->GetPet();
 	Mob* myowner = this->GetOwner();
 	
+	if(other){
+		int hatemod = 100 + other->spellbonuses.hatemod + other->itembonuses.hatemod;
+		if(hatemod < 1)
+			hatemod = 1;
+		if(hatemod > 99)
+			hatemod = 99;
+		hate = ((hate * (hatemod))/100);
+	}
+
+
 	if (other == myowner)
 		return;
 	

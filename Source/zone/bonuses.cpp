@@ -573,7 +573,7 @@ void Mob::ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newb
 			
 			case SE_ChangeAggro:
 			{
-				newbon->hatemod = effect_value-100;
+				newbon->hatemod += effect_value;
 				break;
 			}
 			case SE_MeleeMitigation:

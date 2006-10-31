@@ -6,6 +6,16 @@ FatherNitwit: (KLS) Fixes for max endurance calc on zone in
 FatherNitwit: (KLS) Fix for rulesystem category issue.
 FatherNitwit: Added rule support to world (no runtime manipulation yet)
 FatherNitwit: Load the 'default' ruleset from the DB if no variable is set.
+KLS: Fix for client corpses not appearing to clients who witnessed their death until they zone.
+KLS: Updated detrimental and healing spell aggro.
+KLS: Hate mods from spells should now work. (Enchanter Visage/Shadowknight Voice line of spells)
+KLS: Found and implemented the Hate Added in detrimental spells. (Shadowknight Terror line of spells)
+KLS: Change to let special messages use their correct types.
+KLS: Group fix for leader being unable to invite a 3rd party member until he/she zones.
+Required Opcode changes for Titanium:
+OP_GroupInvite2=0x12d6
+Required Opcode changes for 0.6.2:
+OP_GroupInvite2=0x1f27
 
 ==10/28/2006
 FatherNitwit: Fix for NPC weapon appearance due to loot items.

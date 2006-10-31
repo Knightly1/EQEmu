@@ -4150,19 +4150,23 @@ void Client::Handle_OP_GroupInvite2(const EQApplicationPacket *app)
 			sizeof(GroupInvite_Struct), app->size);
 		return;
 	}
-	
-	//this seems to be used for any subsequent invites into an
-	//allready existing group
-	
-	if (app->size != sizeof(GroupInvite_Struct)) {
-		LogFile->write(EQEMuLog::Error, "Invalid size for group invite: Expected: %i, Got: %i",
-			sizeof(GroupInvite_Struct), app->size);
-		return;
-	}
-	
+
 	if(this->GetTarget() != 0 && this->GetTarget()->IsClient()) {
-		this->GetTarget()->CastToClient()->QueuePacket(app);
-		return;
+		if(app->GetOpcode() == OP_GroupInvite2)
+		{
+			//Make a new packet using all the same information but make sure it's a fixed GroupInvite opcode so we
+			//Don't have to deal with GroupFollow2 crap.
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupInvite, sizeof(GroupInvite_Struct));
+			memcpy(outapp->pBuffer, app->pBuffer, outapp->size);
+			this->GetTarget()->CastToClient()->QueuePacket(outapp);
+			safe_delete(outapp);
+			return;
+		}
+		else
+		{
+			//The correct opcode, no reason to bother wasting time reconstructing the packet
+			this->GetTarget()->CastToClient()->QueuePacket(app);
+		}
 	}
 	/*if(this->GetTarget() != 0 && this->GetTarget()->IsNPC() && this->GetTarget()->CastToNPC()->IsInteractive()) {
 		if(!this->GetTarget()->CastToNPC()->IsGrouped()) {

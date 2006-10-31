@@ -409,9 +409,11 @@ struct SPDat_Spell_Struct
 /* 158 */	int			Spacing5;
 /* 159 */	int			EndurCost;
 /* 160 */	int			EndurTimerIndex;
-/* 161 */	int			Spacing6[7];
+/* 161 */	int			Spacing6[5];
+/* 166 */   int			HateAdded;
+/* 167 */   int			Spacing7;
 /* 168 */	int			EndurUpkeep;
-/* 169 */	int			Spacing7[6];
+/* 169 */	int			Spacing8[6];
 /* 175 */	// last field is 174
 /*
 Some fields which should be in here somewhere (MQ2):
