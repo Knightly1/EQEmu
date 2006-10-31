@@ -41,7 +41,8 @@ using namespace std;
 #include "../common/opcodemgr.h"
 #include "../common/guilds.h"
 #include "../common/EQStreamIdent.h"
-#include "../common/patches/Client62.h"
+//#include "../common/patches/Client62.h"
+#include "../common/rulesys.h"
 #ifdef WIN32
 	#include <process.h>
 	#define snprintf	_snprintf
@@ -104,6 +105,7 @@ bool holdzones = false;
 EQWHTTPServer http_server;
 LauncherList launcher_list;
 DBAsync *dbasync = NULL;
+RuleManager *rules = new RuleManager();
 
 void CatchSignal(int sig_num);
 
@@ -258,6 +260,23 @@ int main(int argc, char** argv) {
 	}
 	_log(WORLD__INIT, "Loading guilds..");
 	guild_mgr.LoadGuilds();
+	//rules:
+	{
+		char tmp[64];
+		if (database.GetVariable("RuleSet", tmp, sizeof(tmp)-1)) {
+			_log(WORLD__INIT, "Loading rule set '%s'", tmp);
+			if(!rules->LoadRules(&database, tmp)) {
+				_log(WORLD__INIT_ERR, "Failed to load ruleset '%s', falling back to defaults.", tmp);
+			}
+		} else {
+			if(!rules->LoadRules(&database, "default")) {
+				_log(WORLD__INIT, "No rule set configured, using default rules");
+			} else {
+				_log(WORLD__INIT, "Loaded default rule set 'default'", tmp);
+			}
+		}
+	}
+	
 	_log(WORLD__INIT, "Loading EQ time of day..");
 	if (!zoneserver_list.worldclock.loadFile(Config->EQTimeFile.c_str()))
 		_log(WORLD__INIT_ERR, "Unable to load %s", Config->EQTimeFile.c_str());

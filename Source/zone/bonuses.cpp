@@ -56,10 +56,6 @@ void Client::CalcBonuses()
 	
 	CalcSpellBonuses(&spellbonuses);
 	
-	CalcMaxHP();
-	CalcMaxMana();
-	CalcMaxEndurance();
-	
 	CalcAC();
 	CalcATK();
 	CalcHaste();
@@ -77,6 +73,10 @@ void Client::CalcBonuses()
 	CalcDR();
 	CalcPR();
 	CalcCR();
+	
+	CalcMaxHP();
+	CalcMaxMana();
+	CalcMaxEndurance();
 	
 	rooted = FindType(SE_Root);
 }

@@ -5975,8 +5975,6 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	}
 	
 	CalcBonuses();
-	CalcMaxHP();
-	CalcMaxMana();
 	if (m_pp.cur_hp <= 0)
 		m_pp.cur_hp = GetMaxHP();
 	

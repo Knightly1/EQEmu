@@ -313,6 +313,9 @@
 				RelativePath="..\common\classes.cpp">
 			</File>
 			<File
+				RelativePath="..\common\rulesys.cpp">
+			</File>
+			<File
 				RelativePath="..\common\Condition.cpp">
 			</File>
 			<File

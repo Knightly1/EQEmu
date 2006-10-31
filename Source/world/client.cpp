@@ -49,6 +49,7 @@ using namespace std;
 #include "zonelist.h"
 #include "clientlist.h"
 #include "wguild_mgr.h"
+#include "../common/rulesys.h"
 
 extern ZSList zoneserver_list;
 extern LoginServer loginserver;
@@ -57,8 +58,8 @@ extern uint32 numclients;
 extern volatile bool RunLoops;
 
 Client::Client(EQStreamInterface* ieqs)
-: autobootup_timeout(10000),
-  CLE_keepalive_timer(15000),
+: autobootup_timeout(RuleI(World, ZoneAutobootTimeoutMS)),
+  CLE_keepalive_timer(RuleI(World, ClientKeepaliveTimeoutMS)),
   connect(1000),
   eqs(ieqs)
 {

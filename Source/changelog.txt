@@ -1,6 +1,12 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==10/30/2006
+FatherNitwit: (KLS) Fixes for max endurance calc on zone in
+FatherNitwit: (KLS) Fix for rulesystem category issue.
+FatherNitwit: Added rule support to world (no runtime manipulation yet)
+FatherNitwit: Load the 'default' ruleset from the DB if no variable is set.
+
 ==10/28/2006
 FatherNitwit: Fix for NPC weapon appearance due to loot items.
 aza77: Fixed SendAppearancePacket

@@ -219,6 +219,10 @@ SOURCE=..\common\BasePacket.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\rulesys.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\classes.cpp
 # End Source File
 # Begin Source File

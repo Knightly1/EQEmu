@@ -96,7 +96,7 @@ RuleManager::RuleManager()
 
 RuleManager::CategoryType RuleManager::FindCategory(const char *catname) {
 	int r;
-	for(r = 1; r < _CatCount; r++) {
+	for(r = 0; r < _CatCount; r++) {
 		if(strcasecmp(catname, s_categoryNames[r]) == 0)
 			return((CategoryType) r);
 	}

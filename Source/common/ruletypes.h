@@ -41,6 +41,10 @@ RULE_REAL( Pets, AttackCommandRange, 150 )
 RULE_CATEGORY( GM )
 RULE_INT ( GM, MinStatusToZoneAnywhere, 250 )
 
+RULE_CATEGORY( World )
+RULE_INT ( World, ZoneAutobootTimeoutMS, 60000 )
+RULE_INT ( World, ClientKeepaliveTimeoutMS, 65000 )
+
 #undef RULE_CATEGORY
 #undef RULE_INT
 #undef RULE_REAL
