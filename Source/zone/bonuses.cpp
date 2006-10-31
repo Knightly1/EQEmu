@@ -391,14 +391,25 @@ void Mob::ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newb
 			}
 
 			case SE_AttackSpeed:
-			case SE_AttackSpeed2:
-			case SE_AttackSpeed3:
 			{
-				newbon->haste += effect_value - 100;
-				newbon->haste = newbon->haste > 120 ? 120 : (newbon->haste < -120 ? -120 : newbon->haste);
-
+				effect_value = effect_value > 120 ? 120 : (effect_value < -120 ? -120 : effect_value);
+				newbon->haste = newbon->haste > effect_value ? newbon->haste : effect_value;
 				break;
 			}
+
+ 			case SE_AttackSpeed2:
+			{
+				effect_value = effect_value > 120 ? 120 : (effect_value < -120 ? -120 : effect_value);
+				newbon->hastetype2 = newbon->hastetype2 > effect_value ? newbon->hastetype2 : effect_value;
+ 				break;
+ 			}
+ 
+ 			case SE_AttackSpeed3:
+ 			{
+				effect_value = effect_value > 120 ? 120 : (effect_value < -120 ? -120 : effect_value);
+				newbon->hastetype3 = newbon->hastetype3 > effect_value ? newbon->hastetype3 : effect_value;
+ 				break;
+ 			}
 
 			case SE_TotalHP:
 			{
@@ -685,11 +696,15 @@ void Mob::ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newb
 				break;
 			}
 				
-			case SE_HundredHands:
-			{
-				newbon->HundredHands = true;
-				break;
-			}
+ 			case SE_HundredHands:
+ 			{
+				if(IsBeneficialSpell(spell_id)){ //If it's a beneficial spell we switch it cause
+					effect_value *= -1; //of the way it's stored by sony, negative for both ben and det spells
+				}
+				effect_value = effect_value > 120 ? 120 : (effect_value < -120 ? -120 : effect_value);
+				newbon->HundredHands = newbon->HundredHands > effect_value ? newbon->HundredHands : effect_value;
+ 				break;
+ 			}
 				
 			case SE_MeleeSkillCheck:
 			{

@@ -155,6 +155,8 @@ struct StatBonuses {
 	int		ReverseDamageShield; // this is damage done to the mob when it attacks
 	int		movementspeed;
 	sint8		haste;
+	sint8	hastetype2;
+	sint8	hastetype3;
 	float	AggroRange; // when calculate just replace original value with this
 	float	AssistRange;
 	int8	skillmod[HIGHEST_SKILL];
@@ -200,7 +202,7 @@ struct StatBonuses {
 	sint16 ProcChance;			// ProcChance/10 == % increase i
 	sint16 ExtraAttackChance;
 	
-	bool HundredHands;		//extra haste, stacks with all other haste  i
+	sint8 HundredHands;		//extra haste, stacks with all other haste  i
 	bool MeleeLifetap;  //i
 };
 

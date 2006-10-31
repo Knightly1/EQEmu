@@ -2691,7 +2691,7 @@ sint16 Client::GetFocusEffect(focusType type, int16 spell_id) {
 		}
 	}
 
-	if (realTotal > 0 && UsedItem) {
+	if (realTotal > 0 && UsedItem && spells[spell_id].buffduration == 0) {
 		Message_StringID(MT_Spells, BEGINS_TO_GLOW, UsedItem->Name);
 	}
 

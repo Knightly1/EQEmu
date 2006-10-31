@@ -1750,8 +1750,6 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 		int hatemod = 100 + other->spellbonuses.hatemod + other->itembonuses.hatemod;
 		if(hatemod < 1)
 			hatemod = 1;
-		if(hatemod > 99)
-			hatemod = 99;
 		hate = ((hate * (hatemod))/100);
 	}
 

@@ -12,10 +12,9 @@ KLS: Hate mods from spells should now work. (Enchanter Visage/Shadowknight Voice
 KLS: Found and implemented the Hate Added in detrimental spells. (Shadowknight Terror line of spells)
 KLS: Change to let special messages use their correct types.
 KLS: Group fix for leader being unable to invite a 3rd party member until he/she zones.
-Required Opcode changes for Titanium:
-OP_GroupInvite2=0x12d6
-Required Opcode changes for 0.6.2:
-OP_GroupInvite2=0x1f27
+KLS: GroupInvite2 opcodes found for both Titanium and 0.6.2, make sure to get the updated .conf files.
+KLS: Glow messages should only go off for instant spells.
+KLS: How haste calculations have been calculated has been reworked somewhat, haste shouldn't break any more, nor should all hastes stack.
 
 ==10/28/2006
 FatherNitwit: Fix for NPC weapon appearance due to loot items.
