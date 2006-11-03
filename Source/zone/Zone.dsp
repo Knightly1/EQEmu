@@ -45,7 +45,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /Gm /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /D "i386" /D "SHAREMEM" /D _WIN32_WINNT=0x0400 /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D EQDEBUG=0 /FD /c
+# ADD CPP /nologo /MT /w /W0 /Gm /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /D "i386" /D "SHAREMEM" /D _WIN32_WINNT=0x0400 /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D EQDEBUG=5 /FD /c
 # SUBTRACT CPP /Fr /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -97,7 +97,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /D "i386" /D "SHAREMEM" /D "CATCH_CRASH" /D _WIN32_WINNT=0x0400 /D "NDEBUG" /D "ZONESERVER" /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /D EQDEBUG=0 /FR /YX /FD /c
+# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /D "i386" /D "SHAREMEM" /D "CATCH_CRASH" /D _WIN32_WINNT=0x0400 /D "NDEBUG" /D "ZONESERVER" /D "ZONE" /D "INVERSEXY" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /D EQDEBUG=5 /FR /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe

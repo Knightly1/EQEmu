@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /I "..\common\SocketLib" /I "c:\Perl\lib\CORE" /D EQDEBUG=5 /D "NDEBUG" /D "IRC" /D "EMBPERL" /D "EMBPERL_PLUGIN" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D "_WIN32" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /FD /c
+# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /I "..\common\SocketLib" /I "c:\Perl\lib\CORE" /D EQDEBUG=5 /D "NDEBUG" /D "IRC" /D "EMBPERL" /D "EMBPERL_PLUGIN" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D "_WIN32" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /D EQDEBUG=5 /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /Gm /GR /GX /ZI /Od /I "c:\mysql\include" /I "c:\eqemu\include" /I "..\common\SocketLib" /I "c:\Perl\lib\CORE" /D EQDEBUG=5 /D "_DEBUG" /D "EMBPERL" /D "EMBPERL_PLUGIN" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D "_WIN32" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /Gm /GR /GX /ZI /Od /I "c:\mysql\include" /I "c:\eqemu\include" /I "..\common\SocketLib" /I "c:\Perl\lib\CORE" /D EQDEBUG=5 /D "_DEBUG" /D "EMBPERL" /D "EMBPERL_PLUGIN" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D "_WIN32" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /D EQDEBUG=5 /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -95,7 +95,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /I "..\common\SocketLib" /I "c:\Perl\lib\CORE" /D "NDEBUG" /D EQDEBUG=5 /D "EMBPERL" /D "EMBPERL_PLUGIN" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D "_WIN32" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /FR /FD /c
+# ADD CPP /nologo /MT /w /W0 /GX /Zi /O2 /Ob2 /I "c:\mysql\include" /I "c:\eqemu\include" /I "..\common\SocketLib" /I "c:\Perl\lib\CORE" /D "NDEBUG" /D EQDEBUG=5 /D "EMBPERL" /D "EMBPERL_PLUGIN" /D "WIN32" /D "WORLD" /D "i386" /D "SHAREMEM" /D "INVERSEXY" /D "_WIN32" /D _WIN32_WINNT=0x0400 /D "_CONSOLE" /D "_MBCS" /D "FIELD_ITEMS" /D EQDEBUG=5 /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
