@@ -392,23 +392,37 @@ void Mob::ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newb
 
 			case SE_AttackSpeed:
 			{
-				effect_value = effect_value > 120 ? 120 : (effect_value < -120 ? -120 : effect_value);
-				newbon->haste = newbon->haste > effect_value ? newbon->haste : effect_value;
+				if ((effect_value - 100) > 0) { // Haste
+					if (newbon->haste < 0) break; // Slowed - Don't apply haste
+					if ((effect_value - 100) > newbon->haste) {
+						newbon->haste = effect_value - 100;
+					}
+				} else if ((effect_value - 100) < 0) { // Slow
+					if ((effect_value - 100) < newbon->haste) {
+						newbon->haste = effect_value - 100;
+					}
+				}
 				break;
 			}
 
  			case SE_AttackSpeed2:
 			{
-				effect_value = effect_value > 120 ? 120 : (effect_value < -120 ? -120 : effect_value);
-				newbon->hastetype2 = newbon->hastetype2 > effect_value ? newbon->hastetype2 : effect_value;
- 				break;
+				if ((effect_value - 100) > 0) { // Haste V2 - Stacks with V1 but does not Overcap
+					if ((effect_value - 100) > newbon->hastetype2) {
+						newbon->hastetype2 = effect_value - 100;
+					}
+				}
+				break;
  			}
  
  			case SE_AttackSpeed3:
  			{
-				effect_value = effect_value > 120 ? 120 : (effect_value < -120 ? -120 : effect_value);
-				newbon->hastetype3 = newbon->hastetype3 > effect_value ? newbon->hastetype3 : effect_value;
- 				break;
+				if (effect_value > 0) { // Haste V3 - Stacks and Overcaps
+					if (effect_value > newbon->hastetype3) {
+						newbon->hastetype3 = effect_value;
+					}
+				}
+				break;
  			}
 
 			case SE_TotalHP:

@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==11/04/2006
+Rogean: Haste Fixes: Fixed Haste/Slow as well as Bard Songs (Including Overcap).
+
 ==11/03/2006
 KLS: Added Magoth's stun opcodes for both Titanium and 0.6.2 clients
 KLS: Changed Object Clear opcode for Titanium

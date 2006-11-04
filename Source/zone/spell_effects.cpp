@@ -1972,7 +1972,10 @@ int Mob::CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level, M
 	
 	effect_value = CalcSpellEffectValue_formula(formula, base, max, caster_level, spell_id);
 	
-	if(caster && IsBardSong(spell_id)) {
+	if(caster && IsBardSong(spell_id) && 
+	(spells[spell_id].effectid[effect_id] != SE_AttackSpeed) &&
+	(spells[spell_id].effectid[effect_id] != SE_AttackSpeed2) &&
+	(spells[spell_id].effectid[effect_id] != SE_AttackSpeed3)) {
 		int oval = effect_value;
 		int mod = caster->GetInstrumentMod(spell_id);
 		effect_value = effect_value * mod / 10;

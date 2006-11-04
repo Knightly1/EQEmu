@@ -2125,11 +2125,11 @@ int32 Mob::GetZoneID() const {
 }
 
 int Mob::GetHaste() {
-	int h = itembonuses.haste + spellbonuses.haste + spellbonuses.hastetype2;
+	int h = spellbonuses.haste + spellbonuses.hastetype2 + itembonuses.haste;
 	int cap = 0;
 	int level = GetLevel();
 
-	if(level < 30) {
+	if(level < 30) { // Rogean: Are these caps correct? Will use for now.
 		cap = 50;
 	} else if(level < 50) {
 		cap = 74;
@@ -2141,17 +2141,12 @@ int Mob::GetHaste() {
 		cap = 100;
 	}
 	
-	if(h > cap)
-		h = cap;
+
+	if(h > cap) h = cap;
 
 	h += spellbonuses.hastetype3;
 	h += ExtraHaste;	//GM granted haste.
 
-	//Hundred Hands, this isn't right, hundred hands is supposed to modify the weapon delay before 
-	//haste but for now will keep it similar to it's old implementation.
-	//HH appears to be negative for haste if it's beneficial and negative for slow if detrimental
-	//We flip the signs in the calcbonus code so no need to here
-	h += (itembonuses.HundredHands + spellbonuses.HundredHands);	
 	return(h); 
 }
 

@@ -975,19 +975,19 @@ sint16 Client::CalcCHA() {
 }
 
 int Client::CalcHaste() {
-	int h = spellbonuses.haste + itembonuses.haste;
+	int h = spellbonuses.haste + spellbonuses.hastetype2 + itembonuses.haste;
 	int cap = 0;
 	int level = GetLevel();
-	
+	/*
 	if(disc_inuse == discBlindingSpeed) {
 		if(!disc_elapse.Check(false)) {
 			h += 20;		//this ammount is completely unknown
 		} else {
 			disc_inuse = discNone;
 		}
-	}
+	} */
 
-	if(level < 30) {
+	if(level < 30) { // Rogean: Are these caps correct? Will use for now.
 		cap = 50;
 	} else if(level < 50) {
 		cap = 74;
@@ -999,11 +999,10 @@ int Client::CalcHaste() {
 		cap = 100;
 	}
 	
-	//todo: handle spells like warsong of the vah shir, etc...
-	
-	if(h > cap)
-		h = cap;
-	
+
+	if(h > cap) h = cap;
+
+	h += spellbonuses.hastetype3;
 	h += ExtraHaste;	//GM granted haste.
 	
 	Haste = h;
