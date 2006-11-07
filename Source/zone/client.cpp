@@ -57,6 +57,7 @@ extern bool spells_loaded;
 #include "../common/moremath.h"
 #include "../common/guilds.h"
 #include "../common/breakdowns.h"
+#include "../common/rulesys.h"
 #include "forage.h"
 #include "command.h"
 #include "StringIDs.h"
@@ -140,6 +141,7 @@ Client::Client(EQStreamInterface* ieqs)
 	fishing_timer(8000),
 	endupkeep_timer(1000),
 	forget_timer(0),
+	autosave_timer(RuleI(Character, AutosaveIntervalS)*1000),
 #ifdef REVERSE_AGGRO
 	scanarea_timer(AIClientScanarea_delay),
 #endif
@@ -209,6 +211,7 @@ Client::Client(EQStreamInterface* ieqs)
 	shield_timer.Disable();
 	dead_timer.Disable();
 	camp_timer.Disable();
+	autosave_timer.Disable();
 	instalog = false;
 	pLastUpdate = 0;
 	pLastUpdateWZ = 0;

@@ -6221,6 +6221,7 @@ void Client::CompleteConnect()
 	
 	hpupdate_timer.Start();
 	position_timer.Start();
+	autosave_timer.Start();
 	SetDuelTarget(0);
 	SetDueling(false);
 

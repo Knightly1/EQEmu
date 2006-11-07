@@ -27,6 +27,10 @@ RULE_INT ( Character, CorpseDecayTimeMS, 10800000 )
 RULE_BOOL( Character, LeaveCorpses, false )
 RULE_BOOL( Character, LeaveNakedCorpses, false )
 RULE_REAL( Character, ExpMultiplier, 1.0 )
+RULE_INT ( Character, AutosaveIntervalS, 300 )	//0=disabled
+RULE_INT ( Character, HPRegenMultiplier, 100)
+RULE_INT ( Character, ManaRegenMultiplier, 100)
+RULE_INT ( Character, EnduranceRegenMultiplier, 100)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Guild )

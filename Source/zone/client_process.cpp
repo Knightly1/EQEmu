@@ -144,10 +144,6 @@ bool Client::Process() {
 			this->stunned_timer.Disable();
 		}
 		
-		if (fishing_timer.Check()) {
-			GoFish();
-		}
-		
 		if (bardsong_timer.Check() && bardsong != 0) {
 			//NOTE: this is kinda a heavy-handed check to make sure the mob still exists before
 			//doing the next pulse on them...
@@ -451,10 +447,6 @@ bool Client::Process() {
 			}
 		}
 		
-		if(tribute_timer.Check()) {
-			ToggleTribute(true);	//re-activate the tribute.
-		}
-		
 		adverrorinfo = 3;
 		SpellProcess();
 		adverrorinfo = 4;
@@ -470,18 +462,18 @@ bool Client::Process() {
 			DoManaRegen();
 			DoEnduranceRegen();
 			BuffProcess();
+			DoStaminaUpdate();
+		
+			if(tribute_timer.Check()) {
+				ToggleTribute(true);	//re-activate the tribute.
+			}
 			
-			if(stamina_timer.Check()){
-				EQApplicationPacket* outapp = new EQApplicationPacket(OP_Stamina, sizeof(Stamina_Struct));
-				Stamina_Struct* sta = (Stamina_Struct*)outapp->pBuffer;
-				if (m_pp.hunger_level > 0)
-					m_pp.hunger_level-=32;
-				if (m_pp.thirst_level > 0)
-					m_pp.thirst_level-=32;
-				sta->food = m_pp.hunger_level;
-				sta->water = m_pp.thirst_level;
-				QueuePacket(outapp);
-				safe_delete(outapp);
+			if (fishing_timer.Check()) {
+				GoFish();
+			}
+			
+			if (autosave_timer.Check()) {
+				Save(0);
 			}
 		}
 	}
@@ -1475,6 +1467,7 @@ void Client::DoHPRegen() {
 	sint32 item_regen = itembonuses.HPRegen;
 	sint32 spell_regen = spellbonuses.HPRegen;
 	sint32 total_regen = normal_regen + item_regen + spell_regen;
+	total_regen = (total_regen * RuleI(Character, HPRegenMultiplier)) / 100;
 	SetHP(GetHP() + total_regen);
 	SendHPUpdate();
 }
@@ -1500,8 +1493,26 @@ void Client::DoManaRegen() {
 		regen = 2+spellbonuses.ManaRegen+itembonuses.ManaRegen+(level/5);
 	}
 	
+	regen = (regen * RuleI(Character, ManaRegenMultiplier)) / 100;
+	
 	SetMana(GetMana() + regen);
 	SendManaUpdatePacket();
+}
+
+
+void Client::DoStaminaUpdate() {			
+	if(!stamina_timer.Check())
+		return;
+	
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Stamina, sizeof(Stamina_Struct));
+	Stamina_Struct* sta = (Stamina_Struct*)outapp->pBuffer;
+	if (m_pp.hunger_level > 0)
+		m_pp.hunger_level-=32;
+	if (m_pp.thirst_level > 0)
+		m_pp.thirst_level-=32;
+	sta->food = m_pp.hunger_level;
+	sta->water = m_pp.thirst_level;
+	FastQueuePacket(&outapp);
 }
 
 void Client::DoEnduranceRegen()
@@ -1514,6 +1525,8 @@ void Client::DoEnduranceRegen()
 
 	regen = int(level*4/10) + 2;
 	regen += spellbonuses.EnduranceRegen + itembonuses.EnduranceRegen;
+	
+	regen = (regen * RuleI(Character, EnduranceRegenMultiplier)) / 100;
 
 	SetEndurance(GetEndurance() + regen);
 }

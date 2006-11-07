@@ -315,24 +315,6 @@ public:
 	inline virtual sint16	GetDR()	const { return DR; }
 	inline virtual sint16	GetPR()	const { return PR; }
 	inline virtual sint16	GetCR() const { return CR; }
-	
-	int16    CalcAC();
-	int16    CalcATK();
-	int      CalcHaste();
-	
-	sint16   CalcSTR();
-	sint16   CalcSTA();
-	sint16   CalcDEX();
-	sint16   CalcAGI();
-	sint16   CalcINT();
-	sint16   CalcWIS();
-	sint16   CalcCHA();
-	
-    sint16	CalcMR();
-	sint16	CalcFR();
-	sint16	CalcDR();
-	sint16	CalcPR();
-	sint16	CalcCR();
     
 	sint16	GetMaxStat() const;
 	sint16  GetMaxSTR() const;
@@ -360,10 +342,6 @@ public:
 	virtual bool CheckFizzle(int16 spell_id);
 	
 	inline const sint32	GetBaseHP() const { return base_hp; }
-	sint32	CalcMaxHP();
-	sint32	CalcBaseHP();
-	void DoHPRegen(/*SpawnAppearance_Struct* sa*/);
-	void DoManaRegen();
 	
 	int16 GetWeight() const { return(weight); }
 	inline void RecalcWeight() { weight = CalcCurrentWeight(); }
@@ -683,6 +661,29 @@ private:
 	void	OPGMTrainSkill(const EQApplicationPacket *app);
 	void	OPGMSummon(const EQApplicationPacket *app);
 	void	OPCombatAbility(const EQApplicationPacket *app);
+	
+	int16    CalcAC();
+	int16    CalcATK();
+	int      CalcHaste();
+	
+	sint16   CalcSTR();
+	sint16   CalcSTA();
+	sint16   CalcDEX();
+	sint16   CalcAGI();
+	sint16   CalcINT();
+	sint16   CalcWIS();
+	sint16   CalcCHA();
+	
+    sint16	CalcMR();
+	sint16	CalcFR();
+	sint16	CalcDR();
+	sint16	CalcPR();
+	sint16	CalcCR();
+	sint32	CalcMaxHP();
+	sint32	CalcBaseHP();
+	void DoHPRegen(/*SpawnAppearance_Struct* sa*/);
+	void DoManaRegen();
+	void DoStaminaUpdate();
 
 	int32 pLastUpdate;
 	int32 pLastUpdateWZ;
@@ -781,9 +782,8 @@ private:
 	Timer	shield_timer;
 	Timer	fishing_timer;
 	Timer	endupkeep_timer;
-	// EverHood 6/16/06
-	// our 2 min everybody forgets you timer
-	Timer	forget_timer;
+	Timer	forget_timer;	// our 2 min everybody forgets you timer
+	Timer	autosave_timer;
 #ifdef REVERSE_AGGRO
 	Timer	scanarea_timer;
 #endif
