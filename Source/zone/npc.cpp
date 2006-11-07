@@ -104,6 +104,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	combat_event_timer(CombatEventTimer_expire),
 	swarm_timer(100),
 	classattack_timer(1000),
+	knightattack_timer(1000),
 	assist_timer(AIassistcheck_delay),
 	sendhpupdate_timer(1000),
 	taunt_timer(TauntReuseTime * 1000)

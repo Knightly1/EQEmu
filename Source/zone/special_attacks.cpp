@@ -25,6 +25,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemulator.net)
 #include "masterentity.h"
 #include "StringIDs.h"
 #include "../common/MiscFunctions.h"
+#include "../common/rulesys.h"
 
 int Mob::GetKickDamage() const {
 	float multiple=(GetLevel()/5);
@@ -34,7 +35,7 @@ int Mob::GetKickDamage() const {
 				 (GetSkill(KICK) + GetSTR() + GetLevel()) / 90
 				) * multiple
 			  )
-			  + 1.0;	//base 10 damage???
+			  + 6.0;	//Set a base of 6 damage, 1 seemed too low at the sub level 30 level.
 	if(GetClass() == WARRIOR || GetClass() == WARRIORGM
 	 ||GetClass() == BERSERKER || GetClass() == BERSERKERGM) {
 		dmg*=1.2f;//small increase for warriors
@@ -49,10 +50,10 @@ int Mob::GetBashDamage() const {
 	//this is complete shite
 	float dmg=(
 			    (
-				 (GetSkill(KICK) + GetSTR() + GetLevel()/2) / 100
+				 (GetSkill(BASH) + GetSTR() + GetLevel()/2) / 100
 				) * multiple
 			  )
-			  + 1.0;
+			  + 6.0;	//Set a base of 6 damage, 1 seemed too low at the sub level 30 level.
 	return(int(dmg));
 }
 
@@ -66,8 +67,8 @@ void Mob::DoSpecialAttackDamage(Mob *who, int8 skill, sint32 max_damage) {
 	if(max_damage > 0) {
 		target->AvoidDamage(this, max_damage);
 	}
-	
-	target->Damage(this, max_damage, SPELL_UNKNOWN, skill);
+	TryCriticalHit(target, skill, max_damage);
+	target->Damage(this, max_damage, SPELL_UNKNOWN, skill, false);
 }
 
 
@@ -111,24 +112,39 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 		return;
 	}
 	
-	
+	int ReuseTime = 0;
+	int ClientHaste = GetHaste();
+	int HasteMod = 0;
+
+	if(ClientHaste >= 0){
+		HasteMod = (10000/(100+ClientHaste)); //+100% haste = 2x as many attacks
+	}
+	else{
+		HasteMod = (100-ClientHaste); //-100% haste = 1/2 as many attacks
+	}
+	sint32 dmg = 0;
+
 	if ((ca_atk->m_atk == 100) 
 	  && (ca_atk->m_skill == BASH)) {    // SLAM - Bash without a shield equipped
 		if (target!=this) {
-			sint32 dmg = GetBashDamage();
 			
 			if(!target->IsClient())
-				dmg = (dmg * 76) / 100;	//scale down for PVP
-			else {
 				CheckIncreaseSkill(BASH);
-			}
 			DoAnim(animTailRake);
 
-			if(target->CheckHitChance(this, BASH, 0, BASH)) {
-				DoSpecialAttackDamage(target, BASH, dmg);
+			if(!target->CheckHitChance(this, BASH, 0, BASH)) {
+				dmg = 0;
 			}
-		
-			p_timers.Start(pTimerCombatAbility, BashReuseTime-1);
+			else{
+				dmg = MakeRandomInt(1, GetBashDamage());
+			}
+			DoSpecialAttackDamage(target, BASH, dmg);
+			ReuseTime = BashReuseTime-1;
+			ReuseTime = (ReuseTime*HasteMod)/100;
+			if(ReuseTime > 0)
+			{
+				p_timers.Start(pTimerCombatAbility, ReuseTime);
+			}
 		}
 		return;
 	}
@@ -143,27 +159,23 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 			break;
 		}
 		if (target!=this) {
-			sint32 dmg = GetKickDamage();
-			
 			if(!target->IsClient())
-				dmg = (dmg * 76) / 100;	//scale down for PVP
-			else {
 				CheckIncreaseSkill(KICK);
-			}
 			DoAnim(animKick);
 
-			if(target->CheckHitChance(this, KICK, 0, KICK)) {
-				DoSpecialAttackDamage(target, KICK, dmg);
+			if(!target->CheckHitChance(this, KICK, 0, KICK)) {
+				dmg = 0;
 			}
-			
-			p_timers.Start(pTimerCombatAbility, KickReuseTime-1);
+			else{
+				dmg = MakeRandomInt(1, GetKickDamage());
+			}
+			DoSpecialAttackDamage(target, KICK, dmg);
+			ReuseTime = KickReuseTime-1;
 		}
 		break;
 	case MONK: {
 		CheckIncreaseSkill(ca_atk->m_skill);
-		int reuse = MonkSpecialAttack(target, ca_atk->m_skill);
-		if(reuse > 0)
-			p_timers.Start(pTimerCombatAbility, reuse-1);
+		ReuseTime = MonkSpecialAttack(target, ca_atk->m_skill) - 1;
 		break;
 	}
 	case ROGUE: {
@@ -172,215 +184,80 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 		}
 		const ItemInst *weapon = m_inv.GetItem(SLOT_PRIMARY);
 		TryBackstab(target, weapon?weapon->GetItem():NULL);
-		p_timers.Start(pTimerCombatAbility, BackstabReuseTime-1);
+		ReuseTime = BackstabReuseTime-1;
 		break;
 	}
 	default:
 		//they have no abilities... wtf? make em wait a bit
-		p_timers.Start(pTimerCombatAbility, 9);
+		ReuseTime = 9;
 		break;
 	}
+	
+	ReuseTime = (ReuseTime*HasteMod)/100;
+	if(ReuseTime > 0)
+	{
+		p_timers.Start(pTimerCombatAbility, ReuseTime);
+	}	
 }
 
-
-
 //returns the reuse time in sec for the special attack used.
-//this code is so messed up... it does not appear to check
-// hit chance at all... it seems like every attack always hits....
 int Mob::MonkSpecialAttack(Mob* other, int8 type)
 {
-	bool candamage = true;
-	int avoidchance = other->spellbonuses.AvoidMeleeChance + other->itembonuses.AvoidMeleeChance;
-	if(avoidchance > 0 && MakeRandomInt(0, 99) < avoidchance) {
-		candamage = false;
-	}
-	
 	sint32 ndamage = 0;
-	//PlayerProfile_Struct pp;
-	float hitsuccess = (float)other->GetLevel() - (float)level;
-	float hitmodifier = 0.0;
-	float skillmodifier = 0.0;
-	if(level > other->GetLevel())
-	{
-		hitsuccess += 2;
-		hitsuccess *= 14;
-	}
-	if ((int)hitsuccess >= 40)
-	{
-		hitsuccess *= 3.0;
-		hitmodifier = 1.1;
-	}
-	if ((int)hitsuccess >= 10 && hitsuccess <= 39)
-	{
-		hitsuccess /= 4.0;
-		hitmodifier = 0.25;
-	}
-	else if ((int)hitsuccess < 10 && (int)hitsuccess > -1)
-	{
-		hitsuccess = 0.5;
-		hitmodifier = 1.5;
-	}
-	else if ((int)hitsuccess <= -1)
-	{
-		hitsuccess = 0.1;
-		hitmodifier = 1.8;
-	}
-#if EQDEBUG >= 11
-    LogFile->write(EQEMuLog::Debug,"MonkSpecialAttack() 2 - %d", hitsuccess);
-#endif
-	if ((int)GetSkill(type) >= 100)
-	{
-		skillmodifier = 1;
-	}
-	else if ((int)GetSkill(type) >= 200)
-	{
-		skillmodifier = 2;
-	}
-	
-	hitsuccess -= ((float)GetSkill(type)/10000) + skillmodifier;
-#if EQDEBUG >= 11
-    LogFile->write(EQEMuLog::Debug,"MonkSpecialAttack() 3 - %d", hitsuccess);
-#endif
-	hitsuccess += MakeRandomFloat(0,1);
-#if EQDEBUG >= 11
-    LogFile->write(EQEMuLog::Debug,"MonkSpecialAttack() 4 - %d", hitsuccess);
-#endif
-	float ackwardtest = 2.4f;
-	float random = MakeRandomFloat(0,1);
-	if(random <= 0.2)
-	{
-		ackwardtest = 4.5;
-	}
-	if(random > 85 && random < 400.0)
-	{
-		ackwardtest = 3.2;
-	}
-	if(random > 400 && random < 800.0)
-	{
-		ackwardtest = 3.7;
-
-	}
-	if(random > 900 && random < 1400.0)
-	{
-		ackwardtest = 1.9;
-	}
-	if(random > 1400 && random < 14000.0)
-	{
-		ackwardtest = 2.3;
-	}
-
-	if(random > 14000 && random < 24000.0)
-	{
-		ackwardtest = 1.3;
-	}
-	if(random > 24000 && random < 34000.0)
-	{
-		ackwardtest = 1.3;
-	}
-	if(random > 990000)
-	{
-		ackwardtest = 1.2;
-	}
-	if(random < 0.2)
-	{
-		ackwardtest = 0.8;
-	}
-	
+	sint32 max_dmg = 0;
+	sint32 min_dmg = 1;
 	int reuse = 0;
 	
-	ackwardtest += MakeRandomFloat(0,1);
-	ackwardtest = abs((long)ackwardtest);
-	if (type == FLYING_KICK) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (10 * ackwardtest) * (GetSkill(FLYING_KICK) + GetSTR() + level) / 600);
-		if(other->IsClient())
-			ndamage = ndamage * 3 / 4;
-		if (MakeRandomFloat(0,1) < 0.2) {
-			ndamage = (sint32) (ndamage * 1.9);
-			
-			//I dont know how this can ever get to be negative...
-			if(ndamage <= 0) {
-				entity_list.MessageClose(this, false, 200, 10, "%s misses at an attempt to thunderous kick %s!",name,other->name);
-			}
-			else {
-				entity_list.MessageClose(this, false, 200, 10, "%s lands a thunderous kick!(%d)", name, ndamage);
-			}
-		}
-		
-		if(IsClient() && CastToClient()->CheckDiscipline(discThunderkick, true)) {
-			//values are very approximate
-			if(ndamage < 81)
-				ndamage = 81;
-			else
-				ndamage = ndamage * 4 / 3;
-		}
-		
-		if(candamage)
-			DoSpecialAttackDamage(other, type, ndamage);
+	switch(type)
+	{
+	case FLYING_KICK:{
+		max_dmg = (((level/10)+2)*(24)*(GetSkill(FLYING_KICK)+GetSTR()+level))/600;
+		min_dmg = ((level*8)/10);
 		DoAnim(animFlyingKick);
 		reuse = FlyingKickReuseTime;
-	}
-	else if (type == TIGER_CLAW) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (4 * ackwardtest) * (GetSkill(TIGER_CLAW) + GetSTR() + level) / 700);
-		if(other->IsClient())
-			ndamage = ndamage * 7 / 10;
-		if(candamage)
-			DoSpecialAttackDamage(other, type, ndamage);
+		break;
+		}
+	case TIGER_CLAW:{
+		max_dmg = (((level/10)+ 2)*(9)*(GetSkill(TIGER_CLAW)+GetSTR()+level)/700);
 		DoAnim(animTigerClaw);
 		reuse = TigerClawReuseTime;
-	}
-	else if (type == ROUND_KICK) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (6 * ackwardtest) * (GetSkill(ROUND_KICK) + GetSTR() + level) / 600);
-		if(other->IsClient())
-			ndamage = ndamage * 9 / 10;
-		if(candamage)
-			DoSpecialAttackDamage(other, type, ndamage);
+		break;
+		}
+	case ROUND_KICK:{
+		max_dmg = (((level/10)+ 2)*(14)*(GetSkill(ROUND_KICK)+GetSTR()+level)/800);
 		DoAnim(animRoundKick);
 		reuse = RoundKickReuseTime;
-	}
-	else if (type == EAGLE_STRIKE) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (8 * ackwardtest) * (GetSkill(EAGLE_STRIKE) + GetSTR() + level) / 800);
-		if(other->IsClient())
-			ndamage = ndamage * 7 / 10;
-		
-		
-		if(IsClient() && CastToClient()->CheckDiscipline(discAshenhand, true)) {
-			//values are very approximate
-			ndamage = ndamage * 3;
-			if(other->GetLevel() < 49 && MakeRandomFloat(0,1) < 0.005)
-				ndamage = 32000;
+		break;
 		}
-		
-		if(candamage)
-			DoSpecialAttackDamage(other, type, ndamage);
+	case EAGLE_STRIKE:{
+		max_dmg = (((level/10)+ 2)*(19)*(GetSkill(EAGLE_STRIKE)+GetSTR()+level)/700);
 		DoAnim(animEagleStrike);
 		reuse = EagleStrikeReuseTime;
-	}
-	else if (type == DRAGON_PUNCH) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (10 * ackwardtest) * (GetSkill(DRAGON_PUNCH) + GetSTR() + level) / 600);
-		if(other->IsClient())
-			ndamage = ndamage * 7 / 10;
-		
-		if(IsClient() && CastToClient()->CheckDiscipline(discSilentfist, true)) {
-			//values are very approximate
-			ndamage = ndamage * 4 / 3;
-			if(MakeRandomFloat(0,1) < 0.5)	//chance should be right
-				other->Stun(2);		//duration unknown
+		break;
 		}
-		
-		if(candamage)
-			DoSpecialAttackDamage(other, type, ndamage);
+	case DRAGON_PUNCH:{
+		max_dmg = (((level/10)+ 2)*(24)*(GetSkill(DRAGON_PUNCH)+GetSTR()+level)/600);
 		DoAnim(animTailRake);
 		reuse = TailRakeReuseTime;
-	}
-	else if (type == KICK) {
-		ndamage = (sint32) (((level/10) + hitmodifier) * (6 * ackwardtest) * (GetSkill(KICK) + GetSTR() + level) / 1000);
-		if(other->IsClient())
-			ndamage = ndamage * 7 / 10;
-		if(candamage)
-			DoSpecialAttackDamage(other, type, ndamage);
+		break;
+		}
+	case KICK:{ 
+		max_dmg = GetKickDamage();
 		DoAnim(animKick);
 		reuse = KickReuseTime;
+		break;
+			  }
+	default:
+		break;
 	}
+
+	if(!other->CheckHitChance(this, type, 0, type)){
+		ndamage = 0;
+	}
+	else{
+		ndamage = MakeRandomInt(min_dmg, max_dmg);
+	}
+	DoSpecialAttackDamage(other, type, ndamage);
 	return(reuse);
 }
 
@@ -402,9 +279,7 @@ void Mob::TryBackstab(Mob *other, const Item_Struct* weapon) {
 	if (BehindMob(other, GetX(), GetY())) // Player is behind other
 	{
 		// solar - chance to assassinate
-		
-		// TODO: it's set to 40% chance, should be a formula involving DEX
-		float chance=40;
+		float chance = (10.0+(GetDEX()/10)); //18.5% chance at 85 dex 40% chance at 300 dex
 		if(
 			level >= 60 && // player is 60 or higher
 			other->GetLevel() <= 45 && // mob 45 or under
@@ -413,25 +288,20 @@ void Mob::TryBackstab(Mob *other, const Item_Struct* weapon) {
 			&& other->IsNPC()
 			&& MakeRandomFloat(0, 99) < chance // chance
 			) {
-			
-			//char temp[100];
-			//snprintf(temp, 100, "%s ASSASSINATES their victim!!", this->GetName());
-			//entity_list.MessageClose(this, 0, 200, 10, temp);
 			entity_list.MessageClose_StringID(this, false, 200, 10, ASSASSINATES, GetName());
 			if(IsClient())
 				CastToClient()->CheckIncreaseSkill(BACKSTAB);
 			RogueAssassinate(other);
 		}
 		else {
-			RogueBackstab(other, weapon, GetSkill(BACKSTAB));
+			RogueBackstab(other, weapon);
 			if (level > 54) {
 				float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
 				// Check for double attack with main hand assuming maxed DA Skill (MS)
-				float random = MakeRandomFloat(0, 1);
 				
-				if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
+				if(MakeRandomFloat(0, 1) < DoubleAttackProbability)		// Max 62.4 % chance of DA
 					if(other->GetHP() > 0)
-						RogueBackstab(other, weapon, GetSkill(BACKSTAB));
+						RogueBackstab(other, weapon);
 			}
 			if(IsClient())
 				CastToClient()->CheckIncreaseSkill(BACKSTAB);
@@ -439,77 +309,74 @@ void Mob::TryBackstab(Mob *other, const Item_Struct* weapon) {
 	}
 	else if(GetAA(aaChaoticStab) > 0) {
 		//we can stab from any angle, we do min damage though.
-		RogueBackstab(other, weapon, GetSkill(BACKSTAB), true);
+		RogueBackstab(other, weapon, true);
 		if (level > 54) {
 			float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
 			if(IsClient())
 				CastToClient()->CheckIncreaseSkill(BACKSTAB);
 			// Check for double attack with main hand assuming maxed DA Skill (MS)
-			float random = MakeRandomFloat(0, 1);
-			if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
+			if(MakeRandomFloat(0, 1) < DoubleAttackProbability)		// Max 62.4 % chance of DA
 				if(other->GetHP() > 0)
-					RogueBackstab(other, weapon, GetSkill(BACKSTAB), true);
+					RogueBackstab(other, weapon, true);
 		}
 	}
-	else {	// Player is in front of other... do we want to give them extra attacks like this?
+	else { //We do a single regular attack if we attack from the front without chaotic stab
 		Attack(other, 13);
-		if (level > 54) {
-			float DoubleAttackProbability = (GetSkill(DOUBLE_ATTACK) + GetLevel()) / 500.0f; // 62.4 max
-			
-			// Check for double attack with main hand assuming maxed DA Skill (MS)
-			float random = MakeRandomFloat(0, 1);
-			if(random < DoubleAttackProbability)		// Max 62.4 % chance of DA
-				if(other->GetHP() > 0)
-					Attack(other, 13);
-		}
 	}
 }
 
 //heko: backstab
-void Mob::RogueBackstab(Mob* other, const Item_Struct* weapon, int8 bs_skill, bool min_damage)
+void Mob::RogueBackstab(Mob* other, const Item_Struct* weapon, bool min_damage)
 {
-	int ndamage = 0;
-	int max_hit, min_hit;
-	float skillmodifier = 0.0;
+	sint32 ndamage = 0;
+	sint32 max_hit = 0;
+	sint32 min_hit = 0;
+	int16 bs_skill = GetSkill(BACKSTAB);
+	
 	int8 primaryweapondamage;
 	if (weapon && weapon->ItemClass == ItemClassCommon)
 		primaryweapondamage = weapon->Damage; //backstab uses primary weapon
 	else
-		primaryweapondamage = this->GetLevel() % 10; // fallback incase it's a npc without a weapon
-	
-    // catch a divide by zero error
-    if (!bs_skill)
-        return;
-	
-	skillmodifier = (float)bs_skill/25.0;	//formula's from www.thesafehouse.org
+		primaryweapondamage = (GetLevel()/7)+1; // fallback incase it's a npc without a weapon, 2 dmg at 10, 10 dmg at 65
 	
 	// formula is (weapon damage * 2) + 1 + (level - 25)/3 + (strength+skill)/100
-	max_hit = (int)(((float)primaryweapondamage * 2.0) + 1.0 + ((level - 25)/3.0) + ((GetSTR()+GetSkill(BACKSTAB))/100));
-	max_hit *= (int)skillmodifier;
+	if(level > 25){
+		max_hit = ((primaryweapondamage*2) + 1 + ((level-25)/3) + ((GetSTR()+bs_skill)/100));
+	}
+	else{
+		max_hit = ((primaryweapondamage*2) + 1 + ((GetSTR()+bs_skill)/100));
+	}
 	
 	// determine minimum hits
 	if (level < 51)
 	{
-		min_hit = 0;
+		min_hit = (level*15/10);
 	}
 	else
 	{
 		// Trumpcard:  Replaced switch statement with formula calc.  This will give minhit increases all the way to 65.
-		min_hit= (int)( level * ( 1.5 + ( (level - 51) * .05 ) ));
+		min_hit = (level * ( level*5 - 105)) / 100;
 	}
-	if (max_hit < min_hit)
-		max_hit = min_hit;
-	if(min_damage)
-		ndamage = min_hit;
-	else
-		ndamage = min_hit + MakeRandomInt(0, max_hit-min_hit);	// TODO: better formula, consider mob level vs player level, strength/atk
 	
-//checked elsewhere	
-//	if (!BehindMob(other, GetX(), GetY()))
-//		ndamage = min_hit;
-	//other->Damage(this, ndamage, 0xffff, BACKSTAB);
+	if(!other->CheckHitChance(this, BACKSTAB, 0, BACKSTAB))	{
+		ndamage = 0;
+	}
+	else{
+		if(min_damage){
+			ndamage = min_hit;
+		}
+		else
+		{
+			max_hit = (max_hit * ((bs_skill*100)/25)) / 100;
+			if (max_hit < min_hit)
+				max_hit = min_hit;
+			
+			ndamage = MakeRandomInt(min_hit, max_hit); 
+		}
+	}
+	
 	DoSpecialAttackDamage(other, BACKSTAB, ndamage);
-	DoAnim(animPiercing);	//piercing animation
+	DoAnim(animPiercing);
 }
 
 // solar - assassinate
@@ -944,14 +811,35 @@ void NPC::DoClassAttacks(Mob *target) {
 	
 	bool taunt_time = taunt_timer.Check();
 	bool ca_time = classattack_timer.Check(false);
-	
-	//only check attack allowed if we are funna do something
-	if((taunt_time || ca_time) && !IsAttackAllowed(target))
+	bool ka_time = knightattack_timer.Check(false);
+
+	//only check attack allowed if we are going to do something
+	if((taunt_time || ca_time || ka_time) && !IsAttackAllowed(target))
 		return;
+
+	if(ka_time){
+		int knightreuse = 1000; //lets give it a small cooldown actually.
+		switch(GetClass()){
+			case SHADOWKNIGHT: case SHADOWKNIGHTGM:{
+				CastSpell(SPELL_NPC_HARM_TOUCH, target->GetID());
+				knightreuse = HarmTouchReuseTime * 1000;
+				break;
+			}
+			case PALADIN: case PALADINGM:{
+				if(GetHPRatio() < 20) {
+					CastSpell(SPELL_LAY_ON_HANDS, GetID());
+					knightreuse = LayOnHandsReuseTime * 1000;
+				} else {
+					knightreuse = 2000; //Check again in two seconds.
+				}
+				break;
+			}
+		}
+		knightattack_timer.Start(knightreuse); 
+	}
 	
 	//general stuff, for all classes....
 	//only gets used when their primary ability get used too
-	//this might be bad for pally's with long reuse time
 	if (taunting && HasOwner() && target->IsNPC() && target->GetBodyType() != BT_Undead && taunt_time) {
 		Taunt(target->CastToNPC(), false);
 	}
@@ -993,36 +881,70 @@ void NPC::DoClassAttacks(Mob *target) {
 			did_attack = true;
 			break;
 		}
+		case WARRIOR: case WARRIORGM:{
+			if(level >= RuleI(Combat, NPCBashKickLevel)){
+				if(!target->IsCasting())
+				{
+					DoAnim(animKick);
+					if(target->CheckHitChance(this, KICK, 0, KICK)) {
+						DoSpecialAttackDamage(target, KICK, MakeRandomInt(1, GetKickDamage()));
+					}
+					else{
+						DoSpecialAttackDamage(target, KICK, 0);
+					}
+					reuse = KickReuseTime * 1000;
+					did_attack = true;
+				}
+				else
+				{
+					DoAnim(animTailRake);
+					if(target->CheckHitChance(this, BASH, 0, BASH)) {
+						DoSpecialAttackDamage(target, BASH, MakeRandomInt(1, GetBashDamage()));
+					}
+					else{
+						DoSpecialAttackDamage(target,BASH, 0);
+					}
+					reuse = BashReuseTime * 1000;
+					did_attack = true;
+				}
+			}
+			break;
+		}
 		case BERSERKER: case BERSERKERGM:
-		case WARRIOR: case WARRIORGM:
 		case RANGER: case RANGERGM:
 		case BEASTLORD: case BEASTLORDGM: {
 			//kick
-			
-			DoAnim(animKick);
-			
-			sint32 dmg = GetKickDamage();
-			if(target->CheckHitChance(this, KICK, 0, KICK)) {
-				DoSpecialAttackDamage(target, KICK, dmg);
+			if(level >= RuleI(Combat, NPCBashKickLevel)){
+				DoAnim(animKick);
+				if(target->CheckHitChance(this, KICK, 0, KICK)) {
+					DoSpecialAttackDamage(target, KICK, MakeRandomInt(1, GetKickDamage()));
+				}
+				else{
+					DoSpecialAttackDamage(target, KICK, 0);
+				}
+				reuse = KickReuseTime * 1000;
+				did_attack = true;
 			}
-			
-			reuse = KickReuseTime * 1000;
-			did_attack = true;
 			break;
 		}
+		case CLERIC: case CLERICGM: //clerics can bash too.
 		case SHADOWKNIGHT: case SHADOWKNIGHTGM:
-			CastSpell(SPELL_NPC_HARM_TOUCH, target->GetID());
-			reuse = HarmTouchReuseTime * 1000;
-			did_attack = true;
-			break;
 		case PALADIN: case PALADINGM:
-			if(GetHPRatio() < 20) {
-				CastSpell(SPELL_LAY_ON_HANDS, GetID());
-				reuse = LayOnHandsReuseTime * 1000;
-			} else {
-				reuse = 1000 * 5;	//check again in 5 seconds
+		{
+			if(level >= RuleI(Combat, NPCBashKickLevel)){
+				DoAnim(animTailRake);
+				if(target->CheckHitChance(this, BASH, 0, BASH)) {
+					DoSpecialAttackDamage(target, BASH, MakeRandomInt(1, GetBashDamage()));
+				}
+				else{
+					DoSpecialAttackDamage(target,BASH, 0);
+				}
+				reuse = BashReuseTime * 1000;
+				did_attack = true;
 			}
 			break;
+		}
+
 	}
 
 	if(did_attack) {

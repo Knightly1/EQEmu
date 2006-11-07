@@ -294,7 +294,7 @@ bool logpos;
     int16	MaxSkill_class(int16 skillid, int16 class_, int16 level) const;
 	
 	
-	void	RogueBackstab(Mob* other, const Item_Struct* weapon, int8 bs_skill, bool min_damage = false);
+	void	RogueBackstab(Mob* other, const Item_Struct* weapon, bool min_damage = false);
 	void	RogueAssassinate(Mob* other); // solar
 	bool	BehindMob(Mob* other = 0, float playerx = 0.0f, float playery = 0.0f) const;
 	
@@ -407,6 +407,7 @@ bool logpos;
 	bool AttackAnimation(int &attack_skill, int16 &skillinuse, int Hand, const ItemInst* weapon);
 	bool AvoidDamage(Mob* attacker, sint32 &damage);
 	bool CheckHitChance(Mob* attacker, int8 attack_skill, int Hand, int16 skillinuse);
+	void TryCriticalHit(Mob *defender, int16 skill, sint32 &damage);
 	
 	void	DamageShield(Mob* other);
 	bool	FindBuff(int16 spellid);

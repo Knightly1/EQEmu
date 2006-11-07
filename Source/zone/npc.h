@@ -236,6 +236,7 @@ protected:
 	Timer	combat_event_timer;	//running while we are engaged in offensive or defensive combat activities
     Timer	swarm_timer;
     Timer	classattack_timer;
+	Timer	knightattack_timer;
     Timer	assist_timer;		//ask for help from nearby mobs
 
 	bool	attack_event;	//true if we have fired an EVENT_ATTACK and our attacked timer has not gone off

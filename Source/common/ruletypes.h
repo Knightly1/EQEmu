@@ -55,6 +55,13 @@ RULE_INT (Spells, BardSpellAggroMod, 3)
 RULE_INT (Spells, PetSpellAggroMod, 10)
 RULE_CATEGORY_END()
 
+RULE_CATEGORY( Combat )
+RULE_REAL ( Combat, BaseCritChance, 0.0 ) //The base crit chance for non warriors, NOTE: This will apply to NPCs as well
+RULE_REAL ( Combat, WarBerBaseCritChance, 0.03 ) //The base crit chance for warriors and berserkers, only applies to clients
+RULE_REAL ( Combat, BerserkBaseCritChance, 0.06 ) //The bonus base crit chance you get when you're berserk
+RULE_INT ( Combat, NPCBashKickLevel, 6 ) //The level that npcs can KICK/BASH
+RULE_CATEGORY_END()
+
 #undef RULE_CATEGORY
 #undef RULE_INT
 #undef RULE_REAL

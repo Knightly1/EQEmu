@@ -1,7 +1,16 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
-=11/06/2006
+==11/07/2006
+KLS: Changed how critical hits work, as a result things that could not crit before like special attacks, now can. 
+KLS: Cleave like effects should be fixed to do an increase of your already standing chance to critical instead of a flat increase.
+KLS: Reworked much of the special attack code.
+KLS: Applied haste to combat skill timers, they should give trouble much less often.
+KLS: Monk skill damage will be more random but the max damage they can do has not changed.
+KLS: Skills should be avoided less often, they were being avoided twice in the code instead of once.
+KLS: Implemented basic strikethrough.
+
+==11/06/2006
 FatherNitwit: (Cripp) periodic auto save.
 FatherNitwit: LostZaphod's possible win32 azone fix. (untested)
 FatherNitwit: (cbodmer) Regen multiplier rules.

@@ -351,6 +351,9 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	float roll;
 	Mob *attacker=other;
 	Mob *defender=this;
+	bool sthrough = false;
+	if(MakeRandomInt(0, 100) <= (attacker->itembonuses.StrikeThrough + attacker->spellbonuses.StrikeThrough))
+		sthrough = true;
 /*
 	////////////////////////////////////////////////////////
 	// Mitigation goes here
@@ -404,7 +407,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	//////////////////////////////////////////////////////////
 	// make enrage same as riposte
 	/////////////////////////////////////////////////////////
-	if (IsEnraged() && !other->BehindMob(this, other->GetX(), other->GetY()) ) {
+	if (IsEnraged() && !other->BehindMob(this, other->GetX(), other->GetY()) && !sthrough) {
 		damage = -3;
 		mlog(COMBAT__DAMAGE, "I am enraged, riposting frontal attack.");
 	}
@@ -412,7 +415,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	/////////////////////////////////////////////////////////
 	// riposte
 	/////////////////////////////////////////////////////////
-	if (damage > 0 && CanThisClassRiposte() && !other->BehindMob(this, other->GetX(), other->GetY()) )
+	if (damage > 0 && CanThisClassRiposte() && !other->BehindMob(this, other->GetX(), other->GetY()) && !sthrough)
 	{
 		if (IsClient()) {
         	skill = CastToClient()->GetSkill(RIPOSTE);
@@ -441,7 +444,8 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 			class_==BEASTLORD ||
 			class_==MONKGM ||
 			class_==BEASTLORDGM )
-            && !other->BehindMob(this, other->GetX(), other->GetY()))
+            && !other->BehindMob(this, other->GetX(), other->GetY())
+			&& !sthrough)
 	{
 		if (IsClient()) {
 			skill = CastToClient()->GetSkill(BLOCKSKILL);
@@ -464,7 +468,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	//////////////////////////////////////////////////////		
 	// parry
 	//////////////////////////////////////////////////////
-	if (damage > 0 && CanThisClassParry() && !other->BehindMob(this, other->GetX(), other->GetY()) )
+	if (damage > 0 && CanThisClassParry() && !other->BehindMob(this, other->GetX(), other->GetY()) && !sthrough)
 	{
         
 		if (IsClient()) {
@@ -488,7 +492,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	////////////////////////////////////////////////////////
 	// dodge
 	////////////////////////////////////////////////////////
-	if (damage > 0 && CanThisClassDodge() && !other->BehindMob(this, other->GetX(), other->GetY()) )
+	if (damage > 0 && CanThisClassDodge() && !other->BehindMob(this, other->GetX(), other->GetY()) && !sthrough)
 	{
 	
 		if (IsClient()) {
@@ -787,85 +791,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		
 		mlog(COMBAT__DAMAGE, "Damage calculated to %d (min %d, max %d, str %d, skill %d, DMG %d, lv %d)", damage, min_hit, max_hit
 		, GetSTR(), GetSkill(skillinuse), weapon_damage, mylevel);
-		
-		
-		///////////////////////////////////////////////////
-		/////   Critical Hits
-		//////////////////////////////////////////////////
-		float critChance = 0.0f;
-		int critMod = 4;
-		bool landed_crit = false;
-		
-		critChance += (spellbonuses.CriticalHitChance + itembonuses.CriticalHitChance) / 100.0f;
-		//critChance += (mydex * 0.0001); // Factor in DEX
-		
-		if((GetClass() == WARRIOR || GetClass() == BERSERKER) && mylevel >= 12) {
-			// Factor in AA Skill
-			switch( GetAA(aaCombatFury) ) {
-			case 0:
-				critChance += 0.03f;
-				break;
-			case 1:
-				critChance += 0.05f;
-				break;
-			case 2:
-				critChance += 0.07f;
-				break;
-			case 3:
-				critChance += 0.10f;
-				break;
-			}
-
-			// 3x base crit chance when berserk
-			if( this->berserk )
-				critChance += 0.06f;
-			
-			if(berserk)
-				critMod = 10;	//crippling blow
-			else
-				critMod = 5;
-			
-		} else {	//non warrior crits
-			// Factor in AA Skill
-			switch( GetAA(aaCombatFury) ) {
-			case 1:
-				critChance += 0.02f;
-				break;
-			case 2:
-				critChance += 0.04f;
-				break;
-			case 3:
-				critChance += 0.07f;
-				break;
-			default:
-				//not warrior and no AA, so no crits
-				critChance = 0;
-			}
-		} //!warrior
-		
-		//if we can critical hit...
-		if (critChance > 0) {
-			float critRand = MakeRandomFloat(0, 1);
-
-			//see if we did in fact hit.
-			if( critRand <= critChance ) {
-				/*int RAND_CRIT = rand()%critMod;
-					
-				uint8 item_dmg = 0;
-				if (weapon_item && weapon->IsWeapon())
-					item_dmg = weapon_item->Damage;
-				damage += ((( mylevel / 4) + item_dmg) * RAND_CRIT);
-				if(damage < 0)
-					damage = 0;*/
-				damage = (damage * critMod) / 2;
-				
-				mlog(COMBAT__TOHIT, "Landed critical hit, increasing damage to %d (chance %f, mod %d)", damage, critChance, critMod);
-				
-				landed_crit = true;
-			} else
-				mlog(COMBAT__MISSES, "Missed critical hit (chance %f, mod %d)", critChance, critMod);
-		}
-		
+	
 		/*#if 0 // Weighted MDF type damage
 			float hml = (float) ((float)rand()/(float)RAND_MAX);
 			if(GetLevel()>=25){
@@ -900,16 +826,8 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 			damage = 0;
 		} else {	//we hit, try to avoid it
 			other->AvoidDamage(this, damage);
-			
+			TryCriticalHit(other, skillinuse, damage);
 			mlog(COMBAT__DAMAGE, "Final damage after all reductions: %d", damage);
-			
-			//once we hit, we will give the correct crit message
-			if(landed_crit) {
-				if(berserk)
-					entity_list.MessageClose(this, false, 200, 10, "%s lands a crippling blow!(%d)", name,damage);
-				else
-					entity_list.MessageClose(this, false, 200, 10, "%s scores a critical hit!(%d)", name,damage);
-			}
 		}
 		
 		if (bRiposte && damage == -3) {	//cannot riposte a riposte
@@ -1505,6 +1423,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 				damage = 0;	//miss
 			} else {	//hit, check for damage avoidance
 				other->AvoidDamage(this, damage);
+				TryCriticalHit(other, skillinuse, damage);
 			}
 		}
 		
@@ -2490,7 +2409,64 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 	}
 }
 
-
+void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
+{
+	if(damage < 1) //We can't critical hit if we don't hit.
+		return;
+ 
+	float critChance = RuleR(Combat, BaseCritChance);
+	//Use a real value because there are spells/skills that can up the crit mod by a percent and while
+	//They are not implemented yet it seems like a good idea to keep it open for when they are.
+	float critMod = 2.0f; 
+	if((GetClass() == WARRIOR || GetClass() == BERSERKER) && GetLevel() >= 12 && IsClient()) 
+	{
+		if(CastToClient()->berserk)
+		{
+			critChance += RuleR(Combat, BerserkBaseCritChance);
+			critMod = 4.0;
+		}
+		else
+		{
+			critChance += RuleR(Combat, WarBerBaseCritChance);
+			critMod = 2.0;
+		}
+	}
+ 
+	switch(GetAA(aaCombatFury))
+	{
+	case 1:
+		critChance += 0.02f;
+		break;
+	case 2:
+		critChance += 0.04f;
+		break;
+	case 3:
+		critChance += 0.07f;
+		break;
+	default:
+		break;
+	}
+	float CritBonus = spellbonuses.CriticalHitChance + itembonuses.CriticalHitChance;
+	if(CritBonus > 0.0 && critChance < 0.01) //If we have a bonus to crit in items or spells but no actual chance to crit
+		critChance = 0.01f; //Give them a small one so skills and items appear to have some effect.
+ 
+	critChance += ((critChance) * (CritBonus) / 100.0f); //crit chance is a % increase to your reg chance
+ 
+	if(critChance > 0){
+		if(MakeRandomFloat(0, 1) <= critChance)
+		{
+			damage = (damage * critMod);
+			if(IsClient() && CastToClient()->berserk)
+			{
+				entity_list.MessageClose(this, false, 200, 10, "%s lands a crippling blow!(%d)", GetCleanName(), damage);
+			}
+			else
+			{
+				entity_list.MessageClose(this, false, 200, 10, "%s scores a critical hit!(%d)", GetCleanName(), damage);
+			}
+		}
+	}
+}
 
 
 
