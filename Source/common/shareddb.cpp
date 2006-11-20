@@ -1295,7 +1295,6 @@ bool SharedDatabase::DBLoadSkillCaps() {
 			int8 class_ = atoi(row[1]);
 			int8 level = atoi(row[2]);
 			int16 cap = atoi(row[3]);
-printf("CAP %d %d %d = %d\n", skillID, class_, level, cap);
 			if(skillID >= skill_count || class_ >= class_count || level >= level_count)
 				continue;
 			EMuShareMemDLL.SkillCaps.SetSkillCap(class_, skillID, level, cap);

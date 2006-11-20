@@ -958,7 +958,7 @@ bool Client::OPCharCreate(char *name, CharCreate_Struct *cc)
 	SetRacialLanguages( &pp ); // bUsh
 	SetRaceStartingSkills( &pp ); // bUsh
 	SetClassStartingSkills( &pp ); // bUsh
-	pp.skills[SENSE_HEADING + 1] = 200;
+	pp.skills[SENSE_HEADING] = 200;
 	// Some one fucking fix this to use a field name. -Doodman
 	//pp.unknown3596[28] = 15; // @bp: This is to enable disc usage
 //	strcpy(pp.servername, WorldConfig::get()->ShortName.c_str());
@@ -1216,86 +1216,86 @@ void Client::SetClassStartingSkills( PlayerProfile_Struct *pp )
    {
    case BARD:
       {
-         pp->skills[_1H_SLASHING + 1] = 5;
-         pp->skills[SINGING + 1] = 5;
+         pp->skills[_1H_SLASHING] = 5;
+         pp->skills[SINGING] = 5;
          break;
       }
    case BEASTLORD:
       {
-         pp->skills[HAND_TO_HAND + 1] = 5;
+         pp->skills[HAND_TO_HAND] = 5;
          break;
       }
    case BERSERKER: // A Guess
       {
-         pp->skills[_2H_SLASHING + 1] = 5;
+         pp->skills[_2H_SLASHING] = 5;
          break;
       }
    case CLERIC:
       {
-         pp->skills[_1H_BLUNT + 1] = 5;
+         pp->skills[_1H_BLUNT] = 5;
          break;
       }
    case DRUID:
       {
-         pp->skills[_1H_BLUNT + 1] = 5;
+         pp->skills[_1H_BLUNT] = 5;
          break;
       }
    case ENCHANTER:
       {
-         pp->skills[PIERCING + 1] = 5;
+         pp->skills[PIERCING] = 5;
          break;
       }
    case MAGICIAN:
       {
-         pp->skills[PIERCING + 1] = 5;
+         pp->skills[PIERCING] = 5;
          break;
       }
    case MONK:
       {
-         pp->skills[DODGE + 1] = 5;
-         pp->skills[DUAL_WIELD + 1] = 5;
-         pp->skills[HAND_TO_HAND + 1] = 5;
+         pp->skills[DODGE] = 5;
+         pp->skills[DUAL_WIELD] = 5;
+         pp->skills[HAND_TO_HAND] = 5;
          break;
       }
    case NECROMANCER:
       {
-         pp->skills[PIERCING + 1] = 5;
+         pp->skills[PIERCING] = 5;
          break;
       }
    case PALADIN:
       {
-         pp->skills[_1H_SLASHING + 1] = 5;
+         pp->skills[_1H_SLASHING] = 5;
          break;
       }
    case RANGER:
       {
-         pp->skills[_1H_SLASHING + 1] = 5;
+         pp->skills[_1H_SLASHING] = 5;
          break;
       }
    case ROGUE:
       {
-         pp->skills[PIERCING + 1] = 5;
+         pp->skills[PIERCING] = 5;
          pp->languages[LANG_THIEVES_CANT] = 100; // Thieves Cant
          break;
       }
    case SHADOWKNIGHT:
       {
-         pp->skills[_1H_SLASHING + 1] = 5;
+         pp->skills[_1H_SLASHING] = 5;
          break;
       }
    case SHAMAN:
       {
-         pp->skills[_1H_BLUNT + 1] = 5;
+         pp->skills[_1H_BLUNT] = 5;
          break;
       }
    case WARRIOR:
       {
-         pp->skills[_1H_SLASHING + 1] = 5;
+         pp->skills[_1H_SLASHING] = 5;
          break;
       }
    case WIZARD:
       {
-         pp->skills[PIERCING + 1] = 5;
+         pp->skills[PIERCING] = 5;
          break;
       }
    }
@@ -1319,41 +1319,41 @@ void Client::SetRaceStartingSkills( PlayerProfile_Struct *pp )
       }
    case DARK_ELF:
       {
-         pp->skills[HIDE + 1] = 50;
+         pp->skills[HIDE] = 50;
          break;
       }
    case FROGLOK:
       {
-         pp->skills[SWIMMING + 1] = 125;
+         pp->skills[SWIMMING] = 125;
          break;
       }
    case GNOME:
       {
-         pp->skills[TINKERING + 1] = 50;
+         pp->skills[TINKERING] = 50;
          break;
       }
    case HALFLING:
       {
-         pp->skills[HIDE + 1] = 50;
-         pp->skills[SNEAK + 1] = 50;
+         pp->skills[HIDE] = 50;
+         pp->skills[SNEAK] = 50;
          break;
       }
    case IKSAR:
       {
-         pp->skills[FORAGE + 1] = 50;
-         pp->skills[SWIMMING + 1] = 100;
+         pp->skills[FORAGE] = 50;
+         pp->skills[SWIMMING] = 100;
          break;
       }
    case WOOD_ELF:
       {
-         pp->skills[FORAGE + 1] = 50;
-         pp->skills[HIDE + 1] = 50;
+         pp->skills[FORAGE] = 50;
+         pp->skills[HIDE] = 50;
          break;
       }
    case VAHSHIR:
       {
-         pp->skills[SAFE_FALL + 1] = 50;
-         pp->skills[SNEAK + 1] = 50;
+         pp->skills[SAFE_FALL] = 50;
+         pp->skills[SNEAK] = 50;
          break;
       }
    }
