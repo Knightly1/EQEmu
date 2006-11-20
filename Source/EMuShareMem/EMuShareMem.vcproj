@@ -187,6 +187,9 @@
 			<File
 				RelativePath=".\Spells.cpp">
 			</File>
+			<File
+				RelativePath=".\SkillCaps.cpp">
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"

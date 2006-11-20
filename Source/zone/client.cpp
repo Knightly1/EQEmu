@@ -1689,13 +1689,12 @@ bool Client::HasSkill(SkillType skill_id) const {
 	return((GetSkill(skill_id) > 0) && CanHaveSkill(skill_id));
 }
 bool Client::CanHaveSkill(SkillType skill_id) const {
-#warning OMFG ITS NOT DONE
-	return(false);
+#warning this is not right.
+	return(database.GetSkillCap(GetClass(), skill_id, GetLevel()) > 0);
 }
 
 int16 Client::MaxSkill(SkillType skillid, int16 class_, int16 level) const {
-#warning NOT DONE
-	//consult skill list in zone.
+	return(database.GetSkillCap(class_, skillid, level));
 }
 
 

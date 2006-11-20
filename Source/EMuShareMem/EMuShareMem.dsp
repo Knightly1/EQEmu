@@ -131,6 +131,10 @@ SOURCE=.\Opcodes.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\SkillCaps.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\Spells.cpp
 # End Source File
 # End Group
