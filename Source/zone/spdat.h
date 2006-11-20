@@ -19,6 +19,7 @@
 #define SPDAT_H
 
 #include "../common/classes.h"
+#include "../common/skills.h"
 
 #define SPELL_UNKNOWN 0xFFFF
 #define SPELLBOOK_UNKNOWN 0xFFFFFFFF		//player profile spells are 32 bit
@@ -389,7 +390,7 @@ struct SPDat_Spell_Struct
 /* 086 */	int			effectid[EFFECT_COUNT];	// Spell's effects
 /* 098 */	SpellTargetType	targettype;	// Spell's Target
 /* 099 */	int			basediff; // base difficulty fizzle adjustment
-/* 100 */	int			skill;
+/* 100 */	SkillType	skill;
 /* 101 */	sint16		zonetype;	// 01=Outdoors, 02=dungeons, ff=Any 
 /* 102 */	int16		EnvironmentType;
 /* 103 */	int			TimeOfDay;

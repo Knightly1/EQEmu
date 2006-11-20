@@ -1,6 +1,18 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+=11/19/2006
+FatherNitwit: Completely redid skills in the code to support >252
+FatherNitwit: Skill caps are now database driven (shared mem)
+Create this table, and source in SkillCaps.sql
+CREATE TABLE skill_caps (
+ skillID TINYINT UNSIGNED NOT NULL,
+ class TINYINT UNSIGNED NOT NULL,
+ level TINYINT UNSIGNED NOT NULL,
+ cap MEDIUMINT UNSIGNED NOT NULL,
+ PRIMARY KEY(skillID,class,level)
+);
+
 ==11/07/2006
 KLS: Changed how critical hits work, as a result things that could not crit before like special attacks, now can. 
 KLS: Cleave like effects should be fixed to do an increase of your already standing chance to critical instead of a flat increase.

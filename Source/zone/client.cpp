@@ -947,7 +947,7 @@ bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
 #endif
 
 
-void Client::SetSkill(int skillid, int8 value) {
+void Client::SetSkill(SkillType skillid, int8 value) {
 	if (skillid > HIGHEST_SKILL)
 		return;
 	m_pp.skills[skillid] = value; // We need to be able to #setskill 254 and 255 to reset skills
@@ -962,7 +962,7 @@ void Client::SetSkill(int skillid, int8 value) {
 	}
 }
 
-void Client::AddSkill(int skillid, int8 value) {
+void Client::AddSkill(SkillType skillid, int8 value) {
 	if (skillid > HIGHEST_SKILL)
 		return;
 	value = GetRawSkill(skillid) + value;
@@ -1657,7 +1657,7 @@ void Client::SendMoneyUpdate() {
 	FastQueuePacket(&outapp);
 }
 
-bool Client::CheckIncreaseSkill(int skillid, int chancemodi) {
+bool Client::CheckIncreaseSkill(SkillType skillid, int chancemodi) {
 	if (IsAIControlled()) // no skillups while chamred =p
 		return false;
 	if (skillid > HIGHEST_SKILL)
@@ -1685,47 +1685,20 @@ bool Client::CheckIncreaseSkill(int skillid, int chancemodi) {
 	return false;
 }
 
-// Made this function to check for skill increases in skills where a linear algorithm for
-// skill progression is acceptable.  For the time being using (10+level*5)
-// solar: use CheckIncreaseSkill instead
-/*
-bool Client::SimpleCheckIncreaseSkill(int16 skillid,sint16 chancemodi){
-	if (IsAIControlled()) // no skillups while chamred =p
-		return false;
-	if (skillid > HIGHEST_SKILL)
-		return false;
-	// Make sure we're not already at skill cap
-	if (GetSkill(skillid) < (10+level*5) ){
-		// the higher your current skill level, the harder it is
-		sint16 Chance = 10 + chancemodi + ((252 - GetSkill(skillid)) / 20);
-		if (Chance < 0)
-			Chance = 0; // Make it always possible
-		if (MakeRandomInt(0,100) < Chance){
-			SetSkill(skillid,GetRawSkill(skillid)+1);
-			return true;
-		}
-	}
-	return false;
+bool Client::HasSkill(SkillType skill_id) const {
+	return((GetSkill(skill_id) > 0) && CanHaveSkill(skill_id));
 }
-*/
+bool Client::CanHaveSkill(SkillType skill_id) const {
+#warning OMFG ITS NOT DONE
+	return(false);
+}
 
-#include "maxskill.h"
-/*
-int8 Mob::MaxSkill(int16 skillid, int16 class_, int16 level) {
-	switch (skillid) {
-		case OFFENSE:
-		case DEFENSE: {
-			int16 tmp = level * 5;
-			if (tmp > 200)
-				tmp = 200;
-			return tmp;
-		}
-		default: {
-			return level*4;
-		}
-	}
+int16 Client::MaxSkill(SkillType skillid, int16 class_, int16 level) const {
+#warning NOT DONE
+	//consult skill list in zone.
 }
-*/
+
+
 void Client::SendLevelAppearance(){
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_LevelAppearance, sizeof(LevelAppearance_Struct));
 	LevelAppearance_Struct* la = (LevelAppearance_Struct*)outapp->pBuffer;

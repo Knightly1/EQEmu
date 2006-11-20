@@ -681,8 +681,10 @@ void QuestManager::doanim(int anim_id) {
 }
 
 void QuestManager::addskill(int skill_id, int value) {
+	if(skill_id < 0 || skill_id > HIGHEST_SKILL)	//must check before casting.
+		return;
 	if (initiator && initiator->IsClient())
-		initiator->AddSkill(skill_id, value);
+		initiator->AddSkill((SkillType) skill_id, value);
 }
 
 void QuestManager::setlanguage(int skill_id, int value) {
@@ -691,16 +693,20 @@ void QuestManager::setlanguage(int skill_id, int value) {
 }
 
 void QuestManager::setskill(int skill_id, int value) {
+	if(skill_id < 0 || skill_id > HIGHEST_SKILL)	//must check before casting.
+		return;
 	if (initiator && initiator->IsClient())
-		initiator->SetSkill(skill_id, value);
+		initiator->SetSkill((SkillType) skill_id, value);
 }
 
 void QuestManager::setallskill(int value) {
 	if (!initiator)
 		return;
-	if (initiator && initiator->IsClient()) { 
-		for(int skill_num=0;skill_num<74;skill_num++)
-			initiator->SetSkill(skill_num, value);
+	if (initiator && initiator->IsClient()) {
+		SkillType sk;
+		for (sk = _1H_BLUNT; sk <= HIGHEST_SKILL; sk = (SkillType)(sk+1)) {
+			initiator->SetSkill(sk, value);
+		}
 	}
 }
 
@@ -1226,10 +1232,8 @@ void QuestManager::clear_zone_flag(int zone_id) {
 }
 
 void QuestManager::sethp(int hpperc) {
-	float maxhp;
-	float newhp;
+	int newhp;
 
-	maxhp = npc->GetMaxHP();
-	newhp = maxhp/100*(100-hpperc);
-	npc->Damage(npc, newhp, SPELL_UNKNOWN, 0, false, 0, false);
+	newhp = (npc->GetMaxHP()*(100-hpperc))/100;
+	npc->Damage(npc, newhp, SPELL_UNKNOWN, HAND_TO_HAND, false, 0, false);
 }

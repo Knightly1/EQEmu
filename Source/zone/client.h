@@ -248,8 +248,8 @@ public:
 	void LogLoot(Client* player,Corpse* corpse,const Item_Struct* item);
 	bool	AutoAttackEnabled() const { return auto_attack; }
 	bool	Attack(Mob* other, int Hand = 13, bool bRiposte = false);	// 13 = Primary (default), 14 = secondary
-	void	Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill = 0x04, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false);
-	void	Death(Mob* other, sint32 damage, int16 spell_id = 0xFFFF, int8 attack_skill = 0x04);
+	void	Damage(Mob* other, sint32 damage, int16 spell_id, SkillType attack_skill, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false);
+	void	Death(Mob* other, sint32 damage, int16 spell_id, SkillType attack_skill);
 	void	MakeCorpse(int32 exploss);
 	
 	bool	ChangeFirstName(const char* in_firstname,const char* gmname);
@@ -404,8 +404,6 @@ public:
 	
 	void	SetFactionLevel(int32 char_id, int32 npc_id, int8 char_class, int8 char_race, int8 char_deity);
 	void    SetFactionLevel2(int32 char_id, sint32 faction_id, int8 char_class, int8 char_race, int8 char_deity, sint32 value);
-	void SetSkill(int skill_num, int8 skill_id); // socket 12-29-01
-	void	AddSkill(int skillid, int8 value);
 	sint16	GetRawItemAC();
 	int16	GetCombinedAC_TEST();
 	
@@ -452,24 +450,46 @@ public:
 	void	AddMoneyToPP(uint32 copper,bool updateclient);
 	void	AddMoneyToPP(uint32 copper, uint32 silver, uint32 gold,uint32 platinum,bool updateclient);
 	
-	bool	CheckIncreaseSkill(int skillid, int chancemodi = 0);
 //	bool	SimpleCheckIncreaseSkill(int16 skillid,sint16 chancemodi = 0);
 	void	FinishTrade(Client* with);
 	void	FinishTrade(NPC* with);
 	bool	TGB() const { return tgb; }
 	
 	void	OnDisconnect(bool hard_disconnect);
+
+	
 	int16	GetSkillPoints() {return m_pp.points;}
 	void	SetSkillPoints(int inp) {m_pp.points = inp;}
+	
 	void	IncreaseSkill(int skill_id, int value = 1) { if (skill_id <= HIGHEST_SKILL) { m_pp.skills[skill_id] += value; } }
 	void	IncreaseLanguageSkill(int skill_id, int value = 1) { if (skill_id < 26) { m_pp.languages[skill_id] += value; } }
-	uint32		GetSkill(int skill_id) const { if (skill_id <= HIGHEST_SKILL) { return((itembonuses.skillmod[skill_id] > 0)? m_pp.skills[skill_id]*(100 + itembonuses.skillmod[skill_id])/100 : m_pp.skills[skill_id]); } return 0; }
-	uint32		GetRawSkill(int skill_id) const { if (skill_id <= HIGHEST_SKILL) { return(m_pp.skills[skill_id]); } return 0; }
+	virtual uint16 GetSkill(SkillType skill_id) const { if (skill_id <= HIGHEST_SKILL) { return((itembonuses.skillmod[skill_id] > 0)? m_pp.skills[skill_id]*(100 + itembonuses.skillmod[skill_id])/100 : m_pp.skills[skill_id]); } return 0; }
+	uint32		GetRawSkill(SkillType skill_id) const { if (skill_id <= HIGHEST_SKILL) { return(m_pp.skills[skill_id]); } return 0; }
+	bool HasSkill(SkillType skill_id) const;
+	bool CanHaveSkill(SkillType skill_id) const;
+	void SetSkill(SkillType skill_num, int8 value); // socket 12-29-01
+	void	AddSkill(SkillType skillid, int8 value);
+	void CheckSpecializeIncrease(int16 spell_id);
+	bool	CheckIncreaseSkill(SkillType skillid, int chancemodi = 0);
+	void    SetLanguageSkill(int langid, int value);
+
+	int16	MaxSkill(SkillType skillid, int16 class_, int16 level) const;
+    inline	int16	MaxSkill(SkillType skillid) const { return MaxSkill(skillid, GetClass(), GetLevel()); }
+    // Util functions for MaxSkill
+/*
+	int16	MaxSkill_weapon(int16 skillid, int16 class_, int16 level) const;
+    int16	MaxSkill_offensive(int16 skillid, int16 class_, int16 level) const;
+    int16	MaxSkill_defensive(int16 skillid, int16 class_, int16 level) const;
+    int16	MaxSkill_arcane(int16 skillid, int16 class_, int16 level) const;
+    int16	MaxSkill_class(int16 skillid, int16 class_, int16 level) const;
+*/
+
+	
 	
 	void TradeskillSearchResults(const char *query, unsigned long qlen, unsigned long objtype, unsigned long someid);
 	void SendTradeskillDetails(unsigned long  recipe_id);
-	bool TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskill);
-	void CheckIncreaseTradeskill(sint16 bonusstat, sint16 stat_modifier, float skillup_modifier, uint16 success_modifier, uint16 tradeskill);
+	bool TradeskillExecute(DBTradeskillRecipe_Struct *spec, SkillType tradeskill);
+	void CheckIncreaseTradeskill(sint16 bonusstat, sint16 stat_modifier, float skillup_modifier, uint16 success_modifier, SkillType tradeskill);
 	
 	int32	pendingrezzexp;
 	void	GMKill();
@@ -596,7 +616,6 @@ public:
 	
 	bool	CheckTradeLoreConflict(Client* other);
 	void	LinkDead();
-	bool	CanUseSkill(uint8 skillid) const { if (GetSkill(skillid) < 254) return true; return false; }
 	void	Insight(int32 t_id);
 	bool	CheckDoubleAttack(bool AAadd = false, bool Triple = false);
 	//remove charges/multiple objects from inventory:
@@ -630,7 +649,6 @@ public:
 #ifdef PACKET_UPDATE_MANAGER
 	inline UpdateManager *GetUpdateManager() { return(&update_manager); }
 #endif
-	void    SetLanguageSkill(int langid, int value); // bUsh
 	void	EnteringMessages(Client* client);
 	void	SendRules(Client* client);
 	std::list<Client*> consent_list;
@@ -644,7 +662,7 @@ protected:
 	void CalcEdibleBonuses(StatBonuses* newbon);
 	void MakeBuffFadePacket(int16 spell_id, int slot_id, bool send_message = true);
 	bool client_data_loaded;
-	float RangedHitChance(uint8 skill, Mob *other);
+	float RangedHitChance(SkillType skill, Mob *other);
 	
 	sint16	GetFocusEffect(focusType type, int16 spell_id);
 	sint16	CalcFocusEffect(focusType type, int16 focus_id, int16 spell_id);

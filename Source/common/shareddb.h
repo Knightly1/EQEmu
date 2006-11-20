@@ -4,6 +4,7 @@
 #define MAX_ITEM_ID				125000
 
 #include "database.h"
+#include "skills.h"
 
 #include <list>
 
@@ -68,6 +69,7 @@ public:
 	inline const int32  GetMaxNPCFactionList()	{ return npcfactionlist_max; }
 	const Item_Struct*		GetItem(uint32 id);
 	const NPCFactionList*	GetNPCFactionEntry(uint32 id);
+	int16	GetSkillCap(int8 Class_, SkillType Skill, int8 Level);
 //	const Door*				GetDoor(int8 door_id, const char* zone_name);
 //	const Door*				GetDoorDBID(uint32 db_id);
 	const	LootTable_Struct* GetLootTable(int32 loottable_id);
@@ -75,12 +77,14 @@ public:
 	bool	LoadItems();
 	bool	LoadLoot();
 	bool	LoadNPCFactionLists();
+	bool	LoadSkillCaps();
 	bool	GetCommandSettings(map<string,uint8> &commands);
 	const Item_Struct* IterateItems(uint32* NextIndex);
 	bool	DBLoadItems(sint32 iItemCount, uint32 iMaxItemID);
 	bool	DBLoadNPCTypes(sint32 iNPCTypeCount, uint32 iMaxNPCTypeID);
 	bool	DBLoadNPCFactionLists(sint32 iNPCFactionListCount, uint32 iMaxNPCFactionListID);
 	bool	DBLoadLoot();
+	bool	DBLoadSkillCaps();
 
 
 protected:
@@ -95,6 +99,7 @@ protected:
 	static bool extDBLoadItems(sint32 iItemCount, int32 iMaxItemID);
 	static bool extDBLoadNPCFactionLists(sint32 iNPCFactionListCount, int32 iMaxNPCFactionListID);
 	static bool extDBLoadLoot();
+	static bool extDBLoadSkillCaps();
 	
 	
 	uint32				max_item;

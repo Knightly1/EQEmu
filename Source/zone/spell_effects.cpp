@@ -120,7 +120,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 						dmg = caster->GetActSpellDamage(spell_id, dmg);
 					
 					dmg = -dmg;
-					Damage(caster, dmg, spell_id, SPELL_ATTACK_SKILL, false, buffslot, false);
+					Damage(caster, dmg, spell_id, spell.skill, false, buffslot, false);
 				}
 				else if(dmg > 0) {
 					//healing spell...
@@ -155,7 +155,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				//do any AAs apply to these spells?
 				if(dmg < 0) {
 					dmg = -dmg;
-					Damage(caster, dmg, spell_id, SPELL_ATTACK_SKILL, false, buffslot, false);
+					Damage(caster, dmg, spell_id, spell.skill, false, buffslot, false);
 				} else {
 					HealDamage(dmg);
 				}
@@ -1893,7 +1893,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					//	dmg = caster->GetActSpellDamage(spell_id, dmg);
 					
 					dmg = -dmg;
-					Damage(caster, dmg, spell_id, SPELL_ATTACK_SKILL, false, buffslot, false);
+					Damage(caster, dmg, spell_id, spell.skill, false, buffslot, false);
 				} else if(dmg > 0) {
 					//healing spell...
 					if(caster)
@@ -2211,7 +2211,7 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 			
 			if(effect_value < 0) {
 				effect_value = -effect_value;
-				Damage(caster, effect_value, spell_id, SPELL_ATTACK_SKILL, false, i, true);
+				Damage(caster, effect_value, spell_id, spell.skill, false, i, true);
 			} else if(effect_value > 0) {
 				//healing spell...
 				if(caster)
@@ -2256,7 +2256,7 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 			
 			if(effect_value < 0) {
 				effect_value = -effect_value;
-				Damage(caster, effect_value, spell_id, SPELL_ATTACK_SKILL, false, i, true);
+				Damage(caster, effect_value, spell_id, spell.skill, false, i, true);
 			} else if(effect_value > 0) {
 				//healing spell...
 				HealDamage(effect_value);

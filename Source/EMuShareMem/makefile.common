@@ -1,5 +1,5 @@
 #all common .o files must be built in .obj so they get -fPIC
-SF=MMFMutex.o Doors.o Items.o Spells.o NPCFactionLists.o MMF.o Loot.o Opcodes.o DLLMain.o .obj/timer.o .obj/unix.o
+SF=MMFMutex.o Doors.o Items.o Spells.o NPCFactionLists.o MMF.o Loot.o Opcodes.o SkillCaps.o DLLMain.o .obj/timer.o .obj/unix.o
 
 # .obj/unix.o .obj/EMuShareMem.o 
 

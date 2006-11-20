@@ -499,28 +499,46 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	*/
 }
 
-int Mob::GetSpecializeSkill(int16 spell_id) {
+uint16 Mob::GetSpecializeSkillValue(int16 spell_id) const {
 	switch(spells[spell_id].skill) {
-		case ABJURE:
-			return(SPECIALIZE_ABJURE);
-			break;
-		case ALTERATION:
-			return(SPECIALIZE_ALTERATION);
-			break;
-		case CONJURATION:
-			return(SPECIALIZE_CONJURATION);
-			break;
-		case DIVINATION:
-			return(SPECIALIZE_DIVINATION);
-			break;
-		case EVOCATION:
-			return(SPECIALIZE_EVOCATION);
-			break;
-		default:
-			//wtf...
-			break;
+	case ABJURE:
+		return(GetSkill(SPECIALIZE_ABJURE));
+	case ALTERATION:
+		return(GetSkill(SPECIALIZE_ALTERATION));
+	case CONJURATION:
+		return(GetSkill(SPECIALIZE_CONJURATION));
+	case DIVINATION:
+		return(GetSkill(SPECIALIZE_DIVINATION));
+	case EVOCATION:
+		return(GetSkill(SPECIALIZE_EVOCATION));
+	default:
+		//wtf...
+		break;
 	}
-	return(0xFFFF);
+	return(0);
+}
+
+void Client::CheckSpecializeIncrease(int16 spell_id) {
+	switch(spells[spell_id].skill) {
+	case ABJURE:
+		CheckIncreaseSkill(SPECIALIZE_ABJURE);
+		break;
+	case ALTERATION:
+		CheckIncreaseSkill(SPECIALIZE_ALTERATION);
+		break;
+	case CONJURATION:
+		CheckIncreaseSkill(SPECIALIZE_CONJURATION);
+		break;
+	case DIVINATION:
+		CheckIncreaseSkill(SPECIALIZE_DIVINATION);
+		break;
+	case EVOCATION:
+		CheckIncreaseSkill(SPECIALIZE_EVOCATION);
+		break;
+	default:
+		//wtf...
+		break;
+	}
 }
 
 /*
@@ -586,8 +604,7 @@ bool Client::CheckFizzle(int16 spell_id)
 	act_skill += GetLevel(); // maximum of whatever the client can cheat
 	
 	//FatherNitwit: spell specialization
-	int spec_skill = GetSpecializeSkill(spell_id);
-	float specialize = spec_skill < HIGHEST_SKILL ? GetSkill(spec_skill) : 0;
+	float specialize = GetSpecializeSkillValue(spell_id);
 		//VERY rough success formula, needs research
 	if(specialize > 0) {
 		specialize += GetAA(aaSpellCastingMastery) * 5.0;
@@ -960,44 +977,35 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 		{
 			switch(spells[spell_id].skill)
 			{
-				case SINGING:
-				{
+			case SINGING:
+				CastToClient()->CheckIncreaseSkill(SINGING);
+				break;
+			case PERCUSSION_INSTRUMENTS:
+				if(this->itembonuses.percussionMod > 0)
+					CastToClient()->CheckIncreaseSkill(PERCUSSION_INSTRUMENTS);
+				else
 					CastToClient()->CheckIncreaseSkill(SINGING);
-					break;
-				}
-				case PERCUSSION_INSTRUMENTS:
-				{
-					if(this->itembonuses.percussionMod > 0)
-						CastToClient()->CheckIncreaseSkill(PERCUSSION_INSTRUMENTS);
-					else
-						CastToClient()->CheckIncreaseSkill(SINGING);
-					break;
-				}
-				case STRINGED_INSTRUMENTS:
-				{
-					if(this->itembonuses.stringedMod > 0)
-						CastToClient()->CheckIncreaseSkill(STRINGED_INSTRUMENTS);
-					else
-						CastToClient()->CheckIncreaseSkill(SINGING);
-					break;
-				}
-				case WIND_INSTRUMENTS:
-				{
-					if(this->itembonuses.windMod > 0)
-						CastToClient()->CheckIncreaseSkill(WIND_INSTRUMENTS);
-					else
-						CastToClient()->CheckIncreaseSkill(SINGING);
-					break;
-				}
-				case BRASS_INSTRUMENTS:
-				{
-					if(this->itembonuses.brassMod > 0)
-						CastToClient()->CheckIncreaseSkill(BRASS_INSTRUMENTS);
-					else
-						CastToClient()->CheckIncreaseSkill(SINGING);
-					break;
-				}
-
+				break;
+			case STRINGED_INSTRUMENTS:
+				if(this->itembonuses.stringedMod > 0)
+					CastToClient()->CheckIncreaseSkill(STRINGED_INSTRUMENTS);
+				else
+					CastToClient()->CheckIncreaseSkill(SINGING);
+				break;
+			case WIND_INSTRUMENTS:
+				if(this->itembonuses.windMod > 0)
+					CastToClient()->CheckIncreaseSkill(WIND_INSTRUMENTS);
+				else
+					CastToClient()->CheckIncreaseSkill(SINGING);
+				break;
+			case BRASS_INSTRUMENTS:
+				if(this->itembonuses.brassMod > 0)
+					CastToClient()->CheckIncreaseSkill(BRASS_INSTRUMENTS);
+				else
+					CastToClient()->CheckIncreaseSkill(SINGING);
+				break;
+			default:
+				break;
 			}
 		}
 		// go again in 6 seconds
@@ -1027,10 +1035,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 				// increased chance of gaining channel skill if you regained concentration
 				c->CheckIncreaseSkill(CHANNELING, regain_conc ? 5 : 0);
 				
-				int spec_skill = GetSpecializeSkill(spell_id);
-				int specialize = spec_skill < HIGHEST_SKILL ? GetSkill(spec_skill) : 0;
-				if(specialize > 0)
-					c->CheckIncreaseSkill(spec_skill);
+				c->CheckSpecializeIncrease(spell_id);
 			}
 			
 			
@@ -1617,7 +1622,7 @@ void Mob::BardPulse(uint16 spell_id, Mob *caster) {
 			action->unknown06 = GetInstrumentMod(spell_id);		// seems to always be 0x0A (10)
 			action->buff_unknown = 0;
 			action->level = buffs[buffs_i].casterlevel;
-			action->type = 231;	// 231 means a spell
+			action->type = SpellDamageType;
 			entity_list.QueueCloseClients(this, packet, false, 200, 0, true, IsClient() ? FILTER_PCSPELLS : FILTER_NPCSPELLS);
 			
 			action->buff_unknown = 4;
@@ -1627,7 +1632,7 @@ void Mob::BardPulse(uint16 spell_id, Mob *caster) {
 			CombatDamage_Struct *cd = (CombatDamage_Struct *)message_packet->pBuffer;
 			cd->target = action->target;
 			cd->source = action->source;
-			cd->type = action->type;
+			cd->type = SpellDamageType;
 			cd->spellid = action->spell;
 			cd->sequence = action->sequence;
 			cd->damage = 0;

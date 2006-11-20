@@ -57,7 +57,7 @@ int Mob::GetBashDamage() const {
 	return(int(dmg));
 }
 
-void Mob::DoSpecialAttackDamage(Mob *who, int8 skill, sint32 max_damage) {
+void Mob::DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage) {
 	//this really should go through the same code as normal melee damage to
 	//pick up all the special behavior there
 	if(target->SpecAttacks[IMMUNE_MELEE] || target->SpecAttacks[IMMUNE_MELEE_NONMAGICAL] || target->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]) {
@@ -132,7 +132,7 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 				CheckIncreaseSkill(BASH);
 			DoAnim(animTailRake);
 
-			if(!target->CheckHitChance(this, BASH, 0, BASH)) {
+			if(!target->CheckHitChance(this, BASH, 0)) {
 				dmg = 0;
 			}
 			else{
@@ -163,7 +163,7 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 				CheckIncreaseSkill(KICK);
 			DoAnim(animKick);
 
-			if(!target->CheckHitChance(this, KICK, 0, KICK)) {
+			if(!target->CheckHitChance(this, KICK, 0)) {
 				dmg = 0;
 			}
 			else{
@@ -174,8 +174,13 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 		}
 		break;
 	case MONK: {
-		CheckIncreaseSkill(ca_atk->m_skill);
 		ReuseTime = MonkSpecialAttack(target, ca_atk->m_skill) - 1;
+		if(ReuseTime < 100) {
+			//hackish... but we return a huge reuse time if this is an 
+			// invalid skill, otherwise, we can safely assume it is a 
+			// valid monk skill and just cast it to a SkillType
+			CheckIncreaseSkill((SkillType) ca_atk->m_skill);
+		}
 		break;
 	}
 	case ROGUE: {
@@ -201,63 +206,71 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 }
 
 //returns the reuse time in sec for the special attack used.
-int Mob::MonkSpecialAttack(Mob* other, int8 type)
+int Mob::MonkSpecialAttack(Mob* other, int8 unchecked_type)
 {
 	sint32 ndamage = 0;
 	sint32 max_dmg = 0;
 	sint32 min_dmg = 1;
 	int reuse = 0;
+	SkillType skill_type;	//to avoid casting... even though it "would work"
 	
-	switch(type)
+	switch(unchecked_type)
 	{
 	case FLYING_KICK:{
-		max_dmg = (((level/10)+2)*(24)*(GetSkill(FLYING_KICK)+GetSTR()+level))/600;
+		skill_type = FLYING_KICK;
+		max_dmg = (((level/10)+2)*(24)*(GetSkill(skill_type)+GetSTR()+level))/600;
 		min_dmg = ((level*8)/10);
 		DoAnim(animFlyingKick);
 		reuse = FlyingKickReuseTime;
 		break;
 		}
 	case TIGER_CLAW:{
-		max_dmg = (((level/10)+ 2)*(9)*(GetSkill(TIGER_CLAW)+GetSTR()+level)/700);
+		skill_type = TIGER_CLAW;
+		max_dmg = (((level/10)+ 2)*(9)*(GetSkill(skill_type)+GetSTR()+level)/700);
 		DoAnim(animTigerClaw);
 		reuse = TigerClawReuseTime;
 		break;
 		}
 	case ROUND_KICK:{
-		max_dmg = (((level/10)+ 2)*(14)*(GetSkill(ROUND_KICK)+GetSTR()+level)/800);
+		skill_type = ROUND_KICK;
+		max_dmg = (((level/10)+ 2)*(14)*(GetSkill(skill_type)+GetSTR()+level)/800);
 		DoAnim(animRoundKick);
 		reuse = RoundKickReuseTime;
 		break;
 		}
 	case EAGLE_STRIKE:{
-		max_dmg = (((level/10)+ 2)*(19)*(GetSkill(EAGLE_STRIKE)+GetSTR()+level)/700);
+		skill_type = EAGLE_STRIKE;
+		max_dmg = (((level/10)+ 2)*(19)*(GetSkill(skill_type)+GetSTR()+level)/700);
 		DoAnim(animEagleStrike);
 		reuse = EagleStrikeReuseTime;
 		break;
 		}
 	case DRAGON_PUNCH:{
-		max_dmg = (((level/10)+ 2)*(24)*(GetSkill(DRAGON_PUNCH)+GetSTR()+level)/600);
+		skill_type = DRAGON_PUNCH;
+		max_dmg = (((level/10)+ 2)*(24)*(GetSkill(skill_type)+GetSTR()+level)/600);
 		DoAnim(animTailRake);
 		reuse = TailRakeReuseTime;
 		break;
 		}
-	case KICK:{ 
+	case KICK:{
+		skill_type = KICK;
 		max_dmg = GetKickDamage();
 		DoAnim(animKick);
 		reuse = KickReuseTime;
 		break;
 			  }
 	default:
-		break;
+		mlog(CLIENT__ERROR, "Invalid special attack type %d attempted", unchecked_type);
+		return(1000); /* nice long delay for them, the caller depends on this! */
 	}
 
-	if(!other->CheckHitChance(this, type, 0, type)){
+	if(!other->CheckHitChance(this, skill_type, 0)){
 		ndamage = 0;
 	}
 	else{
 		ndamage = MakeRandomInt(min_dmg, max_dmg);
 	}
-	DoSpecialAttackDamage(other, type, ndamage);
+	DoSpecialAttackDamage(other, skill_type, ndamage);
 	return(reuse);
 }
 
@@ -358,7 +371,7 @@ void Mob::RogueBackstab(Mob* other, const Item_Struct* weapon, bool min_damage)
 		min_hit = (level * ( level*5 - 105)) / 100;
 	}
 	
-	if(!other->CheckHitChance(this, BACKSTAB, 0, BACKSTAB))	{
+	if(!other->CheckHitChance(this, BACKSTAB, 0))	{
 		ndamage = 0;
 	}
 	else{
@@ -384,11 +397,11 @@ void Mob::RogueAssassinate(Mob* other)
 {
 	//can you dodge, parry, etc.. an assassinate??
 	//if so, use DoSpecialAttackDamage(other, BACKSTAB, 32000); instead
-	other->Damage(this, 32000, 0xffff, BACKSTAB);
+	other->Damage(this, 32000, SPELL_UNKNOWN, BACKSTAB);
 	DoAnim(animPiercing);	//piercing animation
 }
 
-float Client::RangedHitChance(uint8 skill, Mob *other) {
+float Client::RangedHitChance(SkillType skill, Mob *other) {
 	float chancetohit = 0;
 	if(target->IsNPC())
 		chancetohit = GetSkill(skill) / 3.75;
@@ -849,7 +862,7 @@ void NPC::DoClassAttacks(Mob *target) {
 	
 	int level = GetLevel();
 	int reuse = TauntReuseTime * 1000;	//make this very long since if they dont use it once, they prolly never will
-	bool did_attack;
+	bool did_attack = false;
 	//class specific stuff...
 	switch(GetClass()) {
 		case ROGUE: case ROGUEGM:
@@ -886,24 +899,22 @@ void NPC::DoClassAttacks(Mob *target) {
 				if(!target->IsCasting())
 				{
 					DoAnim(animKick);
-					if(target->CheckHitChance(this, KICK, 0, KICK)) {
-						DoSpecialAttackDamage(target, KICK, MakeRandomInt(1, GetKickDamage()));
+					sint32 dmg = 0;
+					if(target->CheckHitChance(this, KICK, 0)) {
+						dmg = MakeRandomInt(1, GetKickDamage());
 					}
-					else{
-						DoSpecialAttackDamage(target, KICK, 0);
-					}
+					DoSpecialAttackDamage(target, KICK, dmg);
 					reuse = KickReuseTime * 1000;
 					did_attack = true;
 				}
 				else
 				{
 					DoAnim(animTailRake);
-					if(target->CheckHitChance(this, BASH, 0, BASH)) {
-						DoSpecialAttackDamage(target, BASH, MakeRandomInt(1, GetBashDamage()));
+					sint32 dmg = 0;
+					if(target->CheckHitChance(this, BASH, 0)) {
+						dmg = MakeRandomInt(1, GetBashDamage());
 					}
-					else{
-						DoSpecialAttackDamage(target,BASH, 0);
-					}
+					DoSpecialAttackDamage(target, BASH, dmg);
 					reuse = BashReuseTime * 1000;
 					did_attack = true;
 				}
@@ -916,12 +927,11 @@ void NPC::DoClassAttacks(Mob *target) {
 			//kick
 			if(level >= RuleI(Combat, NPCBashKickLevel)){
 				DoAnim(animKick);
-				if(target->CheckHitChance(this, KICK, 0, KICK)) {
-					DoSpecialAttackDamage(target, KICK, MakeRandomInt(1, GetKickDamage()));
+				sint32 dmg = 0;
+				if(target->CheckHitChance(this, KICK, 0)) {
+					dmg = MakeRandomInt(1, GetKickDamage());
 				}
-				else{
-					DoSpecialAttackDamage(target, KICK, 0);
-				}
+				DoSpecialAttackDamage(target, KICK, dmg);
 				reuse = KickReuseTime * 1000;
 				did_attack = true;
 			}
@@ -933,12 +943,11 @@ void NPC::DoClassAttacks(Mob *target) {
 		{
 			if(level >= RuleI(Combat, NPCBashKickLevel)){
 				DoAnim(animTailRake);
-				if(target->CheckHitChance(this, BASH, 0, BASH)) {
-					DoSpecialAttackDamage(target, BASH, MakeRandomInt(1, GetBashDamage()));
+				sint32 dmg = 0;
+				if(target->CheckHitChance(this, BASH, 0)) {
+					dmg = MakeRandomInt(1, GetBashDamage());
 				}
-				else{
-					DoSpecialAttackDamage(target,BASH, 0);
-				}
+				DoSpecialAttackDamage(target, BASH, dmg);
 				reuse = BashReuseTime * 1000;
 				did_attack = true;
 			}

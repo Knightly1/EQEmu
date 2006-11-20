@@ -68,8 +68,6 @@
 #include "map.h"
 #include <set>
 
-#define SPELL_ATTACK_SKILL 231
-
 /*enum FindSpellType {
 	SPELLTYPE_SELF,
 	SPELLTYPE_OFFENSIVE,
@@ -159,7 +157,7 @@ struct StatBonuses {
 	sint8	hastetype3;
 	float	AggroRange; // when calculate just replace original value with this
 	float	AssistRange;
-	int8	skillmod[HIGHEST_SKILL];
+	sint16	skillmod[HIGHEST_SKILL+1];
 	int		effective_casting_level;
 	int		reflect_chance;	// chance to reflect incoming spell
 	int16	singingMod;
@@ -284,15 +282,7 @@ bool logpos;
 	static	int8	GetDefaultGender(int16 in_race, int8 in_gender = 0xFF);
 	static	void	CreateSpawnPacket(EQApplicationPacket* app, NewSpawn_Struct* ns);
 //	static	int		CheckEffectIDMatch(int8 effectindex, int16 spellid1, int8 caster_level1, int16 spellid2, int8 caster_level2);
-	int16	MaxSkill(int16 skillid, int16 class_, int16 level) const;
-    inline	int16	MaxSkill(int16 skillid) const { return MaxSkill(skillid, GetClass(), GetLevel()); }
-    // Util functions for MaxSkill
-    int16	MaxSkill_weapon(int16 skillid, int16 class_, int16 level) const;
-    int16	MaxSkill_offensive(int16 skillid, int16 class_, int16 level) const;
-    int16	MaxSkill_defensive(int16 skillid, int16 class_, int16 level) const;
-    int16	MaxSkill_arcane(int16 skillid, int16 class_, int16 level) const;
-    int16	MaxSkill_class(int16 skillid, int16 class_, int16 level) const;
-	
+
 	
 	void	RogueBackstab(Mob* other, const Item_Struct* weapon, bool min_damage = false);
 	void	RogueAssassinate(Mob* other); // solar
@@ -350,7 +340,7 @@ bool logpos;
 	virtual void SetLevel(uint8 in_level, bool command = false) { level = in_level; }
 	
 	virtual inline sint32 GetPrimaryFaction() const { return 0; }
-	virtual uint32 GetSkill(int skill_num) const { return 0; } //overloaded by things which actually have skill (NPC|client)
+	virtual uint16 GetSkill(SkillType skill_num) const { return 0; } //overloaded by things which actually have skill (NPC|client)
 	virtual void SendWearChange(int8 material_slot);
 	virtual int32 GetEquipment(int8 material_slot) const { return(0); }
 	virtual sint32 GetEquipmentMaterial(int8 material_slot) const;
@@ -362,11 +352,11 @@ bool logpos;
 	virtual void GoToBind() {}
 	virtual void Gate();
 	virtual bool Attack(Mob* other, int Hand = 13, bool FromRiposte = false) { return false; }		// 13 = Primary (default), 14 = secondary
-	virtual void Damage(Mob* from, sint32 damage, int16 spell_id, int8 attack_skill = 0x04, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false) {};
+	virtual void Damage(Mob* from, sint32 damage, int16 spell_id, SkillType attack_skill, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false) {};
 	virtual void Heal();
 	virtual void HealDamage(uint32 ammount);
 	virtual void SetMaxHP() { cur_hp = max_hp; }
-	virtual void Death(Mob* killer, sint32 damage, int16 spell_id = 0xFFFF, int8 attack_skill = 0x04) {}
+	virtual void Death(Mob* killer, sint32 damage, int16 spell_id, SkillType attack_skill) {}
 	static int32 GetLevelCon(int8 mylevel, int8 iOtherLevel);
 	inline int32 GetLevelCon(int8 iOtherLevel) const { return(this?GetLevelCon(GetLevel(), iOtherLevel):CON_GREEN); }
 	
@@ -404,9 +394,9 @@ bool logpos;
 	bool IsInvisible(Mob* other = 0) const;
 	void SetInvisible(bool state);
    
-	bool AttackAnimation(int &attack_skill, int16 &skillinuse, int Hand, const ItemInst* weapon);
+	bool AttackAnimation(SkillType &skillinuse, int Hand, const ItemInst* weapon);
 	bool AvoidDamage(Mob* attacker, sint32 &damage);
-	bool CheckHitChance(Mob* attacker, int8 attack_skill, int Hand, int16 skillinuse);
+	bool CheckHitChance(Mob* attacker, SkillType skillinuse, int Hand);
 	void TryCriticalHit(Mob *defender, int16 skill, sint32 &damage);
 	
 	void	DamageShield(Mob* other);
@@ -491,7 +481,7 @@ bool logpos;
 	virtual sint32 GetActSpellDuration(int16 spell_id, sint32 duration){ return duration;}
 	virtual sint32 GetActSpellCasttime(int16 spell_id, sint32 casttime);
 	float ResistSpell(int8 resist_type, int16 spell_id, Mob *caster);
-	int GetSpecializeSkill(int16 spell_id);
+	uint16 GetSpecializeSkillValue(int16 spell_id) const;
 	
 	void ShowStats(Client* client);
 	void ShowBuffs(Client* client);
@@ -762,7 +752,7 @@ bool logpos;
 	virtual FACTION_VALUE GetReverseFactionCon(Mob* iOther) { return FACTION_INDIFFERENT; }
 	
 protected:
-	void CommonDamage(Mob* other, sint32 &damage, const int16 spell_id, const int8 attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic);
+	void CommonDamage(Mob* other, sint32 &damage, const uint16 spell_id, const SkillType attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic);
 	static uint16 GetProcID(uint16 spell_id, uint8 effect_index);
 	float _GetMovementSpeed(int mod) const;
 
@@ -846,7 +836,7 @@ protected:
 	int GetWeaponDamage(Mob *against, const Item_Struct *weapon_item, bool &was_bane);
 	int GetKickDamage() const;
 	int GetBashDamage() const;
-	void DoSpecialAttackDamage(Mob *who, int8 skill, sint32 max_damage);
+	void DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage);
 
 	enum {MAX_PROCS = 4};
 	tProc PermaProcs[MAX_PROCS];

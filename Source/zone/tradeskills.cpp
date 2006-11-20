@@ -30,6 +30,8 @@
 #include "StringIDs.h"
 #include "../common/MiscFunctions.h"
 
+static const SkillType TradeskillUnknown = _1H_BLUNT; /* an arbitrary non-tradeskill */
+
 void Object::HandleAugmentation(Client* user, const AugmentItem_Struct* in_augment, Object *worldo)
 {
 	if (!user || !in_augment) {
@@ -103,7 +105,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	PlayerProfile_Struct& user_pp = user->GetPP();
 	ItemInst* container = NULL;
 	ItemInst* inst = NULL;
-	uint8 tradeskill = 0xE8;
+	int8 tstype = 0xE8;
 	uint8 passtype = 0;
 	bool worldcontainer=false;
 	
@@ -120,7 +122,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 		if (inst) {
 			const Item_Struct* item = inst->GetItem();
 			if (item && inst->IsType(ItemClassContainer)) {
-				tradeskill = item->BagType;
+				tstype = item->BagType;
 			}
 		}
 	}
@@ -133,7 +135,8 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	container = inst;
 	
 	// Convert container type to tradeskill type
-	switch (tradeskill)
+	SkillType tradeskill = TradeskillUnknown;
+	switch (tstype)
 	{
 	case 16:
 		tradeskill = TAILORING;
@@ -195,7 +198,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 			user->Message(13, "Only rogues can mix poisons.");
 		break;
 	case 0x0D: //Quest Containers-Most use 1E but item 17111 uses this one, odd Still needs completion
-		tradeskill = 75;// Making our own type here
+		tradeskill = POTTERY;
 		break;
 	case 46: //Fishing Still needs completion
 		tradeskill = FISHING;
@@ -205,7 +208,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 			"petition and let them know what tradeskill you were trying to use. and give them the following code: 0x%02X", tradeskill);
 	}
 	
-	if (tradeskill == 0) {
+	if (tradeskill == TradeskillUnknown) {
 		return;
 	}
 	
@@ -263,8 +266,8 @@ void Object::HandleAutoCombine(Client* user, const RecipeAutoCombine_Struct* rac
 	outp->reply_code = 0xFFFFFFF5;	//default fail.
 	
 	
-	uint32 tskill = Object::TypeToSkill(rac->object_type);
-	if(tskill == 0) {
+	SkillType tskill = Object::TypeToSkill(rac->object_type);
+	if(tskill == TradeskillUnknown) {
 		LogFile->write(EQEMuLog::Error, "Unknown container type for HandleAutoCombine: %d\n", rac->object_type);
 		user->QueuePacket(outapp);
 		safe_delete(outapp);
@@ -396,8 +399,8 @@ void Object::HandleAutoCombine(Client* user, const RecipeAutoCombine_Struct* rac
 	
 }
 
-uint32 Object::TypeToSkill(uint32 type) {
-	uint32 tradeskill = 0;
+SkillType Object::TypeToSkill(uint32 type) {
+	SkillType tradeskill = TradeskillUnknown;
 	switch (type) {
 		case OT_MEDICINEBAG: {
 			tradeskill = ALCHEMY;
@@ -441,7 +444,7 @@ uint32 Object::TypeToSkill(uint32 type) {
 			break;
 		}
 		case OT_KEYMAKER: { //unknown for now...
-			tradeskill = 0;
+			tradeskill = TradeskillUnknown;
 			break;
 		}
 		case OT_TOOLBOX: {
@@ -644,11 +647,11 @@ void Client::SendTradeskillDetails(unsigned long recipe_id) {
 }
 
 //returns true on success
-bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskill) {
+bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, SkillType tradeskill) {
 	if(spec == NULL || tradeskill == 0)
 		return(false);
 	
-	sint16 user_skill = GetSkill(tradeskill);
+	int16 user_skill = GetSkill(tradeskill);
 	float chance = 0;
 	float skillup_modifier;
 	sint16 thirdstat = 0;
@@ -778,7 +781,7 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, uint16 tradeskil
 	return(false);
 }
 
-void Client::CheckIncreaseTradeskill(sint16 bonusstat, sint16 stat_modifier, float skillup_modifier, uint16 success_modifier, uint16 tradeskill)
+void Client::CheckIncreaseTradeskill(sint16 bonusstat, sint16 stat_modifier, float skillup_modifier, uint16 success_modifier, SkillType tradeskill)
 {
 	uint16 current_raw_skill = GetRawSkill(tradeskill);
 	int maxskill = MaxSkill(tradeskill);

@@ -182,7 +182,7 @@ void Doors::HandleClick(Client* sender, int8 trigger)
 			}
 			else
 			{	// door is locked, either no key works for it or player doesn't have the key - try to pick it
-				if(sender->MaxSkill(35, sender->GetClass(), sender->GetLevel())>0 && GetLockpick()!=0)
+				if(sender->HasSkill(PICK_LOCK) && GetLockpick()!=0)
 				{	// client has the lock pick skill and this lock can be picked
 					float modskill=0.0f; 
 					const ItemInst* inst = sender->GetInv().GetItem(SLOT_CURSOR);
@@ -191,7 +191,6 @@ void Doors::HandleClick(Client* sender, int8 trigger)
 					{	// we can try to pick the lock with these lock picking tools
 						modskill=sender->GetSkill(PICK_LOCK);
 						
-						//WR: Check the 2nd arg to this, was 25...
 						sender->CheckIncreaseSkill(PICK_LOCK, 1);
 #if EQDEBUG>=5
 						LogFile->write(EQEMuLog::Debug,"Client has lockpicks: skill=%f", modskill);

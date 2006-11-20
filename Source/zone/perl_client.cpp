@@ -1202,31 +1202,6 @@ XS(XS_Client_GetRawItemAC)
 	XSRETURN(1);
 }
 
-XS(XS_Client_AddSkill); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_AddSkill)
-{
-	dXSARGS;
-	if (items != 3)
-		Perl_croak(aTHX_ "Usage: Client::AddSkill(THIS, skillid, value)");
-	{
-		Client *		THIS;
-		int		skillid = (int)SvIV(ST(1));
-		int8		value = (int8)SvUV(ST(2));
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->AddSkill(skillid, value);
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_Client_AccountID); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_AccountID)
 {
@@ -1524,40 +1499,6 @@ XS(XS_Client_AddMoneyToPP)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_Client_CheckIncreaseSkill); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_CheckIncreaseSkill)
-{
-	dXSARGS;
-	if (items < 2 || items > 3)
-		Perl_croak(aTHX_ "Usage: Client::CheckIncreaseSkill(THIS, skillid, chancemodi= 0)");
-	{
-		Client *		THIS;
-		bool		RETVAL;
-		int		skillid = (int)SvIV(ST(1));
-		int		chancemodi;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		if (items < 3)
-			chancemodi = 0;
-		else {
-			chancemodi = (int)SvIV(ST(2));
-		}
-
-		RETVAL = THIS->CheckIncreaseSkill(skillid, chancemodi);
-		ST(0) = boolSV(RETVAL);
-		sv_2mortal(ST(0));
-	}
-	XSRETURN(1);
-}
-
 XS(XS_Client_TGB); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_TGB)
 {
@@ -1696,6 +1637,33 @@ XS(XS_Client_IncreaseLanguageSkill)
 	XSRETURN_EMPTY;
 }
 
+XS(XS_Client_GetSkill); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_GetSkill)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Client::GetSkill(THIS, skill_id)");
+	{
+		Client *		THIS;
+		uint16		RETVAL;
+		dXSTARG;
+		SkillType		skill_id = (SkillType)SvUV(ST(1));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		RETVAL = THIS->GetSkill(skill_id);
+		XSprePUSH; PUSHu((UV)RETVAL);
+	}
+	XSRETURN(1);
+}
+
 XS(XS_Client_GetRawSkill); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_GetRawSkill)
 {
@@ -1706,7 +1674,7 @@ XS(XS_Client_GetRawSkill)
 		Client *		THIS;
 		uint32		RETVAL;
 		dXSTARG;
-		int		skill_id = (int)SvIV(ST(1));
+		SkillType		skill_id = (SkillType)SvUV(ST(1));
 
 		if (sv_derived_from(ST(0), "Client")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -1718,6 +1686,220 @@ XS(XS_Client_GetRawSkill)
 			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
 		RETVAL = THIS->GetRawSkill(skill_id);
+		XSprePUSH; PUSHu((UV)RETVAL);
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Client_HasSkill); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_HasSkill)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Client::HasSkill(THIS, skill_id)");
+	{
+		Client *		THIS;
+		bool		RETVAL;
+		SkillType		skill_id = (SkillType)SvUV(ST(1));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		RETVAL = THIS->HasSkill(skill_id);
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Client_CanHaveSkill); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_CanHaveSkill)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Client::CanHaveSkill(THIS, skill_id)");
+	{
+		Client *		THIS;
+		bool		RETVAL;
+		SkillType		skill_id = (SkillType)SvUV(ST(1));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		RETVAL = THIS->CanHaveSkill(skill_id);
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Client_SetSkill); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_SetSkill)
+{
+	dXSARGS;
+	if (items != 3)
+		Perl_croak(aTHX_ "Usage: Client::SetSkill(THIS, skill_num, value)");
+	{
+		Client *		THIS;
+		SkillType		skill_num = (SkillType)SvUV(ST(1));
+		int8		value = (int8)SvUV(ST(2));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->SetSkill(skill_num, value);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_Client_AddSkill); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_AddSkill)
+{
+	dXSARGS;
+	if (items != 3)
+		Perl_croak(aTHX_ "Usage: Client::AddSkill(THIS, skillid, value)");
+	{
+		Client *		THIS;
+		SkillType		skillid = (SkillType)SvUV(ST(1));
+		int8		value = (int8)SvUV(ST(2));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->AddSkill(skillid, value);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_Client_CheckSpecializeIncrease); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_CheckSpecializeIncrease)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Client::CheckSpecializeIncrease(THIS, spell_id)");
+	{
+		Client *		THIS;
+		int16		spell_id = (int16)SvUV(ST(1));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->CheckSpecializeIncrease(spell_id);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_Client_CheckIncreaseSkill); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_CheckIncreaseSkill)
+{
+	dXSARGS;
+	if (items < 2 || items > 3)
+		Perl_croak(aTHX_ "Usage: Client::CheckIncreaseSkill(THIS, skillid, chancemodi= 0)");
+	{
+		Client *		THIS;
+		bool		RETVAL;
+		SkillType		skillid = (SkillType)SvUV(ST(1));
+		int		chancemodi;
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		if (items < 3)
+			chancemodi = 0;
+		else {
+			chancemodi = (int)SvIV(ST(2));
+		}
+
+		RETVAL = THIS->CheckIncreaseSkill(skillid, chancemodi);
+		ST(0) = boolSV(RETVAL);
+		sv_2mortal(ST(0));
+	}
+	XSRETURN(1);
+}
+
+XS(XS_Client_SetLanguageSkill); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_SetLanguageSkill)
+{
+	dXSARGS;
+	if (items != 3)
+		Perl_croak(aTHX_ "Usage: Client::SetLanguageSkill(THIS, langid, value)");
+	{
+		Client *		THIS;
+		int		langid = (int)SvIV(ST(1));
+		int		value = (int)SvIV(ST(2));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		THIS->SetLanguageSkill(langid, value);
+	}
+	XSRETURN_EMPTY;
+}
+
+XS(XS_Client_MaxSkill); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Client_MaxSkill)
+{
+	dXSARGS;
+	if (items != 2)
+		Perl_croak(aTHX_ "Usage: Client::MaxSkill(THIS, skillid)");
+	{
+		Client *		THIS;
+		int8		RETVAL;
+		dXSTARG;
+		SkillType		skillid = (SkillType)SvUV(ST(1));
+
+		if (sv_derived_from(ST(0), "Client")) {
+			IV tmp = SvIV((SV*)SvRV(ST(0)));
+			THIS = INT2PTR(Client *,tmp);
+		}
+		else
+			Perl_croak(aTHX_ "THIS is not of type Client");
+		if(THIS == NULL)
+			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
+
+		RETVAL = THIS->MaxSkill(skillid);
 		XSprePUSH; PUSHu((UV)RETVAL);
 	}
 	XSRETURN(1);
@@ -2781,33 +2963,6 @@ XS(XS_Client_GetInstrumentMod)
 	XSRETURN(1);
 }
 
-XS(XS_Client_CanUseSkill); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_CanUseSkill)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Client::CanUseSkill(THIS, skillid)");
-	{
-		Client *		THIS;
-		bool		RETVAL;
-		uint8		skillid = (uint8)SvUV(ST(1));
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->CanUseSkill(skillid);
-		ST(0) = boolSV(RETVAL);
-		sv_2mortal(ST(0));
-	}
-	XSRETURN(1);
-}
-
 XS(XS_Client_DecreaseByID); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_DecreaseByID)
 {
@@ -3119,31 +3274,6 @@ XS(XS_Client_UseDiscipline)
 	XSRETURN(1);
 }
 
-XS(XS_Client_SetLanguageSkill); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_SetLanguageSkill)
-{
-	dXSARGS;
-	if (items != 3)
-		Perl_croak(aTHX_ "Usage: Client::SetLanguageSkill(THIS, langid, value)");
-	{
-		Client *		THIS;
-		int		langid = (int)SvIV(ST(1));
-		int		value = (int)SvIV(ST(2));
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->SetLanguageSkill(langid, value);
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_Client_GetCharacterFactionLevel); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_GetCharacterFactionLevel)
 {
@@ -3169,31 +3299,6 @@ XS(XS_Client_GetCharacterFactionLevel)
 		XSprePUSH; PUSHi((IV)RETVAL);
 	}
 	XSRETURN(1);
-}
-
-XS(XS_Client_SetSkill); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_SetSkill)
-{
-	dXSARGS;
-	if (items != 3)
-		Perl_croak(aTHX_ "Usage: Client::SetSkill(THIS, in_skill_num, in_skill_value)");
-	{
-		Client *		THIS;
-		int		in_skill_num = (int)SvIV(ST(1));
-		int8		in_skill_value = (int8)SvUV(ST(2));
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->SetSkill(in_skill_num, in_skill_value);
-	}
-	XSRETURN_EMPTY;
 }
 
 XS(XS_Client_SetZoneFlag); /* prototype to pass -Wmissing-prototypes */
@@ -3415,7 +3520,6 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "SetFactionLevel"), XS_Client_SetFactionLevel, file, "$$$$$$");
 		newXSproto(strcpy(buf, "SetFactionLevel2"), XS_Client_SetFactionLevel2, file, "$$$$$$$");
 		newXSproto(strcpy(buf, "GetRawItemAC"), XS_Client_GetRawItemAC, file, "$");
-		newXSproto(strcpy(buf, "AddSkill"), XS_Client_AddSkill, file, "$$$");
 		newXSproto(strcpy(buf, "AccountID"), XS_Client_AccountID, file, "$");
 		newXSproto(strcpy(buf, "AccountName"), XS_Client_AccountName, file, "$");
 		newXSproto(strcpy(buf, "Admin"), XS_Client_Admin, file, "$");
@@ -3427,13 +3531,21 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "GetFace"), XS_Client_GetFace, file, "$");
 		newXSproto(strcpy(buf, "TakeMoneyFromPP"), XS_Client_TakeMoneyFromPP, file, "$$");
 		newXSproto(strcpy(buf, "AddMoneyToPP"), XS_Client_AddMoneyToPP, file, "$$$$$$");
-		newXSproto(strcpy(buf, "CheckIncreaseSkill"), XS_Client_CheckIncreaseSkill, file, "$$;$");
 		newXSproto(strcpy(buf, "TGB"), XS_Client_TGB, file, "$");
 		newXSproto(strcpy(buf, "GetSkillPoints"), XS_Client_GetSkillPoints, file, "$");
 		newXSproto(strcpy(buf, "SetSkillPoints"), XS_Client_SetSkillPoints, file, "$$");
 		newXSproto(strcpy(buf, "IncreaseSkill"), XS_Client_IncreaseSkill, file, "$$;$");
 		newXSproto(strcpy(buf, "IncreaseLanguageSkill"), XS_Client_IncreaseLanguageSkill, file, "$$;$");
+		newXSproto(strcpy(buf, "GetSkill"), XS_Client_GetSkill, file, "$$");
 		newXSproto(strcpy(buf, "GetRawSkill"), XS_Client_GetRawSkill, file, "$$");
+		newXSproto(strcpy(buf, "HasSkill"), XS_Client_HasSkill, file, "$$");
+		newXSproto(strcpy(buf, "CanHaveSkill"), XS_Client_CanHaveSkill, file, "$$");
+		newXSproto(strcpy(buf, "SetSkill"), XS_Client_SetSkill, file, "$$$");
+		newXSproto(strcpy(buf, "AddSkill"), XS_Client_AddSkill, file, "$$$");
+		newXSproto(strcpy(buf, "CheckSpecializeIncrease"), XS_Client_CheckSpecializeIncrease, file, "$$");
+		newXSproto(strcpy(buf, "CheckIncreaseSkill"), XS_Client_CheckIncreaseSkill, file, "$$;$");
+		newXSproto(strcpy(buf, "SetLanguageSkill"), XS_Client_SetLanguageSkill, file, "$$$");
+		newXSproto(strcpy(buf, "MaxSkill"), XS_Client_MaxSkill, file, "$$");
 		newXSproto(strcpy(buf, "GMKill"), XS_Client_GMKill, file, "$");
 		newXSproto(strcpy(buf, "IsMedding"), XS_Client_IsMedding, file, "$");
 		newXSproto(strcpy(buf, "GetDuelTarget"), XS_Client_GetDuelTarget, file, "$");
@@ -3474,7 +3586,6 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "Hungry"), XS_Client_Hungry, file, "$");
 		newXSproto(strcpy(buf, "Thirsty"), XS_Client_Thirsty, file, "$");
 		newXSproto(strcpy(buf, "GetInstrumentMod"), XS_Client_GetInstrumentMod, file, "$$");
-		newXSproto(strcpy(buf, "CanUseSkill"), XS_Client_CanUseSkill, file, "$$");
 		newXSproto(strcpy(buf, "DecreaseByID"), XS_Client_DecreaseByID, file, "$$$");
 		newXSproto(strcpy(buf, "SlotConvert2"), XS_Client_SlotConvert2, file, "$$");
 		newXSproto(strcpy(buf, "Escape"), XS_Client_Escape, file, "$");
@@ -3486,9 +3597,7 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "CalcPriceMod"), XS_Client_CalcPriceMod, file, "$;$$");
 		newXSproto(strcpy(buf, "ResetTrade"), XS_Client_ResetTrade, file, "$");
 		newXSproto(strcpy(buf, "UseDiscipline"), XS_Client_UseDiscipline, file, "$$$");
-		newXSproto(strcpy(buf, "SetLanguageSkill"), XS_Client_SetLanguageSkill, file, "$$$");
 		newXSproto(strcpy(buf, "GetCharacterFactionLevel"), XS_Client_GetCharacterFactionLevel, file, "$$");
-		newXSproto(strcpy(buf, "SetSkill"), XS_Client_SetSkill, file, "$$$");
 		newXSproto(strcpy(buf, "SetZoneFlag"), XS_Client_SetZoneFlag, file, "$$");
 		newXSproto(strcpy(buf, "ClearZoneFlag"), XS_Client_ClearZoneFlag, file, "$$");
 		newXSproto(strcpy(buf, "HasZoneFlag"), XS_Client_HasZoneFlag, file, "$$");

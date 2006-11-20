@@ -69,7 +69,7 @@ public:
 	virtual void	AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot);
 	
 	virtual void SetTarget(Mob* mob);
-	virtual uint32 GetSkill(int skill_num) const { if (skill_num <= HIGHEST_SKILL) { return skills[skill_num + 1]; } return 0; }
+	virtual uint16 GetSkill(SkillType skill_num) const { if (skill_num <= HIGHEST_SKILL) { return skills[skill_num]; } return 0; }
 /*  virtual void SetSkill(int in_skill_num, int8 in_skill_value) { // socket 12-29-01
         if (in_skill_num <= HIGHEST_SKILL) { skills[in_skill_num + 1] = in_skill_value; } }*/
 
@@ -80,8 +80,8 @@ public:
 
 	// neotokyo: added frenzy
 	bool	Attack(Mob* other, int Hand = 13, bool = false);
-	void	Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill = 0x04, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false);
-	void	Death(Mob* other, sint32 damage, int16 spell_id = SPELL_UNKNOWN, int8 attack_skill = 0x04);
+	void	Damage(Mob* other, sint32 damage, int16 spell_id, SkillType attack_skill, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false);
+	void	Death(Mob* other, sint32 damage, int16 spell_id, SkillType attack_skill);
 	bool	DatabaseCastAccepted(int spell_id);
 	bool	IsFactionListAlly(uint32 other_faction);
 	FACTION_VALUE CheckNPCFactionAlly(sint32 other_faction);

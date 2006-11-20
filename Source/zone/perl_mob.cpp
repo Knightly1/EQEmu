@@ -485,33 +485,6 @@ XS(XS_Mob_Depop)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_Mob_MaxSkill); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_MaxSkill)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Mob::MaxSkill(THIS, skillid)");
-	{
-		Mob *		THIS;
-		int8		RETVAL;
-		dXSTARG;
-		int16		skillid = (int16)SvUV(ST(1));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->MaxSkill(skillid);
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
 XS(XS_Mob_RogueAssassinate); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_RogueAssassinate)
 {
@@ -640,7 +613,7 @@ XS(XS_Mob_GetSkill)
 		Mob *		THIS;
 		uint32		RETVAL;
 		dXSTARG;
-		int		skill_num = (int)SvIV(ST(1));
+		SkillType		skill_num = (SkillType)SvUV(ST(1));
 
 		if (sv_derived_from(ST(0), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -888,14 +861,14 @@ XS(XS_Mob_Damage); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_Damage)
 {
 	dXSARGS;
-	if (items < 4 || items > 8)
-		Perl_croak(aTHX_ "Usage: Mob::Damage(THIS, from, damage, spell_id, attack_skill= 0x04, avoidable= true, buffslot= -1, iBuffTic= false)");
+	if (items < 5 || items > 8)
+		Perl_croak(aTHX_ "Usage: Mob::Damage(THIS, from, damage, spell_id, attack_skill, avoidable= true, buffslot= -1, iBuffTic= false)");
 	{
 		Mob *		THIS;
 		Mob*		from;
 		sint32		damage = (sint32)SvIV(ST(2));
 		int16		spell_id = (int16)SvUV(ST(3));
-		int8		attack_skill;
+		SkillType		attack_skill = (SkillType)SvUV(ST(4));
 		bool		avoidable;
 		sint8		buffslot;
 		bool		iBuffTic;
@@ -917,12 +890,6 @@ XS(XS_Mob_Damage)
 			Perl_croak(aTHX_ "from is not of type Mob");
 		if(from == NULL)
 			Perl_croak(aTHX_ "from is NULL, avoiding crash.");
-
-		if (items < 5)
-			attack_skill = 0x04;
-		else {
-			attack_skill = (int8)SvUV(ST(4));
-		}
 
 		if (items < 6)
 			avoidable = true;
@@ -2765,15 +2732,15 @@ XS(XS_Mob_ResistSpell)
 	XSRETURN(1);
 }
 
-XS(XS_Mob_GetSpecializeSkill); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetSpecializeSkill)
+XS(XS_Mob_GetSpecializeSkillValue); /* prototype to pass -Wmissing-prototypes */
+XS(XS_Mob_GetSpecializeSkillValue)
 {
 	dXSARGS;
 	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Mob::GetSpecializeSkill(THIS, spell_id)");
+		Perl_croak(aTHX_ "Usage: Mob::GetSpecializeSkillValue(THIS, spell_id)");
 	{
 		Mob *		THIS;
-		int		RETVAL;
+		uint16		RETVAL;
 		dXSTARG;
 		int16		spell_id = (int16)SvUV(ST(1));
 
@@ -2786,8 +2753,8 @@ XS(XS_Mob_GetSpecializeSkill)
 		if(THIS == NULL)
 			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
-		RETVAL = THIS->GetSpecializeSkill(spell_id);
-		XSprePUSH; PUSHi((IV)RETVAL);
+		RETVAL = THIS->GetSpecializeSkillValue(spell_id);
+		XSprePUSH; PUSHu((UV)RETVAL);
 	}
 	XSRETURN(1);
 }
@@ -5787,7 +5754,6 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "GetID"), XS_Mob_GetID, file, "$");
 		newXSproto(strcpy(buf, "GetName"), XS_Mob_GetName, file, "$");
 		newXSproto(strcpy(buf, "Depop"), XS_Mob_Depop, file, "$;$");
-		newXSproto(strcpy(buf, "MaxSkill"), XS_Mob_MaxSkill, file, "$$");
 		newXSproto(strcpy(buf, "RogueAssassinate"), XS_Mob_RogueAssassinate, file, "$$");
 		newXSproto(strcpy(buf, "BehindMob"), XS_Mob_BehindMob, file, "$;$$$");
 		newXSproto(strcpy(buf, "SetLevel"), XS_Mob_SetLevel, file, "$$;$");
@@ -5800,7 +5766,7 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "GoToBind"), XS_Mob_GoToBind, file, "$");
 		newXSproto(strcpy(buf, "Gate"), XS_Mob_Gate, file, "$");
 		newXSproto(strcpy(buf, "Attack"), XS_Mob_Attack, file, "$$;$$");
-		newXSproto(strcpy(buf, "Damage"), XS_Mob_Damage, file, "$$$$;$$$$");
+		newXSproto(strcpy(buf, "Damage"), XS_Mob_Damage, file, "$$$$$;$$$");
 		newXSproto(strcpy(buf, "Heal"), XS_Mob_Heal, file, "$");
 		newXSproto(strcpy(buf, "SetMaxHP"), XS_Mob_SetMaxHP, file, "$");
 		newXSproto(strcpy(buf, "GetLevelCon"), XS_Mob_GetLevelCon, file, "$$");
@@ -5868,7 +5834,7 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "GetActSpellDuration"), XS_Mob_GetActSpellDuration, file, "$$$");
 		newXSproto(strcpy(buf, "GetActSpellCasttime"), XS_Mob_GetActSpellCasttime, file, "$$$");
 		newXSproto(strcpy(buf, "ResistSpell"), XS_Mob_ResistSpell, file, "$$$$");
-		newXSproto(strcpy(buf, "GetSpecializeSkill"), XS_Mob_GetSpecializeSkill, file, "$$");
+		newXSproto(strcpy(buf, "GetSpecializeSkillValue"), XS_Mob_GetSpecializeSkillValue, file, "$$");
 		newXSproto(strcpy(buf, "GetNPCTypeID"), XS_Mob_GetNPCTypeID, file, "$");
 		newXSproto(strcpy(buf, "IsTargeted"), XS_Mob_IsTargeted, file, "$");
 		newXSproto(strcpy(buf, "GetX"), XS_Mob_GetX, file, "$");

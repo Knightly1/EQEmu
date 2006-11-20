@@ -53,7 +53,10 @@ bool TitleManager::LoadTitles() {
 	safe_delete_array(query);
 	
 	while ((row = mysql_fetch_row(result))) {
-		e.skill_id = atoi(row[0]);
+		int tmp_skill = atoi(row[0]);
+		if(tmp_skill < 0 || tmp_skill > HIGHEST_SKILL)
+			continue;
+		e.skill_id = (SkillType) tmp_skill;
 		e.skill_value = atoi(row[1]);
 		e.title = row[2];
 		titles.push_back(e);

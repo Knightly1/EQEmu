@@ -157,7 +157,7 @@ bool MMF::Open(const char* iName, int32 iSize) {
 		case 'M': load_share = 6;  break;
 		case 'O': load_share = 7;  break;
 		case 'Z': load_share = 8;  break;
-		case 'G': load_share = 9;  break;
+		case 'K': load_share = 9;  break;
 #ifdef CATCH_CRASH
 		default:
 		    cerr<<"Failed to load shared memory segment="<<MMFname<<" ("<<MMFname[16]<<")"<<endl;
@@ -187,8 +187,8 @@ bool MMF::Open(const char* iName, int32 iSize) {
 		case 7: share_key = ftok(".", 'O'); break;
 		// Item Serialization
 		case 8: share_key = ftok(".", 'Z'); break;
-		// ERROR Fatal
-		case 9: share_key = ftok(".", 'G'); break;
+		// Skills
+		case 9: share_key = ftok(".", 'K'); break;
 		// ERROR Fatal
 		default: cerr<<"Opps!"<<endl; share_key = 0xFF; break;
 	}

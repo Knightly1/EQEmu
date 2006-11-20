@@ -244,8 +244,7 @@ sint32 Client::GetActSpellCost(int16 spell_id, sint32 cost)
 
 	//reduce -= CastToClient()->GetFocusEffect(9, spell_id);
 	
-	int spec_skill = GetSpecializeSkill(spell_id);
-	uint32 spec_value = spec_skill < HIGHEST_SKILL ? GetSkill(spec_skill) : 0;
+	uint32 spec_value = GetSpecializeSkillValue(spell_id);
 		//VERY rough success formula, needs research
 	uint32 spec_goal = spec_value + 98 + 5 * (GetAA(aaSpellCastingMastery) + GetAA(aaAdvancedSpellCastingMastery));
 	if(spec_value > 0 && (spec_goal < (uint32)MakeRandomInt(0, 600))) {

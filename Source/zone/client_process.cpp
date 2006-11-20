@@ -1253,7 +1253,6 @@ void Client::OPMoveCoin(const EQApplicationPacket* app)
 
 void Client::OPGMTraining(const EQApplicationPacket *app)
 {
-	int cur_skill;
 
 	EQApplicationPacket* outapp = app->Copy();
 	GMTrainee_Struct* gmtrain = (GMTrainee_Struct*) outapp->pBuffer;
@@ -1272,10 +1271,11 @@ void Client::OPGMTraining(const EQApplicationPacket *app)
 	if(DistNoRoot(*pTrainer) > USE_NPC_RANGE2)
 		return;
 
-	for (cur_skill = 0; cur_skill <= HIGHEST_SKILL; cur_skill++)
-	{
-		gmtrain->skills[cur_skill] = pTrainer->CastToMob()->MaxSkill(cur_skill);
+	SkillType sk;
+	for (sk = _1H_BLUNT; sk <= HIGHEST_SKILL; sk = (SkillType)(sk+1)) {
+		gmtrain->skills[sk] = MaxSkill(sk);
 	}
+	
 	uchar ending[]={0x34,0x87,0x8a,0x3F,0x01
 		,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9
 		,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9,0xC9
@@ -1359,29 +1359,25 @@ void Client::OPGMTrainSkill(const EQApplicationPacket *app)
 			return;
 		}
 
-		int8 skilllevel = GetRawSkill(gmskill->skill_id);
+		SkillType skill = (SkillType) gmskill->skill_id;
 
-		if ( skilllevel == 255)
-		{
-			// Client never gets this skill; check for gm status or fail
+		if(!CanHaveSkill(skill)) {
+			mlog(CLIENT__ERROR, "Tried to train skill %d, which is not allowed.", skill);
 			return;
 		}
-		else if (skilllevel == 254)
-		{
-			// Client training new skill for the first time set the skill to level-1
-
-			int16 t_level = database.GetTrainlevel(GetClass(), gmskill->skill_id);
+		
+		int16 skilllevel = GetRawSkill(skill);
+		if(skilllevel == 0) {
+			//this is a new skill..
+			int16 t_level = database.GetTrainlevel(GetClass(), skill);
 			cout<<"t_level:"<<t_level<<endl;
 			if (t_level == SKILL_UNTRAINABLE || t_level == 0)
 			{
 				return;
 			}
-			//m_pp.skills[gmskill->skill_id] = t_level;
-			SetSkill(gmskill->skill_id, t_level);
-		}
-		else if (skilllevel <= 251)
-		{
-			switch(gmskill->skill_id) {
+			SetSkill(skill, t_level);
+		} else {
+			switch(skill) {
 			case BREWING:
 			case MAKE_POISON:
 			case TINKERING:
@@ -1397,16 +1393,11 @@ void Client::OPGMTrainSkill(const EQApplicationPacket *app)
 					Message_StringID(13, MORE_SKILLED_THAN_I, pTrainer->GetCleanName());
 					return;
 				}
+			default:
+				break;
 			}
             // Client train a valid skill
-			// FIXME If the client doesn't do the "You are more skilled than I" check we should do it here
-			SetSkill(gmskill->skill_id, skilllevel + 1);
-		}
-		else
-		{
-			// Log a warning someones been hacking
-			LogFile->write(EQEMuLog::Error, "OP_GMTrainSkill: failed client: %s", GetName());
-			return;
+			SetSkill(skill, skilllevel + 1);
 		}
 	}
 	m_pp.points--;
@@ -1478,12 +1469,11 @@ void Client::DoManaRegen() {
 	int32 level=GetLevel();
 	int32 regen = 0;
 	if (IsSitting()) {		//this should be changed so we dont med while camping, etc...
-		int32 med = GetSkill(MEDITATE);
-		if(med > 0) {
+		if(HasSkill(MEDITATE)) {
 			medding = true;
 			regen = (((GetSkill(MEDITATE)/10)+(level-(level/4)))/4)+4;
 			regen += spellbonuses.ManaRegen + itembonuses.ManaRegen;
-			CheckIncreaseSkill(MEDITATE);
+			CheckIncreaseSkill(MEDITATE, -10);
 		}
 		else
 			regen = 2+spellbonuses.ManaRegen+itembonuses.ManaRegen+(level/5);
@@ -1535,8 +1525,9 @@ void Client::DoEnduranceUpkeep() {
 	int upkeep_sum = 0;
 
 	int cost_redux = spellbonuses.EnduranceReduction + itembonuses.EnduranceReduction;
-	
-	for (int buffs_i=0; buffs_i<BUFF_COUNT; buffs_i++) {
+
+	uint32 buffs_i;
+	for (buffs_i=0; buffs_i<BUFF_COUNT; buffs_i++) {
 		if (buffs[buffs_i].spellid != SPELL_UNKNOWN) {
 			int upkeep = spells[buffs[buffs_i].spellid].EndurUpkeep;
 			if(upkeep > 0) {

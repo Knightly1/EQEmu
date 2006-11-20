@@ -286,7 +286,7 @@ void Client::HandleAAAction(aaID activate) {
 				int heal = GetHP();
 				int curhp = GetTarget()->GetHP();
 				GetTarget()->SetHP(heal+curhp);
-				Death(this,0,0,0);
+				Death(this,0,SPELL_UNKNOWN,HAND_TO_HAND);
 			}
 			break;
 		

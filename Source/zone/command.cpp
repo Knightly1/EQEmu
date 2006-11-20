@@ -2313,7 +2313,7 @@ void command_showskills(Client *c, const Seperator *sep)
 		t=c->GetTarget()->CastToClient();
 
 	c->Message(0, "Skills for %s", t->GetName());
-	for (int i=0; i <= HIGHEST_SKILL; i++)
+	for (SkillType i=_1H_BLUNT; i <= HIGHEST_SKILL; i=(SkillType)(i+1))
 		c->Message(0, "Skill [%d] is at [%d]", i, t->GetSkill(i));
 }
 
@@ -2459,7 +2459,7 @@ void command_setskill(Client *c, const Seperator *sep)
 		c->Message(0, "Error: #setskill: Target must be a client.");
 	}
 	else if (	
-						!sep->IsNumber(1) || atoi(sep->arg[1]) < 0 || atoi(sep->arg[1]) > 73 ||
+						!sep->IsNumber(1) || atoi(sep->arg[1]) < 0 || atoi(sep->arg[1]) > HIGHEST_SKILL ||
 						!sep->IsNumber(2) || atoi(sep->arg[2]) < 0 || atoi(sep->arg[2]) > 255
 					)
 	{
@@ -2471,8 +2471,9 @@ void command_setskill(Client *c, const Seperator *sep)
 	else {
 		LogFile->write(EQEMuLog::Normal,"Set skill request from %s, target:%s skill_id:%i value:%i", c->GetName(), c->GetTarget()->GetName(), atoi(sep->arg[1]), atoi(sep->arg[2]) );
 		int skill_num = atoi(sep->arg[1]);
-		int8 skill_id = (int8)atoi(sep->arg[2]);
-		c->GetTarget()->CastToClient()->SetSkill(skill_num, skill_id);
+		int16 skill_value = atoi(sep->arg[2]);
+		if(skill_num < HIGHEST_SKILL)
+			c->GetTarget()->CastToClient()->SetSkill((SkillType)skill_num, skill_value);
 	}
 }
 
@@ -2490,7 +2491,7 @@ void command_setskillall(Client *c, const Seperator *sep)
 		if (c->Admin() >= commandSetSkillsOther || c->GetTarget()==c || c->GetTarget()==0) {
 			LogFile->write(EQEMuLog::Normal,"Set ALL skill request from %s, target:%s", c->GetName(), c->GetTarget()->GetName());
 			int8 level = atoi(sep->arg[1]);
-			for(int skill_num=0;skill_num <= HIGHEST_SKILL;skill_num++) {
+			for(SkillType skill_num=_1H_BLUNT;skill_num <= HIGHEST_SKILL;skill_num=(SkillType)(skill_num+1)) {
 				c->GetTarget()->CastToClient()->SetSkill(skill_num, level);
 			}
 		}
@@ -3794,22 +3795,17 @@ void command_haste(Client *c, const Seperator *sep)
 
 void command_damage(Client *c, const Seperator *sep)
 {
-	long type=0xffff;
 	if (c->GetTarget()==0)
 		c->Message(0, "Error: #Damage: No Target.");
 	else if (!sep->IsNumber(1)) {
-		c->Message(0, "Usage: #damage x.");
+		c->Message(0, "Usage: #damage x");
 	}
 	else {
 		sint32 nkdmg = atoi(sep->arg[1]);
-		if (!sep->IsNumber(2))
-			type=0xffff;
-		else
-			type=atol(sep->arg[2]);
 		if (nkdmg > 2100000000)
 			c->Message(0, "Enter a value less then 2,100,000,000.");
 		else
-			c->GetTarget()->Damage(c, nkdmg, type, 0x04, false);
+			c->GetTarget()->Damage(c, nkdmg, SPELL_UNKNOWN, HAND_TO_HAND, false);
 	}
 }
 
@@ -4528,7 +4524,7 @@ void command_manaburn(Client *c, const Seperator *sep)
 					int nukedmg=(c->GetMana())*2;
 					if (nukedmg>0)
 					{
-						target->Damage(c, nukedmg, 2751,240);
+						target->Damage(c, nukedmg, 2751, ABJURE/*hackish*/);
 						c->Message(4,"You unleash an enormous blast of magical energies.");
 					}
 					LogFile->write(EQEMuLog::Normal,"Manaburn request from %s, damage: %d", c->GetName(), nukedmg);

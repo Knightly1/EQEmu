@@ -252,25 +252,21 @@ int main(int argc, char** argv) {
 		_log(ZONE__INIT_ERR, "Loading items FAILED!");
 		_log(ZONE__INIT, "Failed.  But ignoring error and going on...");
 	}
-/*
-	_log(ZONE__INIT, "Loading npcs");
-	if (!database.LoadNPCTypes()) {
-		_log(ZONE__INIT_ERR, "Loading npcs FAILED!");
-		CheckEQEMuErrorAndPause();
-		return 0;
-	}
-*/
-#ifdef SHAREMEM
 	_log(ZONE__INIT, "Loading npc faction lists");
 	if (!database.LoadNPCFactionLists()) {
 		_log(ZONE__INIT_ERR, "Loading npcs faction lists FAILED!");
 		CheckEQEMuErrorAndPause();
 		return 0;
 	}
-#endif
 	_log(ZONE__INIT, "Loading loot tables");
 	if (!database.LoadLoot()) {
 		_log(ZONE__INIT_ERR, "Loading loot FAILED!");
+		CheckEQEMuErrorAndPause();
+		return 0;
+    }
+	_log(ZONE__INIT, "Loading skill caps");
+	if (!database.LoadSkillCaps()) {
+		_log(ZONE__INIT_ERR, "Loading skill caps FAILED!");
 		CheckEQEMuErrorAndPause();
 		return 0;
 	}
@@ -950,7 +946,11 @@ This is hanging on freebsd for me, not sure why...
 		
 		sp[tempid].targettype = (SpellTargetType) atoi(sep.arg[98]);
 		sp[tempid].basediff=atoi(sep.arg[99]);
-		sp[tempid].skill=atoi(sep.arg[100]);
+		int tmp_skill = atoi(sep.arg[100]);;
+		if(tmp_skill < 0 || tmp_skill > HIGHEST_SKILL)
+			sp[tempid].skill = BEGGING;	/* not much better we can do. */
+		else
+			sp[tempid].skill = (SkillType) tmp_skill;
 		sp[tempid].zonetype=atoi(sep.arg[101]);
 		sp[tempid].EnvironmentType=atoi(sep.arg[102]);
 		sp[tempid].TimeOfDay=atoi(sep.arg[103]);

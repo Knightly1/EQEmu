@@ -18,6 +18,8 @@
 #ifndef EQ_CONSTANTS_H
 #define EQ_CONSTANTS_H 
 
+#include "skills.h"
+
 /*
 ** Item attributes
 **
@@ -472,6 +474,89 @@ typedef enum {
   GUA_FullGroupInfo = 7,
   GUA_MakeLeader = 8,
   GUA_Started = 9
+};
+
+//0x1c is something...
+static const uint8 FallingDamageType = 0xFC;
+static const uint8 SpellDamageType = 0xe7;
+static const uint8 DamageTypeUnknown = 0xFF;
+
+//indexed by 'SkillType'
+static const uint8 SkillDamageTypes[HIGHEST_SKILL+1] = {
+ /*  _1H_BLUNT */  0,
+ /*  _1H_SLASHING */  1,
+ /*  _2H_BLUNT */  0,
+ /*  _2H_SLASHING */  1,
+ /*  ABJURE */  SpellDamageType,
+ /*  ALTERATION */  SpellDamageType,
+ /*  APPLY_POISON */  DamageTypeUnknown,
+ /*  ARCHERY */  36,
+ /*  BACKSTAB */  36,
+ /*  BIND_WOUND */  DamageTypeUnknown,
+ /*  BASH */  0,
+ /*  BLOCKSKILL */  DamageTypeUnknown,
+ /*  BRASS_INSTRUMENTS */  DamageTypeUnknown,
+ /*  CHANNELING */  DamageTypeUnknown,
+ /*  CONJURATION */  SpellDamageType,
+ /*  DEFENSE */  DamageTypeUnknown,
+ /*  DISARM */  DamageTypeUnknown,
+ /*  DISARM_TRAPS */  DamageTypeUnknown,
+ /*  DIVINATION */  SpellDamageType,
+ /*  DODGE */  DamageTypeUnknown,
+ /*  DOUBLE_ATTACK */  DamageTypeUnknown,
+ /*  DRAGON_PUNCH */  4,
+ /*  DUAL_WIELD */  DamageTypeUnknown,
+ /*  EAGLE_STRIKE */  4,
+ /*  EVOCATION */  SpellDamageType,
+ /*  FEIGN_DEATH */  4,
+ /*  FLYING_KICK */  4,
+ /*  FORAGE */  DamageTypeUnknown,
+ /*  HAND_TO_HAND */  4,
+ /*  HIDE */  DamageTypeUnknown,
+ /*  KICK */  4,
+ /*  MEDITATE */  DamageTypeUnknown,
+ /*  MEND */  DamageTypeUnknown,
+ /*  OFFENSE */  DamageTypeUnknown,
+ /*  PARRY */  DamageTypeUnknown,
+ /*  PICK_LOCK */  DamageTypeUnknown,
+ /*  PIERCING */  36,
+ /*  RIPOSTE */  DamageTypeUnknown,
+ /*  ROUND_KICK */  4,
+ /*  SAFE_FALL */  DamageTypeUnknown,
+ /*  SENSE_HEADING */  DamageTypeUnknown,
+ /*  SINGING */  DamageTypeUnknown,
+ /*  SNEAK */  DamageTypeUnknown,
+ /*  SPECIALIZE_ABJURE */  DamageTypeUnknown,
+ /*  SPECIALIZE_ALTERATION */  DamageTypeUnknown,
+ /*  SPECIALIZE_CONJURATION */  DamageTypeUnknown,
+ /*  SPECIALIZE_DIVINATION */  DamageTypeUnknown,
+ /*  SPECIALIZE_EVOCATION */  DamageTypeUnknown,
+ /*  PICK_POCKETS */  DamageTypeUnknown,
+ /*  STRINGED_INSTRUMENTS */  DamageTypeUnknown,
+ /*  SWIMMING */  DamageTypeUnknown,
+ /*  THROWING */  36,
+ /*  TIGER_CLAW */  DamageTypeUnknown,
+ /*  TRACKING */  DamageTypeUnknown,
+ /*  WIND_INSTRUMENTS */  DamageTypeUnknown,
+ /*  FISHING */  DamageTypeUnknown,
+ /*  MAKE_POISON */  DamageTypeUnknown,
+ /*  TINKERING */  DamageTypeUnknown,
+ /*  RESEARCH */  DamageTypeUnknown,
+ /*  ALCHEMY */  DamageTypeUnknown,
+ /*  BAKING */  DamageTypeUnknown,
+ /*  TAILORING */  DamageTypeUnknown,
+ /*  SENSE_TRAPS */  DamageTypeUnknown,
+ /*  BLACKSMITHING */  DamageTypeUnknown,
+ /*  FLETCHING */  DamageTypeUnknown,
+ /*  BREWING */  DamageTypeUnknown,
+ /*  ALCOHOL_TOLERANCE */  DamageTypeUnknown,
+ /*  BEGGING */  DamageTypeUnknown,
+ /*  JEWELRY_MAKING */  DamageTypeUnknown,
+ /*  POTTERY */  DamageTypeUnknown,
+ /*  PERCUSSION_INSTRUMENTS */  DamageTypeUnknown,
+ /*  INTIMIDATION */  DamageTypeUnknown,
+ /*  BERSERKING */  DamageTypeUnknown,
+ /*  TAUNT */  DamageTypeUnknown
 };
 
 

@@ -1393,7 +1393,8 @@ void Client::Handle_OP_Consider(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Begging(const EQApplicationPacket *app)
 {
-	if(GetSkill(BEGGING)>0){
+	if(!HasSkill(BEGGING))
+		return;
 	int ran=MakeRandomInt(0,100);
 	int chancetoattack=0;
 	if(this->GetLevel() > this->GetTarget()->GetLevel())
@@ -1427,8 +1428,6 @@ void Client::Handle_OP_Begging(const EQApplicationPacket *app)
 	}
 	else
 		Message(0,"Your attempt to beg was not succesful.");
-	}
-	return;
 }
 
 void Client::Handle_OP_TestBuff(const EQApplicationPacket *app)
@@ -1815,12 +1814,18 @@ void Client::Handle_OP_Death(const EQApplicationPacket *app)
 		return;
 	
 	Death_Struct* ds = (Death_Struct*)app->pBuffer;
+
+	//I think this attack_skill value is really a value from SkillDamageTypes...
+	if(ds->attack_skill > HIGHEST_SKILL) {
+		mlog(CLIENT__ERROR, "Invalid skill in OP_Death: %d");
+		return;
+	}
 	
 	if(GetHP() > 0)
 		return;
 	
 	Mob* killer = entity_list.GetMob(ds->killer_id);
-	Death(killer, ds->damage, ds->spell_id, ds->attack_skill);
+	Death(killer, ds->damage, ds->spell_id, (SkillType)ds->attack_skill);
 	return;
 }
 
@@ -1902,16 +1907,6 @@ void Client::Handle_OP_Logout(const EQApplicationPacket *app)
 	return;
 }
 
-#if 0	//solar: this isn't used anymore, the client doesn't send a packet
-void Client::Handle_OP_SenseHeading(const EQApplicationPacket *app)
-{
-	if (rand()%100 <= 15 && (GetSkill(SENSE_HEADING) < 200) && (GetSkill(SENSE_HEADING) < this->GetLevel()*5+5)) {
-		this->SetSkill(SENSE_HEADING, GetRawSkill(SENSE_HEADING) + 1);
-	}
-	return;
-}
-#endif
-
 void Client::Handle_OP_FeignDeath(const EQApplicationPacket *app)
 {
 	if(GetClass() != MONK)
@@ -1955,10 +1950,6 @@ void Client::Handle_OP_FeignDeath(const EQApplicationPacket *app)
 	else {
 		SetFeigned(true);
 	}
-	//what is this doing? why is it doing this and CheckIncreaseSkill??
-	if ((uint16)MakeRandomInt(0, 300) > GetSkill(FEIGN_DEATH) && MakeRandomFloat(0, 4) == 1 && GetSkill(FEIGN_DEATH) < 200 && GetSkill(FEIGN_DEATH) < (uint16)(GetLevel()*5+5) ) {
-		SetSkill(FEIGN_DEATH, GetRawSkill(FEIGN_DEATH) + 1);
-	}
 
 	CheckIncreaseSkill(FEIGN_DEATH);
 	return;
@@ -1966,7 +1957,7 @@ void Client::Handle_OP_FeignDeath(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Sneak(const EQApplicationPacket *app)
 {
-	if(GetSkill(SNEAK) < 1) {
+	if(!HasSkill(SNEAK)) {
 		return; //You cannot sneak if you do not have sneak
 	}
 	
@@ -2012,7 +2003,7 @@ void Client::Handle_OP_Sneak(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Hide(const EQApplicationPacket *app)
 {
-	if(GetSkill(HIDE) < 1) {
+	if(!HasSkill(HIDE)) {
 		return; //You cannot hide if you do not have hide
 	}
 	
@@ -4910,7 +4901,7 @@ void Client::Handle_OP_Forage(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Mend(const EQApplicationPacket *app)
 {
-	if(GetClass() != MONK)
+	if(!HasSkill(MEND))
 		return;
 	
 	if(!p_timers.Expired(&database, pTimerMend, false)) {
@@ -4923,7 +4914,7 @@ void Client::Handle_OP_Mend(const EQApplicationPacket *app)
 	int mendhp = (int) GetMaxHP() * num / 100;
 	uint32 noadvance = MakeRandomInt(0, 200);
 	int currenthp = GetHP();
-	if (MakeRandomInt(0, 100) <= (int)GetSkill(MEND)) {
+	if (MakeRandomInt(0, 300) < (int)GetSkill(MEND)) {
 		SetHP(GetHP() + mendhp);
 		SendHPUpdate();
 		Message_StringID(4,MEND_SUCCESS);
@@ -4947,7 +4938,7 @@ void Client::Handle_OP_Mend(const EQApplicationPacket *app)
 		Message_StringID(4,MEND_FAIL);
 	}
 	
-	if(GetSkill(MEND) < noadvance)
+	if(noadvance < 175)
 		CheckIncreaseSkill(MEND);
 	//if ((GetSkill(MEND) < noadvance) && (MakeRandomFloat(0, 100) < 35) && (GetSkill(MEND) < 101))
 	//	this->SetSkill(MEND,GetRawSkill(MEND)+1);
@@ -4970,7 +4961,7 @@ void Client::Handle_OP_EnvDamage(const EQApplicationPacket *app)
 	int damage = ed->damage;
 	
 	if (ed->dmgtype == 252) {
-		if(CanUseSkill(SAFE_FALL)) {
+		if(HasSkill(SAFE_FALL)) {
 			int sv = GetSkill(SAFE_FALL);
 			//this is a total bullshit forumla, somebody find a better one
 			if(MakeRandomInt(0,240) < sv/5)
@@ -5003,7 +4994,7 @@ void Client::Handle_OP_EnvDamage(const EQApplicationPacket *app)
 		SetHP(GetHP() - damage);
 	
 	if(GetHP() <= 0)
-		Death(0,32000);
+		Death(0, 32000, SPELL_UNKNOWN, HAND_TO_HAND);
 	SendHPUpdate();
 	return;
 }
@@ -5013,7 +5004,7 @@ void Client::Handle_OP_Damage(const EQApplicationPacket *app)
 	// Broadcast to other clients
 	CombatDamage_Struct* damage = (CombatDamage_Struct*)app->pBuffer;
 	//dont send to originator of falling damage packets
-	entity_list.QueueClients(this, app, (damage->type==0xFC));
+	entity_list.QueueClients(this, app, (damage->type==FallingDamageType));
 	return;
 }
 
@@ -5138,6 +5129,9 @@ void Client::Handle_OP_GMFind(const EQApplicationPacket *app)
 
 void Client::Handle_OP_PickPocket(const EQApplicationPacket *app)
 {
+	if(!HasSkill(PICK_POCKETS))
+		return;
+	
 	if (app->size != sizeof(PickPocket_Struct)){
 		LogFile->write(EQEMuLog::Error, "Size mismatch for Pick Pocket packet");
 		DumpPacket(app);
@@ -5162,6 +5156,9 @@ void Client::Handle_OP_PickPocket(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Bind_Wound(const EQApplicationPacket *app)
 {
+	if(!HasSkill(BIND_WOUND))
+		return;
+	
 	if (app->size != sizeof(BindWound_Struct)){
 		LogFile->write(EQEMuLog::Error, "Size mismatch for Bind wound packet");
 		DumpPacket(app);
@@ -5287,7 +5284,7 @@ void Client::Handle_OP_Split(const EQApplicationPacket *app)
 
 void Client::Handle_OP_SenseTraps(const EQApplicationPacket *app)
 {
-	if (!CanUseSkill(SENSE_TRAPS))
+	if (!HasSkill(SENSE_TRAPS))
 		return;
 	
 	if(!p_timers.Expired(&database, pTimerSenseTraps, false)) {
@@ -5346,7 +5343,7 @@ void Client::Handle_OP_SenseTraps(const EQApplicationPacket *app)
 
 void Client::Handle_OP_DisarmTraps(const EQApplicationPacket *app)
 {
-	if (!CanUseSkill(DISARM_TRAPS))
+	if (!HasSkill(DISARM_TRAPS))
 		return;
 	
 	if(!p_timers.Expired(&database, pTimerSenseTraps, false)) {
@@ -5840,12 +5837,18 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	}
 	
 	//validate skills
-	for (uint16 sk = 1; sk < MAX_PP_SKILL; sk++) {
-		//int cap = GetSkillCap(sk-1);
-		int cap = MaxSkill(sk-1, GetClass(), GetLevel());
-		if (cap >= 254)
-			m_pp.skills[sk] = cap;
+	//im not sure I follow this logic... commenting for now...
+	/*
+	if(Admin() < minStatusToHaveInvalidSkills) {
+		SkillType sk;
+		for (sk = _1H_BLUNT; sk <= HIGHEST_SKILL; sk = (SkillType)(sk+1)) {
+			//int cap = GetSkillCap(sk-1);
+			int cap = MaxSkill(sk-1, GetClass(), GetLevel());
+			if (cap >= 254)
+				m_pp.skills[sk] = cap;
+		}
 	}
+	*/
 	
 	//validate adventure points, this cap is arbitrary
 	if(m_pp.ldon_points_guk < 0 || m_pp.ldon_points_guk > 0xFFFF) m_pp.ldon_points_guk = 0;

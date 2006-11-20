@@ -2,7 +2,7 @@
 #include "shareddb.h"
 #include "../common/Item.h"
 #include "../common/EMuShareMem.h"
-#include "../common/Item.h"
+#include "../common/classes.h"
 #include "MiscFunctions.h"
 #include "eq_packet_structs.h"
 #include "guilds.h"
@@ -288,7 +288,6 @@ bool SharedDatabase::SetStartingItems(PlayerProfile_Struct* pp, Inventory* inv, 
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char* query = 0;
-	int invslot;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
 	const Item_Struct* myitem;
@@ -1247,6 +1246,87 @@ bool SharedDatabase::GetCommandSettings(map<string,uint8> &commands) {
 	
 	return false;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+bool SharedDatabase::extDBLoadSkillCaps() {
+	return s_usedb->DBLoadSkillCaps();
+}
+
+bool SharedDatabase::LoadSkillCaps() {
+	if (!EMuShareMemDLL.Load())
+		return false;
+	
+	int8 class_count = PLAYER_CLASS_COUNT;
+	int8 skill_count = HIGHEST_SKILL+1;
+	int8 level_count = HARD_LEVEL_CAP+1;
+
+	return EMuShareMemDLL.SkillCaps.LoadSkillCaps(&extDBLoadSkillCaps,
+			 sizeof(uint16), class_count, skill_count, level_count);
+}
+
+bool SharedDatabase::DBLoadSkillCaps() {
+	LogFile->write(EQEMuLog::Status, "Loading skill caps from database...");
+	
+	int8 class_count = PLAYER_CLASS_COUNT;
+	int8 skill_count = HIGHEST_SKILL+1;
+	int8 level_count = HARD_LEVEL_CAP+1;
+	
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	if (RunQuery(query, MakeAnyLenString(&query, 
+		"SELECT skillID,class,level,cap FROM skill_caps ORDER BY skillID,class,level"), 
+		errbuf, &result)) {
+		safe_delete_array(query);
+		
+		while ((row = mysql_fetch_row(result))) {
+			int8 skillID = atoi(row[0]);
+			int8 class_ = atoi(row[1]);
+			int8 level = atoi(row[2]);
+			int16 cap = atoi(row[3]);
+printf("CAP %d %d %d = %d\n", skillID, class_, level, cap);
+			if(skillID >= skill_count || class_ >= class_count || level >= level_count)
+				continue;
+			EMuShareMemDLL.SkillCaps.SetSkillCap(class_, skillID, level, cap);
+		}
+		mysql_free_result(result);
+	}
+	else {
+		cerr << "Error in DBLoadSkillCaps (memshare) #2 query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+
+	return true;
+}
+
+uint16 SharedDatabase::GetSkillCap(int8 Class_, SkillType Skill, int8 Level) {
+	return EMuShareMemDLL.SkillCaps.GetSkillCap(Class_, Skill, Level);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

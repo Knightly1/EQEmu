@@ -60,7 +60,7 @@ extern RaidAddicts raidaddicts;
 
 extern Zone* zone;
 
-bool Mob::AttackAnimation(int &attack_skill, int16 &skillinuse, int Hand, const ItemInst* weapon)
+bool Mob::AttackAnimation(SkillType &skillinuse, int Hand, const ItemInst* weapon)
 {
 	// Determine animation
 	int type = 0;
@@ -73,56 +73,48 @@ bool Mob::AttackAnimation(int &attack_skill, int16 &skillinuse, int Hand, const 
 		{
 		case ItemType1HS: // 1H Slashing
 		{
-			attack_skill = 1;
 			skillinuse = _1H_SLASHING;
 			type = anim1HWeapon;
 			break;
 		}
 		case ItemType2HS: // 2H Slashing
 		{
-			attack_skill = 1;
 			skillinuse = _2H_SLASHING;
 			type = anim2HSlashing;
 			break;
 		}
 		case ItemTypePierce: // Piercing
 		{
-			attack_skill = 36;
 			skillinuse = PIERCING;
 			type = animPiercing;
 			break;
 		}
 		case ItemType1HB: // 1H Blunt
 		{
-			attack_skill = 0;
 			skillinuse = _1H_BLUNT;
 			type = anim1HWeapon;
 			break;
 		}
 		case ItemType2HB: // 2H Blunt
 		{
-			attack_skill = 0;
 			skillinuse = _2H_BLUNT;
 			type = anim2HWeapon;
 			break;
 		}
 		case ItemType2HPierce: // 2H Piercing
 		{
-			attack_skill = 36;
 			skillinuse = PIERCING;
 			type = anim2HWeapon;
 			break;
 		}
 		case ItemTypeHand2Hand:
 		{
-			attack_skill = 4;
 			skillinuse = HAND_TO_HAND;
 			type = animHand2Hand;
 			break;
 		}
 		default:
 		{
-			attack_skill = 4;
 			skillinuse = HAND_TO_HAND;
 			type = animHand2Hand;
 			break;
@@ -131,7 +123,6 @@ bool Mob::AttackAnimation(int &attack_skill, int16 &skillinuse, int Hand, const 
 	}
 	else
 	{
-		attack_skill = 4;
 		skillinuse = HAND_TO_HAND;
 		type = animHand2Hand;
 	}
@@ -146,7 +137,7 @@ bool Mob::AttackAnimation(int &attack_skill, int16 &skillinuse, int Hand, const 
 
 // solar: called when a mob is attacked, does the checks to see if it's a hit
 // and does other mitigation checks.  'this' is the mob being attacked.
-bool Mob::CheckHitChance(Mob* other, int8 attack_skill, int Hand, int16 skillinuse)
+bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 {
 /*
 	Father Nitwit:
@@ -278,11 +269,11 @@ bool Mob::CheckHitChance(Mob* other, int8 attack_skill, int Hand, int16 skillinu
 #endif*/
 	
 	//I dont think this is 100% correct, but at least it does something...
-	if(attacker->spellbonuses.MeleeSkillCheckSkill == attack_skill || attacker->spellbonuses.MeleeSkillCheckSkill == 255) {
+	if(attacker->spellbonuses.MeleeSkillCheckSkill == skillinuse || attacker->spellbonuses.MeleeSkillCheckSkill == 255) {
 		chancetohit += attacker->spellbonuses.MeleeSkillCheck;
 		mlog(COMBAT__TOHIT, "Applied spell melee skill bonus %d, yeilding %.2f", attacker->spellbonuses.MeleeSkillCheck, chancetohit);
 	}
-	if(attacker->itembonuses.MeleeSkillCheckSkill == attack_skill || attacker->itembonuses.MeleeSkillCheckSkill == 255) {
+	if(attacker->itembonuses.MeleeSkillCheckSkill == skillinuse || attacker->itembonuses.MeleeSkillCheckSkill == 255) {
 		chancetohit += attacker->itembonuses.MeleeSkillCheck;
 		mlog(COMBAT__TOHIT, "Applied item melee skill bonus %d, yeilding %.2f", attacker->spellbonuses.MeleeSkillCheck, chancetohit);
 	}
@@ -290,11 +281,11 @@ bool Mob::CheckHitChance(Mob* other, int8 attack_skill, int Hand, int16 skillinu
 	
 	//add in our hit chance bonuses if we are using the right skill
 	//does the hit chance cap apply to spell bonuses from disciplines?
-	if(attacker->spellbonuses.HitChanceSkill == 255 || attacker->spellbonuses.HitChanceSkill == attack_skill) {
+	if(attacker->spellbonuses.HitChanceSkill == 255 || attacker->spellbonuses.HitChanceSkill == skillinuse) {
 		chancetohit += attacker->spellbonuses.HitChance / 15.0f;
 		mlog(COMBAT__TOHIT, "Applied spell melee hit chance %d/15, yeilding %.2f", attacker->spellbonuses.HitChance, chancetohit);
 	}
-	if(attacker->itembonuses.HitChanceSkill == 255 || attacker->itembonuses.HitChanceSkill == attack_skill) {
+	if(attacker->itembonuses.HitChanceSkill == 255 || attacker->itembonuses.HitChanceSkill == skillinuse) {
 		chancetohit += attacker->itembonuses.HitChance / 15.0f;
 		mlog(COMBAT__TOHIT, "Applied item melee hit chance %d/15, yeilding %.2f", attacker->itembonuses.HitChance, chancetohit);
 	}
@@ -417,13 +408,10 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	/////////////////////////////////////////////////////////
 	if (damage > 0 && CanThisClassRiposte() && !other->BehindMob(this, other->GetX(), other->GetY()) && !sthrough)
 	{
+        skill = GetSkill(RIPOSTE);
 		if (IsClient()) {
-        	skill = CastToClient()->GetSkill(RIPOSTE);
-        	if (GetLevelCon(other->GetLevel()) != CON_GREEN)
+        	if (!other->IsClient() && GetLevelCon(other->GetLevel()) != CON_GREEN)
 				this->CastToClient()->CheckIncreaseSkill(RIPOSTE);
-		}
-		else {
-        	skill = this->MaxSkill(RIPOSTE);
 		}
 		
 		if (!ghit) {	//if they are not using a garunteed hit discipline
@@ -447,13 +435,10 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
             && !other->BehindMob(this, other->GetX(), other->GetY())
 			&& !sthrough)
 	{
+		skill = CastToClient()->GetSkill(BLOCKSKILL);
 		if (IsClient()) {
-			skill = CastToClient()->GetSkill(BLOCKSKILL);
-			if (GetLevelCon(other->GetLevel()) != CON_GREEN)
+			if (!other->IsClient() && GetLevelCon(other->GetLevel()) != CON_GREEN)
 				this->CastToClient()->CheckIncreaseSkill(BLOCKSKILL);
-		}
-		else {
-        	skill = this->MaxSkill(BLOCKSKILL);
 		}
 		
 		if (!ghit) {	//if they are not using a garunteed hit discipline
@@ -470,13 +455,10 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	//////////////////////////////////////////////////////
 	if (damage > 0 && CanThisClassParry() && !other->BehindMob(this, other->GetX(), other->GetY()) && !sthrough)
 	{
-        
+        skill = CastToClient()->GetSkill(PARRY);
 		if (IsClient()) {
-        	skill = CastToClient()->GetSkill(PARRY);
-			if (GetLevelCon(other->GetLevel()) != CON_GREEN)
+			if (!other->IsClient() && GetLevelCon(other->GetLevel()) != CON_GREEN)
 				this->CastToClient()->CheckIncreaseSkill(PARRY); 
-		} else {
-        		skill = this->MaxSkill(PARRY);
 		}
 		
 		bonus = (defender->spellbonuses.ParryChance + defender->itembonuses.ParryChance) / 100.0f;
@@ -495,12 +477,10 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	if (damage > 0 && CanThisClassDodge() && !other->BehindMob(this, other->GetX(), other->GetY()) && !sthrough)
 	{
 	
+        skill = CastToClient()->GetSkill(DODGE);
 		if (IsClient()) {
-        	skill = CastToClient()->GetSkill(DODGE);
-			if (GetLevelCon(other->GetLevel()) != CON_GREEN)
+			if (!other->IsClient() && GetLevelCon(other->GetLevel()) != CON_GREEN)
 				this->CastToClient()->CheckIncreaseSkill(DODGE);
-		} else {
-        		skill = this->MaxSkill(DODGE);
 		}
 		
 		bonus = (defender->spellbonuses.DodgeChance + defender->itembonuses.DodgeChance) / 100.0f;
@@ -653,9 +633,8 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	
 	// calculate attack_skill and skillinuse depending on hand and weapon
 	// also send Packet to near clients
-	int16 skillinuse;
-	int attack_skill;
-	AttackAnimation(attack_skill, skillinuse, Hand, weapon);
+	SkillType skillinuse;
+	AttackAnimation(skillinuse, Hand, weapon);
 	mlog(COMBAT__ATTACKS, "Attacking with %s in slot %d using skill %d", weapon_item?weapon_item->Name:"Fist", Hand, skillinuse);
 	
 	/// Now figure out damage
@@ -754,7 +733,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 			{
 				mlog(COMBAT__ATTACKS, "Landed a finishing blow: AA at %d, other level %d, roll %.1f", aa_item, other->GetLevel(), tempchancerand);
 				entity_list.MessageClose_StringID(this, false, 200, MT_CritMelee, FINISHING_BLOW, GetName());
-				other->Damage(this, 32000, SPELL_UNKNOWN, attack_skill);
+				other->Damage(this, 32000, SPELL_UNKNOWN, skillinuse);
 				return(true);
 			}
 			mlog(COMBAT__ATTACKS, "Failed a finishing blow: AA at %d, other level %d, roll %.1f", aa_item, other->GetLevel(), tempchancerand);
@@ -821,7 +800,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		#endif // Weighted MDF type damage*/
 	
 		//check to see if we hit..
-		if(!other->CheckHitChance(this, attack_skill, Hand, skillinuse)) {
+		if(!other->CheckHitChance(this, skillinuse, Hand)) {
 			mlog(COMBAT__ATTACKS, "Attack missed. Damage set to 0.");
 			damage = 0;
 		} else {	//we hit, try to avoid it
@@ -885,7 +864,7 @@ void Mob::Heal()
 	SendHPUpdate();
 }
 
-void Client::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, bool avoidable, sint8 buffslot, bool iBuffTic)
+void Client::Damage(Mob* other, sint32 damage, int16 spell_id, SkillType attack_skill, bool avoidable, sint8 buffslot, bool iBuffTic)
 {
 	if(dead || IsCorpse())
 		return;
@@ -914,7 +893,7 @@ void Client::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill
 	}
 }
 
-void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
+void Client::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skill)
 {
 	if(dead)
 		return;	//cant die more than once...
@@ -1024,7 +1003,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill)
 
 	if(spell != SPELL_UNKNOWN)
 	{
-		for(int buffIt = 0; buffIt < BUFF_COUNT; buffIt++)
+		for(uint16 buffIt = 0; buffIt < BUFF_COUNT; buffIt++)
 		{
 			if(buffs[buffIt].spellid == spell && buffs[buffIt].client)
 			{
@@ -1266,10 +1245,9 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		}
 	}
 	
-	int attack_skill = HAND_TO_HAND;
+	SkillType skillinuse;
 	//basically "if not immune"
 	if(damage >= 0) {
-		int16 skillinuse;
 		
 	
 		if (Hand == 14 && weapon && weapon->ItemType == ItemTypeShield) {
@@ -1279,7 +1257,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		
 		sint16 charges = 0;
 		ItemInst weapon_inst(&database, weapon, charges);
-		AttackAnimation(attack_skill, skillinuse, Hand, &weapon_inst);
+		AttackAnimation(skillinuse, Hand, &weapon_inst);
 		
 		int8 otherlevel = other->GetLevel();
 		int8 mylevel = this->GetLevel();
@@ -1419,7 +1397,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 			mlog(COMBAT__DAMAGE, "Client %s is sitting. Hitting for max damage (%d).", other->GetName(), max_dmg);
 			damage = max_dmg;
 		} else {
-			if(!other->CheckHitChance(this, attack_skill, Hand, skillinuse)) {
+			if(!other->CheckHitChance(this, skillinuse, Hand)) {
 				damage = 0;	//miss
 			} else {	//hit, check for damage avoidance
 				other->AvoidDamage(this, damage);
@@ -1442,7 +1420,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	}
 		
 	if(GetHP() > 0 && other->GetHP() >= -11) {
-		other->Damage(this, damage, 0xffff, attack_skill, false); // Not avoidable client already had thier chance to Avoid
+		other->Damage(this, damage, SPELL_UNKNOWN, skillinuse, false); // Not avoidable client already had thier chance to Avoid
     }
 	
 	
@@ -1495,7 +1473,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
         return false;
 }
 
-void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, bool avoidable, sint8 buffslot, bool iBuffTic) {
+void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, SkillType attack_skill, bool avoidable, sint8 buffslot, bool iBuffTic) {
 	if(spell_id==0)
 		spell_id = SPELL_UNKNOWN;
 	
@@ -1529,7 +1507,7 @@ void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, int8 attack_skill, b
 	}
 }
 
-void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill) {
+void NPC::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skill) {
 
 	mlog(COMBAT__HITS, "Fatal blow dealt by %s with %d damage, spell %d, skill %d", other->GetName(), damage, spell, attack_skill);
 	
@@ -1558,7 +1536,7 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, int8 attack_skill) {
 //	d->unknown12 = 1;
 	d->bindzoneid = 0;
 	d->spell_id = spell == SPELL_UNKNOWN ? 0xffffffff : spell;
-	d->attack_skill = spell != SPELL_UNKNOWN ? 0xe7 : attack_skill;
+	d->attack_skill = SkillDamageTypes[attack_skill];
 	d->damage = damage;
 	app->priority = 6;
 	entity_list.QueueClients(other, app, false);
@@ -1721,7 +1699,7 @@ void Mob::DamageShield(Mob* attacker) {
 		spellid = spellbonuses.DamageShieldSpellID;
 	//invert DS... spells yeild negative values for a true damage shield
 	if(DS < 0) {
-		attacker->Damage(this, -DS, spellid, SPELL_ATTACK_SKILL, false);
+		attacker->Damage(this, -DS, spellid, ABJURE/*hackish*/, false);
 		// todo: send EnvDamage packet to the attacker
 		//entity_list.MessageClose(attacker, 0, 200, 10, "%s takes %d damage from %s's damage shield (%s)", attacker->GetName(), -spells[buffs[i].spellid].base[1], this->GetName(), spells[buffs[i].spellid].name);
 	} else {
@@ -1946,7 +1924,7 @@ bool Client::CheckDoubleAttack(bool AAadd, bool Triple) {
 	int skill = 0;
 	if (Triple)
 	{
-		if(!CanUseSkill(DOUBLE_ATTACK))
+		if(!HasSkill(DOUBLE_ATTACK))
 			return(false);
 		
 		if (GetClass() == MONK)
@@ -1961,7 +1939,7 @@ bool Client::CheckDoubleAttack(bool AAadd, bool Triple) {
 		
 		//should these stack with skill, or does that ever even happen?
 		int aaskill = GetAA(aaBestialFrenzy)*25 + GetAA(aaHarmoniousAttack)*25;
-		if (!aaskill && !CanUseSkill(DOUBLE_ATTACK))
+		if (!aaskill && !HasSkill(DOUBLE_ATTACK))
 		{
 			return false;
 		}
@@ -1983,10 +1961,10 @@ bool Client::CheckDoubleAttack(bool AAadd, bool Triple) {
 	return false;
 }
 
-void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, const int8 attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic) {
+void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, const SkillType skill_used, bool &avoidable, const sint8 buffslot, const bool iBuffTic) {
 	
 	mlog(COMBAT__HITS, "Applying damage %d done by %s with skill %d and spell %d, avoidable? %s, is %sa buff tic in slot %d",
-		damage, attacker?attacker->GetName():"NOBODY", attack_skill, spell_id, avoidable?"yes":"no", iBuffTic?"":"not ", buffslot);
+		damage, attacker?attacker->GetName():"NOBODY", skill_used, spell_id, avoidable?"yes":"no", iBuffTic?"":"not ", buffslot);
 	
 	if (GetInvul() || DivineAura()) {
 		mlog(COMBAT__DAMAGE, "Avoiding %d damage due to invulnerability.", damage);
@@ -2003,7 +1981,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 	}
 	
 /*	not sure what this was all about
-    if ((spell_id != SPELL_UNKNOWN || (attack_skill>200 && attack_skill<250)) && damage>0) {
+    if ((spell_id != SPELL_UNKNOWN || (skill_used>200 && skill_used<250)) && damage>0) {
 			// todo: exchange that for EnvDamage-Packets when we know how to do it
 			char val1[20]={0};
 			Message_StringID(4,attacker_HIT_NONMELEE,GetName(),ConvertArray(damage,val1));
@@ -2013,7 +1991,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 	
 	if(attacker && damage != -5) {	//no hate if we are completely immune, just laugh it off
 		sint32 hate = 0;
-		if (attack_skill == ARCHERY)
+		if (skill_used == ARCHERY)
 			hate = 1;	// almost no aggro for archery
 		else if(damage < 1)
 			hate = 1;
@@ -2083,14 +2061,14 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 		//check for death conditions
 		if(IsClient()) {
 			if((GetHP() - damage) <= -10) {
-				Death(attacker, damage, spell_id, attack_skill);
+				Death(attacker, damage, spell_id, skill_used);
 				return;
 			}
 		} else {
 			if (damage >= GetHP()) {
 				//killed...
 				SetHP(-100);
-				Death(attacker, damage, spell_id, attack_skill);
+				Death(attacker, damage, spell_id, skill_used);
 				return;
 			}
 		}
@@ -2106,7 +2084,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 		}
     	
     	//check stun chances if bashing
-		if (attack_skill == BASH && GetLevel() < 56) {
+		if (skill_used == BASH && GetLevel() < 56) {
 			int stun_resist = itembonuses.StunResist+spellbonuses.StunResist;
 			if(stun_resist <= 0 || MakeRandomInt(0,99) >= stun_resist) {
 				mlog(COMBAT__HITS, "Stunned. We had %dpercent resist chance.");
@@ -2150,7 +2128,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 			a->source = 0;
 		else
 			a->source = attacker->GetID();
-	    a->type = attack_skill; // was 0x1c
+	    a->type = SkillDamageTypes[skill_used]; // was 0x1c
 		a->damage = damage;
 //		if (attack_skill != 231)
 //			a->spellid = SPELL_UNKNOWN;
@@ -2165,7 +2143,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 			//attacker is a pet, let pet owners see their pet's damage
 			Mob* owner = attacker->GetOwner();
 			if (owner && owner->IsClient()) {
-				if ((spell_id != SPELL_UNKNOWN || (attack_skill>200 && attack_skill<250)) && damage>0) {
+				if ((spell_id != SPELL_UNKNOWN) && damage>0) {
 					//special crap for spell damage, looks hackish to me
 					char val1[20]={0};
 					owner->Message_StringID(4,OTHER_HIT_NONMELEE,GetCleanName(),ConvertArray(damage,val1));
@@ -2188,7 +2166,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 			
 			//if the attacker is a client, try them with the correct filter
 			if(attacker && attacker->IsClient()) {
-				if ((spell_id != SPELL_UNKNOWN || (attack_skill>200 && attack_skill<250)) && damage>0) {
+				if ((spell_id != SPELL_UNKNOWN) && damage>0) {
 					//special crap for spell damage, looks hackish to me
 					char val1[20]={0};
 					attacker->Message_StringID(4,OTHER_HIT_NONMELEE,GetCleanName(),ConvertArray(damage,val1));
@@ -2417,18 +2395,18 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 	float critChance = RuleR(Combat, BaseCritChance);
 	//Use a real value because there are spells/skills that can up the crit mod by a percent and while
 	//They are not implemented yet it seems like a good idea to keep it open for when they are.
-	float critMod = 2.0f; 
+	sint8 critMod = 2; 
 	if((GetClass() == WARRIOR || GetClass() == BERSERKER) && GetLevel() >= 12 && IsClient()) 
 	{
 		if(CastToClient()->berserk)
 		{
 			critChance += RuleR(Combat, BerserkBaseCritChance);
-			critMod = 4.0;
+			critMod = 4;
 		}
 		else
 		{
 			critChance += RuleR(Combat, WarBerBaseCritChance);
-			critMod = 2.0;
+			critMod = 2;
 		}
 	}
  

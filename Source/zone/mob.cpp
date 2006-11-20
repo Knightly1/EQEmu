@@ -1221,7 +1221,7 @@ void Mob::SetZone(int32 zone_id)
 }
 
 void Mob::Kill() {
-	Death(this, 0, 0xffff, 0x04);
+	Death(this, 0, SPELL_UNKNOWN, HAND_TO_HAND);
 }
 
 void Mob::SetAttackTimer() {
@@ -1278,10 +1278,8 @@ void Mob::SetAttackTimer() {
 
 			//clients must have the skill to use it...
 			if(IsClient()) {
-				int8 tmp = GetSkill(DUAL_WIELD);
-				
 				//if we cant dual weild, skip it
-				if (tmp == 0 || tmp > 252 || !CanThisClassDualWield()) {
+				if (!CanThisClassDualWield()) {
 					attack_dw_timer.Disable();
 					continue;
 				}
@@ -1419,7 +1417,7 @@ bool Mob::CanThisClassDualWield(void) const //Dual wield not Duel, busy someone 
 			return(dh2h);
 		}
 		
-		return (this->CastToClient()->GetSkill(DUAL_WIELD) != 0);	// No skill = no chance
+		return (this->CastToClient()->HasSkill(DUAL_WIELD));	// No skill = no chance
 	}
 	else
 		return true;	//if we get here, we are the right class
@@ -1468,7 +1466,7 @@ bool Mob::CanThisClassDoubleAttack(void) const
 	}
 
 	if (IsClient())
-		return(CastToClient()->GetSkill(DOUBLE_ATTACK) != 0);	// No skill = no chance
+		return(CastToClient()->HasSkill(DOUBLE_ATTACK));	// No skill = no chance
 	else
 		return true;	//if we get here, we are the right class
 						//and are at the right level, and are NPC
@@ -1551,7 +1549,7 @@ bool Mob::CanThisClassParry(void) const
 	}
 
 	if (this->IsClient())
-		return(this->CastToClient()->GetSkill(PARRY) != 0);	// No skill = no chance
+		return(this->CastToClient()->HasSkill(PARRY));	// No skill = no chance
 	else
 		return true;
 }
@@ -1617,7 +1615,7 @@ bool Mob::CanThisClassDodge(void) const
 	}
 	
 	if (this->IsClient())
-		return(this->CastToClient()->GetSkill(DODGE) != 0);	// No skill = no chance
+		return(this->CastToClient()->HasSkill(DODGE));	// No skill = no chance
 	else
 		return true;
 }
@@ -1668,7 +1666,7 @@ bool Mob::CanThisClassRiposte(void) const //Could just check if they have the sk
 	}
 	
 	if (this->IsClient())
-		return(this->CastToClient()->GetSkill(RIPOSTE) != 0);	// No skill = no chance
+		return(this->CastToClient()->HasSkill(RIPOSTE));	// No skill = no chance
 	else
 		return true;
 }

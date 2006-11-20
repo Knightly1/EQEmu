@@ -553,7 +553,7 @@ void Mob::AI_Process() {
 					FaceTarget(target); 
 					DoAnim(animSwarmAttack, 9); 
 					int dmg=MakeRandomInt(50,200);
-					target->Damage(this, dmg, 0xffff, 0x07, true); 
+					target->Damage(this, dmg, SPELL_UNKNOWN, ARCHERY, true); 
 				}
 			} else if(GetRace() == 89) {
 	//WTF is up with classes 90 and 91???

@@ -136,6 +136,23 @@ struct OpcodeDLLFunc_Struct {
 	DLLFUNC_ClearEQOpcodes ClearEQOpcodes;
 };
 
+////////////////
+// Skill Caps //
+////////////////
+
+typedef bool(*CALLBACK_DBLoadSkillCaps)();
+
+typedef bool(*DLLFUNC_DLLLoadSkillCaps)(const CALLBACK_DBLoadSkillCaps, int32 opsize, int8 ClassCount, int8 SkillCount, int8 LevelCount);
+typedef uint16 (*DLLFUNC_GetSkillCap)(int8 Class_, int8 Skill, int8 Level);
+typedef void (*DLLFUNC_ClearSkillCaps)();
+typedef bool(*DLLFUNC_SetSkillCap)(int8 Class_, int8 Skill, int8 Level, uint16 cap);
+struct SkillCapDLLFunc_Struct {
+	DLLFUNC_DLLLoadSkillCaps LoadSkillCaps;
+	DLLFUNC_GetSkillCap GetSkillCap;
+	DLLFUNC_SetSkillCap SetSkillCap;
+	DLLFUNC_ClearSkillCaps ClearSkillCaps;
+};
+
 
 class LoadEMuShareMemDLL : public SharedLibrary {
 public:
@@ -152,6 +169,7 @@ public:
 	NPCFactionListDLLFunc_Struct	NPCFactionList;
 	LootDLLFunc_Struct				Loot;
 	OpcodeDLLFunc_Struct			Opcodes;
+	SkillCapDLLFunc_Struct			SkillCaps;
 private:
 	void ClearFunc();
 	

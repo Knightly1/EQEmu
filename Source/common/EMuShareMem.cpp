@@ -85,6 +85,10 @@ bool LoadEMuShareMemDLL::Load() {
 		Opcodes.SetOpcodePair = (DLLFUNC_SetOpcodePair) GetSym("SetOpcodePair");
 		Opcodes.DLLLoadOpcodes = (DLLFUNC_DLLLoadOpcodes) GetSym("DLLLoadOpcodes");
 		Opcodes.ClearEQOpcodes = (DLLFUNC_ClearEQOpcodes) GetSym("ClearEQOpcodes");
+		SkillCaps.LoadSkillCaps = (DLLFUNC_DLLLoadSkillCaps) GetSym("LoadSkillCaps");
+		SkillCaps.GetSkillCap = (DLLFUNC_GetSkillCap) GetSym("GetSkillCap");
+		SkillCaps.SetSkillCap = (DLLFUNC_SetSkillCap) GetSym("SetSkillCap");
+		SkillCaps.ClearSkillCaps = (DLLFUNC_ClearSkillCaps) GetSym("ClearSkillCaps");
 		if(Items.GetItem == NULL) {
 			Unload();
 			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Items.GetItem");
@@ -216,6 +220,30 @@ bool LoadEMuShareMemDLL::Load() {
 			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Opcodes.ClearEQOpcodes");
 			return(false);
 		}
+
+		if(SkillCaps.LoadSkillCaps == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach SkillCaps.LoadSkillCaps");
+			return(false);
+		}
+
+		if(SkillCaps.GetSkillCap == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach SkillCaps.GetSkillCap");
+			return(false);
+		}
+
+		if(SkillCaps.SetSkillCap == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach SkillCaps.SetSkillCap");
+			return(false);
+		}
+
+		if(SkillCaps.ClearSkillCaps == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach SkillCaps.ClearSkillCaps");
+			return(false);
+		}
 		
 		LogFile->write(EQEMuLog::Status, "%s loaded", EmuLibName);
 		loaded = true;
@@ -254,5 +282,9 @@ void LoadEMuShareMemDLL::ClearFunc() {
 	Opcodes.SetOpcodePair = NULL;
 	Opcodes.DLLLoadOpcodes = NULL;
 	Opcodes.ClearEQOpcodes = NULL;
+	SkillCaps.LoadSkillCaps = NULL;
+	SkillCaps.GetSkillCap = NULL;
+	SkillCaps.SetSkillCap = NULL;
+	SkillCaps.ClearSkillCaps = NULL;
 	loaded = false;
 }

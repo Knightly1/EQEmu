@@ -269,6 +269,7 @@ enum {	//some random constants
 
 //The Level Cap:
 //#define LEVEL_CAP RuleI(Character, MaxLevel)	//hard cap is 127
+#define HARD_LEVEL_CAP 127
 
 //the square of the maximum range at whihc you could possibly use NPC services (shop, tribute, etc)
 #define USE_NPC_RANGE2 200*200		//arbitrary right now
@@ -290,6 +291,7 @@ enum {
 	minStatusToKick = 150,
 	minStatusToAvoidFalling = 100,
 	minStatusToHaveInvalidSpells = 80,
+	minStatusToHaveInvalidSkills = 80,
 	minStatusToIgnoreZoneFlags = 100,
 	minStatusToSeeOthersZoneFlags = 100,
 	minStatusToEditOtherGuilds = 100,

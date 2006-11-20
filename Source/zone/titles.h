@@ -40,7 +40,7 @@ public:
 protected:
 	class TitleEntry {
 	public:
-		uint8 skill_id;			//the skill which skill_value applies to
+		SkillType skill_id;			//the skill which skill_value applies to
 		uint16 skill_value;		//the minimum value of skill `skill_id` to qualify for this title
 		uint8 aa_points;		//minimum number of AA points needed to qualify for this title
 		string title;
