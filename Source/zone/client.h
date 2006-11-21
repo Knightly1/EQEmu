@@ -467,9 +467,10 @@ public:
 	uint32		GetRawSkill(SkillType skill_id) const { if (skill_id <= HIGHEST_SKILL) { return(m_pp.skills[skill_id]); } return 0; }
 	bool HasSkill(SkillType skill_id) const;
 	bool CanHaveSkill(SkillType skill_id) const;
-	void SetSkill(SkillType skill_num, int8 value); // socket 12-29-01
-	void	AddSkill(SkillType skillid, int8 value);
+	void SetSkill(SkillType skill_num, int16 value); // socket 12-29-01
+	void	AddSkill(SkillType skillid, int16 value);
 	void CheckSpecializeIncrease(int16 spell_id);
+	void CheckSongSkillIncrease(int16 spell_id);
 	bool	CheckIncreaseSkill(SkillType skillid, int chancemodi = 0);
 	void    SetLanguageSkill(int langid, int value);
 

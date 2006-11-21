@@ -675,7 +675,9 @@ void EntityList::AEBardPulse(Mob *caster, Mob *center, int16 spell_id, bool affe
 		}
 		//if we get here... cast the spell.
 		caster->BardPulse(spell_id, curmob);
-	}	
+	}
+	if(caster->IsClient())
+		caster->CastToClient()->CheckSongSkillIncrease(spell_id);
 }
 
 //Dook- Rampage and stuff for clients.

@@ -786,9 +786,7 @@ void Client::CheckIncreaseTradeskill(sint16 bonusstat, sint16 stat_modifier, flo
 	uint16 current_raw_skill = GetRawSkill(tradeskill);
 	int maxskill = MaxSkill(tradeskill);
 
-	if(current_raw_skill >= 252)
-		return;	//try not to break things...
-	if(maxskill == 254 || current_raw_skill >= maxskill)
+	if(current_raw_skill >= maxskill)
 		return;	//not allowed to go higher.
 	
 	float chance_stage2 = 0;

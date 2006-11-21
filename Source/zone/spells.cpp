@@ -541,6 +541,41 @@ void Client::CheckSpecializeIncrease(int16 spell_id) {
 	}
 }
 
+void Client::CheckSongSkillIncrease(int16 spell_id){
+	switch(spells[spell_id].skill)
+	{
+	case SINGING:
+		CheckIncreaseSkill(SINGING, -20);
+		break;
+	case PERCUSSION_INSTRUMENTS:
+		if(this->itembonuses.percussionMod > 0)
+			CheckIncreaseSkill(PERCUSSION_INSTRUMENTS, -20);
+		else
+			CheckIncreaseSkill(SINGING, -20);
+		break;
+	case STRINGED_INSTRUMENTS:
+		if(this->itembonuses.stringedMod > 0)
+			CheckIncreaseSkill(STRINGED_INSTRUMENTS, -20);
+		else
+			CheckIncreaseSkill(SINGING, -20);
+		break;
+	case WIND_INSTRUMENTS:
+		if(this->itembonuses.windMod > 0)
+			CheckIncreaseSkill(WIND_INSTRUMENTS, -20);
+		else
+			CheckIncreaseSkill(SINGING, -20);
+		break;
+	case BRASS_INSTRUMENTS:
+		if(this->itembonuses.brassMod > 0)
+			CheckIncreaseSkill(BRASS_INSTRUMENTS, -20);
+		else
+			CheckIncreaseSkill(SINGING, -20);
+		break;
+	default:
+		break;
+	}
+}
+
 /*
 solar: returns true if spell is successful, false if it fizzled.
 only works for clients, npcs shouldn't be fizzling..
@@ -975,38 +1010,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 	{
 		if(IsClient())
 		{
-			switch(spells[spell_id].skill)
-			{
-			case SINGING:
-				CastToClient()->CheckIncreaseSkill(SINGING);
-				break;
-			case PERCUSSION_INSTRUMENTS:
-				if(this->itembonuses.percussionMod > 0)
-					CastToClient()->CheckIncreaseSkill(PERCUSSION_INSTRUMENTS);
-				else
-					CastToClient()->CheckIncreaseSkill(SINGING);
-				break;
-			case STRINGED_INSTRUMENTS:
-				if(this->itembonuses.stringedMod > 0)
-					CastToClient()->CheckIncreaseSkill(STRINGED_INSTRUMENTS);
-				else
-					CastToClient()->CheckIncreaseSkill(SINGING);
-				break;
-			case WIND_INSTRUMENTS:
-				if(this->itembonuses.windMod > 0)
-					CastToClient()->CheckIncreaseSkill(WIND_INSTRUMENTS);
-				else
-					CastToClient()->CheckIncreaseSkill(SINGING);
-				break;
-			case BRASS_INSTRUMENTS:
-				if(this->itembonuses.brassMod > 0)
-					CastToClient()->CheckIncreaseSkill(BRASS_INSTRUMENTS);
-				else
-					CastToClient()->CheckIncreaseSkill(SINGING);
-				break;
-			default:
-				break;
-			}
+			this->CastToClient()->CheckSongSkillIncrease(spell_id);
 		}
 		// go again in 6 seconds
 //this is handled with bardsong_timer
@@ -1589,7 +1593,9 @@ bool Mob::ApplyNextBardPulse(int16 spell_id, Mob *spell_target, int16 slot) {
 	
 	//do we need to do this???
 	DoAnim(spells[spell_id].CastingAnim, 0, true, IsClient() ? FILTER_PCSPELLS : FILTER_NPCSPELLS);
-	
+	if(IsClient())
+		CastToClient()->CheckSongSkillIncrease(spell_id);
+
 	return(true);
 }
 

@@ -1,5 +1,8 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==11/20/2006
+KLS: Skill system tweaks and bug fixes.
+KLS: Bard songs will now skill up while they are being sung instead of just when first cast.
 
 =11/19/2006
 FatherNitwit: Completely redid skills in the code to support >252

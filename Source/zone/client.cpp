@@ -947,27 +947,26 @@ bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
 #endif
 
 
-void Client::SetSkill(SkillType skillid, int8 value) {
+void Client::SetSkill(SkillType skillid, int16 value) {
 	if (skillid > HIGHEST_SKILL)
 		return;
 	m_pp.skills[skillid] = value; // We need to be able to #setskill 254 and 255 to reset skills
 
-	if(value <= 252) {
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SkillUpdate, sizeof(SkillUpdate_Struct));
-		SkillUpdate_Struct* skill = (SkillUpdate_Struct*)outapp->pBuffer;
-		skill->skillId=skillid;
-		skill->value=value;
-		QueuePacket(outapp);
-		safe_delete(outapp);
-	}
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_SkillUpdate, sizeof(SkillUpdate_Struct));
+	SkillUpdate_Struct* skill = (SkillUpdate_Struct*)outapp->pBuffer;
+	skill->skillId=skillid;
+	skill->value=value;
+	QueuePacket(outapp);
+	safe_delete(outapp);
 }
 
-void Client::AddSkill(SkillType skillid, int8 value) {
+void Client::AddSkill(SkillType skillid, int16 value) {
 	if (skillid > HIGHEST_SKILL)
 		return;
 	value = GetRawSkill(skillid) + value;
-	if (value > 252)
-		value = 252;
+	int16 max = MaxSkill(skillid);
+	if (value > max)
+		value = max;
 	SetSkill(skillid, value);
 }
 
@@ -1665,7 +1664,7 @@ bool Client::CheckIncreaseSkill(SkillType skillid, int chancemodi) {
 	int skillval = GetRawSkill(skillid);
 	int maxskill = MaxSkill(skillid);
 	// Make sure we're not already at skill cap
-	if (skillval < maxskill && skillval < 252)
+	if (skillval < maxskill)
 	{
 		// the higher your current skill level, the harder it is
 		sint16 Chance = 10 + chancemodi + ((252 - skillval) / 20);
@@ -1689,8 +1688,8 @@ bool Client::HasSkill(SkillType skill_id) const {
 	return((GetSkill(skill_id) > 0) && CanHaveSkill(skill_id));
 }
 bool Client::CanHaveSkill(SkillType skill_id) const {
-#warning this is not right.
-	return(database.GetSkillCap(GetClass(), skill_id, GetLevel()) > 0);
+	return(database.GetSkillCap(GetClass(), skill_id, RuleI(Character, MaxLevel)) > 0); 
+	//if you don't have it by max level, then odds are you never will?
 }
 
 int16 Client::MaxSkill(SkillType skillid, int16 class_, int16 level) const {

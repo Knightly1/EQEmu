@@ -1271,9 +1271,14 @@ void Client::OPGMTraining(const EQApplicationPacket *app)
 	if(DistNoRoot(*pTrainer) > USE_NPC_RANGE2)
 		return;
 
-	SkillType sk;
-	for (sk = _1H_BLUNT; sk <= HIGHEST_SKILL; sk = (SkillType)(sk+1)) {
+ 	SkillType sk;
+ 	for (sk = _1H_BLUNT; sk <= HIGHEST_SKILL; sk = (SkillType)(sk+1)) {
 		gmtrain->skills[sk] = MaxSkill(sk);
+		if(sk == TINKERING && GetRace() != GNOME) {
+			gmtrain->skills[sk] = 0; //Non gnomes can't tinker!
+		} else {
+			gmtrain->skills[sk] = CanHaveSkill(sk);
+		}
 	}
 	
 	uchar ending[]={0x34,0x87,0x8a,0x3F,0x01

@@ -165,6 +165,9 @@ Zone extensions and features
 //#define PACKET_UPDATE_MANAGER
 //#define MANAGE_HP_UPDATES
 
+//The highest you can #setskill / #setallskill
+#define HIGHEST_CAN_SET_SKILL 400
+
 /*
 
 Zone Numerical configuration

@@ -2460,13 +2460,12 @@ void command_setskill(Client *c, const Seperator *sep)
 	}
 	else if (	
 						!sep->IsNumber(1) || atoi(sep->arg[1]) < 0 || atoi(sep->arg[1]) > HIGHEST_SKILL ||
-						!sep->IsNumber(2) || atoi(sep->arg[2]) < 0 || atoi(sep->arg[2]) > 255
+						!sep->IsNumber(2) || atoi(sep->arg[2]) < 0 || atoi(sep->arg[2]) > HIGHEST_CAN_SET_SKILL
 					)
 	{
 		c->Message(0, "Usage: #setskill skill x ");
 		c->Message(0, "       skill = 0 to 73");
-		c->Message(0, "       x = 0 to 255");
-		c->Message(0, "NOTE: skill values greater than 252 may cause the skill to become unusable on the client.");
+		c->Message(0, "       x = 0 to %d", HIGHEST_CAN_SET_SKILL);
 	}
 	else {
 		LogFile->write(EQEMuLog::Normal,"Set skill request from %s, target:%s skill_id:%i value:%i", c->GetName(), c->GetTarget()->GetName(), atoi(sep->arg[1]), atoi(sep->arg[2]) );
@@ -2483,14 +2482,14 @@ void command_setskillall(Client *c, const Seperator *sep)
 		c->Message(0, "Error: #setallskill: No target.");
 	else if (!c->GetTarget()->IsClient())
 		c->Message(0, "Error: #setskill: Target must be a client.");
-	else if (!sep->IsNumber(1) || atoi(sep->arg[1]) < 0 || atoi(sep->arg[1]) > 252) {
+	else if (!sep->IsNumber(1) || atoi(sep->arg[1]) < 0 || atoi(sep->arg[1]) > HIGHEST_CAN_SET_SKILL) {
 		c->Message(0, "Usage: #setskillall value ");
-		c->Message(0, "       value = 0 to 252");
+		c->Message(0, "       value = 0 to %d", HIGHEST_CAN_SET_SKILL);
 	}
 	else {
 		if (c->Admin() >= commandSetSkillsOther || c->GetTarget()==c || c->GetTarget()==0) {
 			LogFile->write(EQEMuLog::Normal,"Set ALL skill request from %s, target:%s", c->GetName(), c->GetTarget()->GetName());
-			int8 level = atoi(sep->arg[1]);
+			int16 level = atoi(sep->arg[1]);
 			for(SkillType skill_num=_1H_BLUNT;skill_num <= HIGHEST_SKILL;skill_num=(SkillType)(skill_num+1)) {
 				c->GetTarget()->CastToClient()->SetSkill(skill_num, level);
 			}
