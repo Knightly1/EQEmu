@@ -207,4 +207,5 @@
 	void Handle_OP_RequestTitles(const EQApplicationPacket *app);
 	void Handle_OP_PurchaseLeadershipAA(const EQApplicationPacket *app);
 	void Handle_OP_Ignore(const EQApplicationPacket *app);
+	void Handle_OP_LoadSpellSet(const EQApplicationPacket *app);
 

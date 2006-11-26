@@ -628,7 +628,7 @@ struct RaidLeadershipAA_Struct {
  */
 static const uint32 MAX_PP_LANGUAGE		= 28;
 static const uint32 MAX_PP_SPELLBOOK	= 400;
-static const uint32 MAX_PP_MEMSPELL		= 9;
+static const uint32 MAX_PP_MEMSPELL		= 10;
 static const uint32 MAX_PP_SKILL		= 75;
 static const uint32 MAX_PP_AA_ARRAY		= 240;
 static const uint32 MAX_GROUP_MEMBERS	= 6;
@@ -665,7 +665,6 @@ struct PlayerProfile_Struct
 /*0245*/	uint8				unknown0245[7];	//
 /*0252*/	uint32				intoxication;		
 /*0256*/	uint32				spellSlotRefresh[MAX_PP_MEMSPELL];	//in ms
-/*0292*/	uint8				unknown0392[4];
 /*0296*/	uint8				haircolor;			// Player hair color
 /*0297*/	uint8				beardcolor;			// Player beard color
 /*0298*/	uint8				eyecolor1;			// Player left eye color
@@ -706,7 +705,7 @@ struct PlayerProfile_Struct
 /*2584*/	int32				spell_book[MAX_PP_SPELLBOOK];
 /*4184*/	uint8				unknown3224[448];	// all 0xff   
 /*4632*/	int32				mem_spells[MAX_PP_MEMSPELL];
-/*4668*/	uint8				unknown3704[32];	//
+/*4672*/	uint8				unknown3704[28];	//
 /*4700*/	float				y;					// Player y position
 /*4704*/	float				x;					// Player x position
 /*4708*/	float				z;					// Player z position

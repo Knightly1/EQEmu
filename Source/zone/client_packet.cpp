@@ -307,6 +307,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_SenseHeading] = &Client::Handle_OP_Ignore;
 	ConnectedOpcodes[OP_FloatListThing] = &Client::Handle_OP_Ignore;
 	ConnectedOpcodes[OP_WorldUnknown001] = &Client::Handle_OP_Ignore;
+	ConnectedOpcodes[OP_LoadSpellSet] = &Client::Handle_OP_LoadSpellSet;
 	
 }
 
@@ -4383,6 +4384,21 @@ void Client::Handle_OP_DeleteSpell(const EQApplicationPacket *app)
 	FastQueuePacket(&outapp);
 	return;
 }
+
+void Client::Handle_OP_LoadSpellSet(const EQApplicationPacket *app)
+{
+	if(app->size!=sizeof(LoadSpellSet_Struct)) {
+		printf("Wrong size of LoadSpellSet_Struct! Expected: %i, Got: %i\n",sizeof(LoadSpellSet_Struct),app->size);
+		return;
+	}
+	int i;
+	LoadSpellSet_Struct* ss=(LoadSpellSet_Struct*)app->pBuffer;
+	for(i=0;i<MAX_PP_MEMSPELL;i++) {
+		if (ss->spell[i] != 0xFFFFFFFF)
+			UnmemSpell(i,true);
+	}
+}
+
 
 void Client::Handle_OP_PetitionBug(const EQApplicationPacket *app)
 {

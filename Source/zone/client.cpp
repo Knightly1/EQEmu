@@ -1687,6 +1687,7 @@ bool Client::CheckIncreaseSkill(SkillType skillid, int chancemodi) {
 bool Client::HasSkill(SkillType skill_id) const {
 	return((GetSkill(skill_id) > 0) && CanHaveSkill(skill_id));
 }
+
 bool Client::CanHaveSkill(SkillType skill_id) const {
 	return(database.GetSkillCap(GetClass(), skill_id, RuleI(Character, MaxLevel)) > 0); 
 	//if you don't have it by max level, then odds are you never will?

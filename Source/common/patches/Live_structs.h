@@ -643,7 +643,7 @@ struct BindStruct {
  */
 static const uint32 MAX_PP_LANGUAGE		= 28;
 static const uint32 MAX_PP_SPELLBOOK	= 400;
-static const uint32 MAX_PP_MEMSPELL		= 9;
+static const uint32 MAX_PP_MEMSPELL		= 10;
 static const uint32 MAX_PP_SKILL		= 75;
 static const uint32 MAX_PP_AA_ARRAY		= 239;
 static const uint32 MAX_GROUP_MEMBERS	= 6;
@@ -712,7 +712,6 @@ struct PlayerProfile_Struct
 /*00124*/ uint32  deity;              // deity
 /*00128*/ uint32  intoxication;       // Alcohol level (in ticks till sober?)
 /*00132*/ uint32  spellSlotRefresh[MAX_PP_MEMSPELL]; // Refresh time (millis)
-/*00168*/ uint8 unknown0166[4];
 /*00172*/ uint8   haircolor;          // Player hair color
 /*00173*/ uint8   beardcolor;         // Player beard color
 /*00174*/ uint8   eyecolor1;          // Player left eye color
@@ -740,7 +739,7 @@ struct PlayerProfile_Struct
 /*02312*/ int32   spell_book[MAX_PP_SPELLBOOK];    // List of the Spells in spellbook
 /*03912*/ uint8   unknown4184[448];   // all 0xff after last spell    
 /*04360*/ int32   mem_spells[MAX_PP_MEMSPELL]; // List of spells memorized
-/*04396*/ uint8 unknown04396[32];
+/*04400*/ uint8 unknown04396[28];
 /*04428*/ uint32  platinum;           // Platinum Pieces on player
 /*04432*/ uint32  gold;               // Gold Pieces on player
 /*04436*/ uint32  silver;             // Silver Pieces on player

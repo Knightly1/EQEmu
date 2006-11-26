@@ -1292,7 +1292,7 @@ bool SharedDatabase::DBLoadSkillCaps() {
 		
 		while ((row = mysql_fetch_row(result))) {
 			int8 skillID = atoi(row[0]);
-			int8 class_ = atoi(row[1]);
+			int8 class_ = atoi(row[1])-1;	//classes are base 1... 
 			int8 level = atoi(row[2]);
 			int16 cap = atoi(row[3]);
 			if(skillID >= skill_count || class_ >= class_count || level >= level_count)
@@ -1311,7 +1311,9 @@ bool SharedDatabase::DBLoadSkillCaps() {
 }
 
 uint16 SharedDatabase::GetSkillCap(int8 Class_, SkillType Skill, int8 Level) {
-	return EMuShareMemDLL.SkillCaps.GetSkillCap(Class_, Skill, Level);
+	if(Class_ == 0)
+		return;
+	return EMuShareMemDLL.SkillCaps.GetSkillCap(Class_-1, Skill, Level);
 }
 
 

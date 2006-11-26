@@ -336,8 +336,10 @@ int command_init(void) {
 		command_add("unscribespells","Clear out your or your player target's spell book.",180,command_unscribespells) ||
 		command_add("interrupt","[message id] [color] - Interrupt your casting.  Arguments are optional.",50,command_interrupt) ||
 		command_add("d1","[type] [spell] [damage] - Send an OP_Action packet with the specified values",200,command_d1) ||
-		command_add("summonitem","[itemid] [charges] - Summon an item onto your cursor.  Charges are optional.",10,command_summonitem) ||
-		command_add("si",NULL,10,command_summonitem) ||
+		command_add("summonitem","[itemid] [charges] - Summon an item onto your cursor.  Charges are optional.",200,command_summonitem) ||
+		command_add("si",NULL,200,command_summonitem) ||
+		command_add("giveitem","[itemid] [charges] - Summon an item onto your target's cursor.  Charges are optional.",200,command_giveitem) ||
+		command_add("gi",NULL,200,command_giveitem) ||
 		command_add("itemsearch","[search criteria] - Search for an item",10,command_itemsearch) ||
 		command_add("search",NULL,0,command_itemsearch) ||
 		command_add("stun","[duration] - Stuns you or your target for duration",100,command_stun) ||
@@ -4766,6 +4768,37 @@ void command_summonitem(Client *c, const Seperator *sep)
 			c->SummonItem(itemid, atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), atoi(sep->arg[5]), atoi(sep->arg[6]), atoi(sep->arg[7]) );
 		else {
 			c->SummonItem(itemid);
+		}
+	}
+}
+
+void command_giveitem(Client *c, const Seperator *sep)
+{
+	if (!sep->IsNumber(1)) {
+		c->Message(13, "Usage: #summonitem [item id] [charges], charges are optional");
+	} else if(c->GetTarget() == NULL) {
+		c->Message(13, "You must target a client to give the item to.");
+	} else if(!c->GetTarget()->IsClient()) {
+		c->Message(13, "You can only give items to players with this command.");
+	} else {
+		Client *t = c->GetTarget()->CastToClient();
+		int32 itemid = atoi(sep->arg[1]);
+		if (database.GetItemStatus(itemid) > c->Admin())
+			c->Message(13, "Error: Insufficient status to summon this item.");
+		else if (sep->argnum==2 && sep->IsNumber(2)) {
+			t->SummonItem(itemid, atoi(sep->arg[2]) );
+		} else if (sep->argnum==3) {
+			t->SummonItem(itemid, atoi(sep->arg[2]), atoi(sep->arg[3]) );
+		} else if (sep->argnum==4)
+			t->SummonItem(itemid, atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]) );
+		else if (sep->argnum==5)
+			t->SummonItem(itemid, atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), atoi(sep->arg[5]) );
+		else if (sep->argnum==6)
+			t->SummonItem(itemid, atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), atoi(sep->arg[5]), atoi(sep->arg[6]) );
+		else if (sep->argnum==7)
+			t->SummonItem(itemid, atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), atoi(sep->arg[5]), atoi(sep->arg[6]), atoi(sep->arg[7]) );
+		else {
+			t->SummonItem(itemid);
 		}
 	}
 }
