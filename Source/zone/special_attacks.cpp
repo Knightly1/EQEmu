@@ -67,8 +67,12 @@ void Mob::DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage) {
 	if(max_damage > 0) {
 		target->AvoidDamage(this, max_damage);
 	}
+	ApplyMeleeDamageBonus(skill, max_damage);
 	TryCriticalHit(target, skill, max_damage);
 	target->Damage(this, max_damage, SPELL_UNKNOWN, skill, false);
+	
+	if(max_damage == -3)
+		DoRiposte(target);	
 }
 
 

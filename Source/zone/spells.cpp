@@ -82,6 +82,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "../common/skills.h"
 #include "../common/bodytypes.h"
 #include "../common/classes.h"
+#include "../common/rulesys.h"
 #include <math.h>
 #include <assert.h>
 #ifndef WIN32
@@ -1625,7 +1626,7 @@ void Mob::BardPulse(uint16 spell_id, Mob *caster) {
 			action->target = GetID();
 			action->spell = spell_id;
 			action->sequence = (int32) (GetHeading() * 2);	// just some random number
-			action->unknown06 = GetInstrumentMod(spell_id);		// seems to always be 0x0A (10)
+			action->unknown06 = caster->GetInstrumentMod(spell_id);		// seems to always be 0x0A (10)
 			action->buff_unknown = 0;
 			action->level = buffs[buffs_i].casterlevel;
 			action->type = SpellDamageType;
@@ -1866,6 +1867,10 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 	{
 		if(IsBlankSpellEffect(spellid1, i))
 			continue;
+			
+		if(effect1 == SE_CurrentHPOnce) //lots of spells share a single one time heal or single one time dd slot
+			continue;					//they shouldn't consider this an effect for stacking purposes as it only happens once and DD's and Direct heals always stack except for special cases like kunark BP ch
+			
 
 		effect1 = sp1.effectid[i];
 		effect2 = sp2.effectid[i];
@@ -2522,16 +2527,6 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 		}
 	}
 
-	// solar: stun spells are special.  we only issue a warning here, and it's
-	// also checked in SpellEffect() where the effect is skipped.  This check
-	// is only for the message, the real stun checking is done there.
-	if(SpecAttacks[UNSTUNABLE] && (IsStunSpell(spell_id) || IsEffectInSpell(spell_id, SE_SpinTarget)))
-	{
-		mlog(SPELLS__RESISTS, "We are immune to Stun spells.");
-		caster->Message_StringID(MT_Shout, IMMUNE_STUN);
-		return true;
-	}
-
 	// slow and haste spells
 	if(SpecAttacks[UNSLOWABLE] && IsEffectInSpell(spell_id, SE_AttackSpeed))
 	{
@@ -2637,43 +2632,9 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 //
 float Mob::ResistSpell(int8 resist_type, int16 spell_id, Mob *caster)
 {
-	int caster_level, target_level, resist, base_resist;
-	float roll, roll2, effectiveness_index;
-	float no_resist_chance, full_hit_cutoff, partial_hit_cutoff;
-	
-	/*
-	Why is this completely different? is this researched,
-	or was it just made up..?
-	if (spell_id == 0) //elem damage!
-	{
-		adverrorinfo = 91;
-		int castlevel = caster->GetLevel();
-		int targlevel = GetLevel();
-		if (castlevel > 60)
-			castlevel -= (castlevel-60)/2;
-		if (targlevel > 60)
-			targlevel -= (targlevel-60)/2;
-		int variance = (castlevel-targlevel)*5;
-		if ((caster->IsClient() && variance > 0) || (IsClient() && variance < 0)) //Levels shouldn't matter as much against players.
-			variance /= 5;
-		if (variance < -50)
-			return true;
-		if (variance < -25)
-			variance *= 2;
-		
-		int targMR = GetResist(resist_type);
-		
-		if (GetLevel() < 50)
-		{
-			targMR -= (targMR*(caster->GetLevel()-50)/100);
-		}
-		int resistchance = (targMR + spells[spell_id].ResistDiff - variance);
-		resistchance /= 2;
-
-		if (rand()%100 < resistchance)
-			return 100;
-		return 0;
-	}*/
+	int caster_level, target_level, resist;
+	float roll, effectiveness_index;
+	float partialchance, fullchance, resistchance;
 	
 	if(spell_id != 0 && !IsValidSpell(spell_id))
 	{
@@ -2701,9 +2662,9 @@ float Mob::ResistSpell(int8 resist_type, int16 spell_id, Mob *caster)
 	}
 
 	// if NPC target and more than X levels above caster, it's always resisted
-	if(IsNPC() && target_level - caster_level > AUTO_RESIST_LEVEL_DIFF) {
-		mlog(SPELLS__RESISTS, "We are %d levels above the caster, which is higher than the %d level auto-resist gap. Fully resisting.",  target_level - caster_level, AUTO_RESIST_LEVEL_DIFF);
-		return 0;
+	if(IsNPC() && target_level - caster_level > RuleI(Spells, AutoResistDiff)) {
+		mlog(SPELLS__RESISTS, "We are %d levels above the caster, which is higher than the %d level auto-resist gap. Fully resisting.",  target_level - caster_level, RuleI(Spells, AutoResistDiff));
+ 		return 0;
 	}
 	
 	//check for buff/item/aa based fear moditifers
@@ -2785,87 +2746,73 @@ float Mob::ResistSpell(int8 resist_type, int16 spell_id, Mob *caster)
 		resist = GetMR();
 		break;
 	}
-	base_resist = resist;	//use whatever comes out of the switch as our base.
 
 	// value in spell to adjust base resist by
 	if(spell_id != 0)
 		resist += spells[spell_id].ResistDiff;
-
-	//
-	// solar: at this point we have:
-	//
-	//   resist: a value of the target's resist, generally around 0 - 300
-	//   target_level: level of target
-	//   caster_level: level of caster
-	//
-
-	//
-	// solar:
-	// the general concept is that we will do a random roll and get a number
-	// from say 1 to 1000.
-	// we divide this range into distinct sections to indicate the action
-	// that is to happen, one of no resist, partial resist, full resist.
-	// we assign an arbitrary likelyhood to each situation, with no variables.
-	// no resist: 90%
-	// resist: (the partial and total percentages are of the % that is resists)
-	//   partial: 70%
-	//   total: 30%
-	// now given this, we can adjust the no resist % based on level difference
-	// and resists to shift the whole scale
-	//	
-
-
-	// our base chance to land the spell assuming zero resist and same level.
-	// this is out of 100
-	no_resist_chance = 90;
+		
+	//This is our base resist chance given no resists and no level diff, set to a modest 2% by default
+	resistchance = RuleR(Spells, ResistChance); 
 	
+	//This is our difference in levels between the caster and target, if the caster is HIGHER than the target there is still some resist factored in but it is less than if he was LOWER than his target.
+	//Replaced the old system where resist chance was 1 + (leveldiff*leveldiff), this resulted in some pretty shoddy scaling especially at higher levels where you're dealing with a much larger range of NPC levels.
 	float lvldiff = caster_level - target_level;
-	float level_adj = lvldiff * lvldiff + 1;
-	// level_adj is a positive value indicating the magnitude of the adjustment
-	no_resist_chance += level_adj * (caster_level > target_level ? 1 : -1);
+	if(caster->IsClient()){ //levels are a bit more harsh to clients than they are to npcs
+		if((lvldiff) > 0){
+			resistchance -= (lvldiff)*0.6;
+		}
+		else{
+			resistchance -= (lvldiff)*4.0;
+		}
+	}
+	else{
+		if((lvldiff) > 0){
+			resistchance -= (lvldiff)*1.2;
+		}
+		else{
+			resistchance -= (lvldiff)*0.8;
+		}
+	}
 
-	// now we add the resistance we have
-	no_resist_chance -= resist / 2.0;
+	/*The idea is we come up with 3 ranges of numbers and a roll between 0 and 100
+	[[[Empty Space above the resistchance line]]] - If the roll lands up here the spell wasn't resisted, the lower the resist chance the larger this range is
+	[[[Space between resistchance line and full resist chance line]]] - If the roll ends up here then the spell is resisted but only partially, we take the roll in porportion to where it landed in this range to det how
+	high the partial should be, for example if we rolled barely over the full resist chance line then it would result in a low partial but if we barely missed the spell not resisting then it would result in a very high partial
+	The higher the resist the larger this range will be.
+	[[[Space below the full resist chance line]]] - If the roll ends up down here then the spell was resisted fully, the higher the resist the larger this range will be.
+	*/
+
+	//default 0.40: 500 resist = 200% Base resist while 40 resist = 16% resist base.
+	//Set ResistMod lower to require more resist points per percentage point of resistance.
+	resistchance += resist * RuleR(Spells, ResistMod); 
+	resistchance += spellbonuses.ResistSpellChance + itembonuses.ResistSpellChance;
+	//Resist chance makes up the upper limit of our partial range
+	//Fullchance makes up the lower limit of our partial range
+	fullchance = (resistchance * (1 - RuleR(Spells, PartialHitChance))); //default 0.7
+	roll = MakeRandomFloat(0, 100);
+
+	mlog(SPELLS__RESISTS, "Spell %d: Resist Amount: %d, ResistChance: %.2f, Resist Bonuses: %.2f", 
+		spell_id, resist, resistchance, (spellbonuses.ResistSpellChance + itembonuses.ResistSpellChance));	
 	
-	//this is prolly wrong, but I dont see a good way to roll
-	//it into the rest of this stuff
-	//should this apply for elemental damage?
-	sint16 bonus_resists = spellbonuses.ResistSpellChance + itembonuses.ResistSpellChance;
-	no_resist_chance -= bonus_resists;
-	
-	mlog(SPELLS__RESISTS, "Spell %d: Chance of full hit: 90 - (base %d + spell mod %d)/2 %s level adj %d - bonuses %d = %d %% chance",
-		spell_id, base_resist, resist-base_resist, (caster_level > target_level)? "+" : "-", level_adj, bonus_resists, no_resist_chance);
-	
-//this calculation is all fucked up....	
-
-	roll = MakeRandomFloat(0, 1000);
-	// figure out cutoff points
-	full_hit_cutoff = 10 * no_resist_chance;
-
-
-	if(roll < full_hit_cutoff)	// spell landed
+	if (roll > resistchance)
 	{
-		mlog(SPELLS__RESISTS, "Spell %d: Roll of %.2f < %.2f, no resist", spell_id, roll, full_hit_cutoff);
-		effectiveness_index = 100;
+		mlog(SPELLS__RESISTS, "Spell %d: Roll of %.2f > resist chance of %.2f, no resist", spell_id, roll, resistchance);
+		return(100);
 	}
 	else
 	{
-		partial_hit_cutoff = (1000 - full_hit_cutoff) * 0.70; // 70% chance for partial
-		roll2 = 1000 - roll;
-
-		if(roll2 < partial_hit_cutoff)	// partial
-		{
-			effectiveness_index = roll2 * 100 / partial_hit_cutoff;
-			mlog(SPELLS__RESISTS, "Spell %d: Roll of %.2f < partial hit cutoff %.2f, resulting effectiveness %.2f", spell_id, roll2, partial_hit_cutoff, effectiveness_index);
+		if (roll <= fullchance)
+ 		{
+			return(0);
+			mlog(SPELLS__RESISTS, "Spell %d: Roll of %.2f <= fullchance %.2f, fully resisted", spell_id, roll, fullchance);
 		}
-		else	// resisted
+		else
 		{
-			mlog(SPELLS__RESISTS, "Spell %d: Roll of %.2f >= partial hit cutoff %.2f, fully resisted.", spell_id, roll2, partial_hit_cutoff);
-			effectiveness_index = 0;
+			mlog(SPELLS__RESISTS, "Spell %d: Roll of %.2f > fullchance %.2f, partially resisted, returned %.2f", spell_id, roll, fullchance, (100 * ((roll-fullchance)/(resistchance-fullchance))));
+			//Remove the lower range so it doesn't throw off the porportion.
+			return(100 * ((roll-fullchance)/(resistchance-fullchance)));
 		}
 	}
-
-	return effectiveness_index;
 }
 
 float Mob::GetAOERange(uint16 spell_id) {

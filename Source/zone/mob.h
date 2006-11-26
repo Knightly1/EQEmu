@@ -354,7 +354,7 @@ bool logpos;
 	virtual bool Attack(Mob* other, int Hand = 13, bool FromRiposte = false) { return false; }		// 13 = Primary (default), 14 = secondary
 	virtual void Damage(Mob* from, sint32 damage, int16 spell_id, SkillType attack_skill, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false) {};
 	virtual void Heal();
-	virtual void HealDamage(uint32 ammount);
+	virtual void HealDamage(uint32 ammount, Mob* caster = NULL);
 	virtual void SetMaxHP() { cur_hp = max_hp; }
 	virtual void Death(Mob* killer, sint32 damage, int16 spell_id, SkillType attack_skill) {}
 	static int32 GetLevelCon(int8 mylevel, int8 iOtherLevel);
@@ -398,6 +398,8 @@ bool logpos;
 	bool AvoidDamage(Mob* attacker, sint32 &damage);
 	bool CheckHitChance(Mob* attacker, SkillType skillinuse, int Hand);
 	void TryCriticalHit(Mob *defender, int16 skill, sint32 &damage);
+	void DoRiposte(Mob* defender);
+	void ApplyMeleeDamageBonus(int16 skill, sint32 &damage);
 	
 	void	DamageShield(Mob* other);
 	bool	FindBuff(int16 spellid);

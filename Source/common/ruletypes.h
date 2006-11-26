@@ -53,6 +53,10 @@ RULE_CATEGORY( Spells )
 RULE_INT (Spells, SpellAggroModifier, 100)
 RULE_INT (Spells, BardSpellAggroMod, 3)
 RULE_INT (Spells, PetSpellAggroMod, 10)
+RULE_INT (Spells, AutoResistDiff, 15)
+RULE_REAL (Spells, ResistChance, 2.0) //chance to resist given no resists and same level
+RULE_REAL (Spells, ResistMod, 0.40) //multiplier, chance to resist = this * ResistAmount
+RULE_REAL (Spells, PartialHitChance, 0.7) //The chance when a spell is resisted that it will partial hit.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Combat )
@@ -60,6 +64,7 @@ RULE_REAL ( Combat, BaseCritChance, 0.0 ) //The base crit chance for non warrior
 RULE_REAL ( Combat, WarBerBaseCritChance, 0.03 ) //The base crit chance for warriors and berserkers, only applies to clients
 RULE_REAL ( Combat, BerserkBaseCritChance, 0.06 ) //The bonus base crit chance you get when you're berserk
 RULE_INT ( Combat, NPCBashKickLevel, 6 ) //The level that npcs can KICK/BASH
+RULE_REAL ( Combat, ClientBaseCritChance, 0.0 ) //The base crit chance for all clients, this will stack with warrior's/zerker's crit chance.
 RULE_CATEGORY_END()
 
 #undef RULE_CATEGORY

@@ -187,6 +187,58 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	} else
 		hp_regen = d->hp_regen;
 	
+	//quick fix of ordering if they screwed it up in the DB
+	if(max_dmg < min_dmg) {
+		int tmp = min_dmg;
+		min_dmg = max_dmg;
+		max_dmg = tmp;
+	}
+		
+	if(max_dmg == 0){
+		int AC_adjust=12;
+
+		if (GetLevel() >= 66) {
+			    if (min_dmg==0)
+			    	min_dmg = 220;
+			    if (max_dmg==0)
+					max_dmg = ((((99000)*(GetLevel()-64))/400)*AC_adjust/10);
+			}
+			else if (GetLevel() >= 60 && GetLevel() <= 65){
+			    if(min_dmg==0)
+					min_dmg = (GetLevel()+(GetLevel()/3));
+			    if(max_dmg==0)
+			    	max_dmg = (GetLevel()*3)*AC_adjust/10;
+			}
+			else if (GetLevel() >= 51 && GetLevel() <= 59){
+			    if(min_dmg==0)
+			    	min_dmg = (GetLevel()+(GetLevel()/3));
+			    if(max_dmg==0)
+			    	max_dmg = (GetLevel()*3)*AC_adjust/10;
+			}
+			else if (GetLevel() >= 40 && GetLevel() <= 50) {
+				if (min_dmg==0)
+					min_dmg = GetLevel();
+				if(max_dmg==0)
+					max_dmg = (GetLevel()*3)*AC_adjust/10;
+			}
+			else if (GetLevel() >= 28 && GetLevel() <= 39) {
+			    if (min_dmg==0)
+					min_dmg = GetLevel() / 2;
+			    if (max_dmg==0)
+					max_dmg = ((GetLevel()*2)+2)*AC_adjust/10;
+			}
+			else if (GetLevel() <= 27) {
+			    if (min_dmg==0)
+					min_dmg=1;
+			    if (max_dmg==0)
+					max_dmg = (GetLevel()*2)*AC_adjust/10;
+			}
+			
+			int clfact = GetClassLevelFactor();
+			min_dmg = (min_dmg * clfact) / 22;
+			max_dmg = (max_dmg * clfact) / 22;	
+	}	
+	
     CalcMaxMana();
     SetMana(GetMaxMana());
 

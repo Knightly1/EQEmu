@@ -126,7 +126,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					//healing spell...
 					if(caster)
 						dmg = caster->GetActSpellHealing(spell_id, dmg);
-					HealDamage(dmg);
+					HealDamage(dmg, caster);
 				}
 				
 #ifdef SPELL_EFFECT_SPAM
@@ -157,7 +157,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					dmg = -dmg;
 					Damage(caster, dmg, spell_id, spell.skill, false, buffslot, false);
 				} else {
-					HealDamage(dmg);
+					HealDamage(dmg, caster);
 				}
 				break;
 			}
@@ -180,7 +180,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				if((chp + val) > cap)
 					val = cap - chp;
 				if(val > 0)
-					HealDamage(val);
+					HealDamage(val, caster);
 				break;
 			}
 
@@ -387,7 +387,16 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Stun: %d msec", effect_value);
 #endif
-				Stun(effect_value);
+				//Typically we check for immunities else where but since stun immunities are different and only
+				//Block the stun part and not the whole spell, we do it here, also do the message here so we wont get the message on a resist
+				if(SpecAttacks[UNSTUNABLE] && (IsStunSpell(spell_id) || IsEffectInSpell(spell_id, SE_SpinTarget)))
+				{
+					caster->Message_StringID(MT_Shout, IMMUNE_STUN);
+				}
+				else
+				{
+					Stun(effect_value);
+				}
 				break;
 			}
 
@@ -1898,7 +1907,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					//healing spell...
 					if(caster)
 						dmg = caster->GetActSpellHealing(spell_id, dmg);
-					HealDamage(dmg);
+					HealDamage(dmg, caster);
 				}
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Current Hitpoints: %+i  actual: %+i", effect_value, dmg);
@@ -2216,7 +2225,7 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 				//healing spell...
 				if(caster)
 					effect_value = caster->GetActSpellHealing(spell_id, effect_value);
-				HealDamage(effect_value);
+				HealDamage(effect_value, caster);
 			}
 			
 			break;
@@ -2226,7 +2235,7 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 			effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
 			
 			//is this affected by stuff like GetActSpellHealing??
-			HealDamage(effect_value);
+			HealDamage(effect_value, caster);
 			break;
 		}
 
@@ -2259,7 +2268,7 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 				Damage(caster, effect_value, spell_id, spell.skill, false, i, true);
 			} else if(effect_value > 0) {
 				//healing spell...
-				HealDamage(effect_value);
+				HealDamage(effect_value, caster);
 			}
 			break;
 		}

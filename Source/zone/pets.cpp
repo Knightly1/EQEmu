@@ -206,7 +206,7 @@ void Mob::MakePet(int16 spell_id, const char* pettype, const char *petname) {
 	} else {
 		strcpy(npc_type->name, this->GetCleanName());
 		npc_type->name[25] = '\0';
-		strcat(npc_type->name, "'s_pet");
+		strcat(npc_type->name, "`s_pet");
 	}
 	
 	

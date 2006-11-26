@@ -1,5 +1,18 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==11/25/2006
+KLS: The way resists are calculate have been changed and are now somewhat tweakable with rules, and partial hits should work correctly.
+KLS: Ripostes have been seperated from the attack code and will now apply to all attacks.
+KLS: Skills and Spells that directly modify melee damage should now work and be applied to all attacks.
+KLS: Some fixes and optimizations in the attack code.
+KLS: Familiars will no longer aggro like regular pets.
+KLS: Damage Shield Bonuses on items should no longer be backwards.
+KLS: Heals will report the amount of damage healed to their targets and casters.
+KLS: Pets will now spawn at %t`s pet instead of %t's pet, the client filters out ' in certain things like combat and considering.
+KLS: Stun Immunity will now only apply to the stun portion of the spell instead of the whole spell.
+KLS: Instrument Mods should send correctly on the reapplication of bard pulses.
+KLS: Spells should no longer check instant heals/damage portions of the spell for stacking purposes, several spells that should have stacked before but didn't now should properly.
+
 ==11/20/2006
 KLS: Skill system tweaks and bug fixes.
 KLS: Bard songs will now skill up while they are being sung instead of just when first cast.

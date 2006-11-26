@@ -740,19 +740,8 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		}
 		
 		min_hit = 1;
-		max_hit = (int) (weapon_damage * (( ((float)GetSTR()*2) + (float)GetSkill(skillinuse)*1.5+ (float)mylevel) / 100));	// Apply damage formula
-		/*#if 0 // Weighted MDF type damage
-			int magic_number = 0;
-			int weighted = 0;
-			if (GetLevel() >= 25) {
-				max_hit =  (int)(weapon_damage * (( ((float)GetSTR()) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100));	// Apply damage formula
-				min_hit = (GetLevel()-25)/3; // FIXME Brutal hack for Damage bonus this is here somewhere but
-				if (Hand != 13)
-					min_hit = 1;
-				magic_number = 2* weapon_damage + (level-25)/3;
-				weighted = (int)(0.9 * (weapon_damage+min_hit) + 0.1 * max_hit);
-			}
-		#endif // Weighted MDF type damage*/
+		//This needs to be researched, it seems terribly off. Changed to use offense skill for now instead of weapon since we know that is correct
+		max_hit = (weapon_damage * (((GetSTR()*20) + (GetSkill(OFFENSE)*15) + (mylevel*10)) / 1000));	// Apply damage formula
 		
 		// Only apply the damage bonus to the main hand
 		if(Hand == 13) {	// Kaiyodo - If we're not using the DWDA stuff, will always be the primary hand
@@ -766,7 +755,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		if(max_hit <= min_hit)
 			damage = min_hit;
 		else
-			damage = (int32)min_hit + MakeRandomInt(0, max_hit - min_hit + 1);
+			damage = MakeRandomInt(min_hit, max_hit);
 		
 		mlog(COMBAT__DAMAGE, "Damage calculated to %d (min %d, max %d, str %d, skill %d, DMG %d, lv %d)", damage, min_hit, max_hit
 		, GetSTR(), GetSkill(skillinuse), weapon_damage, mylevel);
@@ -805,6 +794,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 			damage = 0;
 		} else {	//we hit, try to avoid it
 			other->AvoidDamage(this, damage);
+			ApplyMeleeDamageBonus(skillinuse, damage);
 			TryCriticalHit(other, skillinuse, damage);
 			mlog(COMBAT__DAMAGE, "Final damage after all reductions: %d", damage);
 		}
@@ -846,9 +836,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	//handle riposet, ensuring they are in front is checked in AvoidDamage
 	//this used to test IsNPC, preventing riposte attacks in PvP
 	if( damage == -3 ) {
-		//other->CastToNPC()->FaceTarget(); //Causes too much lag?? Disabled. -image
-		mlog(COMBAT__ATTACKS, "%s is preforming a ripost attack", other->GetName());
-		other->Attack(this, 13, true);
+		DoRiposte(other);
 	}
 	
 	if (damage > 0)
@@ -1156,19 +1144,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	if (!target && GetTarget() != other)
 		SetTarget(other);
 	
-//	SetAttackTimer();
-	float calcheading=CalculateHeadingToTarget(target->GetX(), target->GetY());
-	if((calcheading)!=GetHeading()){
-		SetHeading(calcheading);
-		FaceTarget(target, true);
-	}
-	/*if(moved){
-		SetHeading(this->GetHeading()*8);
-		SendPosition();
-		SetMoving(false);
-		moved=false;
-	}*/
-	
+	//Check that we can attack before we calc heading and face our target	
 	if (!IsAttackAllowed(other)) {
 		if (this->GetOwnerID())
 			entity_list.MessageClose(this, 1, 200, 10, "%s says, 'That is not a legal target master.'", this->GetCleanName());
@@ -1176,6 +1152,11 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 			RemoveFromHateList(other);
 		mlog(COMBAT__ATTACKS, "I am not allowed to attack %s", other->GetName());
 		return false;
+	}
+	float calcheading=CalculateHeadingToTarget(target->GetX(), target->GetY());
+	if((calcheading)!=GetHeading()){
+		SetHeading(calcheading);
+		FaceTarget(target, true);
 	}
 	
 	if(!combat_event) {
@@ -1265,124 +1246,10 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		otherlevel = otherlevel ? otherlevel : 1;
 		mylevel = mylevel ? mylevel : 1;
 		
-		float basedamage;
-		float level_mod = 1.5f;
+		//instead of calcing damage in floats lets just go straight to ints
+		damage = MakeRandomInt(min_dmg, max_dmg);
 		
-		//adjust level mod a bit
-		if (mylevel >= 66)
-		    level_mod = 4.5f;
-		else if (mylevel >= 60 && mylevel <= 65)
-		    level_mod = 4.25f;
-		else if (mylevel >= 51 && mylevel <= 59)
-		    level_mod = 3.75f;
-		
-		//quick fix of ordering if they screwed it up in the DB
-		if(max_dmg < min_dmg) {
-			int tmp = min_dmg;
-			min_dmg = max_dmg;
-			max_dmg = tmp;
-		}
-		
-		mlog(COMBAT__ATTACKS, "My Level %d, other level %d, min_dmg %d, max_dmg %d", mylevel, otherlevel, min_dmg, max_dmg);
-		
-		
-		// set min_dmg max_dmg here based on level if they are not set already
-		// FIXME database cache lookup fancy like stuff needed here
-		//this crap really belongs in the constructor....
-		if(max_dmg == 0) {
-			int AC_adjust=12;	// value to adjust default because of AC being added
-			//float basedefend = 0;
-			//float currenthit = 0;
-			
-			
-			if (mylevel >= 66) {
-			    if (min_dmg==0)
-			    	min_dmg = 220;
-			    if (max_dmg==0)
-					max_dmg = (int16)((((220*level_mod)*(mylevel-64))/4.0f)*AC_adjust/10);
-		//			max_dmg = (int16)(((220*level_mod)*(mylevel-64))/4.0f);
-				// 66 = 495, 67 = 742, 68 = 990, 69 = 1237, 70 = 1485
-			}
-			else if (mylevel >= 60 && mylevel <= 65){
-			    if(min_dmg==0)
-					min_dmg = (mylevel+(mylevel/3));
-			    if(max_dmg==0)
-			    	max_dmg = (mylevel*3)*AC_adjust/10;
-		//		    max_dmg = (mylevel*3);
-			    // 60 = 180, 65 = 195
-			}
-			else if (mylevel >= 51 && mylevel <= 59){
-			    if(min_dmg==0)
-			    	min_dmg = (mylevel+(mylevel/3));
-			    // 51 = 68, 59 = 78
-			    if(max_dmg==0)
-			    	max_dmg = (mylevel*3)*AC_adjust/10;
-		//		    max_dmg = (mylevel*3);
-			    // 51 = 153, 59 = 177
-			}
-			else if (mylevel >= 40 && mylevel <= 50) {
-				if (min_dmg==0)
-					min_dmg = mylevel;
-				if(max_dmg==0)
-					max_dmg = (mylevel*3)*AC_adjust/10;
-		//				max_dmg = (mylevel*3);
-			    // 40 = 120 , 50 = 150
-			}
-			else if (mylevel >= 28 && mylevel <= 39) {
-			    if (min_dmg==0)
-					min_dmg = mylevel / 2; // 14-17
-			    if (max_dmg==0)
-					max_dmg = ((mylevel*2)+2)*AC_adjust/10;
-			    // 28 = 58, 39 = 80
-			}
-			else if (mylevel <= 27) {
-			    if (min_dmg==0)
-					min_dmg=1;
-			    if (max_dmg==0)
-					max_dmg = (mylevel*2)*AC_adjust/10;
-			    // 1 = 2, 27 = 54
-			}
-			
-			//apply class/level factor for game-determined damages... if they specified crap in the
-			//database, assume they knew what they were doing and dont jack with them.
-			int clfact = GetClassLevelFactor();
-			min_dmg = (min_dmg * clfact) / 22;
-			max_dmg = (max_dmg * clfact) / 22;
-			
-			mlog(COMBAT__DAMAGE, "Mob has no damage stored in DB, using defatuls calc at level %d with ACA %d and CLF %d", mylevel, AC_adjust, clfact);
-		}
-		
-		if(max_dmg != 0 && min_dmg <= max_dmg) {
-			basedamage = MakeRandomFloat(min_dmg,max_dmg);
-			mlog(COMBAT__DAMAGE, "Base damage = rand(%d,%d) = %.2f", min_dmg, max_dmg, basedamage);
-		}
-		else if (other->IsPet()) {
-			//calculation for pets with no damage stored in the DB..??
-			// FIXME Shouldn't nerf the damage of charmed pets
-			float maxdmg = mylevel*1.9f*GetClassLevelFactor()/22;
-			basedamage = MakeRandomFloat(mylevel, maxdmg);
-			mlog(COMBAT__DAMAGE, "Pet base damage: %d*1.9*(clmod=%d/22) = %.2f... res = %.2f", mylevel, GetClassLevelFactor(), maxdmg, basedamage);
-		}
-		else { // Default calculation
-			float maxdmg = mylevel*level_mod*GetClassLevelFactor()/22;
-			basedamage = MakeRandomFloat(mylevel, maxdmg);
-			mlog(COMBAT__DAMAGE, "Default base damage: %d*%.2f*(clmod=%d/22) = %.2f... res = %.2f", mylevel, level_mod, GetClassLevelFactor(), maxdmg, basedamage);
-		}
-		
-		//only account for STR here, assume their base STR was factored into their DB damages
-		float dmgbonusmod = 0;
-		dmgbonusmod += (float)(this->itembonuses.STR + this->spellbonuses.STR)/3;
-		dmgbonusmod += (float)(this->spellbonuses.ATK + this->itembonuses.ATK)/5;
-		mlog(COMBAT__DAMAGE, "Damage bonus: %.2f percent from ATK and STR bonuses.", dmgbonusmod);
-		basedamage += (basedamage/100.0f)*dmgbonusmod;
-		
-		damage = (int)basedamage;
-		
-		if(other->IsClient() && min_dmg != 0 && damage == min_dmg && dmgbonusmod > 0) {
-			//I dont really understand this...
-			mlog(COMBAT__DAMAGE, "Damage (%d) is at min with bonus (%.2f), adding bonus.", damage, dmgbonusmod);
-		    damage += (int)dmgbonusmod;
-		}
+		//check if we're hitting above our max or below it.
 		if(min_dmg != 0 && damage < min_dmg) {
 			mlog(COMBAT__DAMAGE, "Damage (%d) is below min (%d). Setting to min.", damage, min_dmg);
 		    damage = min_dmg;
@@ -1401,6 +1268,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 				damage = 0;	//miss
 			} else {	//hit, check for damage avoidance
 				other->AvoidDamage(this, damage);
+				ApplyMeleeDamageBonus(skillinuse, damage);
 				TryCriticalHit(other, skillinuse, damage);
 			}
 		}
@@ -1445,26 +1313,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	
 	// now check ripostes
 	if (damage == -3) { // riposting
-		mlog(COMBAT__ATTACKS, "Preforming a riposte");
-	    other->Attack(this, 13, true);
-	    
-		//double riposte
-		float DoubleRipChance = 0;
-		switch(this->GetAA(aaDoubleRiposte)) {
-		case 1: 
-			DoubleRipChance += 0.15f;
-			break;
-		case 2:
-			DoubleRipChance += 0.35f;
-			break;
-		case 3:
-			DoubleRipChance += 0.50f;
-			break;
-		}
-		if(DoubleRipChance >= MakeRandomFloat(0, 1)) {
-			mlog(COMBAT__ATTACKS, "Preforming a double riposed (%.3f chance)", DoubleRipChance);
-			other->Attack(this, 13, true);
-		}
+		DoRiposte(other);
 	}
 	
 	if (damage > 0)
@@ -1650,6 +1499,8 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 		hate = ((hate * (hatemod))/100);
 	}
 
+	if(IsFamiliar()) //familiars can't really attack anything
+		return;	
 
 	if (other == myowner)
 		return;
@@ -1688,7 +1539,8 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 // given this, a reverse ds must be checked each time the wearer is attacking
 // and not when they're attacked
 void Mob::DamageShield(Mob* attacker) {
-	int DS = itembonuses.DamageShield + spellbonuses.DamageShield;
+	//a damage shield on a spell is a negative value but on an item it's a positive value so add the spell value and subtract the item value to get the end ds value
+	int DS = spellbonuses.DamageShield - itembonuses.DamageShield;
 	if(DS == 0)
 		return;
 	
@@ -2221,9 +2073,27 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 }
 
 
-void Mob::HealDamage(uint32 amount) {
-	uint32 curhp = GetHP();
+void Mob::HealDamage(uint32 amount, Mob* caster) {
 	uint32 maxhp = GetMaxHP();
+	uint32 curhp = GetHP();
+	uint32 acthealed = 0;
+	if(amount > (maxhp - curhp))
+		acthealed = (maxhp - curhp);
+	else
+		acthealed = amount;
+		
+	if(acthealed > 100){
+		if(caster){
+			Message(MT_NonMelee, "You have been healed by %s for %d points of damage.", caster->GetCleanName(), acthealed);
+			if(caster != this){
+				caster->Message(MT_NonMelee, "You have healed %s for %d points of damage.", GetCleanName(), acthealed);
+			}
+		}
+		else{
+			Message(MT_NonMelee, "You have been healed for %d points of damage.", acthealed);
+		}	
+	}		
+		
 	if (curhp < maxhp) {
 		if ((curhp+amount)>maxhp)
 			curhp=maxhp;
@@ -2393,6 +2263,8 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 		return;
  
 	float critChance = RuleR(Combat, BaseCritChance);
+	if(IsClient())
+		critChance += RuleR(Combat, ClientBaseCritChance);	
 	//Use a real value because there are spells/skills that can up the crit mod by a percent and while
 	//They are not implemented yet it seems like a good idea to keep it open for when they are.
 	sint8 critMod = 2; 
@@ -2446,6 +2318,49 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 	}
 }
 
-
+void Mob::DoRiposte(Mob *defender){
+		mlog(COMBAT__ATTACKS, "Preforming a riposte");
+	    defender->Attack(this, 13, true);
+	    
+		//double riposte
+		int DoubleRipChance = 0;
+		switch(defender->GetAA(aaDoubleRiposte)) {
+		case 1: 
+			DoubleRipChance = 15;
+			break;
+		case 2:
+			DoubleRipChance = 35;
+			break;
+		case 3:
+			DoubleRipChance = 50;
+			break;
+		}
+		if(DoubleRipChance >= MakeRandomInt(0, 100)) {
+			mlog(COMBAT__ATTACKS, "Preforming a double riposed (%d percent chance)", DoubleRipChance);
+			defender->Attack(this, 13, true);
+		}
+}
+ 
+void Mob::ApplyMeleeDamageBonus(int16 skill, sint32 &damage){
+	if(damage < 1)
+		return;
+ 
+	if(IsNPC()){ //across the board NPC damage bonuses.
+ 		//only account for STR here, assume their base STR was factored into their DB damages
+		int dmgbonusmod = 0;
+		dmgbonusmod += (100*(itembonuses.STR + spellbonuses.STR))/3;
+		dmgbonusmod += (100*(spellbonuses.ATK + itembonuses.ATK))/5;
+		mlog(COMBAT__DAMAGE, "Damage bonus: %d percent from ATK and STR bonuses.", (dmgbonusmod/100));
+		damage += (damage*dmgbonusmod/10000);
+	}
+  
+	if(spellbonuses.DamageModifierSkill == skill || spellbonuses.DamageModifierSkill == 255){
+		damage += ((damage * spellbonuses.DamageModifier)/100);
+	}
+ 
+	if(itembonuses.DamageModifierSkill == skill || itembonuses.DamageModifierSkill == 255){
+		damage += ((damage * itembonuses.DamageModifier)/100);
+	}
+}
 
 

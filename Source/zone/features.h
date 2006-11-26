@@ -242,9 +242,6 @@ enum {	//some random constants
 //This is the entry in npc_types to spawn for trap damagaes
 #define TRAP_NPC_TYPE 1586
 
-//this defines the level difference at which things auto-resist spells
-#define AUTO_RESIST_LEVEL_DIFF 15
-
 //This is the multiplier of eqemu speed to get client speed
 //tweak this if pathing mobs seem to jump forward or backwards
 //this should prolly be dynamic based on ping time or something.. who knows
