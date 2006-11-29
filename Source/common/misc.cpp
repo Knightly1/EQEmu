@@ -538,6 +538,15 @@ timeval now;
 	return key;
 }
 
+void print_hex(const char *data, unsigned long length) {
+	char buffer[80];
+	uint32 offset;
+	for(offset=0;offset<length;offset+=16) {
+		build_hex_line((const char *)data,length,offset,buffer,5);
+		printf("%s\n", buffer);	//%s is to prevent % escapes in the ascii
+	}
+}
+
 void build_hex_line(const char *buffer, unsigned long length, unsigned long offset, char *out_buffer, unsigned char padding)
 {
 char *ptr=out_buffer;

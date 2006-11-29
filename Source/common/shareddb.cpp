@@ -1312,7 +1312,7 @@ bool SharedDatabase::DBLoadSkillCaps() {
 
 uint16 SharedDatabase::GetSkillCap(int8 Class_, SkillType Skill, int8 Level) {
 	if(Class_ == 0)
-		return;
+		return(0);
 	return EMuShareMemDLL.SkillCaps.GetSkillCap(Class_-1, Skill, Level);
 }
 
