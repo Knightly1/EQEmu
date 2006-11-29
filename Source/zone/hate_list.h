@@ -53,6 +53,7 @@ public:
     void CheckFrenzyHate();
     
     bool IsEmpty();
+	void PrintToClient(Client *c);
 
 protected:
     tHateEntry *Find(Mob *ent);

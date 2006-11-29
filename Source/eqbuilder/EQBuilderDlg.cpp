@@ -251,6 +251,7 @@ BOOL CEQBuilderDlg::OnInitDialog()
 	sSpawnStatic = static_cast<CStatic*>(GetDlgItem(IDC_SPAWN_STATIC));
 	sGridStatic = static_cast<CStatic*>(GetDlgItem(IDC_GRID_STATIC));
 	sMerchantStatic = static_cast<CStatic*>(GetDlgItem(IDC_MERCHANT_STATIC));
+	sRaceErrorStatic = static_cast<CStatic*>(GetDlgItem(IDC_RACE_ERRORS));
 
 	ResetScores();
 
@@ -289,8 +290,8 @@ BOOL CEQBuilderDlg::OnInitDialog()
 	bCampCheck = static_cast<CButton*>(GetDlgItem(IDC_CAMP_CHECK));
 	bCampCheck->SetCheck( true );
 	eCampEdit->EnableWindow();
-	filtres.coord_error = 5;
-	eCampEdit->SetWindowText( "5" );
+	filtres.camp_range = 15;
+	eCampEdit->SetWindowText( "15" );
 
 	eDeltazEdit = static_cast<CEdit*>(GetDlgItem(IDC_DELTAZ_EDIT));
 	bDeltazCheck = static_cast<CButton*>(GetDlgItem(IDC_DELTAZ_CHECK));
@@ -566,6 +567,7 @@ void CEQBuilderDlg::ResetScores() {
 	sSpawnStatic->SetWindowText( "0f,0g" );
 	sGridStatic->SetWindowText( "0" );
 	sMerchantStatic->SetWindowText( "0" );
+	sRaceErrorStatic->SetWindowText( "0" );
 }
 
 void CEQBuilderDlg::AddLogFile(CString pathname, CString filename, CString fileext) {

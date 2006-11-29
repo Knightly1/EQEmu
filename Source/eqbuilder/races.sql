@@ -377,4 +377,16 @@ INSERT INTO races VALUES ('Nightmare',287,0);
 INSERT INTO races VALUES ('Draglock',132,0);
 INSERT INTO races VALUES ('Black and White Dragons',195,0);
 INSERT INTO races VALUES ('Burynai',144,0);
+INSERT INTO races VALUES ('Bubonian Underling',269,0);
+INSERT INTO races VALUES ('Knight of Pestilence',266,0);
+INSERT INTO races VALUES ('Lepertoloth',267,0);
+INSERT INTO races VALUES ('New Tribunal',256,0);
+INSERT INTO races VALUES ('Bat',260,0);
+INSERT INTO races VALUES ('Nightmare Wraith',264,0);
+INSERT INTO races VALUES ('Slarghilug',261,0);
+INSERT INTO races VALUES ('Crocodile',259,0);
+INSERT INTO races VALUES ('Malarian',265,0);
+INSERT INTO races VALUES ('Tin Soldier',263,0);
+INSERT INTO races VALUES ('Water Mephit',271,0);
+INSERT INTO races VALUES ('Vegerog',258,0);
 

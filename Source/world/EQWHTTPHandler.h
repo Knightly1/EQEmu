@@ -20,8 +20,8 @@
 
 #include "../common/TCPServer.h"
 #include "../common/TCPConnection.h"
-#include <HttpdSocket.h>
-#include <Mime.h>
+#include "../common/SocketLib/HttpdSocket.h"
+#include "../common/SocketLib/Mime.h"
 #include "../common/types.h"
 
 class EQWParser;

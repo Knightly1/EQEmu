@@ -672,6 +672,7 @@ bool logpos;
 	void				AddFeignMemory(Client* attacker);
 	void				RemoveFromFeignMemory(Client* attacker);
 	void				ClearFeignMemory();
+	void				PrintHateListToClient(Client *who) { hate_list.PrintToClient(who); }
 
 	
 	int					GetCurWp(){ return cur_wp; }

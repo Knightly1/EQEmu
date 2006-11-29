@@ -284,3 +284,23 @@ bool HateList::IsEmpty() {
 	}
     return(true);
 }
+
+// Prints hate list to a client
+void HateList::PrintToClient(Client *c)
+{
+	LinkedListIterator<tHateEntry*> iterator(list);
+	iterator.Reset();
+	while (iterator.MoreElements())
+	{
+		tHateEntry *e = iterator.GetData();
+		c->Message(0, "- name: %s, damage: %d, hate: %d",
+			(e->ent && e->ent->GetName()) ? e->ent->GetName() : "(null)",
+			e->damage, e->hate);
+
+		iterator.Advance();
+	}
+}
+
+
+
+

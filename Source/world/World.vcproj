@@ -25,7 +25,7 @@
 				StringPooling="TRUE"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="TRUE"
-				UsePrecompiledHeader="2"
+				UsePrecompiledHeader="0"
 				PrecompiledHeaderFile=".\../Build/World/Release/World.pch"
 				AssemblerListingLocation=".\../Build/World/Release/"
 				ObjectFile=".\../Build/World/Release/"
@@ -99,7 +99,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
-				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
+				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib advapi32.lib shell32.lib"
 				OutputFile="../build/WorldDebug.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="TRUE"
@@ -160,7 +160,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
-				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
+				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib advapi32.lib shell32.lib"
 				OutputFile=".\../build/World.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"

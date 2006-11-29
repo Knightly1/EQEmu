@@ -19,7 +19,7 @@
 #include "HTTPRequest.h"
 #include "EQWHTTPHandler.h"
 #include "../common/EQDB.h"
-#include <HttpdForm.h>
+#include "../common/SocketLib/HttpdForm.h"
 
 using namespace std;
 

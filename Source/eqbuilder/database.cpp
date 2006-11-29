@@ -202,7 +202,7 @@ int database::GetRace( CString nomrace )
 	}
 
 	if(m_raceCachesFilled) {
-		map<string, uint8>::iterator res;
+		map<string, uint16>::iterator res;
 		res = m_raceToIDs.find(string((const char *)nomrace));
 		if(res == m_raceToIDs.end()) {
 			return(-1);
@@ -247,7 +247,7 @@ void database::LoadRaceCache() {
 	runquery( query, &result, NULL, NULL );	
 
 	while((row = mysql_fetch_row( result ))) {
-		uint8 id = atoi(row[1]);
+		uint16 id = atoi(row[1]);
 		m_raceToIDs[row[0]] = id;
 		m_raceToNames[id] = row[0];
 	}

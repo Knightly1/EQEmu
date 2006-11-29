@@ -91,9 +91,9 @@ protected:
 	void LoadClassCache();
 	bool m_raceCachesFilled;
 	bool m_classCachesFilled;
-	map<uint8, string> m_raceToNames;
+	map<uint16, string> m_raceToNames;
 	map<uint8, string> m_classToNames;
-	map<string, uint8> m_raceToIDs;
+	map<string, uint16> m_raceToIDs;
 	map<string, uint8> m_classToIDs;
 
 // Overrides

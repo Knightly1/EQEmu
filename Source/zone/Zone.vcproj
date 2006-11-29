@@ -38,7 +38,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
-				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
+				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib advapi32.lib shell32.lib"
 				OutputFile="../build/ZonePerl.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="TRUE"
@@ -101,7 +101,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
-				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib"
+				AdditionalDependencies="odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib odbc32.lib odbccp32.lib wsock32.lib zlib.lib mysqlclient.lib advapi32.lib shell32.lib"
 				OutputFile=".\../Build/Zone.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"

@@ -35,6 +35,7 @@ void CEQBuilderDlg::Reprocess() {
 void CEQBuilderDlg::ProcessData() {
 	pProgress->SetPos( 0 );
 	buildpos = 0;
+	m_raceErrors = 0;
 	
 	m_ids.Restart();
 
@@ -128,6 +129,10 @@ void CEQBuilderDlg::ProcessData() {
 	CString merchants;
 	merchants.Format( "%d/%d", msets, mcount );
 
+	CString raceerrors;
+	raceerrors.Format( "%d", m_raceErrors );
+	
+
 	sDoorStatic->SetWindowText( doors );
 	sTeleportStatic->SetWindowText( teleports );
 	sMobStatic->SetWindowText( mobs );
@@ -135,6 +140,7 @@ void CEQBuilderDlg::ProcessData() {
 	sSpawnStatic->SetWindowText( spawns );
 	sGridStatic->SetWindowText( grids );
 	sMerchantStatic->SetWindowText( merchants );
+	sRaceErrorStatic->SetWindowText( raceerrors );
 	
 	//zone view
 	vZoneView.ClearSpawnLists();
@@ -1300,6 +1306,10 @@ void CEQBuilderDlg::processNPCData(const cmob *mob) {
 			listShops->add(m);
 		}
 		listNPCs->add( new cnpc( mob->npc ) );
+
+		if(mob->npc->race == -1) {
+			m_raceErrors++;
+		}
 	} else {
 		//we found some other mob like this in our list allready
 		if(mob->npc->merchant != NULL) {

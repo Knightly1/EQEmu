@@ -77,6 +77,7 @@
 #define IDC_OCCUR_EDIT3                 1065
 #define IDC_PATH_MERGE_EDIT             1065
 #define IDC_PASSWORD                    1066
+#define IDC_RACE_ERRORS                 1066
 #define IDC_DATABASE                    1067
 #define IDC_GRIDID                      1072
 #define IDC_USESPECID                   1074

@@ -241,6 +241,7 @@ protected:
 	CStatic* sSpawnStatic;
 	CStatic* sGridStatic;
 	CStatic* sMerchantStatic;
+	CStatic* sRaceErrorStatic;
 	void ResetScores();
 	void CountMerchants(int &msets, int &mcount);
 
@@ -263,6 +264,7 @@ protected:
 	bool out_merchants;
 
 	// npcs
+	int m_raceErrors;
 	npc_list* listNPCs;
 	void getNPCData();
 	cnpc *isNPCDejaSauve( const cnpc* npc );	//do we allready have this npc?

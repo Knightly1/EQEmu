@@ -449,23 +449,24 @@ void Zone::LoadNewMerchantData(uint32 merchantid){
 
 void Zone::LoadMerchantData_result(MYSQL_RES* result) {
     MYSQL_ROW row;
-	std::list<MerchantList> merlist;
+	std::map<uint32,std::list<MerchantList> >::iterator cur;
 	int32 npcid = 0;
 	while((row = mysql_fetch_row(result))) {
-		if(npcid != atoul(row[0])){		
-			if(npcid > 0)
-				merchanttable[npcid] = merlist;
-			npcid = atoul(row[0]);
-			merlist.clear();
-		}
 		MerchantList ml;
-		ml.id = npcid;
+		ml.id = atoul(row[0]);
+		if(npcid != ml.id){
+			cur = merchanttable.find(ml.id);
+			if(cur == merchanttable.end()) {
+				std::list<MerchantList> empty;
+				merchanttable[ml.id] = empty;
+				cur = merchanttable.find(ml.id);
+			}
+			npcid = ml.id;
+		}
 		ml.slot = atoul(row[1]);
 		ml.item = atoul(row[2]);
-		merlist.push_back(ml);
+		cur->second.push_back(ml);
 	}
-	if(npcid > 0)
-		merchanttable[npcid] = merlist;
 	//mysql_free_result(result);
 //	LogFile->write(EQEMuLog::Status, "Finished Loading Merchant Lists...");
 }
@@ -483,7 +484,8 @@ void Zone::GetMerchantDataForZoneLoad(){
 		"from merchantlist ml, npc_types nt, spawnentry se, spawn2 s2 "
 		"where nt.merchant_id=ml.merchantid and nt.id=se.npcid "
 		"and se.spawngroupid=s2.spawngroupid and s2.zone='%s' "
-		"group by ml.merchantid,slot order by merchantid,slot asc", GetShortName()));
+		//"group by ml.merchantid,slot order by merchantid,slot asc"		//this made the query use a temp table/filesort (very slow)... so we handle unsorted data on our end.
+		, GetShortName()));
 	if (!(pQueuedMerchantsWorkID = dbasync->AddWork(&dbaw))) {
 		safe_delete(dbaw);
 		LogFile->write(EQEMuLog::Error,"dbasync->AddWork() failed adding merchant list query");

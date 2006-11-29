@@ -375,7 +375,8 @@ int command_init(void) {
 		command_add("flags","- displays the flags of you or your target",0,command_flags) ||
 		command_add("flagedit","- Edit zone flags on your target",100,command_flagedit) ||
 		command_add("mlog","- Manage log settings",250,command_mlog) ||
-		command_add("aggro","(range) [-v] - Display aggro information for all mobs 'range' distance from your target. -v is verbose faction info.",100,command_aggro) ||
+		command_add("aggro","(range) [-v] - Display aggro information for all mobs 'range' distance from your target. -v is verbose faction info.",80,command_aggro) ||
+		command_add("hatelist"," - Display hate list for target.", 80,command_hatelist) ||
 		command_add("npcemote","[message] - Make your NPC target emote a message.",150,command_npcemote) ||
 		command_add("serverrules","- Read this server's rules",0,command_serverrules) ||
 		command_add("acceptrules","[acceptrules] - Accept the EQEmu Agreement",0,command_acceptrules) ||
@@ -6694,6 +6695,18 @@ void command_guildlist(Client *c, const Seperator *sep)
 	else
 		c->Message(0,"Could not find reference id.");
 }
+
+void command_hatelist(Client *c, const Seperator *sep) {
+	Mob *target = c->GetTarget();
+	if(target == NULL) {
+		c->Message(0, "Error: you must have a target.");
+		return;
+	}
+	
+	c->Message(0, "Display hate list for %s..", target->GetName());
+	target->PrintHateListToClient(c);
+}
+
 
 void command_rules(Client *c, const Seperator *sep) {
 	//super-command for managing rules settings

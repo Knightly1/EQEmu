@@ -14,23 +14,23 @@ Class2=CEQBuilderDlg
 ResourceCount=10
 Resource1=IDR_MAINFRAME
 Class3=log
-Resource2=IDD_EQBUILDER_DIALOG
+Resource2=IDR_MENU1 (French (France))
 Resource3=IDD_LOADING_MAP
 Class4=DBConnect
 Resource4=IDD_BIGZONE
 Class5=SqlOptionsDlg
 Resource5=IDR_MENU1
 Resource6=IDD_SQLOPT
-Resource7=IDD_LOOT
-Resource8=IDD_DATABASE
+Resource7=IDD_FACTIONS
+Resource8=IDD_LOOT
 Class6=CZoneViewer
 Class7=Joe
-Resource9=IDD_FACTIONS
+Resource9=IDD_DATABASE
 Class8=BigZoneDlg
 Class9=FactionsDialog
 Class10=LootDialog
 Class11=LoadingMap
-Resource10=IDR_MENU1 (French (France))
+Resource10=IDD_EQBUILDER_DIALOG
 
 [CLS:CEQBuilderApp]
 Type=0
@@ -52,7 +52,7 @@ VirtualFilter=dWC
 [DLG:IDD_EQBUILDER_DIALOG]
 Type=1
 Class=CEQBuilderDlg
-ControlCount=81
+ControlCount=83
 Control1=IDC_ZONE_COMBO,combobox,1344341315
 Control2=IDC_LOADDB_BUTTON,button,1476460544
 Control3=IDC_RELOAD_MAP,button,1476460544
@@ -134,6 +134,8 @@ Control78=IDC_RESET_IDS,button,1342242816
 Control79=IDC_SAVE_IDS,button,1342242816
 Control80=IDC_LOAD_IDS,button,1342242816
 Control81=IDC_PROGRESS_TEXT,edit,1484849280
+Control82=IDC_STATIC,static,1342308353
+Control83=IDC_RACE_ERRORS,static,1342308353
 
 [CLS:log]
 Type=0
