@@ -2,6 +2,7 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
 =12/01/2006
+FatherNitwit: Fixing up spell set loading crash.
 KLS: More skill fixes
 KLS: Moved the old class_skills system over to the new skills system.
 
