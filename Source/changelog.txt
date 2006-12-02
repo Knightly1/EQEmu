@@ -1,6 +1,10 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+=12/01/2006
+KLS: More skill fixes
+KLS: Moved the old class_skills system over to the new skills system.
+
 =11/28/2006
 FatherNitwit: (bleh) Added #hatelist command.
 FatherNitwit: (bleh) Work on windows build issues.

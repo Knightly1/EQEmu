@@ -1697,6 +1697,9 @@ int16 Client::MaxSkill(SkillType skillid, int16 class_, int16 level) const {
 	return(database.GetSkillCap(class_, skillid, level));
 }
 
+int8 Client::SkillTrainLevel(SkillType skillid, int16 class_){
+	return(database.GetTrainLevel(class_, skillid, RuleI(Character, MaxLevel)));
+}
 
 void Client::SendLevelAppearance(){
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_LevelAppearance, sizeof(LevelAppearance_Struct));

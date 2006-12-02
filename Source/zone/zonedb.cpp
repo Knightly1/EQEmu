@@ -1249,36 +1249,6 @@ bool ZoneDatabase::SetZoneWeather(int32 zoneid, int8 w) {
 }
 //End weather functions.
 
-// FIXME this can go into shared mem
-int16 ZoneDatabase::GetTrainlevel(int16 eqclass, int8 skill_id) {
-	// Returns the level eqclass gets skill_id
-	char errbuf[MYSQL_ERRMSG_SIZE];
-	char *query = 0;
-	MYSQL_RES *result;
-	MYSQL_ROW row;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT skill_%i FROM class_skill WHERE class=%i", skill_id, eqclass), errbuf, &result))
-	{
-		safe_delete_array(query);
-		if (mysql_num_rows(result) == 1) {
-			row = mysql_fetch_row(result);
-			int8 tmp = atoi(row[0]);
-			mysql_free_result(result);
-			if (tmp > RuleI(Character, MaxLevel)) {
-				LogFile->write(EQEMuLog::Error, "Database Error invalid skill entry:%i for class:%i in class_skill Table", skill_id, eqclass);
-				tmp = SKILL_UNTRAINABLE;
-			}
-			return tmp;
-		}
-		mysql_free_result(result);
-	}
-	else {
-		LogFile->write(EQEMuLog::Error, "Database Warning could not find skill entry:%i for class:%i in class_skill Table", skill_id, eqclass);
-		safe_delete_array(query);
-	}
-	return SKILL_UNTRAINABLE; // Aka never
-}
-
-
 /*
  solar: this is never actually called, client_process starts an async query
  instead and uses GetAccountInfoForLogin_result to process it..

@@ -1273,11 +1273,12 @@ void Client::OPGMTraining(const EQApplicationPacket *app)
 
  	SkillType sk;
  	for (sk = _1H_BLUNT; sk <= HIGHEST_SKILL; sk = (SkillType)(sk+1)) {
-		gmtrain->skills[sk] = MaxSkill(sk);
 		if(sk == TINKERING && GetRace() != GNOME) {
 			gmtrain->skills[sk] = 0; //Non gnomes can't tinker!
 		} else {
-			gmtrain->skills[sk] = CanHaveSkill(sk);
+			gmtrain->skills[sk] = MaxSkill(sk, GetClass(), RuleI(Character, MaxLevel)); 
+			//this is the highest level that the trainer can train you to, this is enforced clientside so we can't just
+			//Set it to 1 with CanHaveSkill or you wont be able to train past 1.
 		}
 	}
 	
@@ -1374,9 +1375,8 @@ void Client::OPGMTrainSkill(const EQApplicationPacket *app)
 		int16 skilllevel = GetRawSkill(skill);
 		if(skilllevel == 0) {
 			//this is a new skill..
-			int16 t_level = database.GetTrainlevel(GetClass(), skill);
-			cout<<"t_level:"<<t_level<<endl;
-			if (t_level == SKILL_UNTRAINABLE || t_level == 0)
+			int16 t_level = SkillTrainLevel(skill, GetClass());
+			if (t_level == 0)
 			{
 				return;
 			}

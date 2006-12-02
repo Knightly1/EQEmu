@@ -89,6 +89,7 @@ bool LoadEMuShareMemDLL::Load() {
 		SkillCaps.GetSkillCap = (DLLFUNC_GetSkillCap) GetSym("GetSkillCap");
 		SkillCaps.SetSkillCap = (DLLFUNC_SetSkillCap) GetSym("SetSkillCap");
 		SkillCaps.ClearSkillCaps = (DLLFUNC_ClearSkillCaps) GetSym("ClearSkillCaps");
+		SkillCaps.GetTrainLevel = (DLLFUNC_GetTrainLevel) GetSym("GetTrainLevel");	
 		if(Items.GetItem == NULL) {
 			Unload();
 			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach Items.GetItem");
@@ -245,6 +246,12 @@ bool LoadEMuShareMemDLL::Load() {
 			return(false);
 		}
 		
+		if(SkillCaps.GetTrainLevel == NULL) {
+			Unload();
+			LogFile->write(EQEMuLog::Error, "LoadEMuShareMemDLL::Load() failed to attach SkillCaps.GetTrainLevel");
+			return(false);
+		}
+				
 		LogFile->write(EQEMuLog::Status, "%s loaded", EmuLibName);
 		loaded = true;
 		return true;
@@ -286,5 +293,6 @@ void LoadEMuShareMemDLL::ClearFunc() {
 	SkillCaps.GetSkillCap = NULL;
 	SkillCaps.SetSkillCap = NULL;
 	SkillCaps.ClearSkillCaps = NULL;
+	SkillCaps.GetTrainLevel = NULL;
 	loaded = false;
 }

@@ -146,11 +146,13 @@ typedef bool(*DLLFUNC_DLLLoadSkillCaps)(const CALLBACK_DBLoadSkillCaps, int32 op
 typedef uint16 (*DLLFUNC_GetSkillCap)(int8 Class_, int8 Skill, int8 Level);
 typedef void (*DLLFUNC_ClearSkillCaps)();
 typedef bool(*DLLFUNC_SetSkillCap)(int8 Class_, int8 Skill, int8 Level, uint16 cap);
+typedef uint8 (*DLLFUNC_GetTrainLevel)(int8 Class_, int8 Skill, int8 Level);
 struct SkillCapDLLFunc_Struct {
 	DLLFUNC_DLLLoadSkillCaps LoadSkillCaps;
 	DLLFUNC_GetSkillCap GetSkillCap;
 	DLLFUNC_SetSkillCap SetSkillCap;
 	DLLFUNC_ClearSkillCaps ClearSkillCaps;
+	DLLFUNC_GetTrainLevel GetTrainLevel;
 };
 
 

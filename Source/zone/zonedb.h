@@ -53,8 +53,6 @@ struct FactionMods;
 struct FactionValue;
 struct LootTable_Struct;
 
-static const uint8 SKILL_UNTRAINABLE = 150; /* arbitrary */
-
 
 class ZoneDatabase : public SharedDatabase {
 public:
@@ -200,7 +198,6 @@ public:
 	int32	NPCSpawnDB(int8 command, const char* zone, Client *c, NPC* spawn = 0, int32 extra = 0); // 0 = Create 1 = Add; 2 = Update; 3 = Remove; 4 = Delete
 	bool	SetSpecialAttkFlag(int8 id, const char* flag);
 	bool	GetPetEntry(const char *pet_type, PetRecord *into);
-	int16	GetTrainlevel(int16 eqclass, int8 skill_id);
 	void	AddLootTableToNPC(NPC* npc,int32 loottable_id, ItemList* itemlist, int32* copper, int32* silver, int32* gold, int32* plat);
 	void	AddLootDropToNPC(NPC* npc,int32 lootdrop_id, ItemList* itemlist);
 	int32	GetMaxNPCSpellsID();

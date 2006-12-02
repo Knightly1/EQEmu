@@ -46,6 +46,22 @@ DLLFUNC bool SetSkillCap(int8 Class_, int8 Skill, int8 Level, uint16 cap) {
 	return true;
 }
 
+DLLFUNC uint8 GetTrainLevel(int8 Class_, int8 Skill, int8 Level){
+	if (MMFSkillCapsData == 0 || (!SkillCapsMMF.IsLoaded()))
+		return 0;
+	if (Class_ >= MMFSkillCapsData->ClassCount || Skill >= MMFSkillCapsData->SkillCount || Level >= MMFSkillCapsData->LevelCount)
+		return(0);
+
+	uint32 index = (((Class_ * MMFSkillCapsData->SkillCount) + Skill) * MMFSkillCapsData->LevelCount);
+	
+	for(int x = 0; x < Level; x++){
+		if(MMFSkillCapsData->caps[index + x]){
+			return (x);
+		}
+	}
+	return(0);
+}
+
 DLLFUNC void ClearSkillCaps() {
 	if (!MMFSkillCapsData_Writable)
 		return;

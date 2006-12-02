@@ -476,7 +476,8 @@ public:
 
 	int16	MaxSkill(SkillType skillid, int16 class_, int16 level) const;
     inline	int16	MaxSkill(SkillType skillid) const { return MaxSkill(skillid, GetClass(), GetLevel()); }
-    // Util functions for MaxSkill
+    int8	SkillTrainLevel(SkillType skillid, int16 class_);
+	// Util functions for MaxSkill
 /*
 	int16	MaxSkill_weapon(int16 skillid, int16 class_, int16 level) const;
     int16	MaxSkill_offensive(int16 skillid, int16 class_, int16 level) const;

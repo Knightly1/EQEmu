@@ -70,6 +70,7 @@ public:
 	const Item_Struct*		GetItem(uint32 id);
 	const NPCFactionList*	GetNPCFactionEntry(uint32 id);
 	int16	GetSkillCap(int8 Class_, SkillType Skill, int8 Level);
+	int8	GetTrainLevel(int8 Class_, SkillType Skill, int8 Level);
 //	const Door*				GetDoor(int8 door_id, const char* zone_name);
 //	const Door*				GetDoorDBID(uint32 db_id);
 	const	LootTable_Struct* GetLootTable(int32 loottable_id);
