@@ -40,6 +40,7 @@ using namespace std;
 #include "../common/bodytypes.h"
 #include "spawngroup.h"
 #include "../common/MiscFunctions.h"
+#include "../common/rulesys.h"
 
 #ifdef GUILDWARS
 #include "../GuildWars/GuildWars.h"
@@ -107,7 +108,8 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	knightattack_timer(1000),
 	assist_timer(AIassistcheck_delay),
 	sendhpupdate_timer(1000),
-	taunt_timer(TauntReuseTime * 1000)
+	taunt_timer(TauntReuseTime * 1000),
+	global_position_update_timer(RuleI(Zone, NPCGlobalPositionUpdateInterval))
 {
 	//What is the point of this, since the names get mangled..
 	Mob* mob = entity_list.GetMob(name);
@@ -510,7 +512,12 @@ bool NPC::Process()
 				combat_event = false;
 			}
 		}
-	
+
+		//60 seconds, or whatever the rule is set to has passed, send this position to everyone to avoid ghosting
+		if(global_position_update_timer.Check()){
+			SendAllPosition();
+		}
+		
 		BuffProcess();
 		int32 bonus = 0;
 		

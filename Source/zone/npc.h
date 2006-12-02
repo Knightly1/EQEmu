@@ -238,6 +238,7 @@ protected:
     Timer	classattack_timer;
 	Timer	knightattack_timer;
     Timer	assist_timer;		//ask for help from nearby mobs
+	Timer	global_position_update_timer;
 
 	bool	attack_event;	//true if we have fired an EVENT_ATTACK and our attacked timer has not gone off
 	bool	combat_event;	//true if we have fired an EVENT_COMBAT and our combat activity timer has not gone off
