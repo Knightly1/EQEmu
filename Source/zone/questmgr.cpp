@@ -907,8 +907,8 @@ void QuestManager::setglobal(const char *varname, const char *newvalue, int opti
 
 	// clean up expired vars and get rid of the one we're going to set if there
 	database.RunQuery(query, MakeAnyLenString(&query, 
-		"DELETE FROM quest_globals WHERE expdate < %i || (name='%s' && npcid=%i && charid=%i && zoneid=%i))"
-		,Timer::GetTimeSeconds(),varname,qgNpcid,qgCharid,qgZoneid), errbuf);
+		"DELETE FROM quest_globals WHERE expdate < UNIX_TIMESTAMP() || (name='%s' && npcid=%i && charid=%i && zoneid=%i))"
+		,varname,qgNpcid,qgCharid,qgZoneid), errbuf);
 	safe_delete_array(query);
 	
 	//NOTE: this should be escaping the contents of arglist
@@ -933,8 +933,8 @@ void QuestManager::targlobal(const char *varname, const char *value, const char 
 	//MYSQL_ROW row;
 	// clean up expired vars and get rid of the one we're going to set if there
 	database.RunQuery(query, MakeAnyLenString(&query, 
-		"DELETE FROM quest_globals WHERE expdate < %i || (name='%s' && npcid=%i && charid=%i && zoneid=%i))"
-		,Timer::GetTimeSeconds(),varname,qgNpcid,qgCharid,qgZoneid), errbuf);
+		"DELETE FROM quest_globals WHERE expdate < UNIX_TIMESTAMP() || (name='%s' && npcid=%i && charid=%i && zoneid=%i))"
+		,varname,qgNpcid,qgCharid,qgZoneid), errbuf);
 	safe_delete_array(query);
 	
 	if (!database.RunQuery(query, MakeAnyLenString(&query, 

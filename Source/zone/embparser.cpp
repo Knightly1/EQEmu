@@ -215,19 +215,21 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 //		char tmpname[64];
 
 		database.RunQuery(query, MakeAnyLenString(&query, 
-		  "SELECT name,value,expdate FROM quest_globals WHERE (npcid=%i || npcid=0) && (charid=%i || charid=0) && (zoneid=%i || zoneid=0)", 
+		  "SELECT name,value,IF(expdate<UNIX_TIMESTAMP(),1,0) "
+		  "FROM quest_globals "
+		  "WHERE (npcid=%i || npcid=0) && (charid=%i || charid=0) && (zoneid=%i || zoneid=0)", 
 		     npcmob->GetNPCTypeID(),charid,zone->GetZoneID()), errbuf, &result);
 		bool run_delete = false;
-		uint32 now = Timer::GetTimeSeconds();
 		if (result)
 		{
 			while ((row = mysql_fetch_row(result)))
 			{
-//				printf("$%s = %s\n",row[0],row[1]);
-				uint32 expdate = atoul(row[2]);
-				if(expdate > now)
+				uint32 expired = atoul(row[2]);
+				if(expired != 0) {
 					run_delete = true;
-				ExportVar(packagename.c_str(), row[0], row[1]);
+				} else {
+					ExportVar(packagename.c_str(), row[0], row[1]);
+				}
 			}
 			mysql_free_result(result);		
 		}
@@ -235,8 +237,8 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 		
 		if(run_delete) {
 			database.RunQuery(query, MakeAnyLenString(&query, 
-		  "DELETE FROM quest_globals WHERE expdate < %lu", 
-		     now), errbuf);
+		  "DELETE FROM quest_globals WHERE expdate < UNIX_TIMESTAMP()" 
+		     ), errbuf);
 			safe_delete_array(query);
 		}
 	}
