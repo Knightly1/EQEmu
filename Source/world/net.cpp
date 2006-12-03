@@ -72,11 +72,13 @@ using namespace std;
 #include "../common/EMuShareMem.h"
 extern LoadEMuShareMemDLL EMuShareMemDLL;
 
+/*
+Zone only right now.
 #ifdef EQPROFILE
 #ifdef COMMON_PROFILE
 CommonProfiler _cp;
 #endif
-#endif
+#endif*/
 
 #include "zoneserver.h"
 #include "console.h"

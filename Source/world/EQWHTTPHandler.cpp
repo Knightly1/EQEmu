@@ -17,7 +17,7 @@
 */
 #include "../common/debug.h"
 #include "EQWHTTPHandler.h"
-#include "../common/SocketLib/base64.h"
+#include "../common/SocketLib/Base64.h"
 #include "EQWParser.h"
 #include "EQW.h"
 #include "HTTPRequest.h"

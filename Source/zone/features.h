@@ -334,13 +334,14 @@ Developer configuration
 
 */
 
+//#define EQPROFILE
 #ifdef EQPROFILE
 //Enable the zone profiler
 #define ZONE_PROFILE
 
 #define COMMON_PROFILE
 
-//#define PROFILE_DUMP_TIME 3*60
+#define PROFILE_DUMP_TIME 3*60
 #endif	//EQPROFILE
 
 
