@@ -1,6 +1,12 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==12/09/2006
+KLS: Stun immune should apply to spin effects such as those found in One Hundred Blows.
+KLS: Some cleanups in special attack and resist code.
+KLS: Added a define SKILL_MAX_LEVEL in features.h that lets you define how high level you can get skills from the database, defaults to 75.
+KLS: Damage shields wont proc on yourself any longer to avoid some wierdness. They only ever procced on yourself under special conditions so it shouldn't be noticable.
+
 ==12/03/2006
 FatherNitwit: Fixed a few issues related to quest global expiration.
 

@@ -2633,8 +2633,7 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 float Mob::ResistSpell(int8 resist_type, int16 spell_id, Mob *caster)
 {
 	int caster_level, target_level, resist;
-	float roll, effectiveness_index;
-	float partialchance, fullchance, resistchance;
+	float roll, fullchance, resistchance;
 	
 	if(spell_id != 0 && !IsValidSpell(spell_id))
 	{
@@ -2803,8 +2802,8 @@ float Mob::ResistSpell(int8 resist_type, int16 spell_id, Mob *caster)
 	{
 		if (roll <= fullchance)
  		{
-			return(0);
 			mlog(SPELLS__RESISTS, "Spell %d: Roll of %.2f <= fullchance %.2f, fully resisted", spell_id, roll, fullchance);
+			return(0);
 		}
 		else
 		{

@@ -870,9 +870,17 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				snprintf(effect_desc, _EDLEN, "Spin: %d", effect_value);
 #endif
 				// solar: the spinning is handled by the client
-				if(buffslot >= 0)
-					Stun(buffs[buffslot].ticsremaining * 6000);
-				break;
+				if(SpecAttacks[UNSTUNABLE] && (IsStunSpell(spell_id) || IsEffectInSpell(spell_id, SE_SpinTarget)))
+				{
+					caster->Message_StringID(MT_Shout, IMMUNE_STUN);
+				}
+				else
+				{
+					// solar: the spinning is handled by the client
+					if(buffslot >= 0)
+						Stun(buffs[buffslot].ticsremaining * 6000);
+					break;
+				}
 			}
 
 			case SE_EyeOfZomm:

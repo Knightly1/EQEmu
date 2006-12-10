@@ -168,6 +168,7 @@ Zone extensions and features
 //The highest you can #setskill / #setallskill
 #define HIGHEST_CAN_SET_SKILL 400
 
+#define SKILL_MAX_LEVEL 75
 /*
 
 Zone Numerical configuration

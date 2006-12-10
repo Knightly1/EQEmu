@@ -28,33 +28,36 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemulator.net)
 #include "../common/rulesys.h"
 
 int Mob::GetKickDamage() const {
-	float multiple=(GetLevel()/5);
-	multiple++;
-	float dmg=(
+	int multiple=(GetLevel()*100/5);
+	multiple += 100;
+	int dmg=(
 			    (
-				 (GetSkill(KICK) + GetSTR() + GetLevel()) / 90
+				 (GetSkill(KICK) + GetSTR() + GetLevel())*100 / 90
 				) * multiple
 			  )
-			  + 6.0;	//Set a base of 6 damage, 1 seemed too low at the sub level 30 level.
+			  + 600;	//Set a base of 6 damage, 1 seemed too low at the sub level 30 level.
 	if(GetClass() == WARRIOR || GetClass() == WARRIORGM
 	 ||GetClass() == BERSERKER || GetClass() == BERSERKERGM) {
-		dmg*=1.2f;//small increase for warriors
+		dmg*=12/10;//small increase for warriors
 	}
-	return(int(dmg));
+	
+	dmg /= 100;
+	return(dmg);
 }
 
 int Mob::GetBashDamage() const {
-	float multiple=(GetLevel()/5);
-	multiple++;
+	int multiple=(GetLevel()/5);
+	multiple += 100;
 
 	//this is complete shite
-	float dmg=(
+	int dmg=(
 			    (
-				 (GetSkill(BASH) + GetSTR() + GetLevel()/2) / 100
+				 ((GetSkill(BASH) + GetSTR())*100 + GetLevel()*100/2) / 100
 				) * multiple
 			  )
-			  + 6.0;	//Set a base of 6 damage, 1 seemed too low at the sub level 30 level.
-	return(int(dmg));
+			  + 600;	//Set a base of 6 damage, 1 seemed too low at the sub level 30 level.
+	dmg /= 100;		  
+	return(dmg);
 }
 
 void Mob::DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage) {
@@ -900,7 +903,7 @@ void NPC::DoClassAttacks(Mob *target) {
 		}
 		case WARRIOR: case WARRIORGM:{
 			if(level >= RuleI(Combat, NPCBashKickLevel)){
-				if(!target->IsCasting())
+				if(MakeRandomInt(0, 100) > 25) //tested on live, warrior mobs both kick and bash, kick about 75% of the time, casting doesn't seem to make a difference.
 				{
 					DoAnim(animKick);
 					sint32 dmg = 0;

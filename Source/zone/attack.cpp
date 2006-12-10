@@ -1543,6 +1543,9 @@ void Mob::DamageShield(Mob* attacker) {
 	int DS = spellbonuses.DamageShield - itembonuses.DamageShield;
 	if(DS == 0)
 		return;
+		
+	if(this == attacker) //I was crashing when I hit myself with melee with a DS on, not sure why but we shouldn't be reflecting damage onto ourselves anyway really.
+		return;
 	
 	mlog(COMBAT__HITS, "Applying Damage Shield of value %d to %s", DS, attacker->GetName());
 	
