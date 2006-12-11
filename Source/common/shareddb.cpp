@@ -1313,7 +1313,7 @@ bool SharedDatabase::DBLoadSkillCaps() {
 uint16 SharedDatabase::GetSkillCap(int8 Class_, SkillType Skill, int8 Level) {
 	if(Class_ == 0)
 		return(0);
-	if(level > SKILL_MAX_LEVEL){
+	if(Level > SKILL_MAX_LEVEL){
 		return EMuShareMemDLL.SkillCaps.GetSkillCap(Class_-1, Skill, SKILL_MAX_LEVEL);
 	}
 	else{
@@ -1324,7 +1324,7 @@ uint16 SharedDatabase::GetSkillCap(int8 Class_, SkillType Skill, int8 Level) {
 uint8 SharedDatabase::GetTrainLevel(int8 Class_, SkillType Skill, int8 Level) {
 	if(Class_ == 0)
 		return(0);
-	if(level > SKILL_MAX_LEVEL){
+	if(Level > SKILL_MAX_LEVEL){
 		return EMuShareMemDLL.SkillCaps.GetTrainLevel(Class_-1, Skill, SKILL_MAX_LEVEL);
 	}
 	else
