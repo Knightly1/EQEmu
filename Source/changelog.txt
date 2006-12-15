@@ -3,6 +3,7 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 
 ==12/15/2006
 FatherNitwit: Fix for possible crash when NPCs are immune to damage.
+KLS: Small fix for newly created player corpses, hopefully they will no longer act like they are npc corpses.
 
 ==12/09/2006
 KLS: Stun immune should apply to spin effects such as those found in One Hundred Blows.

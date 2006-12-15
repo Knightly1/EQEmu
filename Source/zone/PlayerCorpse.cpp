@@ -219,6 +219,9 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 	platinum		= 0;
 	strcpy(orgname, pp->name);
 	strcpy(name, pp->name);
+	
+	//become_npc was not being initialized which led to some pretty funky things with newly created corpses
+	become_npc = false;
 
 	SetPKItem(0);
 
@@ -1206,6 +1209,3 @@ void Corpse::CastRezz(int16 spellid, Mob* Caster){
 	safe_delete(outapp);
 }
 */
-
-
-

@@ -90,7 +90,6 @@ public:
 	void Rezzed(bool in_rez) { rez = in_rez; }
 
 	char		orgname[64];
-	bool IsRezzed() const { return isrezzed; }
 	int32 GetEquipment(int8 material_slot) const;	// returns item id
 	uint32 GetEquipmentColor(int8 material_slot) const;
 protected:
@@ -112,7 +111,6 @@ private:
 	int32		rezzexp;
 	bool		rez;
 	bool		become_npc;
-	bool		isrezzed;
 	int			looters[MAX_LOOTERS]; // People allowed to loot the corpse, character id
 	Timer		corpse_decay_timer;
 	Timer		corpse_delay_timer;

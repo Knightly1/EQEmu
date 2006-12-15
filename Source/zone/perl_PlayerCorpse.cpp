@@ -776,7 +776,7 @@ XS(XS_Corpse_IsRezzed)
 		if(THIS == NULL)
 			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 
-		RETVAL = THIS->IsRezzed();
+		RETVAL = THIS->Rezzed();
 		ST(0) = boolSV(RETVAL);
 		sv_2mortal(ST(0));
 	}
