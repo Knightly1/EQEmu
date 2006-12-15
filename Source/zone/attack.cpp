@@ -1226,7 +1226,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		}
 	}
 	
-	SkillType skillinuse;
+	SkillType skillinuse = HAND_TO_HAND;
 	//basically "if not immune"
 	if(damage >= 0) {
 		
@@ -1716,7 +1716,7 @@ int Mob::GetMonkHandToHandDelay(void)
 }
 
 
-sint16 Mob::ReduceMagicalDamage(sint16 damage) {
+sint32 Mob::ReduceMagicalDamage(sint32 damage) {
 	if(damage < 0)
 		return(damage);
 	
@@ -1741,7 +1741,7 @@ sint16 Mob::ReduceMagicalDamage(sint16 damage) {
 	return damage;
 }
 
-sint16 Mob::ReduceDamage(sint16 damage){
+sint32 Mob::ReduceDamage(sint32 damage){
 	if(damage < 0)
 		return(damage);
 	

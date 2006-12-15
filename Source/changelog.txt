@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==12/15/2006
+FatherNitwit: Fix for possible crash when NPCs are immune to damage.
+
 ==12/09/2006
 KLS: Stun immune should apply to spin effects such as those found in One Hundred Blows.
 KLS: Some cleanups in special attack and resist code.

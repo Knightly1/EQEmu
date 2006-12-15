@@ -999,13 +999,13 @@ void CEQBuilderDlg::splitSpawnList(const mob_list *list, int ci, int compcount, 
 		cleanMobMovement(mob);
 		
 		//save fixed spawns for the clustering algorithm
-		if(type == logRaid || mob->waypoints == NULL || !mob->roamed) {
+		if(type == logRaid || mob->waypoints == NULL || !mob->roamed || mob->killed) {
 			//see if there is allready a roaming spawn here which contains this NPC
 			cspawn *s = getSpawnPointContaining(gridSpawns, mob, diff);
 			if(s == NULL) {
 				//add them to the fixed list and be done with them.
 				//the clustering algorithm will take care of duplicates
-				fixedMobs->add(new cmob(mob));
+				fixedMobs->add(mob);
 			}
 			continue;
 		}

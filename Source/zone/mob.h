@@ -619,8 +619,8 @@ bool logpos;
 	inline int16	GetRune() const { return rune; }
 	inline void	SetRune(int16 in_rune) { rune = in_rune; }
 	
-	sint16	ReduceDamage(sint16 damage);
-	sint16  ReduceMagicalDamage(sint16 damage);
+	sint32	ReduceDamage(sint32 damage);
+	sint32  ReduceMagicalDamage(sint32 damage);
 
 	
    	inline int16 GetMagicRune() const { return magicrune; }
