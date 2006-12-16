@@ -32,7 +32,7 @@ int Mob::GetKickDamage() const {
 	multiple += 100;
 	int dmg=(
 			    (
-				 (GetSkill(KICK) + GetSTR() + GetLevel())*100 / 90
+				 (GetSkill(KICK) + GetSTR() + GetLevel())*100 / 9000
 				) * multiple
 			  )
 			  + 600;	//Set a base of 6 damage, 1 seemed too low at the sub level 30 level.
@@ -46,13 +46,13 @@ int Mob::GetKickDamage() const {
 }
 
 int Mob::GetBashDamage() const {
-	int multiple=(GetLevel()/5);
+	int multiple=(GetLevel()*100/5);
 	multiple += 100;
 
 	//this is complete shite
 	int dmg=(
 			    (
-				 ((GetSkill(BASH) + GetSTR())*100 + GetLevel()*100/2) / 100
+				 ((GetSkill(BASH) + GetSTR())*100 + GetLevel()*100/2) / 10000
 				) * multiple
 			  )
 			  + 600;	//Set a base of 6 damage, 1 seemed too low at the sub level 30 level.

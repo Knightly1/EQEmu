@@ -1256,7 +1256,6 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 	_ZP(Mob_SpellFinished);
 	
 	//EQApplicationPacket *outapp = NULL;
-	int recourse_spell=0;
 	Mob *ae_center = NULL;
 	
 	if(!IsValidSpell(spell_id))
@@ -1429,38 +1428,6 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 		CastToClient()->GetPTimers().Start(pTimerSpellStart + spell_id, recast);
 	}
 	
-	// Recourse means there is a spell linked to that spell in that the recourse spell will
-	// be automatically casted on the casters group or the caster only depending on Targettype
-	// solar: this is for things like dark empathy, shadow vortex
-	recourse_spell = spells[spell_id].RecourseLink;
-	if(recourse_spell != 0)
-	{
-		if(spells[recourse_spell].targettype == ST_Group) {
-			if(IsGrouped()) {
-				Group *g = entity_list.GetGroupByMob(this);;
-				g->CastGroupSpell(this, recourse_spell);
-			} else {
-				SpellOnTarget(recourse_spell, this);
-#ifdef GROUP_BUFF_PETS
-				if (HasPet())
-					SpellOnTarget(recourse_spell, GetPet());
-#endif
-			}
-		} else if(spells[recourse_spell].targettype == ST_GroupTeleport) {
-		// EverHood - Necro Epic 2 Pet Proc Recourse
-			if(HasOwner()) {
-				if(GetOwner()->IsGrouped()) {
-					Group *g = entity_list.GetGroupByMob(this->GetOwner());;
-					g->CastGroupSpell(this, recourse_spell);
-				} else {
-					SpellOnTarget(recourse_spell, this->GetOwner());
-				}
-			}
-		} else {
-			SpellOnTarget(recourse_spell, this);
-		}
-	}
-
 	if(IsNPC())
 		CastToNPC()->AI_Event_SpellCastFinished(true, slot);
 
@@ -2262,8 +2229,9 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 					(
 						IsGroupOnlySpell(spell_id) &&
 						!(
-							entity_list.GetGroupByMob(this) &&
-							entity_list.GetGroupByMob(this)->IsGroupMember(spelltar)
+							(entity_list.GetGroupByMob(this) &&
+							entity_list.GetGroupByMob(this)->IsGroupMember(spelltar)) ||
+							(spelltar == GetPet()) //should be able to cast grp spells on self and pet despite grped status.
 						)
 					)
 				)
@@ -2320,6 +2288,49 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	{
 		spell_effectiveness = 100;
 	}
+
+		// Recourse means there is a spell linked to that spell in that the recourse spell will
+		// be automatically casted on the casters group or the caster only depending on Targettype
+		// solar: this is for things like dark empathy, shadow vortex
+		int recourse_spell=0;
+		recourse_spell = spells[spell_id].RecourseLink;
+		if(recourse_spell)
+		{
+			if(spells[recourse_spell].targettype == ST_Group || spells[recourse_spell].targettype == ST_GroupTeleport)
+			{
+				if(IsGrouped())
+				{
+					Group *g = entity_list.GetGroupByMob(this);
+					g->CastGroupSpell(this, recourse_spell);
+				}
+				else if(HasOwner())
+				{
+					if(GetOwner()->IsGrouped())
+					{
+						Group *g = entity_list.GetGroupByMob(GetOwner());
+						g->CastGroupSpell(this, recourse_spell);
+					}
+					else
+					{
+						SpellOnTarget(recourse_spell, GetOwner());
+						SpellOnTarget(recourse_spell, this);
+					}
+				}
+				else
+				{
+					SpellOnTarget(recourse_spell, this);
+#ifdef GROUP_BUFF_PETS
+					if (HasPet())
+						SpellOnTarget(recourse_spell, GetPet());
+#endif
+				}	
+
+			}
+			else
+			{
+				SpellOnTarget(recourse_spell, this);
+			}
+		}
 
 
 	if(spell_id == 982)	// Cazic Touch, hehe =P
