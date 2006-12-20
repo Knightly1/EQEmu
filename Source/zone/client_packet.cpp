@@ -6302,7 +6302,13 @@ void Client::CompleteConnect()
 					BuffFadeBySpellID(buffs[j1].spellid);
 					//SetRune(buffs[j1].durationformula);
 					//Somehow we need to toss the remaining rune value over..
+					break;
 				}
+				case SE_Silence:
+					{
+						Silence(true);
+						break;						
+					}				
 				case SE_DivineAura:
 					{
 					invulnerable = true;
@@ -6324,6 +6330,11 @@ void Client::CompleteConnect()
 					invisible_undead = true;
 					break;
 					} 
+				case SE_InvisVsAnimals: 
+					{
+					invisible_animals = true;
+					break;
+					}					
 			}
 		}
 	}

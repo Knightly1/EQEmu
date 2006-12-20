@@ -121,8 +121,9 @@ void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
 				this->Message_StringID(15,GAIN_XP);
 		}
 	}
-	else
+	else if((set_exp + set_aaxp) < (m_pp.exp+m_pp.expAA)){ //only loss message if you lose exp, no message if you gained/lost nothing.
 		Message(15, "You have lost experience.");
+	}
 	
 	//check_level represents the level we should be when we have
 	//this ammount of exp (once these loops complete)
@@ -203,6 +204,15 @@ void Client::SetEXP(int32 set_exp, int32 set_aaxp, bool isrezzexp) {
 			Message(15, "Welcome to level %i!", check_level);
 		SetLevel(check_level);
 	}
+	
+	//If were at max level then stop gaining experience if we make it to the cap
+	if(GetLevel() == RuleI(Character, MaxLevel)){
+		int32 expneeded = GetEXPForLevel(RuleI(Character, MaxLevel) + 1);
+		if(set_exp > expneeded)
+		{
+			set_exp =  expneeded;
+		}
+	}	
 	
 	//set the client's EXP and AAEXP
 	m_pp.exp = set_exp;
@@ -410,8 +420,11 @@ void Group::SplitExp(uint32 exp, Mob* other) {
 //			if( cmember->GetLevelCon( other->GetLevel() ) != CON_GREEN ) // If Mob doesn't con green
 //			{ 
 				// add exp + exp cap 
-				sint16 diff = cmember->GetLevel() - maxlevel; 
-				if (diff >= -8) { /*Instead of person who killed the mob, the person who has the highest level in the group*/ 
+				sint16 diff = cmember->GetLevel() - maxlevel;
+				sint16 maxdiff = -(cmember->GetLevel()*15/10 - cmember->GetLevel());
+					if(maxdiff > -5)
+						maxdiff = -5;
+				if (diff >= (maxdiff)) { /*Instead of person who killed the mob, the person who has the highest level in the group*/ 				
 					uint32 tmp = (cmember->GetLevel()+3) * (cmember->GetLevel()+3) * 75 * 35 / 10;
 					uint32 tmp2 = groupexp / membercount;
 					cmember->AddEXP( tmp < tmp2 ? tmp : tmp2, conlevel ); 

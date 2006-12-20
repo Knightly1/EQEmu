@@ -1,6 +1,21 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==12/19/2006
+KLS: Fixed up Illusions a bit
+KLS: Fixed a bug where the base2[0] field of a spell was not getting loaded correctly
+KLS: Implemented Sacrifice Spells
+KLS: Implemented Call of the Hero Spells
+KLS: Implemented Silence spells
+KLS: Implemented Invis Vs Animal Spells
+KLS: Implemented Illusion Copy Spells
+KLS: Implemented Dispel Detrimental Spells
+KLS: Dispel Magic spells will skip spells with poison or disease counters.
+KLS: Spells that imbue items(summon items with reagents, sacrifice) will not be affected by reagen conservation focus.
+KLS: If a player is at max level the experience he has will cap at the max experience to gain the next level instead of being able to gain experience past his visible experience bar.
+KLS: The max level you can group with and gain experience is now YourLevel*1.5 instead of YourLevel+8.
+KLS: You'll only get an experience loss message if you actually lose exp now, no more You lost experience messages when you take a 0% rez.
+
 ==12/15/2006
 FatherNitwit: Fix for possible crash when NPCs are immune to damage.
 KLS: Small fix for newly created player corpses, hopefully they will no longer act like they are npc corpses.

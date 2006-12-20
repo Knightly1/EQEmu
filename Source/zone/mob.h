@@ -585,9 +585,10 @@ bool logpos;
  	void    SendSpellBarDisable();
  	void    SendSpellBarEnable(int16 spellid);
  	virtual void    Stun(int duration);
+	inline void Silence(bool newval) { silenced = newval; }
 	
 	bool	invulnerable;
-	bool	invisible, invisible_undead, sneaking;
+	bool	invisible, invisible_undead, invisible_animals, sneaking;
 	bool	see_invis, see_invis_undead;   // Mongrel: See Invis and See Invis vs. Undead 
 	bool	qglobal;		// SCORPIOUS2K - qglobal flag
 
@@ -614,6 +615,7 @@ bool logpos;
 	void	Mesmerize();
 	inline bool	IsMezzed() const { return mezzed; }
 	inline bool	IsStunned() const { return stunned; }
+	inline bool	IsSilenced() const { return silenced; }
 	inline int16	GetErrorNumber() const {return adverrorinfo;}
 	
 	inline int16	GetRune() const { return rune; }
@@ -908,6 +910,7 @@ protected:
 	bool	stunned;
 	bool	charmed;	//this isnt fully implemented yet
 	bool	rooted;
+	bool	silenced;
 //	Timer mezzed_timer;
 	Timer  stunned_timer;
 	Timer	bardsong_timer;

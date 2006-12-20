@@ -25,6 +25,7 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemu.org)
 #include "../common/skills.h"
 #include "../common/bodytypes.h"
 #include "../common/classes.h"
+#include "../common/rulesys.h"
 #include <math.h>
 #include <assert.h>
 #ifndef WIN32
@@ -342,7 +343,14 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				break;
 			}
 			
-			//todo: SE_InvisVsAnimals
+			case SE_InvisVsAnimals:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Invisibility to Animals");
+#endif
+				invisible_animals = true;		// Mongrel: We're now invis to undead
+				break;
+			}
 			
 			case SE_InvisVsUndead:
 			{
@@ -533,6 +541,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				int slot;
 				for(slot = 0; slot < BUFF_COUNT; slot++)
 				{
+					if(buffs[slot].diseasecounters || buffs[slot].poisoncounters) //if we have poison or disease counters then we can't remove this with dispel
+						continue;
+
 					if
 					(
 						buffs[slot].spellid != SPELL_UNKNOWN &&
@@ -552,9 +563,24 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Dispel Detrimental: %d", effect_value);
 #endif
-				// solar: TODO implement this
-				const char *msg = "Dispel Detrimental is not implemented.";
-				if(caster) caster->Message(13, msg);
+				int slot;
+				for(slot = 0; slot < BUFF_COUNT; slot++)
+				{
+					if(buffs[slot].diseasecounters || buffs[slot].poisoncounters)
+						continue;
+
+					if
+					(
+						buffs[slot].spellid != SPELL_UNKNOWN &&
+						buffs[slot].durationformula != DF_Permanent &&
+				    	buffs[slot].casterlevel <= (caster_level + effect_value) &&
+						IsDetrimentalSpell(buffs[slot].spellid)
+					)
+				    {
+						BuffFadeBySlot(slot);
+						slot = BUFF_COUNT;
+					}
+				}
 				break;
 			}
 
@@ -646,7 +672,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Summon Pet: %s", spell.teleport_zone);
 #endif
-				if(GetPet())
+				if(GetPet() || GetFamiliarID())
 				{
 					Message_StringID(MT_Shout, ONLY_ONE_PET);
 				}
@@ -662,7 +688,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Summon Familiar: %s", spell.teleport_zone);
 #endif
-				if (GetFamiliarID())
+				if (GetFamiliarID() || GetPet())
 				{
 					Message_StringID(MT_Shout, ONLY_ONE_PET);
 				}
@@ -779,25 +805,36 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Illusion: race %d", effect_value);
 #endif
-				// solar: TODO fix up SendIllusionPacket
-
-				/*int16 tex = 0;
-				if (spell_id == 599||spell_id == 2798||spell_id == 2799||spell_id == 2800)
-					tex = 2;// water
-				else if (spell_id == 598||spell_id == 2795||spell_id == 2796||spell_id == 2797)
-					tex = 1;// fire
-				else if (spell_id == 584||spell_id == 2792||spell_id == 2793||spell_id == 2794)
-					tex = 0; //earth
-				else if (spell_id == 597||spell_id == 2789|| spell_id == 2790|| spell_id == 2791)
-					tex = 3;// air
-				*/
-
 				SendIllusionPacket
 				(
 					spell.base[i],
 					Mob::GetDefaultGender(spell.base[i], GetGender()),
 					spell.base2[i]
 				);
+				if(spell.base[i] == OGRE){
+					SendAppearancePacket(AT_Size, 9);
+				}
+				else if(spell.base[i] == TROLL){
+					SendAppearancePacket(AT_Size, 8);
+				}
+				else if(spell.base[i] == VAHSHIR || spell.base[i] == FROGLOK || spell.base[i] == BARBARIAN){
+					SendAppearancePacket(AT_Size, 7);
+				}
+				else if(spell.base[i] == HALF_ELF || spell.base[i] == WOOD_ELF || spell.base[i] == DARK_ELF){
+					SendAppearancePacket(AT_Size, 5);
+				}
+				else if(spell.base[i] == DWARF){
+					SendAppearancePacket(AT_Size, 4);
+				}
+				else if(spell.base[i] == HALFLING || spell.base[i] == GNOME){
+					SendAppearancePacket(AT_Size, 3);
+				}
+				else{
+					SendAppearancePacket(AT_Size, 6);
+				}
+				for(int x = 0; x < 7; x++){
+					SendWearChange(x);
+				}				
 				break;
 			}
 
@@ -806,9 +843,18 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Illusion Copy");
 #endif
-				// solar: TODO implement this
-				const char *msg = "Illusion Copy is not implemented.";
-				if(caster) caster->Message(13, msg);
+				if(caster && caster->GetTarget()){
+						SendIllusionPacket
+						(
+							caster->GetTarget()->GetRace(),
+							caster->GetTarget()->GetGender(),
+							caster->GetTarget()->GetTexture()
+						);
+						caster->SendAppearancePacket(AT_Size, caster->GetTarget()->GetSize());
+						for(int x = 0; x < 7; x++){
+							caster->SendWearChange(x);
+						}
+				}
 			}
 
 			case SE_DamageShield:
@@ -1006,14 +1052,6 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				snprintf(effect_desc, _EDLEN, "Model Size: %d%%", effect_value);
 #endif
 				ChangeSize(GetSize() * (effect_value / 100.0));
-				break;
-			}
-
-			case SE_TestSpells:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Test Spell: %+i", effect_value);
-#endif
 				break;
 			}
 
@@ -1465,21 +1503,31 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Sacrifice");
 #endif
-				// solar: TODO implement this
-				const char *msg = "Sacrifice is not implemented.";
-				if(caster) caster->Message(13, msg);
+				if(!IsClient() || !caster->IsClient()){
+					break;
+				}
+				CastToClient()->Sacrifice(caster->CastToClient());
+			}
+			
+			case SE_SummonPC:
+			{
+				if(IsClient()){
+					CastToClient()->MovePC(zone->GetZoneID(), caster->GetX(), caster->GetY(), caster->GetZ(), 2, true);
+					Message(15, "You have been summoned!");
+				}
+				else{
+					caster->Message(13, "This spell can only be cast on players.");
+				}
 				break;
 			}
+			
 
 			case SE_Silence:
 			{
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Silence");
 #endif
-				// solar: TODO implement this
-				const char *msg = "Silence is not implemented.";
-				if(caster) caster->Message(13, msg);
-				break;
+				Silence(true);
 			}
 
 			case SE_Fearless:
@@ -2359,10 +2407,35 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 				}
 				break;
 			}
-
+			
+			case SE_IllusionCopy:
 			case SE_Illusion:
 			{
 				SendIllusionPacket(0, GetBaseGender());
+				if(GetRace() == OGRE){
+					SendAppearancePacket(AT_Size, 9);
+				}
+				else if(GetRace() == TROLL){
+					SendAppearancePacket(AT_Size, 8);
+				}
+				else if(GetRace() == VAHSHIR || GetRace() == FROGLOK || GetRace() == BARBARIAN){
+					SendAppearancePacket(AT_Size, 7);
+				}
+				else if(GetRace() == HALF_ELF || GetRace() == WOOD_ELF || GetRace() == DARK_ELF){
+					SendAppearancePacket(AT_Size, 5);
+				}
+				else if(GetRace() == DWARF){
+					SendAppearancePacket(AT_Size, 4);
+				}
+				else if(GetRace() == HALFLING || GetRace() == GNOME){
+					SendAppearancePacket(AT_Size, 3);
+				}
+				else{
+					SendAppearancePacket(AT_Size, 6);
+				}
+				for(int x = 0; x < 7; x++){
+					SendWearChange(x);
+				}				
 				break;
 			}
 
@@ -2383,6 +2456,18 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 				invisible_undead = false;	// Mongrel: No longer IVU
 				break;
 			}
+			
+			case SE_InvisVsAnimals:
+			{
+				invisible_animals = false;	
+				break;
+			}
+
+			case SE_Silence:
+			{
+				Silence(false);
+			}
+			
 
 			case SE_DivineAura:
 			{
@@ -2728,6 +2813,12 @@ sint16 Client::GetFocusEffect(focusType type, int16 spell_id) {
 		if(Total2 > realTotal2) {
 			realTotal2 = Total2;
 		}
+	}
+	
+	if(type == focusReagentCost && (IsEffectInSpell(spell_id, SE_SummonItem) || IsSacrificeSpell(spell_id))){
+		return 0; 
+	//Summon Spells that require reagents are typically imbue type spells, enchant metal, sacrifice and shouldn't be affected
+	//by reagent conservation for obvious reasons.
 	}
 
 	return realTotal + realTotal2;

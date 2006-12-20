@@ -824,6 +824,10 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. undead due to melee attack.");
 		BuffFadeByEffect(SE_InvisVsUndead);
 	}
+	if(invisible_animals){
+		mlog(COMBAT__ATTACKS, "Removing invisibility vs. animals due to melee attack.");
+		BuffFadeByEffect(SE_InvisVsAnimals);
+	}
 	
 	////////////////////////////////////////////////////////////
 	////////  PROC CODE
@@ -1301,6 +1305,10 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. undead due to melee attack.");
 		BuffFadeByEffect(SE_InvisVsUndead);
 	}
+	if(invisible_animals){
+		mlog(COMBAT__ATTACKS, "Removing invisibility vs. animals due to melee attack.");
+		BuffFadeByEffect(SE_InvisVsAnimals);
+	}	
 	
 	//I doubt this works...
 	if (!target)

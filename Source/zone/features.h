@@ -169,6 +169,9 @@ Zone extensions and features
 #define HIGHEST_CAN_SET_SKILL 400
 
 #define SKILL_MAX_LEVEL 75
+
+#define SACRIFICE_MIN_LEVEL 50
+#define SACRIFICE_ITEMID 9963
 /*
 
 Zone Numerical configuration

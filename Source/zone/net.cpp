@@ -916,8 +916,8 @@ This is hanging on freebsd for me, not sure why...
 		int y=0;
 		for(y=0; y< 12;y++)
 			sp[tempid].base[y]=atoi(sep.arg[20+y]);
-		for(y=0; y < 11; y++)
-			sp[tempid].base2[y]=atoi(sep.arg[33+y]);
+		for(y=0; y < 12; y++)
+			sp[tempid].base2[y]=atoi(sep.arg[32+y]);
 		for(y=0; y< 12;y++)
 			sp[tempid].max[y]=atoi(sep.arg[44+y]);
 		

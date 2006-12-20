@@ -190,6 +190,7 @@ Mob::Mob(const char*   in_name,
 	mana_regen = 0;
 	invisible = false;
 	invisible_undead = false;
+	invisible_animals = false;
 	sneaking = false;
 	invulnerable = false;
 	IsFullHP	= (cur_hp == max_hp);
@@ -243,6 +244,7 @@ Mob::Mob(const char*   in_name,
 	attacked_count = 0;
 	mezzed = false;
 	stunned = false;
+	silenced = false;
 	rune = 0;
     magicrune = 0;
     int m;
@@ -370,18 +372,15 @@ bool Mob::IsInvisible(Mob* other) const
 		return true;
 	
 	//check invis vs. undead
-	if (bodytype == BT_Undead || bodytype == BT_SummonedUndead) {
+	if (other->GetBodyType() == BT_Undead || other->GetBodyType() == BT_SummonedUndead) {
 		if(invisible_undead && !other->SeeInvisibleUndead())
 			return true;
 	}
 	
 	//check invis vs. animals...
-	if(bodytype == BT_Animal) {
-		uint32 l;
-		for (l = 0; l < BUFF_COUNT; l++) {
-			if(IsEffectInSpell(buffs[l].spellid, SE_InvisVsAnimals))
-				return(true);
-		}
+	if (other->GetBodyType() == BT_Animal){
+		if(invisible_animals && !other->SeeInvisible())
+			return true;
 	}
 	
 	//handle sneaking
@@ -993,8 +992,9 @@ void Mob::SendIllusionPacket(int16 in_race, int8 in_gender, int16 in_texture, in
 	else if (in_helmtexture != 0xFF || this->IsClient() || this->IsPlayerCorpse()) {
 		this->helmtexture = in_helmtexture;
 	}
-	else
-		this->texture = 0;
+	else{
+		this->helmtexture = 0;
+	}
 	if ((race == 0 || race > 12) && race != 128 && race != 130) {
 		this->haircolor = in_haircolor;
 		this->beardcolor = in_beardcolor;

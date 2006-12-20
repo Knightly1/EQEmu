@@ -179,11 +179,14 @@ void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 		delaytimer ||
 		spellend_timer.Enabled() ||
 		IsStunned() ||
-		IsMezzed()
+		IsMezzed() ||
+		IsSilenced()
 	)
 	{
-		mlog(SPELLS__CASTING_ERR, "Spell casting canceled: not able to cast now. Valid? %d, casting %d, waiting? %d, spellend? %d, stunned? %d, mezed? %d",
-			IsValidSpell(spell_id), casting_spell_id, delaytimer, spellend_timer.Enabled(), IsStunned(), IsMezzed() );
+		mlog(SPELLS__CASTING_ERR, "Spell casting canceled: not able to cast now. Valid? %d, casting %d, waiting? %d, spellend? %d, stunned? %d, mezed? %d, silenced? %d",
+			IsValidSpell(spell_id), casting_spell_id, delaytimer, spellend_timer.Enabled(), IsStunned(), IsMezzed(), IsSilenced() );
+		if(IsSilenced())
+			Message(13, "You cannot cast spells while silenced");
 		if(IsClient())
 			CastToClient()->SendSpellBarEnable(spell_id);
 		return;
@@ -1236,6 +1239,31 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 			CastAction = GroupSpell;
 			break;
 		}
+		case ST_GroupClient:
+		{
+			if(!spell_target){
+				mlog(SPELLS__CASTING_ERR, "Spell %d canceled: invalid target (Group: Single Target Client Only)", spell_id);
+				Message_StringID(13,SPELL_NEED_TAR);
+				return false;
+			}
+			if(IsClient() && IsGrouped()){
+				Group *g = entity_list.GetGroupByMob(this);
+				if(g->IsGroupMember(spell_target) && spell_target != this){
+					CastAction = SingleTarget;
+				}
+				else{
+					mlog(SPELLS__CASTING_ERR, "Spell %d canceled: Attempted to cast a Single Target Group spell on a member not in the group.", spell_id);
+					Message(13, "You must have a group member targeted for this spell.");
+					return false;
+				}
+			}
+			else{
+				mlog(SPELLS__CASTING_ERR, "Spell %d canceled: Attempted to cast a Single Target Group spell on a member not in the group.", spell_id);
+				Message(13, "You must have a group member targeted for this spell.");
+				return false;
+			}
+			break;
+		}		
 
 		default:
 		{
