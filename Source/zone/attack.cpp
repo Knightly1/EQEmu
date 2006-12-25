@@ -1961,13 +1961,14 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 			//see if root will break
 			if (IsRooted()) { // neotoyko: only spells cancel root
 				if (MakeRandomInt(0, 99) < 20) {
-					mlog(COMBAT__HITS, "Melee attack broke root! 20percent chance");
+					mlog(COMBAT__HITS, "Spell broke root! 20percent chance");
 					BuffFadeByEffect(SE_Root, buffslot); // buff slot is passed through so a root w/ dam doesnt cancel itself
 				} else {
-					mlog(COMBAT__HITS, "Melee attack did not break root. 20 percent chance");
+					mlog(COMBAT__HITS, "Spell did not break root. 20 percent chance");
 				}
 			}
-			
+		}
+		else{
 			//increment chances of interrupting
 			if(IsCasting()) { //shouldnt interrupt on regular spell damage
 				attacked_count++;

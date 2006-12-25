@@ -197,8 +197,8 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 		else
 			user->Message(13, "Only rogues can mix poisons.");
 		break;
-	case 0x0D: //Quest Containers-Most use 1E but item 17111 uses this one, odd Still needs completion
-		tradeskill = POTTERY;
+	case 13: //Quest Containers
+		tradeskill = GENERIC_TRADESKILL;
 		break;
 	case 46: //Fishing Still needs completion
 		tradeskill = FISHING;

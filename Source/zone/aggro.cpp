@@ -28,6 +28,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "StringIDs.h"
 #include <iostream>
 
+extern Zone* zone;
 //#define LOSDEBUG 6
 
 //look around a client for things which might aggro the client.
@@ -426,6 +427,9 @@ bool Mob::IsAttackAllowed(Mob *target)
 	Client *c1, *c2, *becomenpc;
 //	NPC *npc1, *npc2;
 	int reverse;
+
+	if(!zone->CanDoCombat())
+		return false;
 
 	// some special cases
 	if(!target)

@@ -364,8 +364,11 @@ void QuestManager::depop(int npc_type) {
 	if (npc_type != 0){
 		Mob * tmp = entity_list.GetMobByNpcTypeID(npc_type);
 		if (tmp) {
-			if(tmp != npc)
+			if(tmp != npc){
 				tmp->CastToNPC()->Depop();
+				entity_list.RemoveNPC(tmp->GetID());
+				entity_list.RemoveMob(tmp->GetID());
+			}
 			else
 				depop_npc = true;
 		}

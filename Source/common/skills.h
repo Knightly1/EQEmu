@@ -95,7 +95,8 @@ typedef enum {
  PERCUSSION_INSTRUMENTS	= 70,
  INTIMIDATION			= 71,
  BERSERKING				= 72,
- TAUNT					= 73
+ TAUNT					= 73,
+ GENERIC_TRADESKILL 	= 75
 } SkillType;
 
 #define HIGHEST_SKILL	TAUNT

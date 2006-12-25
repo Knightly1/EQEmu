@@ -149,10 +149,14 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 
 	//This is a bad way of making it set the type to clear on bootup.
 	int8 weather=database.GetZoneWeather(zone->GetZoneID());
-	if(weather<1 || weather>3)
-		zone->weather_type=1;
-	else
-		zone->weather_type=weather;
+    if(weather)
+	{
+		if(weather > 3)
+			zone->weather_type = 0;
+		else
+			zone->weather_type = weather;
+	}
+
 	LogFile->write(EQEMuLog::Debug, "Default weather for zone is:%i", zone->weather_type);
 	return true;
 }
@@ -667,7 +671,7 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name)
 	Weather_Timer = new Timer(((rand()%7200-30)+30)*2000);
 	Weather_Timer->Start();
 	LogFile->write(EQEMuLog::Status, "Weather should change in %i seconds",Weather_Timer->GetRemainingTime()/1000);
-	weather_type = 1;
+	weather_type = 0;
 	zone_weather = 0;
 	
 	aas = NULL;
@@ -878,7 +882,7 @@ void Zone::ReloadStaticData() {
 
 bool Zone::LoadZoneCFG(const char* filename, bool DontLoadDefault) {
 	memset(&newzone_data, 0, sizeof(NewZone_Struct));
-	if(!database.GetZoneCFG(database.GetZoneID(filename), &newzone_data, can_bind)) {
+	if(!database.GetZoneCFG(database.GetZoneID(filename), &newzone_data, can_bind, can_combat)) {
 		cout << "Error while loading Zone Config!\n";
 		cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
 		return false;
@@ -1023,27 +1027,30 @@ bool Zone::Process() {
 	if(Weather_Timer->Check()){
 		Weather_Timer->Disable();
 		int16 tmpweather =rand()%100;
-		int8 type=weather_type-1;
-		//0 normal, 1 rainy, 2 snowy
-		if(type!=2){
-			if(zone_weather==type && tmpweather>80)
-				zone_weather=2;
-			else if(zone_weather==type)
-				zone_weather=type+1;
-			else
-				zone_weather=type; //default to zones default
-		}
-		else{
-			if(zone_weather==2 && tmpweather>80)
-				zone_weather=1;
-			else if(zone_weather==2)
-				zone_weather=0;
-			else
-				zone_weather=2; //default to zones default
+
+		if(weather_type != 0)
+		{
+			if(tmpweather)
+			{
+				if(tmpweather > 80)
+				{
+					// A change in the weather....
+					int8 tmpOldWeather = zone_weather;
+
+					if(zone_weather == 0)
+						zone_weather = weather_type;
+					else
+						zone_weather = 0;
+
+					LogFile->write(EQEMuLog::Debug, "The weather has changed. Old weather was = %i. New weather is = %i", tmpOldWeather, zone_weather);
+				}
+				else
+					LogFile->write(EQEMuLog::Debug, "The weather is not going to change. Chance was = %i percent", tmpweather);
+			}
 		}
 		this->weatherSend();
-		safe_delete(Weather_Timer);
-		if(zone_weather==type) //stopping, reset to large timer
+		safe_delete(Weather_Timer);		
+		if(zone_weather==weather_type) //stopping, reset to large timer
 			Weather_Timer= new Timer(((rand()%(7170))+30)*2000);
 		else
 			Weather_Timer= new Timer(((rand()%(570))+30)*1000);

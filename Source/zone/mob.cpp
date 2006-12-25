@@ -1432,6 +1432,8 @@ bool Mob::CanThisClassDoubleAttack(void) const
 	// Kaiyodo - Check the classes that can DA
 	switch(GetClass()) // Lets make sure they are the right level! -image
 	{
+	case BERSERKER:
+	case BERSERKERGM:	
 	case WARRIOR:
 	case WARRIORGM:
 	case MONK:

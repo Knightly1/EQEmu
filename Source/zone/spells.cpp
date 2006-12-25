@@ -192,6 +192,14 @@ void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 		return;
 	}
 	
+	if(IsDetrimentalSpell(spell_id) && !zone->CanDoCombat()){
+		Message(13, "Your spell would not have taken hold.");
+		if(IsClient())
+			CastToClient()->SendSpellBarEnable(spell_id);
+		return;
+	}
+
+	
 	//cannot cast under deivne aura
 	if(DivineAura()) {
 		mlog(SPELLS__CASTING_ERR, "Spell casting canceled: cannot cast while Divine Aura is in effect.");
@@ -1862,10 +1870,14 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 	{
 		if(IsBlankSpellEffect(spellid1, i))
 			continue;
-			
-		if(effect1 == SE_CurrentHPOnce) //lots of spells share a single one time heal or single one time dd slot
-			continue;					//they shouldn't consider this an effect for stacking purposes as it only happens once and DD's and Direct heals always stack except for special cases like kunark BP ch
-			
+
+		//Effects which really aren't going to affect stacking.
+		if(effect1 == SE_CurrentHPOnce ||
+			effect1 == SE_CurseCounter	||
+			effect1 == SE_DiseaseCounter ||
+			effect1 == SE_PoisonCounter){
+			continue;
+			}
 
 		effect1 = sp1.effectid[i];
 		effect2 = sp2.effectid[i];
@@ -1886,6 +1898,10 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 				continue;
 				mlog(SPELLS__STACKING, "Both casters exist and are not the same, the effect is a detrimental dot, moving on");
 			}
+		}
+
+		if(effect1 == SE_CompleteHeal){ //SE_CompleteHeal never stacks or overwrites ever, always block.
+			return (-1);
 		}
 
 		/*

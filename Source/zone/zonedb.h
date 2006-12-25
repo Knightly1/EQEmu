@@ -149,7 +149,7 @@ public:
 	/*
 	 * Zone related
 	 */
-	bool GetZoneCFG(int32 zoneid, NewZone_Struct *data, bool &can_bind);
+	bool GetZoneCFG(int32 zoneid, NewZone_Struct *data, bool &can_bind, bool &can_combat);
 	bool	SaveZoneCFG(int32 zoneid,NewZone_Struct* zd);
 	bool	DumpZoneState();
 	sint8	LoadZoneState(const char* zonename, LinkedList<Spawn2*>& spawn2_list);

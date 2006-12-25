@@ -161,6 +161,7 @@ public:
 	void	weatherProc();
 	void	weatherSend();
 	bool	CanBind() const { return(can_bind); }
+	bool	CanDoCombat() const { return(can_combat); }
 	
 	time_t	weather_timer;
 	int8	weather_type;
@@ -192,6 +193,7 @@ private:
 	float	psafe_x, psafe_y, psafe_z;
 	int32	pMaxClients;
 	bool	can_bind;
+	bool	can_combat;
 	
 	int		totalAAs;
 	SendAA_Struct **aas;	//array of AA structs

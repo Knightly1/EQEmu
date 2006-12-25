@@ -2016,7 +2016,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 	return true;
 }
 
-int Mob::CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level, Mob *caster)
+int Mob::CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level, Mob *caster, int ticsremaining)
 {
 	int formula, base, max, effect_value;
 
@@ -2035,7 +2035,7 @@ int Mob::CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level, M
 	if(IsBlankSpellEffect(spell_id, effect_id))
 		return 0;
 	
-	effect_value = CalcSpellEffectValue_formula(formula, base, max, caster_level, spell_id);
+	effect_value = CalcSpellEffectValue_formula(formula, base, max, caster_level, spell_id, ticsremaining);
 	
 	if(caster && IsBardSong(spell_id) && 
 	(spells[spell_id].effectid[effect_id] != SE_AttackSpeed) &&
@@ -2051,7 +2051,7 @@ int Mob::CalcSpellEffectValue(int16 spell_id, int effect_id, int caster_level, M
 }
 
 // solar: generic formula calculations
-int Mob::CalcSpellEffectValue_formula(int formula, int base, int max, int caster_level, int16 spell_id)
+int Mob::CalcSpellEffectValue_formula(int formula, int base, int max, int caster_level, int16 spell_id, int ticsremaining)
 {
 /*
 neotokyo: i need those formulas checked!!!!
@@ -2161,15 +2161,11 @@ snare has both of them negative, yet their range should work the same:
 			result = ubase + (caster_level / 8); break;
 		case 121:	// solar: corrected 2/6/04
 			result = ubase + (caster_level / 3); break;
-		case 122: {	// todo: we need the remaining tics here
-			uint8 b;
-            for (b = 0; b < BUFF_COUNT; b++) {
-				if (buffs[b].spellid == spell_id) {
-					int ticdif = spells[spell_id].buffduration - buffs[b].ticsremaining;
-					result = base + (max*ticdif);
-					break;
-				}
-			}
+		case 122: {	
+			int ticdif = spells[spell_id].buffduration - (ticsremaining-1);
+			if(ticdif < 0)
+				ticdif = 0;
+			result = -(11 + 11*ticdif);
 			break;
 		}
 		case 123:	// solar: added 2/6/04
@@ -2260,16 +2256,16 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 		{
 		case SE_CurrentHP:
 		{
-			effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
+			effect_value = CalcSpellEffectValue(spell_id, i, caster_level, caster, ticsremaining);
 			
 			//TODO: account for AAs and stuff
 			
 			//dont know what the signon this should be... - makes sense
 			if (caster && caster->IsClient() && 
-				spells[spell_id].SpellAffectIndex != 86 
-				&& /*!BeneficialSpell(spell_id)*/ effect_value < 0) {
+				IsDetrimentalSpell(spell_id) &&
+				effect_value < 0) {
 				sint32 modifier = 100;
-				modifier += caster->CastToClient()->GetFocusEffect(focusImprovedDOT, spell_id);
+				modifier += caster->CastToClient()->GetFocusEffect(focusImprovedDamage, spell_id);
 			
 				effect_value = effect_value * modifier / 100;
 			}
@@ -2354,11 +2350,9 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 
 		// solar: TODO get this outta here
 		case SE_Root: {
-			float r1 = (float)rand()/RAND_MAX;
-			float r2 = (float)(GetMR() - caster_level)/512.0f;//Need to move to Effect and use partial when resists are updated
-			// cout<<"Root:"<<(float)r1<<":"<<r2<<endl;
-			if ( r1 < r2 )
+			if(ResistSpell(spells[spell_id].resisttype, spell_id, caster) < 100){
 				BuffFadeByEffect(SE_Root);
+			}
 			break;
 		}
 		default: {
@@ -2590,8 +2584,19 @@ sint16 Client::CalcFocusEffect(focusType type, int16 focus_id, int16 spell_id) {
 		
 		//missing limits:
 		//SE_LimitTarget
-		//SE_LimitResist
-		//SE_LimitInstant
+		
+		case SE_LimitResist:{
+			if(focus_spell.base[i]){
+				if(spell.resisttype != focus_spell.base[i])
+					return(0);
+			}
+			break;
+		}
+		case SE_LimitInstant:{
+			if(spell.buffduration)
+				return(0);
+			break;
+		}
 		
 		case SE_LimitMaxLevel:
 			if (spell.classes[(GetClass()%16) - 1] > focus_spell.base[i])

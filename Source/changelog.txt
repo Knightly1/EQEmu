@@ -1,6 +1,24 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==12/24/2006
+KLS: (WildcardX) Fix for generic tradeskill container combines
+KLS: (WildcardX) Fix for quest::depop and multipul mobs in the same zone that share a NPCType ID
+KLS: (WildcardX) Zones can now be flagged to disallow offensive actions.
+KLS: (WildcardX) Fix for zone weather, should no longer rain in places with no set weather, such as dungeons.
+KLS: Interrupts should only be caused by melee, not spell damage now
+KLS: Roots should only break on spell damage now.
+KLS: DoT Focus effects should work correctly
+KLS: Spell Formula 122 (Splurt) should now function correctly.
+KLS: Berserkers should find themselves with the ability to double attack.
+KLS: Curse, poison and disease counters should no longer be factored into stacking, should keep certain dots and certain slows from overwriting and blocking each other.
+KLS: Complete Heal buffs will no longer stack with or overwrite other complete heal buffs.
+Required SQL:
+ALTER TABLE `zone` ADD `cancombat` tinyint(4) NOT NULL default '1';
+UPDATE `zone` SET `cancombat` = 0 WHERE short_name = 'nexus';
+UPDATE `zone` SET `cancombat` = 0 WHERE short_name = 'poknowledge';
+UPDATE `zone` SET `cancombat` = 0 WHERE short_name = 'potranquility';
+
 ==12/19/2006
 KLS: Fixed up Illusions a bit
 KLS: Fixed a bug where the base2[0] field of a spell was not getting loaded correctly
