@@ -374,7 +374,7 @@ struct SPDat_Spell_Struct
 /* 018 */	int32		AEDuration;	// sentinel, rain of something
 /* 019 */	int16		mana; // Mana Used
 /* 020 */	sint16		base[EFFECT_COUNT];	//various purposes
-/* 032 */	int			base2[12];			//various purposes
+/* 032 */	int			base2[EFFECT_COUNT]; //various purposes
 /* 044 */	sint16		max[EFFECT_COUNT];
 /* 056 */	int16		icon; // Spell icon
 /* 057 */	int16		memicon; // Icon on membarthing
@@ -400,31 +400,31 @@ struct SPDat_Spell_Struct
 /* 121 */	int8		TargetAnim;
 /* 122 */	int32		TravelType;
 /* 123 */	int16		SpellAffectIndex;
-/* 124 */	int16		Spacing2[23];
-/* 147 */	sint16		ResistDiff;
-/* 148 */	int16		Spacing3[2];
+/* 124 */ int spacing124[23];
+/* 147 */	sint16		ResistDiff; 
+/* 148 */   int			dot_stacking_exempt;
+/* 149 */   int			deletable;
 /* 150 */	int16		RecourseLink;
-/* 151 */	int			Spacing4[4];
-/* 155 */	int			descnum; // eqstr of description of spell
-/* 156 */	int			typedescnum; // eqstr of type description
-/* 157 */	int			effectdescnum; // eqstr of effect description
-/* 158 */	int			Spacing5;
-/* 159 */	int			EndurCost;
-/* 160 */	int			EndurTimerIndex;
-/* 161 */	int			Spacing6[5];
-/* 166 */   int			HateAdded;
-/* 167 */   int			Spacing7;
-/* 168 */	int			EndurUpkeep;
-/* 169 */	int			Spacing8[6];
-/* 175 */	// last field is 174
-/*
-Some fields which should be in here somewhere (MQ2):
-Deletable
-PvPResistBase
-PvPResistCalc
-PvPResistCap
-CanMGB
-*/
+/* 151 */ int spacing151[4];
+/* 155 */   int			descnum; // eqstr of description of spell
+/* 156 */   int			typedescnum; // eqstr of type description
+/* 157 */   int			effectdescnum; // eqstr of effect description
+/* 158 */ int spacing158[4];
+/* 162 */   int			bonushate;
+/* 163 */ int spacing163[3];
+/* 166 */   int			EndurCost;
+/* 167 */   int			EndurTimerIndex;
+/* 168 */ int spacing168[5];
+/* 173 */   int			HateAdded;
+/* 174 */   int			EndurUpkeep;
+/* 175 */ int spacing175[2];
+/* 177 */   int			pvpresistbase;
+/* 178 */   int			pvpresistcalc;
+/* 179 */   int			pvpresistcap;
+/* 180 */   int			spell_category;
+/* 181 */ int spacing181[4];
+/* 185 */   int			can_mgb;
+/* 186 */	// last field is 185.
 };
 
 #ifdef NEW_LoadSPDat

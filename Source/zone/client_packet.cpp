@@ -2015,7 +2015,7 @@ void Client::Handle_OP_Hide(const EQApplicationPacket *app)
 	int reuse = HideReuseTime - GetAA(209);
 	p_timers.Start(pTimerHide, reuse-1);
 	
-	float hidechance = ((GetSkill(HIDE)/300.0f) + .25) * 100;
+	float hidechance = ((GetSkill(HIDE)/250.0f) + .25) * 100;
 	float random = MakeRandomFloat(0, 100);
 	CheckIncreaseSkill(HIDE,15);					
 	if (random < hidechance) {
@@ -2036,16 +2036,16 @@ void Client::Handle_OP_Hide(const EQApplicationPacket *app)
 		if (!auto_attack && entity_list.Fighting(this)) {
 			if (MakeRandomInt(0, 300) < (int)GetSkill(HIDE)) {
 				msg->string_id=343;
-				entity_list.RemoveFromHateLists(this,true);
+				entity_list.Evade(this); 
 			} else {
 				msg->string_id=344;
 			}
 		} else {
 			if (invisible){
-				msg->string_id=347;
+				msg->string_id=346;
 			}
 			else {
-				msg->string_id=348;
+				msg->string_id=345;
 			}
 		}
 		FastQueuePacket(&outapp);

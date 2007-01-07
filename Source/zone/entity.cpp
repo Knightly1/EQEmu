@@ -2563,6 +2563,28 @@ void EntityList::HalveAggro(Mob* who)
 	}
 }
 
+
+void EntityList::Evade(Mob *who)
+{
+	uint32 flatval = who->GetLevel() * 12;
+	int amt = 0;
+	LinkedListIterator<NPC*> iterator(npc_list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		if (iterator.GetData()->CastToNPC()->CheckAggro(who)){
+			amt = iterator.GetData()->CastToNPC()->GetHateAmount(who);
+			amt = amt * 85 / 100;
+			amt -= flatval;
+			if(amt > 0)
+				iterator.GetData()->CastToNPC()->SetHate(who, amt);
+			else
+				iterator.GetData()->CastToNPC()->SetHate(who, 1);
+		}
+		iterator.Advance();
+	}
+}
+
 void EntityList::ClearFeignAggro(Mob* targ)
 {
 	LinkedListIterator<NPC*> iterator(npc_list);

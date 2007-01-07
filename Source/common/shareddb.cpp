@@ -739,7 +739,7 @@ bool SharedDatabase::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 			//item.Unk059 = (uint32)atoul(row[ItemField::UNK059]);
 			item.CastTime = (uint32)atoul(row[ItemField::casttime]);
 			//item.Unk061 = (uint32)atoul(row[ItemField::UNK061]);
-			item.ProcRate = (uint32)atoul(row[ItemField::procrate]);
+			item.ProcRate = (sint32)atoi(row[ItemField::procrate]);
 			item.CombatEffects = (sint8)atoi(row[ItemField::combateffects]);
 			item.Shielding = (sint8)atoi(row[ItemField::shielding]);
 			item.StunResist = (sint8)atoi(row[ItemField::stunresist]);

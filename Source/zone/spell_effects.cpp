@@ -256,9 +256,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				break;
 			}
 
+			case SE_Succor:
 			case SE_Teleport:	// gates, rings, circles, etc
 			case SE_Teleport2:
-			case SE_Succor:
 			{
 				float x, y, z, heading;
 				const char *target_zone;
@@ -275,6 +275,10 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				else
 				{
 					target_zone = spell.teleport_zone;
+					if(IsNPC()){
+						CastToNPC()->Depop();
+						break;
+					}
 				}
 
 #ifdef SPELL_EFFECT_SPAM
@@ -291,6 +295,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					efstr, x, y, z, heading, target_zone ? target_zone : "same zone"
 				);
 #endif
+				if(effect == SE_Succor)
+					entity_list.RemoveFromHateLists(this, false);
+
 				if(IsClient())
 				{
 					// TODO: MovePC needs to take heading too, which is in base[3]
@@ -298,7 +305,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				}
 				break;
 			}
-
+			
 			case SE_HealOverTime:
 			{
 #ifdef SPELL_EFFECT_SPAM
@@ -397,7 +404,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #endif
 				//Typically we check for immunities else where but since stun immunities are different and only
 				//Block the stun part and not the whole spell, we do it here, also do the message here so we wont get the message on a resist
-				if(SpecAttacks[UNSTUNABLE] && (IsStunSpell(spell_id) || IsEffectInSpell(spell_id, SE_SpinTarget)))
+				if(SpecAttacks[UNSTUNABLE])
 				{
 					caster->Message_StringID(MT_Shout, IMMUNE_STUN);
 				}
@@ -916,7 +923,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				snprintf(effect_desc, _EDLEN, "Spin: %d", effect_value);
 #endif
 				// solar: the spinning is handled by the client
-				if(SpecAttacks[UNSTUNABLE] && (IsStunSpell(spell_id) || IsEffectInSpell(spell_id, SE_SpinTarget)))
+				if(SpecAttacks[UNSTUNABLE] || (GetLevel() > 55)) //spin effects will only work on things up to level 55
 				{
 					caster->Message_StringID(MT_Shout, IMMUNE_STUN);
 				}
@@ -925,8 +932,8 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					// solar: the spinning is handled by the client
 					if(buffslot >= 0)
 						Stun(buffs[buffslot].ticsremaining * 6000);
-					break;
 				}
+				break;				
 			}
 
 			case SE_EyeOfZomm:
@@ -2630,47 +2637,16 @@ sint16 Client::CalcFocusEffect(focusType type, int16 focus_id, int16 spell_id) {
 			break;
 		
 		case SE_LimitEffect:
-			switch( focus_spell.base[i] ) {
-				case -147:
-					if (IsPercentalHealSpell(spell_id))
-						return 0;
-					break;
-				case -101:
-					if (IsCHDurationSpell(spell_id))
-						return 0;
-					break;
-				case -40:
-					if (IsInvulnerabilitySpell(spell_id))
-						return 0;
-					break;
-				case -32:
-					if (IsSummonItemSpell(spell_id))
-						return 0;
-					break;
-				case 0:
-					if (!IsEffectHitpointsSpell(spell_id))
-						return 0;
-					break;
-				case 33:
-					if (!IsSummonPetSpell(spell_id))
-						return 0;
-					break;
-				case 36:
-					if (!IsPoisonCounterSpell(spell_id))
-						return 0;
-					break;
-				case 71:
-					if (!IsSummonSkeletonSpell(spell_id))
-						return 0;
-					break;
-				case -86:
-					if (!IsEffectInSpell(spell_id, SE_Harmony))
-						return 0;
-					break;
-				default:
-					LogFile->write(EQEMuLog::Normal, "CalcFocusEffect(%d):  unknown limit effect %d", focus_id, focus_spell.base[i]);
-					return(0);	//returning here will be more likely to make people nitice their shit isnt working and fix it!
+			if(focus_spell.base[i] < 0){
+				if(IsEffectInSpell(spell_id,focus_spell.base[i])){ //we limit this effect, can't have
+					return 0;
+				}
 			}
+			else{
+				if(!IsEffectInSpell(spell_id,focus_spell.base[i])){ //we limit this effect, must have
+					return 0;
+				}
+			}			
 			break;
 		
 		

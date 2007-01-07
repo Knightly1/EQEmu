@@ -736,14 +736,23 @@ bool Mob::CombatRange(Mob* other)
 {
 	if(!other)
 		return(false);
-    // neotokyo: some mobs have set size == -1; this caused a signed/unsigned overflow
-	sint32 size_mod = (sint32)GetSize();
+
+	float size_mod = GetSize();
+	float other_size_mod = other->GetSize();
+
 	if(GetRace() == 49 || GetRace() == 158 || GetRace() == 196) //For races with a fixed size
- 		size_mod = 60;
-	else if (size_mod < 6)
-		size_mod = 8;
-	if (other->GetSize() > size_mod)
-		size_mod = (sint32)other->GetSize();
+		size_mod = 60.0f;
+	else if (size_mod < 6.0)
+		size_mod = 8.0f;
+
+	if(other->GetRace() == 49 || other->GetRace() == 158 || other->GetRace() == 196) //For races with a fixed size
+		other_size_mod = 60.0f;
+	else if (other_size_mod < 6.0)
+		other_size_mod = 8.0f;
+
+	if (other_size_mod > size_mod)
+		size_mod = other_size_mod;
+
 	size_mod *= size_mod * 4;
 	if (DistNoRootNoZ(*other) <= size_mod)
 		return true;
@@ -1136,7 +1145,7 @@ int16 Mob::CheckAggroAmount(int16 spellid) {
 	if (GetOwner())
 		AggroAmount /= RuleI(Spells, PetSpellAggroMod);
 
-	AggroAmount += spells[spell_id].HateAdded; 
+	AggroAmount += spells[spell_id].HateAdded + spells[spell_id].bonushate;
 	AggroAmount = (AggroAmount * RuleI(Spells, SpellAggroModifier))/100;
 	return AggroAmount;
 }

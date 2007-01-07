@@ -220,7 +220,9 @@ enum {	//timer settings, all in milliseconds
 	CombatEventTimer_expire = 11000,
 	Tribute_duration = 600000,
 	ZoneTimerResolution = 3,			//sleep time between zone main loop runs (milliseconds)
-	FeignMemoryDuration = 120000 // EverHood - Duration player must feign death to clear zonewide agro.
+	FeignMemoryDuration = 120000, // EverHood - Duration player must feign death to clear zonewide agro.
+	EnragedTimer = 360000,
+	EnragedDurationTimer = 10000
 };
 
 enum {	//some random constants

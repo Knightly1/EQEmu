@@ -1015,13 +1015,13 @@ void NPC::AI_DoMovement() {
 			ClearFeignMemory();
 			moved=false;
 			SetMoving(false);
-			SendPosition();
 			if (GetTarget() == NULL || DistNoRoot(*GetTarget()) >= 5*5 )
 			{
 				SetHeading(guard_heading); 
 			} else { 
 				FaceTarget(GetTarget(), true); 
-			} 
+			}
+			SendPosition();			
 		}
 	 } 
   } 
@@ -1057,6 +1057,7 @@ void Mob::AI_Event_NoLongerEngaged() {
 		SetMoving(false);
 		SendPosition();
 	}
+	ClearRampage();
 }
 
 void NPC::AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot) {
@@ -1138,7 +1139,7 @@ void Mob::StartEnrage()
 
     if (!SpecAttackTimers[SPECATK_ENRAGE])
     {
-        SpecAttackTimers[SPECATK_ENRAGE] = new Timer(10000);
+        SpecAttackTimers[SPECATK_ENRAGE] = new Timer(EnragedDurationTimer);
     }
     // start the timer. need to call IsEnraged frequently since we dont have callback timers :-/
     SpecAttackTimers[SPECATK_ENRAGE]->Start();
@@ -1146,17 +1147,18 @@ void Mob::StartEnrage()
 	entity_list.MessageClose(this, true, 600, 13, "%s has become ENRAGED.", GetCleanName());
 }
 
+void Mob::ProcessEnrage(){
+	if(IsEnraged()){
+		if(SpecAttackTimers[SPECATK_ENRAGE] && SpecAttackTimers[SPECATK_ENRAGE]->Check()){
+			entity_list.MessageClose(this, true, 600, 13, "%s is no longer enraged.", GetCleanName());
+			SpecAttackTimers[SPECATK_ENRAGE]->Start(EnragedTimer);
+			bEnraged = false;
+		}
+	}
+}
+
 bool Mob::IsEnraged() 
 {
-    // check the timer and set to false if time is up
-    if (bEnraged && SpecAttackTimers[SPECATK_ENRAGE] && SpecAttackTimers[SPECATK_ENRAGE]->Check())
-    {
-		entity_list.MessageClose(this, true, 600, 13, "%s is no longer enraged.", GetCleanName());
-        safe_delete(SpecAttackTimers[SPECATK_ENRAGE]);
-        SpecAttackTimers[SPECATK_ENRAGE] = new Timer(360000);
-        SpecAttackTimers[SPECATK_ENRAGE]->Start();
-        bEnraged = false;
-    }
     return bEnraged;
 }
 
@@ -1176,32 +1178,43 @@ bool Mob::AddRampage(Mob *mob)
 {
     if (!SpecAttacks[SPECATK_RAMPAGE])
         return false;
-    for (int i = 0; i < MAX_RAMPAGE_TARGETS; i++)
+    for (int i = 0; i < MAX_RAMPAGE_LIST; i++)
     {
         // if name is already on the list dont add it again
         if (strcasecmp(mob->GetName(), RampageArray[i]) == 0)
             return false;
-        strcpy(RampageArray[i], mob->GetName());
-        LogFile->write(EQEMuLog::Normal, "Adding %s to Rampage List in slot %d", RampageArray[i], i);
-        return true;
-    }
+
+		if (RampageArray[i][0] == 0 ){ //we assume the slot is free if the first character is empty.
+			strcpy(RampageArray[i], mob->GetName());
+			LogFile->write(EQEMuLog::Normal, "Adding %s to Rampage List in slot %d", RampageArray[i], i);
+			return true;
+		}
+	}
     return false;
+}
+
+void Mob::ClearRampage(){
+	memset(RampageArray, 0, sizeof(RampageArray));
 }
 
 bool Mob::Rampage()
 {
-
+	int index_hit = 0;
 	entity_list.MessageClose(this, true, 600, 13, "%s goes on a RAMPAGE!", GetCleanName());
-    for (int i = 0; i < MAX_RAMPAGE_TARGETS; i++)
+    for (int i = 0; i < MAX_RAMPAGE_LIST; i++)
     {
+		if(index_hit >= MAX_RAMPAGE_TARGETS)
+			break;	
         // range is important
         if (strlen(RampageArray[i]) == 0)
         	continue;
         Mob *target = entity_list.GetMob(RampageArray[i]);
-        if(target )
+        if(target)
         {
-            if (CombatRange(target))
+            if (CombatRange(target)){
                 Attack(target);
+				index_hit++;
+			}
         }
     }
     return true;

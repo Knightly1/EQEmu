@@ -225,10 +225,10 @@ bool PersistentTimer::Expired(Database *db, bool iReset) {
 		return(true);
 	}
 	int32 current_time = get_current_time();
-    if (enabled && current_time-start_time > timer_time) {
-		if (iReset) {
+    if (current_time-start_time >= timer_time) {
+		if (enabled && iReset) {
 			start_time = current_time; // Reset timer
-		} else {
+		} else if(enabled) {
 			Clear(db);	//remove it from DB too
 		}
 		return(true);

@@ -299,8 +299,8 @@ public:
 	
 	virtual void CalcBonuses();
 	//these are all precalculated now
-	inline virtual int16	GetAC()		const { return AC; }
-	inline virtual int16	GetATK()	const { return ATK; }
+	inline virtual sint16	GetAC()		const { return AC; }
+	inline virtual sint16	GetATK()	const { return ATK; }
 	inline virtual int	GetHaste() const { return Haste; }
 	
 	inline virtual sint16	GetSTR()	const { return STR; }
@@ -683,8 +683,8 @@ private:
 	void	OPGMSummon(const EQApplicationPacket *app);
 	void	OPCombatAbility(const EQApplicationPacket *app);
 	
-	int16    CalcAC();
-	int16    CalcATK();
+	sint16    CalcAC();
+	sint16    CalcATK();
 	int      CalcHaste();
 	
 	sint16   CalcSTR();

@@ -3479,7 +3479,6 @@ void command_spellinfo(Client *c, const Seperator *sep)
 		c->Message(0, "  TargetAnim: %d", s->TargetAnim);
 		c->Message(0, "  SpellAffectIndex: %d", s->SpellAffectIndex);
 		c->Message(0, " RecourseLink: %d", s->RecourseLink);
-		c->Message(0, "  Spacing2[5]: %d, %d, %d, %d, %d", s->Spacing2[0], s->Spacing2[1], s->Spacing2[2], s->Spacing2[3], s->Spacing2[4]);
 	}
 }
 

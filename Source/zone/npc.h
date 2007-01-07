@@ -245,6 +245,7 @@ protected:
 
 //	int8	position;	// 0 - Standing, 1 - Sitting, 2 - Crouching, 4 - Looting
     Timer	sendhpupdate_timer;
+	Timer	enraged_timer;
 
 	int32	npc_spells_id;
 	struct AISpells_Struct {

@@ -1355,8 +1355,6 @@ void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, SkillType attack_ski
 	CommonDamage(other, damage, spell_id, attack_skill, avoidable, buffslot, iBuffTic);
 	
 	if(damage > 0) {
-	    if (other)
-	        AddRampage(other);
 #ifdef FLEE_HP_RATIO
 		//see if we are gunna start fleeing
 		CheckFlee();
@@ -1501,6 +1499,7 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 	Mob* myowner = this->GetOwner();
 	
 	if(other){
+		AddRampage(other);
 		int hatemod = 100 + other->spellbonuses.hatemod + other->itembonuses.hatemod;
 		if(hatemod < 1)
 			hatemod = 1;
@@ -1914,10 +1913,16 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 			}
 		}
 		
-		if (sneaking){
-			sneaking = false;
-			// FIXME Break sneak packet goes here.
-		}
+
+	if(IsClient() && CastToClient()->sneaking){
+		CastToClient()->sneaking = false;
+		SendAppearancePacket(AT_Sneak, 0);
+	}
+	if(attacker->IsClient() && attacker->CastToClient()->sneaking){
+		attacker->CastToClient()->sneaking = false;
+		attacker->SendAppearancePacket(AT_Sneak, 0);
+	}
+	
 	
 		//final damage has been determined.
 		
@@ -2178,6 +2183,7 @@ void Mob::TryWeaponProc(const ItemInst* weapon_g, Mob *on) {
 		
 		if (IsValidSpell(aug->Proc.Effect) 
 			&& (aug->Proc.Type == ET_CombatProc)) {
+				ProcChance = ProcChance*(100+aug->ProcRate)/100;
 			if (MakeRandomFloat(0, 1) < ProcChance) {	// 255 dex = 0.084 chance of proc. No idea what this number should be really.
 				if(aug->Proc.Level > ourlevel) {
 					Mob * own = GetOwner();
@@ -2203,7 +2209,7 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 	//give weapon a chance to proc first.
 	if(weapon != NULL) {
 		if (IsValidSpell(weapon->Proc.Effect) && (weapon->Proc.Type == ET_CombatProc)) {
-			float WPC = (weapon->ProcRate/100.0f) + ProcChance;
+			float WPC = ProcChance*(100+weapon->ProcRate)/100;
 			if (MakeRandomFloat(0, 1) < WPC) {	// 255 dex = 0.084 chance of proc. No idea what this number should be really.
 				if(weapon->Proc.Level > ourlevel) {
 					mlog(COMBAT__PROCS, "Tried to proc (%s), but our level (%d) is lower than required (%d)", weapon->Name, ourlevel, weapon->Proc.Level);
@@ -2231,8 +2237,8 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 	uint32 i;
 	for(i = 0; i < MAX_PROCS; i++) {
 		if (PermaProcs[i].spellID != SPELL_UNKNOWN) {
-			float chance = PermaProcs[i].chance * procmod;
-			if(MakeRandomFloat(0,99) < chance) {
+			float chance = ProcChance + (PermaProcs[i].chance / 100);
+			if(MakeRandomFloat(0, 1) < chance) {
 				int spelllevel = spells[PermaProcs[i].spellID].classes[ourclass-1];
 				//pets must be high enough to cast the spell..?
 				//this is kinda a screwed up rule...
@@ -2249,8 +2255,8 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 			}
 		}
 		if (SpellProcs[i].spellID != SPELL_UNKNOWN) {
-			float chance = SpellProcs[i].chance * procmod;
-			if(MakeRandomFloat(0,99) < chance) {
+			float chance = ProcChance + (SpellProcs[i].chance / 100);
+			if(MakeRandomFloat(0, 1) < chance) {
 				int spelllevel = spells[SpellProcs[i].spellID].classes[ourclass-1];
 				//pets must be high enough to cast the spell..?
 				//this is kinda a screwed up rule...

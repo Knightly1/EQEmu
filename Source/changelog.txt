@@ -1,6 +1,24 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==1/07/2006
+KLS: action_struct unknown06 renamed to instrument_mod to reflect it's behavior
+KLS: WildCardX inspired weapon proc rate changes, proc rates should now load as a signed int instead of an unsigned int and should correctly calculate.
+KLS: Some changes to the expired function of ptimers, it should return if the timer is expired whether or not the timer is enabled. This avoids certain situations where timers are disabled and then run down without ever being reenabled and essentially being locked down forever unless the database admin resets it manually.
+KLS: Also fixed a small ptimer expire bug where if the timer just reached zero it would return expired until it was one second past zero.
+KLS: Evade will no longer set the rogue's hate to 0, but instead will lower the hate by some amount based on level and the current hate of the monster. May need tweaking as don't know exact values.
+KLS: Combat Range has been redone a bit so it no longer mixes ints and floats and also correctly factors in the size of the enemy you're fighting. Should prevent exploits where you can hit something rooted/permarooted but they cannot hit you back.
+KLS: Rampage and enrage have been reworked and should work correctly, rampage will now carry a rampage list of 20 by default that does not get wiped until the monster stops fighting.
+KLS: Fixed up spell fields and spell loading to make more sense, identified some fields. It should load in order now.
+KLS: Sneak should now break when you deal / are dealt damage.
+KLS: Hide should succeed a bit more and use the correct messages: "You have hidden your self from view", "You have failed to hide your self from view"
+KLS: CalcAC() and CalcATK() now use signed values instead of unsigned.
+KLS: When a mob returns to their guard point they should now correctly assume their guard heading.
+KLS: Succor should fully wipe you from hate lists now, as should zoning.
+KLS: Spin effects are now correctly capped at a max of level 55, all targets above this cannot be affected.
+KLS: SE_LimitEffect should now correctly deal with any effect type the spell has and not just the ones hard coded into the server.
+KLS: (Cripp)Fix for zone heading
+
 ==12/24/2006
 KLS: (WildcardX) Fix for generic tradeskill container combines
 KLS: (WildcardX) Fix for quest::depop and multipul mobs in the same zone that share a NPCType ID

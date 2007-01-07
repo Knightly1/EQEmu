@@ -962,24 +962,52 @@ This is hanging on freebsd for me, not sure why...
 		sp[tempid].TargetAnim=atoi(sep.arg[121]);
 		sp[tempid].TravelType=atoi(sep.arg[122]);
 		sp[tempid].SpellAffectIndex=atoi(sep.arg[123]);
-		
-		for(y=0; y< 23;y++) {
-			sp[tempid].Spacing2[y]=atoi(sep.arg[124+y]);
-		}
+
+		for(y = 0; y < 23;y++)
+			sp[tempid].spacing124[y]=atoi(sep.arg[124+y]);
 		
 		sp[tempid].ResistDiff=atoi(sep.arg[147]);
-		
-		for(y=0; y< 2;y++) {
-			sp[tempid].Spacing3[y]=atoi(sep.arg[148+y]);
-		}
-		
+		sp[tempid].dot_stacking_exempt=atoi(sep.arg[148]);
+		sp[tempid].deletable=atoi(sep.arg[149]);
 		sp[tempid].RecourseLink = atoi(sep.arg[150]);
+
+		for(y = 0; y < 4;y++)
+			sp[tempid].spacing151[y]=atoi(sep.arg[151+y]);
+				
 		sp[tempid].descnum = atoi(sep.arg[155]);
 		sp[tempid].typedescnum = atoi(sep.arg[156]);
 		sp[tempid].effectdescnum = atoi(sep.arg[157]);
+		
+		for(y = 0; y < 4;y++)
+			sp[tempid].spacing158[y]=atoi(sep.arg[158+y]);
 
-		for(y=0; y< 17;y++)
-			sp[tempid].Spacing4[y] = atoi(sep.arg[158+y]);
+		sp[tempid].bonushate=atoi(sep.arg[162]);
+
+		for(y = 0; y < 3;y++)
+			sp[tempid].spacing163[y]=atoi(sep.arg[163+y]);
+
+		sp[tempid].EndurCost=atoi(sep.arg[166]);
+		sp[tempid].EndurTimerIndex=atoi(sep.arg[167]);
+
+		for(y = 0; y < 5;y++)
+			sp[tempid].spacing168[y]=atoi(sep.arg[168+y]);
+
+		sp[tempid].HateAdded=atoi(sep.arg[173]);
+		sp[tempid].EndurUpkeep=atoi(sep.arg[174]);
+
+		for(y = 0; y < 2;y++)
+			sp[tempid].spacing175[y]=atoi(sep.arg[175+y]);
+
+		sp[tempid].pvpresistbase=atoi(sep.arg[177]);
+		sp[tempid].pvpresistcalc=atoi(sep.arg[178]);
+		sp[tempid].pvpresistcap=atoi(sep.arg[179]);
+		sp[tempid].spell_category=atoi(sep.arg[180]);
+
+		for(y = 0; y < 4;y++)
+			sp[tempid].spacing181[y]=atoi(sep.arg[181+y]);
+
+		sp[tempid].can_mgb=atoi(sep.arg[185]);
+
 	} 
 	_log(SPELLS__LOAD, "FileLoadSPDat() spells loaded: %i", counter);
 	//in.close();

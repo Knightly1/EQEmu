@@ -710,7 +710,7 @@ sint16 Client::acmod() {
 // ac1 and ac2 are probably the damage migitation and damage avoidance numbers, not sure which is which.
 // I forgot to include the iksar defense bonus and i cant find my notes now...
 // AC from spells are not included (cant even cast spells yet..)
-int16 Client::CalcAC() {
+sint16 Client::CalcAC() {
 
 	// new formula
 	int avoidance = 0;
@@ -1360,7 +1360,7 @@ sint16	Client::CalcCR()
 	return(CR);
 }
 
-int16  Client::CalcATK() {
+sint16  Client::CalcATK() {
 	ATK = itembonuses.ATK + spellbonuses.ATK;
 	return(ATK);
 }

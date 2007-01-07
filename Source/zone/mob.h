@@ -453,8 +453,8 @@ bool logpos;
 	char GetCasterClass() const;
 	virtual sint32 CalcMaxMana();
 	
-	inline virtual int16	GetAC()		const { return AC + itembonuses.AC + spellbonuses.AC; } // Quagmire - this is NOT the right math
-	inline virtual int16	GetATK()	const { return ATK + itembonuses.ATK + spellbonuses.ATK; }
+	inline virtual sint16	GetAC()		const { return AC + itembonuses.AC + spellbonuses.AC; } // Quagmire - this is NOT the right math
+	inline virtual sint16	GetATK()	const { return ATK + itembonuses.ATK + spellbonuses.ATK; }
 	inline virtual sint16	GetSTR()	const { return STR + itembonuses.STR + spellbonuses.STR; }
 	inline virtual sint16	GetSTA()	const { return STA + itembonuses.STA + spellbonuses.STA; }
 	inline virtual sint16	GetDEX()	const { return DEX + itembonuses.DEX + spellbonuses.DEX; }
@@ -629,12 +629,15 @@ bool logpos;
 	void	SetMagicRune(int16 in_rune) { magicrune = in_rune; }
 	
 #define MAX_RAMPAGE_TARGETS 3
+#define MAX_RAMPAGE_LIST 20
 #define MAX_FLURRY_HITS 2
     bool Flurry();
     bool Rampage();
     bool AddRampage(Mob*);
+	void ClearRampage();
 	
     void StartEnrage();
+	void ProcessEnrage();
     bool IsEnraged();
 	void Taunt(NPC* who, bool always_succeed);
 	
@@ -774,7 +777,7 @@ protected:
 	bool	IsFullHP;
 	bool	moved;
 	
-    char RampageArray[MAX_RAMPAGE_TARGETS][64];
+    char RampageArray[MAX_RAMPAGE_LIST][64];
 	
 	bool	isgrouped; //These meant to be private?
 	bool	pendinggroup;

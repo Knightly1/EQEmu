@@ -284,7 +284,7 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, float dest_x, 
 	SendLogoutPackets();
 	
 	//dont clear aggro until the zone is successful
-	entity_list.ClearFeignAggro(this);
+	entity_list.RemoveFromHateLists(this);
 	
 	LogFile->write(EQEMuLog::Status, "Zoning '%s' to: %s (%i) x=%f, y=%f, z=%f",
 		m_pp.name, database.GetZoneName(zone_id), zone_id,
@@ -296,6 +296,7 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, float dest_x, 
 	x_pos = dest_x; //these coordinates will now be saved when ~client is called
 	y_pos = dest_y;
 	z_pos = dest_z;
+	heading = dest_h; // Cripp: fix for zone heading
 	m_pp.heading = dest_h;
 	m_pp.zone_id = zone_id;
 	

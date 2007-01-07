@@ -795,7 +795,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 	
 	//watch timer for long ass reuse_time spells
 	if(IsClient() && slot != USE_ITEM_SPELL_SLOT && spells[spell_id].recast_time > 30000) {	// 10 is item
-		if(!CastToClient()->GetPTimers().Expired(&database, pTimerSpellStart + spell_id)) {
+		if(!CastToClient()->GetPTimers().Expired(&database, pTimerSpellStart + spell_id, false)) {
 			//should we issue a  message or send them a spell gem packet?
 			Message(13, "Spell reuse timer not expired yet.");
 			mlog(SPELLS__CASTING_ERR, "Casting of %d canceled: spell reuse timer not expired", spell_id);
@@ -1629,7 +1629,7 @@ void Mob::BardPulse(uint16 spell_id, Mob *caster) {
 			action->target = GetID();
 			action->spell = spell_id;
 			action->sequence = (int32) (GetHeading() * 2);	// just some random number
-			action->unknown06 = caster->GetInstrumentMod(spell_id);		// seems to always be 0x0A (10)
+			action->instrument_mod = caster->GetInstrumentMod(spell_id);
 			action->buff_unknown = 0;
 			action->level = buffs[buffs_i].casterlevel;
 			action->type = SpellDamageType;
@@ -2231,7 +2231,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	action->type = 231;	// 231 means a spell
 	action->spell = spell_id;
 	action->sequence = (int32) (GetHeading() * 2);	// just some random number
-	action->unknown06 = GetInstrumentMod(spell_id);	// seems to always be 0x0A (10)
+	action->instrument_mod = GetInstrumentMod(spell_id);
 	action->buff_unknown = 0;
 
 	if(spelltar->IsClient())	// send to target

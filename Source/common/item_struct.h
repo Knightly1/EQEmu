@@ -153,7 +153,7 @@ struct Item_Struct {
 		sint16  CastTime;	// Cast Time for clicky effects, in milliseconds
 	};
 	//uint32	Unk061;
-	uint32	ProcRate;
+	sint32	ProcRate;
 	sint8	CombatEffects;		// PoP: Combat Effects +
 	sint8	Shielding;		// PoP: Shielding %
 	sint8	StunResist;		// PoP: Stun Resist %

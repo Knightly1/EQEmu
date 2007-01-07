@@ -258,6 +258,7 @@ public:
 	void	WriteEntityIDs();
 	void	HalveAggro(Mob* who);
 	void	DoubleAggro(Mob* who);
+	void	Evade(Mob *who);
 
     void    Process();
 	void	ClearFeignAggro(Mob* targ);
