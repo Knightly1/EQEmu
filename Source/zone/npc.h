@@ -168,7 +168,6 @@ public:
 	int32	GetMaxDamage(int8 tlevel);
 	void    SetTaunting(bool tog) {taunting = tog;}
 	void	PickPocket(Client* thief);
-	void	SendPickPocketResponce(Client* thief, uint32 amt, int type, const Item_Struct* item = NULL);
 	void	StartSwarmTimer(int32 duration) { swarm_timer.Start(duration); }
 	void	AddLootDrop(const Item_Struct*dbitem, ItemList* itemlistconst, sint8 charges, bool equipit, bool wearchange = false);
 	void	DoClassAttacks(Mob *target);

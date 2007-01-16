@@ -212,54 +212,6 @@ void Client::DropInst(const ItemInst* inst)
 	object->Save();
 }
 
-// Searches for a specified item anywhere in Players possession
-uint32 Client::FindItemInInventory(uint32 item_id)
-{
-	uint32 result = INVALID_ID;
-
-	// See Item.h for the slot ID's used here
-
-	if(item_id)
-	{
-		if(SlotItemSearch(0, 30, item_id))
-			result = item_id;
-		else if(SlotItemSearch(251, 330, item_id))
-			result = item_id;
-		else if(SlotItemSearch(2000, 2015, item_id))
-			result = item_id;
-		else if(SlotItemSearch(2031, 2190, item_id))
-			result = item_id;
-		else if(SlotItemSearch(2500, 2501, item_id))
-			result = item_id;
-		else if(result = SlotItemSearch(2531, 2550, item_id))
-			result = item_id;
-	}
-
-	return result;
-}
-
-// Searches for a specified item in the specified slot/inventory range
-bool Client::SlotItemSearch(uint32 startSlot, uint32 endSlot, uint32 item_id)
-{
-	bool result = false;
-
-	if(item_id)
-	{
-		for(uint32 x = startSlot; x <= endSlot; x++)
-		{
-			const ItemInst* inst = m_inv[x];
-
-			if(inst)
-			{
-				if(inst->GetItem()->ID == item_id)
-					result = true;
-			}
-		}
-	}
-
-	return result;
-}
-
 // Returns a slot's item ID (returns INVALID_ID if not found)
 uint32 Client::GetItemIDAt(sint16 slot_id) {
 	const ItemInst* inst = m_inv[slot_id];

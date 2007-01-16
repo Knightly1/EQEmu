@@ -3151,7 +3151,22 @@ void Client::Sacrifice(Client *caster)
 				}
 }
 
-
+void Client::SendPickPocketResponce(Mob *from, uint32 amt, int type, const Item_Struct* item){
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_PickPocket, sizeof(sPickPocket_Struct));
+		sPickPocket_Struct* pick_out = (sPickPocket_Struct*) outapp->pBuffer;
+		pick_out->coin = amt;
+		pick_out->from = GetID();
+		pick_out->to = from->GetID();
+		pick_out->myskill = GetSkill(PICK_POCKETS);
+		pick_out->type = type;
+		if(item)
+			strcpy(pick_out->itemname, item->Name);
+		else
+			pick_out->itemname[0] = '\0';
+		//if we do not send this packet the client will lock up and require the player to relog.
+		QueuePacket(outapp);
+		safe_delete(outapp);
+}
 
 
 

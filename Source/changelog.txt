@@ -14,6 +14,9 @@ KLS: Fixed an issue with the client position update code that should see the ser
 Required SQL:
 ALTER TABLE `npc_types` ADD `see_hide` tinyint(4) NOT NULL default '0';
 ALTER TABLE `npc_types` ADD `see_improved_hide` tinyint(4) NOT NULL default '0';
+Optional SQL:
+UPDATE `npc_types` SET `see_hide` = 1 WHERE see_invis = '1';
+UPDATE `npc_types` SET `see_hide` = 1 WHERE see_invis_undead = '1';
 
 ==1/07/2006
 KLS: action_struct unknown06 renamed to instrument_mod to reflect it's behavior

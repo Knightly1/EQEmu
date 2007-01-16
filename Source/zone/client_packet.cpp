@@ -862,6 +862,13 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 	    if(!sneaking){
 			hidden = false;
 			improved_hidden = false;
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+			SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
+			sa_out->spawn_id = GetID();
+			sa_out->type = 0x03;
+			sa_out->parameter = 0;
+			entity_list.QueueClients(this, outapp, true);
+			safe_delete(outapp);
 		}
 	}
 	
@@ -1980,6 +1987,13 @@ void Client::Handle_OP_Sneak(const EQApplicationPacket *app)
 		sneaking = false;
 		hidden = false;
 		improved_hidden = false;
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+		SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
+		sa_out->spawn_id = GetID();
+		sa_out->type = 0x03;
+		sa_out->parameter = 0;
+		entity_list.QueueClients(this, outapp, true);
+		safe_delete(outapp);
 	}
 	else {
 		CheckIncreaseSkill(SNEAK,15);

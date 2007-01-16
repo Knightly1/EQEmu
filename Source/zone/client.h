@@ -284,6 +284,7 @@ public:
 	
 	inline int8	GetLanguageSkill(int16 n)	const { return m_pp.languages[n]; }
 
+	void	SendPickPocketResponce(Mob *from, uint32 amt, int type, const Item_Struct* item = NULL);
 	
 	inline const char*	GetLastName() const	{ return lastname; }
 	inline int32	GetLDoNPoints() { return 0; }
@@ -591,7 +592,6 @@ public:
 	void	SetTint(sint16 slot_id, Color_Struct& color);
 	void	SetMaterial(sint16 slot_id, uint32 item_id);
 	void	Undye();
-	uint32	FindItemInInventory(uint32 item_id);
 	uint32	GetItemIDAt(sint16 slot_id);
 	bool	PutItemInInventory(sint16 slot_id, const ItemInst& inst, bool client_update = false);
 	bool	PushItemOnCursor(const ItemInst& inst, bool client_update = false);
@@ -681,7 +681,6 @@ private:
 	void	OPGMTrainSkill(const EQApplicationPacket *app);
 	void	OPGMSummon(const EQApplicationPacket *app);
 	void	OPCombatAbility(const EQApplicationPacket *app);
-	bool	SlotItemSearch(uint32 startSlot, uint32 endSlot, uint32 item_id);
 	
 	sint16    CalcAC();
 	sint16    CalcATK();

@@ -1055,28 +1055,13 @@ int32 NPC::GetMaxDamage(int8 tlevel)
 	return dmg;
 }
 
-void NPC::SendPickPocketResponce(Client* thief, uint32 amt, int type, const Item_Struct* item){
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_PickPocket, sizeof(sPickPocket_Struct));
-		sPickPocket_Struct* pick_out = (sPickPocket_Struct*) outapp->pBuffer;
-		pick_out->coin = amt;
-		pick_out->from = thief->GetID();
-		pick_out->to = GetID();
-		pick_out->myskill = thief->GetSkill(PICK_POCKETS);
-		pick_out->type = type;
-		if(item)
-			strcpy(pick_out->itemname, item->Name);
-		//if we do not send this packet the client will lock up and require the player to relog.
-		thief->QueuePacket(outapp);
-		safe_delete(outapp);
-}
-
 void NPC::PickPocket(Client* thief) {
 	
 	//make sure were allowed to targte them:
 	int olevel = GetLevel();
 	if(olevel > (thief->GetLevel() + THIEF_PICKPOCKET_OVER)) {
 		thief->Message(13, "You are too inexperienced to pick pocket this target");
-		SendPickPocketResponce(thief, 0, 0);
+		thief->SendPickPocketResponce(this, 0, 0);
 		//should we check aggro
 		return;
 	}
@@ -1085,7 +1070,7 @@ void NPC::PickPocket(Client* thief) {
 		AddToHateList(thief, 50);
 		Say("Stop thief!");
 		thief->Message(13, "You are noticed trying to steal!");
-		SendPickPocketResponce(thief, 0, 0);
+		thief->SendPickPocketResponce(this, 0, 0);
 		return;
 	}
 	
@@ -1148,7 +1133,7 @@ void NPC::PickPocket(Client* thief) {
 				thief->PutItemInInventory(slot[random], *inst);
 				thief->SendItemPacket(slot[random], inst, ItemPacketTrade);
 				RemoveItem(item->ID);
-				SendPickPocketResponce(thief, 0, 5, item);
+				thief->SendPickPocketResponce(this, 0, 5, item);
 			}
 		}
 		else if (!no_coin)
@@ -1158,7 +1143,7 @@ void NPC::PickPocket(Client* thief) {
 		else
 		{
 			thief->Message(0, "This target's pockets are empty");
-			SendPickPocketResponce(thief, 0, 0);
+			thief->SendPickPocketResponce(this, 0, 0);
 		}
 	}
 	if (!steal_item) //Steal money
@@ -1187,7 +1172,7 @@ void NPC::PickPocket(Client* thief) {
 						amt = GetPlatinum();
 					SetPlatinum(GetPlatinum()-amt);
 					thief->AddMoneyToPP(0,0,0,amt,true);
-					SendPickPocketResponce(thief, amt, 1);
+					thief->SendPickPocketResponce(this, amt, 1);
 					break;
 				   }
 			case 1:{
@@ -1195,7 +1180,7 @@ void NPC::PickPocket(Client* thief) {
 						amt = GetGold();
 					SetGold(GetGold()-amt);
 					thief->AddMoneyToPP(0,0,amt,0,true);
-					SendPickPocketResponce(thief, amt, 2);
+					thief->SendPickPocketResponce(this, amt, 2);
 					break;
 				   }
 			case 2:{
@@ -1203,7 +1188,7 @@ void NPC::PickPocket(Client* thief) {
 						amt = GetSilver();
 					SetSilver(GetSilver()-amt);
 					thief->AddMoneyToPP(0,amt,0,0,true);
-					SendPickPocketResponce(thief, amt, 3);
+					thief->SendPickPocketResponce(this, amt, 3);
 					break;
 				   }
 			case 3:{
@@ -1211,14 +1196,14 @@ void NPC::PickPocket(Client* thief) {
 						amt = GetCopper();
 					SetCopper(GetCopper()-amt);
 					thief->AddMoneyToPP(amt,0,0,0,true);
-					SendPickPocketResponce(thief, amt, 4);
+					thief->SendPickPocketResponce(this, amt, 4);
 					break;
 				   }
 			}
 		}
 		else
 		{
-			SendPickPocketResponce(thief, 0, 0);
+			thief->SendPickPocketResponce(this, 0, 0);
 		}
 	}
 	safe_delete(inst);

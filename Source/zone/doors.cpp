@@ -100,7 +100,13 @@ void Doors::HandleClick(Client* sender, int8 trigger)
 	//////////////////////////////////////////////////////////////////
 
 	uint32 keyneeded=GetKeyItem(); 
-	uint32 playerkey = sender->FindItemInInventory(keyneeded);
+	uint32 haskey = 0;
+	uint32 playerkey = 0;
+
+	haskey = sender->GetInv().HasItem(keyneeded, 1);
+
+	if(haskey != SLOT_INVALID)
+		playerkey = keyneeded;
 
 	if(GetTriggerType() == 255) { // this object isnt triggered
 		if(trigger == 1) { // this door is only triggered by an object
