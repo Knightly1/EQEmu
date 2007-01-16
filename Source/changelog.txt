@@ -1,6 +1,20 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==1/15/2006
+KLS: Fixed an issue with storing timers.
+KLS: Added in hide and basic support of hide improving AAs later
+KLS: Some more changes to how procs work, perma procs will not be influenced by mob stats, should make them easier to balance.
+KLS: Some internal changes to critical hits with some future spell effects in mind shouldn't change functionality.
+KLS: WildCardX's key changes, keys should now work even if they're not on your cursor and no matter where in your inventory it's on you, including your bank
+KLS: Pickpocket should work considerably better.
+KLS: Removed some obsolete discipline code that I ran across.
+KLS: Character:ExpMultiplier rule should work correctly now.
+KLS: Fixed an issue with the client position update code that should see the server sending fewer redundant client position update packets.
+Required SQL:
+ALTER TABLE `npc_types` ADD `see_hide` tinyint(4) NOT NULL default '0';
+ALTER TABLE `npc_types` ADD `see_improved_hide` tinyint(4) NOT NULL default '0';
+
 ==1/07/2006
 KLS: action_struct unknown06 renamed to instrument_mod to reflect it's behavior
 KLS: WildCardX inspired weapon proc rate changes, proc rates should now load as a signed int instead of an unsigned int and should correctly calculate.

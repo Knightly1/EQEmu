@@ -329,6 +329,8 @@ bool logpos;
 		
 		int8	in_see_invis,			// Mongrel: see through invis
 		int8	in_see_invis_undead,		// Mongrel: see through invis vs. undead
+		int8	in_see_hide,
+		int8	in_see_improved_hide,
 		int8	in_qglobal
 
 	);
@@ -387,6 +389,9 @@ bool logpos;
 	
 	inline bool SeeInvisible() const { return see_invis; }				// Mongrel: Now using the flags
 	inline bool SeeInvisibleUndead() const { return see_invis_undead; }   // Mongrel: Now using the flags
+	inline bool SeeHide() const { return see_hide; }
+	inline bool SeeImprovedHide() const { return see_improved_hide; }
+
 	bool CheckLos(Mob* other);
 	bool CheckLosFN(Mob* other);
 	inline bool GetQglobal() const {return qglobal;}		// SCORPIOUS2K - return quest global flag
@@ -588,8 +593,8 @@ bool logpos;
 	inline void Silence(bool newval) { silenced = newval; }
 	
 	bool	invulnerable;
-	bool	invisible, invisible_undead, invisible_animals, sneaking;
-	bool	see_invis, see_invis_undead;   // Mongrel: See Invis and See Invis vs. Undead 
+	bool	invisible, invisible_undead, invisible_animals, sneaking, hidden, improved_hidden;
+	bool	see_invis, see_invis_undead, see_hide, see_improved_hide;   // Mongrel: See Invis and See Invis vs. Undead 
 	bool	qglobal;		// SCORPIOUS2K - qglobal flag
 
 	void	Spin();

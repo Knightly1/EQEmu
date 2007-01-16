@@ -591,6 +591,7 @@ public:
 	void	SetTint(sint16 slot_id, Color_Struct& color);
 	void	SetMaterial(sint16 slot_id, uint32 item_id);
 	void	Undye();
+	uint32	FindItemInInventory(uint32 item_id);
 	uint32	GetItemIDAt(sint16 slot_id);
 	bool	PutItemInInventory(sint16 slot_id, const ItemInst& inst, bool client_update = false);
 	bool	PushItemOnCursor(const ItemInst& inst, bool client_update = false);
@@ -644,8 +645,6 @@ public:
 	float	CalcPriceMod(Mob* other = 0, bool reverse = false);
 	void	ResetTrade();
 	void	DropInst(const ItemInst* inst);
-	//This function needs to be eliminated, it isnt doing anything:
-	bool	CheckDiscipline(int8 type, bool onetime = false);	//true if discipline is active.
 	bool	TrainDiscipline(int32 itemid);
 	void	SendDisciplineUpdate();
 	bool	UseDiscipline(int32 spell_id, int32 target);
@@ -682,6 +681,7 @@ private:
 	void	OPGMTrainSkill(const EQApplicationPacket *app);
 	void	OPGMSummon(const EQApplicationPacket *app);
 	void	OPCombatAbility(const EQApplicationPacket *app);
+	bool	SlotItemSearch(uint32 startSlot, uint32 endSlot, uint32 item_id);
 	
 	sint16    CalcAC();
 	sint16    CalcATK();
@@ -792,8 +792,6 @@ private:
 	Timer	hpupdate_timer;
 	Timer	camp_timer;
 	Timer	process_timer;
-	Timer	disc_timer;		//only for avaliable message, pTimerDisciplineReuse enforces reuse time
-	Timer	disc_elapse;
 	Timer	stamina_timer;
 //	Timer	LDTimer;
 	Timer	zoneinpacket_timer;
@@ -819,8 +817,6 @@ private:
 	float	proximity_y;
 	float	proximity_z;
 
-	int8 disc_inuse;	//obsoleted by spell-based disciplines, not yet removed
-	
 	void	BulkSendInventoryItems();
 	
 	faction_map factionvalues;

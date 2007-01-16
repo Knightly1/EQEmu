@@ -834,11 +834,7 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 		if(MakeRandomFloat(0, 100) < 70)//should be good
 			CheckIncreaseSkill(TRACKING,-10);
 	}
-	x_pos			= ppu->x_pos;
-	y_pos			= ppu->y_pos;
-	z_pos			= ppu->z_pos;
-	animation		= ppu->animation;
-	
+
 #ifdef GUILDWARS
 	if(animation > 65 && admin<80 && CheckCheat()){
 		if(cheater || cheatcount>0){
@@ -861,6 +857,13 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 	cheat_x=x_pos;
 	cheat_y=y_pos;
 #endif
+
+	if(ppu->y_pos != y_pos || ppu->x_pos != x_pos){
+	    if(!sneaking){
+			hidden = false;
+			improved_hidden = false;
+		}
+	}
 	
 		//printf("animation: %i\n",ppu->animation);
 	// Outgoing client packet
@@ -879,6 +882,10 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 #endif
 		safe_delete(outapp);
 	}
+	x_pos			= ppu->x_pos;
+	y_pos			= ppu->y_pos;
+	z_pos			= ppu->z_pos;
+	animation		= ppu->animation;
 	return;
 }
 
@@ -1971,6 +1978,8 @@ void Client::Handle_OP_Sneak(const EQApplicationPacket *app)
 	bool was = sneaking;
 	if (sneaking){
 		sneaking = false;
+		hidden = false;
+		improved_hidden = false;
 	}
 	else {
 		CheckIncreaseSkill(SNEAK,15);
@@ -2023,11 +2032,13 @@ void Client::Handle_OP_Hide(const EQApplicationPacket *app)
 		SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
 		sa_out->spawn_id = GetID();
 		sa_out->type = 0x03;
-		this->invisible = true;
 		sa_out->parameter = 1;
 		entity_list.QueueClients(this, outapp, true);
 		safe_delete(outapp);
-		invisible = true;
+		if(GetAA(aaShroudofStealth))
+			improved_hidden = true;
+		else
+			hidden = true;
 	}
 	if(GetClass() == ROGUE){
 		EQApplicationPacket *outapp = new EQApplicationPacket(OP_SimpleMessage,sizeof(SimpleMessage_Struct));
@@ -2041,7 +2052,7 @@ void Client::Handle_OP_Hide(const EQApplicationPacket *app)
 				msg->string_id=344;
 			}
 		} else {
-			if (invisible){
+			if (hidden){
 				msg->string_id=346;
 			}
 			else {
@@ -5147,27 +5158,58 @@ void Client::Handle_OP_PickPocket(const EQApplicationPacket *app)
 {
 	if(!HasSkill(PICK_POCKETS))
 		return;
-	
-	if (app->size != sizeof(PickPocket_Struct)){
+
+		if (app->size != sizeof(PickPocket_Struct)){
 		LogFile->write(EQEMuLog::Error, "Size mismatch for Pick Pocket packet");
 		DumpPacket(app);
 	}
 	PickPocket_Struct* pick_in = (PickPocket_Struct*) app->pBuffer;
 
-	//EQApplicationPacket* outapp = new EQApplicationPacket(OP_PickPocket, sizeof(sPickPocket_Struct));
-	//sPickPocket_Struct* pick_out = (sPickPocket_Struct*) outapp->pBuffer;
 	Mob* victim = entity_list.GetMob(pick_in->to);
 	if (!victim)
 		return;
-	if (victim == this)
+	if (victim == this){
 		Message(0,"You catch yourself red-handed.");
-	else if (victim->GetOwnerID())
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_PickPocket, sizeof(sPickPocket_Struct));
+		sPickPocket_Struct* pick_out = (sPickPocket_Struct*) outapp->pBuffer;
+		pick_out->coin = 0;
+		pick_out->from = victim->GetID();
+		pick_out->to = GetID();
+		pick_out->myskill = GetSkill(PICK_POCKETS);
+		pick_out->type = 0;
+		//if we do not send this packet the client will lock up and require the player to relog.
+		QueuePacket(outapp);
+		safe_delete(outapp);
+	}
+	else if (victim->GetOwnerID()){
 		Message(0,"You cannot steal from pets!");
-	else if (victim->IsNPC())
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_PickPocket, sizeof(sPickPocket_Struct));
+		sPickPocket_Struct* pick_out = (sPickPocket_Struct*) outapp->pBuffer;
+		pick_out->coin = 0;
+		pick_out->from = victim->GetID();
+		pick_out->to = GetID();
+		pick_out->myskill = GetSkill(PICK_POCKETS);
+		pick_out->type = 0;
+		//if we do not send this packet the client will lock up and require the player to relog.
+		QueuePacket(outapp);
+		safe_delete(outapp);
+	}
+	else if (victim->IsNPC()){
 		victim->CastToNPC()->PickPocket(this);
-	else
+	}
+	else{
 		Message(0,"Stealing from clients not yet supported.");
-	//safe_delete(outapp);
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_PickPocket, sizeof(sPickPocket_Struct));
+		sPickPocket_Struct* pick_out = (sPickPocket_Struct*) outapp->pBuffer;
+		pick_out->coin = 0;
+		pick_out->from = victim->GetID();
+		pick_out->to = GetID();
+		pick_out->myskill = GetSkill(PICK_POCKETS);
+		pick_out->type = 0;
+		//if we do not send this packet the client will lock up and require the player to relog.
+		QueuePacket(outapp);
+		safe_delete(outapp);
+	}
 }
 
 void Client::Handle_OP_Bind_Wound(const EQApplicationPacket *app)
@@ -6091,11 +6133,6 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 		//report it...
 	}
 
-	//TODO: this needs to be updated to take account of the multiple discipline timers!
-	if(!p_timers.Expired(&database, pTimerDisciplineReuseStart)) {
-		//reset this so they get the avaliable message.
-		disc_timer.Start(p_timers.GetRemainingTime(pTimerDisciplineReuseStart)*1000);
-	}
 #ifdef _EQDEBUG	
 	printf("Dumping inventory on load:\n");
 	m_inv.dumpInventory();

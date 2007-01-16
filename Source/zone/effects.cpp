@@ -93,8 +93,6 @@ sint32 Client::GetActSpellDamage(int16 spell_id, sint32 value) {
 				modifier += 75;
 				break;
 		}
-		if(CheckDiscipline(discUnholyAura, true))
-			modifier += 50;
 	}
 	
 	//spell crits, dont make sense if cast on self.
@@ -380,18 +378,6 @@ sint32 Client::GetActSpellCasttime(int16 spell_id, sint32 casttime)
 	casttime = (casttime*(100 - cast_reducer)/100);
 	
 	return casttime;
-}
-
-bool Client::CheckDiscipline(int8 type, bool oneuse) {
-	if(disc_inuse != type)
-		return(false);
-	if(disc_elapse.Check(false)) {	//timer expired
-		disc_inuse = discNone;
-		return(false);
-	}
-	if(oneuse)
-		disc_inuse = discNone;	//clear the discipline
-	return(true);
 }
 
 bool Client::TrainDiscipline(int32 itemid) {

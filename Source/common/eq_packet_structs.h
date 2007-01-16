@@ -2235,7 +2235,7 @@ struct sPickPocket_Struct {
 	uint32 myskill;
 	uint32 type;
 	uint32 coin;
-	uint32 unknowns[2];
+	char itemname[64];
 };
 
 struct LogServer_Struct {

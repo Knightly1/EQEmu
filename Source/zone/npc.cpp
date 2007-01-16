@@ -99,6 +99,8 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	  0,
 	  d->see_invis,			// pass see_invis/see_ivu flags to mob constructor
 	  d->see_invis_undead,
+	  d->see_hide,
+	  d->see_improved_hide,
 // SCORPIOUS2K - qglobal
 	  d->qglobal ),
 	attacked_timer(11000),
@@ -1053,19 +1055,42 @@ int32 NPC::GetMaxDamage(int8 tlevel)
 	return dmg;
 }
 
+void NPC::SendPickPocketResponce(Client* thief, uint32 amt, int type, const Item_Struct* item){
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_PickPocket, sizeof(sPickPocket_Struct));
+		sPickPocket_Struct* pick_out = (sPickPocket_Struct*) outapp->pBuffer;
+		pick_out->coin = amt;
+		pick_out->from = thief->GetID();
+		pick_out->to = GetID();
+		pick_out->myskill = thief->GetSkill(PICK_POCKETS);
+		pick_out->type = type;
+		if(item)
+			strcpy(pick_out->itemname, item->Name);
+		//if we do not send this packet the client will lock up and require the player to relog.
+		thief->QueuePacket(outapp);
+		safe_delete(outapp);
+}
+
 void NPC::PickPocket(Client* thief) {
 	
 	//make sure were allowed to targte them:
 	int olevel = GetLevel();
-	if(olevel > (thief->GetLevel() - THIEF_PICKPOCKET_UNDER)) {
-		thief->Message(13, "Your not good enough to steal from them.");
+	if(olevel > (thief->GetLevel() + THIEF_PICKPOCKET_OVER)) {
+		thief->Message(13, "You are too inexperienced to pick pocket this target");
+		SendPickPocketResponce(thief, 0, 0);
 		//should we check aggro
 		return;
 	}
 	
+	if(MakeRandomInt(0, 100) > 95){
+		AddToHateList(thief, 50);
+		Say("Stop thief!");
+		thief->Message(13, "You are noticed trying to steal!");
+		SendPickPocketResponce(thief, 0, 0);
+		return;
+	}
 	
 	int steal_skill = thief->GetSkill(PICK_POCKETS);
-	int stealchance = (rand()%6+1)*olevel;
+	int stealchance = steal_skill*100/(5*olevel+5);
 	ItemInst* inst = 0;
 	int x = 0;
 	int slot[50];
@@ -1120,22 +1145,10 @@ void NPC::PickPocket(Client* thief) {
 
 			if (/*item->StealSkill || */steal_skill >= stealchance)
 			{
-				thief->Message_StringID(0,12903,item->Name,0);
 				thief->PutItemInInventory(slot[random], *inst);
 				thief->SendItemPacket(slot[random], inst, ItemPacketTrade);
 				RemoveItem(item->ID);
-			}
-			else
-			{
-				if (stealchance - 25 > steal_skill)
-				{
-					thief->Message_StringID(0,12904,GetName(),0);
-					AddToHateList(thief,50);
-				}
-				else
-				{
-					thief->Message_StringID(0,12898);
-				}
+				SendPickPocketResponce(thief, 0, 5, item);
 			}
 		}
 		else if (!no_coin)
@@ -1144,7 +1157,8 @@ void NPC::PickPocket(Client* thief) {
 		}
 		else
 		{
-			thief->Message_StringID(0,113);
+			thief->Message(0, "This target's pockets are empty");
+			SendPickPocketResponce(thief, 0, 0);
 		}
 	}
 	if (!steal_item) //Steal money
@@ -1164,51 +1178,47 @@ void NPC::PickPocket(Client* thief) {
 			}
 		}
 
-		if (steal_skill >= stealchance)
+		if (MakeRandomInt(0, 100) <= stealchance)
 		{
 			switch (steal_type)
 			{
-				case 0:
+			case 0:{
 					if (amt > GetPlatinum())
 						amt = GetPlatinum();
 					SetPlatinum(GetPlatinum()-amt);
 					thief->AddMoneyToPP(0,0,0,amt,true);
+					SendPickPocketResponce(thief, amt, 1);
 					break;
-				case 1:
+				   }
+			case 1:{
 					if (amt > GetGold())
 						amt = GetGold();
 					SetGold(GetGold()-amt);
 					thief->AddMoneyToPP(0,0,amt,0,true);
+					SendPickPocketResponce(thief, amt, 2);
 					break;
-				case 2:
+				   }
+			case 2:{
 					if (amt > GetSilver())
 						amt = GetSilver();
 					SetSilver(GetSilver()-amt);
 					thief->AddMoneyToPP(0,amt,0,0,true);
+					SendPickPocketResponce(thief, amt, 3);
 					break;
-				case 3:
+				   }
+			case 3:{
 					if (amt > GetCopper())
 						amt = GetCopper();
 					SetCopper(GetCopper()-amt);
 					thief->AddMoneyToPP(amt,0,0,0,true);
+					SendPickPocketResponce(thief, amt, 4);
 					break;
+				   }
 			}
-			char chr_amt[10];
-			memset(chr_amt,0,10);
-			itoa(amt,chr_amt,10);
-			thief->Message_StringID(0,12899+steal_type,chr_amt,0);
 		}
 		else
 		{
-			if (stealchance - 25 > steal_skill)
-			{
-				thief->Message_StringID(0,12904,GetName(),0);
-				AddToHateList(thief,50);
-			}
-			else
-			{
-				thief->Message_StringID(0,12898);
-			}
+			SendPickPocketResponce(thief, 0, 0);
 		}
 	}
 	safe_delete(inst);

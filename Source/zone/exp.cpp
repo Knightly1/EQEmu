@@ -44,10 +44,17 @@ void Client::AddEXP(int32 add_exp, int8 conlevel, bool resexp) {
 		//take that ammount away from regular exp
 		add_exp -= add_aaxp;
 	
-		//get zone modifier
+		float totalmod = 1.0;
+		//get modifiers
 		if (zone->GetEXPMod() > 0) {
-			add_exp = int32(float(add_exp) * zone->GetEXPMod());
+			totalmod = zone->GetEXPMod();
 		}
+
+		if(RuleR(Character, ExpMultiplier) >= 0){
+			totalmod *= RuleR(Character, ExpMultiplier);
+		}
+
+		add_exp = int32(float(add_exp) * totalmod);
 	
 #ifdef CON_XP_SCALING
 		if (conlevel != 0xFF) {

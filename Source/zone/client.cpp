@@ -122,6 +122,8 @@ Client::Client(EQStreamInterface* ieqs)
 	0xff,	// AA Title
 	0,	// see_invis
 	0, // see_invis_undead 
+	0,
+	0,
 	0	// qglobal
 
 	),
@@ -130,8 +132,6 @@ Client::Client(EQStreamInterface* ieqs)
 	hpupdate_timer(1800),
 	camp_timer(29000),
 	process_timer(100),
-	disc_timer(60000),
-	disc_elapse(60000),
 	stamina_timer(40000),
 	zoneinpacket_timer(3000),
 	linkdead_timer(30000),
@@ -229,10 +229,6 @@ Client::Client(EQStreamInterface* ieqs)
 	tribute_timer.Disable();
 	
 	logging_enabled = CLIENT_DEFAULT_LOGGING_ENABLED;
-	
-	disc_timer.Disable();
-	disc_elapse.Disable();
-	disc_inuse = discNone;
 	
 	//for good measure:
 	memset(&m_pp, 0, sizeof(m_pp));
@@ -2358,7 +2354,7 @@ int8 Client::SlotConvert2(int8 slot){
 
 void Client::Escape()
 {
-	invisible = true;
+	hidden = true;
 	entity_list.ClearFeignAggro(this);
 
 	EQApplicationPacket *outapp = new EQApplicationPacket(OP_SimpleMessage,12);

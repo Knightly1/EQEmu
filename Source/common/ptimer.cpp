@@ -163,7 +163,7 @@ bool PersistentTimer::Load(Database *db) {
 }
 
 bool PersistentTimer::Store(Database *db) {
-	if(Expired(false))	//dont need to store expired timers.
+	if(Expired(db, false))	//dont need to store expired timers.
 		return(true);
 	
 	char errbuf[MYSQL_ERRMSG_SIZE];

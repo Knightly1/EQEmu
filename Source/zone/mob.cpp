@@ -86,7 +86,9 @@ Mob::Mob(const char*   in_name,
 
 		 int8	in_aa_title,
 		 int8	in_see_invis,			// Mongrel: see through invis/ivu
-		 int8  in_see_invis_undead,
+		 int8   in_see_invis_undead,
+		 int8   in_see_hide,
+		 int8   in_see_improved_hide,
 		 int8	in_qglobal
 
 		 ) : 
@@ -192,6 +194,8 @@ Mob::Mob(const char*   in_name,
 	invisible_undead = false;
 	invisible_animals = false;
 	sneaking = false;
+	hidden = false;
+	improved_hidden = false;
 	invulnerable = false;
 	IsFullHP	= (cur_hp == max_hp);
 	qglobal=0;
@@ -288,6 +292,8 @@ Mob::Mob(const char*   in_name,
 
 	see_invis = in_see_invis;
 	see_invis_undead = in_see_invis_undead;
+	see_hide = in_see_hide;
+	see_improved_hide = in_see_improved_hide;
 	qglobal=in_qglobal;
 	
 	// Bind wound
@@ -381,6 +387,18 @@ bool Mob::IsInvisible(Mob* other) const
 	if (other->GetBodyType() == BT_Animal){
 		if(invisible_animals && !other->SeeInvisible())
 			return true;
+	}
+
+	if(hidden){
+		if(!other->see_hide && !other->see_improved_hide){
+			return true;
+		}
+	}
+
+	if(improved_hidden){
+		if(!other->see_improved_hide){
+			return true;
+		}
 	}
 	
 	//handle sneaking
@@ -596,7 +614,7 @@ void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 	ns->spawn.light		= light;
 
 
-	ns->spawn.invis		= invisible;	// TODO: load this before spawning players
+	ns->spawn.invis		= (invisible || hidden) ? 1 : 0;	// TODO: load this before spawning players
 	ns->spawn.NPC		= IsClient() ? 0 : 1;
 	ns->spawn.petOwnerId	= ownerid;
 

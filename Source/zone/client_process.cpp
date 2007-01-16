@@ -382,17 +382,6 @@ bool Client::Process() {
 				}
 			}
 		}
-		if (disc_timer.Check()) {
-			disc_timer.Disable();
-			//Message(0, "Your disciplines are available for use!");
-			Message_StringID(0,DISCIPLINE_RDY);
-		}
-		else if (disc_elapse.Check()) {
-			disc_elapse.Disable();
-			disc_inuse = discNone;
-			//Message(0, "You lose your concentration!");
-			Message_StringID(0,DISCIPLINE_CONLOST);
-		}
 		
 		adverrorinfo = 2;
 		if (position_timer.Check()) {
@@ -991,6 +980,8 @@ void Client::BreakInvis()
 		entity_list.QueueClients(this, outapp, true);
 		safe_delete(outapp);
 		invisible = false;
+		hidden = false;
+		improved_hidden = false;
 	}
 }
 

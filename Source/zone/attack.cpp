@@ -828,6 +828,9 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. animals due to melee attack.");
 		BuffFadeByEffect(SE_InvisVsAnimals);
 	}
+
+	hidden = false;
+	improved_hidden = false;
 	
 	////////////////////////////////////////////////////////////
 	////////  PROC CODE
@@ -1308,7 +1311,10 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	if(invisible_animals){
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. animals due to melee attack.");
 		BuffFadeByEffect(SE_InvisVsAnimals);
-	}	
+	}
+
+	hidden = false;
+	improved_hidden = false;
 	
 	//I doubt this works...
 	if (!target)
@@ -2222,7 +2228,6 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 				} else {
 					mlog(COMBAT__PROCS, "Attacking weapon (%s) successfully procing spell %d (%.2f percent chance)", weapon->Name, weapon->Proc.Effect, ProcChance*100);
 					ExecWeaponProc(weapon->Proc.Effect, on);
-					return;
 				}
 			} else {
 				mlog(COMBAT__PROCS, "Attacking weapon (%s) did no proc (%.2f percent chance).", weapon->Name, ProcChance*100);
@@ -2230,46 +2235,26 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 		}
 	}
 	
-	int ourclass = GetClass();
-	
 	//now try our proc arrays
 	float procmod =  float(GetDEX()) / 100.0f + ProcBonus*100.0;	//did somebody think about this???
 	uint32 i;
 	for(i = 0; i < MAX_PROCS; i++) {
 		if (PermaProcs[i].spellID != SPELL_UNKNOWN) {
-			float chance = ProcChance + (PermaProcs[i].chance / 100);
+			float chance = PermaProcs[i].chance / 100; 
 			if(MakeRandomFloat(0, 1) < chance) {
-				int spelllevel = spells[PermaProcs[i].spellID].classes[ourclass-1];
-				//pets must be high enough to cast the spell..?
-				//this is kinda a screwed up rule...
-				if(spelllevel < 127 && ourlevel < spelllevel && GetOwner() != NULL) {
-					mlog(COMBAT__PROCS, "Failed to proc permanent proc %d, spell %d, our level (%d) is lower than required (%d)", i, PermaProcs[i].spellID, ourlevel, spelllevel);
-					GetOwner()->Message_StringID(13,PROC_PETTOOLOW);
-				} else {
-					mlog(COMBAT__PROCS, "Permanent proc %d procing spell %d (%.2f percent chance(%d*(%.4f dex + %.4f bonus)))", i, PermaProcs[i].spellID, chance, PermaProcs[i].chance, procmod-ProcBonus, ProcBonus);
-					ExecWeaponProc(PermaProcs[i].spellID, on);
-					break;
-				}
+				mlog(COMBAT__PROCS, "Permanent proc %d procing spell %d (%.2f percent chance)", i, PermaProcs[i].spellID, chance);
+				ExecWeaponProc(PermaProcs[i].spellID, on);
 			} else {
-				mlog(COMBAT__PROCS, "Permanent proc %d failed to proc %d (%.2f percent chance(%d*(%.4f dex + %.4f bonus)))", i, PermaProcs[i].spellID, chance, PermaProcs[i].chance, procmod-ProcBonus, ProcBonus);
+				mlog(COMBAT__PROCS, "Permanent proc %d failed to proc %d (%.2f percent chance)", i, PermaProcs[i].spellID, chance);
 			}
 		}
 		if (SpellProcs[i].spellID != SPELL_UNKNOWN) {
 			float chance = ProcChance + (SpellProcs[i].chance / 100);
 			if(MakeRandomFloat(0, 1) < chance) {
-				int spelllevel = spells[SpellProcs[i].spellID].classes[ourclass-1];
-				//pets must be high enough to cast the spell..?
-				//this is kinda a screwed up rule...
-				if(spelllevel < 127 && ourlevel < spelllevel && GetOwner() != NULL) {
-					mlog(COMBAT__PROCS, "Failed to proc permanent proc %d, spell %d, our level (%d) is lower than required (%d)", i, SpellProcs[i].spellID, ourlevel, spelllevel);
-					GetOwner()->Message_StringID(13,PROC_PETTOOLOW);
-				} else {
-					mlog(COMBAT__PROCS, "Permanent proc %d procing spell %d (%.2f percent chance)", i, SpellProcs[i].spellID, chance);
-					ExecWeaponProc(SpellProcs[i].spellID, on);
-					break;
-				}
+				mlog(COMBAT__PROCS, "Spell proc %d procing spell %d (%.2f percent chance)", i, SpellProcs[i].spellID, chance);
+				ExecWeaponProc(SpellProcs[i].spellID, on);
 			} else {
-				mlog(COMBAT__PROCS, "Permanent proc %d failed to proc %d (%.2f percent chance)", i, SpellProcs[i].spellID, chance);
+				mlog(COMBAT__PROCS, "Spell proc %d failed to proc %d (%.2f percent chance)", i, SpellProcs[i].spellID, chance);
 			}
 		}
 	}
@@ -2283,20 +2268,18 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 	float critChance = RuleR(Combat, BaseCritChance);
 	if(IsClient())
 		critChance += RuleR(Combat, ClientBaseCritChance);	
-	//Use a real value because there are spells/skills that can up the crit mod by a percent and while
-	//They are not implemented yet it seems like a good idea to keep it open for when they are.
-	sint8 critMod = 2; 
+
+	uint8 critMod = 20; 
 	if((GetClass() == WARRIOR || GetClass() == BERSERKER) && GetLevel() >= 12 && IsClient()) 
 	{
 		if(CastToClient()->berserk)
 		{
 			critChance += RuleR(Combat, BerserkBaseCritChance);
-			critMod = 4;
+			critMod = 40;
 		}
 		else
 		{
 			critChance += RuleR(Combat, WarBerBaseCritChance);
-			critMod = 2;
 		}
 	}
  
@@ -2323,7 +2306,7 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 	if(critChance > 0){
 		if(MakeRandomFloat(0, 1) <= critChance)
 		{
-			damage = (damage * critMod);
+			damage = (damage * critMod) / 10;
 			if(IsClient() && CastToClient()->berserk)
 			{
 				entity_list.MessageClose(this, false, 200, 10, "%s lands a crippling blow!(%d)", GetCleanName(), damage);

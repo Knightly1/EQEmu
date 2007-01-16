@@ -5238,6 +5238,8 @@ void command_npcedit(Client *c, const Seperator *sep)
       c->Message(0, "#npcedit CR - Sets an NPCs cold resistance");
       c->Message(0, "#npcedit Seeinvis - Sets an NPCs ability to see invis");   
       c->Message(0, "#npcedit Seeinvisundead - Sets an NPCs ability to see through invis vs. undead");   
+      c->Message(0, "#npcedit Seehide - Sets an NPCs ability to see through hide");
+	  c->Message(0, "#npcedit Seeimprovedhide - Sets an NPCs ability to see through improved hide");
       c->Message(0, "#npcedit AC - Sets an NPCs armor class");
       c->Message(0, "#npcedit npcaggro - Sets an NPC's npc_aggro flag");
       c->Message(0, "#npcedit qglobal - Sets an NPC's quest global flag");
@@ -5496,6 +5498,24 @@ void command_npcedit(Client *c, const Seperator *sep)
       char *query = 0;
       c->Message(15,"NPCID %u now has seeinvisundead set to %i",c->GetTarget()->CastToNPC()->GetNPCTypeID(),atoi(sep->arg[2]));
       database.RunQuery(query, MakeAnyLenString(&query, "update npc_types set see_invis_undead=%i where id=%i",atoi(sep->argplus[2]),c->GetTarget()->CastToNPC()->GetNPCTypeID()), errbuf);
+      c->LogSQL(query);
+      safe_delete_array(query);
+   }
+   else if ( strcasecmp( sep->arg[1], "seehide" ) == 0 )
+   {
+      char errbuf[MYSQL_ERRMSG_SIZE];
+      char *query = 0;
+      c->Message(15,"NPCID %u now has seehide set to %i",c->GetTarget()->CastToNPC()->GetNPCTypeID(),atoi(sep->arg[2]));
+      database.RunQuery(query, MakeAnyLenString(&query, "update npc_types set see_hide=%i where id=%i",atoi(sep->argplus[2]),c->GetTarget()->CastToNPC()->GetNPCTypeID()), errbuf);
+      c->LogSQL(query);
+      safe_delete_array(query);
+   }
+   else if ( strcasecmp( sep->arg[1], "seeimprovedhide" ) == 0 )
+   {
+      char errbuf[MYSQL_ERRMSG_SIZE];
+      char *query = 0;
+      c->Message(15,"NPCID %u now has seeimprovedhide set to %i",c->GetTarget()->CastToNPC()->GetNPCTypeID(),atoi(sep->arg[2]));
+      database.RunQuery(query, MakeAnyLenString(&query, "update npc_types set see_improved_hide=%i where id=%i",atoi(sep->argplus[2]),c->GetTarget()->CastToNPC()->GetNPCTypeID()), errbuf);
       c->LogSQL(query);
       safe_delete_array(query);
    }
