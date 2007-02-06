@@ -2641,30 +2641,35 @@ void EntityList::SignalMobsByNPCID(int32 snpc, int signal_id)
 
 bool EntityList::MakeTrackPacket(Client* client){
 	int32 distance = 0;
+
 	if(client->GetClass() == DRUID)
-		distance = (client->GetSkill(TRACKING)*7);
+		distance = (client->GetSkill(TRACKING)*10);
 	else if(client->GetClass() == RANGER)
 		distance = (client->GetSkill(TRACKING)*12);
 	else if(client->GetClass() == BARD)
-		distance = (client->GetSkill(TRACKING)*10); 
+		distance = (client->GetSkill(TRACKING)*7); 
 	if(distance <= 0)
 		return false;
 	if(distance<300)
 		distance=300;
-	int8 spe=100;
 	
+	int32 spe= 0;
 	bool ret = false;
 	
+	spe = mob_list.Count() + 50;
+
 	uchar* buffer1 = new uchar[sizeof(Track_Struct)];
 	Track_Struct* track_ent = (Track_Struct*) buffer1;
 	
 	uchar* buffer2 = new uchar[sizeof(Track_Struct)*spe];
 	Tracking_Struct* track_array = (Tracking_Struct*) buffer2;
 	memset(track_array, 0, sizeof(Track_Struct)*spe);
-	int array_counter = 0;
+	
+	int32 array_counter = 0;
 	
 	LinkedListIterator<Mob*> iterator(mob_list);
 	iterator.Reset();
+
 	while(iterator.MoreElements())
 	{
 		if (iterator.GetData() && (iterator.GetData()->DistNoZ(*client)<=distance))
@@ -2677,25 +2682,21 @@ bool EntityList::MakeTrackPacket(Client* client){
 			track_ent->z=(int16)cur_entity->GetZ();
 			memcpy(&track_array->Entrys[array_counter], track_ent, sizeof(Track_Struct));
 			array_counter++;
-			if (array_counter >= (spe)){
-				EQApplicationPacket* outapp = new EQApplicationPacket(OP_Track,sizeof(Track_Struct)*spe);
-				memcpy(outapp->pBuffer, track_array,sizeof(Track_Struct)*spe);
-				outapp->priority = 6;
-				client->QueuePacket(outapp);
-				safe_delete(outapp);
-				ret = true;
-				break;
-			}
 		}
+
 		iterator.Advance();
 	}
-	if ((array_counter!=0) && (ret==false)) {
+
+	if(array_counter <= spe) {
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_Track,sizeof(Track_Struct)*(array_counter));
 		memcpy(outapp->pBuffer, track_array,sizeof(Track_Struct)*(array_counter));
 		outapp->priority = 6;
 		client->QueuePacket(outapp);
 		safe_delete(outapp);
 		ret = true;
+	}
+	else {
+		LogFile->write(EQEMuLog::Status, "ERROR: Unable to transmit a Tracking_Struct packet. Mobs in zone = %i. Mobs in packet = %i", array_counter, spe);
 	}
 	
 	safe_delete_array(buffer1);

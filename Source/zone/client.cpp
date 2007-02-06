@@ -1614,23 +1614,14 @@ void Client::AddMoneyToPP(uint32 copper,bool updateclient){
 }
 
 void Client::AddMoneyToPP(uint32 copper, uint32 silver, uint32 gold, uint32 platinum, bool updateclient){
-    /*if ((updateclient) && platinum!=0)
-		SendClientMoneyUpdate(3, platinum);
-	if ((updateclient) && gold!=0)
-		SendClientMoneyUpdate(2, gold);
-	if ((updateclient) && silver!=0)
-		SendClientMoneyUpdate(1, silver);
-	if ((updateclient) && copper!=0)
-        SendClientMoneyUpdate(0, copper);*/
-	//send them all at once, since the above code stopped working.
-	if(updateclient)
-		SendMoneyUpdate();
-	
 	m_pp.platinum += platinum;
 	m_pp.gold += gold;
 	m_pp.silver += silver;
-	m_pp.copper += + copper;
+	m_pp.copper += copper;
 	
+	if(updateclient)
+		SendMoneyUpdate();
+
 	RecalcWeight();
 	Save();
 	

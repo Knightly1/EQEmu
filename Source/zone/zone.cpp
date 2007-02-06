@@ -137,7 +137,20 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 			zone->lootvar = 0;
 		}
 	}
-	
+
+	zone->weather_type = database.GetZoneWeather(iZoneID);
+
+	LogFile->write(EQEMuLog::Debug, "Zone: %s has weather of type %i.", zonename, zone->weather_type);
+		
+	if(zone->weather_type > 3 || zone->weather_type == 0) {
+		zone->zone_weather = 0;
+		zone->Weather_Timer->Disable();
+		LogFile->write(EQEMuLog::Debug, "Zone: %s(%i) has no weather type. The weather timer has been disabled.", zonename, iZoneID);
+	}
+	else {
+		zone->zone_weather = 0;
+		LogFile->write(EQEMuLog::Debug, "Zone: %s(%i) has weather type = %i. The weather timer has been enabled.", zonename, iZoneID, zone->weather_type);
+	}
 
 	ZoneLoaded = true;
 
@@ -147,17 +160,6 @@ bool Zone::Bootup(int32 iZoneID, bool iStaticZone) {
 	UpdateWindowTitle();
 	zone->GetTimeSync();
 
-	//This is a bad way of making it set the type to clear on bootup.
-	int8 weather=database.GetZoneWeather(zone->GetZoneID());
-    if(weather)
-	{
-		if(weather > 3)
-			zone->weather_type = 0;
-		else
-			zone->weather_type = weather;
-	}
-
-	LogFile->write(EQEMuLog::Debug, "Default weather for zone is:%i", zone->weather_type);
 	return true;
 }
 
@@ -645,7 +647,6 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name)
 	spawn2_timer(1000)
 {
 	zoneid = in_zoneid;
-	zone_weather = 0;
 	map = Map::LoadMapfile(in_short_name);
 	pathing = PathManager::LoadPathFile(in_short_name);
 	short_name = strcpy(new char[strlen(in_short_name)+1], in_short_name);
@@ -670,7 +671,7 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name)
 	autoshutdown_timer.Start(AUTHENTICATION_TIMEOUT * 1000, false);
 	Weather_Timer = new Timer(((rand()%7200-30)+30)*2000);
 	Weather_Timer->Start();
-	LogFile->write(EQEMuLog::Status, "Weather should change in %i seconds",Weather_Timer->GetRemainingTime()/1000);
+	LogFile->write(EQEMuLog::Debug, "The next weather check for zone: %s will be in %i seconds.", short_name, Weather_Timer->GetRemainingTime()/1000);
 	weather_type = 0;
 	zone_weather = 0;
 	
@@ -1024,38 +1025,45 @@ bool Zone::Process() {
 		guildwars.Update();
 #endif
 	
-	if(Weather_Timer->Check()){
-		Weather_Timer->Disable();
-		int16 tmpweather =rand()%100;
+	if(Weather_Timer) {
+		if(Weather_Timer->Enabled()) {
+			if(Weather_Timer->Check()){
+				Weather_Timer->Disable();
+				int16 tmpweather =rand()%100;
 
-		if(weather_type != 0)
-		{
-			if(tmpweather)
-			{
-				if(tmpweather > 80)
+				if(zone->weather_type != 0)
 				{
-					// A change in the weather....
-					int8 tmpOldWeather = zone_weather;
+					if(tmpweather > 80)
+					{
+						// A change in the weather....
+						int8 tmpOldWeather = zone_weather;
 
-					if(zone_weather == 0)
-						zone_weather = weather_type;
+						if(zone->zone_weather == 0)
+							zone->zone_weather = zone->weather_type;
+						else
+							zone->zone_weather = 0;
+
+						LogFile->write(EQEMuLog::Debug, "The weather for zone: %s has changed. Old weather was = %i. New weather is = %i", zone->GetShortName(), tmpOldWeather, zone_weather);
+
+						this->weatherSend();
+					}
 					else
-						zone_weather = 0;
+						LogFile->write(EQEMuLog::Debug, "The weather for zone: %s is not going to change. Chance was = %i percent.", zone->GetShortName(), tmpweather);
+				
 
-					LogFile->write(EQEMuLog::Debug, "The weather has changed. Old weather was = %i. New weather is = %i", tmpOldWeather, zone_weather);
+					safe_delete(Weather_Timer);
+
+					if(zone->zone_weather != zone->weather_type)
+						Weather_Timer = new Timer(((rand() % (7170)) + 30) * 2000);
+					else
+						Weather_Timer = new Timer(((rand() % (570)) + 30 ) * 1000);
+
+					Weather_Timer->Start();
+
+					LogFile->write(EQEMuLog::Debug, "The next weather check for zone: %s will be in %i seconds.", zone->GetShortName(), Weather_Timer->GetRemainingTime()/1000); 
 				}
-				else
-					LogFile->write(EQEMuLog::Debug, "The weather is not going to change. Chance was = %i percent", tmpweather);
 			}
 		}
-		this->weatherSend();
-		safe_delete(Weather_Timer);		
-		if(zone_weather==weather_type) //stopping, reset to large timer
-			Weather_Timer= new Timer(((rand()%(7170))+30)*2000);
-		else
-			Weather_Timer= new Timer(((rand()%(570))+30)*1000);
-		Weather_Timer->Start();
-		LogFile->write(EQEMuLog::Status, "Weather should change in %i seconds",Weather_Timer->GetRemainingTime()/1000);
 	}
 	
 	if (clientauth_timer.Check()) {
@@ -1073,7 +1081,6 @@ bool Zone::Process() {
 	}
 
 	return true;
-
 }
 
 void Zone::StartShutdownTimer(int32 set_time) {
@@ -1724,25 +1731,6 @@ bool ZoneDatabase::GetDecayTimes(npcDecayTimes_Struct* npcCorpseDecayTimes) {
 	return true;
 }// Added By Hogie -- End
 
-
-/*void Zone::weatherProc()
-{
-	if(time(0)>=weather_timer && weather_type != 0x00)
-	{
-		if(zone_weather==0)
-			weather_timer=time(0)+(rand()%(600-30))+30;
-		else
-			weather_timer=time(0)+(rand()%(3600-30))+30;
-		//weather_timer=time(0)+15;
-		cout << "Weather changes in " << weather_timer-time(0) << " seconds. (weather is now " << (long)zone_weather << ")" << endl;
-		if(zone_weather>0)
-			zone_weather=0;
-		else
-			zone_weather=weather_type;
-		weatherSend();
-	}
-}
-*/
 void Zone::weatherSend()
 {
 	/*switch(zone_weather)

@@ -585,62 +585,50 @@ void QuestManager::unscribespells() {
 	}
 
 void QuestManager::givecash(int copper, int silver, int gold, int platinum) {
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoneyOnCorpse, sizeof(moneyOnCorpseStruct)); 
-	moneyOnCorpseStruct* d = (moneyOnCorpseStruct*) outapp->pBuffer; 
-	d->response      = 1; 
-	d->unknown1      = 0x5a; 
-	d->unknown2      = 0x40; 
-	d->unknown3      = 0; 
 	if (initiator && initiator->IsClient())
 	{
-		d->copper      = copper; 
-		d->silver      = silver; 
-		d->gold         = gold; 
-		d->platinum      = platinum; 
-		initiator->AddMoneyToPP(d->copper, d->silver, d->gold, d->platinum,true); 
-		initiator->QueuePacket(outapp);
-		
+		initiator->AddMoneyToPP(copper, silver, gold, platinum,true);
+
 		string tmp;
-		if (d->platinum>0){
+		if (platinum>0){
 			tmp = "You receive ";
-			tmp += itoa(d->platinum);
-			tmp += " plat"; 
+			tmp += itoa(platinum);
+			tmp += " plat";
 		}
-		if (d->gold>0){
+		if (gold>0){
 			if (tmp.length()==0){
 				tmp = "You receive ";
 			}
 			else{
 				tmp += ",";
 			}
-			tmp += itoa(d->gold);
+			tmp += itoa(gold);
 			tmp += " gold";
 		}
-		if(d->silver>0){
+		if(silver>0){
 			if (tmp.length()==0){
 				tmp = "You receive ";
 			}
 			else{
 				tmp += ",";
 			}
-			tmp += itoa(d->silver);
+			tmp += itoa(silver);
 			tmp += " silver";
 		}
-		if(d->copper>0){
+		if(copper>0){
 			if (tmp.length()==0){
 				tmp = "You receive ";
 			}
 			else{
 				tmp += ",";
 			}
-			tmp += itoa(d->copper);
+			tmp += itoa(copper);
 			tmp += " copper";
 		}
 		tmp += " pieces.";
-		if (initiator) 
+		if (initiator)
 			initiator->Message(MT_OOC,tmp.c_str());
 	}
-	safe_delete(outapp);
 }
 
 void QuestManager::pvp(const char *mode) {

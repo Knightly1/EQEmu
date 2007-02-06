@@ -5267,9 +5267,11 @@ void Client::Handle_OP_Track(const EQApplicationPacket *app)
 	if( GetSkill(TRACKING)==0 )
 		SetSkill(TRACKING,1);
 	else
-		CheckIncreaseSkill(TRACKING,15); 
+		CheckIncreaseSkill(TRACKING,15);
 
-	entity_list.MakeTrackPacket(this);
+	if(!entity_list.MakeTrackPacket(this))
+		LogFile->write(EQEMuLog::Error, "Unable to generate OP_Track packet requested by client.");
+
 	return;
 }
 
@@ -6411,6 +6413,9 @@ void Client::CompleteConnect()
 		Kick();
 		return;
 	}
+
+	if(zone)
+		zone->weatherSend();
 }
 
 

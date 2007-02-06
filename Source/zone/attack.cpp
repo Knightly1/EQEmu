@@ -1945,7 +1945,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 		CastToClient()->sneaking = false;
 		SendAppearancePacket(AT_Sneak, 0);
 	}
-	if(attacker->IsClient() && attacker->CastToClient()->sneaking){
+	if(attacker && attacker->IsClient() && attacker->CastToClient()->sneaking){
 		attacker->CastToClient()->sneaking = false;
 		attacker->SendAppearancePacket(AT_Sneak, 0);
 	}

@@ -158,7 +158,6 @@ public:
 	void	SetDate(int16 year, int8 month, int8 day, int8 hour, int8 minute);
 	void	SetTime(int8 hour, int8 minute);
 
-	void	weatherProc();
 	void	weatherSend();
 	bool	CanBind() const { return(can_bind); }
 	bool	CanDoCombat() const { return(can_combat); }
