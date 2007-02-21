@@ -166,6 +166,7 @@ Mob::Mob(const char*   in_name,
 	beard		= in_beard;
 	attack_speed= 0;
 	findable	= false;
+	trackable	= true;
 
 	if(in_aa_title>0)
 		aa_title	= in_aa_title;
@@ -244,6 +245,7 @@ Mob::Mob(const char*   in_name,
 	SetOwnerID(0);
 	typeofpet = petCharmed;		//default to charmed...
     SetFamiliarID(0);
+	held = false;
 	
 	attacked_count = 0;
 	mezzed = false;
@@ -1758,7 +1760,7 @@ bool Mob::HateSummon() {
 
 		// RangerDown - GMMove doesn't seem to be working well with players, so use MovePC for them, GMMove for NPC's
 		if (target->IsClient())
-			target->CastToClient()->MovePC(zone->GetZoneID(),x_pos,y_pos,z_pos,0,true);
+			target->CastToClient()->MovePC(zone->GetZoneID(), x_pos, y_pos, z_pos, target->GetHeading(), 0, true);
 		else
 			GetHateTop()->GMMove(x_pos, y_pos, z_pos, target->GetHeading());
         return true;

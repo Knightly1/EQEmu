@@ -145,8 +145,8 @@ protected:
 	
 	Mutex quest_mutex;
 	
-	static int32 QGexpdate(const char * name, const char * options);
-
+	int QGVarDuration(const char *fmt);
+	int InsertQuestGlobal(int charid, int npcid, int zoneid, const char *name, const char *value, int expdate);
 
 	class QuestTimer {
 	public:

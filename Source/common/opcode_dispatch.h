@@ -186,7 +186,7 @@ IN(OP_Bazaar, BazaarSearch_Struct);
 IN(OP_ShopPlayerBuy, Merchant_Sell_Struct);
 IN(OP_ShopPlayerSell, Merchant_Purchase_Struct);
 INr(OP_ShopEnd);		//?
-IN(OP_CloseContainer, ClickObjectAck_Struct);
+IN(OP_CloseContainer, ClickObjectAction_Struct);
 IN(OP_ClickObject, ClickObject_Struct);
 IN(OP_RecipesFavorite, TradeskillFavorites_Struct);
 IN(OP_RecipesSearch, RecipesSearch_Struct);
@@ -336,7 +336,7 @@ OUT(OP_BankerChange, BankerChange_Struct);
 OUT(OP_BecomeTrader, BecomeTrader_Struct);
 OUT(OP_BeginCast, BeginCast_Struct);
 OUT(OP_Charm, Charm_Struct);
-OUT(OP_ClickObjectAck, ClickObjectAck_Struct);
+OUT(OP_ClickObjectAck, ClickObjectAction_Struct);
 OUT(OP_ConsentResponse, ConsentResponse_Struct);
 //OUT(OP_ConsumeAmmo, MoveItem_Struct);
 OUT(OP_ExpUpdate, ExpUpdate_Struct);

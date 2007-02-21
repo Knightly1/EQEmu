@@ -53,6 +53,9 @@ const int SpellType_Lifetap=64;
 const int SpellType_Snare=128;
 const int SpellType_DOT=256;
 
+const int SpellTypes_Detrimental = SpellType_Nuke|SpellType_Root|SpellType_Lifetap|SpellType_Snare|SpellType_DOT;
+const int SpellTypes_Beneficial = SpellType_Heal|SpellType_Buff|SpellType_Escape|SpellType_Pet;
+
 #define SpellType_Any		0xFFFF
 #ifdef _EQDEBUG
 	#define MobAI_DEBUG_Spells	-1
@@ -60,14 +63,14 @@ const int SpellType_DOT=256;
 	#define MobAI_DEBUG_Spells	-1
 #endif
 
+//NOTE: do NOT pass in beneficial and detrimental spell types into the same call here!
 bool NPC::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 	_ZP(Mob_AICastSpell);
 // Faction isnt checked here, it's assumed you wouldnt pass a spell type you wouldnt want casted on the mob
 	if (!tar)
 		return false;
 	if (iChance < 100) {
-		int8 tmp = rand()%100;
-		if (tmp >= iChance)
+		if (MakeRandomInt(0, 100) >= iChance)
 			return false;
 	}
 		
@@ -75,9 +78,10 @@ bool NPC::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 
 	if (iSpellTypes & SpellType_Escape) {
 	    dist2 = 0; //DistNoRoot(*this);	//WTF was up with this...
-    }
-	else 
+    } else 
 	    dist2 = DistNoRoot(*tar);
+
+	bool checked_los = false;	//we do not check LOS until we are absolutely sure we need to, and we only do it once.
 	
 	float manaR = GetManaRatio();
 //	for (int i=0; i<MAX_AISPELLS; i++) {
@@ -136,10 +140,17 @@ bool NPC::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 					}
 					case SpellType_Root: {
 						if (
-							!tar->IsRooted() && dist2 >= 900 && MakeRandomInt(0, 99) < 50
+							!tar->IsRooted() 
+							&& dist2 >= 900 
+							&& MakeRandomInt(0, 99) < 50
 							&& tar->DontRootMeBefore() < Timer::GetCurrentTime()
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
+							if(!checked_los) {
+								if(!CheckLosFN(tar))
+									return(false);	//cannot see target... we assume that no spell is going to work since we will only be casting detrimental spells in this call
+								checked_los = true;
+							}
 							AIDoSpellCast(i, tar, mana_cost, &tar->pDontRootMeBefore);
 							return true;
 						}
@@ -175,23 +186,34 @@ bool NPC::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 							manaR >= 40 && (rand()%100) < 50
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
+							if(!checked_los) {
+								if(!CheckLosFN(tar))
+									return(false);	//cannot see target... we assume that no spell is going to work since we will only be casting detrimental spells in this call
+								checked_los = true;
+							}
 							AIDoSpellCast(i, tar, mana_cost);
 							return true;
 						}
 						break;
 					}
 					case SpellType_Pet: {
-						if (!IsPet() && !GetPetID() && MakeRandomInt(0, 99) < 25) {
+						if ((!IsPet() && !GetPetID()) && //keep mobs from recasting pets when they have them.
+							(!IsFamiliar() && !GetFamiliarID()) && MakeRandomInt(0, 99) < 25) {
 							AIDoSpellCast(i, tar, mana_cost);
 							return true;
 						}
 						break;
 					}
 					case SpellType_Lifetap: {
-						if (GetHPRatio() <= 75
+						if (   GetHPRatio() <= 75
 							&& MakeRandomInt(0, 99) < 50
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
+							if(!checked_los) {
+								if(!CheckLosFN(tar))
+									return(false);	//cannot see target... we assume that no spell is going to work since we will only be casting detrimental spells in this call
+								checked_los = true;
+							}
 							AIDoSpellCast(i, tar, mana_cost);
 							return true;
 						}
@@ -199,10 +221,16 @@ bool NPC::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 					}
 					case SpellType_Snare: {
 						if (
-							!tar->IsRooted() && MakeRandomInt(0, 99) < 50
+							   !tar->IsRooted()
+							&& MakeRandomInt(0, 99) < 50
 							&& tar->DontSnareMeBefore() < Timer::GetCurrentTime()
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
+							if(!checked_los) {
+								if(!CheckLosFN(tar))
+									return(false);	//cannot see target... we assume that no spell is going to work since we will only be casting detrimental spells in this call
+								checked_los = true;
+							}
 							AIDoSpellCast(i, tar, mana_cost, &tar->pDontSnareMeBefore);
 							return true;
 						}
@@ -214,6 +242,11 @@ bool NPC::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 							&& tar->DontDotMeBefore() < Timer::GetCurrentTime()
 							&& tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0
 							) {
+							if(!checked_los) {
+								if(!CheckLosFN(tar))
+									return(false);	//cannot see target... we assume that no spell is going to work since we will only be casting detrimental spells in this call
+								checked_los = true;
+							}
 							AIDoSpellCast(i, tar, mana_cost, &tar->pDontDotMeBefore);
 							return true;
 						}
@@ -266,8 +299,19 @@ void NPC::AIDoSpellCast(int8 i, Mob* tar, sint32 mana_cost, int32* oDontDoAgainB
 	CastSpell(AIspells[i].spellid, tar->GetID(), 1, AIspells[i].manacost == -2 ? 0 : -1, mana_cost, oDontDoAgainBefore);
 }
 
-bool EntityList::AICheckCloseSpells(NPC* caster, int8 iChance, float iRange, int16 iSpellTypes) {
-	_ZP(EntityList_AICheckCloseSpells);
+bool EntityList::AICheckCloseBeneficialSpells(NPC* caster, int8 iChance, float iRange, int16 iSpellTypes) {
+	_ZP(EntityList_AICheckCloseBeneficialSpells);
+
+	if((iSpellTypes&SpellTypes_Detrimental) != 0) {
+		//according to live, you can buff and heal through walls...
+		//now with PCs, this only applies if you can TARGET the target, but
+		// according to Rogean, Live NPCs will just cast through walls/floors, no problem..
+		//
+		// This check was put in to address an idle-mob CPU issue
+		_log(AI__ERROR, "Error: detrimental spells requested from AICheckCloseBeneficialSpells!!");
+		return(false);
+	}
+	
 	if (iChance < 100) {
 		int8 tmp = MakeRandomInt(0, 99);
 		if (tmp >= iChance)
@@ -307,14 +351,12 @@ bool EntityList::AICheckCloseSpells(NPC* caster, int8 iChance, float iRange, int
 		) {
 			continue;
 		}
-		
-		//they are in range, and we like them, now make sure
-		//that we can see them...
-		if(caster->CheckLosFN(mob)) {
-			// we have a winner!
-			if (caster->AICastSpell(mob, 100, iSpellTypes))
-				return true;
-		}
+
+		//since we assume these are beneficial spells, which do not
+		//require LOS, we just go for it.
+		// we have a winner!
+		if (caster->AICastSpell(mob, 100, iSpellTypes))
+			return true;
 	}
 	return false;
 }
@@ -1060,6 +1102,7 @@ void Mob::AI_Event_NoLongerEngaged() {
 	ClearRampage();
 }
 
+//this gets called from InterruptSpell() for failure or SpellFinished() for success
 void NPC::AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot) {
 	if (slot == 1) {
 		int32 recovery_time = 0;
@@ -1074,7 +1117,7 @@ void NPC::AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot) {
 						AIspells[casting_spell_AIindex].time_cancast = Timer::GetCurrentTime() + spells[AIspells[casting_spell_AIindex].spellid].recast_time;
 			}
 			if (!IsEngaged())
-				recovery_time += 2500;
+				recovery_time += RandomTimer(2000, 3000);
 			if (recovery_time < AIautocastspell_timer->GetSetAtTrigger())
 				recovery_time = AIautocastspell_timer->GetSetAtTrigger();
 			AIautocastspell_timer->Start(recovery_time, false);
@@ -1087,34 +1130,58 @@ void NPC::AI_Event_SpellCastFinished(bool iCastSucceeded, int8 slot) {
 
 
 bool NPC::AI_EngagedCastCheck() {
-	if (AIautocastspell_timer->Check()) {
+	if (AIautocastspell_timer->Check(false)) {
+		_ZP(Mob_AI_Process_engaged_cast);
+		AIautocastspell_timer->Disable();	//prevent the timer from going off AGAIN while we are casting.
+		
 		mlog(AI__SPELLS, "Engaged autocast check triggered. Trying to cast healing spells then maybe offensive spells.");
-		if (!AICastSpell(this, 100, SpellType_Heal | SpellType_Escape)) // try casting a heal or gate
-			if (!entity_list.AICheckCloseSpells(this, 25, MobAISpellRange, SpellType_Heal)) // try casting a heal on nearby
-				AICastSpell(target, 20, SpellType_Nuke | SpellType_Lifetap | SpellType_DOT);
+		
+		// try casting a heal or gate
+		if (!AICastSpell(this, 100, SpellType_Heal | SpellType_Escape)) {
+			// try casting a heal on nearby
+			if (!entity_list.AICheckCloseBeneficialSpells(this, 25, MobAISpellRange, SpellType_Heal)) {
+				//nobody to heal, try some detrimental spells.
+				if(!AICastSpell(target, 20, SpellType_Nuke | SpellType_Lifetap | SpellType_DOT)) {
+					//no spell to cast, try again soon.
+					AIautocastspell_timer->Start(RandomTimer(500, 2000), false);
+				}
+			} //else, spell casting finishing will reset the timer.
+		}
 		return(true);
 	}
+	
 	return(false);
 }
 
 bool NPC::AI_PursueCastCheck() {
-	if (AIautocastspell_timer->Check()) {
+	if (AIautocastspell_timer->Check(false)) {
+		_ZP(Mob_AI_Process_pursue_cast);
+		AIautocastspell_timer->Disable();	//prevent the timer from going off AGAIN while we are casting.
+		
 		mlog(AI__SPELLS, "Engaged (pursuing) autocast check triggered. Trying to cast offensive spells.");
-		AICastSpell(target, 90, SpellType_Root | SpellType_Nuke | SpellType_Lifetap | SpellType_Snare);
+		if(!AICastSpell(target, 90, SpellType_Root | SpellType_Nuke | SpellType_Lifetap | SpellType_Snare | SpellType_DOT)) {
+			//no spell cast, try again soon.
+			AIautocastspell_timer->Start(RandomTimer(500, 2000), false);
+		} //else, spell casting finishing will reset the timer.
 		return(true);
 	}
 	return(false);
 }
 
 bool NPC::AI_IdleCastCheck() {
-	if (AIautocastspell_timer->Check()) {
+	if (AIautocastspell_timer->Check(false)) {
 		_ZP(Mob_AI_Process_autocast);
 #if MobAI_DEBUG_Spells >= 25
 		cout << "Non-Engaged autocast check triggered: " << this->GetName() << endl;
 #endif
-		AIautocastspell_timer->Start(2500, false);
-		if (!AICastSpell(this, 100, SpellType_Heal | SpellType_Buff | SpellType_Pet))
-			entity_list.AICheckCloseSpells(this, 33, MobAISpellRange, SpellType_Heal | SpellType_Buff);
+		AIautocastspell_timer->Disable();	//prevent the timer from going off AGAIN while we are casting.
+		if (!AICastSpell(this, 100, SpellType_Heal | SpellType_Buff | SpellType_Pet)) {
+			if(!entity_list.AICheckCloseBeneficialSpells(this, 33, MobAISpellRange, SpellType_Heal | SpellType_Buff)) {
+				//if we didnt cast any spells, our autocast timer just resets to the 
+				//last duration it was set to... try to put up a more reasonable timer...
+				AIautocastspell_timer->Start(RandomTimer(1000, 5000), false);
+			}	//else, spell casting finishing will reset the timer.
+		}	//else, spell casting finishing will reset the timer.
 		return(true);
 	}
 	return(false);

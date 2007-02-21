@@ -567,7 +567,7 @@ void database::extractnpcs( npc_list* npcs, CString path, CString zonename, bool
 			"`race`, `class`, `bodytype`, `hp`, `texture`, `helmtexture`, `face`, "
 			"`luclin_hairstyle`, `luclin_haircolor`, `luclin_eyecolor`, `luclin_eyecolor2`, "
 			"`luclin_beard`, `luclin_beardcolor`, `merchant_id`";
-		cvalues.Format( "'%d', '%s', '%s', '%d', '%d', '%f', '%f', '%f', "
+		cvalues.Format( "'%d', '%s', '%s', '%d', '%d', '%f', '%f', "
 		"'%d', '%d', '%d', '%d', '%d', '%d', '%d', "
 		"'%d', '%d', '%d', '%d', '%d', '%d', '%d'",
 			id,nom,last_name,level,gender,size,runspeed,
@@ -782,9 +782,9 @@ void database::extractASpawn(cspawn *spawn, CString &zonename, CFile &f) {
 		if(k < chance_change)
 			spawnentry_chance++;
 
-		ckeys = "`id`, `spawngroupID`, `npcID`, `chance`";
-		cvalues.Format( "'%d', '%d', '%d', '%d'",
-			spawnentry_id, spawnentry_spawngroupid, spawnentry_npcid, spawnentry_chance );
+		ckeys = "`spawngroupID`, `npcID`, `chance`";
+		cvalues.Format( "'%d', '%d', '%d'",
+			spawnentry_spawngroupid, spawnentry_npcid, spawnentry_chance );
 		query = "INSERT INTO `spawnentry` (" + ckeys + ") VALUES (" + cvalues + ");\n";
 		f.Write( query, lstrlen(query) );
 

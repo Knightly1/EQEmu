@@ -266,6 +266,14 @@ const NPCType *Horse::BuildHorseType(int16 spell_id) {
 			mount_color=3;  // Red drogmor
 			npc_type->runspeed=MOUNT_FAST_RUN;
 			break;
+		case 2874:
+			npc_type->runspeed=MOUNT_FAST_RUN;
+			mount_color=1;
+			break;
+		case 2875:
+			npc_type->runspeed=MOUNT_FAST_RUN;
+			mount_color=2;
+			break;			
 		default:
 /*			Message(13,"I dont know what mount spell this is! (%i)", spell_id);
 			mount_color= 0;  // Brown horse

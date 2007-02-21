@@ -12,6 +12,7 @@ Eglin
 
 #include <string>
 #include <vector>
+#include <map>
 #include <stdio.h>
 #include <string.h>
 
@@ -118,6 +119,28 @@ public:
 	void setstr(const char *varname, const char *val) const {
 		SV *t = get_sv(varname, true);
 		sv_setpv(t, val);
+	}
+
+	// put key-value pairs in hash
+	void sethash(const char *varname, std::map<std::string,std::string> &vals)
+	{
+		std::map<std::string,std::string>::iterator it;
+
+		// Get hash and clear it.
+		HV *hv = get_hv(varname, TRUE);
+		hv_clear(hv);
+
+ 		// Iterate through key-value pairs, storing them in hash
+ 		for (it = vals.begin(); it != vals.end(); it++)
+ 		{
+ 			int keylen = it->first.length();
+ 
+ 			SV *val = newSVpv(it->second.c_str(), it->second.length());
+ 
+ 			// If val was not added to hash, reset reference count
+ 			if (hv_store(hv, it->first.c_str(), keylen, val, 0) == NULL)
+ 				val->sv_refcnt = 0;
+ 		}
 	}
 	
 	//loads a file and compiles it into our interpreter (assuming it hasn't already been read in)

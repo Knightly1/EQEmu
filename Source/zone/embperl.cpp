@@ -106,7 +106,7 @@ Embperl::Embperl()
 void Embperl::DoInit() {
 	
 	//arguments for interpreter start
-	const char *args[] = { "",
+	char *args[] = { "",
 #ifdef EMBPERL_IO_CAPTURE
 		"-w", "-W",		//only useful if the IO goes somewhere
 #endif

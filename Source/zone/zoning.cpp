@@ -335,15 +335,164 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, float dest_x, 
 	zone_mode = ZoneUnsolicited;
 }
 
-void Client::MovePC(const char* zonename, float x, float y, float z, int8 ignorerestrictions, bool summoned, ZoneMode zm) {
-	MovePC(database.GetZoneID(zonename), x, y, z, ignorerestrictions, summoned, zm);
+void Client::ZonePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions, bool summoned, ZoneMode zm) {
+	bool bReadyToZone = false;
+
+	switch(zm) {
+		case ZoneToSafeCoords:
+			x = zone->safe_x();
+			y = zone->safe_y();
+			z = zone->safe_z();
+			this->heading = heading;
+			bReadyToZone = true;
+			break;
+		case ZoneSummoned:
+			LogFile->write(EQEMuLog::Error, "Client::ZonePC() received a reguest to perform ZoneSummoned. This operation is unimplemented at this time.");
+			break;
+		case ZoneSolicited:
+			zonesummon_ignorerestrictions = ignorerestrictions;
+			zonesummon_x = x;
+			zonesummon_y = y;
+			zonesummon_z = z;
+			zonesummon_id = zoneID;
+			this->heading = heading;
+			bReadyToZone = true;
+			break;
+		case ZoneToBindPoint:
+			bReadyToZone = true;
+			break;
+		default:
+			LogFile->write(EQEMuLog::Error, "Client::ZonePC() received a reguest to perform an unsupported client zone operation.");
+			break;
+	}
+
+	if(bReadyToZone) {
+		zone_mode = zm;
+
+		LogFile->write(EQEMuLog::Debug, "Player %s has requested a zoning to LOC x=%f, y=%f, z=%f, heading=%f in zoneid=%i", GetName(), x, y, z, heading, zoneID);
+
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
+		RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
+
+		gmg->zone_id = zoneID;
+		gmg->x = x;
+		gmg->y = y;
+		gmg->z = z;
+		gmg->heading = heading;
+		gmg->type = 0x01;				//an observed value, not sure of meaning
+
+		outapp->priority = 6;
+		FastQueuePacket(&outapp);
+		safe_delete(outapp);
+	}
 }
 
-void Client::MovePC(float x, float y, float z, int8 ignorerestrictions, bool summoned, ZoneMode zm)
+void Client::InZoneMovePC(float x, float y, float z, float heading, int8 ignorerestrictions, bool summoned, ZoneMode zm) {
+	zone_mode = ZoneUnsolicited;
+		
+	switch(zm) {
+		case ZoneToSafeCoords:
+			x = x_pos = zone->safe_x();
+			y = y_pos = zone->safe_y();
+			z = z_pos = zone->safe_z();
+			this->heading = heading;
+			break;
+		case ZoneToBindPoint:
+			x = x_pos = m_pp.binds[0].x;
+			y = y_pos = m_pp.binds[0].y;
+			z = z_pos = m_pp.binds[0].z;
+			break;
+		case ZoneSummoned:
+			LogFile->write(EQEMuLog::Error, "Client::InZoneMovePC() received a reguest to perform ZoneSummoned. This operation is unimplemented at this time.");
+			break;
+		case ZoneSolicited:
+			zonesummon_x = x_pos = x;
+			zonesummon_y = y_pos = y;
+			zonesummon_z = z_pos = z;
+			this->heading = heading;
+			break;
+		default:
+			LogFile->write(EQEMuLog::Error, "Client::InZoneMovePC() received a reguest to perform an unsupported client zone operation.");
+			break;
+	}
+
+	LogFile->write(EQEMuLog::Debug, "Player %s has requested an intra-zone movement to LOC x=%f, y=%f, z=%f, heading=%f", GetName(), x_pos, y_pos, z_pos, heading);
+	
+	//properly handle proximities
+	entity_list.ProcessMove(this, x_pos, y_pos, z_pos);
+	proximity_x = x_pos;
+	proximity_y = y_pos;
+	proximity_z = z_pos;
+		
+	//send out updates to people in zone.
+	SendPosition();
+		
+	#ifdef PACKET_UPDATE_MANAGER   
+	//flush our position queues because we dont know where we will end up
+	update_manager.FlushQueues();
+	#endif
+
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
+	RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
+
+	gmg->zone_id = zone->GetZoneID();
+	gmg->x = x;
+	gmg->y = y;
+	gmg->z = z;
+	gmg->heading = heading;
+	gmg->type = 0x01;				//an observed value, not sure of meaning
+
+	outapp->priority = 6;
+	FastQueuePacket(&outapp);
+	safe_delete(outapp);
+}
+
+void Client::MovePC(const char* zonename, float x, float y, float z, float heading, int8 ignorerestrictions, bool summoned, ZoneMode zm) {
+	ProcessMovePC(database.GetZoneID(zonename), x, y, z, heading, ignorerestrictions, summoned, zm);
+}
+
+void Client::MovePC(float x, float y, float z, float heading, int8 ignorerestrictions, bool summoned, ZoneMode zm) {
+	ProcessMovePC(zone->GetZoneID(), x, y, z, heading, ignorerestrictions, summoned, zm);
+}
+
+void Client::MovePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions, bool summoned, ZoneMode zm) {
+	ProcessMovePC(zoneID, x, y, z, heading, ignorerestrictions, summoned, zm);
+}
+
+void Client::ProcessMovePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions, bool summoned, ZoneMode zm)
 {
-	MovePC(zone->GetZoneID(), x, y, z, ignorerestrictions, summoned, zm);
+	if(IsDead()) {
+		ZonePCToBindPointAfterDeath();
+		return;
+	}
+
+	if(zoneID == 0) {
+		zoneID = zone->GetZoneID();
+	}
+
+	if (zoneID != zone->GetZoneID()) {
+		// This is an actual zoning of the client.
+		ZonePC(zoneID, x, y, z, heading, ignorerestrictions, summoned, zm);
+	} else {
+		// This is not a real zoning... this is an intra-zone movement of the client.
+		if(GetPetID() != 0) {
+			//if they have a pet and they are staying in zone, move with them
+			Mob *p = GetPet();
+			if(p != NULL) {
+				p->GMMove(x+15, y, z);	//so it dosent have to run across the map.
+			}
+		}
+
+		if(IsAIControlled()) {
+			GMMove(x, y, z);
+			return;
+		}
+
+		InZoneMovePC(x, y, z, heading, ignorerestrictions, summoned, zm);
+	}
 }
 
+/*
 void Client::MovePC(int32 zoneID, float x, float y, float z, int8 ignorerestrictions, bool summoned, ZoneMode zm)
 {
 	if(zoneID == 0) {
@@ -372,7 +521,7 @@ void Client::MovePC(int32 zoneID, float x, float y, float z, int8 ignorerestrict
 		zonesummon_y = y;
 		zonesummon_z = z;
 		zonesummon_id = zoneID;
-		zoning = true;
+		// zoning = true;
     } else {
     	//otherwise, not zoning, set our state as such
     	//and actually move the player to the specified location
@@ -422,20 +571,20 @@ void Client::MovePC(int32 zoneID, float x, float y, float z, int8 ignorerestrict
 	EQApplicationPacket* outapp;
 
 	//Summon is using the regular code until somebody finds the packet
-/*	if (summoned == true) {
-		outapp = new EQApplicationPacket(OP_GMSummon, sizeof(GMSummon_Struct));
-		GMSummon_Struct* gms = (GMSummon_Struct*) outapp->pBuffer;
+	//if (summoned == true) {
+	//	outapp = new EQApplicationPacket(OP_GMSummon, sizeof(GMSummon_Struct));
+	//	GMSummon_Struct* gms = (GMSummon_Struct*) outapp->pBuffer;
 
-		strcpy(gms->charname, this->GetName());
-		strcpy(gms->gmname, this->GetName());
+	//	strcpy(gms->charname, this->GetName());
+	//	strcpy(gms->gmname, this->GetName());
 
-		gms->x = (sint32) x;
-		gms->y = (sint32) y;
-		gms->z = (sint32) z;
+	//	gms->x = (sint32) x;
+	//	gms->y = (sint32) y;
+	//	gms->z = (sint32) z;
 
-		gms->zoneID = zoneID;
-		
-	} else {*/
+	//	gms->zoneID = zoneID;
+	//	
+	//} else {
 		outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
 		RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
 		
@@ -449,12 +598,14 @@ void Client::MovePC(int32 zoneID, float x, float y, float z, int8 ignorerestrict
 	//}
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);
+	safe_delete(outapp);
 }
+*/
 
 void Client::GoToSafeCoords(uint16 zone_id) {
 	if(zone_id == 0)
 		zone_id = zone->GetZoneID();
-	MovePC(zone_id, 0, 0, 0, 0, false, ZoneToSafeCoords);
+	MovePC(zone_id, 0.0f, 0.0f, 0.0f, 0.0f, 0, false, ZoneToSafeCoords);
 }
 
 
@@ -492,7 +643,7 @@ void Client::SetBindPoint(int to_zone, float new_x, float new_y, float new_z) {
 void Client::GoToBind() {
 	//move the client, which will zone them if needed.
 	//ignore restrictions on the zone request..?
-	MovePC(m_pp.binds[0].zoneId, 0, 0, 0, 1, false, ZoneToBindPoint);
+	MovePC(m_pp.binds[0].zoneId, 0.0f, 0.0f, 0.0f, 0.0f, 1, false, ZoneToBindPoint);
 }
 
 
@@ -632,6 +783,36 @@ bool Client::CanBeInZone() {
 	}
 
 	return(true);
+}
+
+void Client::ZonePCToBindPointAfterDeath() {
+	int			iZoneNameLength = 0;
+	const char*	pShortZoneName = NULL;
+	char*		pZoneName = NULL;
+	
+	pShortZoneName = database.GetZoneName(m_pp.binds[0].zoneId);
+	database.GetZoneLongName(pShortZoneName, &pZoneName);
+	iZoneNameLength = strlen(pZoneName);
+
+	zone_mode = ZoneToBindPoint;
+	zonesummon_ignorerestrictions = 1;
+
+	LogFile->write(EQEMuLog::Debug, "Player %s has died and will be zoned to bind point in zone: %s at LOC x=%f, y=%f, z=%f, heading=%f", GetName(), pZoneName, m_pp.binds[0].x, m_pp.binds[0].y, m_pp.binds[0].z, m_pp.binds[0].heading);
+
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZonePlayerToBind, sizeof(ZonePlayerToBind_Struct) + iZoneNameLength);
+	ZonePlayerToBind_Struct* gmg = (ZonePlayerToBind_Struct*) outapp->pBuffer;
+
+	gmg->bind_zone_id = m_pp.binds[0].zoneId;
+	gmg->x = m_pp.binds[0].x;
+	gmg->y = m_pp.binds[0].y;
+	gmg->z = m_pp.binds[0].z;
+	gmg->heading = m_pp.binds[0].heading;
+	
+	strcpy(gmg->zone_name, pZoneName);
+
+	outapp->priority = 6;
+	FastQueuePacket(&outapp);
+	safe_delete(outapp);
 }
 
 

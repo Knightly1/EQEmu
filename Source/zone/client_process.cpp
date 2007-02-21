@@ -136,6 +136,8 @@ bool Client::Process() {
 		}
 
 		if (camp_timer.Check()) {
+			LeaveGroup();
+			Save();
 			instalog = true;
 		}
 		
@@ -1419,7 +1421,7 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 		{
 			Message(0, "Local: Summoning %s to %i, %i, %i", gms->charname, gms->x, gms->y, gms->z);
 			if (st->IsClient() && (st->CastToClient()->GetAnon() != 1 || this->Admin() >= st->CastToClient()->Admin()))
-				st->CastToClient()->MovePC((char *) 0, gms->x, gms->y, gms->z, 2, true);
+				st->CastToClient()->MovePC(gms->x, gms->y, gms->z, this->GetHeading(), 2, true);
 			else
 				st->GMMove(this->GetX(), this->GetY(), this->GetZ(),this->GetHeading());
 		}
@@ -1478,7 +1480,8 @@ void Client::DoManaRegen() {
 		medding = false;
 		regen = 2+spellbonuses.ManaRegen+itembonuses.ManaRegen+(level/5);
 	}
-	
+	regen += GetAA(aaMentalClarity);
+	regen += GetAA(aaBodyAndMindRejuvenation);
 	regen = (regen * RuleI(Character, ManaRegenMultiplier)) / 100;
 	
 	SetMana(GetMana() + regen);

@@ -16,7 +16,7 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 #ifndef EQ_PACKET_STRUCTS_H
-#define EQ_PACKET_STRUCTS_H 
+#define EQ_PACKET_STRUCTS_H
 
 #include "types.h"
 #include <string.h>
@@ -88,7 +88,7 @@ struct DuelResponse_Struct
 };
 /*
 	Cofruben:
-	Adventure stuff,not a net one,just one for our use 
+	Adventure stuff,not a net one,just one for our use
 */
 static const uint32 ADVENTURE_COLLECT		= 0;
 static const uint32 ADVENTURE_MASSKILL		= 1;
@@ -183,10 +183,10 @@ struct CharacterSelect_Struct {
 **
 */
 
-/* 
-** Generic Spawn Struct 
-** Length: 383 Octets 
-** Used in: 
+/*
+** Generic Spawn Struct
+** Length: 383 Octets
+** Used in:
 **   spawnZoneStruct
 **   dbSpawnStruct
 **   petStruct
@@ -244,9 +244,9 @@ struct Spawn_Struct {
 /*0189*/ uint32 petOwnerId;     // If this is a pet, the spawn id of owner
 /*0193*/ int8   guildrank;      // 0=normal, 1=officer, 2=leader
 /*0194*/ uint8 unknown0194[3];
-/*0197*/ union 
+/*0197*/ union
          {
-             struct 
+             struct
              {
                /*0197*/ uint32 equip_helmet;    // Equipment: Helmet Visual
                /*0201*/ uint32 equip_chest;     // Equipment: Chest Visual
@@ -280,7 +280,7 @@ struct Spawn_Struct {
 /*0334*/ uint8  gender;         // Gender (0=male, 1=female)
 /*0335*/ uint8  bodytype;       // Bodytype
 /*0336*/ uint8 unknown0336[3];
-union 
+union
 {
 /*0339*/ int8 equip_chest2;     // Second place in packet for chest texture (usually 0xFF in live packets)
                                   // Not sure why there are 2 of them, but it effects chest texture!
@@ -289,9 +289,9 @@ union
 };
 /*0340*/ uint32 spawnId;        // Spawn Id
 /*0344*/ uint8 unknown0344[4];
-/*0348*/ union 
+/*0348*/ union
          {
-             struct 
+             struct
              {
                  /*0348*/ Color_Struct color_helmet;    // Color of helmet item
                  /*0352*/ Color_Struct color_chest;     // Color of chest item
@@ -375,9 +375,9 @@ struct NewZone_Struct {
 ** Length: 12 Bytes
 **
 */
-struct MemorizeSpell_Struct { 
-int32 slot;     // Spot in the spell book/memorized slot 
-int32 spell_id; // Spell id (200 or c8 is minor healing, etc) 
+struct MemorizeSpell_Struct {
+int32 slot;     // Spot in the spell book/memorized slot
+int32 spell_id; // Spell id (200 or c8 is minor healing, etc)
 int32 scribing; // 1 if memorizing a spell, set to 0 if scribing to book, 2 if un-memming
 int32 unknown12;
 };
@@ -411,20 +411,20 @@ struct DeleteSpell_Struct
 };
 
 struct ManaChange_Struct
-{                  
+{
 	int32	new_mana;                  // New Mana AMount
 	int32	stamina;
 	int32	spell_id;
 	int32	unknown12;
 };
 
-struct SwapSpell_Struct 
-{ 
-	int32 from_slot; 
-	int32 to_slot; 
+struct SwapSpell_Struct
+{
+	int32 from_slot;
+	int32 to_slot;
 
 
-}; 
+};
 
 struct BeginCast_Struct
 {
@@ -470,8 +470,8 @@ struct SpellBuff_Struct
 /*008*/ int32	duration;
 /*012*/	int16	dmg_shield_remaining;
 //these last four bytes are really the caster's global player ID for wearoff
-/*013*/ int8	diseasecounters;	//prolly not real
-/*014*/ int8	poisoncounters;		//proll not real
+/*013*/ int8	persistant_buff;	//prolly not real, used for perm illusions
+/*014*/ int8	reserved;		//proll not real, reserved will use for something else later
 /*012*/	int32	player_id;	//'global' ID of the caster, for wearoff messages
 };
 
@@ -599,7 +599,7 @@ struct CharCreate_Struct
 struct AA_Array
 {
 	int32 AA;
-	int32 value;	
+	int32 value;
 };
 
 
@@ -639,7 +639,7 @@ struct Bandolier_Struct {
 struct PotionBelt_Struct {
 	BandolierItem_Struct items[MAX_PLAYER_BANDOLIER_ITEMS];
 };
-	
+
 static const uint32 MAX_GROUP_LEADERSHIP_AA_ARRAY = 16;
 static const uint32 MAX_RAID_LEADERSHIP_AA_ARRAY = 16;
 static const uint32 MAX_LEADERSHIP_AA_ARRAY = (MAX_GROUP_LEADERSHIP_AA_ARRAY+MAX_RAID_LEADERSHIP_AA_ARRAY);
@@ -653,18 +653,18 @@ struct RaidLeadershipAA_Struct {
 	uint32 ranks[MAX_RAID_LEADERSHIP_AA_ARRAY];
 };
 
- /** 
-* A bind point. 
-* Size: 20 Octets 
-*/ 
-struct BindStruct { 
-   /*000*/ uint32 zoneId; 
-   /*004*/ float x; 
-   /*008*/ float y; 
-   /*012*/ float z; 
-   /*016*/ float heading; 
-   /*020*/ 
-}; 
+ /**
+* A bind point.
+* Size: 20 Octets
+*/
+struct BindStruct {
+   /*000*/ uint32 zoneId;
+   /*004*/ float x;
+   /*008*/ float y;
+   /*012*/ float z;
+   /*016*/ float heading;
+   /*020*/
+};
 
 
 /*
@@ -725,8 +725,8 @@ sed -e 's/_t//g' -e 's/MAX_AA/MAX_PP_AA_ARRAY/g' \
     -e 's/thirst/thirst_level/g' \
     -e 's/guildstatus/guildrank/g' \
     -e 's/airRemaining/air_remaining/g' \
-    
-    
+
+
 
  */
 struct PlayerProfile_Struct
@@ -741,17 +741,17 @@ struct PlayerProfile_Struct
 /*0116*/	uint32				level;				// Level of player (might be one byte)
 /*0120*/	BindStruct			binds[5];           // Bind points (primary is first)
 /*0220*/	uint32				deity;				// deity
-/*0224*/	uint32				guild_id;				
+/*0224*/	uint32				guild_id;
 /*0228*/	uint32				birthday;			// characters bday
 /*0232*/	uint32				lastlogin;			// last login or zone time
 /*0236*/	uint32				timePlayedMin;			// in minutes
-/*0240*/	uint8				pvp;			
+/*0240*/	uint8				pvp;
 /*0241*/	uint8				level2; //no idea why this is here, but thats how it is on live
 /*0242*/	uint8				anon;		// 2=roleplay, 1=anon, 0=not anon
 /*0243*/	uint8				gm;
 /*0244*/	uint8				guildrank;
 /*0245*/	uint8				unknown0245[7];	//
-/*0252*/	uint32				intoxication;		
+/*0252*/	uint32				intoxication;
 /*0256*/	uint32				spellSlotRefresh[MAX_PP_MEMSPELL];	//in ms
 /*0292*/	uint8                           unknown0392[4];
 /*0296*/	uint8				haircolor;			// Player hair color
@@ -775,7 +775,7 @@ struct PlayerProfile_Struct
 /*2416*/	char				suffix[32];			//length might be wrong
 /*2448*/	uint32				guildid2;		//
 /*2452*/	uint32				exp;				// Current Experience
-/*2456*/	uint32				unknown1496;		
+/*2456*/	uint32				unknown1496;
 /*2460*/	uint32				points;				// Unspent Practice points
 /*2464*/	uint32				mana;				// current mana
 /*2468*/	uint32				cur_hp;				// current hp
@@ -792,7 +792,7 @@ struct PlayerProfile_Struct
 /*2552*/	uint8				languages[MAX_PP_LANGUAGE];
 /*2580*/	uint8				unknown1620[4];
 /*2584*/	int32				spell_book[MAX_PP_SPELLBOOK];
-/*4184*/	uint8				unknown3224[448];	// all 0xff   
+/*4184*/	uint8				unknown3224[448];	// all 0xff
 /*4632*/	int32				mem_spells[MAX_PP_MEMSPELL];
 /*4668*/	uint8				unknown3704[32];	//
 /*4700*/	float				y;					// Player y position
@@ -832,7 +832,7 @@ struct PlayerProfile_Struct
 /*5476*/	sint32				hunger_level;
 /*5480*/	sint32				thirst_level;
 /*5484*/	int32				ability_up;
-/*5488*/	char				unknown4524[16];				
+/*5488*/	char				unknown4524[16];
 /*5504*/	uint16				zone_id;			// Current zone of the player
 /*5506*/	uint16				zoneInstance;			// Instance ID
 /*5508*/	SpellBuff_Struct	buffs[BUFF_COUNT];			// Buffs currently on the player
@@ -991,7 +991,7 @@ struct BindWound_Struct
 
 /*
 ** Type:   Zone Change Request (before hand)
-** Length: 88 bytes 
+** Length: 88 bytes
 ** OpCode: a320
 */
 
@@ -1014,7 +1014,7 @@ struct RequestClientZoneChange_Struct {
 /*08*/	float	x;
 /*12*/	float	z;
 /*16*/	float	heading;
-/*20*/	uint32	type;	//unknown... values 
+/*20*/	uint32	type;	//unknown... values
 };
 
 struct Animation_Struct {
@@ -1037,7 +1037,7 @@ struct Action_Struct
  /* 12 */	uint16 unknown16;
 // some kind of sequence that's the same in both actions
 // as well as the combat damage, to tie em together?
- /* 14 */	int32 sequence;	
+ /* 14 */	int32 sequence;
  /* 18 */	uint32 unknown18;
  /* 22 */	int8 type;		// 231 (0xE7) for spells
  /* 23 */	uint32 unknown23;
@@ -1294,13 +1294,13 @@ struct TradeMoneyUpdate_Struct{
 ** Surname struct
 ** Size: 100 bytes
 */
-struct Surname_Struct 
-{ 
+struct Surname_Struct
+{
 /*0000*/	char name[64];
 /*0064*/	uint32 unknown0064;
 /*0068*/	char lastname[32];
 /*0100*/
-}; 
+};
 
 struct GuildsListEntry_Struct {
 	char name[64];
@@ -1549,7 +1549,7 @@ struct Merchant_Click_Struct {
 /*000*/ int32	npcid;			// Merchant NPC's entity id
 /*004*/ int32	playerid;
 /*008*/ int32	command;		//1=open, 0=cancel/close
-/*012*/ float	rate;			//cost multiplier, dosent work anymore 
+/*012*/ float	rate;			//cost multiplier, dosent work anymore
 };
 /*
 Unknowns:
@@ -1601,17 +1601,22 @@ struct Adventure_Purchase_Struct {
 /*008*/	int32	variable;
 };
 
-struct AdventurePoints_Update_Struct {
-/*000*/	uint32				ldon_available_points;		// Total available points
-/*004*/ uint8				unkown_apu004[20];
-/*024*/	uint32				ldon_guk_points;		// Earned Deepest Guk points
-/*028*/	uint32				ldon_mirugal_points;		// Earned Mirugal' Mebagerie points
-/*032*/	uint32				ldon_mistmoore_points;		// Earned Mismoore Catacombs Points
-/*036*/	uint32				ldon_rujarkian_points;		// Earned Rujarkian Hills points
-/*040*/	uint32				ldon_takish_points;		// Earned Takish points
-/*044*/	uint8				unknown_apu042[216];
-};
 
+struct AdventurePoints_Update_Struct {
+/*000*/	uint32	ldon_available_points;		// Total available points
+/*004*/	uint8	unknown004[36];
+/*040*/	uint8	unknown040[16];
+/*056*/	uint32	ldon_guk_points;		// Earned Deepest Guk points
+/*060*/	uint8	unknown060[16];
+/*076*/	uint32	ldon_mirugal_points;		// Earned Mirugal' Menagerie points
+/*080*/	uint8	unknown080[16];
+/*096*/	uint32	ldon_mistmoore_points;		// Earned Mismoore Catacombs Points
+/*100*/	uint8	unknown100[16];
+/*116*/	uint32	ldon_rujarkian_points;		// Earned Rujarkian Hills points
+/*120*/	uint8	unknown120[16];
+/*136*/	uint32	ldon_takish_points;		// Earned Takish points
+/*140*/
+};
 
 struct AdventureFinish_Struct{
 	uint32 win_lose;//Cofruben: 00 is a lose,01 is win.
@@ -1667,7 +1672,7 @@ struct Illusion_Struct {
 /**/	uint16	race;
 /**/	char	unknown006[2];
 /**/	uint8	gender;
-/**/	uint8	texture;	
+/**/	uint8	texture;
 /**/	uint8	helmtexture;
 /**/	uint8	unknown011;
 /**/	uint32	face;
@@ -1713,14 +1718,14 @@ struct GroupCancel_Struct {
 	uint8	toggle;
 };
 
-struct GroupUpdate_Struct {	
+struct GroupUpdate_Struct {
 /*0000*/	int32	action;
 /*0004*/	char	yourname[64];
 /*0068*/	char	membername[5][64];
 /*0388*/	char	leadersname[64];
 };
 
-struct GroupUpdate2_Struct {	
+struct GroupUpdate2_Struct {
 /*0000*/	int32	action;
 /*0004*/	char	yourname[64];
 /*0068*/	char	membername[5][64];
@@ -1729,7 +1734,7 @@ struct GroupUpdate2_Struct {
 /*0580*/	int8	unknown[188];
 /*0768*/
 };
-struct GroupJoin_Struct {	
+struct GroupJoin_Struct {
 /*0000*/	int32	action;
 /*0004*/	char	yourname[64];
 /*0068*/	char	membername[64];
@@ -1743,10 +1748,10 @@ struct FaceChange_Struct {
 /*003*/	int8	eyecolor2;
 /*004*/	int8	hairstyle;
 /*005*/	int8	beard;	// vesuvias
-/*006*/	int8	face; 
+/*006*/	int8	face;
 //vesuvias:
 //there are only 10 faces for barbs changing woad just
-//increase the face value by ten so if there were 8 woad 
+//increase the face value by ten so if there were 8 woad
 //designs then there would be 80 barb faces
 };
 
@@ -1828,11 +1833,11 @@ struct Who_All_Struct { // 76 length total
 /*140*/
 };
 
-struct Stun_Struct { // 4 bytes total 
+struct Stun_Struct { // 4 bytes total
 	int32 duration; // Duration of stun
 };
 
-struct AugmentItem_Struct { 
+struct AugmentItem_Struct {
 /*00*/	sint16	container_slot;
 /*02*/	char	unknown02[2];
 /*04*/	sint32	augment_slot;
@@ -1846,11 +1851,11 @@ struct Emote_Struct {
 /*1028*/
 };
 
-// Inspect 
-struct Inspect_Struct { 
-	int16 TargetID; 
-	int16 PlayerID; 
-}; 
+// Inspect
+struct Inspect_Struct {
+	int16 TargetID;
+	int16 PlayerID;
+};
 //OP_InspectAnswer
 struct InspectResponse_Struct{//Cofruben:need to send two of this for the inspect response.
 /*000*/	int32 TargetID;
@@ -2005,11 +2010,12 @@ struct Shielding_Struct {
 };
 
 /*
-** Click Object Acknowledgement Struct
+** Click Object Action Struct
 ** Response to client clicking on a World Container (ie, forge)
+*  also sent by the client when they close the container.
 **
 */
-struct ClickObjectAck_Struct {
+struct ClickObjectAction_Struct {
 /*00*/	uint32	player_id;	// Entity Id of player who clicked object
 /*04*/	uint32	drop_id;	// Zone-specified unique object identifier
 /*08*/	uint32	open;		// 1=opening, 0=closing
@@ -2035,7 +2041,7 @@ struct CloseContainer_Struct {
 /*
 ** Generic Door Struct
 ** Length: 52 Octets
-** Used in: 
+** Used in:
 **    cDoorSpawnsStruct(f721)
 **
 */
@@ -2658,7 +2664,7 @@ struct Split_Struct
 ** Last Updated: Oct-15-2003
 **
 */
-struct NewCombine_Struct { 
+struct NewCombine_Struct {
 /*00*/	sint16	container_slot;
 /*02*/	char	unknown02[2];
 /*04*/
@@ -2910,14 +2916,14 @@ struct BankerChange_Struct {
 };
 
 struct LeadershipExpUpdate_Struct {
-   /*0000*/ uint32 unknown0000;          // All zeroes? 
-   /*0004*/ uint32 group_leadership_exp;         // Group leadership exp value 
-   /*0008*/ uint32 group_leadership_points;   // Unspent group points 
-   /*0012*/ uint32 unknown0012;          // Type? 
-   /*0016*/ uint32 unknown0016;          // All zeroes? 
-   /*0020*/ uint32 raid_leadership_exp;          // Raid leadership exp value 
-   /*0024*/ uint32 raid_leadership_points;    // Unspent raid points 
-   /*0028*/ uint32 unknown0028; 
+   /*0000*/ uint32 unknown0000;          // All zeroes?
+   /*0004*/ uint32 group_leadership_exp;         // Group leadership exp value
+   /*0008*/ uint32 group_leadership_points;   // Unspent group points
+   /*0012*/ uint32 unknown0012;          // Type?
+   /*0016*/ uint32 unknown0016;          // All zeroes?
+   /*0020*/ uint32 raid_leadership_exp;          // Raid leadership exp value
+   /*0024*/ uint32 raid_leadership_points;    // Unspent raid points
+   /*0028*/ uint32 unknown0028;
 };
 
 struct UpdateLeadershipAA_Struct {
@@ -2968,7 +2974,7 @@ struct RaidDetails_Struct {
 /*000*/	uint32		action;	//=6,20
 /*004*/	char		leader_name[64];
 /*068*/	uint32		unknown68[4];
-/*084*/	LeadershipAA_Struct abilities;	//ranks in backwards byte order		
+/*084*/	LeadershipAA_Struct abilities;	//ranks in backwards byte order
 /*128*/	uint8		unknown128[142];
 /*354*/	uint32		leader_id;
 };
@@ -3084,15 +3090,16 @@ struct UseAA_Struct {
 
 struct AA_Ability {
 /*00*/	int32 skill_id;
-/*04*/	int32 increase_amt;
-/*08*/	int32 unknown08;
-/*12*/	int32 last_level;
+/*04*/	int32 base1;
+/*08*/	int32 base2;
+/*12*/	int32 slot;
 };
 
 struct SendAA_Struct {
 /* EMU additions for internal use */
 	char name[128];
-	
+	int16 cost_inc;
+
 /*0000*/	int32 id;
 /*0004*/	int32 unknown004;
 /*0008*/	int32 hotkey_sid;
@@ -3128,7 +3135,7 @@ struct AA_Action {
 };
 
 struct AA_Skills {		//this should be removed and changed to AA_Array
-/*00*/	int32	aa_skill; 
+/*00*/	int32	aa_skill;
 /*04*/	int32	aa_value;
 };
 
@@ -3159,13 +3166,13 @@ struct AATable_Struct {
 struct Weather_Struct {
 	uint32	val1;	//generall 0x000000FF
 	uint32	type;	//0x31=rain, 0x02=snow(i think), 0 = normal
-	uint32	mode;	
+	uint32	mode;
 };
 
 struct ZoneInUnknown_Struct {
 	uint32	val1;
 	uint32	val2;
-	uint32	val3;	
+	uint32	val3;
 };
 
 struct MobHealth_Struct {
@@ -3181,6 +3188,21 @@ struct AnnoyingZoneUnknown_Struct {
 struct LoadSpellSet_Struct {
       uint32  spell[MAX_PP_MEMSPELL];      // 0xFFFFFFFF if no action, slot number if to unmem starting at 0
       uint32 unknown;	//there seems to be an extra field in this packet...
+};
+
+// This is the structure for OP_ZonePlayerToBind opcode. Discovered on Feb 9 2007 by FNW from packet logs for titanium client
+// This field "zone_name" is text the Titanium client will display on player death
+// it appears to be a variable length, null-terminated string
+// In logs it has "Bind Location" text which shows up on Titanium client as ....
+// "Return to Bind Location, please wait..."
+// This can be used to send zone name instead.. On 6.2 client, this is ignored.
+struct ZonePlayerToBind_Struct {
+/*000*/	uint32 bind_zone_id;
+/*004*/	float x;
+/*008*/	float y;
+/*012*/	float z;
+/*016*/	float heading;
+/*020*/	char zone_name[1];
 };
 
 //old structures live here:

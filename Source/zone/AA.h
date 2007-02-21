@@ -12,6 +12,9 @@ using namespace std;
 
 
 #define MAX_SWARM_PETS 12	//this can change as long as you make more coords (swarm_pet_x/swarm_pet_y)
+//the sum of all the client side AA effects we use
+//Wouldn't mess with this unless you know what you're doing
+#define AA_EFFECTS_USED 43
 
 //this might be missing some, and some might not be used...
 typedef enum {	//AA Targeting Constants
@@ -37,7 +40,8 @@ typedef enum {
 	aaActionActOfValor			= 10,
 	aaActionSuspendedMinion		= 11,
 	aaActionEscape				= 12,
-	aaActionBeastialAlignment	= 13
+	aaActionBeastialAlignment	= 13,
+	aaActionLeechTouch			= 14
 } aaNonspellAction;
 
 //use these for AAs which dont cast spells, yet need effects
@@ -47,7 +51,9 @@ typedef enum {	//AA Effect IDs
 	aaEffectRampage,
 	aaEffectSharedHealth,
 	aaEffectFlamingArrows,
-	aaEffectFrostArrows
+	aaEffectFrostArrows,
+	aaEffectWarcry,
+	aaEffectLeechTouch
 } aaEffectType;
 
 

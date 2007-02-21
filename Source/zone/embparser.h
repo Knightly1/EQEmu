@@ -11,6 +11,7 @@
 #include "embperl.h"
 #include "features.h"
 
+#include <string>
 #include <map>
 #include <queue>
 using namespace std;
@@ -62,6 +63,7 @@ public:
 	//expose a var to the script (probably parallels addvar))
 	//i.e. exportvar("qst1234", "name", "somemob"); 
 	//would expose the variable $name='somemob' to the script that handles npc1234
+	void ExportHash(const char *pkgprefix, const char *hashname, std::map<string,string> &vals);
 	void ExportVar(const char * pkgprefix, const char * varname, const char * value) const;
 	void ExportVar(const char * pkgprefix, const char * varname, int value) const;
 	void ExportVar(const char * pkgprefix, const char * varname, unsigned int value) const;

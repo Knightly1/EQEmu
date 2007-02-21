@@ -271,6 +271,7 @@ typedef enum {
 #define SE_RangedProc				201	//not implemented
 #define SE_IllusionOther			202	//not implemented
 #define SE_MassGroupBuff			203	//not implemented
+#define SE_GroupFearImmunity		204
 
 #define SE_Rampage					205
 #define SE_AETaunt					206
@@ -285,25 +286,50 @@ typedef enum {
 
 #define SE_Accuracy					216	//not implemented
 
+#define SE_PetCriticalHit			218 //aa effect
 #define SE_SlayUndead				219	//not implemented
 
-#define SE_GiveDoubleAttack			225	//not implemented
+#define SE_Packrat					221 //aa effect
 
+#define	SE_GiveDoubleRiposte		224 //aa effect
+#define SE_GiveDoubleAttack			225	//not implemented
+#define SE_TwoHandBash				226 //aa effect, bash with a 2h sword
 #define SE_ReduceSkillTimer			227	//not implemented
+
+#define SE_PersistantCasting		229 //aa effect
 
 #define SE_DivineSave				232	//not implemented (base == % chance on death to insta-res)
 
+#define	SE_ChannelingChance			235 //Appears to only be used in AAs
+#define SE_GivePetGroupTarget		237 //aaeffect, makes pets targetable by group spells
+#define SE_SetBreathLevel			246 //aa effect
+#define SE_SecondaryForte			248 //aa effect, lets you gain a 2nd forte, gives you a 2nd specialize skill that can go past 50 to 100
+#define SE_SecondaryDmgInc			249 //aa effect, sinister strikes
+
 #define SE_Blank					254
 
+#define SE_PetDiscipline			257 //aa effect /pet hold
 #define SE_TripleBackstab			258 //not implemented
+#define SE_CombatStability			259 //aa effect
 
 #define SE_RaiseStatCap				262 //not implemented
-
+#define	SE_TradeSkillMastery		263	//lets you raise more than one tradeskill above master.
+#define SE_HastenedAASkill			264 //aa skill
+#define SE_MasteryofPast			265 //aa skill, makes impossible to fizzle spell of base[x] level
 #define SE_ExtraAttackChance		266 //not implemented
+#define SE_PetDiscipline2			267 //aa effect /pet focus, /pet no cast
+#define SE_ReduceTradeskillFail		268 //aa effect, reduces chance to fail with given tradeskill by a percent chance
+
+#define SE_BaseMovementSpeed		271 //mods basemove speed, doesn't stack with other move mods, aa effect
 
 #define SE_CriticalDoTChance		273	//not implemented
 #define SE_CriticalHealChance		274	//not implemented
+
+#define SE_Ambidexterity			276 //aa effect
+
+#define	SE_FinishingBlow			278 //aa effect
 #define SE_Flurry					279	//not implemented
+#define SE_PetFlurry				280
 
 #define SE_SomeRecourse				289 //not implemented
 
@@ -316,6 +342,7 @@ typedef enum {
 #define SE_WakeTheDead				299
 #define SE_Doppelganger				300
 
+#define SE_OffhandRiposteFail		304 //aa effect, enemy cannot riposte offhand attacks
 #define SE_mitigateDamageShield		305 //not implemented
 #define SE_WakeTheDead2				306 //not implemented
 #define SE_Appraisal				307 //not implemented
@@ -327,6 +354,7 @@ typedef enum {
 
 #define SE_Invisibility2			314 //not implemented
 #define SE_InvisVsUndead2			315 //not implemented
+#define SE_ItemManaRegenCapIncrease	318 //aa effect increases amount of mana regen you can gain via items
 #define SE_CriticalHealOverTimer	319 //not implemented
 
 #define SE_ReduceHate				321 //not implemented
@@ -334,9 +362,12 @@ typedef enum {
 #define SE_DefensiveProc			323	//not implemented
 #define SE_HPToMana					324 //not implemented
 
+#define SE_SpellSlotIncrease		326 //aa effect, increases your spell slot availability
+#define SE_MysticalAttune			327 //AA effect, increases amount of buffs that a player can have
+#define SE_DelayDeath				328 //AA effect, increases how far you can fall below 0 hp before you die
 #define SE_ManaAbsorbPercentDamage	329 //not implemented
 #define SE_CriticalDamageMob		330	//not implemented
-
+#define SE_Salvage					331 //chance to recover items that would be destroyed in failed tradeskill combine
 #define SE_SummonToCorpse			332 //not implemented
 #define SE_EffectOnFade				333 //not implemented
 #define SE_BardAEDot				334	//needs a better name (spell id 703 and 730)
@@ -434,6 +465,7 @@ struct SPDat_Spell_Struct
 	#define SPDAT_RECORDS	3602
 #endif
 
+bool IsTargetableAESpell(int16 spell_id);
 bool IsSacrificeSpell(int16 spell_id);
 bool IsLifetapSpell(int16 spell_id);
 bool IsMezSpell(int16 spell_id);
@@ -476,11 +508,13 @@ bool IsDamageSpell(int16 spellid);
 bool IsFearSpell(int16 spellid);
 bool BeneficialSpell(int16 spell_id);
 bool GroupOnlySpell(int16 spell_id);
-bool NoMerchantSpell(int16 spell_id);
 int GetSpellEffectIndex(int16 spell_id, int effect);
 int CanUseSpell(int16 spellid, int classa, int level);
 int GetMinLevel(int16 spell_id);
 int CalcBuffDuration_formula(int level, int formula, int duration);
+sint32 CalculatePoisonCounters(int16 spell_id);
+sint32 CalculateDiseaseCounters(int16 spell_id);
+sint32 CalculateCurseCounters(int16 spell_id);
 
 
 int CalcPetHp(int levelb, int classb, int STA = 75);

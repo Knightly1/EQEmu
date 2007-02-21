@@ -147,7 +147,7 @@ typedef enum {
 	ZoneToSafeCoords,
 	ZoneSummoned,		//might be eliminated using solicited
 	ZoneToBindPoint,
-	ZoneSolicited,  //we told the client to zone.
+	ZoneSolicited,		//we told the client to zone.
 	ZoneUnsolicited
 } ZoneMode;
 
@@ -391,14 +391,15 @@ public:
 	void	GoToSafeCoords(uint16 zone_id);
 	void	Gate();
 	void	SetBindPoint(int to_zone = -1, float new_x = 0.0f, float new_y = 0.0f, float new_z = 0.0f);
-	void	MovePC(const char* zonename, float x, float y, float z, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
-	void	MovePC(int32 zoneID, float x, float y, float z, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
-	void	MovePC(float x, float y, float z, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
+	void	MovePC(const char* zonename, float x, float y, float z, float heading, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
+	void	MovePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
+	void	MovePC(float x, float y, float z, float heading, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
 	void	WhoAll();
 	bool	CheckLoreConflict(const Item_Struct* item);
 	void	ChangeLastName(const char* in_lastname);
 	void	GetGroupAAs(GroupLeadershipAA_Struct *into) const;
 	void	Sacrifice(Client* caster);
+	void	ZonePCToBindPointAfterDeath();
 	
 	FACTION_VALUE	GetReverseFactionCon(Mob* iOther);
     FACTION_VALUE   GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race, int32 p_class, int32 p_deity, sint32 pFaction, Mob* tnpc);
@@ -582,6 +583,7 @@ public:
 	int32 GetAA(int32 aa_id) const;
 	bool SetAA(int32 aa_id, int32 new_value);
 	void TemporaryPets(int16 spell_id, Mob *target, const char *name_override = NULL, uint32 duration_override = 0);
+	void FillAAEffects(SendAA_Struct* aa_struct, uint8 level);
 	
 	
 	sint16 acmod();
@@ -775,7 +777,10 @@ private:
 	void SendZoneCancel(ZoneChange_Struct *zc);
 	void SendZoneError(ZoneChange_Struct *zc, sint8 err);
 	void DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, float dest_x, float dest_y, float dest_z, float dest_h, sint8 ignore_r);
-//	char	zonesummon_name[32];
+	void InZoneMovePC(float x, float y, float z, float heading, int8 ignorerestrictions, bool summoned, ZoneMode zm);
+	void ZonePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions, bool summoned, ZoneMode zm);
+	void ProcessMovePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
+	//	char	zonesummon_name[32];
 	float	zonesummon_x;
 	float	zonesummon_y;
 	float	zonesummon_z;

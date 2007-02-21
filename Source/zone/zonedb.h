@@ -141,10 +141,8 @@ public:
 	SendAA_Struct*	GetAASkillVars(int32 skill_id);
 	int8	GetTotalAALevels(int32 skill_id);
 	int32	GetSizeAA();
-	int32	CountAALevels();
 	int32	CountAAs();
 	void	LoadAAs(SendAA_Struct **load);
-	void	RetrieveAALevels(SendAA_Struct* aa_struct);
 	
 	/*
 	 * Zone related

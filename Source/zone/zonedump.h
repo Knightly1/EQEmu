@@ -102,6 +102,7 @@ struct NPCType
 	int8	mount_color;	//only used by horse class
 	float	attack_speed;	//%+- on attack delay of the mob.
 	bool	findable;		//can be found with find command
+	bool	trackable;
 };
 
 struct ZSDump_Spawn2 {

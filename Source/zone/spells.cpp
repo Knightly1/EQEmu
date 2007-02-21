@@ -161,7 +161,7 @@ void NPC::SpellProcess()
 // the rule is you can cast one triggered (usually timed) spell at a time
 // but things like SpellFinished() can run concurrent with a triggered cast
 // to allow procs to work
-void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
+bool Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 	sint32 cast_time, sint32 mana_cost, int32* oSpellWillFinish, int32 item_slot)
 {
 	_ZP(Mob_CastSpell);
@@ -189,14 +189,18 @@ void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 			Message(13, "You cannot cast spells while silenced");
 		if(IsClient())
 			CastToClient()->SendSpellBarEnable(spell_id);
-		return;
+		if(casting_spell_id && IsNPC())
+			CastToNPC()->AI_Event_SpellCastFinished(false, casting_spell_slot);
+		return(false);
 	}
 	
 	if(IsDetrimentalSpell(spell_id) && !zone->CanDoCombat()){
 		Message(13, "Your spell would not have taken hold.");
 		if(IsClient())
 			CastToClient()->SendSpellBarEnable(spell_id);
-		return;
+		if(casting_spell_id && IsNPC())
+			CastToNPC()->AI_Event_SpellCastFinished(false, casting_spell_slot);
+		return(false);
 	}
 
 	
@@ -204,7 +208,7 @@ void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 	if(DivineAura()) {
 		mlog(SPELLS__CASTING_ERR, "Spell casting canceled: cannot cast while Divine Aura is in effect.");
 		InterruptSpell(173, 0x121, false);
-		return;
+		return(false);
 	}
 	
 	// check for fizzle
@@ -220,7 +224,7 @@ void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 		
 		// fizzle 1/4 the mana away
 		SetMana(GetMana() - use_mana);
-		return;
+		return(false);
 	}
 	
     if (HasActiveSong()) {
@@ -229,7 +233,7 @@ void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
         _StopSong();
     }
 
-	DoCastSpell(spell_id, target_id, slot, cast_time, mana_cost, oSpellWillFinish, item_slot);
+	return(DoCastSpell(spell_id, target_id, slot, cast_time, mana_cost, oSpellWillFinish, item_slot));
 }
 
 //
@@ -240,7 +244,7 @@ void Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 // this is the 2nd phase of CastSpell, broken up like this to make it easier
 // to repeat a spell for bard songs
 //
-void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
+bool Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
                     sint32 cast_time, sint32 mana_cost, int32* oSpellWillFinish, int32 item_slot)
 {
 	_ZP(Mob_DoCastSpell);
@@ -251,8 +255,10 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 //	float modrange;
 	EQApplicationPacket *outapp = NULL;
 
-	if(!IsValidSpell(spell_id))
-		return;
+	if(!IsValidSpell(spell_id)) {
+		InterruptSpell();
+		return(false);
+	}
 	
 	const SPDat_Spell_Struct &spell = spells[spell_id];
 	
@@ -270,19 +276,10 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	// if this spell doesn't require a target, or if it's an optional target
 	// and a target wasn't provided, then it's us; unless TGB is on and this
 	// is a TGB compatible spell.
-	if(
-		(
-			IsGroupSpell(spell_id) &&
-			!(
-				IsClient() &&
-				CastToClient()->TGB() &&
-				IsTGBCompatibleSpell(spell_id)
-			)
-		) ||
+	if((IsGroupSpell(spell_id) || 
 		spell.targettype == ST_Self ||
 		spell.targettype == ST_AECaster ||
-		(spell.targettype == ST_TargetOptional && target_id == 0)
-	)
+		spell.targettype == ST_TargetOptional) && target_id == 0)
 	{
 		mlog(SPELLS__CASTING, "Spell %d auto-targeted the caster. Group? %d, target type %d", spell_id, IsGroupSpell(spell_id), spell.targettype);
 		target_id = GetID();
@@ -311,7 +308,7 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 		} else {
 			InterruptSpell(0, 0, 0);	//the 0 args should cause no messages
 		}
-		return;
+		return(false);
 	}
 
 	// ok now we know the target
@@ -322,6 +319,9 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 		mana_cost = GetActSpellCost(spell_id, mana_cost);
 	}
 
+	if(IsClient() && CastToClient()->CheckAAEffect(aaEffectMassGroupBuff) && IsGroupSpell(spell_id))
+		mana_cost *= 2;
+	
 	// neotokyo: 19-Nov-02
 	// mana is checked for clients on the frontend. we need to recheck it for NPCs though
 	// fix: items dont need mana :-/
@@ -347,7 +347,7 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 				} else {
 					InterruptSpell(0, 0, 0);	//the 0 args should cause no messages
 				}
-				return;
+				return(false);
 			}
 		}
 	}
@@ -358,54 +358,13 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	mlog(SPELLS__CASTING, "Spell %d: Casting time %d (orig %d), mana cost %d", orgcasttime, cast_time, mana_cost);
 
 	// cast time is 0, just finish it right now and be done with it
-	if(cast_time == 0)
-	{
+	if(cast_time == 0) {
 		CastedSpellFinished(spell_id, target_id, slot, mana_cost, item_slot);
-		return;
+		return(true);
 	}
 
 	// ok we know it has a cast time so we can start the timer now
 	spellend_timer.Start(cast_time);
-	
-	/*
-	spell range should be checked elsewhere, this does not catch everything.
-	// get the spell range
-	modrange = spell.range;
-
-	// find the target in entity_list
-	pMob = entity_list.GetMob(target_id);
-	
-	if(!pMob)
-	{
-		mlog(SPELLS__CASTING_ERR, "Unable to find mob ID %d", target_id);
-		Message(13, "Error aquiring target.");
-		InterruptSpell();
-		return;
-	}
-
-	// check distance to target against spell range, but first let's
-	// eliminate the case where it's our self targeted, or it's a group
-	// spell
-	// note: client checks this, but this makes sure
-	if(pMob != this && !IsGroupSpell(spell_id))
-	{
-		mobDist = DistNoRoot(*pMob);
-		if(mobDist > spell.range)
-		{
-			modrange = GetActSpellRange(spell_id, spell.range);
-
-			if(modrange*modrange < mobDist) // still not enough
-			{
-				if (IsClient() && !(spell.targettype == ST_AECaster))
-				{
-					Message(MT_Spells, "Your target is out of range(2)!");
-				}
-				InterruptSpell();
-				return;
-			}
-		}
-	}
-	*/
 	
 	if (IsAIControlled())
 	{
@@ -429,86 +388,7 @@ void Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	entity_list.QueueCloseClients(this, outapp, false, 200, 0, true); //IsClient() ? FILTER_PCSPELLS : FILTER_NPCSPELLS);
 	safe_delete(outapp);
 	outapp = NULL;
-
-/*	if (IsClient()) // begins to glow messages
-	{
-		char itemname[65];
-		int16 focusspell;
-		sint32 buffdur, newdur, dmg=0, newdmg;
-
-		// mana cost - slot 10 is an item
-		if(slot != 10 && CastToClient()->GetReduceManaCostItem(focusspell, itemname))
-		{
-			Message_StringID(MT_Spells, BEGINS_TO_GLOW, itemname);
-		}
-
-		// spell range
-		if (modrange != spell.range)
-		{
-			CastToClient()->GetExtendedRangeItem(focusspell, itemname);
-			Message_StringID(MT_Spells, BEGINS_TO_GLOW, itemname);
-		}
-		
-		// buff duration
-		buffdur = CalcBuffDuration_formula(
-			GetCasterLevel(spell_id), 
-			spell.buffdurationformula, 
-			spell.buffduration
-		);
-//		buffdur = CalcBuffDuration(this, pMob, spell_id);
-// we use the straight formula calculation here, since we're just trying
-// to see if there's a reduction.  this whole message printing thing is
-// probably not ideal, since this isn't where it's actually applying
-// the reductions...
-		
-		newdur = GetActSpellDuration(spell_id, buffdur);
-		if (newdur != buffdur)
-		{
-			CastToClient()->GetIncreaseSpellDurationItem(focusspell, itemname);
-			Message_StringID(MT_Spells, BEGINS_TO_GLOW, itemname);
-		}
-		
-		// Improved Healing and Damage
-		for (int i = 0; i < EFFECT_COUNT; i++)
-		{
-			if (spell.effectid[i] == SE_CurrentHP)
-			{
-				dmg = CalcSpellEffectValue(spell_id, i, GetCasterLevel(spell_id));
-				break;
-			}   
-		}
-
-		if( dmg < 0)
-		{
-			newdmg = GetActSpellValue(spell_id, dmg);
-			if (newdmg != dmg)
-			{
-				CastToClient()->GetImprovedDamageItem(focusspell, itemname);
-				Message_StringID(MT_Spells, BEGINS_TO_GLOW, itemname);
-			}
-
-		}
-		else if(dmg > 0)
-		{
-			newdmg = GetActSpellValue(spell_id, dmg);
-			if (newdmg != dmg)
-			{
-				CastToClient()->GetImprovedHealingItem(focusspell, itemname);
-				Message_StringID(MT_Spells, BEGINS_TO_GLOW, itemname);
-			}
-
-		}
-		
-		// CastTime
-		if(orgcasttime != cast_time)
-		{
-			CastToClient()->GetReduceCastTimeItem(focusspell, itemname);
-			Message_StringID(MT_Spells, BEGINS_TO_GLOW, itemname);
-		}
-
-	}
-	end obsolete glow messages
-	*/
+	return(true);
 }
 
 uint16 Mob::GetSpecializeSkillValue(int16 spell_id) const {
@@ -654,7 +534,17 @@ bool Client::CheckFizzle(int16 spell_id)
 	float specialize = GetSpecializeSkillValue(spell_id);
 		//VERY rough success formula, needs research
 	if(specialize > 0) {
-		specialize += GetAA(aaSpellCastingMastery) * 5.0;
+		switch(GetAA(aaSpellCastingMastery)){
+		case 1:
+			specialize = specialize * 1.05;
+			break;
+		case 2:
+			specialize = specialize * 1.15;
+			break;
+		case 3:
+			specialize = specialize * 1.3;
+			break;
+		}
 		if(((specialize/6.0f) + 15.0f) < MakeRandomFloat(0, 100)) {
 			specialize *= SPECIALIZE_FIZZLE / 200;
 		} else {
@@ -878,7 +768,8 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 			{
 				// max 93% chance at 252 skill
 				channelchance = 30 + GetSkill(CHANNELING) / 400.0f * 100;
-				channelchance -= attacked_count * 2;
+				channelchance -= attacked_count * 2;			
+				channelchance += channelchance * (GetAA(aaChanellingFocus)*5) / 100; 
 			} else {
 				// NPCs are just hard to interrupt, otherwise they get pwned
 				channelchance = 85;
@@ -925,7 +816,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 	// first check for component reduction... we assume bard spells never have components
 	if(!bard_song_mode && IsClient()) {
 		int reg_focus = CastToClient()->GetFocusEffect(focusReagentCost,spell_id);
-		if(MakeRandomInt(0, 100) < reg_focus) {
+		if(MakeRandomInt(0, 100) <= reg_focus) {
 			mlog(SPELLS__CASTING, "Spell %d: Reagent focus item prevented reagent consumption (%d chance)", spell_id, reg_focus);
 		} else {
 			if(reg_focus > 0)
@@ -1209,6 +1100,7 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 		}
 
 // AE spells
+		case ST_AEBard:
 		case ST_AECaster:
 		{
 			spell_target = NULL;
@@ -1232,7 +1124,6 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 		}
 
 // Group spells
-		case ST_AEBard:
 		case ST_GroupTeleport:
 		case ST_Group:
 		{
@@ -1348,7 +1239,10 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 	}
 	
 	//range check our target, if we have one and it is not us
-	float range = GetActSpellRange(spell_id, spells[spell_id].range);
+	float range = spells[spell_id].range;
+	if(IsClient() && CastToClient()->TGB() && IsTGBCompatibleSpell(spell_id) && IsGroupSpell(spell_id))
+		range = spells[spell_id].aoerange;
+	range = GetActSpellRange(spell_id, range);
 	if(spell_target != NULL && spell_target != this) {
 		//casting a spell on somebody but ourself, make sure they are in range
 		float dist2 = DistNoRoot(*spell_target);
@@ -1394,6 +1288,9 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 					// affect the target too
 					SpellOnTarget(spell_id, spell_target);
 				}
+				if(ae_center && ae_center == this && IsBeneficialSpell(spell_id))
+					SpellOnTarget(spell_id, this);
+				
 				bool affect_caster = !IsNPC();	//NPC AE spells do not affect the NPC caster
 				entity_list.AESpell(this, ae_center, spell_id, affect_caster);
 			}
@@ -1402,28 +1299,45 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 
 		case GroupSpell:
 		{
-			// at this point spell_target is a member of the other group, or the
-			// caster if they're not using TGB
-			// NOTE: this will always hit the caster, plus the target's group so
-			// it can affect up to 7 people if the targeted group is not our own
-			if(spell_target->IsGrouped())
-			{
-				Group *target_group = entity_list.GetGroupByMob(spell_target);
-				if(target_group)
-				{
-					target_group->CastGroupSpell(this, spell_id);
-				}
+			if(IsClient() && CastToClient()->CheckAAEffect(aaEffectMassGroupBuff)){
+				SpellOnTarget(spell_id, this);
+				entity_list.AESpell(this, this, spell_id, true);
+				CastToClient()->DisableAAEffect(aaEffectMassGroupBuff);
 			}
 			else
 			{
-				// if target is grouped, CastGroupSpell will cast it on the caster
-				// too, but if not then we have to do that here.
-				spell_target->SpellOnTarget(spell_id, this);
-#ifdef GROUP_BUFF_PETS
-				//pet too
-				if (spell_target->HasPet())
-					spell_target->SpellOnTarget(spell_id, spell_target->GetPet());
-#endif
+				// at this point spell_target is a member of the other group, or the
+				// caster if they're not using TGB
+				// NOTE: this will always hit the caster, plus the target's group so
+				// it can affect up to 7 people if the targeted group is not our own
+				if(spell_target->IsGrouped())
+				{
+					Group *target_group = entity_list.GetGroupByMob(spell_target);
+					if(target_group)
+					{
+						target_group->CastGroupSpell(this, spell_id);
+					}
+				}
+				else
+				{
+					// if target is grouped, CastGroupSpell will cast it on the caster
+					// too, but if not then we have to do that here.
+					if(spell_target != this){
+						SpellOnTarget(spell_id, this);
+	#ifdef GROUP_BUFF_PETS
+						//pet too
+						if (HasPet())
+							SpellOnTarget(spell_id, GetPet());
+	#endif					
+					}
+
+					SpellOnTarget(spell_id, spell_target);
+	#ifdef GROUP_BUFF_PETS
+					//pet too
+					if (spell_target->HasPet())
+						SpellOnTarget(spell_id, spell_target->GetPet());
+	#endif
+				}
 			}
 			break;
 		}
@@ -1555,6 +1469,14 @@ bool Mob::ApplyNextBardPulse(int16 spell_id, Mob *spell_target, int16 slot) {
 		}
 
 		case AECaster:
+		{
+			if(IsBeneficialSpell(spell_id))
+				SpellOnTarget(spell_id, this);
+			
+			bool affect_caster = !IsNPC();	//NPC AE spells do not affect the NPC caster
+			entity_list.AEBardPulse(this, this, spell_id, affect_caster);
+			break;		
+		}
 		case AETarget:
 		{
 			// we can't cast an AE spell without something to center it on
@@ -1781,6 +1703,12 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 
 	mlog(SPELLS__STACKING, "Check Stacking on old %s (%d) @ lvl %d (by %s) vs. new %s (%d) @ lvl %d (by %s)", sp1.name, spellid1, caster_level1, (caster1==NULL)?"Nobody":caster1->GetName(), sp2.name, spellid2, caster_level2, (caster2==NULL)?"Nobody":caster2->GetName());
 
+	if(((spellid1 == spellid2) && (spellid1 == 2751)) || //special case spells that will block each other no matter what
+		((spellid1 == spellid2) && (spellid1 == 2755)) //manaburn / lifeburn
+		){
+			return -1;
+		}
+	
 	/*
 	One of these is a bard song and one isn't and they're both beneficial so they should stack.
 	*/
@@ -1987,7 +1915,8 @@ int Mob::AddBuff(Mob *caster, int16 spell_id, int duration)
 	if(duration == 0)
 	{
 		duration = CalcBuffDuration(caster, this, spell_id);
-		duration = GetActSpellDuration(spell_id, duration);
+		if(caster)
+			duration = caster->GetActSpellDuration(spell_id, duration);
 	}
 
 	if(duration == 0) {
@@ -2085,6 +2014,7 @@ int Mob::AddBuff(Mob *caster, int16 spell_id, int duration)
 	buffs[emptyslot].ticsremaining = duration;
 	buffs[emptyslot].diseasecounters = 0;
 	buffs[emptyslot].poisoncounters = 0;
+	buffs[emptyslot].cursecounters = 0;
 	buffs[emptyslot].client = caster ? caster->IsClient() : 0;
 	
 	mlog(SPELLS__BUFFS, "Buff %d added to slot %d with caster level %d", spell_id, emptyslot, caster_level);
@@ -2385,26 +2315,9 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		Shout("%s!", target_name);
 	}
 
-	if (spelltar->IsAIControlled() && spells[spell_id].goodEffect == 0
-		//IsDetrimentalSpell(spell_id)
+	if (spelltar->IsAIControlled() && IsDetrimentalSpell(spell_id)
 		) {
 		int16 aggro_amount = CheckAggroAmount(spell_id);//*spelltar->CastToNPC()->AggroModifier();
-		if (IsClient()) {
-			switch (GetAA(aaSpellCastingSubtlety))
-			{
-			case 1:
-				aggro_amount = aggro_amount * 95 / 100;
-				break;
-			case 2:
-				aggro_amount = aggro_amount * 90 / 100;
-				break;
-			case 3:
-				aggro_amount = aggro_amount * 80 / 100;
-				break;
-			}
-		}
-		if (spell_effectiveness < 100)
-			aggro_amount /= 2;
 		mlog(SPELLS__CASTING, "Spell %d cast on %s generated %d hate", spell_id, spelltar->GetName(), aggro_amount);
 		spelltar->AddToHateList(this, aggro_amount);
 	}
@@ -2731,13 +2644,16 @@ float Mob::ResistSpell(int8 resist_type, int16 spell_id, Mob *caster)
 				rchance += 5;
 				break;
 			case 2:
-				rchance += 10;
+				rchance += 15;
 				break;
 			case 3:
-				rchance += 20;
+				rchance += 25;
 				break;
 		}
 		rchance += itembonuses.ResistFearChance + spellbonuses.ResistFearChance;
+		
+		if(GetAA(aaFearless) || (IsClient() && CastToClient()->CheckAAEffect(aaEffectWarcry)))
+			rchance = 100;
 		
 		//I dont think these should get factored into standard spell resist...
 		if(MakeRandomInt(0, 99) < rchance) {
@@ -2811,7 +2727,7 @@ float Mob::ResistSpell(int8 resist_type, int16 spell_id, Mob *caster)
 	//This is our difference in levels between the caster and target, if the caster is HIGHER than the target there is still some resist factored in but it is less than if he was LOWER than his target.
 	//Replaced the old system where resist chance was 1 + (leveldiff*leveldiff), this resulted in some pretty shoddy scaling especially at higher levels where you're dealing with a much larger range of NPC levels.
 	float lvldiff = caster_level - target_level;
-	if(caster->IsClient()){ //levels are a bit more harsh to clients than they are to npcs
+	if(caster && caster->IsClient()){ //levels are a bit more harsh to clients than they are to npcs
 		if((lvldiff) > 0){
 			resistchance -= (lvldiff)*0.6;
 		}
@@ -3646,6 +3562,7 @@ int Mob::GetCasterLevel(int16 spell_id) {
 	int level = GetLevel();
 	level += spellbonuses.effective_casting_level;
 	level += itembonuses.effective_casting_level;
+	level += GetAA(aaJamFest);
 	mlog(SPELLS__CASTING, "Determined effective casting level %d+%d+%d=%d", GetLevel(), spellbonuses.effective_casting_level, itembonuses.effective_casting_level, level);
 	return(level);
 }

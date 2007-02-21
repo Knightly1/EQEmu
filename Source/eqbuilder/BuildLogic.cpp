@@ -1248,13 +1248,12 @@ int CEQBuilderDlg::getSpawnProbability( cspawn* spawn, logType typelog ) {
 		if ( ( dead_factor < 0 ) || ( dead_factor > 20 ) ) {
 			dead_factor = 5;
 		}
-		prob += dead_factor * ( nb_total - 2 * nb_dead );
+		if ( typelog == logPathing ) {
+			prob += dead_factor * ( nb_total - 2 * nb_dead );
+		}
 	}
 	if ( nb_dead == 0 ) {
 		prob += dead_factor;
-	}
-	if ( nb_dead == nb_total ) {
-		prob = 0;
 	}
 
 	// occurence

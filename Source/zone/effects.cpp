@@ -148,7 +148,7 @@ sint32 Client::GetActSpellDamage(int16 spell_id, sint32 value) {
 		
 		if(chance > 0 && MakeRandomInt(0,100) <= chance) {
 			modifier += ratio;
-			entity_list.MessageClose(this, false, 100, MT_SpellCrits, "%s delivers a critical blast!", GetName());		
+			entity_list.MessageClose(this, false, 100, MT_SpellCrits, "%s delivers a critical blast! (%d)", GetName(), ((-value * modifier) / 100));	
 		}
 	}
 	
@@ -205,11 +205,14 @@ sint32 Client::GetActSpellHealing(int16 spell_id, sint32 value) {
 		chance += GetAA(aaAdvancedHealingGift) * 2;
 		
 		if(MakeRandomInt(0,100) < chance) {
-			//message?
-			modifier += 100;
+			entity_list.MessageClose(this, false, 100, MT_SpellCrits, "%s performs an exceptional heal! (%d)", GetName(), ((value * modifier) / 50));		
+			return (value * modifier) / 50;
 		}
+		else{
+			return (value * modifier) / 100;
+		}		
 	}
-						
+					
 	return (value * modifier) / 100;
 }
 
@@ -295,25 +298,24 @@ sint32 Client::GetActSpellCasttime(int16 spell_id, sint32 casttime)
 	//this function loops through the effects of spell_id many times
 	//could easily be consolidated.
 
-	switch (GetAA(aaSpellCastingDeftness)) {
-		case 1:
-			cast_reducer += 2;
-			break;
-		case 2:
-			cast_reducer += 5;
-			break;
-		case 3:
-			cast_reducer += 10;
-			break;
-	}
-	
 	if (GetLevel() >= 51 && casttime >= 3000 && !BeneficialSpell(spell_id) 
 		&& (GetClass() == SHADOWKNIGHT || GetClass() == RANGER 
 			|| GetClass() == PALADIN || GetClass() == BEASTLORD ))
 		cast_reducer += (GetLevel()-50)*3;
 	
-	if (BeneficialSpell(spell_id) && spells[spell_id].buffduration > 0 && spells[spell_id].cast_time >= 4000)
-	{
+	if(casttime >= 4000 && BeneficialSpell(spell_id) && spells[spell_id].buffduration > 0){
+		switch (GetAA(aaSpellCastingDeftness)) {
+			case 1:
+				cast_reducer += 5;
+				break;
+			case 2:
+				cast_reducer += 10;
+				break;
+			case 3:
+				cast_reducer += 15;
+				break;
+		}
+
 		switch (GetAA(aaQuickBuff))
 		{
 			case 1:
@@ -560,9 +562,8 @@ void EntityList::AETaunt(Client* taunter, float range) {
 		if (zdiff < 0)
 			zdiff *= -1;
 		if (zdiff < 10
-			/* && !them->IsDead()  need to write this function...*/
 			&& taunter->IsAttackAllowed(them)
-			&& taunter->DistNoRootNoZ(*them)) {
+			&& taunter->DistNoRootNoZ(*them) <= range) {
 			
 			if (taunter->CheckLosFN(them)) {
 				taunter->Taunt(them, true);
@@ -585,6 +586,9 @@ void EntityList::AESpell(Mob *caster, Mob *center, int16 spell_id, bool affect_c
 	
 	bool bad = IsDetrimentalSpell(spell_id);
 	bool isnpc = caster->IsNPC();
+
+	const int MAX_TARGETS_ALLOWED = 4;
+	int iCounter = 0;
 	
 	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
 	{
@@ -610,11 +614,25 @@ void EntityList::AESpell(Mob *caster, Mob *center, int16 spell_id, bool affect_c
 		}
 		//finally, make sure they are within range
 		if(bad) {
+			if(!caster->IsAttackAllowed(curmob))
+				continue;
 			if(!center->CheckLosFN(curmob))
 				continue;
 		}
+		else {
+			if(!caster->IsBeneficialAllowed(curmob))
+				continue;
+		}
+
 		//if we get here... cast the spell.
-		caster->SpellOnTarget(spell_id, curmob);
+		if(IsTargetableAESpell(spell_id) && bad) {
+			if(iCounter < MAX_TARGETS_ALLOWED)
+				caster->SpellOnTarget(spell_id, curmob);
+		}
+		else
+			caster->SpellOnTarget(spell_id, curmob);
+
+		iCounter++;
 	}	
 }
 
@@ -660,7 +678,7 @@ void EntityList::AEBardPulse(Mob *caster, Mob *center, int16 spell_id, bool affe
 				continue;
 		}
 		//if we get here... cast the spell.
-		caster->BardPulse(spell_id, curmob);
+		curmob->BardPulse(spell_id, caster);
 	}
 	if(caster->IsClient())
 		caster->CastToClient()->CheckSongSkillIncrease(spell_id);

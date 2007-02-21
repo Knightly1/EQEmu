@@ -1499,10 +1499,10 @@ bool StructMatcher::Match_OP_BankerChange(const SMPacket *p) {
 }
 
 bool StructMatcher::Match_OP_CloseContainer(const SMPacket *p) {
-	if(p->size == sizeof(ClickObjectAck_Struct)) {
+	if(p->size == sizeof(ClickObjectAction_Struct)) {
 		CheckHistoryExists(OP_ClickObject, DISTANT);
 		
-		ClickObjectAck_Struct *s = (ClickObjectAck_Struct *) p->pBuffer;
+		ClickObjectAction_Struct *s = (ClickObjectAction_Struct *) p->pBuffer;
 		CheckSelf(s->player_id);
 		//CheckUnsignedLimit(s->drop_id, ULONG_MAX);
 		CheckBool(s->open);
@@ -2242,9 +2242,9 @@ bool StructMatcher::Match_OP_ReqNewZone(const SMPacket *p) {
 	return(false);
 }
 
-bool StructMatcher::Match_OP_ClickObjectAck(const SMPacket *p) {
-	if(p->size == sizeof(ClickObjectAck_Struct)) {
-		ClickObjectAck_Struct *s = (ClickObjectAck_Struct *) p->pBuffer;
+bool StructMatcher::Match_OP_ClickObjectAction(const SMPacket *p) {
+	if(p->size == sizeof(ClickObjectAction_Struct)) {
+		ClickObjectAction_Struct *s = (ClickObjectAction_Struct *) p->pBuffer;
 		CheckSelf(s->player_id);
 		//CheckUnsignedLimit(s->drop_id, ULONG_MAX);
 		//CheckUnsignedLimit(s->open, ULONG_MAX);

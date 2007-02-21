@@ -177,6 +177,8 @@ sint32 Client::LevelRegen()
 	if (GetAA(aaNaturalHealing) >= 1){
 		hp += GetAA(aaNaturalHealing);
 	}
+	
+	hp += GetAA(aaBodyAndMindRejuvenation);
 	if (GetAppearance() == eaDead) {	//stunned/mezzed
 		hp /= 4;
 	}
@@ -1062,7 +1064,7 @@ sint16	Client::CalcMR()
 	}
 	
 	MR += itembonuses.MR + spellbonuses.MR;
-	MR += (GetAA(aaInnateMagicProtection) + GetAA(aaMarrsProtection))*5;
+	MR += (GetAA(aaInnateMagicProtection) + GetAA(aaMarrsProtection))*2;
 	
 	if(GetClass() == WARRIOR) {
 		MR += GetLevel() / 2 + 1;
@@ -1134,7 +1136,7 @@ sint16	Client::CalcFR()
 	}
 	
     FR += itembonuses.FR + spellbonuses.FR;
-    FR += (GetAA(aaInnateFireProtection) + GetAA(aaWardingofSolusek))*5;
+    FR += (GetAA(aaInnateFireProtection) + GetAA(aaWardingofSolusek))*2;
 	
 	if(FR < 1)
 		FR = 1;
@@ -1209,7 +1211,7 @@ sint16	Client::CalcDR()
 	}
 	
     DR += itembonuses.DR + spellbonuses.DR;
-    DR += (GetAA(aaInnateDiseaseProtection) + GetAA(aaBertoxxulousGift))*5;
+    DR += (GetAA(aaInnateDiseaseProtection) + GetAA(aaBertoxxulousGift))*2;
 	
 	if(DR < 1)
 		DR = 1;
@@ -1284,7 +1286,7 @@ sint16	Client::CalcPR()
 	}
 	
     PR += itembonuses.PR + spellbonuses.PR;
-    PR += (GetAA(aaInnatePoisonProtection) + GetAA(aaShroudofTheFaceless))*5;
+    PR += (GetAA(aaInnatePoisonProtection) + GetAA(aaShroudofTheFaceless))*2;
 	
 	if(PR < 1)
 		PR = 1;
@@ -1352,7 +1354,7 @@ sint16	Client::CalcCR()
 	}
 	
     CR += itembonuses.CR + spellbonuses.CR;
-    CR += (GetAA(aaInnateColdProtection) + GetAA(aaBlessingofEci))*5;
+    CR += (GetAA(aaInnateColdProtection) + GetAA(aaBlessingofEci))*2;
 	
 	if(CR < 1)
 		CR = 1;

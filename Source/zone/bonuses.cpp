@@ -85,18 +85,17 @@ int Client::CalcRecommendedLevelBonus(int8 level, uint8 reclevel, int basestat)
 {
 	if( (reclevel > 0) && (level < reclevel) )
 	{
-		float statmod = (level / reclevel) * basestat;
+		sint32 statmod = (level * 10000 / reclevel) * basestat;
 	
 		if( statmod < 0 )
 		{
-			statmod *= -1;
-			statmod += 0.5;
-			return (((int)statmod) * -1);
+			statmod -= 5000;
+			return (statmod/10000);
 		}
 		else
 		{
-			statmod += 0.5;
-			return (int)statmod;
+			statmod += 5000;
+			return (statmod/10000);
 		}
 	}
 

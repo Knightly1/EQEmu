@@ -11,7 +11,7 @@ IDGenSet::IDGenSet(database *db)
 	spawn2		("spawn2", 		 "SELECT MAX(id)+1 FROM spawn2", db),
 	spawnentry	("spawnentry", 	 "SELECT MAX(id)+1 FROM spawnentry", db),
 	grid		("grid", 		 "SELECT MAX(id)+1 FROM grid", db),
-	merchantlist("merchantlist", "SELECT MAX(id)+1 FROM merchantlist", db)
+	merchantlist("merchantlist", "SELECT MAX(merchantid)+1 FROM merchantlist", db)
 {
 	npc_types.SetToZone();
 	npc_types.SetZoneMultiple(1000);
@@ -23,6 +23,8 @@ IDGenSet::IDGenSet(database *db)
 	spawnentry.SetZoneMultiple(10000);
 	grid.SetToFixed();
 	grid.SetFixedID(1);
+	merchantlist.SetToZone();
+	merchantlist.SetZoneMultiple(1000);
 }
 
 void IDGenSet::Reset() {

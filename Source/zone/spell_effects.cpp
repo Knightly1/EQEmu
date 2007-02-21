@@ -91,6 +91,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 
 		effect = spell.effectid[i];
 		effect_value = CalcSpellEffectValue(spell_id, i, caster_level, caster ? caster : this);
+
+		if(spell_id == SPELL_LAY_ON_HANDS && caster && caster->GetAA(aaImprovedLayOnHands))
+			effect_value = GetMaxHP();
 		
 		
 
@@ -127,6 +130,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					//healing spell...
 					if(caster)
 						dmg = caster->GetActSpellHealing(spell_id, dmg);
+			
 					HealDamage(dmg, caster);
 				}
 				
@@ -143,14 +147,18 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #endif
 				
 				sint32 dmg = effect_value;
-				if (spell_id == 2751) //Manaburn
+				if (spell_id == 2751 && caster) //Manaburn
 				{
-					dmg = GetMana()*-3;
-					SetMana(0);
-				} else if (spell_id == 2755) //Lifeburn
+					dmg = caster->GetMana()*-3;
+					caster->SetMana(0);
+				} else if (spell_id == 2755 && caster) //Lifeburn
 				{
-					dmg = GetHP()*-15/10;
-					SetHP(1);
+					dmg = caster->GetHP()*-15/10;
+					caster->SetHP(1);
+					if(caster->IsClient()){
+						caster->CastToClient()->SetFeigned(true);
+						caster->SendAppearancePacket(AT_Anim, 115);
+					}
 				}
 				
 				//do any AAs apply to these spells?
@@ -239,16 +247,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 						break;
 					
 					// solar: if it's blank or "0" it means bind point
-					// TODO: MovePC needs to take heading too, which is in base[3]
 					if(spell.teleport_zone && strlen(spell.teleport_zone) > 1)
 					{
-						CastToClient()->MovePC
-						(
-							spell.teleport_zone,
-							spell.base[1],
-							spell.base[0],
-							spell.base[2]
-						);
+						CastToClient()->MovePC(spell.teleport_zone, spell.base[1], spell.base[0], spell.base[2], spell.base[3]);
 					} else {
 						Gate();
 					}
@@ -257,6 +258,59 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 			}
 
 			case SE_Succor:
+			{
+				float x, y, z, heading;
+				const char *target_zone;
+
+				x = spell.base[1];
+				y = spell.base[0];
+				z = spell.base[2];
+				heading = spell.base[3];
+								
+				if(!strcmp(spell.teleport_zone, "same"))
+				{
+					target_zone = 0;
+				}
+				else
+				{
+					target_zone = spell.teleport_zone;
+					if(IsNPC()){
+						CastToNPC()->Depop();
+						break;
+					}
+				}
+
+				entity_list.RemoveFromHateLists(this, false);
+
+				if(IsClient())
+				{
+					// Below are the spellid's for known evac/succor spells that send player
+					// to the current zone's safe points.
+
+					// Succor = 1567
+					// Lesser Succor = 2183
+					// Evacuate = 1628
+					// Lesser Evacuate = 2184
+					// Decession = 2558
+					// Greater Decession = 3244
+					// Egress = 1566
+
+					if(!target_zone) {
+						#ifdef SPELL_EFFECT_SPAM
+						LogFile->write(EQEMuLog::Debug, "Succor/Evacuation Spell In Same Zone.");
+						#endif
+						CastToClient()->MovePC(target_zone, x, y, z, heading, 0, false, ZoneToSafeCoords);
+					}
+					else {
+						#ifdef SPELL_EFFECT_SPAM
+						LogFile->write(EQEMuLog::Debug, "Succor/Evacuation Spell To Another Zone.");
+						#endif
+						CastToClient()->MovePC(target_zone, x, y, z, heading);
+					}
+				}
+
+				break;
+			}
 			case SE_Teleport:	// gates, rings, circles, etc
 			case SE_Teleport2:
 			{
@@ -295,13 +349,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					efstr, x, y, z, heading, target_zone ? target_zone : "same zone"
 				);
 #endif
-				if(effect == SE_Succor)
-					entity_list.RemoveFromHateLists(this, false);
-
 				if(IsClient())
 				{
-					// TODO: MovePC needs to take heading too, which is in base[3]
-					CastToClient()->MovePC(target_zone, x, y, z);
+					CastToClient()->MovePC(target_zone, x, y, z, heading);
 				}
 				break;
 			}
@@ -340,6 +390,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				break;
 			}
 
+			case SE_Invisibility2:
 			case SE_Invisibility:
 			{
 #ifdef SPELL_EFFECT_SPAM
@@ -359,6 +410,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				break;
 			}
 			
+			case SE_InvisVsUndead2:
 			case SE_InvisVsUndead:
 			{
 #ifdef SPELL_EFFECT_SPAM
@@ -385,6 +437,59 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				break;
 			}
 
+			case SE_FleshToBone:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Flesh To Bone");
+#endif			
+				if(IsClient()){
+					ItemInst* transI = CastToClient()->GetInv().GetItem(SLOT_CURSOR);
+					if(transI && transI->IsType(ItemClassCommon) && transI->IsStackable()){
+						uint32 fcharges = transI->GetCharges();
+							//Does it sound like meat... maybe should check if it looks like meat too...
+							if(strstr(transI->GetItem()->Name, "meat") ||
+								strstr(transI->GetItem()->Name, "Meat") ||
+								strstr(transI->GetItem()->Name, "flesh") ||
+								strstr(transI->GetItem()->Name, "Flesh") ||
+								strstr(transI->GetItem()->Name, "parts") ||
+								strstr(transI->GetItem()->Name, "Parts")){
+								CastToClient()->DeleteItemInInventory(SLOT_CURSOR, fcharges, true);
+								CastToClient()->SummonItem(13073, fcharges);
+							}
+							else{
+								Message(13, "You can only transmute flesh to bone.");
+							}
+						}
+					else{
+						Message(13, "You can only transmute flesh to bone.");
+					}
+						
+				}
+				break;
+			}
+
+			case SE_GroupFearImmunity:{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Group Fear Immunity");
+#endif			
+				if(IsClient()){
+					Group *g = entity_list.GetGroupByClient(CastToClient());
+					uint32 time = spell.base[i]*10;
+					if(g){
+						for(int gi=0; gi < 6; gi++){
+							if(g->members[gi] && g->members[gi]->IsClient())
+							{
+								g->members[gi]->CastToClient()->EnableAAEffect(aaEffectWarcry , time);
+							}
+						}
+					}
+					else{
+						CastToClient()->EnableAAEffect(aaEffectWarcry , time);
+					}
+				}
+				break;
+			}
+			
 			case SE_AddFaction:
 			{
 #ifdef SPELL_EFFECT_SPAM
@@ -548,14 +653,13 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				int slot;
 				for(slot = 0; slot < BUFF_COUNT; slot++)
 				{
-					if(buffs[slot].diseasecounters || buffs[slot].poisoncounters) //if we have poison or disease counters then we can't remove this with dispel
+					if(buffs[slot].diseasecounters || buffs[slot].poisoncounters || buffs[slot].cursecounters) //if we have poison or disease counters then we can't remove this with dispel
 						continue;
 
 					if
 					(
 						buffs[slot].spellid != SPELL_UNKNOWN &&
-						buffs[slot].durationformula != DF_Permanent &&
-				    	buffs[slot].casterlevel <= (caster_level + effect_value)
+						buffs[slot].durationformula != DF_Permanent
 				    )
 				    {
 						BuffFadeBySlot(slot);
@@ -573,15 +677,14 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				int slot;
 				for(slot = 0; slot < BUFF_COUNT; slot++)
 				{
-					if(buffs[slot].diseasecounters || buffs[slot].poisoncounters)
+					if(buffs[slot].diseasecounters || buffs[slot].poisoncounters || buffs[slot].cursecounters)
 						continue;
 
 					if
 					(
 						buffs[slot].spellid != SPELL_UNKNOWN &&
 						buffs[slot].durationformula != DF_Permanent &&
-				    	buffs[slot].casterlevel <= (caster_level + effect_value) &&
-						IsDetrimentalSpell(buffs[slot].spellid)
+				    	IsDetrimentalSpell(buffs[slot].spellid)
 					)
 				    {
 						BuffFadeBySlot(slot);
@@ -842,6 +945,10 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				for(int x = 0; x < 7; x++){
 					SendWearChange(x);
 				}				
+				if(caster && caster->GetAA(aaPermanentIllusion))
+					buffs[buffslot].persistant_buff = 1;
+				else
+					buffs[buffslot].persistant_buff = 0;
 				break;
 			}
 
@@ -1438,6 +1545,32 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Curse Counter: %+i", effect_value);
 #endif
+				if (effect_value > 0)
+					buffs[buffslot].cursecounters = effect_value;
+				else
+				{
+					effect_value = 0 - effect_value;
+					for (int j=0; j < BUFF_COUNT; j++) {
+						if (buffs[j].spellid >= (int16)SPDAT_RECORDS)
+							continue;
+						if (buffs[j].cursecounters == 0)
+							continue;
+						if (effect_value >= buffs[j].cursecounters)
+						{
+							if (caster)
+								caster->Message(MT_Spells,"You have cured your target from %s!",spells[buffs[j].spellid].name);
+							effect_value -= buffs[j].cursecounters;
+							buffs[j].cursecounters = 0;
+							BuffFadeBySlot(j);
+						}
+						else
+						{
+							buffs[j].cursecounters -= effect_value;
+							effect_value = 0;
+							break;
+						}
+					}
+				}
 				break;
 			}
 
@@ -1519,7 +1652,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 			case SE_SummonPC:
 			{
 				if(IsClient()){
-					CastToClient()->MovePC(zone->GetZoneID(), caster->GetX(), caster->GetY(), caster->GetZ(), 2, true);
+					CastToClient()->MovePC(zone->GetZoneID(), caster->GetX(), caster->GetY(), caster->GetZ(), caster->GetHeading(), 2, true);
 					Message(15, "You have been summoned!");
 				}
 				else{
@@ -2446,12 +2579,14 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 				break;
 			}
 
+			case SE_Invisibility2:
 			case SE_Invisibility:
 			{
 				SetInvisible(false);
 				break;
 			}
 
+			case SE_InvisVsUndead2:
 			case SE_InvisVsUndead:
 			{
 				invisible_undead = false;	// Mongrel: No longer IVU
@@ -2795,6 +2930,9 @@ sint16 Client::GetFocusEffect(focusType type, int16 spell_id) {
 			realTotal2 = Total2;
 		}
 	}
+	
+	if(type == focusReagentCost && IsSummonPetSpell(spell_id) && GetAA(aaElementalPact))
+		return 100;	
 	
 	if(type == focusReagentCost && (IsEffectInSpell(spell_id, SE_SummonItem) || IsSacrificeSpell(spell_id))){
 		return 0; 

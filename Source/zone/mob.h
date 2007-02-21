@@ -121,8 +121,10 @@ struct Buffs_Struct {
 	int16	casterid;		// Maybe change this to a pointer sometime, but gotta make sure it's 0'd when it no longer points to anything
 	int8		durationformula;
 	sint32		ticsremaining;
-	int8	poisoncounters;
-	int8	diseasecounters;
+	sint32	poisoncounters;
+	sint32	diseasecounters;
+	sint32	cursecounters;
+	bool	persistant_buff;
 	bool	client;  //True if the caster is a client
 };
 
@@ -528,8 +530,8 @@ bool logpos;
 	bool UseBardSpellLogic(int16 spell_id = 0xffff, int slot = -1);
 	void InterruptSpell(int16 spellid = SPELL_UNKNOWN);
 	void InterruptSpell(int16, int16, int16 spellid = SPELL_UNKNOWN);
-	virtual void	CastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0xFFFFFFFF);
-	virtual void	DoCastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0xFFFFFFFF);
+	bool	CastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0xFFFFFFFF);
+	bool	DoCastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0xFFFFFFFF);
 	void	CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_used, int32 inventory_slot = 0xFFFFFFFF);
 	bool	SpellFinished(int16 spell_id, Mob *target, int16 slot = 10, int16 mana_used = 0);
 	bool	SpellOnTarget(int16 spell_id, Mob* spelltar);
@@ -661,6 +663,8 @@ bool logpos;
 	
 	inline void			SetPetOrder(eStandingPetOrder i) { pStandingPetOrder = i; }
 	inline const eStandingPetOrder GetPetOrder() const { return pStandingPetOrder; }
+	inline void			SetHeld(bool nState) { held = nState; }
+	inline const bool	IsHeld() const { return held; }	
 	inline const bool	IsRoamer() const { return roamer; }
 	inline const bool   IsRooted() const { return rooted || permarooted; }
 
@@ -763,6 +767,7 @@ bool logpos;
 	inline float GetCWPP() const { return(cur_wp_pause); }
 	inline int GetCWP() const { return(cur_wp); }
 	virtual FACTION_VALUE GetReverseFactionCon(Mob* iOther) { return FACTION_INDIFFERENT; }
+	inline bool IsTrackable() const { return(trackable); }
 	
 protected:
 	void CommonDamage(Mob* other, sint32 &damage, const uint16 spell_id, const SkillType attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic);
@@ -806,6 +811,7 @@ protected:
 	bool moving;
 	bool targeted;
 	bool findable;
+	bool trackable;
 	sint32  cur_hp;
 	sint32  max_hp;
 	sint32	base_hp;
@@ -840,6 +846,7 @@ protected:
 	float	size;
 	float	runspeed;
 	int32 pLastChange;
+	bool held;
 	void CalcSpellBonuses(StatBonuses* newbon);
 	virtual void CalcBonuses();
 	void TryWeaponProc(const Item_Struct* weapon, Mob *on);

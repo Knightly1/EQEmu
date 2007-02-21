@@ -54,6 +54,7 @@ And then at then end of embparser.cpp, add:
 #include "entity.h"
 #include "masterentity.h"
 
+#include <sstream>
 #include <iostream>
 #include <list>
 using namespace std;
@@ -94,7 +95,7 @@ QuestManager::~QuestManager() {
 
 void QuestManager::Process() {
 	list<QuestTimer>::iterator cur = QTimerList.begin(), end, tmp;
-	
+
 	end = QTimerList.end();
 	while (cur != end) {
 		if (cur->Timer_.Enabled() && cur->Timer_.Check()) {
@@ -114,10 +115,10 @@ void QuestManager::Process() {
 		} else
 			cur++;
 	}
-	
-	
+
+
 	list<SignalTimer>::iterator curS, endS, tmpS;
-	
+
 	curS = STimerList.begin();
 	endS = STimerList.end();
 	while (curS != endS) {
@@ -130,10 +131,10 @@ void QuestManager::Process() {
 		} else if(curS->Timer_.Check()) {
 			//disable the timer so it gets deleted.
 			curS->Timer_.Disable();
-			
+
 			//signal the event...
 			entity_list.SignalMobsByNPCID(curS->npc_id, curS->signal_id);
-			
+
 			//restart for the same reasons as above.
 			curS = STimerList.begin();
 			endS = STimerList.end();
@@ -154,7 +155,7 @@ void QuestManager::EndQuest() {
 	if(depop_npc) {
 		//clear out any timers for them...
 		list<QuestTimer>::iterator cur = QTimerList.begin(), end, tmp;
-		
+
 		end = QTimerList.end();
 		while (cur != end) {
 			if(cur->mob == npc) {
@@ -166,7 +167,7 @@ void QuestManager::EndQuest() {
 				cur++;
 			}
 		}
-		
+
 		npc->Depop();
 		npc = NULL;	//just to be safe
 	}
@@ -206,7 +207,7 @@ void QuestManager::write(const char *file, const char *str) {
 int16 QuestManager::spawn2(int npc_type, int grid, int unused, float x, float y, float z, float heading) {
 	const NPCType* tmp = 0;
 	//int8 guildwarset = atoi(arglist[2]);
-	if ((tmp = database.GetNPCType(npc_type))) 
+	if ((tmp = database.GetNPCType(npc_type)))
 	{
 
 		NPC* npc = new NPC(tmp, 0, x, y, z, heading);
@@ -235,11 +236,11 @@ int16 QuestManager::unique_spawn(int npc_type, int grid, int unused, float x, fl
 	if(other != NULL) {
 		return(other->GetID());
 	}
-	
-	
+
+
 	const NPCType* tmp = 0;
 	//int8 guildwarset = atoi(arglist[2]);
-	if ((tmp = database.GetNPCType(npc_type))) 
+	if ((tmp = database.GetNPCType(npc_type)))
 	{
 
 		NPC* npc = new NPC(tmp, 0, x, y, z, heading);
@@ -264,12 +265,12 @@ int16 QuestManager::unique_spawn(int npc_type, int grid, int unused, float x, fl
 }
 
 void QuestManager::setstat(int stat, int value) {
-	if (initiator) 
+	if (initiator)
 		initiator->SetStats(stat, value);
 }
 
 void QuestManager::incstat(int stat, int value) { //old setstat command aza
-	if (initiator) 
+	if (initiator)
 		initiator->IncStats(stat, value);
 }
 
@@ -304,13 +305,13 @@ void QuestManager::Zone(const char *zone_name) {
 		ztz->guild_id = initiator->GuildID();
 		ztz->ignorerestrictions = 3;
 		worldserver.SendPacket(pack);
-		safe_delete(pack);				
+		safe_delete(pack);
 	}
 }
 
 void QuestManager::settimer(const char *timer_name, int seconds) {
 	list<QuestTimer>::iterator cur = QTimerList.begin(), end;
-	
+
 	end = QTimerList.end();
 	while (cur != end) {
 		if (cur->mob == npc && cur->name == timer_name) {
@@ -322,7 +323,7 @@ void QuestManager::settimer(const char *timer_name, int seconds) {
 		}
 		cur++;
 	}
-	
+
 /*	timers * tmp = new timers;
 	tmp->mob = npc;
 	tmp->Timer_ = new Timer(seconds * 1000,0);
@@ -335,7 +336,7 @@ void QuestManager::settimer(const char *timer_name, int seconds) {
 
 void QuestManager::stoptimer(const char *timer_name) {
 	list<QuestTimer>::iterator cur = QTimerList.begin(), end;
-	
+
 	end = QTimerList.end();
 	while (cur != end)
 	{
@@ -357,7 +358,7 @@ void QuestManager::shout(const char *str) {
 }
 
 void QuestManager::shout2(const char *str) {
-	worldserver.SendEmoteMessage(0,0,0,13, "%s shouts, '%s'", npc->GetCleanName(), str);	
+	worldserver.SendEmoteMessage(0,0,0,13, "%s shouts, '%s'", npc->GetCleanName(), str);
 }
 
 void QuestManager::depop(int npc_type) {
@@ -460,11 +461,11 @@ bool QuestManager::isdisctome(int item_id) {
 	if(item == NULL) {
 		return(false);
 	}
-	
+
 	if(item->ItemClass != ItemClassCommon || item->ItemType != ItemTypeSpell) {
 		return(false);
 	}
-	
+
 	//Need a way to determine the difference between a spell and a tome
 	//so they cant turn in a spell and get it as a discipline
 	//this is kinda a hack:
@@ -477,7 +478,7 @@ bool QuestManager::isdisctome(int item_id) {
 		)) {
 		return(false);
 	}
-	
+
 	//we know for sure none of the int casters get disciplines
 	uint32 cbit = 0;
 	cbit |= 1 << (WIZARD-1);
@@ -487,12 +488,12 @@ bool QuestManager::isdisctome(int item_id) {
 	if(item->Classes & cbit) {
 		return(false);
 	}
-	
+
 	int32 spell_id = item->Scroll.Effect;
 	if(!IsValidSpell(spell_id)) {
 		return(false);
 	}
-	
+
 	//we know for sure none of the int casters get disciplines
 	const SPDat_Spell_Struct &spell = spells[spell_id];
 	if(
@@ -503,7 +504,7 @@ bool QuestManager::isdisctome(int item_id) {
 	) {
 		return(false);
 	}
-	
+
 	return(true);
 }
 
@@ -530,39 +531,39 @@ void QuestManager::snow(int weather) {
 }
 
 void QuestManager::surname(const char *name) {
-	//Cofruben:-Changes the last name. 
-	if (initiator && initiator->IsClient()) 
-	{ 
-			initiator->ChangeLastName(name); 
-			initiator->Message(15,"Your surname has been changed/set to: %s", name); 
-	} 
-	else 
+	//Cofruben:-Changes the last name.
+	if (initiator && initiator->IsClient())
+	{
+			initiator->ChangeLastName(name);
+			initiator->Message(15,"Your surname has been changed/set to: %s", name);
+	}
+	else
 		initiator->Message(15,"Error changing/setting surname");
 }
 
 void QuestManager::permaclass(int class_id) {
- 	//Cofruben:-Makes the client the class specified 
-	initiator->SetBaseClass(class_id); 
-	initiator->Save(2); 
+ 	//Cofruben:-Makes the client the class specified
+	initiator->SetBaseClass(class_id);
+	initiator->Save(2);
 	initiator->Kick();
 }
 
 void QuestManager::permarace(int race_id) {
- 	//Cofruben:-Makes the client the race specified 
-	initiator->SetBaseRace(race_id); 
-	initiator->Save(2); 
+ 	//Cofruben:-Makes the client the race specified
+	initiator->SetBaseRace(race_id);
+	initiator->Save(2);
 	initiator->Kick();
 }
 
 void QuestManager::permagender(int gender_id) {
- 	//Cofruben:-Makes the client the gender specified 
-	initiator->SetBaseGender(gender_id); 
-	initiator->Save(2); 
+ 	//Cofruben:-Makes the client the gender specified
+	initiator->SetBaseGender(gender_id);
+	initiator->Save(2);
 	initiator->Kick();
 }
 
 void QuestManager::scribespells() {
- 	//Cofruben:-Scribe spells for user up to his actual level. 
+ 	//Cofruben:-Scribe spells for user up to his actual level.
 	int16 book_slot;
 	int16 curspell;
 	for(curspell = 0, book_slot = 0; curspell < SPDAT_RECORDS && book_slot < MAX_PP_SPELLBOOK; curspell++)
@@ -641,12 +642,12 @@ void QuestManager::pvp(const char *mode) {
 }
 
 void QuestManager::movepc(int zone_id, float x, float y, float z) {
-	if (initiator && initiator->IsClient()) 
-		 initiator->MovePC(zone_id, x, y, z);	
+	if (initiator && initiator->IsClient())
+		 initiator->MovePC(zone_id, x, y, z, 0.0f);
 }
 
 void QuestManager::gmmove(float x, float y, float z) {
-	if (initiator && initiator->IsClient()) 
+	if (initiator && initiator->IsClient())
 		initiator->GMMove(x, y, z);
 }
 
@@ -662,7 +663,7 @@ void QuestManager::movegrp(int zoneid, float x, float y, float z) {
 			g->TeleportGroup(initiator, zoneid, x, y, z);
 		}
 		else {
-			initiator->MovePC(zoneid, x, y, z);
+			initiator->MovePC(zoneid, x, y, z, 0.0f);
 		}
 	}
 }
@@ -737,15 +738,15 @@ void QuestManager::faction(int faction_id, int faction_value) {
 	if (initiator && initiator->IsClient()) {
 		if(faction_id != 0 && faction_value != 0) {
 	// SCORPIOUS2K - fixed faction command
-			//Client *p; 
+			//Client *p;
 			initiator->SetFactionLevel2(
-				initiator->CharacterID(), 
-				faction_id, 
-				initiator->GetBaseClass(), 
-				initiator->GetBaseRace(), 
-				initiator->GetDeity(), 
-				faction_value); 
-			
+				initiator->CharacterID(),
+				faction_id,
+				initiator->GetBaseClass(),
+				initiator->GetBaseRace(),
+				initiator->GetDeity(),
+				faction_value);
+
 		}
 	}
 }
@@ -773,57 +774,57 @@ void QuestManager::settime(int8 new_hour, int8 new_min) {
 void QuestManager::itemlink(int item_id) {
 	//I dont think this is right anymore, need the hash
 /*
-uint32_t calc_hash (const char *string) 
-{ 
-    register hash = 0; 
+uint32_t calc_hash (const char *string)
+{
+    register hash = 0;
 
-    while (*string != '\0') 
-    { 
-        register c = toupper(*string); 
+    while (*string != '\0')
+    {
+        register c = toupper(*string);
 
-        asm volatile(" 
-            imul $31, %1, %1; 
-            movzx %%ax, %%edx; 
-            addl %%edx, %1; 
-            movl %1, %0; 
-            " 
-            :"=r"(hash) 
-            :"D"(hash), "a"(c) 
-            :"%edx" 
-             ); 
+        asm volatile("
+            imul $31, %1, %1;
+            movzx %%ax, %%edx;
+            addl %%edx, %1;
+            movl %1, %0;
+            "
+            :"=r"(hash)
+            :"D"(hash), "a"(c)
+            :"%edx"
+             );
 
-        //This is what the inline asm is doing: 
-        //hash *= 0x1f; 
-        //hash += (int)c; 
+        //This is what the inline asm is doing:
+        //hash *= 0x1f;
+        //hash += (int)c;
 
-        string++; 
-    } 
+        string++;
+    }
 
-    return hash; 
-} 
-
-
-Now the not so simple part, generating the string to feed into the hash function. 
-
-The string for normal (unaugmented) items looks like this: 
-Code: 
-sprintf(hashstr, "%d%s%s%d %d %d %d %d %d %d %d", id, name, "-1-1-1-1-1", hp, mana, ac, light, icon, price, size, weight); 
+    return hash;
+}
 
 
-The string for bags looks like this: 
-Code: 
-sprintf(hashstr, "%d%s%d%d%d%d", id, name, bagslots, bagwr, price, weight); 
+Now the not so simple part, generating the string to feed into the hash function.
+
+The string for normal (unaugmented) items looks like this:
+Code:
+sprintf(hashstr, "%d%s%s%d %d %d %d %d %d %d %d", id, name, "-1-1-1-1-1", hp, mana, ac, light, icon, price, size, weight);
 
 
-The string for books looks like this: 
-Code: 
-sprintf(hashstr, "%d%s%d%d", id, name, weight, booktype); 
+The string for bags looks like this:
+Code:
+sprintf(hashstr, "%d%s%d%d%d%d", id, name, bagslots, bagwr, price, weight);
+
+
+The string for books looks like this:
+Code:
+sprintf(hashstr, "%d%s%d%d", id, name, weight, booktype);
 */
 
 // MYRA - added itemlink(ID) command
-	const Item_Struct* item = 0; 
-	int16 itemid = item_id; 
-	item = database.GetItem(itemid); 
+	const Item_Struct* item = 0;
+	int16 itemid = item_id;
+	item = database.GetItem(itemid);
 	initiator->Message(0, "%s tells you, '%c00%i %s%c",npc->GetName(),0x12, item->ID, item->Name, 0x12);
 }
 
@@ -834,7 +835,7 @@ void QuestManager::signalwith(int npc_id, int signal_id, int wait_ms) {
 		STimerList.push_back(SignalTimer(wait_ms, npc_id, signal_id));
 		return;
 	}
-	
+
 	if (npc_id<1)
 	{
 		printf("signal() bad npcid=%i\n",npc_id);
@@ -859,7 +860,7 @@ void QuestManager::setglobal(const char *varname, const char *newvalue, int opti
 	int qgZoneid=zone->GetZoneID();
 	int qgCharid=0;
 	int qgNpcid = npc->GetNPCTypeID();
-	
+
 	/*	options value determines the availability of global variables to NPCs when a quest begins
 	------------------------------------------------------------------
 	  value		   npcid	  player		zone
@@ -872,7 +873,7 @@ void QuestManager::setglobal(const char *varname, const char *newvalue, int opti
 		5			all			this		all
 		6			this		all			all
 		7			all			all			all
-	*/		
+	*/
 	if (initiator && initiator->IsClient())  // some events like waypoint and spawn don't have a player involved
 	{
 		qgCharid=initiator->CharacterID();
@@ -897,58 +898,67 @@ void QuestManager::setglobal(const char *varname, const char *newvalue, int opti
 	}
 
 	// clean up expired vars and get rid of the one we're going to set if there
-	database.RunQuery(query, MakeAnyLenString(&query, 
+	database.RunQuery(query, MakeAnyLenString(&query,
 		"DELETE FROM quest_globals WHERE expdate < UNIX_TIMESTAMP() || (name='%s' && npcid=%i && charid=%i && zoneid=%i))"
 		,varname,qgNpcid,qgCharid,qgZoneid), errbuf);
 	safe_delete_array(query);
-	
+
+	InsertQuestGlobal(qgCharid, qgNpcid, qgZoneid, varname, newvalue, QGVarDuration(duration));
+}
+
+/* Inserts global variable into quest_globals table */
+int QuestManager::InsertQuestGlobal(
+									int charid, int npcid, int zoneid,
+									const char *varname, const char *varvalue,
+									int duration)
+{
+	char *query = 0;
+	char errbuf[MYSQL_ERRMSG_SIZE];
+
+	// Make duration string either "unix_timestamp(now()) + xxx" or "NULL"
+	stringstream duration_ss;
+	if (duration == INT_MAX)
+	{
+		duration_ss << "NULL";
+	}
+	else
+	{
+		duration_ss << "unix_timestamp(now()) + " << duration;
+	}
+
 	//NOTE: this should be escaping the contents of arglist
 	//npcwise a malicious script can arbitrarily alter the DB
-	if (!database.RunQuery(query, MakeAnyLenString(&query, 
-	  "INSERT INTO quest_globals (charid,npcid,zoneid,name,value,expdate) VALUES (%i,%i,%i,'%s','%s',unix_timestamp(now())+%i)",
-	  qgCharid,qgNpcid,qgZoneid,varname,newvalue,
-	  QGexpdate(varname,duration)
-	  ), errbuf)) 
+	if (!database.RunQuery(query, MakeAnyLenString(&query,
+		"REPLACE INTO quest_globals (charid, npcid, zoneid, name, value, expdate)"
+		"VALUES (%i, %i, %i, '%s', '%s', %s)",
+		charid, npcid, zoneid, varname, varvalue, duration_ss.str().c_str()
+		), errbuf))
 	{
 		cerr << "setglobal error inserting " << varname << " : " << errbuf << endl;
 	}
 	safe_delete_array(query);
 
+	return 0;
 }
 
 void QuestManager::targlobal(const char *varname, const char *value, const char *duration, int qgNpcid, int qgCharid, int qgZoneid) {
 	// targlobal(varname,value,duration,npcid,charid,zoneid)
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
-	MYSQL_RES *result;
-	//MYSQL_ROW row;
 	// clean up expired vars and get rid of the one we're going to set if there
-	database.RunQuery(query, MakeAnyLenString(&query, 
-		"DELETE FROM quest_globals WHERE expdate < UNIX_TIMESTAMP() || (name='%s' && npcid=%i && charid=%i && zoneid=%i))"
+	database.RunQuery(query, MakeAnyLenString(&query,
+		"DELETE FROM quest_globals WHERE expdate < UNIX_TIMESTAMP()"
+		" || (name='%s' && npcid=%i && charid=%i && zoneid=%i))"
 		,varname,qgNpcid,qgCharid,qgZoneid), errbuf);
 	safe_delete_array(query);
-	
-	if (!database.RunQuery(query, MakeAnyLenString(&query, 
-	  "INSERT INTO quest_globals (charid,npcid,zoneid,name,value,expdate) VALUES (%i,%i,%i,'%s','%s',unix_timestamp(now())+%i)",
-	  qgCharid,qgNpcid,qgZoneid,varname,value,
-	  QGexpdate(varname,duration)
-	  ), errbuf, &result)) 
-	{
-		cerr << "targlobal error inserting " << varname << " : " << errbuf << endl;
-	}
-	if (query)
-	{
-		safe_delete_array(query);
-		query=0;
-	}
-	mysql_free_result(result);
+
+	InsertQuestGlobal(qgCharid, qgNpcid, qgZoneid, varname, value, QGVarDuration(duration));
 }
 
 void QuestManager::delglobal(const char *varname) {
 	// delglobal(varname)
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
-	//MYSQL_ROW row;
 	int qgZoneid=zone->GetZoneID();
 	int qgCharid=0;
 	int qgNpcid=npc->GetNPCTypeID();
@@ -961,98 +971,80 @@ void QuestManager::delglobal(const char *varname) {
 	{
 		qgCharid=-qgNpcid;		// make char id negative npc id as a fudge
 	}
-	if (!database.RunQuery(query, 
-	  MakeAnyLenString(&query, "DELETE FROM quest_globals WHERE name='%s' && (npcid=0 || npcid=%i) && (charid=0 || charid=%i) && (zoneid=%i || zoneid=0)",
-	  varname,qgNpcid,qgCharid,qgZoneid),errbuf)) 
+	if (!database.RunQuery(query,
+	  MakeAnyLenString(&query,
+	  "DELETE FROM quest_globals WHERE name='%s'"
+	  " && (npcid=0 || npcid=%i) && (charid=0 || charid=%i) && (zoneid=%i || zoneid=0)",
+	  varname,qgNpcid,qgCharid,qgZoneid),errbuf))
 	{
 		cerr << "delglobal error deleting " << varname << " : " << errbuf << endl;
 	}
 	safe_delete_array(query);
 }
 
-// SCORPIOUS2K - convert duration value to expdate
-int32 QuestManager::QGexpdate(const char * name, const char * options)
+// Converts duration string to duration value (in seconds)
+// Return of INT_MAX indicates infinite duration
+int QuestManager::QGVarDuration(const char *fmt)
 {
+	int duration = 0;
+
 	// format:	Y#### or D## or H## or M## or S## or T###### or C#######
-	
-	if(options[0] == 'F')
-		return(0xFFFFFFFF);
 
-	int32 tval=strlen(options);
+	int len = strlen(fmt);
 
-	if (tval < 2 || (tval>1 && !isdigit(options[1])))
+	// Default to no duration
+	if (len < 1)
+		return 0;
+
+	// Set val to value after type character
+	// e.g., for "M3924", set to 3924
+	int val = atoi(&fmt[0] + 1);
+
+	switch (fmt[0])
 	{
-		cerr << "Invalid duration '" << options <<"' for " << name << " using default" << endl;
-		tval=2629743;		// default=1 day
-	}
-	else
-	{
-		tval=atoi(&options[1]);
-		if (toupper(options[0])=='Y')
-		{	// years
-			if (tval>50)
-			{
-				tval=50;
-			}
-			tval = tval*31556926;
-		}
-		else if (toupper(options[0])=='D')
-		{	// days
-
-			if (tval>300)
-			{
-				tval=300;
-			}
-			tval=tval*2629743;
-		}
-		else if (toupper(options[0])=='H')
-		{	// hours
-			if (tval>23)
-			{
-				tval=23;
-			}
-			tval=tval*3600;
-		}
-		else if (toupper(options[0])=='M')
-		{	// minutes
-			if (tval>59)
-			{
-				tval=59;
-			}
-			tval=tval*60;
-		}
-		else if (toupper(options[0])=='S')
-		{	// seconds
-			if (tval>59)
-			{
-				tval=59;
-			}
-		}		
-		else if (toupper(options[0])=='T')
-		{	// time as hhmmss
-			if (tval>235959)
-			{
-				tval=235959;
-			}
-		}
-		//if (toupper(options[0])!='C')
-		else 
-		{	// calender time as YYYMMDD
-			cerr << "Invalid duration '" << options <<"' for " << name << " using default" << endl;
-			tval=2629743;		// default=1 day
-		}
+		// Forever
+		case 'F':
+		case 'f':
+			duration = INT_MAX;
+			break;
+		// Years
+		case 'Y':
+		case 'y':
+			duration = val * 31556926;
+			break;
+		case 'D':
+		case 'd':
+			duration = val * 86400;
+			break;
+		// Hours
+		case 'H':
+		case 'h':
+			duration = val * 3600;
+			break;
+		// Minutes
+		case 'M':
+		case 'm':
+			duration = val * 60;
+			break;
+		// Seconds
+		case 'S':
+		case 's':
+			duration = val;
+			break;
+		// Invalid
+		default:
+			duration = 0;
+			break;
 	}
 
-	return(Timer::GetTimeSeconds() + tval);
+	return duration;
 }
-
-
 
 void QuestManager::ding() {
 	//-Cofruben:makes a sound.
 	if (initiator && initiator->IsClient())
 		initiator->SendSound();
-	
+
 }
 
 void QuestManager::rebind(int zoneid, float x, float y, float z) {
@@ -1087,28 +1079,28 @@ void QuestManager::addldonpoints(sint32 points, int32 theme) {
 }
 
 void QuestManager::setnexthpevent(int at) {
-	npc->SetNextHPEvent( at ); 
+	npc->SetNextHPEvent( at );
 }
 
 void QuestManager::setnextinchpevent(int at) {
-	npc->SetNextIncHPEvent( at ); 
+	npc->SetNextIncHPEvent( at );
 }
 
 void QuestManager::respawn(int npc_type, int grid) {
 	//char tempa[100];
 	float x,y,z,h;
-	if ( !npc ) 
+	if ( !npc )
 		return;
-	
+
 	x = npc->GetX();
 	y = npc->GetY();
 	z = npc->GetZ();
 	h = npc->GetHeading();
 	depop_npc = true;
-		
+
 	const NPCType* tmp = 0;
 	//int8 guildwarset = atoi(arglist[2]);
-	if ((tmp = database.GetNPCType(npc_type))) 
+	if ((tmp = database.GetNPCType(npc_type)))
 	{
 		npc = new NPC(tmp, 0, x, y, z, h);
 		npc->AddLootTable();
@@ -1122,7 +1114,7 @@ void QuestManager::respawn(int npc_type, int grid) {
 
 void QuestManager::set_proximity(float minx, float maxx, float miny, float maxy, float minz, float maxz) {
 	entity_list.AddProximity(npc);
-	
+
 	npc->proximity->min_x = minx;
 	npc->proximity->max_x = maxx;
 	npc->proximity->min_y = miny;
@@ -1149,32 +1141,32 @@ void QuestManager::setanim(int npc_type, int animnum) {
 void QuestManager::showgrid(int grid) {
 	if(initiator == NULL)
 		return;
-	
+
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
-	
+
 	FindPerson_Point pt;
 	vector<FindPerson_Point> pts;
-	
+
 	pt.x = initiator->GetX();
 	pt.y = initiator->GetY();
 	pt.z = initiator->GetZ();
 	pts.push_back(pt);
-	
+
 	// Retrieve all waypoints for this grid
 	if(database.RunQuery(query,MakeAnyLenString(&query,"SELECT `x`,`y`,`z` FROM grid_entries WHERE `gridid`=%i AND `zoneid`=%i ORDER BY `number`",grid,zone->GetZoneID()),errbuf,&result))
 	{
 		while((row = mysql_fetch_row(result)))
-		{   
+		{
 			pt.x = atof(row[0]);
 			pt.y = atof(row[1]);
 			pt.z = atof(row[2]);
 			pts.push_back(pt);
 		}
 		mysql_free_result(result);
-		
+
 		initiator->SendPathPacket(pts);
 	}
 	else	// DB query error!

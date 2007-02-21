@@ -383,7 +383,8 @@ int command_init(void) {
 		command_add("rules","(subcommand) - Manage server rules", 250, command_rules) ||
 		command_add("guildcreate","[guildname] - Creates an approval setup for guild name specified",0,command_guildcreate) ||
 		command_add("guildapprove","[guildapproveid] - Approve a guild with specified ID (guild creator receives the id)",0,command_guildapprove) ||
-		command_add("guildlist","[guildapproveid] - Lists character names who have approved the guild specified by the approve id",0,command_guildlist)
+		command_add("guildlist","[guildapproveid] - Lists character names who have approved the guild specified by the approve id",0,command_guildlist) ||
+		command_add("altactivate", "[argument] - activates alternate advancement abilities, use altactivate help for more information", 0, command_altactivate)
 		)
 	{
 		command_deinit();
@@ -1355,7 +1356,7 @@ void command_summon(Client *c, const Seperator *sep)
 			return;
 		}
 		c->Message(0, "Summoning player %s to %1.1f, %1.1f, %1.1f", t->GetName(), c->GetX(), c->GetY(), c->GetZ());
-		t->CastToClient()->MovePC(zone->GetZoneID(), c->GetX(), c->GetY(), c->GetZ(), 2, true);
+		t->CastToClient()->MovePC(zone->GetZoneID(), c->GetX(), c->GetY(), c->GetZ(), c->GetHeading(), 2, true);
 	}
 }
 
@@ -1401,7 +1402,7 @@ void command_zone(Client *c, const Seperator *sep)
 		
 	if (sep->IsNumber(2) || sep->IsNumber(3) || sep->IsNumber(4))
 		//zone to specific coords
-		c->MovePC(zoneid, atof(sep->arg[2]), atof(sep->arg[3]), atof(sep->arg[4]), 0, false);
+		c->MovePC(zoneid, atof(sep->arg[2]), atof(sep->arg[3]), atof(sep->arg[4]), 0.0f, 0, false);
 	else
 		//zone to safe coords
 		c->GoToSafeCoords(zoneid);
@@ -3925,11 +3926,11 @@ void command_goto(Client *c, const Seperator *sep)
 {
 	// Pyro's goto function
 	if (sep->arg[1][0] == '\0' && c->GetTarget())
-		c->MovePC(c->GetTarget()->GetX(), c->GetTarget()->GetY(), c->GetTarget()->GetZ());
+		c->MovePC(c->GetTarget()->GetX(), c->GetTarget()->GetY(), c->GetTarget()->GetZ(), c->GetTarget()->GetHeading());
 	else if (!(sep->IsNumber(1) && sep->IsNumber(2) && sep->IsNumber(3)))
 		c->Message(0, "Usage: #goto [x y z]");
 	else
-		c->MovePC(atof(sep->arg[1]), atof(sep->arg[2]), atof(sep->arg[3]), 1, false);
+		c->MovePC(atof(sep->arg[1]), atof(sep->arg[2]), atof(sep->arg[3]), 0.0f, 1, false);
 }
 
 #ifdef BUGTRACK
@@ -6873,5 +6874,55 @@ void command_rules(Client *c, const Seperator *sep) {
 		}
 	} else {
 		c->Message(15, "Invalid action specified. use '#rules help' for help");
+	}
+}
+
+void command_altactivate(Client *c, const Seperator *sep){
+	if(sep->arg[1][0] == '\0'){
+		c->Message(10, "Invalid argument, usage:");
+		c->Message(10, "#altactivate list - lists the AA ID numbers that are available to you");
+		c->Message(10, "#altactivate time [argument] - returns the time left until you can use the AA with the ID that matches the argument.");
+		c->Message(10, "#altactivate [argument] - activates the AA with the ID that matches the argument.");
+		return;
+	}
+	if(!strcasecmp(sep->arg[1], "help")){
+		c->Message(10, "Usage:");
+		c->Message(10, "#altactivate list - lists the AA ID numbers that are available to you");
+		c->Message(10, "#altactivate time [argument] - returns the time left until you can use the AA with the ID that matches the argument.");
+		c->Message(10, "#altactivate [argument] - activates the AA with the ID that matches the argument.");
+		return;
+	}
+	if(!strcasecmp(sep->arg[1], "list")){
+		c->Message(10, "You have access to the following AA Abilities:");
+		int x, val;
+		SendAA_Struct* saa = NULL;
+		for(x = 0; x < 1359; x++){
+			if(AA_Actions[x][0].spell_id || AA_Actions[x][0].action){ //if there's an action or spell associated we assume it's a valid
+				val = 0;					//and assume if they don't have a value for the first rank then it isn't valid for any rank
+				saa = NULL;
+				val = c->GetAA(x);
+				if(val){
+					saa = zone->FindAA(x);
+					c->Message(10, "%d: %s %d", x, saa->name, val);
+				}
+			}	
+		}
+	}
+	else if(!strcasecmp(sep->arg[1], "time")){
+		int ability = atoi(sep->arg[2]);
+		if(c->GetAA(ability)){
+			int remain = c->GetPTimers().GetRemainingTime(pTimerAAStart + ability);
+			if(remain)
+				c->Message(10, "You may use that ability in %d minutes and %d seconds.", (remain/60), (remain%60));
+			else
+				c->Message(10, "You may use that ability now.");
+		}
+		else{
+			c->Message(10, "You do not have access to that ability.");
+		}
+	}
+	else
+	{
+		c->ActivateAA((aaID) atoi(sep->arg[1]));
 	}
 }

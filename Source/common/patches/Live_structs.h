@@ -438,8 +438,8 @@ struct SpellBuff_Struct
 /*008*/ int32	duration;
 /*012*/	int16	dmg_shield_remaining;
 //these last four bytes are really the caster's global player ID for wearoff
-/*013*/ int8	diseasecounters;	//prolly not real
-/*014*/ int8	poisoncounters;		//proll not real
+/*013*/ int8	persistant_buff;	//prolly not real
+/*014*/ int8	reserved;		//proll not real
 /*012*/	int32	player_id;	//'global' ID of the caster, for wearoff messages
 };
 
@@ -3034,9 +3034,9 @@ struct UseAA_Struct {
 
 struct AA_Ability {
 /*00*/	int32 skill_id;
-/*04*/	int32 increase_amt;
-/*08*/	int32 unknown08;
-/*12*/	int32 last_level;
+/*04*/	int32 base1;
+/*08*/	int32 base2;
+/*12*/	int32 slot;
 };
 
 struct SendAA_Struct {

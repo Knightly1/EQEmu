@@ -841,6 +841,7 @@ const NPCType* ZoneDatabase::GetNPCType (uint32 id) {
             "npc_types.d_meele_texture2,"
             "npc_types.runspeed,"
 			"npc_types.findable,"
+			"npc_types.trackable,"
             "npc_types.hp_regen_rate,"
 			"npc_types.mana_regen_rate,"
             "npc_types.aggroradius,"
@@ -916,6 +917,7 @@ const NPCType* ZoneDatabase::GetNPCType (uint32 id) {
 				tmpNPCType->d_meele_texture2= atoi(row[r++]);
 				tmpNPCType->runspeed= atof(row[r++]);
 				tmpNPCType->findable = atoi(row[r++]) == 0? false : true;
+				tmpNPCType->trackable = atoi(row[r++]) == 0? false : true;
 				tmpNPCType->hp_regen = atoi(row[r++]);
 				tmpNPCType->mana_regen = atoi(row[r++]);
 				

@@ -91,13 +91,38 @@ Credits for this function:
 void Client::ActivateAA(aaID activate){
 	if(activate < 0 || activate >= aaHighestID)
 		return;
-	
+
+	aaID aaid = activate;
 	uint8 activate_val = GetAA(activate);
-	
-	if (activate_val == 0 || IsStunned() || IsMezzed() || IsSitting())
+	//this wasn't taking into acct multi tiered act talents before...
+	if(activate_val == 0){
+		SendAA_Struct* aa2 = zone->FindAA(activate);
+		if(!aa2){
+			int i;
+			int a;
+			for(i=1;i<5;i++){
+				a = activate - i;
+				if(a <= 0)
+					break;
+
+				aa2 = zone->FindAA(a);
+				if(aa2 != NULL)
+					break;
+			}
+		}
+		if(aa2){
+			aaid = (aaID) aa2->id;
+			activate_val = GetAA(aa2->id);
+		}
+	}
+
+	if (activate_val == 0 || IsStunned() || IsMezzed() || IsSitting()){
 		return;
+	}
 	
-	if(!p_timers.Expired(&database, pTimerAAStart + activate)) {
+	if(!p_timers.Expired(&database, pTimerAAStart + aaid)) {
+		uint32 aaremain = p_timers.GetRemainingTime(pTimerAAStart + aaid);
+		Message(13, "Ability recast time not met, usable in %d minutes and %d seconds.", aaremain/60, aaremain%60);	
 		return;
 	}
 	
@@ -106,7 +131,12 @@ void Client::ActivateAA(aaID activate){
 	activate_val--;		//to get array index.
 	
 	//get our current node, now that the indices are well bounded
-	const AA_DBAction *caa = &AA_Actions[activate][activate_val];
+	const AA_DBAction *caa = &AA_Actions[aaid][activate_val];
+
+	if((aaid == aaImprovedHarmTouch || aaid == aaLeechTouch) && !p_timers.Expired(&database, pTimerHarmTouch)){
+		Message(13,"Ability recovery time not yet met.");
+		return;
+	}
 	
 	//everything should be configured out now
 	
@@ -152,7 +182,7 @@ void Client::ActivateAA(aaID activate){
 			}
 			SetMana(GetMana() - caa->mana_cost);
 		}
-		HandleAAAction(activate);
+		HandleAAAction(aaid);
 	}
 	
 	//cast the spell, if we have one
@@ -170,14 +200,17 @@ void Client::ActivateAA(aaID activate){
 		}
 		
 		int32 timer_base = caa->reuse_time * (100 - redux) / 100;
+
+		if(activate == aaImprovedHarmTouch || activate == aaLeechTouch)
+			p_timers.Start(pTimerHarmTouch, HarmTouchReuseTime);	
 		
 		//start the usage timer
-		p_timers.Start(pTimerAAStart + activate, timer_base);
+		p_timers.Start(pTimerAAStart + aaid, timer_base);
 		
 		//notify the client
 		//I do not know why we do not put the proper end time in here:
 		time_t timestamp = time(NULL);
-		SendAATimer(activate, timestamp, timestamp);
+		SendAATimer(aaid, timestamp, timestamp);
 	}
 }
 
@@ -209,7 +242,8 @@ void Client::HandleAAAction(aaID activate) {
 			break;
 			
 		case aaActionMassBuff:
-			EnableAAEffect(aaEffectMassGroupBuff);
+			EnableAAEffect(aaEffectMassGroupBuff, 3600); 
+			Message(10, "The next group spell you cast will cast on all players in range.");
 			break;
 		
 		case aaActionFlamingArrows:
@@ -227,9 +261,8 @@ void Client::HandleAAAction(aaID activate) {
 				DisableAAEffect(aaEffectFrostArrows);
 			break;
 		
-		case aaActionRampage:
-			EnableAAEffect(aaEffectRampage);
-			timer_id = aaEffectRampage;
+		case aaActionRampage: 
+			EnableAAEffect(aaEffectRampage, 10);
 			break;
 		
 		case aaActionSharedHealth:
@@ -252,6 +285,7 @@ void Client::HandleAAAction(aaID activate) {
 					spell_id = 2740;
 					break;
 			}
+			target = aaTargetCurrent;
 			break;
 		}
 		
@@ -269,6 +303,7 @@ void Client::HandleAAAction(aaID activate) {
 					spell_id = 2761;	//2642?
 					break;
 			}
+			target = aaTargetCurrent;
 			break;
 		}
 		
@@ -285,7 +320,8 @@ void Client::HandleAAAction(aaID activate) {
 			if(GetTarget() != NULL) {
 				int heal = GetHP();
 				int curhp = GetTarget()->GetHP();
-				GetTarget()->SetHP(heal+curhp);
+				target = aaTargetCurrent;
+				GetTarget()->HealDamage(curhp, this);
 				Death(this,0,SPELL_UNKNOWN,HAND_TO_HAND);
 			}
 			break;
@@ -335,6 +371,12 @@ void Client::HandleAAAction(aaID activate) {
 					spell_id = AA_Choose3(activate_val, 4533, 4534, 4535);
 					break;
 			}
+			
+		case aaActionLeechTouch:
+			target = aaTargetCurrent;
+			spell_id = SPELL_HARM_TOUCH2;
+			EnableAAEffect(aaEffectLeechTouch, 1000);
+			break;
 		
 		default:
 			LogFile->write(EQEMuLog::Error, "Unknown AA nonspell action type %d", caa->action);
@@ -558,12 +600,14 @@ void Client::BuyAA(AA_Action* action){
 		return;
 	}
 	
-	if(m_pp.aapoints >= aa2->cost && cur_level < aa2->max_level) {
+	int real_cost = aa2->cost + (aa2->cost_inc * cur_level);
+	
+	if(m_pp.aapoints >= real_cost && cur_level < aa2->max_level) {
 		SetAA(aa2->id, cur_level+1);
 
 		mlog(AA__MESSAGE, "Set AA %d to level %d", aa2->id, cur_level+1);
 		
-		m_pp.aapoints -= aa2->cost;
+		m_pp.aapoints -= real_cost;
 		Save();
 		
 		SendAA(aa2->id);
@@ -571,9 +615,9 @@ void Client::BuyAA(AA_Action* action){
 
 		//we are building these messages ourself instead of using the stringID to work around patch discrepencies
 		if(cur_level<1)
-			Message(15,"You have gained the ability \"%s\" at a cost of %d ability %s.", aa2->name, aa2->cost, (aa2->cost>1)?"points":"point");
+			Message(15,"You have gained the ability \"%s\" at a cost of %d ability %s.", aa2->name, real_cost, (real_cost>1)?"points":"point");
 		else
-			Message(15,"You have improved %s %d at a cost of %d ability %s.", aa2->name, cur_level, aa2->cost, (aa2->cost>1)?"points":"point");
+			Message(15,"You have improved %s %d at a cost of %d ability %s.", aa2->name, cur_level, real_cost, (real_cost>1)?"points":"point");
 
 		
 		SendAAStats();
@@ -656,10 +700,12 @@ void Client::SendPreviousAA(int32 id, int seq){
 		else
 			saa->last_id=saa->id-1;
 		saa->current_level=value+1;
-		saa->cost2=saa->cost*saa->current_level;
-		if(saa->type==1) //general ability
-			saa->abilities[0].increase_amt *= saa->current_level;
+		saa->cost2 = 0; //cost 2 is what the client uses to calc how many points we've spent, so we have to add up the points in order
+		for(int i=0;i<(value+1);i++){
+			saa->cost2 += saa->cost + (saa->cost_inc * i);
+		}
 	}
+	FillAAEffects(saa, value);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
@@ -703,10 +749,13 @@ void Client::SendAA(int32 id, int seq) {
 		}
 		saa->last_id=saa->id-1;
 		saa->current_level=value;
-		saa->cost2=saa->cost*value;//value;
-		if(saa->type==1) //general ability
-			saa->abilities[0].increase_amt*=value;
+		saa->cost = saa2->cost + (saa2->cost_inc*(value-1));
+		saa->cost2 = 0;
+		for(int i=0;i<value;i++){
+			saa->cost2 += saa2->cost + (saa2->cost_inc * i);
+		}
 	}
+	FillAAEffects(saa,orig_val);
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_SendAATable);
 	outapp->size=size;
 	outapp->pBuffer=(uchar*)saa;
@@ -867,29 +916,433 @@ bool ZoneDatabase::LoadSwarmSpells() {
 	return true;
 }
 
-/*
-Get the name of the alternate advancement skill with the given 'index'.
-Return true if the name was found, otherwise false.
-False will also be returned if there is a database error.
-*/
+//Returns the number effects an AA has when we send them to the client
+//For the purposes of sizing a packet because every skill does not
+//have the same number effects, they can range from none to a few depending on AA.
 int8 ZoneDatabase::GetTotalAALevels(int32 skill_id) {
-char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	int total=0;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(ability) from aa_levels where aa_id=%i", skill_id), errbuf, &result)) {
-		safe_delete_array(query);
-		if (mysql_num_rows(result) == 1) {
-			row = mysql_fetch_row(result);
-			total=atoi(row[0]);
-		}
-		mysql_free_result(result);
-	} else {
-		LogFile->write(EQEMuLog::Error, "Error in GetTotalAALevels '%s: %s", query, errbuf);
-		safe_delete_array(query);
+	uint32 total_effects = 0;
+	switch(skill_id){
+		case aaInnateStrength:
+		case aaInnateStamina:
+		case aaInnateAgility:
+		case aaInnateDexterity:
+		case aaInnateIntelligence:
+		case aaInnateWisdom:
+		case aaInnateCharisma:
+		case aaInnateFireProtection:
+		case aaInnateColdProtection:
+		case aaInnateMagicProtection:
+		case aaInnatePoisonProtection:
+		case aaInnateDiseaseProtection:
+		case aaInnateRunSpeed:
+		case aaInnateRegeneration:
+		case aaInnateLungCapacity:
+		case aaMentalClarity:
+		case aaNaturalDurability:
+		case aaNaturalHealing:
+		case aaRapidFeign:
+		case aaExtendedNotes:
+		case aaPhysicalEnhancement:
+		case aa2HandBash:
+			total_effects = 1;
+			break;		
+			
+		case aaBodyAndMindRejuvenation:
+		case aaAdvTrapNegotiation:
+		case aaQuickEvacuation:
+			total_effects = 2;
+			break;	
+
+		case aaQuickBuff:	
+		case aaQuickSummoning:
+		case aaSpellCastingDeftness:
+			total_effects = 4;
+			break;
+			
+		case aaQuickDamage:
+			total_effects = 5;
+			break;
 	}
-	return total;
+
+	return total_effects;
+}
+
+/*
+Every AA can send the client effects, which are purely for client side effects.
+Essentially it's like being able to attach a very simple version of a spell to
+Any given AA, it has 4 fields:
+skill_id = spell effect id
+slot = ID slot, doesn't appear to have any impact on stacking like real spells, just needs to be unique.
+base1 = the base field of a spell
+base2 = base field 2 of a spell, most AAs do not utilize this
+example:
+	skill_id = SE_STA
+	slot = 1
+	base1 = 15
+	This would if you filled the abilities struct with this make the client show if it had
+	that AA an additional 15 stamina on the client's stats
+*/
+void Client::FillAAEffects(SendAA_Struct* aa_struct, uint8 level){
+	if(!aa_struct)
+		return;
+
+	SendAA_Struct* aa2 = zone->FindAA(aa_struct->id);
+	if(!aa2) {
+		int a = 0;
+		for(int i=1;i<15;i++){
+			a = aa_struct->id - i;
+			if(a <= 0){
+				//uh oh unable to find this AA, something's wrong =(			
+				break;
+			}
+			aa2 = zone->FindAA(a);
+			if(aa2){
+				break;
+			}
+		}
+	}
+	//the logic can be difficult to follow on some of these, but it's right
+	//These calculate what the client effects should be based on what AA we have and the level
+	switch(aa2->id){
+		case aaInnateStrength:
+			aa_struct->abilities[0].skill_id = SE_STR;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level) 
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));
+			break;
+							  
+		case aaInnateStamina:
+			aa_struct->abilities[0].skill_id = SE_STA;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));			
+			break;
+							  
+		case aaInnateAgility:
+			aa_struct->abilities[0].skill_id = SE_AGI;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));	
+			break;
+							  
+		case aaInnateDexterity:
+			aa_struct->abilities[0].skill_id = SE_DEX;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));	
+			break;
+							  
+		case aaInnateIntelligence:
+			aa_struct->abilities[0].skill_id = SE_INT;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));	
+			break;
+							  
+		case aaInnateWisdom:
+			aa_struct->abilities[0].skill_id = SE_WIS;
+			aa_struct->abilities[0].slot= 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));	
+			break;
+							  
+		case aaInnateCharisma:
+			aa_struct->abilities[0].skill_id = SE_CHA;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));	
+			break;
+							  
+		case aaInnateFireProtection:
+			aa_struct->abilities[0].skill_id = SE_ResistFire;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));	
+			break;
+							  
+		case aaInnateColdProtection:
+			aa_struct->abilities[0].skill_id = SE_ResistCold;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));	
+			break;
+							  
+		case aaInnateMagicProtection:
+			aa_struct->abilities[0].skill_id = SE_ResistMagic;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));	
+			break;
+							  
+		case aaInnatePoisonProtection:
+			aa_struct->abilities[0].skill_id = SE_ResistPoison;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));	
+			break;
+							  
+		case aaInnateDiseaseProtection:
+			aa_struct->abilities[0].skill_id = SE_ResistDisease;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 2 + (2 * (level-1));
+			else
+				aa_struct->abilities[0].base1 = 2 + (2 * (level));	
+			break;
+							  
+		case aaInnateRunSpeed:
+			aa_struct->abilities[0].skill_id = SE_BaseMovementSpeed;
+			aa_struct->abilities[0].slot = 1;
+			if(level == 0)
+				aa_struct->abilities[0].base1 = 8;
+			else if(level == 1)
+				aa_struct->abilities[0].base1 = 19;
+			else
+				aa_struct->abilities[0].base1 = 30;
+			break;
+							  
+		case aaInnateRegeneration:
+			aa_struct->abilities[0].skill_id = SE_CurrentHP;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 1 + ((level-1));
+			else
+				aa_struct->abilities[0].base1 = 1 + ((level));	
+			break;
+							  
+		case aaInnateLungCapacity:
+			aa_struct->abilities[0].skill_id = SE_SetBreathLevel;
+			aa_struct->abilities[0].slot = 1;
+
+			if(level == 0)
+				aa_struct->abilities[0].base1 = 110;
+			else if(level == 1)
+				aa_struct->abilities[0].base1 = 125;
+			else 
+				aa_struct->abilities[0].base1 = 150;
+			break;
+							  
+		case aaMentalClarity:
+			aa_struct->abilities[0].skill_id = SE_CurrentMana;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 1 + ((level-1));
+			else
+				aa_struct->abilities[0].base1 = 1 + ((level));	
+			break;
+							  
+		case aaSpellCastingDeftness:
+			aa_struct->abilities[0].skill_id = SE_IncreaseSpellHaste;
+			aa_struct->abilities[0].slot = 1;
+			if(level == 0)
+				aa_struct->abilities[0].base1 = 5;
+			else if(level == 1)
+				aa_struct->abilities[0].base1 = 10;
+			else 
+				aa_struct->abilities[0].base1 = 15;
+
+			aa_struct->abilities[1].skill_id = SE_LimitMinDur;
+			aa_struct->abilities[1].slot = 2;
+			aa_struct->abilities[1].base1 = 1;
+			aa_struct->abilities[2].skill_id = SE_LimitCastTime;
+			aa_struct->abilities[2].slot = 3;
+			aa_struct->abilities[2].base1 = 4000;
+			aa_struct->abilities[3].skill_id = SE_LimitSpellType;
+			aa_struct->abilities[3].slot = 4;
+			aa_struct->abilities[3].base1 = 1;
+			break;
+							  
+		case aaNaturalDurability:
+			aa_struct->abilities[0].skill_id = SE_MaxHPChange;
+			aa_struct->abilities[0].slot = 1;
+			if(level == 0)
+				aa_struct->abilities[0].base1 = 200;
+			else if(level == 1)
+				aa_struct->abilities[0].base1 = 500;
+			else 
+				aa_struct->abilities[0].base1 = 1000;
+			break;
+							  
+		case aaNaturalHealing:
+			aa_struct->abilities[0].skill_id = SE_CurrentHP;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 1 + ((level-1));
+			else
+				aa_struct->abilities[0].base1 = 1 + ((level));	
+			aa_struct->abilities[0].base2 = 0;
+			break;	  
+
+		case aaQuickEvacuation:
+			aa_struct->abilities[0].skill_id = SE_IncreaseSpellHaste;
+			aa_struct->abilities[0].slot = 1;
+			if(level == 0)
+				aa_struct->abilities[0].base1 = 10;
+			else if(level == 1)
+				aa_struct->abilities[0].base1 = 25;
+			else
+				aa_struct->abilities[0].base1 = 50;
+			aa_struct->abilities[1].skill_id = SE_LimitEffect;
+			aa_struct->abilities[1].slot = 2;
+			aa_struct->abilities[1].base1 = SE_Succor;
+			break;
+
+		case aaQuickDamage:
+			aa_struct->abilities[0].skill_id = SE_IncreaseSpellHaste;
+			aa_struct->abilities[0].slot = 1;
+			if(level == 0)
+				aa_struct->abilities[0].base1 = 2;
+			else if(level == 1)
+				aa_struct->abilities[0].base1 = 5;
+			else
+				aa_struct->abilities[0].base1 = 10;
+			aa_struct->abilities[1].skill_id =  SE_LimitEffect;
+			aa_struct->abilities[1].base1 = 0;
+			aa_struct->abilities[1].slot = 2;
+			aa_struct->abilities[2].skill_id = SE_LimitSpellType;
+			aa_struct->abilities[2].base1 = 0;
+			aa_struct->abilities[2].slot = 3;
+			aa_struct->abilities[3].skill_id = SE_LimitInstant;
+			aa_struct->abilities[3].base1 = 1;
+			aa_struct->abilities[3].slot = 4;
+			aa_struct->abilities[4].skill_id = SE_LimitCastTime;
+			aa_struct->abilities[4].base1 = 4000;
+			aa_struct->abilities[4].slot = 5;
+			break;
+
+		case aaQuickBuff:
+			aa_struct->abilities[0].skill_id = SE_IncreaseSpellHaste;
+			aa_struct->abilities[0].slot = 1;
+			if(level == 0)
+				aa_struct->abilities[0].base1 = 10;
+			else if(level == 1)
+				aa_struct->abilities[0].base1 = 25;
+			else
+				aa_struct->abilities[0].base1 = 50;
+			aa_struct->abilities[1].skill_id = SE_LimitSpellType;
+			aa_struct->abilities[1].base1 = 1;
+			aa_struct->abilities[1].slot = 2;
+			aa_struct->abilities[2].skill_id = SE_LimitCastTime;
+			aa_struct->abilities[2].slot = 3;
+			aa_struct->abilities[2].base1 = 4000;			
+			aa_struct->abilities[3].skill_id = SE_LimitMinDur;
+			aa_struct->abilities[3].base1 = 12;
+			aa_struct->abilities[3].slot = 4;
+			break;
+
+		case aaQuickSummoning:
+			aa_struct->abilities[0].skill_id = SE_IncreaseSpellHaste;
+			aa_struct->abilities[0].slot = 1;
+			if(level == 0)
+				aa_struct->abilities[0].base1 = 10;
+			else if(level == 1)
+				aa_struct->abilities[0].base1 = 25;
+			else
+				aa_struct->abilities[0].base1 = 50;
+			aa_struct->abilities[1].skill_id =  SE_LimitEffect;
+			aa_struct->abilities[1].base1 = SE_SummonItem;
+			aa_struct->abilities[1].slot = 2;
+			aa_struct->abilities[2].skill_id =  SE_LimitEffect;
+			aa_struct->abilities[2].base1 = SE_SummonPet;
+			aa_struct->abilities[2].slot = 3;
+			aa_struct->abilities[3].skill_id =  SE_LimitEffect;
+			aa_struct->abilities[3].base1 = SE_SummonItemIntoBag;
+			aa_struct->abilities[3].slot = 4;
+			break;
+
+		case aaRapidFeign:
+			aa_struct->abilities[0].skill_id = SE_ReduceSkillTimer;
+			aa_struct->abilities[0].slot = 1;
+			if(level == 0)
+				aa_struct->abilities[0].base1 = 1;
+			else if(level == 1)
+				aa_struct->abilities[0].base1 = 3;
+			else
+				aa_struct->abilities[0].base1 = 5;
+			aa_struct->abilities[0].base2 = 25;
+			break;
+
+		case aaExtendedNotes:
+			aa_struct->abilities[0].skill_id = SE_IncreaseRange;
+			aa_struct->abilities[0].slot = 1;
+			if(level == 0)
+				aa_struct->abilities[0].base1 = 10;
+			else if(level == 1)
+				aa_struct->abilities[0].base1 = 15;
+			else
+				aa_struct->abilities[0].base1 = 25;
+			break;
+
+		case aaBodyAndMindRejuvenation:
+			aa_struct->abilities[0].skill_id = SE_CurrentHP;
+			aa_struct->abilities[0].slot = 1;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[0].base1 = 1 + ((level-1));
+			else
+				aa_struct->abilities[0].base1 = 1 + ((level));	
+			aa_struct->abilities[1].skill_id = SE_CurrentMana;
+			aa_struct->abilities[1].slot = 2;
+			if(level == aa_struct->max_level)
+				aa_struct->abilities[1].base1 = 1 + ((level-1));
+			else
+				aa_struct->abilities[1].base1 = 1 + ((level));	
+			break;
+
+		case aaPhysicalEnhancement:
+			aa_struct->abilities[0].skill_id = SE_MaxHPChange;
+			aa_struct->abilities[0].slot = 2;
+			aa_struct->abilities[0].base1 = 200;
+			break;
+
+		case aaAdvTrapNegotiation:
+			aa_struct->abilities[0].skill_id = SE_ReduceSkillTimer;
+			aa_struct->abilities[0].slot = 1;
+			if(level == 0)
+				aa_struct->abilities[0].base1 = 1;
+			else if(level == 1)
+				aa_struct->abilities[0].base1 = 3;
+			else
+				aa_struct->abilities[0].base1 = 5;
+			aa_struct->abilities[0].base2 = SENSE_TRAPS;
+			aa_struct->abilities[1].skill_id = SE_ReduceSkillTimer;
+			aa_struct->abilities[1].slot = 2;
+			if(level == 0)
+				aa_struct->abilities[1].base1 = 1;
+			else if(level == 1)
+				aa_struct->abilities[1].base1 = 3;
+			else
+				aa_struct->abilities[1].base1 = 5;
+			aa_struct->abilities[1].base2 = DISARM_TRAPS;
+			break;
+
+		case aa2HandBash:
+			aa_struct->abilities[0].skill_id = SE_TwoHandBash;
+			aa_struct->abilities[0].base1 = 1;
+			aa_struct->abilities[0].slot = 1;
+			break;
+		}
 }
 
 int32 ZoneDatabase::CountAAs(){
@@ -909,28 +1362,10 @@ int32 ZoneDatabase::CountAAs(){
 	return count;
 }
 
-int32 ZoneDatabase::CountAALevels(){
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	int count=0;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(id) from aa_levels"), errbuf, &result)) {
-		if((row = mysql_fetch_row(result))!=NULL){
-			count = atoi(row[0]);
-		}
-		mysql_free_result(result);
-	} else {
-		LogFile->write(EQEMuLog::Error, "Error in ZoneDatabase::CountAALevels query '%s': %s", query, errbuf);		
-	}
-	safe_delete_array(query);
-	return count;
-}
-
 int32 ZoneDatabase::GetSizeAA(){
 	int size=CountAAs()*sizeof(SendAA_Struct);
 	if(size>0)
-		size+=CountAALevels()*sizeof(AA_Ability);
+		size+=AA_EFFECTS_USED*sizeof(AA_Ability);
 	return size;
 }
 
@@ -956,28 +1391,6 @@ void ZoneDatabase::LoadAAs(SendAA_Struct **load){
 	safe_delete_array(query);
 }
 
-void ZoneDatabase::RetrieveAALevels(SendAA_Struct* aa_struct){
-	if(!aa_struct)
-		return;
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    char *query = 0;
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT ability, increase_amt, level from aa_levels where aa_id=%i order by level asc", aa_struct->id), errbuf, &result)) {
-		int ndx=0;
-		while((row = mysql_fetch_row(result))!=NULL) {
-			aa_struct->abilities[ndx].skill_id=atoi(row[0]);
-			aa_struct->abilities[ndx].increase_amt=atoi(row[1]);
-			aa_struct->abilities[ndx].last_level=atoi(row[2]);
-			ndx++;
-		}
-		mysql_free_result(result);
-	} else {
-		LogFile->write(EQEMuLog::Error, "Error in ZoneDatabase::RetrieveAALevels query '%s': %s", query, errbuf);		
-	}
-	safe_delete_array(query);
-}
-
 SendAA_Struct* ZoneDatabase::GetAASkillVars(int32 skill_id)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -988,7 +1401,7 @@ SendAA_Struct* ZoneDatabase::GetAASkillVars(int32 skill_id)
 	uchar* buffer;
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT cost, max_level, hotkey_sid, hotkey_sid2, "
 		"title_sid, desc_sid, type, prereq_skill, prereq_minpoints, spell_type, spell_refresh, "
-		"classes, berserker,spellid,class_type,name"
+		"classes, berserker,spellid,class_type,name,cost_inc"
 		" FROM altadv_vars WHERE skill_id=%i", skill_id), errbuf, &result)) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {
@@ -1030,7 +1443,7 @@ SendAA_Struct* ZoneDatabase::GetAASkillVars(int32 skill_id)
 			else
 				sendaa->next_id=0xFFFFFFFF;
 			
-			RetrieveAALevels(sendaa);
+			sendaa->cost_inc = atoi(row[16]);
 		}
 		mysql_free_result(result);
 	} else {

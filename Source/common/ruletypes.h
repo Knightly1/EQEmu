@@ -31,6 +31,7 @@ RULE_INT ( Character, AutosaveIntervalS, 300 )	//0=disabled
 RULE_INT ( Character, HPRegenMultiplier, 100)
 RULE_INT ( Character, ManaRegenMultiplier, 100)
 RULE_INT ( Character, EnduranceRegenMultiplier, 100)
+RULE_INT ( Character, ConsumptionMultiplier, 100) //item's hunger restored = this value * item's food level, 100 = normal, 50 = people eat 2x as fast, 200 = people eat 2x as slow
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Guild )

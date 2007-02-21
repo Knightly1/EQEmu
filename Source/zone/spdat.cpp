@@ -95,6 +95,16 @@ extern bool spells_loaded;
 ///////////////////////////////////////////////////////////////////////////////
 // spell property testing functions
 
+bool IsTargetableAESpell(int16 spell_id) {
+	bool bResult = false;
+
+	if (IsValidSpell(spell_id) && spells[spell_id].targettype == ST_AETarget) {
+		bResult = true;
+	}
+
+	return bResult;
+}
+
 bool IsSacrificeSpell(int16 spell_id)
 {
 	return IsEffectInSpell(spell_id, SE_Sacrifice);
@@ -137,14 +147,7 @@ bool IsSummonSpell(int16 spellid) {
 }
 
 bool IsEvacSpell(int16 spellid) {
-	for (int o = 0; o < EFFECT_COUNT; o++)
-	{
-		int32 tid = spells[spellid].effectid[o];
-		if(tid == SE_DeathSave) {
-			return true;
-		}
-	}
-	return false;
+	return IsEffectInSpell(spellid, SE_Succor);
 }
 
 bool IsDamageSpell(int16 spellid) {
@@ -211,6 +214,10 @@ bool IsBeneficialSpell(int16 spell_id)
 	// EverHood - These spells are actually detrimental
 	if(spells[spell_id].goodEffect == 1){
 		SpellTargetType tt = spells[spell_id].targettype;
+		if(tt != ST_Self || tt != ST_Pet){
+			if(IsEffectInSpell(spell_id, SE_CancelMagic))
+				return false;
+		}		
 		if(tt == ST_Target || tt == ST_AETarget || tt == ST_Animal || tt == ST_Undead || tt == ST_Pet) {
 			int16 sai = spells[spell_id].SpellAffectIndex;
 			if(spells[spell_id].resisttype == RESIST_MAGIC){
@@ -540,52 +547,44 @@ bool GroupOnlySpell(int16 spell_id)
 	return false;
 }
 
-//from WR...
-bool NoMerchantSpell(int16 spell_id)
-{
-	switch (spell_id)
+sint32 CalculatePoisonCounters(int16 spell_id){
+	if(!IsValidSpell(spell_id))
+		return 0;
+
+	sint32 Counters = 0;
+	for(int i = 0; i < EFFECT_COUNT; i++)
 	{
-		case 1196:
-		case 1197:
-		case 1900:
-		case 1901:
-		case 2100:
-		case 2104:
-		case 2107:
-		case 2108:
-		case 2109:
-		case 2112:
-		case 2115:
-		case 2116:
-		case 2145:
-		case 2461:
-		case 2467:
-		case 2476:
-		case 2320:
-		case 1255:
-		case 3018:
-		case 652:
-		case 1902:
-		case 2101:
-		case 2102:
-		case 2103:
-		case 2113:
-		case 2114:
-		case 2117:
-		case 2120:
-		case 2121:
-		case 2122:
-		case 2123:
-		case 2125:
-		case 2126:
-		case 2474:
-		case 2475:
-		case 2479:
-		case 2770:
-		case 2632:
-			return true;
+		if(spells[spell_id].effectid[i] == SE_PoisonCounter && spells[spell_id].base[i] > 0){
+			Counters += spells[spell_id].base[i];
+		}
 	}
-	return false;
+    return Counters;
 }
 
+sint32 CalculateDiseaseCounters(int16 spell_id){
+	if(!IsValidSpell(spell_id))
+		return 0;
 
+	sint32 Counters = 0;
+	for(int i = 0; i < EFFECT_COUNT; i++)
+	{
+		if(spells[spell_id].effectid[i] == SE_DiseaseCounter && spells[spell_id].base[i] > 0){
+			Counters += spells[spell_id].base[i];
+		}
+	}
+    return Counters;
+}
+
+sint32 CalculateCurseCounters(int16 spell_id){
+	if(!IsValidSpell(spell_id))
+		return 0;
+
+	sint32 Counters = 0;
+	for(int i = 0; i < EFFECT_COUNT; i++)
+	{
+		if(spells[spell_id].effectid[i] == SE_CurseCounter && spells[spell_id].base[i] > 0){
+			Counters += spells[spell_id].base[i];
+		}
+	}
+    return Counters;
+}

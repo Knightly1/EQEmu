@@ -804,7 +804,7 @@ void LoadSPDat() {
 		spells_loaded = true;
 	}
 	else {
-		SPDAT_RECORDS = -1;
+		SPDAT_RECORDS = 0;
 		_log(SPELLS__LOAD_ERR, "LoadSPDat() EMuShareMemDLL.Spells.DLLLoadSPDat() returned false");
 		return;
 	}

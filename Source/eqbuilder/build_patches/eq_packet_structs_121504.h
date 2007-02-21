@@ -2044,7 +2044,7 @@ struct Shielding_Struct {
 ** Last Updated: Oct-17-2003
 **
 */
-struct ClickObjectAck_Struct {
+struct ClickObjecAction_Struct {
 /*00*/	uint32	player_id;	// Entity Id of player who clicked object
 /*04*/	uint32	drop_id;	// Zone-specified unique object identifier
 /*08*/	uint32	open;		// 1=opening, 0=closing

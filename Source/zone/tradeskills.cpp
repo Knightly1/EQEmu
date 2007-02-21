@@ -191,6 +191,9 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	case 27:
 		tradeskill = RESEARCH;
 		break;
+	case 28: // Another Quest Containers.. Cavedude asked for this
+		tradeskill = GENERIC_TRADESKILL;
+		break;
 	case 12:
 		if (user_pp.class_ == ROGUE)
 			tradeskill = MAKE_POISON;
@@ -744,7 +747,37 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, SkillType trades
 	_log(TRADESKILLS__TRACE, "...Bonusstat: %d , INT: %d , WIS: %d , DEX: %d , STR: %d", bonusstat , GetINT() , GetWIS() , GetDEX() , GetSTR());
 	
 	float res = MakeRandomFloat(0, 99);
-	if ((tradeskill==75) || GetGM() || (chance > res)){
+	int AAChance = 0;
+
+	if(tradeskill == ALCHEMY){
+		switch(GetAA(aaAlchemyMastery)){
+		case 1:
+			AAChance = 10;
+			break;
+		case 2:
+			AAChance = 25;
+			break;
+		case 3:
+			AAChance = 50;
+			break;
+		}
+	}
+
+	if(tradeskill == JEWELRY_MAKING){
+		switch(GetAA(aaJewelCraftMastery)){
+		case 1:
+			AAChance = 10;
+			break;
+		case 2:
+			AAChance = 25;
+			break;
+		case 3:
+			AAChance = 50;
+			break;
+		}
+	}
+
+	if (((tradeskill==75) || GetGM() || (chance > res)) || MakeRandomInt(0, 99) < AAChance){
 		success_modifier = 1;
 		
 		if(over_trivial < 0)

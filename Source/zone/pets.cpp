@@ -365,16 +365,16 @@ void NPC::GetPetState(SpellBuff_Struct *pet_buffs, int32 *items, char *name) {
 			pet_buffs[i].duration = buffs[i].ticsremaining;
 			pet_buffs[i].level = buffs[i].casterlevel;
 			pet_buffs[i].effect = 10;
-			pet_buffs[i].poisoncounters = buffs[i].poisoncounters;
-			pet_buffs[i].diseasecounters = buffs[i].diseasecounters;
+			pet_buffs[i].persistant_buff = buffs[i].persistant_buff;
+			pet_buffs[i].reserved = 0;
 		}
 		else {
 			pet_buffs[i].spellid = SPELL_UNKNOWN;
 			pet_buffs[i].duration = 0;
 			pet_buffs[i].level = 0;
 			pet_buffs[i].effect = 0;
-			pet_buffs[i].poisoncounters = 0;
-			pet_buffs[i].diseasecounters = 0;
+			pet_buffs[i].persistant_buff = 0;
+			pet_buffs[i].reserved = 0;
 		}
 	}
 }
@@ -400,8 +400,9 @@ void NPC::SetPetState(SpellBuff_Struct *pet_buffs, int32 *items) {
 			buffs[i].casterlevel		= pet_buffs[i].level;
 			buffs[i].casterid			= 0;
 			buffs[i].durationformula	= spells[buffs[i].spellid].buffdurationformula;
-			buffs[i].poisoncounters		= pet_buffs[i].poisoncounters;
-			buffs[i].diseasecounters	= pet_buffs[i].diseasecounters;
+			buffs[i].poisoncounters		= CalculatePoisonCounters(pet_buffs[i].spellid);
+			buffs[i].diseasecounters	= CalculateDiseaseCounters(pet_buffs[i].spellid);
+			buffs[i].cursecounters		= CalculateCurseCounters(pet_buffs[i].spellid);
 		}
 		else {
 			buffs[i].spellid = SPELL_UNKNOWN;

@@ -398,8 +398,8 @@ bool Client::Save(int8 iCommitNow) {
 			m_pp.buffs[i].level = buffs[i].casterlevel;
 			m_pp.buffs[i].bard_modifier = 10;
 			m_pp.buffs[i].effect = 0;
-			m_pp.buffs[i].poisoncounters = buffs[i].poisoncounters;
-			m_pp.buffs[i].diseasecounters = buffs[i].diseasecounters;
+			m_pp.buffs[i].persistant_buff = buffs[i].persistant_buff;
+			m_pp.buffs[i].reserved = 0;
 			//temp hack, just put some number in here to make the client think its a real player ID
 			m_pp.buffs[i].player_id = 0x2211;
 		}
@@ -410,8 +410,8 @@ bool Client::Save(int8 iCommitNow) {
 			m_pp.buffs[i].level = 0;
 			m_pp.buffs[i].bard_modifier = 0;
 			m_pp.buffs[i].effect = 0;
-			m_pp.buffs[i].poisoncounters = 0;
-			m_pp.buffs[i].diseasecounters = 0;
+			m_pp.buffs[i].persistant_buff = 0;
+			m_pp.buffs[i].reserved = 0;
 			m_pp.buffs[i].player_id = 0;
 		}
 	}

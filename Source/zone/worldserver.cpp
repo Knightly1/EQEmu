@@ -448,7 +448,7 @@ void WorldServer::Process() {
 				else {
 					SendEmoteMessage(szp->adminname, 0, 0, "Summoning %s to %s %1.1f, %1.1f, %1.1f", szp->name, szp->zone, szp->x_pos, szp->y_pos, szp->z_pos);
 				}
-				client->MovePC(szp->zone, szp->x_pos, szp->y_pos, szp->z_pos, szp->ignorerestrictions, true);
+				client->MovePC(szp->zone, szp->x_pos, szp->y_pos, szp->z_pos, client->GetHeading(), szp->ignorerestrictions, true);
 			}
 			break;
 		}

@@ -285,10 +285,10 @@ void Doors::HandleClick(Client* sender, int8 trigger)
         if ( strncmp(dest_zone,zone_name,strlen(zone_name)) == 0) {
   			//dunno why, but this dosent seem to work all the time:
             //sender->GMMove(dest_x,dest_y,dest_z);
-           	sender->MovePC((const char*) NULL, dest_x, dest_y, dest_z);
+           	sender->MovePC(dest_x, dest_y, dest_z, dest_heading);
         }
         else {
-           	sender->MovePC(dest_zone, dest_x, dest_y, dest_z);
+           	sender->MovePC(dest_zone, dest_x, dest_y, dest_z, dest_heading);
         }
     }
 }

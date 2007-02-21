@@ -63,19 +63,19 @@ int Mob::GetBashDamage() const {
 void Mob::DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage) {
 	//this really should go through the same code as normal melee damage to
 	//pick up all the special behavior there
-	if(target->SpecAttacks[IMMUNE_MELEE] || target->SpecAttacks[IMMUNE_MELEE_NONMAGICAL] || target->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]) {
+	if(who->SpecAttacks[IMMUNE_MELEE] || who->SpecAttacks[IMMUNE_MELEE_NONMAGICAL] || who->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]) {
 		max_damage = -5;
 	}
 	
 	if(max_damage > 0) {
-		target->AvoidDamage(this, max_damage);
+		who->AvoidDamage(this, max_damage);
 	}
 	ApplyMeleeDamageBonus(skill, max_damage);
-	TryCriticalHit(target, skill, max_damage);
-	target->Damage(this, max_damage, SPELL_UNKNOWN, skill, false);
+	TryCriticalHit(who, skill, max_damage);
+	who->Damage(this, max_damage, SPELL_UNKNOWN, skill, false);
 	
 	if(max_damage == -3)
-		DoRiposte(target);	
+		DoRiposte(who);	
 }
 
 
@@ -278,6 +278,10 @@ int Mob::MonkSpecialAttack(Mob* other, int8 unchecked_type)
 		ndamage = MakeRandomInt(min_dmg, max_dmg);
 	}
 	DoSpecialAttackDamage(other, skill_type, ndamage);
+	if(unchecked_type == DRAGON_PUNCH && GetAA(aaDragonPunch) && MakeRandomInt(0, 99) < 25){
+		SpellFinished(904, other);
+		other->Stun(100);
+	}	
 	return(reuse);
 }
 
@@ -1044,8 +1048,6 @@ void Mob::Taunt(NPC* who, bool always_succeed) {
 void Mob::InstillDoubt(Mob *who) {
 	//make sure we can use this skill
 	int skill = GetSkill(INTIMIDATION);
-	if(skill < 1 || skill > 252)
-		return;
 	
 	//make sure our target is an NPC
 	if(!who || !who->IsNPC())

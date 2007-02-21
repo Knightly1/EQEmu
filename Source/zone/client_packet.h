@@ -116,7 +116,8 @@
 	void Handle_OP_ShopPlayerBuy(const EQApplicationPacket *app);
 	void Handle_OP_ShopPlayerSell(const EQApplicationPacket *app);
 	void Handle_OP_ShopEnd(const EQApplicationPacket *app);
-	void Handle_OP_CloseContainer(const EQApplicationPacket *app);
+//	void Handle_OP_CloseContainer(const EQApplicationPacket *app);
+	void Handle_OP_ClickObjectAction(const EQApplicationPacket *app);
 	void Handle_OP_ClickObject(const EQApplicationPacket *app);
 	void Handle_OP_RecipesFavorite(const EQApplicationPacket *app);
 	void Handle_OP_RecipesSearch(const EQApplicationPacket *app);

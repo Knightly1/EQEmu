@@ -349,8 +349,8 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 		entity_list.RemoveEntity(this->GetID());
 	} else {
 		// Tradeskill item
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClickObjectAck, sizeof(ClickObjectAck_Struct));
-		ClickObjectAck_Struct* coa = (ClickObjectAck_Struct*)outapp->pBuffer;
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClickObjectAction, sizeof(ClickObjectAction_Struct));
+		ClickObjectAction_Struct* coa = (ClickObjectAction_Struct*)outapp->pBuffer;
 		
 		//TODO: there is prolly a better way to do this.
 		//if this is not the main user, send them a close and a message

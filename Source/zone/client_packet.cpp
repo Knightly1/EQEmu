@@ -216,7 +216,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_ShopPlayerBuy] = &Client::Handle_OP_ShopPlayerBuy;
 	ConnectedOpcodes[OP_ShopPlayerSell] = &Client::Handle_OP_ShopPlayerSell;
 	ConnectedOpcodes[OP_ShopEnd] = &Client::Handle_OP_ShopEnd;
-	ConnectedOpcodes[OP_CloseContainer] = &Client::Handle_OP_CloseContainer;
+	ConnectedOpcodes[OP_ClickObjectAction] = &Client::Handle_OP_ClickObjectAction;
 	ConnectedOpcodes[OP_ClickObject] = &Client::Handle_OP_ClickObject;
 	ConnectedOpcodes[OP_RecipesFavorite] = &Client::Handle_OP_RecipesFavorite;
 	ConnectedOpcodes[OP_RecipesSearch] = &Client::Handle_OP_RecipesSearch;
@@ -1153,6 +1153,22 @@ void Client::Handle_OP_Consume(const EQApplicationPacket *app)
 		return;
 	}
 	Consume_Struct* pcs = (Consume_Struct*)app->pBuffer;
+	uint16 cons_mod = 30;
+
+	switch(GetAA(aaInnateMetabolism)){
+		case 1:
+			cons_mod = cons_mod * 110 * RuleI(Character, ConsumptionMultiplier) / 10000;
+			break;
+		case 2:
+			cons_mod = cons_mod * 125 * RuleI(Character, ConsumptionMultiplier) / 10000;
+			break;
+		case 3:
+			cons_mod = cons_mod * 150 * RuleI(Character, ConsumptionMultiplier) / 10000;
+			break;
+		default:
+			cons_mod = cons_mod * RuleI(Character, ConsumptionMultiplier) / 100;
+			break;
+	}
 	
 	ItemInst *myitem = GetInv().GetItem(pcs->slot);
 	if(myitem == NULL) {
@@ -1165,10 +1181,11 @@ void Client::Handle_OP_Consume(const EQApplicationPacket *app)
 #if EQDEBUG >= 1
 		LogFile->write(EQEMuLog::Debug, "Eating from slot:%i", (int)pcs->slot);
 #endif
-		m_pp.hunger_level += eat_item->CastTime*30; //roughly 1 item per 10 minutes
+		m_pp.hunger_level += eat_item->CastTime*cons_mod; //roughly 1 item per 10 minutes
 		DeleteItemInInventory(pcs->slot, 1, false);
 		
-		entity_list.MessageClose_StringID(this, true, 50, 0, EATING_MESSAGE, GetName(), eat_item->Name);
+		if(pcs->auto_consumed != 0xffffffff) //no message if the client consumed for us
+			entity_list.MessageClose_StringID(this, true, 50, 0, EATING_MESSAGE, GetName(), eat_item->Name);
 	}
 	else if (pcs->type == 0x02) {
 #if EQDEBUG >= 1
@@ -1176,10 +1193,11 @@ void Client::Handle_OP_Consume(const EQApplicationPacket *app)
 #endif
 		// 6000 is the max. value
 		//m_pp.thirst_level += 1000;
-		m_pp.thirst_level += eat_item->CastTime*30; //roughly 1 item per 10 minutes
+		m_pp.thirst_level += eat_item->CastTime*cons_mod; //roughly 1 item per 10 minutes
 		DeleteItemInInventory(pcs->slot, 1, false);
 		
-		entity_list.MessageClose_StringID(this, true, 50, 0, DRINKING_MESSAGE, GetName(), eat_item->Name);
+		if(pcs->auto_consumed != 0xffffffff) //no message if the client consumed for us
+			entity_list.MessageClose_StringID(this, true, 50, 0, DRINKING_MESSAGE, GetName(), eat_item->Name);
 	}
 	else {
 		LogFile->write(EQEMuLog::Error, "OP_Consume: unknown type, type:%i", (int)pcs->type);
@@ -1898,8 +1916,7 @@ void Client::Handle_OP_Camp(const EQApplicationPacket *app)
 	//LogFile->write(EQEMuLog::Debug, "%s sent a camp packet.", GetName());
 	if(GetAdventureID() > 0)
 		DeleteCharInAdventure(CharacterID(), GetAdventureID());
-	Save();
-	LeaveGroup();
+
 	if (GetGM()) {
 		OnDisconnect(true);
 	}
@@ -1934,13 +1951,13 @@ void Client::Handle_OP_FeignDeath(const EQApplicationPacket *app)
 	switch (GetAA(aaRapidFeign))
 	{
 		case 1:
-			reuse = 9;
+			reuse -= 1;
 			break;
 		case 2:
-			reuse = 7;
+			reuse -= 2;
 			break;
 		case 3:
-			reuse = 5;
+			reuse -= 5;
 			break;
 	}
 	p_timers.Start(pTimerFeignDeath, reuse-1);
@@ -3467,7 +3484,7 @@ void Client::Handle_OP_GMGoto(const EQApplicationPacket *app)
 	GMSummon_Struct* gmg = (GMSummon_Struct*) app->pBuffer;
 	Mob* gt = entity_list.GetMob(gmg->charname);
 	if (gt != NULL) {
-		this->MovePC(zone->GetZoneID(), gt->GetX(), gt->GetY(), gt->GetZ());
+		this->MovePC(zone->GetZoneID(), gt->GetX(), gt->GetY(), gt->GetZ(), gt->GetHeading());
 	}
 	else if (!worldserver.Connected())
 		Message(0, "Error: World server disconnected.");
@@ -3883,6 +3900,7 @@ void Client::Handle_OP_ShopEnd(const EQApplicationPacket *app)
 	return;
 }
 
+/*
 void Client::Handle_OP_CloseContainer(const EQApplicationPacket *app)
 {
 	if (app->size != sizeof(CloseContainer_Struct)) {
@@ -3898,6 +3916,32 @@ void Client::Handle_OP_CloseContainer(const EQApplicationPacket *app)
 	if (entity && entity->IsObject()) {
 		Object* object = entity->CastToObject();
 		object->Close();
+	}
+	return;
+}
+*/
+
+void Client::Handle_OP_ClickObjectAction(const EQApplicationPacket *app)
+{
+	if (app->size != sizeof(ClickObjectAction_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Invalid size on OP_ClickObjectAction: Expected %i, Got %i",
+			sizeof(ClickObjectAction_Struct), app->size);
+		return;
+	}
+
+	SetTradeskillObject(NULL);
+	
+	ClickObjectAction_Struct* oos = (ClickObjectAction_Struct*)app->pBuffer;
+	Entity* entity = entity_list.GetEntityObject(oos->drop_id);
+	if (entity && entity->IsObject()) {
+		Object* object = entity->CastToObject();
+		if(oos->open == 0) {
+			object->Close();
+		} else {
+			LogFile->write(EQEMuLog::Error, "Unsupported action %d in OP_ClickObjectAction", oos->open);
+		}
+	} else {
+		LogFile->write(EQEMuLog::Error, "Invalid object %d in OP_ClickObjectAction", oos->drop_id);
 	}
 	return;
 }
@@ -4299,7 +4343,7 @@ void Client::Handle_OP_GroupDisband(const EQApplicationPacket *app)
 		return;
 	}
 	
-LogFile->write(EQEMuLog::Debug, "Member Disband Request from %s\n", GetName());
+	LogFile->write(EQEMuLog::Debug, "Member Disband Request from %s\n", GetName());
 	
 	GroupGeneric_Struct* gd = (GroupGeneric_Struct*) app->pBuffer;
 	Group* group = GetGroup();
@@ -4310,7 +4354,11 @@ LogFile->write(EQEMuLog::Debug, "Member Disband Request from %s\n", GetName());
 	if((group->IsLeader(this) && target == 0) || (group->GroupCount()<3)) {
 		group->DisbandGroup();
 	} else {
-		group->DelMember(entity_list.GetMob(gd->name2),false);
+		Mob* memberToDisband = entity_list.GetMob(gd->name2);
+		if(memberToDisband)
+			group->DelMember(memberToDisband,false);
+		else
+			LogFile->write(EQEMuLog::Error, "Failed to remove player from group. Unable to find player named %s in player group", gd->name2);
 	}
 	return;
 }
@@ -4553,6 +4601,8 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 			break;
 		}
 		if (mypet->GetHateTop()==0 && target != this && DistNoRootNoZ(*target) <= (RuleR(Pets, AttackCommandRange)*RuleR(Pets, AttackCommandRange))) {
+			mypet->SetHeld(false); //break the hold and guard if we explicitly tell the pet to attack.
+			mypet->SetPetOrder(SPO_Follow);
 			zone->AddAggroMob();
 			mypet->AddToHateList(target, 1);
 			Message_StringID(10, PET_ATTACKING, mypet->GetCleanName(), target->GetCleanName());
@@ -4594,6 +4644,7 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 	}
 	case PET_GUARDHERE: {
 		if(mypet->IsNPC()) {
+			mypet->SetHeld(false);
 			mypet->Say_StringID(PET_GUARDINGLIFE);
 			mypet->SetPetOrder(SPO_Guard);
 			mypet->CastToNPC()->SaveGuardSpot();
@@ -4601,6 +4652,7 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 		break;
 	}
 	case PET_FOLLOWME: {
+		mypet->SetHeld(false);
 		mypet->Say_StringID(PET_FOLLOWING);
 		mypet->SetPetOrder(SPO_Follow);
 		mypet->SendAppearancePacket(AT_Anim, ANIM_STAND);
@@ -4617,6 +4669,7 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 		break;
 	}
 	case PET_GUARDME: {
+		mypet->SetHeld(false);
 		mypet->Say_StringID(PET_GUARDME_STRING);
 		mypet->SetPetOrder(SPO_Follow);
 		mypet->SendAppearancePacket(AT_Anim, ANIM_STAND);
@@ -4645,6 +4698,15 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 			mypet->InterruptSpell(); //Baron-Sprite: No cast 4 u. // neotokyo: i guess the pet should start casting
 		mypet->SendAppearancePacket(AT_Anim, ANIM_DEATH);
 		break;
+	}
+	case PET_HOLD: {
+		if(GetAA(aaPetDiscipline) && mypet->IsNPC()){
+			mypet->Say("I will hold until given an order, master.");
+			mypet->WhipeHateList();
+			mypet->SetHeld(true);
+			mypet->SetPetOrder(SPO_Guard);
+			mypet->CastToNPC()->SaveGuardSpot();
+		}
 	}
 	default:
 		printf("Client attempted to use a unknown pet command:\n");
@@ -4785,7 +4847,7 @@ void Client::Handle_OP_Animation(const EQApplicationPacket *app)
 	//might verify spawn ID, but it wouldent affect anything
 	
 	// an emote (i.e., waving arm to say hello)
-	DoAnim(s->value, s->action);
+	DoAnim(s->action, s->value);
 	
 	return;
 }
@@ -4951,11 +5013,28 @@ void Client::Handle_OP_Mend(const EQApplicationPacket *app)
 	}
 	p_timers.Start(pTimerMend, MendReuseTime-1);
 	
-	int num = 25 + 5*GetAA(aaCriticalMend) + 5*GetAA(aaMendingoftheTranquil);
-	int mendhp = (int) GetMaxHP() * num / 100;
+	int mendhp = GetMaxHP() / 4;
 	uint32 noadvance = MakeRandomInt(0, 200);
 	int currenthp = GetHP();
 	if (MakeRandomInt(0, 300) < (int)GetSkill(MEND)) {
+		int criticalchance = 0;
+		switch(GetAA(aaCriticalMend)){
+		case 1:
+			criticalchance = 5;
+			break;
+		case 2:
+			criticalchance = 10;
+			break;
+		case 3:
+			criticalchance = 25;
+			break;
+		}
+		criticalchance += 5*GetAA(aaMendingoftheTranquil);
+		
+		if(MakeRandomInt(0,99) < criticalchance){
+			mendhp *= 2;
+			Message(4, "You perform a superior mend.");
+		}	
 		SetHP(GetHP() + mendhp);
 		SendHPUpdate();
 		Message_StringID(4,MEND_SUCCESS);
@@ -5002,18 +5081,10 @@ void Client::Handle_OP_EnvDamage(const EQApplicationPacket *app)
 	int damage = ed->damage;
 	
 	if (ed->dmgtype == 252) {
-		if(HasSkill(SAFE_FALL)) {
-			int sv = GetSkill(SAFE_FALL);
-			//this is a total bullshit forumla, somebody find a better one
-			if(MakeRandomInt(0,240) < sv/5)
-				damage = 0;
-			else if(sv > 2)
-				damage = damage * 3 / sv;
-			
-			CheckIncreaseSkill(SAFE_FALL);
-		}
+		if(HasSkill(SAFE_FALL)) //safe fall is done client side, we don't reduce dmg here
+			CheckIncreaseSkill(SAFE_FALL); //but we do check to see if we get a skill up
 		
-		switch(GetAA(aaAcrobatics)) {
+		switch(GetAA(aaAcrobatics)) { //Don't know what acrobatics effect is yet but it should be done client side via aa effect.. till then
 		case 1:
 			damage = damage * 95 / 100;
 			break;
@@ -5368,13 +5439,13 @@ void Client::Handle_OP_SenseTraps(const EQApplicationPacket *app)
 	int reuse = SenseTrapsReuseTime;
 	switch(GetAA(aaAdvTrapNegotiation)) {
 		case 1:
-			reuse = reuse * 90/100;
+			reuse -= 1;
 			break;
 		case 2:
-			reuse = reuse * 75/100;
+			reuse -= 3;
 			break;
 		case 3:
-			reuse = reuse * 50/100;
+			reuse -= 5;
 			break;
 	}
 	p_timers.Start(pTimerSenseTraps, reuse-1);
@@ -5427,13 +5498,13 @@ void Client::Handle_OP_DisarmTraps(const EQApplicationPacket *app)
 	int reuse = SenseTrapsReuseTime;
 	switch(GetAA(aaAdvTrapNegotiation)) {
 		case 1:
-			reuse = reuse * 90/100;
+			reuse -= 1;
 			break;
 		case 2:
-			reuse = reuse * 75/100;
+			reuse -= 3;
 			break;
 		case 3:
-			reuse = reuse * 50/100;
+			reuse -= 5;
 			break;
 	}
 	p_timers.Start(pTimerSenseTraps, reuse-1);
@@ -5999,8 +6070,10 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 				buffs[i].casterlevel		= m_pp.buffs[i].level;
 				buffs[i].casterid			= 0;
 				buffs[i].durationformula	= spells[buffs[i].spellid].buffdurationformula;
-				buffs[i].poisoncounters		= m_pp.buffs[i].poisoncounters;
-				buffs[i].diseasecounters	= m_pp.buffs[i].diseasecounters;
+				buffs[i].poisoncounters		= CalculatePoisonCounters(m_pp.buffs[i].spellid);
+				buffs[i].diseasecounters	= CalculateDiseaseCounters(m_pp.buffs[i].spellid);
+				buffs[i].cursecounters		= CalculateCurseCounters(m_pp.buffs[i].spellid);
+				buffs[i].persistant_buff	= m_pp.buffs[i].persistant_buff;
 			}
 			else {
 				buffs[i].spellid = SPELL_UNKNOWN;
@@ -6021,7 +6094,6 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 					switch (spells[buffs[j1].spellid].effectid[x1]) {
 						case SE_Charm:
 						case SE_Rune:
-						case SE_Illusion:
 							buffs[j1].spellid = SPELL_UNKNOWN;
 							m_pp.buffs[j1].spellid = SPELLBOOK_UNKNOWN;
 							m_pp.buffs[j1].slotid = 0;
@@ -6030,6 +6102,17 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 							m_pp.buffs[j1].effect = 0;
 							x1 = EFFECT_COUNT;
 							break;
+						case SE_Illusion:
+							if(m_pp.buffs[j1].persistant_buff != 1){ //anything other than 1=non persistant
+								buffs[j1].spellid = SPELL_UNKNOWN;
+								m_pp.buffs[j1].spellid = SPELLBOOK_UNKNOWN;
+								m_pp.buffs[j1].slotid = 0;
+								m_pp.buffs[j1].level = 0;
+								m_pp.buffs[j1].duration = 0;
+								m_pp.buffs[j1].effect = 0;
+								x1 = EFFECT_COUNT;
+							}
+							break;							
 						// We can't send appearance packets yet, put down at CompleteConnect
 					}
 				}
@@ -6344,6 +6427,34 @@ void Client::CompleteConnect()
 					{
 						SendIllusionPacket(spell.base[x1], 0xFF, 0xFFFF, 0xFFFF);
 					}
+					switch(spell.base[x1]){
+						case OGRE:
+							SendAppearancePacket(AT_Size, 9);
+							break;
+						case TROLL:
+							SendAppearancePacket(AT_Size, 8);
+							break;
+						case VAHSHIR:
+						case FROGLOK:
+						case BARBARIAN:
+							SendAppearancePacket(AT_Size, 7);
+							break;
+						case HALF_ELF:
+						case WOOD_ELF:
+						case DARK_ELF:
+							SendAppearancePacket(AT_Size, 5);
+							break;
+						case DWARF:
+							SendAppearancePacket(AT_Size, 4);
+							break;
+						case HALFLING:
+						case GNOME:
+							SendAppearancePacket(AT_Size, 3);
+							break;
+						default:
+							SendAppearancePacket(AT_Size, 6);
+							break;
+					}
 					break;
 				}
 				case SE_SummonHorse: {
@@ -6367,6 +6478,7 @@ void Client::CompleteConnect()
 					invulnerable = true;
 					break;
 					}
+				case SE_Invisibility2:	
 				case SE_Invisibility: 
 					{
 					invisible = true;
@@ -6378,6 +6490,7 @@ void Client::CompleteConnect()
 					SendAppearancePacket(AT_Levitate, 2);
 					break;
 					}
+				case SE_InvisVsUndead2:	
 				case SE_InvisVsUndead: 
 					{
 					invisible_undead = true;

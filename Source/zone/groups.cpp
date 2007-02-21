@@ -321,32 +321,23 @@ void Group::MemberZoned(Mob* removemob) {
 }
 
 bool Group::DelMember(Mob* oldmember,bool ignoresender){
-	uint32 i;
-
-	if (oldmember == NULL)
-	 {
+	if (oldmember == NULL){
 		return false;
-	 }
+	}
 
-	 for (i = 0; i < MAX_GROUP_MEMBERS; i++)
-	 {
-		  if (members[i] == oldmember)
-		  {
-		  	//handle leader quitting group gracefully
-			if (oldmember == GetLeader() && GroupCount() > 2)
-			{
+	for (uint32 i = 0; i < MAX_GROUP_MEMBERS; i++) {
+		if (members[i] == oldmember) {
+			//handle leader quitting group gracefully
+			if (oldmember == GetLeader() && GroupCount() > 2) {
 				EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
-
 				GroupJoin_Struct* gu = (GroupJoin_Struct*) outapp->pBuffer;
 				gu->action = 8;
-				uint32 nl;
-				for (nl = 0; nl < MAX_GROUP_MEMBERS; nl++) {
+				for (uint32 nl = 0; nl < MAX_GROUP_MEMBERS; nl++) {
 					if (members[nl] && members[nl] != oldmember) {
 						strcpy(gu->membername, members[nl]->GetName());
 						strcpy(gu->yourname, oldmember->GetName());
 						SetLeader(members[nl]);
-						uint32 ld;
-						for (ld = 0; ld < MAX_GROUP_MEMBERS; ld++) {
+						for (uint32 ld = 0; ld < MAX_GROUP_MEMBERS; ld++) {
 							if (members[ld] && members[ld] != oldmember) {
 								members[ld]->CastToClient()->QueuePacket(outapp);
 							}
@@ -359,26 +350,25 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 			}
 			members[i] = NULL;
 			membername[i][0] = '\0';
+			memset(membername[i],0,64);
 			break;
 		  }
-	 }
-	 memset(membername[i],0,64);
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+	}
 
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 	GroupJoin_Struct* gu = (GroupJoin_Struct*) outapp->pBuffer;
 	gu->action = groupActLeave;
 	strcpy(gu->membername, oldmember->GetName());
 	strcpy(gu->yourname, oldmember->GetName());
 
-	for (i = 0; i < MAX_GROUP_MEMBERS; i++)
-	{
-		  if (members[i] == NULL) {
-					 //if (DEBUG>=5) LogFile->write(EQEMuLog::Debug, "Group::DelMember() null member at slot %i", i);
-					 continue;
-		  }
-		  if (members[i] != oldmember && members[i]->IsClient()) {
+	for (uint32 i = 0; i < MAX_GROUP_MEMBERS; i++) {
+		if (members[i] == NULL) {
+			//if (DEBUG>=5) LogFile->write(EQEMuLog::Debug, "Group::DelMember() null member at slot %i", i);
+			continue;
+		}
+		if (members[i] != oldmember && members[i]->IsClient()) {
 			strcpy(gu->yourname, members[i]->GetName());
-				members[i]->CastToClient()->QueuePacket(outapp);
+			members[i]->CastToClient()->QueuePacket(outapp);
 		}
 		#ifdef IPC
 		if(members[i] == oldmember && members[i]->IsNPC() && members[i]->CastToNPC()->IsGrouped() && members[i]->CastToNPC()->IsInteractive()) {
@@ -392,7 +382,7 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 		strcpy(gu->membername,oldmember->GetName());
 		gu->action = groupActLeave;
 
-		 oldmember->CastToClient()->QueuePacket(outapp);
+		oldmember->CastToClient()->QueuePacket(outapp);
 	 }
 
 	database.SetGroupID(oldmember->GetName(), 0);
@@ -400,7 +390,8 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 	oldmember->SetGrouped(false);
 	disbandcheck = true;
 
-	 safe_delete(outapp);
+	safe_delete(outapp);
+
 	return true;	
 }
 

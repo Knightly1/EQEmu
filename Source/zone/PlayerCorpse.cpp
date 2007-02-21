@@ -1211,3 +1211,4 @@ void Corpse::CastRezz(int16 spellid, Mob* Caster){
 	safe_delete(outapp);
 }
 */
+

@@ -1144,6 +1144,19 @@ int16 Mob::CheckAggroAmount(int16 spellid) {
 		AggroAmount /= RuleI(Spells, BardSpellAggroMod);
 	if (GetOwner())
 		AggroAmount /= RuleI(Spells, PetSpellAggroMod);
+		
+	switch (GetAA(aaSpellCastingSubtlety))
+	{
+	case 1:
+		AggroAmount = AggroAmount * 95 / 100;
+		break;
+	case 2:
+		AggroAmount = AggroAmount * 90 / 100;
+		break;
+	case 3:
+		AggroAmount = AggroAmount * 80 / 100;
+		break;
+	}
 
 	AggroAmount += spells[spell_id].HateAdded + spells[spell_id].bonushate;
 	AggroAmount = (AggroAmount * RuleI(Spells, SpellAggroModifier))/100;
@@ -1171,7 +1184,7 @@ int16 Mob::CheckHealAggroAmount(int16 spellid) {
 				break;
 			}
 			default:{
-				AggroAmount += (slevel / 2);
+				AggroAmount += 1;
  				break;
  			}
 		}

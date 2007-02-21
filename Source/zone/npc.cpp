@@ -154,6 +154,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	pAggroRange = d->aggroradius;
 	pAssistRange = GetAggroRange();
 	findable = d->findable;
+	trackable = d->trackable;
 
     // neotokyo: fix for lazy db-updaters
     if (GetCasterClass() != 'N' && mana_regen == 0)

@@ -296,6 +296,23 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 		chancetohit -= (bonus) / 10;
 		mlog(COMBAT__TOHIT, "Applied avoidance chance %.2f/10, yeilding %.2f", bonus, chancetohit);
 	}
+
+	uint16 AA_mod = 0;
+	switch(GetAA(aaCombatAgility))
+	{
+	case 1:
+		AA_mod = 2;
+		break;
+	case 2:
+		AA_mod = 5;
+		break;
+	case 3:
+		AA_mod = 10;
+		break;
+	}
+
+	AA_mod += 3*GetAA(aaPhysicalEnhancement);
+	chancetohit += chancetohit * AA_mod / 100;
 	
 	// Chance to hit;   Max 95%, Min 30%
 	if(chancetohit > 1000) {
@@ -534,6 +551,22 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 			mlog(COMBAT__DAMAGE, "AC Damage Reduction: fail chance %d%%. Did not fail.", acfail);
 		}
 	}
+
+	int aaMit = 0;
+	switch(GetAA(aaCombatStability)){
+		case 1:
+			aaMit = 2;
+			break;
+		case 2:
+			aaMit = 5;
+			break;
+		case 3:
+			aaMit = 10;
+			break;
+	}
+
+	aaMit += GetAA(aaPhysicalEnhancement)*2;
+	damage = damage * (100-aaMit) / 100;
 	
 	mlog(COMBAT__DAMAGE, "Final damage after all avoidances: %d", damage);
 	
@@ -592,6 +625,14 @@ int Mob::GetWeaponDamage(Mob *other, const Item_Struct *weapon_item, bool &bane)
 bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 {
 	_ZP(Client_Attack);
+
+	if (!other) {
+		SetTarget(NULL);
+		LogFile->write(EQEMuLog::Error, "A null Mob object was passed to Client::Attack() for evaluation!");
+		return false;
+	}
+	
+	SetTarget(other);
 	
 	mlog(COMBAT__ATTACKS, "Attacking %s with hand %d %s", other?other->GetName():"(NULL)", Hand, bRiposte?"(this is a riposte)":"");
 	
@@ -819,10 +860,12 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	if(invisible) {
 		mlog(COMBAT__ATTACKS, "Removing invisibility due to melee attack.");
 		BuffFadeByEffect(SE_Invisibility);
+		BuffFadeByEffect(SE_Invisibility2);
 	}
 	if(invisible_undead) {
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. undead due to melee attack.");
 		BuffFadeByEffect(SE_InvisVsUndead);
+		BuffFadeByEffect(SE_InvisVsUndead2);
 	}
 	if(invisible_animals){
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. animals due to melee attack.");
@@ -1131,19 +1174,9 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skil
 
 	m_pp.zone_id = m_pp.binds[0].zoneId;
 	database.MoveCharacterToZone(this->CharacterID(), database.GetZoneName(m_pp.zone_id));
-	
-	//treat this like we sent them a zone request message
-	zonesummon_x = m_pp.binds[0].x;
-	zonesummon_y = m_pp.binds[0].y;
-	zonesummon_z = m_pp.binds[0].z;
-	zonesummon_id = m_pp.binds[0].zoneId;
-	zone_mode = ZoneToBindPoint;
-	
-	heading = 0;
-	
+		
 	Save();
 	
-	//temp hack...
 	GoToBind();
 }
 
@@ -1154,12 +1187,12 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	
 	if (!other) {
 		SetTarget(NULL);
+		LogFile->write(EQEMuLog::Error, "A null Mob object was passed to NPC::Attack() for evaluation!");
 		return false;
 	}
 	
-	if (!target && GetTarget() != other)
-		SetTarget(other);
-	
+	SetTarget(other);
+
 	//Check that we can attack before we calc heading and face our target	
 	if (!IsAttackAllowed(other)) {
 		if (this->GetOwnerID())
@@ -1312,10 +1345,12 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	if(invisible) {
 		mlog(COMBAT__ATTACKS, "Removing invisibility due to melee attack.");
 		BuffFadeByEffect(SE_Invisibility);
+		BuffFadeByEffect(SE_Invisibility2);
 	}
 	if(invisible_undead) {
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. undead due to melee attack.");
 		BuffFadeByEffect(SE_InvisVsUndead);
+		BuffFadeByEffect(SE_InvisVsUndead2);
 	}
 	if(invisible_animals){
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. animals due to melee attack.");
@@ -1479,6 +1514,7 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skill) 
 	if (!HasOwner() && class_ != MERCHANT && class_ != ADVENTUREMERCHANT 
 		&& MerchantType == 0 && killer && (killer->IsClient() || (killer->HasOwner() && killer->GetOwner()->IsClient())) ) {
 		Corpse* corpse = new Corpse(this, &itemlist, GetNPCTypeID(), &NPCTypedata);
+		entity_list.LimitRemoveNPC(this);
 		entity_list.AddCorpse(corpse, this->GetID());
 		this->SetID(0);
 		if(killer->GetOwner() != 0 && killer->GetOwner()->IsClient())
@@ -1508,8 +1544,8 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skill) 
 	
 	this->WhipeHateList();
 	p_depop = true;
-	if(other)
-		other->SetTarget(NULL);
+	if(other && other->GetTarget() == this) //we can kill things without having them targeted
+		other->SetTarget(NULL); //via AE effects and such..
 }
 
 
@@ -1532,6 +1568,10 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 			hatemod = 1;
 		hate = ((hate * (hatemod))/100);
 	}
+	
+	if(IsPet() && GetOwner() && GetOwner()->GetAA(aaPetDiscipline) && IsHeld()){
+		return; 
+	}	
 
 	if(IsFamiliar()) //familiars can't really attack anything
 		return;	
@@ -1551,7 +1591,7 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 	
 	hate_list.Add(other, hate, damage, bFrenzy, !iBuffTic);
 	
-	if (mypet) { // I have a pet, add other to it
+	if (mypet && (!(GetAA(aaPetDiscipline) && mypet->IsHeld()))) { // I have a pet, add other to it
 		mypet->hate_list.Add(other, 1, 0, bFrenzy);
 	} else if (myowner) { // I am a pet, add other to owner if it's NPC/LD
 		if (myowner->IsAIControlled())
@@ -1901,6 +1941,12 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 	if(damage > 0) {
 		//if there is some damage being done and theres an attacker involved
 		if(attacker) {
+			if(spell_id == SPELL_HARM_TOUCH2 && attacker->IsClient() && attacker->CastToClient()->CheckAAEffect(aaEffectLeechTouch)){
+				attacker->HealDamage(damage);
+				entity_list.MessageClose(this, true, 300, MT_Emote, "%s beams a smile at %s", attacker->GetCleanName(), this->GetCleanName() );
+				attacker->CastToClient()->DisableAAEffect(aaEffectLeechTouch);
+			}
+
 			// if spell is lifetap add hp to the caster
 			if (spell_id != SPELL_UNKNOWN && IsLifetapSpell( spell_id )) {
 				
@@ -1992,12 +2038,24 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 		if(spell_id != SPELL_UNKNOWN) {
 			//see if root will break
 			if (IsRooted()) { // neotoyko: only spells cancel root
-				if (MakeRandomInt(0, 99) < 20) {
-					mlog(COMBAT__HITS, "Spell broke root! 20percent chance");
-					BuffFadeByEffect(SE_Root, buffslot); // buff slot is passed through so a root w/ dam doesnt cancel itself
-				} else {
-					mlog(COMBAT__HITS, "Spell did not break root. 20 percent chance");
+				if(GetAA(aaEnhancedRoot))
+				{
+					if (MakeRandomInt(0, 99) < 10) {
+						mlog(COMBAT__HITS, "Spell broke root! 10percent chance");
+						BuffFadeByEffect(SE_Root, buffslot); // buff slot is passed through so a root w/ dam doesnt cancel itself
+					} else {
+						mlog(COMBAT__HITS, "Spell did not break root. 10 percent chance");
+					}
 				}
+				else
+				{
+					if (MakeRandomInt(0, 99) < 20) {
+						mlog(COMBAT__HITS, "Spell broke root! 20percent chance");
+						BuffFadeByEffect(SE_Root, buffslot); // buff slot is passed through so a root w/ dam doesnt cancel itself
+					} else {
+						mlog(COMBAT__HITS, "Spell did not break root. 20 percent chance");
+					}
+				}			
 			}
 		}
 		else{
@@ -2290,13 +2348,13 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 	if(IsClient())
 		critChance += RuleR(Combat, ClientBaseCritChance);	
 
-	uint8 critMod = 20; 
+	uint16 critMod = 200; 
 	if((GetClass() == WARRIOR || GetClass() == BERSERKER) && GetLevel() >= 12 && IsClient()) 
 	{
 		if(CastToClient()->berserk)
 		{
 			critChance += RuleR(Combat, BerserkBaseCritChance);
-			critMod = 40;
+			critMod = 400;
 		}
 		else
 		{
@@ -2323,11 +2381,25 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 		critChance = 0.01f; //Give them a small one so skills and items appear to have some effect.
  
 	critChance += ((critChance) * (CritBonus) / 100.0f); //crit chance is a % increase to your reg chance
+	
+	if(defender && defender->GetBodyType() == BT_Undead || defender->GetBodyType() == BT_SummonedUndead){
+		switch(GetAA(aaSlayUndead)){
+			case 1:
+				critMod += 33;
+				break;
+			case 2:
+				critMod += 66;
+				break;
+			case 3:
+				critMod += 100;
+				break;
+		}
+	}
  
 	if(critChance > 0){
 		if(MakeRandomFloat(0, 1) <= critChance)
 		{
-			damage = (damage * critMod) / 10;
+			damage = (damage * critMod) / 100;
 			if(IsClient() && CastToClient()->berserk)
 			{
 				entity_list.MessageClose(this, false, 200, 10, "%s lands a crippling blow!(%d)", GetCleanName(), damage);
@@ -2361,6 +2433,25 @@ void Mob::DoRiposte(Mob *defender){
 			mlog(COMBAT__ATTACKS, "Preforming a double riposed (%d percent chance)", DoubleRipChance);
 			defender->Attack(this, 13, true);
 		}
+
+		if(defender->GetAA(aaReturnKick)){
+			int ReturnKickChance = 0;
+			switch(defender->GetAA(aaReturnKick)){
+			case 1:
+				ReturnKickChance = 25;
+				break;
+			case 2:
+				ReturnKickChance = 35;
+				break;
+			case 3:
+				ReturnKickChance = 50;
+				break;
+			}
+			if(ReturnKickChance >= MakeRandomInt(0, 100)) {
+				mlog(COMBAT__ATTACKS, "Preforming a return kick (%d percent chance)", ReturnKickChance);
+				defender->MonkSpecialAttack(this, FLYING_KICK);
+			}
+		}		
 }
  
 void Mob::ApplyMeleeDamageBonus(int16 skill, sint32 &damage){

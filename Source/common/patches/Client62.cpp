@@ -177,9 +177,9 @@ ENCODE(OP_SendAATable) {
 	unsigned int r;
 	for(r = 0; r < emu->total_abilities; r++) {
 		OUT(abilities[r].skill_id);
-		OUT(abilities[r].increase_amt);
-		OUT(abilities[r].unknown08);
-		OUT(abilities[r].last_level);
+		OUT(abilities[r].base1);
+		OUT(abilities[r].base2);
+		OUT(abilities[r].slot);
 	}
 	
 	FINISH_ENCODE();
@@ -272,8 +272,8 @@ ENCODE(OP_PlayerProfile) {
 		OUT(buffs[r].spellid);
 		OUT(buffs[r].duration);
 		OUT(buffs[r].dmg_shield_remaining);
-		OUT(buffs[r].diseasecounters);
-		OUT(buffs[r].poisoncounters);
+		OUT(buffs[r].persistant_buff);
+		OUT(buffs[r].reserved);
 //		OUT(buffs[r].player_id);
 	}
 	for(r = 0; r < structs::MAX_PP_DISCIPLINES; r++) {
