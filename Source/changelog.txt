@@ -1,5 +1,86 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+Blah
+
+==2/18/2007
+WildcardX: Player casted area of effect detrimental spells will not longer have an affect on players not engaged in PvP.
+WildcardX: Fixed spawnlimit setting to control the maximum times a given npc_type can spawn in the same zone.
+WildcardX: (Bleh) Fixed player emote animations.
+WildcardX: Implemented a server-side check of a Client object's target to avoid it being null.
+WildcardX: Fixed a zone crash that could occurr during a monk special attack or a rogue's backstab attack.
+WildcardX: Area of effect beneficial spells will no longer affect non-player characters.
+
+==2/16/2007
+KLS: Updating Changelog AA work to be more clear as well as the required SQL.
+
+Required SQL: 
+alter table altadv_vars add column cost_inc tinyint(4) not null default 0; 
+
+Optionally:
+Source in AA_data.sql
+
+==2/15/2007
+WildcardX: Commented out the code supporting the deprecated OP_CloseContainer opcode.
+WildcardX: Fixed world containers so when one player has closed a world container, another player can open it without the need for the first player to leave the zone.
+KLS: Initial release of ongoing AA work
+KLS: Most(Not all) Alternate Advancement abilities up to SoL Class working correctly with correct costs and client side effects
+KLS: Fixed many many AA related bugs
+KLS: Fixed Activatable AA buttons on titanium
+KLS: Added #altactivate command to facilitate the new AA work
+KLS: Added Character:ConsumptionMultiplier rule.
+KLS: Server wont send a eat/drink message unless the player forces the client to eat/drink
+KLS: Fixed an issue with TGB working in a backwards manner.
+KLS: Fixed an issue with AE bard spells hitting the bard instead of the targets around him.
+KLS: Fixed an issue with cancel magic spells that made them act as completely beneficial spells.
+KLS: Added many missing spell effects into spdat.h
+KLS: Fixed a beneficial aggro issue that was resulting in certain clicky items giving significant amounts of aggro.
+KLS: MOBs with pets or familiars already out will not attempt to cast pet spells.
+KLS: Curse, Poison, and Disease counters will go past 256 and all be active but will reset on zoning
+KLS: Curse counters will work now.
+KLS: Intimidation should work under the new skill cap rules.
+KLS: Killing something will no longer clear your server side target unless you killed your target.
+KLS: Fixed a int to float conversion issue in CalcRecommendedLevelBonus() (as per slowglass' post)
+KLS: Fixed a crash issue related to resists, should help those crashing after zoning with a spell that has a heartbeat resist such as root.
+KLS: Removed an unused spell function that didn't make much sense.
+
+==2/14/2007
+WildcardX: Implemented a cap of 4 mobs affected by targeted area of effect spells. This is consistent with EQ live.
+WildcardX: Implemented the succor line of spells.
+WildcardX: Specific mobs can now be toggled as findable or not findable by the track skill. Mobs which are not findable will not appear on any track lists.
+
+Required SQL:
+alter table npc_types add column trackable tinyint(4) not null default 1;
+
+==2/13/2007
+WildcardX: Fixed bug that broke #zone command.
+
+==2/11/2007
+WildcardX: Further enhancements to zone weather system to reduce the amount of work necessary to perform weather and to make it more logical.
+WildcardX: Added a new opcode for both 6.2 and Titanium clients, OP_ZonePlayerToBind=0x385e. Please be sure to update your .conf files.
+WildcardX: Implemented the beginnings of what will become a new "system" to deal with zoning.
+WildcardX: Titanium clients will now zone correctly upon death and will not go link dead and get sent to character select screen.
+WildcardX: Both 6.2 and Titanium clients will now return character view to first person from corpse hover after completing zone to bind point after death.
+WildcardX: Group member camping will now auto-disband upon an actual logout.
+WildcardX: Disbanding a link dead group member will no longer crash the zone.
+WildcardX: Link dead group members will now automatically remove themselves from group.
+WildcardX: Many zoning situations will now use "heading". This was largely being ignored before. However, there are still a couple more situations where this needs to be implemented. I will continue implementing "heading" as i continue to work on the zoning code.
+WildcardX: (Cavedude) Implemented yet another container type to perform even more quest combines.
+WildcardX: Added additional logging to zone "debug" and "error" to support zoning and intra-zone movement.
+WildcardX: Group members disbanding in another zone will still fail to appear as removed from group from other group members, but disbanding this group member when he/she rejoins group in zone will no longer crash the zone and you will be able to re-add this former group member without having to destroy the whole group.
+
+==2/10/2007
+FatherNitwit: Reworked NPC Idle spell casting to avoid extra LOS checks (based on KLS's observations)
+FatherNitwit: Reworked NPC spell casting timers to be more consistent.
+
+==2/9/2007
+Doodman: Fixed AdventurePoints_Update_Struct to be the correct struct.  Same structure for both 6.2 and Ti.  Changed core structure.
+
+==2/1/2007
+WildcardX: (Bleh) Fixed quest globals.
+WildcardX: Fixed the common error message MakeNameUnique() has been recording in logs about being unable to make a unique name for mobs greater than 100 in a zone.
+
+Required SQL:
+ALTER TABLE quest_globals CHANGE expdate expdate INT;
 
 ==1/29/2007
 WildcardX: Cleaned up zone weather code for better efficiency. Weather checks will be more frequent when their is snow or rain and less frequent when the sun is out.

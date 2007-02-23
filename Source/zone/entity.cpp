@@ -2235,7 +2235,7 @@ void EntityList::SendPositionUpdates(Client* client, int32 cLastUpdate, float ra
 }
 
 char* EntityList::MakeNameUnique(char* name) {
-	bool used[100];
+	bool used[300];
 	memset(used, 0, sizeof(used));
 	name[61] = 0; name[62] = 0; name[63] = 0;
 
@@ -2253,16 +2253,16 @@ char* EntityList::MakeNameUnique(char* name) {
 		}
 		iterator.Advance();
 	}
-	for (int i=0; i < 100; i++) {
+	for (int i=0; i < 300; i++) {
 		if (!used[i]) {
 			#ifdef WIN32
-			snprintf(name, 64, "%s%02d", name, i);
+			snprintf(name, 64, "%s%03d", name, i);
 			#else
 			//glibc clears destination of snprintf
 			//make a copy of name before snprintf--misanthropicfiend
 			char temp_name[64];
 			strn0cpy(temp_name, name, 64);
-			snprintf(name, 64, "%s%02d", temp_name, i);
+			snprintf(name, 64, "%s%03d", temp_name, i);
 			#endif
 			return name;
 		}
@@ -2674,14 +2674,16 @@ bool EntityList::MakeTrackPacket(Client* client){
 	{
 		if (iterator.GetData() && (iterator.GetData()->DistNoZ(*client)<=distance))
 		{
-			memset(track_ent, 0, sizeof(Track_Struct));
-			Mob* cur_entity = iterator.GetData();
-			track_ent->entityid = cur_entity->GetID();
-			track_ent->x=(int16)cur_entity->GetX();
-			track_ent->y=(int16)cur_entity->GetY();
-			track_ent->z=(int16)cur_entity->GetZ();
-			memcpy(&track_array->Entrys[array_counter], track_ent, sizeof(Track_Struct));
-			array_counter++;
+			if(iterator.GetData()->IsTrackable()) {
+				memset(track_ent, 0, sizeof(Track_Struct));
+				Mob* cur_entity = iterator.GetData();
+				track_ent->entityid = cur_entity->GetID();
+				track_ent->x=(int16)cur_entity->GetX();
+				track_ent->y=(int16)cur_entity->GetY();
+				track_ent->z=(int16)cur_entity->GetZ();
+				memcpy(&track_array->Entrys[array_counter], track_ent, sizeof(Track_Struct));
+				array_counter++;
+			}
 		}
 
 		iterator.Advance();

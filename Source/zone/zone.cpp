@@ -669,14 +669,13 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name)
 		long_name = strcpy(new char[18], "Long zone missing");
 	}
 	autoshutdown_timer.Start(AUTHENTICATION_TIMEOUT * 1000, false);
-	Weather_Timer = new Timer(((rand()%7200-30)+30)*2000);
+	Weather_Timer = new Timer((MakeRandomInt(1800, 7200) + 30) * 2000);
 	Weather_Timer->Start();
 	LogFile->write(EQEMuLog::Debug, "The next weather check for zone: %s will be in %i seconds.", short_name, Weather_Timer->GetRemainingTime()/1000);
 	weather_type = 0;
 	zone_weather = 0;
 	
 	aas = NULL;
-//	aa_buffer = NULL;
 	totalAAs = 0;
 }
 
@@ -982,10 +981,10 @@ int32 Zone::CountAuth() {
 bool Zone::Process() {
 	LockMutex lock(&MZoneLock);
 	_ZP(Zone_Process);
-	
-	
+
+
 	spawn_conditions.Process();
-	
+
 	if(spawn2_timer.Check()) {
 		LinkedListIterator<Spawn2*> iterator(spawn2_list);
 
@@ -1010,7 +1009,7 @@ bool Zone::Process() {
 			iterator.Advance();
 		}
 	}
-	
+
 	if(!staticzone) {
 		if (autoshutdown_timer.Check()) {
 			StartShutdownTimer();
@@ -1019,53 +1018,49 @@ bool Zone::Process() {
 			}
 		}
 	}
-	
+
 #ifdef GUILDWARS
 	if(db_update->Check())
 		guildwars.Update();
 #endif
-	
-	if(Weather_Timer) {
-		if(Weather_Timer->Enabled()) {
-			if(Weather_Timer->Check()){
-				Weather_Timer->Disable();
-				int16 tmpweather =rand()%100;
+	if(Weather_Timer->Check()){
+		Weather_Timer->Disable();
+		int16 tmpweather = MakeRandomInt(0, 100);
 
-				if(zone->weather_type != 0)
-				{
-					if(tmpweather > 80)
-					{
-						// A change in the weather....
-						int8 tmpOldWeather = zone_weather;
+		if(zone->weather_type != 0)
+		{
+			if(tmpweather >= 80)
+			{
+				// A change in the weather....
+				int8 tmpOldWeather = zone_weather;
 
-						if(zone->zone_weather == 0)
-							zone->zone_weather = zone->weather_type;
-						else
-							zone->zone_weather = 0;
+				if(zone->zone_weather == 0)
+					zone->zone_weather = zone->weather_type;
+				else
+					zone->zone_weather = 0;
 
-						LogFile->write(EQEMuLog::Debug, "The weather for zone: %s has changed. Old weather was = %i. New weather is = %i", zone->GetShortName(), tmpOldWeather, zone_weather);
+				LogFile->write(EQEMuLog::Debug, "The weather for zone: %s has changed. Old weather was = %i. New weather is = %i", zone->GetShortName(), tmpOldWeather, zone_weather);
 
-						this->weatherSend();
-					}
-					else
-						LogFile->write(EQEMuLog::Debug, "The weather for zone: %s is not going to change. Chance was = %i percent.", zone->GetShortName(), tmpweather);
-				
-
-					safe_delete(Weather_Timer);
-
-					if(zone->zone_weather != zone->weather_type)
-						Weather_Timer = new Timer(((rand() % (7170)) + 30) * 2000);
-					else
-						Weather_Timer = new Timer(((rand() % (570)) + 30 ) * 1000);
-
-					Weather_Timer->Start();
-
-					LogFile->write(EQEMuLog::Debug, "The next weather check for zone: %s will be in %i seconds.", zone->GetShortName(), Weather_Timer->GetRemainingTime()/1000); 
-				}
+				this->weatherSend();
 			}
+			else
+				LogFile->write(EQEMuLog::Debug, "The weather for zone: %s is not going to change. Chance was = %i percent.", zone->GetShortName(), tmpweather);
+
+			uint32 weatherTime = 0;
+
+			if(zone->zone_weather != zone->weather_type)
+				weatherTime = (MakeRandomInt(1800, 7200) + 30) * 2000;
+			else
+				weatherTime = (MakeRandomInt(900, 2700) + 30) * 1000;
+
+			Weather_Timer->Start(weatherTime);
+
+			LogFile->write(EQEMuLog::Debug, "The next weather check for zone: %s will be in %i seconds.", zone->GetShortName(), Weather_Timer->GetRemainingTime()/1000); 
 		}
 	}
-	
+
+
+
 	if (clientauth_timer.Check()) {
 		LinkedListIterator<ZoneClientAuth_Struct*> iterator2(client_auth_list);
 
