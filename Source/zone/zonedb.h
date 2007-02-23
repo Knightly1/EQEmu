@@ -143,6 +143,8 @@ public:
 	int32	GetSizeAA();
 	int32	CountAAs();
 	void	LoadAAs(SendAA_Struct **load);
+	int32 CountAAEffects();
+	void FillAAEffects(SendAA_Struct* aa_struct);
 	
 	/*
 	 * Zone related

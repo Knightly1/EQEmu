@@ -581,12 +581,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				}
 				if (!bBreak)
 				{
-					int cha = caster->GetCHA();
-					float r1 = (float)rand()/(float)RAND_MAX;
-					float r2 = (float)cha  + (caster->GetLevel()/3) / 255.0f;
-					float finalPercentDuration = r1 +r2; //When resists work use partial to aid in determining length
-					if (finalPercentDuration > 1.0f) finalPercentDuration = 1.0f;
-					buffs[buffslot].ticsremaining = (int)ceil(finalPercentDuration *buffs[buffslot].ticsremaining);
+					int resistMod = partial + (GetCHA()/25);
+					resistMod = resistMod > 100 ? 100 : resistMod;
+					buffs[buffslot].ticsremaining = resistMod * buffs[buffslot].ticsremaining / 100;
 				}
 
 				break;
@@ -598,23 +595,14 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				snprintf(effect_desc, _EDLEN, "Fear: %+i", effect_value);
 #endif
 				//use resistance value for duration...
-				buffs[buffslot].ticsremaining = (sint32) (buffs[buffslot].ticsremaining * partial * 0.01);
+				buffs[buffslot].ticsremaining = ((buffs[buffslot].ticsremaining * partial) / 100);
 				
-				int resist = spellbonuses.ResistFearChance + itembonuses.ResistFearChance;
-				if(resist > 0 && MakeRandomInt(0,99) < resist) {
-					entity_list.MessageClose_StringID(this, false, 200, MT_Disciplines, RESISTS_URGE, GetCleanName());
-					//entity_list.MessageClose(this, false, 100, 0, "%s resists the urge to flee!", GetName());
-				}
-				else
-				{
 #ifdef ENABLE_FEAR_PATHING
-					SetFeared(caster, buffs[buffslot].ticsremaining * 6000);
+				SetFeared(caster, buffs[buffslot].ticsremaining * 6000);
 #else				//poor man's fear
 					//kathgar: Its basicly fear, they don't move
-					Stun(buffs[buffslot].ticsremaining * 6000);
-#endif
-				}
-                
+				Stun(buffs[buffslot].ticsremaining * 6000);
+#endif  
 				break;
 			}
 
@@ -1171,6 +1159,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 
 			case SE_Root:
 			{
+				buffs[buffslot].ticsremaining = ((buffs[buffslot].ticsremaining * partial) / 100);
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Root: %+i", effect_value);
 #endif
@@ -2487,14 +2476,6 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 		}
 		break;
 	}*/
-
-		// solar: TODO get this outta here
-		case SE_Root: {
-			if(ResistSpell(spells[spell_id].resisttype, spell_id, caster) < 100){
-				BuffFadeByEffect(SE_Root);
-			}
-			break;
-		}
 		default: {
 			// do we need to do anyting here?
 		}

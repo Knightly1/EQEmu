@@ -995,8 +995,8 @@ This is hanging on freebsd for me, not sure why...
 		sp[tempid].HateAdded=atoi(sep.arg[173]);
 		sp[tempid].EndurUpkeep=atoi(sep.arg[174]);
 
-		for(y = 0; y < 2;y++)
-			sp[tempid].spacing175[y]=atoi(sep.arg[175+y]);
+		sp[tempid].spacing175=atoi(sep.arg[175]);
+		sp[tempid].numhits = atoi(sep.arg[176]);
 
 		sp[tempid].pvpresistbase=atoi(sep.arg[177]);
 		sp[tempid].pvpresistcalc=atoi(sep.arg[178]);

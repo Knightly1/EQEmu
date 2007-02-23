@@ -1016,6 +1016,7 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 			if(!spell_target || (
 				spell_target->GetBodyType() != BT_SummonedUndead 
 				&& spell_target->GetBodyType() != BT_Undead
+				&& spell_target->GetBodyType() != BT_Vampire
 				)
 			)
 			{
@@ -2015,8 +2016,9 @@ int Mob::AddBuff(Mob *caster, int16 spell_id, int duration)
 	buffs[emptyslot].diseasecounters = 0;
 	buffs[emptyslot].poisoncounters = 0;
 	buffs[emptyslot].cursecounters = 0;
+	buffs[emptyslot].numhits = spells[spell_id].numhits;
 	buffs[emptyslot].client = caster ? caster->IsClient() : 0;
-	
+		
 	mlog(SPELLS__BUFFS, "Buff %d added to slot %d with caster level %d", spell_id, emptyslot, caster_level);
 	
 	// recalculate bonuses since we stripped/added buffs

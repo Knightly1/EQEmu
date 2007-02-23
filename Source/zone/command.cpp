@@ -384,7 +384,8 @@ int command_init(void) {
 		command_add("guildcreate","[guildname] - Creates an approval setup for guild name specified",0,command_guildcreate) ||
 		command_add("guildapprove","[guildapproveid] - Approve a guild with specified ID (guild creator receives the id)",0,command_guildapprove) ||
 		command_add("guildlist","[guildapproveid] - Lists character names who have approved the guild specified by the approve id",0,command_guildlist) ||
-		command_add("altactivate", "[argument] - activates alternate advancement abilities, use altactivate help for more information", 0, command_altactivate)
+		command_add("altactivate", "[argument] - activates alternate advancement abilities, use altactivate help for more information", 0, command_altactivate) ||
+		command_add("refundaa", "Refunds your target's AA points, will disconnect them in the process as well.", 100, command_refundaa)
 		)
 	{
 		command_deinit();
@@ -6896,7 +6897,7 @@ void command_altactivate(Client *c, const Seperator *sep){
 		c->Message(10, "You have access to the following AA Abilities:");
 		int x, val;
 		SendAA_Struct* saa = NULL;
-		for(x = 0; x < 1359; x++){
+		for(x = 0; x < aaHighestID; x++){
 			if(AA_Actions[x][0].spell_id || AA_Actions[x][0].action){ //if there's an action or spell associated we assume it's a valid
 				val = 0;					//and assume if they don't have a value for the first rank then it isn't valid for any rank
 				saa = NULL;
@@ -6924,5 +6925,48 @@ void command_altactivate(Client *c, const Seperator *sep){
 	else
 	{
 		c->ActivateAA((aaID) atoi(sep->arg[1]));
+	}
+}
+
+void command_refundaa(Client *c, const Seperator *sep){
+	Client* refundee = NULL;
+	int curpt = 0;
+	bool refunded = false;
+	if(c){
+		if(c->GetTarget()){
+			if(c->GetTarget()->IsClient())
+				refundee = c->GetTarget()->CastToClient();
+			else
+				c->Message(0, "Your target must be a client.");
+		}
+		else{
+			c->Message(0, "You must have a target selected.");
+		}
+
+		if(refundee){
+			for(int x1=0;x1<aaHighestID;x1++){
+				curpt = refundee->GetAA(x1);
+				if(curpt > 0){
+					SendAA_Struct* curaa = zone->FindAA(x1);
+					if(curaa){
+						refundee->SetAA(x1, 0);
+						for(int x2=0;x2<curpt;x2++){ //add up all the AA points pt by pt to get the correct cost
+							refundee->GetPP().aapoints += curaa->cost + (curaa->cost_inc * x2);
+							refunded = true;
+						}
+					}
+					else //aa doesn't exist.. but if they bought it then it had at least a cost of 1 point each
+					{ //so give back what we can
+						refundee->GetPP().aapoints += curpt;
+						refundee->SetAA(x1, 0);
+						refunded = true;
+					}
+				}
+			}
+		}
+	}
+	if(refunded){
+		refundee->Save(); //save of course
+		refundee->Kick(); //client gets all buggy if we don't immediatly relog so just force it on them
 	}
 }

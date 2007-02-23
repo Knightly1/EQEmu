@@ -1,6 +1,29 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
-Blah
+==2/22/2007
+KLS: Some more changes to AA system:
+KLS: altadv_vars.cost_inc will now be unsigned to allow your skills to cost less per level
+KLS: Client side aa effects are now loaded from the database once again
+KLS: Updated AA_data.sql to include AAs up to planes of power.
+KLS: Added #refundaa as a way for server GMs to refund a players alt ability points and give them back their points.
+KLS: Implemented limited numbered hits on buffs.
+KLS: Root and charm will now act as partial capable spells.
+KLS: Vampires will act as undead, which is consistant with what the client thinks is undead.
+
+Required SQL:
+CREATE TABLE aa_effects (
+  id int(10) unsigned NOT NULL auto_increment,
+  aaid mediumint(8) unsigned NOT NULL default '0',
+  slot tinyint(3) unsigned NOT NULL default '0',
+  effectid mediumint(8) unsigned NOT NULL default '0',
+  base1 mediumint(8) unsigned NOT NULL default '0',
+  base2 mediumint(8) unsigned NOT NULL default '0',
+  PRIMARY KEY  (id),
+  UNIQUE KEY NewIndex (aaid,slot)
+) TYPE=MyISAM;
+
+Optional SQL:
+Resource AA_Data.sql
 
 ==2/18/2007
 WildcardX: Player casted area of effect detrimental spells will not longer have an affect on players not engaged in PvP.

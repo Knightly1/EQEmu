@@ -3098,7 +3098,7 @@ struct AA_Ability {
 struct SendAA_Struct {
 /* EMU additions for internal use */
 	char name[128];
-	int16 cost_inc;
+	sint16 cost_inc;
 
 /*0000*/	int32 id;
 /*0004*/	int32 unknown004;

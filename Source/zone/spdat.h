@@ -448,7 +448,8 @@ struct SPDat_Spell_Struct
 /* 168 */ int spacing168[5];
 /* 173 */   int			HateAdded;
 /* 174 */   int			EndurUpkeep;
-/* 175 */ int spacing175[2];
+/* 175 */ int spacing175;
+/* 176 */ int numhits;
 /* 177 */   int			pvpresistbase;
 /* 178 */   int			pvpresistcalc;
 /* 179 */   int			pvpresistcap;

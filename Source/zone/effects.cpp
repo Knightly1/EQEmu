@@ -312,7 +312,7 @@ sint32 Client::GetActSpellCasttime(int16 spell_id, sint32 casttime)
 				cast_reducer += 10;
 				break;
 			case 3:
-				cast_reducer += 15;
+				cast_reducer += 25;
 				break;
 		}
 

@@ -262,6 +262,7 @@ void command_guildapprove(Client *c, const Seperator *sep);
 void command_guildlist(Client *c, const Seperator *sep);
 void command_rules(Client *c, const Seperator *sep);
 void command_altactivate(Client *c, const Seperator *sep);
+void command_refundaa(Client *c, const Seperator *sep);
 
 #ifdef EMBPERL
 void command_embperl_plugin(Client *c, const Seperator *sep);

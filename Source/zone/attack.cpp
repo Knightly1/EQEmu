@@ -1907,6 +1907,16 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
     // damage shield calls this function with spell_id set, so its unavoidable
 	if (attacker && damage > 0 && spell_id == SPELL_UNKNOWN) {
 		this->DamageShield(attacker);
+		for(int bs = 0; bs < BUFF_COUNT; bs++){
+			if(buffs[bs].numhits > 0){
+				if(buffs[bs].numhits == 1){
+					BuffFadeBySlot(bs, true);
+				}
+				else{
+					buffs[bs].numhits--;
+				}
+			}
+		}		
 	}
 	
 /*	not sure what this was all about
@@ -2382,7 +2392,7 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
  
 	critChance += ((critChance) * (CritBonus) / 100.0f); //crit chance is a % increase to your reg chance
 	
-	if(defender && defender->GetBodyType() == BT_Undead || defender->GetBodyType() == BT_SummonedUndead){
+	if(defender && defender->GetBodyType() == BT_Undead || defender->GetBodyType() == BT_SummonedUndead || defender->GetBodyType() == BT_Vampire){
 		switch(GetAA(aaSlayUndead)){
 			case 1:
 				critMod += 33;
