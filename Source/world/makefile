@@ -34,8 +34,12 @@ include .depend
 include makefile.common
 
 .depend depend:
-	echo $(SF) "" | sed -e 's#.obj/#../common/#g' -e 's/\.o/.cpp/g' | \
-	xargs gcc -MM $(COPTS) $(PERL_FLAGS) >.depend
+	for f in $(SF); \
+	do \
+		i=`echo $$f | sed -e 's#.obj/#../common/#g' -e 's/\.o/.cpp/g' `; \
+		gcc -MM $(COPTS) `$(PERL_FLAGS)` $$i | sed "s#^[^ ]*:#$$f:#g"; \
+	done  >.depend
+
 
 wine:
 	$(MAKE) -f makefile.wine

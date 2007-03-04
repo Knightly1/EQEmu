@@ -91,6 +91,8 @@ Credits for this function:
 void Client::ActivateAA(aaID activate){
 	if(activate < 0 || activate >= aaHighestID)
 		return;
+	if(IsStunned() || IsMezzed() || IsSitting())
+		return;
 
 	aaID aaid = activate;
 	uint8 activate_val = GetAA(activate);
@@ -116,7 +118,7 @@ void Client::ActivateAA(aaID activate){
 		}
 	}
 
-	if (activate_val == 0 || IsStunned() || IsMezzed() || IsSitting()){
+	if (activate_val == 0){
 		return;
 	}
 	
