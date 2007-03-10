@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==3/10/2007
+Rogean: Fixed #si and minstatus
+
 ==3/3/2007
 FatherNitwit: Finally rewrote 'make depend' to properly track dependencies in linux builds
 
