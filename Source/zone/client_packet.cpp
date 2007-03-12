@@ -2066,8 +2066,10 @@ void Client::Handle_OP_Hide(const EQApplicationPacket *app)
 		sa_out->parameter = 1;
 		entity_list.QueueClients(this, outapp, true);
 		safe_delete(outapp);
-		if(GetAA(aaShroudofStealth))
+		if(GetAA(aaShroudofStealth)){
 			improved_hidden = true;
+			hidden = true;
+		}
 		else
 			hidden = true;
 	}

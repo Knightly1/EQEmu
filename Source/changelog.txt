@@ -1,6 +1,15 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==3/11/2007
+KLS: Attack() will not set our target unless we have no target now.
+KLS: Tweaked some invis and hide stuff to hopefully catch more situations where it should break correctly.
+KLS: Fixed the spell critical hit ratio to be accurate.
+KLS: Spell Casting Deftness and Quick Buff should now work with spells that have duration formulas.
+KLS: NPCs will no longer be restricted by the number of targets on their AE spells.
+KLS: Spells base_1 will load as a 32 bit signed int instead of a 16 bit signed int, should correct some oddities with certain spells. For example certain summon spells using large item ids.
+KLS: Fixed a tradeskill exploit with tradeskill containers and experimentation.
+
 ==3/10/2007
 Rogean: Fixed #si and minstatus
 

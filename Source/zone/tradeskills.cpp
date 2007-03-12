@@ -974,7 +974,41 @@ bool ZoneDatabase::GetTradeRecipe(const ItemInst* container, uint8 c_type, uint8
 	row = mysql_fetch_row(result);
 	uint32 recipe_id = (uint32)atoi(row[0]);
 	mysql_free_result(result);
-	
+
+	//Right here we verify that we actually have ALL of the tradeskill components..
+	//instead of part which is possible with experimentation.
+	bool has_components = true;
+	char TSerrbuf[MYSQL_ERRMSG_SIZE];
+    char *TSquery = 0;
+    MYSQL_RES *TSresult;
+    MYSQL_ROW TSrow;
+	if (RunQuery(TSquery, MakeAnyLenString(&TSquery, "SELECT item_id, componentcount from tradeskill_recipe_entries where recipe_id=%i AND componentcount > 0", recipe_id), TSerrbuf, &TSresult)) {
+		while((TSrow = mysql_fetch_row(TSresult))!=NULL) {
+			int ccnt = 0;
+			for(int x = 0; x < 10; x++){
+				const ItemInst* inst = container->GetItem(x);
+				if(inst){
+					const Item_Struct* item = GetItem(inst->GetItem()->ID);
+					if (item) {				
+						if(item->ID == atoi(TSrow[0])){
+							ccnt++;
+						}
+					}
+				}
+			}
+			if(ccnt != atoi(TSrow[1]))
+				has_components = false;
+		}
+		mysql_free_result(TSresult);
+	} else {
+		LogFile->write(EQEMuLog::Error, "Error in tradeskill verify query: '%s': %s", TSquery, TSerrbuf);			
+	}
+	safe_delete_array(TSquery);
+	if(has_components == false){
+		
+		return false;
+	}
+
 	return(GetTradeRecipe(recipe_id, c_type, tradeskill, spec));
 }
 	

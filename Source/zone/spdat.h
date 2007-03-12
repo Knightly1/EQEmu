@@ -404,7 +404,7 @@ struct SPDat_Spell_Struct
 /* 017 */	int32		buffduration;
 /* 018 */	int32		AEDuration;	// sentinel, rain of something
 /* 019 */	int16		mana; // Mana Used
-/* 020 */	sint16		base[EFFECT_COUNT];	//various purposes
+/* 020 */	sint32		base[EFFECT_COUNT];	//various purposes
 /* 032 */	int			base2[EFFECT_COUNT]; //various purposes
 /* 044 */	sint16		max[EFFECT_COUNT];
 /* 056 */	int16		icon; // Spell icon

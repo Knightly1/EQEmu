@@ -632,7 +632,8 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		return false;
 	}
 	
-	SetTarget(other);
+	if(!GetTarget())
+		SetTarget(other);
 	
 	mlog(COMBAT__ATTACKS, "Attacking %s with hand %d %s", other?other->GetName():"(NULL)", Hand, bRiposte?"(this is a riposte)":"");
 	
@@ -861,15 +862,18 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		mlog(COMBAT__ATTACKS, "Removing invisibility due to melee attack.");
 		BuffFadeByEffect(SE_Invisibility);
 		BuffFadeByEffect(SE_Invisibility2);
+		invisible = false;
 	}
 	if(invisible_undead) {
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. undead due to melee attack.");
 		BuffFadeByEffect(SE_InvisVsUndead);
 		BuffFadeByEffect(SE_InvisVsUndead2);
+		invisible_undead = false;
 	}
 	if(invisible_animals){
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. animals due to melee attack.");
 		BuffFadeByEffect(SE_InvisVsAnimals);
+		invisible_animals = false;
 	}
 
 	if(hidden || improved_hidden){
@@ -1190,8 +1194,8 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		LogFile->write(EQEMuLog::Error, "A null Mob object was passed to NPC::Attack() for evaluation!");
 		return false;
 	}
-	
-	SetTarget(other);
+	if(!GetTarget())
+		SetTarget(other);
 
 	//Check that we can attack before we calc heading and face our target	
 	if (!IsAttackAllowed(other)) {
@@ -1346,15 +1350,18 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		mlog(COMBAT__ATTACKS, "Removing invisibility due to melee attack.");
 		BuffFadeByEffect(SE_Invisibility);
 		BuffFadeByEffect(SE_Invisibility2);
+		invisible = false;
 	}
 	if(invisible_undead) {
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. undead due to melee attack.");
 		BuffFadeByEffect(SE_InvisVsUndead);
 		BuffFadeByEffect(SE_InvisVsUndead2);
+		invisible_undead = false;
 	}
 	if(invisible_animals){
 		mlog(COMBAT__ATTACKS, "Removing invisibility vs. animals due to melee attack.");
 		BuffFadeByEffect(SE_InvisVsAnimals);
+		invisible_animals = false;
 	}
 
 	if(hidden || improved_hidden)

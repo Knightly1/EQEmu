@@ -147,7 +147,7 @@ sint32 Client::GetActSpellDamage(int16 spell_id, sint32 value) {
 		chance += GetFocusEffect(focusImprovedCritical, spell_id);
 		
 		if(chance > 0 && MakeRandomInt(0,100) <= chance) {
-			modifier += ratio;
+			modifier += modifier*ratio/100;
 			entity_list.MessageClose(this, false, 100, MT_SpellCrits, "%s delivers a critical blast! (%d)", GetName(), ((-value * modifier) / 100));	
 		}
 	}
@@ -303,7 +303,7 @@ sint32 Client::GetActSpellCasttime(int16 spell_id, sint32 casttime)
 			|| GetClass() == PALADIN || GetClass() == BEASTLORD ))
 		cast_reducer += (GetLevel()-50)*3;
 	
-	if(casttime >= 4000 && BeneficialSpell(spell_id) && spells[spell_id].buffduration > 0){
+	if(casttime >= 4000 && BeneficialSpell(spell_id) && CalcBuffDuration(this, this, spell_id) > 0 && !IsEffectHitpointsSpell(spell_id)){
 		switch (GetAA(aaSpellCastingDeftness)) {
 			case 1:
 				cast_reducer += 5;
@@ -632,7 +632,8 @@ void EntityList::AESpell(Mob *caster, Mob *center, int16 spell_id, bool affect_c
 		else
 			caster->SpellOnTarget(spell_id, curmob);
 
-		iCounter++;
+		if(!isnpc) //npcs are not target limited...
+			iCounter++;
 	}	
 }
 

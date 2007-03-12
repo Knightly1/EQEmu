@@ -982,6 +982,8 @@ void Client::BreakInvis()
 		entity_list.QueueClients(this, outapp, true);
 		safe_delete(outapp);
 		invisible = false;
+		invisible_undead = false;
+		invisible_animals = false;
 		hidden = false;
 		improved_hidden = false;
 	}
