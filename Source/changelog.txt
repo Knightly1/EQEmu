@@ -1,5 +1,8 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==3/14/2007
+KLS: Put in FNW's requested changes to tradeskill combines from the other day that I almost forgot about
+KLS: Tradeskill combines should check for container type now.
 
 ==3/11/2007
 KLS: Attack() will not set our target unless we have no target now.

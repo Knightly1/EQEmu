@@ -909,13 +909,17 @@ bool ZoneDatabase::GetTradeRecipe(const ItemInst* container, uint8 c_type, uint8
 	if(count < 1) {
 		return(false);	//no items == no recipe
 	}
+
+	//add in the container.
+	count++;
+	sum += type;
 	
 	qlen = MakeAnyLenString(&query, "SELECT tre.recipe_id "
 	" FROM tradeskill_recipe_entries AS tre"
 	" WHERE ( tre.item_id IN(%s) AND tre.componentcount>0 )"
 	"  OR ( tre.item_id=%u AND tre.iscontainer=1 )"
-	" GROUP BY tre.recipe_id HAVING sum(tre.componentcount) = %u"
-	"  AND sum(tre.item_id * tre.componentcount) = %u", buf2, type, count, sum);
+	" GROUP BY tre.recipe_id HAVING sum(tre.componentcount+tre.iscontainer) = %u"
+	"  AND sum(tre.item_id * (tre.componentcount+tre.iscontainer)) = %u", buf2, type, count, sum);
 	
 	if (!RunQuery(query, qlen, errbuf, &result)) {
 		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept search, query: %s", query);
@@ -949,9 +953,10 @@ bool ZoneDatabase::GetTradeRecipe(const ItemInst* container, uint8 c_type, uint8
 		
 		qlen = MakeAnyLenString(&query, "SELECT tre.recipe_id"
 		" FROM tradeskill_recipe_entries AS tre"
-		" WHERE tre.recipe_id IN (%s)"
-		" GROUP BY tre.recipe_id HAVING sum(tre.componentcount) = %u"
-		"  AND sum(tre.item_id * tre.componentcount) = %u", buf2, count, sum);
+		" WHERE tre.recipe_id IN (%s) "
+		"       AND (tre.iscontainer=0 OR tre.item_id=%u) "
+		" GROUP BY tre.recipe_id HAVING sum(tre.componentcount+tre.iscontainer) = %u"
+		" AND sum(tre.item_id * (tre.componentcount+tre.iscontainer)) = %u", buf2, type, count, sum);
 		
 		if (!RunQuery(query, qlen, errbuf, &result)) {
 			LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept, re-query: %s", query);
@@ -977,6 +982,7 @@ bool ZoneDatabase::GetTradeRecipe(const ItemInst* container, uint8 c_type, uint8
 
 	//Right here we verify that we actually have ALL of the tradeskill components..
 	//instead of part which is possible with experimentation.
+	//This is here because something's up with the query above.. it needs to be rethought out
 	bool has_components = true;
 	char TSerrbuf[MYSQL_ERRMSG_SIZE];
     char *TSquery = 0;
