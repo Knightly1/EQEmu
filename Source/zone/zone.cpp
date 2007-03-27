@@ -363,11 +363,15 @@ void Zone::LoadTempMerchantData(){
 	workpt.b1() = DBA_b1_Zone_MerchantListsTemp;
 	DBAsyncWork* dbaw = new DBAsyncWork(&database, &MTdbafq, workpt, DBAsync::Read);
 	dbaw->AddQuery(1, &query, MakeAnyLenString(&query, 
-		"select ml.npcid,ml.slot,ml.itemid,ml.charges from "
-		"merchantlist_temp ml, npc_types nt, spawnentry se, "
-		"spawn2 s2 where nt.id=ml.npcid and nt.id=se.npcid and "
-		"se.spawngroupid=s2.spawngroupid and s2.zone='%s' "
-		"group by ml.npcid,slot order by npcid,slot asc", GetShortName()));
+		"select ml.npcid,ml.slot,ml.itemid,ml.charges "
+		"from "
+		"	merchantlist_temp ml, "
+		"	spawnentry se, "
+		"	spawn2 s2 "
+		"where "
+		"	ml.npcid=se.npcid "
+		"	and se.spawngroupid=s2.spawngroupid "
+		"	and s2.zone='%s' ", GetShortName()));
 	if (!(pQueuedMerchantsWorkID = dbasync->AddWork(&dbaw))) {
 		safe_delete(dbaw);
 		LogFile->write(EQEMuLog::Error, "dbasync->AddWork() failed adding merchant list query");
@@ -406,26 +410,27 @@ void Zone::LoadTempMerchantData(){
 }
 
 void Zone::LoadTempMerchantData_result(MYSQL_RES* result) {
-	std::list<TempMerchantList> merlist;
     MYSQL_ROW row;
+	std::map<uint32,std::list<TempMerchantList> >::iterator cur;
 	int32 npcid = 0;
 	while((row = mysql_fetch_row(result))) {
-		if(npcid != atoul(row[0])){		
-			if(npcid > 0)
-				tmpmerchanttable[npcid] = merlist;
-			npcid = atoul(row[0]);
-			merlist.clear();
-		}
 		TempMerchantList ml;
-		ml.npcid = npcid;
+		ml.npcid = atoul(row[0]);
+		if(npcid != ml.npcid){
+			cur = tmpmerchanttable.find(ml.npcid);
+			if(cur == tmpmerchanttable.end()) {
+				std::list<TempMerchantList> empty;
+				tmpmerchanttable[ml.npcid] = empty;
+				cur = tmpmerchanttable.find(ml.npcid);
+			}
+			npcid = ml.npcid;
+		}
 		ml.slot = atoul(row[1]);
 		ml.item = atoul(row[2]);
 		ml.charges = atoul(row[3]);
 		ml.origslot = ml.slot;
-		merlist.push_back(ml);
+		cur->second.push_back(ml);
 	}
-	if(npcid > 0)
-		tmpmerchanttable[npcid] = merlist;
 	//mysql_free_result(result);
 	//LogFile->write(EQEMuLog::Status, "Finished Loading Temporary Merchant Lists...");
 }
