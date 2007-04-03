@@ -867,7 +867,34 @@ void Client::LeaveGroup() {
 	isgrouped = false;
 }
 
+void Group::BalanceHP(sint32 penalty)
+{
+	int dmgtaken = 0, numMem = 0;
+	int gi = 0;
+	for(; gi < MAX_GROUP_MEMBERS; gi++)
+	{
+		if(members[gi]){
+			dmgtaken += (members[gi]->GetMaxHP() - members[gi]->GetHP());
+			numMem += 1;
+		}
+	}
 
+	dmgtaken += dmgtaken * penalty / 100;
+	dmgtaken /= numMem;
+	for(gi = 0; gi < MAX_GROUP_MEMBERS; gi++)
+	{
+		if(members[gi]){
+			if((members[gi]->GetMaxHP() - dmgtaken) < 1){ //this way the ability will never kill someone
+				members[gi]->SetHP(1);					 //but it will come darn close
+				members[gi]->SendHPUpdate();
+			}
+			else{
+				members[gi]->SetHP(members[gi]->GetMaxHP() - dmgtaken);
+				members[gi]->SendHPUpdate();
+			}
+		}
+	}
+}
 
 
 

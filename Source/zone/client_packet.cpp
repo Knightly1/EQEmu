@@ -5016,9 +5016,8 @@ void Client::Handle_OP_Mend(const EQApplicationPacket *app)
 	p_timers.Start(pTimerMend, MendReuseTime-1);
 	
 	int mendhp = GetMaxHP() / 4;
-	uint32 noadvance = MakeRandomInt(0, 200);
 	int currenthp = GetHP();
-	if (MakeRandomInt(0, 300) < (int)GetSkill(MEND)) {
+	if (MakeRandomInt(0, 199) < (int)GetSkill(MEND)) {
 		int criticalchance = 0;
 		switch(GetAA(aaCriticalMend)){
 		case 1:
@@ -5042,7 +5041,7 @@ void Client::Handle_OP_Mend(const EQApplicationPacket *app)
 		Message_StringID(4,MEND_SUCCESS);
 		//Message(4, "You mend your wounds and heal some damage");
 	}
-	else if (noadvance > 175) {
+	else if (MakeRandomInt(0, 149) < GetSkill(MEND)) {
 		if(currenthp > mendhp) {
 			SetHP(GetHP() - mendhp);
 			SendHPUpdate();
@@ -5060,10 +5059,7 @@ void Client::Handle_OP_Mend(const EQApplicationPacket *app)
 		Message_StringID(4,MEND_FAIL);
 	}
 	
-	if(noadvance < 175)
-		CheckIncreaseSkill(MEND);
-	//if ((GetSkill(MEND) < noadvance) && (MakeRandomFloat(0, 100) < 35) && (GetSkill(MEND) < 101))
-	//	this->SetSkill(MEND,GetRawSkill(MEND)+1);
+	CheckIncreaseSkill(MEND);
 	return;
 }
 

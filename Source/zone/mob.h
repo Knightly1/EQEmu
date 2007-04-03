@@ -534,7 +534,7 @@ bool logpos;
 	bool	CastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0xFFFFFFFF);
 	bool	DoCastSpell(int16 spell_id, int16 target_id, int16 slot = 10, sint32 casttime = -1, sint32 mana_cost = -1, int32* oSpellWillFinish = 0, int32 item_slot = 0xFFFFFFFF);
 	void	CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16 mana_used, int32 inventory_slot = 0xFFFFFFFF);
-	bool	SpellFinished(int16 spell_id, Mob *target, int16 slot = 10, int16 mana_used = 0);
+	bool	SpellFinished(int16 spell_id, Mob *target, int16 slot = 10, int16 mana_used = 0, int32 inventory_slot = 0xFFFFFFFF);
 	bool	SpellOnTarget(int16 spell_id, Mob* spelltar);
 	bool	ApplyNextBardPulse(int16 spell_id, Mob *spell_target, int16 slot);
 	void	BardPulse(uint16 spell_id, Mob *caster);
@@ -619,7 +619,7 @@ bool logpos;
 	bool	CanThisClassParry(void) const;
 	
 	int	GetMonkHandToHandDelay(void);
-	int8	GetClassLevelFactor();
+	int16	GetClassLevelFactor();
 	void	Mesmerize();
 	inline bool	IsMezzed() const { return mezzed; }
 	inline bool	IsStunned() const { return stunned; }

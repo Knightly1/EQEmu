@@ -1449,6 +1449,12 @@ bool Mob::CanThisClassDoubleAttack(void) const
     // All npcs over level 26 can double attack
     if (IsNPC() && GetLevel() >= 26)
         return true;
+	
+	if(GetAA(aaBestialFrenzy) || GetAA(aaHarmoniousAttack) || 
+		GetAA(aaKnightsAdvantage) || GetAA(aaFerocity)){
+			return true;
+		}
+
 	// Kaiyodo - Check the classes that can DA
 	switch(GetClass()) // Lets make sure they are the right level! -image
 	{

@@ -683,14 +683,27 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 {
 	_ZP(Mob_CastedSpellFinished);
 	
-	//watch timer for long ass reuse_time spells
-	if(IsClient() && slot != USE_ITEM_SPELL_SLOT && spells[spell_id].recast_time > 30000) {	// 10 is item
+	if(IsClient() && slot != USE_ITEM_SPELL_SLOT && spells[spell_id].recast_time > 1000) {	// 10 is item
 		if(!CastToClient()->GetPTimers().Expired(&database, pTimerSpellStart + spell_id, false)) {
 			//should we issue a  message or send them a spell gem packet?
 			Message(13, "Spell reuse timer not expired yet.");
 			mlog(SPELLS__CASTING_ERR, "Casting of %d canceled: spell reuse timer not expired", spell_id);
 			InterruptSpell();
 			return;
+		}
+	}
+
+	if(IsClient() && slot == USE_ITEM_SPELL_SLOT)
+	{
+		ItemInst *itm = CastToClient()->GetInv().GetItem(inventory_slot);
+		if(itm && itm->GetItem()->RecastDelay > 0)
+		{
+			if(!CastToClient()->GetPTimers().Expired(&database, (pTimerItemStart + itm->GetItem()->RecastType), false)) {
+				Message(13, "Spell reuse timer not expired yet.");
+				mlog(SPELLS__CASTING_ERR, "Casting of %d canceled: item spell reuse timer not expired", spell_id);
+				InterruptSpell();
+				return;
+			}
 		}
 	}
 	 
@@ -872,7 +885,7 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 	// this is common to both bard and non bard
 
 	// we're done casting, now try to apply the spell
-	if( !SpellFinished(spell_id, spell_target, slot, mana_used) )
+	if( !SpellFinished(spell_id, spell_target, slot, mana_used, inventory_slot) )
 	{
 		mlog(SPELLS__CASTING_ERR, "Casting of %d canceled: SpellFinished returned false.", spell_id);
 		InterruptSpell();
@@ -1179,7 +1192,7 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 // only used from CastedSpellFinished, and procs
 // solar: we can't interrupt in this, or anything called from this!
 // if you need to abort the casting, return false
-bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 mana_used)
+bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 mana_used, int32 inventory_slot)
 {
 	_ZP(Mob_SpellFinished);
 	
@@ -1365,7 +1378,7 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 	}
 	
 	//set our reuse timer on long ass reuse_time spells...
-	if(IsClient() && spells[spell_id].recast_time > 30000) {
+	if(IsClient() && spells[spell_id].recast_time > 1000) {
 		int recast = spells[spell_id].recast_time/1000;
 		if (spell_id == SPELL_LAY_ON_HANDS)	//lay on hands
 		{
@@ -1377,6 +1390,14 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 		}
 		mlog(SPELLS__CASTING, "Spell %d: Setting long reuse timer to %d s (orig %d)", spell_id, recast, spells[spell_id].recast_time);
 		CastToClient()->GetPTimers().Start(pTimerSpellStart + spell_id, recast);
+	}
+
+	if(IsClient() && slot == USE_ITEM_SPELL_SLOT)
+	{
+		ItemInst *itm = CastToClient()->GetInv().GetItem(inventory_slot);
+		if(itm && itm->GetItem()->RecastDelay > 0){
+			CastToClient()->GetPTimers().Start((pTimerItemStart + itm->GetItem()->RecastType), itm->GetItem()->RecastDelay);
+		}
 	}
 	
 	if(IsNPC())

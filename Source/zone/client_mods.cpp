@@ -66,10 +66,10 @@ sint16 Client::GetMaxAGI() const {
 	return GetMaxStat();
 }
 sint16 Client::GetMaxINT() const {
-	return GetMaxStat();
+	return GetMaxStat() + (GetAA(aaInnateEnlightenment) * 10);
 }
 sint16 Client::GetMaxWIS() const {
-	return GetMaxStat();
+	return GetMaxStat() + (GetAA(aaInnateEnlightenment) * 10);
 }
 sint16 Client::GetMaxCHA() const {
 	return GetMaxStat();
@@ -187,65 +187,88 @@ sint32 Client::LevelRegen()
 }
 
 sint32 Client::CalcMaxHP() {
-	max_hp = (CalcBaseHP() + itembonuses.HP + spellbonuses.HP);
+	int32 nd = 10000;
+	max_hp = (CalcBaseHP() + itembonuses.HP);
+
+	//The AA desc clearly says it only applies to base hp..
+	//but the actual effect sent on live causes the client
+	//to apply it to (basehp + itemhp).. I will oblige to the client's whims over
+	//the aa description
 	switch(GetAA(aaNaturalDurability)) {
 	case 1:
-		max_hp = (sint32)(max_hp * ((GetAA(aaPhysicalEnhancement)!=0) ? 104:102))/100;
+		nd += 200;
 		break;
 	case 2:
-		max_hp = (sint32)(max_hp * ((GetAA(aaPhysicalEnhancement)!=0) ? 107:105))/100;
+		nd += 500;
 		break;
 	case 3:
-		max_hp = (sint32)(max_hp * ((GetAA(aaPhysicalEnhancement)!=0) ? 112:110))/100;
+		nd += 1000;
 		break;
 	}
+	
+	if(GetAA(aaPhysicalEnhancement))
+		nd += 200;
+
+	nd += 150*GetAA(aaPlanarDurability);
+
+	max_hp = max_hp * nd / 10000;
+	max_hp += spellbonuses.HP;		
 	
 	if (cur_hp > max_hp)
 		cur_hp = max_hp;
 	return max_hp;
 }
 
-int8 Mob::GetClassLevelFactor(){
-	int8 multiplier = 0;
+int16 Mob::GetClassLevelFactor(){
+	int16 multiplier = 0;
 	int8 mlevel=GetLevel();
 	switch(GetClass())
 	{
-		case WARRIOR:
-		case BERSERKER:{
+		case WARRIOR:{
 			if (mlevel < 20)
-				multiplier = 22;
+				multiplier = 220;
 			else if (mlevel < 30)
-				multiplier = 23;
+				multiplier = 230;
 			else if (mlevel < 40)
-				multiplier = 25;
+				multiplier = 250;
 			else if (mlevel < 53)
-				multiplier = 27;
+				multiplier = 270;
 			else if (mlevel < 57)
-				multiplier = 28;
-			else
-				multiplier = 30;
+				multiplier = 280;
+			else if (mlevel < 60)
+				multiplier = 290;
+			else if (mlevel < 70)
+				multiplier = 300;
+			else 
+				multiplier = 311;
 			break;
 		}
 		case DRUID:
 		case CLERIC:
 		case SHAMAN:{
-			multiplier = 15;
+			if (mlevel < 70)
+				multiplier = 150;
+			else
+				multiplier = 157;
 			break;
 		}
+		case BERSERKER:
 		case PALADIN:
 		case SHADOWKNIGHT:{
 			if (mlevel < 35)
-				multiplier = 21;
+				multiplier = 210;
 			else if (mlevel < 45)
-				multiplier = 22;
+				multiplier = 220;
 			else if (mlevel < 51)
-				multiplier = 23;
+				multiplier = 230;
 			else if (mlevel < 56)
-				multiplier = 24;
+				multiplier = 240;
 			else if (mlevel < 60)
-				multiplier = 25;
+				multiplier = 250;
+			else if (mlevel < 68)
+				multiplier = 260;
 			else
-				multiplier = 26;
+				multiplier = 270;
 			break;
 		}
 		case MONK:
@@ -253,76 +276,63 @@ int8 Mob::GetClassLevelFactor(){
 		case ROGUE:
 		case BEASTLORD:{
 			if (mlevel < 51)
-				multiplier = 18;
+				multiplier = 180;
 			else if (mlevel < 58)
-				multiplier = 19;
+				multiplier = 190;
+			else if (mlevel < 70)
+				multiplier = 200;
 			else
-				multiplier = 20;
+				multiplier = 210;
 			break;
 		}
 		case RANGER:{
 			if (mlevel < 58)
-				multiplier = 20;
+				multiplier = 200;
+			else if (mlevel < 70)
+				multiplier = 210;
 			else
-				multiplier = 21;
+				multiplier = 220;
 			break;
 		}
 		case MAGICIAN:
 		case WIZARD:
 		case NECROMANCER:
 		case ENCHANTER:{
-			multiplier = 12;
+			if (mlevel < 70)
+				multiplier = 120;
+			else
+				multiplier = 127;
 			break;
 		}
 		default:{
 			if (mlevel < 35)
-				multiplier = 21;
+				multiplier = 210;
 			else if (mlevel < 45)
-				multiplier = 22;
+				multiplier = 220;
 			else if (mlevel < 51)
-				multiplier = 23;
+				multiplier = 230;
 			else if (mlevel < 56)
-				multiplier = 24;
+				multiplier = 240;
 			else if (mlevel < 60)
-				multiplier = 25;
+				multiplier = 250;
 			else
-				multiplier = 26;
+				multiplier = 260;
 			break;
 		}
 	}
-	if(mlevel >= 70)
-		multiplier += 3;
 	return multiplier;
 }
 
 sint32 Client::CalcBaseHP()
 {
-
-// Note: The client calculates max hp separatly, we cant change this function
-
-	int8 multiplier=GetClassLevelFactor();
-
-	if (multiplier == 0) {
-		LogFile->write(EQEMuLog::Debug, "Multiplier == 0 in Client::CalcBaseHP, Using Generic...");;
-		multiplier=12;
-	}
-
-	#if EQDEBUG >= 11
-		LogFile->write(EQEMuLog::Debug,"Client::CalcBaseHP() multiplier:%i level:%i sta:%i", multiplier, GetLevel(), GetSTA());
-	#endif
-int16 sta = GetSTA();
-if(sta > 305)
-sta = 305;
-	/*
-	
-	Something is wrong with this formula at higher levels.
-	the 'multiplier' is used for both level and sta increases.
-	A lvl 70 warrior has the wrong base HP. but the multiplier
-	value is correct for how many HP the war should get for each sta
-	point.
-	
-	*/
-	base_hp = 5+multiplier*GetLevel()+multiplier*GetLevel()*sta/300;
+	int16 lm=GetClassLevelFactor();
+	int16 Post255;
+	if((GetSTA()-255)/2 > 0)
+		Post255 = (GetSTA()-255)/2;
+	else
+		Post255 = 0;
+		
+	base_hp = (5)+(GetLevel()*lm/10) + (((GetSTA()-Post255)*GetLevel()*lm/3000));
 	return base_hp;
 }
 
@@ -756,24 +766,44 @@ sint16 Client::CalcAC() {
 
 sint32 Client::CalcMaxMana()
 {
+	int WisInt = 0;
+	int MindLesserFactor, MindFactor;
 	switch(GetCasterClass())
 	{
-		case 'I': {
-			int lev = GetLevel();
-			int mana_calc = GetINT()*lev/5 + lev+lev;
-			max_mana = mana_calc + spellbonuses.Mana + itembonuses.Mana;
-			if(GetLevel() > 2)
-				max_mana += (GetLevel()/2)-1;
+		case 'I': 
+			WisInt = GetINT();
+
+			if((( WisInt - 199 ) / 2) > 0)
+				MindLesserFactor = ( WisInt - 199 ) / 2;
+			else
+				MindLesserFactor = 0;
+
+			MindFactor = WisInt - MindLesserFactor;
+			if(WisInt > 100)
+				max_mana = (((5 * (MindFactor + 20)) / 2) * 3 * GetLevel() / 40);
+			else
+				max_mana = (((5 * (MindFactor + 200)) / 2) * 3 * GetLevel() / 100);	
+			
+			max_mana += (itembonuses.Mana + spellbonuses.Mana);
 			break;
-				  }
-		case 'W': {
-			int lev = GetLevel();
-			int mana_calc = GetWIS()*lev/5 + lev+lev;
-			max_mana = mana_calc + spellbonuses.Mana + itembonuses.Mana;
-			if(GetLevel() > 2)
-				max_mana += (GetLevel()/2)-1;
+
+		case 'W':
+			WisInt = GetWIS();
+
+			if((( WisInt - 199 ) / 2) > 0)
+				MindLesserFactor = ( WisInt - 199 ) / 2;
+			else
+				MindLesserFactor = 0;
+
+			MindFactor = WisInt - MindLesserFactor;
+			if(WisInt > 100)
+				max_mana = (((5 * (MindFactor + 20)) / 2) * 3 * GetLevel() / 40);
+			else
+				max_mana = (((5 * (MindFactor + 200)) / 2) * 3 * GetLevel() / 100);	
+			
+			max_mana += (itembonuses.Mana + spellbonuses.Mana);
 			break;
-				  }
+				
 		case 'N': {
 			max_mana = 0;
 			break;

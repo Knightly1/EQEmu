@@ -1175,12 +1175,14 @@ int16 Mob::CheckHealAggroAmount(int16 spellid) {
 			case SE_Rune:
 			case SE_CurrentHP:{
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
-				AggroAmount += val/3;
+				if(val > 0)
+					AggroAmount += val/3;
 				break;
 			}
 			case SE_HealOverTime: {
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
-				AggroAmount += val/6;
+				if(val > 0)
+					AggroAmount += val/6;
 				break;
 			}
 			default:{

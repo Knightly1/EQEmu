@@ -1,6 +1,20 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==4/02/2007
+KLS: Implemented number6 inspired item cooldown timers.
+KLS: Added rules: NPC:MinorNPCCorpseDecayTimeMS & NPC:MajorNPCCorpseDecayTimeMS to set the decay time in millisecond of mobs below 55 and greater or equal to 55 respectively
+KLS: Addressed an issue that caused some beneficial spells to generate incorrect aggro amounts.
+KLS: Implemented some more passive PoP AA skills.
+KLS: Fixed an problem with avoidance AAs adding chance to be hit instead of subtracting it.
+KLS: Small change to the way pets and familiars initially aggro, familiars should never aggro now.
+KLS: Fixed an issue where the combat code was checking for warrior triple attack but the skill check would always fail.
+KLS: Critical hits should now be filterable as critical hits.
+KLS: Redid hp and mana calculations based on magelo formulas, should be much more accurate, especially when using AA that increase hp.
+KLS: Made mend skill checks more lienent, shouldn't ever fail after 200 skill, shouldn't ever hurt you after 150
+KLS: Initial implementation of hp balance spell effect.
+KLS: Focus effects that limit max level should now correctly reduce the effect by a percentage if the spell is over the level cap
+
 ==3/26/2007
 FatherNitwit: Optimized the merchantlist_temp query on boot.
 

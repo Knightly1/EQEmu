@@ -241,8 +241,8 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 			}
 			
 			int clfact = GetClassLevelFactor();
-			min_dmg = (min_dmg * clfact) / 22;
-			max_dmg = (max_dmg * clfact) / 22;	
+			min_dmg = (min_dmg * clfact) / 220;
+			max_dmg = (max_dmg * clfact) / 220;	
 	}	
 	
     CalcMaxMana();

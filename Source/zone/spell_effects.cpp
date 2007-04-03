@@ -2109,6 +2109,22 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				}
 				break;
 			}
+
+			case SE_BalanceHP: {
+				if(!caster)				
+					break;
+
+				if(!caster->IsClient())
+					break;
+
+				Group *g = entity_list.GetGroupByClient(caster->CastToClient());
+
+				if(!g)
+					break;
+
+				g->BalanceHP(spell.base[i]);
+				break;
+			}
 			
 			//currently missing effects:
 			//SE_SummonItem2
@@ -2117,7 +2133,6 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 			//SE_DeathSave
 			//SE_CriticalDamageMob
 			//SE_Cloak
-			//SE_BalanceHP
 			
 			default:
 			{
@@ -2697,6 +2712,7 @@ sint16 Client::CalcFocusEffect(focusType type, int16 focus_id, int16 spell_id) {
 	const SPDat_Spell_Struct &spell = spells[spell_id];
 	
 	sint16 value = 0;
+	int lvlModifier = 100;
 	
 	for (int i = 0; i < EFFECT_COUNT; i++) {
 		switch (focus_spell.effectid[i]) {
@@ -2721,10 +2737,16 @@ sint16 Client::CalcFocusEffect(focusType type, int16 focus_id, int16 spell_id) {
 			break;
 		}
 		
-		case SE_LimitMaxLevel:
-			if (spell.classes[(GetClass()%16) - 1] > focus_spell.base[i])
-				return(0);
+		case SE_LimitMaxLevel:{
+			int lvldiff = (spell.classes[(GetClass()%16) - 1]) - focus_spell.base[i];
+
+			if(lvldiff > 0){ //every level over cap reduces the effect by spell.base2[i] percent
+				lvlModifier -= spell.base2[i]*lvldiff;
+				if(lvlModifier < 1)
+					return 0;
+			}
 			break;
+		}
 			
 		case SE_LimitMinLevel:
 			if (spell.classes[(GetClass()%16) - 1] < focus_spell.base[i])
@@ -2865,7 +2887,7 @@ sint16 Client::CalcFocusEffect(focusType type, int16 focus_id, int16 spell_id) {
 #endif
 		}
 	}
-	return(value);
+	return(value*lvlModifier/100);
 }
 
 sint16 Client::GetFocusEffect(focusType type, int16 spell_id) {

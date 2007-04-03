@@ -71,6 +71,11 @@ RULE_INT ( Combat, NPCBashKickLevel, 6 ) //The level that npcs can KICK/BASH
 RULE_REAL ( Combat, ClientBaseCritChance, 0.0 ) //The base crit chance for all clients, this will stack with warrior's/zerker's crit chance.
 RULE_CATEGORY_END()
 
+RULE_CATEGORY( NPC )
+RULE_INT ( NPC, MinorNPCCorpseDecayTimeMS, 450000 ) //level<55
+RULE_INT ( NPC, MajorNPCCorpseDecayTimeMS, 1500000 ) //level>=55
+RULE_CATEGORY_END()
+
 #undef RULE_CATEGORY
 #undef RULE_INT
 #undef RULE_REAL

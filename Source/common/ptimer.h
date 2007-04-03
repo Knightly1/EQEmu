@@ -43,6 +43,9 @@ enum {	//values for pTimerType
 	
 	pTimerLayHands = 87,		//these IDs are used by client too
 	pTimerHarmTouch = 89,		//so dont change them
+
+	pTimerItemStart = 100,
+	pTimerItemEnd = 200, //I don't think any items would use one this high but hey, incase.
 	
 	pTimerAAStart = 1000,		//AA re-use timers
 	pTimerAAEnd = 2999,

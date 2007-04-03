@@ -310,9 +310,9 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 		AA_mod = 10;
 		break;
 	}
-
 	AA_mod += 3*GetAA(aaPhysicalEnhancement);
-	chancetohit += chancetohit * AA_mod / 100;
+	AA_mod += 2*GetAA(aaLightningReflexes);
+	chancetohit -= chancetohit * AA_mod / 100;
 	
 	// Chance to hit;   Max 95%, Min 30%
 	if(chancetohit > 1000) {
@@ -566,6 +566,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	}
 
 	aaMit += GetAA(aaPhysicalEnhancement)*2;
+	aaMit += GetAA(aaInnateDefense);
 	damage = damage * (100-aaMit) / 100;
 	
 	mlog(COMBAT__DAMAGE, "Final damage after all avoidances: %d", damage);
@@ -763,6 +764,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		//kathgar: Made it so players cannot be finishing blowed.. something wanky was going on
 		//			Added level limits and fixed the chances to the correct values?
 		uint16 aa_item = GetAA(aaFinishingBlow);
+		aa_item += GetAA(aaCoupdeGrace);
 		if(aa_item>0 && !other->IsClient() && other->GetHPRatio() < 10 && (other->GetLevel()<=54))	//Don't finishing blow players.. at least for now)
 		{
 			float tempchancerand = MakeRandomFloat(0, 100);
@@ -770,7 +772,10 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 			(
 				(aa_item==1 && (tempchancerand<=2)&& other->GetLevel() <= 54) ||
 				(aa_item==2 && (tempchancerand<=5)&& other->GetLevel() <= 52) ||
-				(aa_item==3 && (tempchancerand<=7)&& other->GetLevel() <= 50)
+				(aa_item==3 && (tempchancerand<=7)&& other->GetLevel() <= 50) ||
+				(aa_item==4 && (tempchancerand<=7)&& other->GetLevel() <= 55) ||
+				(aa_item==5 && (tempchancerand<=7)&& other->GetLevel() <= 57) ||
+				(aa_item==6 && (tempchancerand<=7)&& other->GetLevel() <= 59)
 			)
 			{
 				mlog(COMBAT__ATTACKS, "Landed a finishing blow: AA at %d, other level %d, roll %.1f", aa_item, other->GetLevel(), tempchancerand);
@@ -1520,7 +1525,7 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skill) 
 	
 	if (!HasOwner() && class_ != MERCHANT && class_ != ADVENTUREMERCHANT 
 		&& MerchantType == 0 && killer && (killer->IsClient() || (killer->HasOwner() && killer->GetOwner()->IsClient())) ) {
-		Corpse* corpse = new Corpse(this, &itemlist, GetNPCTypeID(), &NPCTypedata);
+		Corpse* corpse = new Corpse(this, &itemlist, GetNPCTypeID(), &NPCTypedata,level>54?RuleI(NPC,MajorNPCCorpseDecayTimeMS):RuleI(NPC,MinorNPCCorpseDecayTimeMS));
 		entity_list.LimitRemoveNPC(this);
 		entity_list.AddCorpse(corpse, this->GetID());
 		this->SetID(0);
@@ -1599,10 +1604,11 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 	hate_list.Add(other, hate, damage, bFrenzy, !iBuffTic);
 	
 	if (mypet && (!(GetAA(aaPetDiscipline) && mypet->IsHeld()))) { // I have a pet, add other to it
-		mypet->hate_list.Add(other, 1, 0, bFrenzy);
+		if(!mypet->IsFamiliar())
+			mypet->hate_list.Add(other, 0, 0, bFrenzy);
 	} else if (myowner) { // I am a pet, add other to owner if it's NPC/LD
 		if (myowner->IsAIControlled())
-			myowner->hate_list.Add(other, 1, 0, bFrenzy);
+			myowner->hate_list.Add(other, 0, 0, bFrenzy);
 	}
 	if (!wasengaged) { 
 		if(IsNPC() && other->IsClient() && other->CastToClient())
@@ -1863,7 +1869,7 @@ bool Client::CheckDoubleAttack(bool AAadd, bool Triple) {
 		if(!HasSkill(DOUBLE_ATTACK))
 			return(false);
 		
-		if (GetClass() == MONK)
+		if (GetClass() == MONK || GetClass() == WARRIOR)
 		{
 			skill = GetSkill(DOUBLE_ATTACK)/2;
 		} else {
@@ -1874,15 +1880,14 @@ bool Client::CheckDoubleAttack(bool AAadd, bool Triple) {
 	{
 		
 		//should these stack with skill, or does that ever even happen?
-		int aaskill = GetAA(aaBestialFrenzy)*25 + GetAA(aaHarmoniousAttack)*25;
+		int aaskill = GetAA(aaBestialFrenzy)*25 + GetAA(aaHarmoniousAttack)*25
+			+ GetAA(aaKnightsAdvantage)*25 + GetAA(aaFerocity)*25;
+			
 		if (!aaskill && !HasSkill(DOUBLE_ATTACK))
 		{
 			return false;
 		}
-		skill = GetSkill(DOUBLE_ATTACK);
-		if (aaskill > skill) {
-			skill = aaskill;
-		}
+		skill = GetSkill(DOUBLE_ATTACK) + aaskill;
 		
 		//discipline effects
 		skill += (spellbonuses.DoubleAttackChance + itembonuses.DoubleAttackChance) * 3;
@@ -2393,6 +2398,22 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 	default:
 		break;
 	}
+
+	switch(GetAA(aaFuryoftheAges))
+	{
+	case 1:
+		critChance += 0.02f;
+		break;
+	case 2:
+		critChance += 0.04f;
+		break;
+	case 3:
+		critChance += 0.07f;
+		break;
+	default:
+		break;
+	}
+
 	float CritBonus = spellbonuses.CriticalHitChance + itembonuses.CriticalHitChance;
 	if(CritBonus > 0.0 && critChance < 0.01) //If we have a bonus to crit in items or spells but no actual chance to crit
 		critChance = 0.01f; //Give them a small one so skills and items appear to have some effect.
@@ -2419,11 +2440,11 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 			damage = (damage * critMod) / 100;
 			if(IsClient() && CastToClient()->berserk)
 			{
-				entity_list.MessageClose(this, false, 200, 10, "%s lands a crippling blow!(%d)", GetCleanName(), damage);
+				entity_list.MessageClose(this, false, 200, MT_CritMelee, "%s lands a crippling blow!(%d)", GetCleanName(), damage);
 			}
 			else
 			{
-				entity_list.MessageClose(this, false, 200, 10, "%s scores a critical hit!(%d)", GetCleanName(), damage);
+				entity_list.MessageClose(this, false, 200, MT_CritMelee, "%s scores a critical hit!(%d)", GetCleanName(), damage);
 			}
 		}
 	}
@@ -2446,6 +2467,9 @@ void Mob::DoRiposte(Mob *defender){
 			DoubleRipChance = 50;
 			break;
 		}
+
+		DoubleRipChance += 10*GetAA(aaFlashofSteel);
+
 		if(DoubleRipChance >= MakeRandomInt(0, 100)) {
 			mlog(COMBAT__ATTACKS, "Preforming a double riposed (%d percent chance)", DoubleRipChance);
 			defender->Attack(this, 13, true);

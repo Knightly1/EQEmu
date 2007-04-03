@@ -85,6 +85,7 @@ public:
 	void	TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z);
 	bool	LearnMembers();
 	void	VerifyGroup();
+	void	BalanceHP(sint32 penalty);
 	
 #ifdef ENABLE_GROUP_LINKING
 	//linking methods
