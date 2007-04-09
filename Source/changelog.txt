@@ -1,6 +1,13 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==4/08/2007
+KLS: Added support for the skill Frenzy.
+KLS: Various tweaks and changes to some passive AA abilities.
+KLS: Added #traindisc to train disciplines on the target player, #scribespells should no longer memorize disciplines to the spellbook.
+KLS: Fixed an issue with spells that require components that use item ids higher than 32k
+KLS: Fixed an issue with AAs and focus effects that increase buff duration not appearing correctly for clients until they zone.
+
 ==4/02/2007
 KLS: Implemented number6 inspired item cooldown timers.
 KLS: Added rules: NPC:MinorNPCCorpseDecayTimeMS & NPC:MajorNPCCorpseDecayTimeMS to set the decay time in millisecond of mobs below 55 and greater or equal to 55 respectively

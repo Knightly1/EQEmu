@@ -2039,6 +2039,9 @@ int Mob::AddBuff(Mob *caster, int16 spell_id, int duration)
 	buffs[emptyslot].cursecounters = 0;
 	buffs[emptyslot].numhits = spells[spell_id].numhits;
 	buffs[emptyslot].client = caster ? caster->IsClient() : 0;
+
+	if(buffs[emptyslot].ticsremaining > (1+CalcBuffDuration_formula(caster_level, spells[spell_id].buffdurationformula, spells[spell_id].buffduration)))
+		buffs[emptyslot].UpdateClient = true;
 		
 	mlog(SPELLS__BUFFS, "Buff %d added to slot %d with caster level %d", spell_id, emptyslot, caster_level);
 	
@@ -3617,14 +3620,22 @@ void Mob::_StopSong()
 	bardsong_timer.Disable();
 }
 
+//This member function sets the buff duration on the client
+//however it does not work if sent quickly after an action packets, which is what one might perfer to do
+//Thus I use this in the buff process to update the correct duration once after casting
+//this allows AAs and focus effects that increase buff duration to work correctly, but could probably
+//be used for other things as well
+void Client::SendBuffDurationPacket(int16 spell_id, int slot_id, int duration)
+{
+	EQApplicationPacket* outapp;
+	outapp = new EQApplicationPacket(OP_Buff, sizeof(SpellBuffFade_Struct));
+	SpellBuffFade_Struct* sbf = (SpellBuffFade_Struct*) outapp->pBuffer;
 
-
-
-
-
-
-
-
-
-
-
+	sbf->entityid = GetID();
+	sbf->slot=2;
+	sbf->spellid=spell_id;
+	sbf->slotid=slot_id;
+	sbf->bufffade = 0;
+	sbf->duration = duration;
+	FastQueuePacket(&outapp);
+}

@@ -1964,17 +1964,19 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 		//if there is some damage being done and theres an attacker involved
 		if(attacker) {
 			if(spell_id == SPELL_HARM_TOUCH2 && attacker->IsClient() && attacker->CastToClient()->CheckAAEffect(aaEffectLeechTouch)){
-				attacker->HealDamage(damage);
+				int healed = damage;
+				healed = attacker->GetActSpellHealing(spell_id, healed);
+				attacker->HealDamage(healed);
 				entity_list.MessageClose(this, true, 300, MT_Emote, "%s beams a smile at %s", attacker->GetCleanName(), this->GetCleanName() );
 				attacker->CastToClient()->DisableAAEffect(aaEffectLeechTouch);
 			}
 
 			// if spell is lifetap add hp to the caster
 			if (spell_id != SPELL_UNKNOWN && IsLifetapSpell( spell_id )) {
-				
-				mlog(COMBAT__DAMAGE, "Applying lifetap heal of %d to %s", damage, attacker->GetName());
-				
-				attacker->HealDamage(damage);
+				int healed = damage;
+				healed = attacker->GetActSpellHealing(spell_id, healed);				
+				mlog(COMBAT__DAMAGE, "Applying lifetap heal of %d to %s", healed, attacker->GetName());
+				attacker->HealDamage(healed);
 				
 				//we used to do a message to the client, but its gone now.
 				// emote goes with every one ... even npcs
@@ -2402,13 +2404,13 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 	switch(GetAA(aaFuryoftheAges))
 	{
 	case 1:
-		critChance += 0.02f;
+		critChance += 0.01f;
 		break;
 	case 2:
-		critChance += 0.04f;
+		critChance += 0.03f;
 		break;
 	case 3:
-		critChance += 0.07f;
+		critChance += 0.05f;
 		break;
 	default:
 		break;

@@ -588,3 +588,15 @@ sint32 CalculateCurseCounters(int16 spell_id){
 	}
     return Counters;
 }
+
+bool IsDiscipline(int16 spell_id)
+{
+	if(!IsValidSpell(spell_id))
+		return false;
+
+	if(spells[spell_id].mana == 0 && (spells[spell_id].EndurCost || spells[spell_id].EndurUpkeep))
+	{
+		return true;
+	}
+	return false;
+}

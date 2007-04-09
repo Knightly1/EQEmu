@@ -18,7 +18,7 @@
 #ifndef SKILLS_H
 #define SKILLS_H
 
-#define HIGHEST_SKILL	73
+#define HIGHEST_SKILL	74
 
 
 // Correct Skill Numbers as of 4-14-2002
@@ -96,6 +96,7 @@
 #define INTIMIDATION			71
 #define BERSERKING				72
 #define TAUNT					73
+#define FRENZY					74
 
 
 // Changed by Socket 12/28/01

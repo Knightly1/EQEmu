@@ -2368,6 +2368,12 @@ void Mob::BuffProcess() {
 					mlog(SPELLS__BUFFS, "Buff %d in slot %d has %d tics remaining.", buffs[buffs_i].spellid, buffs_i, buffs[buffs_i].ticsremaining);
 				}
 			}
+			if(IsClient()){
+				if(buffs[buffs_i].UpdateClient == true){
+					CastToClient()->SendBuffDurationPacket(buffs[buffs_i].spellid, buffs_i, buffs[buffs_i].ticsremaining);
+					buffs[buffs_i].UpdateClient = false;
+				}
+			}
 		}
 	}
 }

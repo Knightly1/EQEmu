@@ -6073,6 +6073,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 				buffs[i].cursecounters		= CalculateCurseCounters(m_pp.buffs[i].spellid);
 				buffs[i].numhits			= spells[buffs[i].spellid].numhits;
 				buffs[i].persistant_buff	= m_pp.buffs[i].persistant_buff;
+				buffs[i].UpdateClient		= false;
 			}
 			else {
 				buffs[i].spellid = SPELL_UNKNOWN;

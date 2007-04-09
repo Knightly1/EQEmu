@@ -127,6 +127,7 @@ struct Buffs_Struct {
 	bool	persistant_buff;
 	uint32	numhits; //the number of physical hits this buff can take before it fades away, lots of druid armor spells take advantage of this mixed with powerful effects
 	bool	client;  //True if the caster is a client
+	bool	UpdateClient;
 };
 
 struct StatBonuses {

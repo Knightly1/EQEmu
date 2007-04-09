@@ -655,6 +655,10 @@ public:
 	void	EnteringMessages(Client* client);
 	void	SendRules(Client* client);
 	std::list<Client*> consent_list;
+	
+	//This is used to later set the buff duration of the spell, in slot to duration. 
+	//Doesn't appear to work directly after the client recieves an action packet.
+	void SendBuffDurationPacket(int16 spell_id, int slot_id, int duration);
 
 
 protected:

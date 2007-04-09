@@ -96,10 +96,11 @@ typedef enum {
  INTIMIDATION			= 71,
  BERSERKING				= 72,
  TAUNT					= 73,
+ FRENZY					= 74,
  GENERIC_TRADESKILL 	= 75
 } SkillType;
 
-#define HIGHEST_SKILL	TAUNT
+#define HIGHEST_SKILL	FRENZY
 
 #endif
 

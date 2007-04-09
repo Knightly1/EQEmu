@@ -385,7 +385,8 @@ int command_init(void) {
 		command_add("guildapprove","[guildapproveid] - Approve a guild with specified ID (guild creator receives the id)",0,command_guildapprove) ||
 		command_add("guildlist","[guildapproveid] - Lists character names who have approved the guild specified by the approve id",0,command_guildlist) ||
 		command_add("altactivate", "[argument] - activates alternate advancement abilities, use altactivate help for more information", 0, command_altactivate) ||
-		command_add("refundaa", "Refunds your target's AA points, will disconnect them in the process as well.", 100, command_refundaa)
+		command_add("refundaa", "Refunds your target's AA points, will disconnect them in the process as well.", 100, command_refundaa) ||
+		command_add("traindisc","[level] - Trains all the disciplines usable by the target, up to level specified. (may freeze client for a few seconds)",150,command_traindisc)	
 		)
 	{
 		command_deinit();
@@ -2469,7 +2470,7 @@ void command_setskill(Client *c, const Seperator *sep)
 					)
 	{
 		c->Message(0, "Usage: #setskill skill x ");
-		c->Message(0, "       skill = 0 to 73");
+		c->Message(0, "       skill = 0 to %d", HIGHEST_SKILL);
 		c->Message(0, "       x = 0 to %d", HIGHEST_CAN_SET_SKILL);
 	}
 	else {
@@ -4665,7 +4666,9 @@ void command_scribespells(Client *c, const Seperator *sep)
 			spells[curspell].skill != 52
 		)
 		{
-			t->ScribeSpell(curspell, book_slot++);
+			if(!IsDiscipline(curspell)){
+				t->ScribeSpell(curspell, book_slot++);
+			}
 		}
 	}
 }
@@ -6968,5 +6971,59 @@ void command_refundaa(Client *c, const Seperator *sep){
 	if(refunded){
 		refundee->Save(); //save of course
 		refundee->Kick(); //client gets all buggy if we don't immediatly relog so just force it on them
+	}
+}
+
+void command_traindisc(Client *c, const Seperator *sep)
+{
+	int level;
+	int16 book_slot;
+	int16 curspell;
+	Client *t=c;
+
+	if(c->GetTarget() && c->GetTarget()->IsClient() && c->GetGM())
+		t=c->GetTarget()->CastToClient();
+
+	if(!sep->arg[1][0])
+	{
+		c->Message(0, "FORMAT: #traindisc <level>");
+		return;
+	}
+
+	level = atoi(sep->arg[1]);
+
+	if(level < 1 || level > 70)
+	{
+		c->Message(0, "ERROR: Enter a level between 1 and 70 inclusive.");
+		return;
+	}
+
+	t->Message(0, "Training disciplines");
+	if(t != c)
+		c->Message(0, "Training disciplines for %s.", t->GetName());
+	LogFile->write(EQEMuLog::Normal, "Train disciplines request for %s from %s, level: %d", t->GetName(), c->GetName(), level);
+
+	for(curspell = 0, book_slot = 0; curspell < SPDAT_RECORDS && book_slot < MAX_PP_SPELLBOOK; curspell++)
+	{
+		if
+		(
+			spells[curspell].classes[WARRIOR] != 0 && // check if spell exists
+			spells[curspell].classes[t->GetPP().class_-1] <= level && 
+			spells[curspell].skill != 52
+		)
+		{
+			if(IsDiscipline(curspell)){
+				for(int r = 0; r < MAX_PP_DISCIPLINES; r++) {
+					if(t->GetPP().disciplines.values[r] == curspell) {
+						t->Message(13, "You already know this discipline.");
+					} else if(t->GetPP().disciplines.values[r] == 0) {
+						t->GetPP().disciplines.values[r] = curspell;
+						t->SendDisciplineUpdate();
+						t->Message(0, "You have learned a new discipline!");
+						r = MAX_PP_DISCIPLINES;
+					}
+				}
+			}
+		}
 	}
 }

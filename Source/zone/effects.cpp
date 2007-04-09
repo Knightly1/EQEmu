@@ -122,7 +122,6 @@ sint32 Client::GetActSpellDamage(int16 spell_id, sint32 value) {
 			if(ratio < 100)	//chance increase and ratio are made up, not confirmed
 				ratio = 100;
 		} else if(spells[spell_id].targettype == ST_Tap) {
-			chance += 3*GetAA(aaTheftofLife);
 			if(ratio < 100)	//chance increase and ratio are made up, not confirmed
 				ratio = 100;
 			
@@ -203,6 +202,11 @@ sint32 Client::GetActSpellHealing(int16 spell_id, sint32 value) {
 			break;
 		}
 		chance += GetAA(aaAdvancedHealingGift) * 2;
+
+		if(spells[spell_id].targettype == ST_Tap)
+		{
+			chance += GetAA(aaTheftofLife) * 3;
+		}
 		
 		if(MakeRandomInt(0,100) < chance) {
 			entity_list.MessageClose(this, false, 100, MT_SpellCrits, "%s performs an exceptional heal! (%d)", GetName(), ((value * modifier) / 50));		
@@ -303,7 +307,7 @@ sint32 Client::GetActSpellCasttime(int16 spell_id, sint32 casttime)
 			|| GetClass() == PALADIN || GetClass() == BEASTLORD ))
 		cast_reducer += (GetLevel()-50)*3;
 	
-	if(casttime >= 4000 && BeneficialSpell(spell_id) && CalcBuffDuration(this, this, spell_id) > 0 && !IsEffectHitpointsSpell(spell_id)){
+	if(casttime >= 4000 && BeneficialSpell(spell_id) && CalcBuffDuration(this, this, spell_id) > 0){
 		switch (GetAA(aaSpellCastingDeftness)) {
 			case 1:
 				cast_reducer += 5;

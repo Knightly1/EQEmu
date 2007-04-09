@@ -201,7 +201,8 @@ enum {	//reuse times
 	SenseTrapsReuseTime = 9,
 	DisarmTrapsReuseTime = 9,
 	HarmTouchReuseTime = 4300,
-	LayOnHandsReuseTime = 4300
+	LayOnHandsReuseTime = 4300,
+	FrenzyReuseTime = 10
 };
 
 enum {	//various hard caps

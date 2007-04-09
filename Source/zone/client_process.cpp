@@ -268,7 +268,7 @@ bool Client::Process() {
 							flurrychance += 50;
 							break;
 					}
-					switch (GetAA(183)) {
+					switch (GetAA(aaRagingFlurry)) {
 						case 1:
 							flurrychance += 10;
 							break;

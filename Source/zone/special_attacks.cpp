@@ -155,6 +155,56 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 		}
 		return;
 	}
+
+	//Frenzy, an instant attack that does up to 3 unmodified attacks before AA's and foci
+	//It attempts to do an attack, for the next hit to succeed the previous must not of missed
+	if ((ca_atk->m_atk == 100) && (ca_atk->m_skill == FRENZY)) {
+		if(!target->IsClient())
+			CheckIncreaseSkill(FRENZY);
+
+		int AtkNum = 1 + (GetSkill(FRENZY)/100);
+		int weapon_damage = 0;
+		SkillType skillinuse;
+
+		ItemInst *itm = GetInv().GetItem(SLOT_PRIMARY);
+		if(itm){
+			bool bane;
+			weapon_damage = GetWeaponDamage(target, itm->GetItem(), bane);
+		}else{
+			weapon_damage = 2;
+		}
+
+		int max_hit = (weapon_damage * (((GetSTR()*20) + (GetSkill(OFFENSE)*15) + (GetLevel()*10)) / 1000));	// Apply damage formula
+		int min_hit = 0;
+		int damage_bonus = GetWeaponDamageBonus(itm?itm->GetItem():NULL);
+		min_hit += damage_bonus;
+		max_hit += damage_bonus;
+		min_hit = min_hit * (100 + itembonuses.MinDamageModifier + spellbonuses.MinDamageModifier) / 100;
+
+		while(AtkNum > 0 && target)
+		{
+			AttackAnimation(skillinuse, 13, itm);
+			if(!target->CheckHitChance(this, FRENZY, 0)) {
+				dmg = 0;
+			}
+			else{
+				dmg = MakeRandomInt(min_hit, max_hit);
+			}
+			DoSpecialAttackDamage(target, skillinuse, dmg);
+			if(dmg > 0)
+				AtkNum--;
+			else
+				AtkNum = 0;
+		}
+		
+		ReuseTime = FrenzyReuseTime-1;
+		ReuseTime = (ReuseTime*HasteMod)/100;
+		if(ReuseTime > 0)
+		{
+			p_timers.Start(pTimerCombatAbility, ReuseTime);
+		}
+		return;
+	}
 	
 	switch(GetClass())
 	{

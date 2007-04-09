@@ -409,7 +409,7 @@ struct SPDat_Spell_Struct
 /* 044 */	sint16		max[EFFECT_COUNT];
 /* 056 */	int16		icon; // Spell icon
 /* 057 */	int16		memicon; // Icon on membarthing
-/* 058 */	sint16		components[4]; // reagents
+/* 058 */	sint32		components[4]; // reagents
 /* 062 */	int			component_counts[4]; // amount of regents used
 /* 066 */	signed		NoexpendReagent[4];	// focus items (Need but not used; Flame Lick has a Fire Beetle Eye focus.)
 											// If it is a number between 1-4 it means components[number] is a focus and not to expend it
@@ -516,6 +516,7 @@ int CalcBuffDuration_formula(int level, int formula, int duration);
 sint32 CalculatePoisonCounters(int16 spell_id);
 sint32 CalculateDiseaseCounters(int16 spell_id);
 sint32 CalculateCurseCounters(int16 spell_id);
+bool IsDiscipline(int16 spell_id);
 
 
 int CalcPetHp(int levelb, int classb, int STA = 75);
