@@ -2370,7 +2370,7 @@ void Mob::BuffProcess() {
 			}
 			if(IsClient()){
 				if(buffs[buffs_i].UpdateClient == true){
-					CastToClient()->SendBuffDurationPacket(buffs[buffs_i].spellid, buffs_i, buffs[buffs_i].ticsremaining);
+					CastToClient()->SendBuffDurationPacket(buffs[buffs_i].spellid, buffs[buffs_i].ticsremaining, buffs[buffs_i].casterlevel);
 					buffs[buffs_i].UpdateClient = false;
 				}
 			}

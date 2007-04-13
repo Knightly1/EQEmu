@@ -3625,7 +3625,7 @@ void Mob::_StopSong()
 //Thus I use this in the buff process to update the correct duration once after casting
 //this allows AAs and focus effects that increase buff duration to work correctly, but could probably
 //be used for other things as well
-void Client::SendBuffDurationPacket(int16 spell_id, int slot_id, int duration)
+void Client::SendBuffDurationPacket(int16 spell_id, int duration, int inlevel)
 {
 	EQApplicationPacket* outapp;
 	outapp = new EQApplicationPacket(OP_Buff, sizeof(SpellBuffFade_Struct));
@@ -3634,7 +3634,9 @@ void Client::SendBuffDurationPacket(int16 spell_id, int slot_id, int duration)
 	sbf->entityid = GetID();
 	sbf->slot=2;
 	sbf->spellid=spell_id;
-	sbf->slotid=slot_id;
+	sbf->slotid=0;
+	sbf->effect = inlevel > 0 ? inlevel : GetLevel();
+	sbf->level = inlevel > 0 ? inlevel : GetLevel();
 	sbf->bufffade = 0;
 	sbf->duration = duration;
 	FastQueuePacket(&outapp);
