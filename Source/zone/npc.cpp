@@ -333,6 +333,8 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	  
 NPC::~NPC()
 {
+	AI_Stop();
+
 	if(proximity != NULL) {
 		entity_list.RemoveProximity(GetID());
 		safe_delete(proximity);

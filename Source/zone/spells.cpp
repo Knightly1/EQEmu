@@ -2205,6 +2205,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	// invuln mobs can't be affected by any spells, good or bad
 	if(spelltar->GetInvul() || spelltar->DivineAura()) {
 		mlog(SPELLS__CASTING_ERR, "Casting spell %d on %s aborted: they are invulnerable.", spell_id, spelltar->GetName());
+		safe_delete(action_packet);
 		return false;
 	}
 	
@@ -2212,6 +2213,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	bodyType bt = spelltar->GetBodyType();
 	if(bt == BT_NoTarget || bt == BT_NoTarget2) {
 		mlog(SPELLS__CASTING_ERR, "Casting spell %d on %s aborted: they are untargetable", spell_id, spelltar->GetName());
+		safe_delete(action_packet);
 		return(false);
 	}
 
@@ -2239,6 +2241,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 			{
 				mlog(SPELLS__CASTING_ERR, "Beneficial spell %d can't take hold %s -> %s, IBA? %d", spell_id, GetName(), spelltar->GetName(), IsBeneficialAllowed(spelltar));
 				Message_StringID(MT_Shout, SPELL_NO_HOLD);
+				safe_delete(action_packet);
 				return false;
 			}
 		}
@@ -2246,6 +2249,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		{
 			mlog(SPELLS__CASTING_ERR, "Detrimental spell %d can't take hold %s -> %s", spell_id, GetName(), spelltar->GetName());
 			spelltar->Message_StringID(MT_Shout, YOU_ARE_PROTECTED, GetCleanName());
+			safe_delete(action_packet);
 			return false;
 		}
 	}
@@ -2259,6 +2263,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	{
 		//the above call does the message to the client if needed
 		mlog(SPELLS__RESISTS, "Spell %d can't take hold due to immunity %s -> %s", spell_id, GetName(), spelltar->GetName());
+		safe_delete(action_packet);
 		return false;
 	}
 
@@ -2280,6 +2285,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 				if(spelltar->IsAIControlled())
 					spelltar->AddToHateList(this, 1);
 
+				safe_delete(action_packet);
 				return false;
 			}
 		}
@@ -2357,6 +2363,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		// spell.  It's most likely a buff that can't stack.
 		mlog(SPELLS__CASTING_ERR, "Spell %d could not apply its effects %s -> %s\n", spell_id, GetName(), spelltar->GetName());
 		Message_StringID(MT_Shout, SPELL_NO_HOLD);
+		safe_delete(action_packet);
 		return false;
 	}
 

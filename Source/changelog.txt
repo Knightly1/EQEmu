@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==6/01/2007
+KLS: Addressed a memory leak in spell code and a memory leak in NPC destruction code.
+
 ==4/13/2007
 KLS: Fixed an issue with buff duration inc. that was causing buffs to lose their effects (I hope)
 

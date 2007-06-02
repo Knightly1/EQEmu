@@ -496,7 +496,6 @@ void Mob::AI_Stop() {
 }
 
 void NPC::AI_Stop() {
-	Mob::AI_Stop();
 	Waypoints.clear();
 	safe_delete(AIautocastspell_timer);
 }
