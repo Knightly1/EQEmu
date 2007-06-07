@@ -1,6 +1,10 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==6/06/2007
+KLS: (Darkonig) Change to the way tradeskill containers are handled.
+KLS: (Darkonig) Change to item->isStackable() implementation, should let certain items that the client lets stack also stack server-side.
+
 ==6/01/2007
 KLS: Addressed a memory leak in spell code and a memory leak in NPC destruction code.
 

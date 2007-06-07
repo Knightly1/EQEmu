@@ -179,7 +179,7 @@ enum InventorySlot
 	// but in our code, we treat them as slots 3100->3179
 	
 	// Slot used in OP_TradeSkillCombine for world tradeskill containers
-	SLOT_TRADESKILL	= 1000,
+	SLOT_TRADESKILL = 1000,
 	
 	// Value recognized by client for destroying an item
 	SLOT_INVALID = (sint16)0xFFFF

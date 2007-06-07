@@ -105,8 +105,8 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	PlayerProfile_Struct& user_pp = user->GetPP();
 	ItemInst* container = NULL;
 	ItemInst* inst = NULL;
-	int8 tstype = 0xE8;
-	uint8 passtype = 0;
+ 	uint8 c_type = 0xE8;
+ 	uint32 some_id = 0;
 	bool worldcontainer=false;
 	
 	if (in_combine->container_slot == SLOT_TRADESKILL) {
@@ -114,6 +114,7 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 			user->Message(13, "Error: Server is not aware of the tradeskill container you are attempting to use");
 			return;
 		}
+		c_type = worldo->m_type;
 		inst = worldo->m_inst;
 		worldcontainer=true;
 	}
@@ -122,7 +123,8 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 		if (inst) {
 			const Item_Struct* item = inst->GetItem();
 			if (item && inst->IsType(ItemClassContainer)) {
-				tstype = item->BagType;
+ 				c_type = item->BagType;
+ 				some_id = item->ID;
 			}
 		}
 	}
@@ -134,98 +136,38 @@ void Object::HandleCombine(Client* user, const NewCombine_Struct* in_combine, Ob
 	
 	container = inst;
 	
-	// Convert container type to tradeskill type
-	SkillType tradeskill = TradeskillUnknown;
-	switch (tstype)
+ 	DBTradeskillRecipe_Struct spec;
+ 	if (!database.GetTradeRecipe(container, c_type, some_id, &spec)) {
+ 		user->Message_StringID(4,TRADESKILL_NOCOMBINE);
+ 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_TradeSkillCombine, 0);
+ 		user->QueuePacket(outapp);
+ 		safe_delete(outapp);
+ 		return;
+ 	}
+ 	
+ 	switch (spec.tradeskill)
 	{
-	case 16:
-		tradeskill = TAILORING;
-		break;
-	case 0xE8: //Generic World Container
-		if(!worldcontainer)	//just to garuntee that worldo is valid
-			return;
-		passtype = worldo->m_type;
-		
-		if(worldo->m_type == OT_MEDICINEBAG) {
-			if ((user_pp.class_ == SHAMAN) & (user_pp.level >= MIN_LEVEL_ALCHEMY))
-				tradeskill = ALCHEMY;
-			else if (user_pp.class_ != SHAMAN)
-				user->Message(13, "This tradeskill can only be performed by a shaman.");
-			else if (user_pp.level < MIN_LEVEL_ALCHEMY)
-				user->Message(13, "You cannot perform alchemy until you reach level %i.", MIN_LEVEL_ALCHEMY);
-			break;
-		} else {
-			tradeskill = TypeToSkill(worldo->m_type);
-		}
-		break;
-	case 18:
-		tradeskill = FLETCHING;
-		break;
-	case 20:
-		tradeskill = JEWELRY_MAKING;
-		break;
-	case 30: //Pottery Still needs completion
-		tradeskill = POTTERY;
-		break;
-	case 14: // Baking 
-	case 15:
-		tradeskill = BAKING;
-		break;
-	case 9: //Alchemy Still needs completion
-		if ((user_pp.class_ == SHAMAN) & (user_pp.level >= MIN_LEVEL_ALCHEMY))
-			tradeskill = ALCHEMY;
-		else if (user_pp.class_ != SHAMAN)
+ 	case ALCHEMY:
+ 		if (user_pp.class_ != SHAMAN)
 			user->Message(13, "This tradeskill can only be performed by a shaman.");
 		else if (user_pp.level < MIN_LEVEL_ALCHEMY)
 			user->Message(13, "You cannot perform alchemy until you reach level %i.", MIN_LEVEL_ALCHEMY);
+			return;
 		break;
-	case 10: //Tinkering Still needs completion
-		if (user_pp.race == GNOME)
-			tradeskill = TINKERING;
-		else
+ 	case TINKERING:
+ 		if (user_pp.race != GNOME)
 			user->Message(13, "Only gnomes can tinker.");
+			return;
 		break; 
-	case 24: //Research Still needs completion
-	case 25:
-	case 26:
-	case 27:
-		tradeskill = RESEARCH;
-		break;
-	case 28: // Another Quest Containers.. Cavedude asked for this
-		tradeskill = GENERIC_TRADESKILL;
-		break;
-	case 12:
-		if (user_pp.class_ == ROGUE)
-			tradeskill = MAKE_POISON;
-		else
+ 	case MAKE_POISON:
+ 		if (user_pp.class_ != ROGUE)
 			user->Message(13, "Only rogues can mix poisons.");
+			return;
 		break;
-	case 13: //Quest Containers
-		tradeskill = GENERIC_TRADESKILL;
-		break;
-	case 46: //Fishing Still needs completion
-		tradeskill = FISHING;
-		break;
-	default:
-		user->Message(13, "This tradeskill has not been implemented yet, if you get this message send a "
-			"petition and let them know what tradeskill you were trying to use. and give them the following code: 0x%02X", tradeskill);
-	}
-	
-	if (tradeskill == TradeskillUnknown) {
-		return;
-	}
-	
-	DBTradeskillRecipe_Struct spec;
-	if (!database.GetTradeRecipe(container, passtype, tradeskill, &spec)) {
-		user->Message_StringID(4,TRADESKILL_NOCOMBINE);
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_TradeSkillCombine, 0);
-		user->QueuePacket(outapp);
-		safe_delete(outapp);
-		return;
 	}
 	
 	//do the check and send results...
-	bool success = user->TradeskillExecute(&spec, tradeskill);
+	bool success = user->TradeskillExecute(&spec);
 	
 	// Send acknowledgement packets to client
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_TradeSkillCombine, 0);
@@ -269,17 +211,9 @@ void Object::HandleAutoCombine(Client* user, const RecipeAutoCombine_Struct* rac
 	outp->reply_code = 0xFFFFFFF5;	//default fail.
 	
 	
-	SkillType tskill = Object::TypeToSkill(rac->object_type);
-	if(tskill == TradeskillUnknown) {
-		LogFile->write(EQEMuLog::Error, "Unknown container type for HandleAutoCombine: %d\n", rac->object_type);
-		user->QueuePacket(outapp);
-		safe_delete(outapp);
-		return;
-	}
-	
 	//ask the database for the recipe to make sure it exists...
 	DBTradeskillRecipe_Struct spec;
-	if (!database.GetTradeRecipe(rac->recipe_id, rac->object_type, tskill, &spec)) {
+	if (!database.GetTradeRecipe(rac->recipe_id, rac->object_type, rac->some_id, &spec)) {
 		LogFile->write(EQEMuLog::Error, "Unknown recipe for HandleAutoCombine: %u\n", rac->recipe_id);
 		user->QueuePacket(outapp);
 		safe_delete(outapp);
@@ -392,7 +326,7 @@ void Object::HandleAutoCombine(Client* user, const RecipeAutoCombine_Struct* rac
 	
 	//now actually try to make something...
 	
-	bool success = user->TradeskillExecute(&spec, tskill);
+	bool success = user->TradeskillExecute(&spec);
 	
 	//TODO: find in-pack containers in inventory, make sure they are really
 	//there, and then use that slot to handle replace_container too.
@@ -650,11 +584,11 @@ void Client::SendTradeskillDetails(unsigned long recipe_id) {
 }
 
 //returns true on success
-bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, SkillType tradeskill) {
-	if(spec == NULL || tradeskill == 0)
+bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec) {
+ 	if(spec == NULL)
 		return(false);
 	
-	int16 user_skill = GetSkill(tradeskill);
+	int16 user_skill = GetSkill(spec->tradeskill);
 	float chance = 0;
 	float skillup_modifier;
 	sint16 thirdstat = 0;
@@ -673,7 +607,7 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, SkillType trades
 	// Some tradeskills are more eqal then others. ;-)
 	// If you want to customize the stage1 success rate do it here.
     // Remember: skillup_modifier is (float). Lower is better
-	switch(tradeskill) {
+	switch(spec->tradeskill) {
 	case FLETCHING:
 	case ALCHEMY:
 	case JEWELRY_MAKING:
@@ -695,10 +629,10 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, SkillType trades
 	// Some tradeskills take the higher of one additional stat beside INT and WIS
 	// to determine the skillup rate. Additionally these tradeskills do not have an
 	// -15 modifier on their statbonus.
-	if (tradeskill ==  FLETCHING || tradeskill == MAKE_POISON) {
+	if (spec->tradeskill ==  FLETCHING || spec->tradeskill == MAKE_POISON) {
 		thirdstat = GetDEX();
 		stat_modifier = 0;
-	} else if (tradeskill == BLACKSMITHING) {
+	} else if (spec->tradeskill == BLACKSMITHING) {
 		thirdstat = GetSTR();
 		stat_modifier = 0;
 	}
@@ -749,7 +683,7 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, SkillType trades
 	float res = MakeRandomFloat(0, 99);
 	int AAChance = 0;
 
-	if(tradeskill == ALCHEMY){
+	if(spec->tradeskill == ALCHEMY){
 		switch(GetAA(aaAlchemyMastery)){
 		case 1:
 			AAChance = 10;
@@ -763,7 +697,7 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, SkillType trades
 		}
 	}
 
-	if(tradeskill == JEWELRY_MAKING){
+	if(spec->tradeskill == JEWELRY_MAKING){
 		switch(GetAA(aaJewelCraftMastery)){
 		case 1:
 			AAChance = 10;
@@ -777,11 +711,11 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, SkillType trades
 		}
 	}
 
-	if (((tradeskill==75) || GetGM() || (chance > res)) || MakeRandomInt(0, 99) < AAChance){
+	if (((spec->tradeskill==75) || GetGM() || (chance > res)) || MakeRandomInt(0, 99) < AAChance){
 		success_modifier = 1;
 		
 		if(over_trivial < 0)
-			CheckIncreaseTradeskill(bonusstat, stat_modifier, skillup_modifier, success_modifier, tradeskill);
+			CheckIncreaseTradeskill(bonusstat, stat_modifier, skillup_modifier, success_modifier, spec->tradeskill);
 		
 		Message_StringID(4,TRADESKILL_SUCCEED);
 
@@ -798,7 +732,7 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec, SkillType trades
 		success_modifier = 2; // Halves the chance
 		
 		if(over_trivial < 0)
-			CheckIncreaseTradeskill(bonusstat, stat_modifier, skillup_modifier, success_modifier, tradeskill);
+			CheckIncreaseTradeskill(bonusstat, stat_modifier, skillup_modifier, success_modifier, spec->tradeskill);
 		
 		Message_StringID(4,TRADESKILL_FAILED);
 
@@ -855,7 +789,7 @@ void Client::CheckIncreaseTradeskill(sint16 bonusstat, sint16 stat_modifier, flo
 }
 
 
-bool ZoneDatabase::GetTradeRecipe(const ItemInst* container, uint8 c_type, uint8 tradeskill, 
+bool ZoneDatabase::GetTradeRecipe(const ItemInst* container, uint8 c_type, uint32 some_id, 
 	DBTradeskillRecipe_Struct *spec)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -869,16 +803,14 @@ bool ZoneDatabase::GetTradeRecipe(const ItemInst* container, uint8 c_type, uint8
 	uint32 qcount = 0;
 	uint32 qlen = 0;
 	
-	//use the world item type as type if we have a world item
-	//otherwise use the item's ID... this make the assumption that
-	//no tradeskill containers will have an item ID which is
-	//below the highest ID of objects, which is currently 0x30
-	uint32 type = c_type;
-	
-	//dunno why I have to cast this up to call GetItem
-	const Item_Struct *istruct = ((const ItemInst *) container)->GetItem();
-	if(c_type == 0 && istruct) {
-		type = istruct->ID;
+ 	// make where clause segment for container(s)
+ 	char containers[30];
+ 	if (some_id == 0) {
+ 		// world combiner so no item number
+ 		snprintf(containers,29, "= %u", c_type);
+ 	} else {
+ 		// container in inventory
+ 		snprintf(containers,29, "in (%u,%u)", c_type, some_id);
 	}
 	
 	buf2[0] = '\0';
@@ -910,21 +842,18 @@ bool ZoneDatabase::GetTradeRecipe(const ItemInst* container, uint8 c_type, uint8
 		return(false);	//no items == no recipe
 	}
 
-	//add in the container.
-	count++;
-	sum += type;
 	
 	qlen = MakeAnyLenString(&query, "SELECT tre.recipe_id "
 	" FROM tradeskill_recipe_entries AS tre"
 	" WHERE ( tre.item_id IN(%s) AND tre.componentcount>0 )"
-	"  OR ( tre.item_id=%u AND tre.iscontainer=1 )"
-	" GROUP BY tre.recipe_id HAVING sum(tre.componentcount+tre.iscontainer) = %u"
-	"  AND sum(tre.item_id * (tre.componentcount+tre.iscontainer)) = %u", buf2, type, count, sum);
+ 	"  OR ( tre.item_id %s AND tre.iscontainer=1 )"
+ 	" GROUP BY tre.recipe_id HAVING sum(tre.componentcount) = %u"
+ 	"  AND sum(tre.item_id * tre.componentcount) = %u", buf2, containers, count, sum);
 	
 	if (!RunQuery(query, qlen, errbuf, &result)) {
-		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept search, query: %s", query);
+		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecipe search, query: %s", query);
 		safe_delete_array(query);
-		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept search, error: %s", errbuf);
+		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecipe search, error: %s", errbuf);
 		return(false);
 	}
 	safe_delete_array(query);
@@ -953,15 +882,14 @@ bool ZoneDatabase::GetTradeRecipe(const ItemInst* container, uint8 c_type, uint8
 		
 		qlen = MakeAnyLenString(&query, "SELECT tre.recipe_id"
 		" FROM tradeskill_recipe_entries AS tre"
-		" WHERE tre.recipe_id IN (%s) "
-		"       AND (tre.iscontainer=0 OR tre.item_id=%u) "
-		" GROUP BY tre.recipe_id HAVING sum(tre.componentcount+tre.iscontainer) = %u"
-		" AND sum(tre.item_id * (tre.componentcount+tre.iscontainer)) = %u", buf2, type, count, sum);
+ 		" WHERE tre.recipe_id IN (%s)"
+ 		" GROUP BY tre.recipe_id HAVING sum(tre.componentcount) = %u"
+ 		"  AND sum(tre.item_id * tre.componentcount) = %u", buf2, count, sum);
 		
 		if (!RunQuery(query, qlen, errbuf, &result)) {
-			LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept, re-query: %s", query);
+			LogFile->write(EQEMuLog::Error, "Error in GetTradeRecipe, re-query: %s", query);
 			safe_delete_array(query);
-			LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept, error: %s", errbuf);
+			LogFile->write(EQEMuLog::Error, "Error in GetTradeRecipe, error: %s", errbuf);
 			return(false);
 		}
 		safe_delete_array(query);
@@ -1015,12 +943,11 @@ bool ZoneDatabase::GetTradeRecipe(const ItemInst* container, uint8 c_type, uint8
 		return false;
 	}
 
-	return(GetTradeRecipe(recipe_id, c_type, tradeskill, spec));
+	return(GetTradeRecipe(recipe_id, c_type, some_id, spec));
 }
 	
 
-
-bool ZoneDatabase::GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint8 tradeskill, 
+bool ZoneDatabase::GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint32 some_id, 
 	DBTradeskillRecipe_Struct *spec)
 {	
 	char errbuf[MYSQL_ERRMSG_SIZE];
@@ -1031,14 +958,27 @@ bool ZoneDatabase::GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint8 tradeski
 	uint32 qcount = 0;
 	uint32 qlen;
 	
-	qlen = MakeAnyLenString(&query, "SELECT tr.skillneeded, tr.trivial, tr.nofail, tr.replace_container"
-	" FROM tradeskill_recipe AS tr"
-	" WHERE tr.id = %lu AND tr.tradeskill = %u", recipe_id, tradeskill);
+ 	// make where clause segment for container(s)
+ 	char containers[30];
+ 	if (some_id == 0) {
+ 		// world combiner so no item number
+ 		snprintf(containers,29, "= %u", c_type);
+ 	} else {
+ 		// container in inventory
+ 		snprintf(containers,29, "in (%u,%u)", c_type, some_id);
+ 	}
+ 	
+ 	qlen = MakeAnyLenString(&query, "SELECT tr.id, tr.tradeskill, tr.skillneeded,"
+ 	" tr.trivial, tr.nofail, tr.replace_container"
+ 	" FROM tradeskill_recipe AS tr inner join tradeskill_recipe_entries as tre"
+ 	" ON tr.id = tre.recipe_id"
+ 	" WHERE tr.id = %lu AND tre.item_id %s"
+ 	" GROUP BY tr.id", recipe_id, containers);
 		
 	if (!RunQuery(query, qlen, errbuf, &result)) {
-		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept, query: %s", query);
+		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecipe, query: %s", query);
 		safe_delete_array(query);
-		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecept, error: %s", errbuf);
+		LogFile->write(EQEMuLog::Error, "Error in GetTradeRecipe, error: %s", errbuf);
 		return(false);
 	}
 	safe_delete_array(query);
@@ -1050,10 +990,11 @@ bool ZoneDatabase::GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint8 tradeski
 	}
 	
 	row = mysql_fetch_row(result);
-	spec->skill_needed		= (sint16)atoi(row[0]);
-	spec->trivial			= (uint16)atoi(row[1]);
-	spec->nofail			= atoi(row[2]) ? true : false;
-	spec->replace_container	= atoi(row[3]) ? true : false;
+ 	spec->tradeskill			= (SkillType)atoi(row[1]);
+ 	spec->skill_needed		= (sint16)atoi(row[2]);
+ 	spec->trivial			= (uint16)atoi(row[3]);
+ 	spec->nofail			= atoi(row[4]) ? true : false;
+ 	spec->replace_container	= atoi(row[5]) ? true : false;
 	mysql_free_result(result);
 	
 	//Pull the on-success items...

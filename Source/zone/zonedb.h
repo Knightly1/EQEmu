@@ -35,6 +35,7 @@ struct DBnpcspells_Struct {
 };
 
 struct DBTradeskillRecipe_Struct {
+	SkillType tradeskill;
 	sint16 skill_needed;
 	uint16 trivial;
 	bool nofail;
@@ -223,8 +224,8 @@ public:
 	/*
 	 * Tradeskills
 	 */
-	bool	GetTradeRecipe(const ItemInst* container, uint8 c_type, uint8 tradeskill, DBTradeskillRecipe_Struct *spec);
-	bool	GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint8 tradeskill, DBTradeskillRecipe_Struct *spec);
+	bool	GetTradeRecipe(const ItemInst* container, uint8 c_type, uint32 some_id, DBTradeskillRecipe_Struct *spec);
+	bool	GetTradeRecipe(uint32 recipe_id, uint8 c_type, uint32 some_id, DBTradeskillRecipe_Struct *spec);
 	int32   GetZoneForage(int32 ZoneID, int8 skill);    /* for foraging - BoB */
 	int32   GetZoneFishing(int32 ZoneID, int8 skill, uint32 &npc_id, uint8 &npc_chance);
 	

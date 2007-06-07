@@ -180,26 +180,7 @@ bool ItemInst::IsType(ItemClass item_class) const
 // Is item stackable?
 bool ItemInst::IsStackable() const
 {
-	//This function may not be right, but I think these are the itemtypes
-	//that can be stacked
-	bool result=false;
-	if (m_item) {
-		switch (m_item->ItemType) {
-			case ItemTypeFood:
-			case ItemTypeDrink:
-			case ItemTypeBandage:
-			case ItemTypeThrowingv2:
-			case ItemTypeArrow:
-			case ItemTypeFishingBait:
-			case ItemTypeStackable:
-			case ItemTypeAlcohol:
-			case ItemTypeAugmentSolvent:
-			case ItemTypeAugmentDistill:
-				result=true;
-		}
-	}
-
-	return result;
+	return m_item->Stackable;
 }
 
 // Can item be equipped?

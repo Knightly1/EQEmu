@@ -3976,10 +3976,19 @@ void Client::Handle_OP_RecipesFavorite(const EQApplicationPacket *app)
 	
 	TradeskillFavorites_Struct* tsf = (TradeskillFavorites_Struct*)app->pBuffer;
 	
-	uint32 tskill = Object::TypeToSkill(tsf->object_type);
-	if(tskill == 0) {
-		LogFile->write(EQEMuLog::Error, "Unknown container type for OP_RecipesFavorite: %d\n", tsf->object_type);
-		return;
+	LogFile->write(EQEMuLog::Debug, "Requested Favorites for: %d - %d\n", tsf->object_type, tsf->some_id);
+
+	// results show that object_type is combiner type
+	//                   some_id = 0 if world combiner, item number otherwise
+
+	// make where clause segment for container(s)
+	char containers[30];
+	if (tsf->some_id == 0) {
+		// world combiner so no item number
+		snprintf(containers,29, "= %u", tsf->object_type);
+	} else {
+		// container in inventory
+		snprintf(containers,29, "in (%u,%u)", tsf->object_type, tsf->some_id);
 	}
 	
 char *query = 0;
@@ -4011,8 +4020,10 @@ char *query = 0;
 	qlen = MakeAnyLenString(&query, "SELECT tr.id,tr.name,tr.trivial,SUM(tre.componentcount) "
 		" FROM tradeskill_recipe AS tr "
 		" LEFT JOIN tradeskill_recipe_entries AS tre ON tr.id=tre.recipe_id "
-		" WHERE tr.id IN (%s) AND tradeskill=%lu "
-		" GROUP BY tr.id LIMIT 100 ", buf, tskill);
+		" WHERE tr.id IN (%s) "
+		" GROUP BY tr.id "
+		" HAVING sum(if(tre.item_id %s AND tre.iscontainer > 0,1,0)) > 0 "
+		" LIMIT 100 ", buf, containers);
 	
 	TradeskillSearchResults(query, qlen, tsf->object_type, tsf->some_id);
 	
@@ -4032,10 +4043,16 @@ void Client::Handle_OP_RecipesSearch(const EQApplicationPacket *app)
 	rss->query[55] = '\0';	//just to be sure.
 	
 	
-	uint32 tskill = Object::TypeToSkill(rss->object_type);
-	if(tskill == 0) {
-		LogFile->write(EQEMuLog::Error, "Unknown container type for OP_RecipesSearch: %d\n", rss->object_type);
-		return;
+	LogFile->write(EQEMuLog::Debug, "Requested search recipes for: %d - %d\n", rss->object_type, rss->some_id);
+
+	// make where clause segment for container(s)
+	char containers[30];
+	if (rss->some_id == 0) {
+		// world combiner so no item number
+		snprintf(containers,29, "= %u", rss->object_type);
+	} else {
+		// container in inventory
+		snprintf(containers,29, "in (%u,%u)", rss->object_type, rss->some_id);
 	}
 	
 	char *query = 0;
@@ -4056,8 +4073,11 @@ void Client::Handle_OP_RecipesSearch(const EQApplicationPacket *app)
 	qlen = MakeAnyLenString(&query, "SELECT tr.id,tr.name,tr.trivial,SUM(tre.componentcount) "
 		" FROM tradeskill_recipe AS tr "
 		" LEFT JOIN tradeskill_recipe_entries AS tre ON tr.id=tre.recipe_id "
-		" WHERE %s tr.trivial >= %u AND tr.trivial <= %u AND tradeskill=%lu "
-		" GROUP BY tr.id LIMIT 200 ", searchclause, rss->mintrivial, rss->maxtrivial, tskill);
+		" WHERE %s tr.trivial >= %u AND tr.trivial <= %u "
+		" GROUP BY tr.id "
+		" HAVING sum(if(tre.item_id %s AND tre.iscontainer > 0,1,0)) > 0 "
+		" LIMIT 200 "
+		, searchclause, rss->mintrivial, rss->maxtrivial, containers);
 	
 	TradeskillSearchResults(query, qlen, rss->object_type, rss->some_id);
 	
