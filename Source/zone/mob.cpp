@@ -649,7 +649,7 @@ void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 	
 	strncpy(ns->spawn.lastName, lastname, sizeof(lastname));
 
-	for(i = 0; i < 7; i++)
+	for(i = 0; i < MAX_MATERIALS; i++)
 	{
 		ns->spawn.equipment[i] = GetEquipmentMaterial(i);
 		ns->spawn.colors[i].color = GetEquipmentColor(i);

@@ -497,10 +497,9 @@ bool Mob::IsAttackAllowed(Mob *target)
 				c1 = mob1->CastToClient();
 				becomenpc = mob2->CastToClient();
 	
-				//who made up this rule???
-				/*if(c1->GetLevel() > becomenpc->GetBecomeNPCLevel())
+				if(c1->GetLevel() > becomenpc->GetBecomeNPCLevel())
 					return false;
-				else*/
+				else
 					return true;
 			}	
 			else if(_CLIENTCORPSE(mob2))	// client vs client corpse
@@ -646,6 +645,7 @@ bool Mob::IsBeneficialAllowed(Mob *target)
 			}
 			else if(_NPC(mob2))				// client to npc
 			{
+                /* fall through and swap positions */
 			}
 			else if(_BECOMENPC(mob2))	// client to becomenpc
 			{

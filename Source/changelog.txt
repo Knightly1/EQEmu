@@ -1,6 +1,10 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==07/16/2007
+FatherNitwit: (Glather) Fix for mobs showing weapons
+FatherNitwit: (Cbodmer) Notify owner when buffs wear off pets.
+
 ==6/06/2007
 KLS: (Darkonig) Change to the way tradeskill containers are handled.
 KLS: (Darkonig) Change to item->isStackable() implementation, should let certain items that the client lets stack also stack server-side.

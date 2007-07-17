@@ -258,7 +258,7 @@ struct Spawn_Struct {
                /*0225*/ uint32 equip_primary;   // Equipment: Primary Visual
                /*0229*/ uint32 equip_secondary; // Equipment: Secondary Visual
              } equip;
-             /*0197*/ uint32 equipment[9];  // Array elements correspond to struct equipment above
+             /*0197*/ uint32 equipment[MAX_MATERIALS];  // Array elements correspond to struct equipment above
          };
 /*0233*/ float    runspeed;       // Speed when running
 /*0036*/ uint8  afk;            // 0=no, 1=afk
@@ -303,7 +303,7 @@ union
                  /*0376*/ Color_Struct color_primary;   // Color of primary item
                  /*0380*/ Color_Struct color_secondary; // Color of secondary item
              } equipment_colors;
-             /*0348*/ Color_Struct colors[9]; // Array elements correspond to struct equipment_colors above
+             /*0348*/ Color_Struct colors[MAX_MATERIALS]; // Array elements correspond to struct equipment_colors above
          };
 /*0384*/ uint8  lfg;            // 0=off, 1=lfg on
 /*0385*/
@@ -765,9 +765,9 @@ struct PlayerProfile_Struct
 /*0304*/	uint8				ability_time_minutes;
 /*0305*/	uint8				ability_time_hours;//place holder
 /*0306*/	uint8				unknown0306[6];		// @bp Spacer/Flag?
-/*0312*/	uint32				item_material[9];	// Item texture/material of worn/held items
+/*0312*/	uint32				item_material[MAX_MATERIALS];	// Item texture/material of worn/held items
 /*0348*/	uint8				unknown0256[44];
-/*0396*/	Color_Struct		item_tint[9];
+/*0396*/	Color_Struct		item_tint[MAX_MATERIALS];
 /*0432*/	AA_Array			aa_array[MAX_PP_AA_ARRAY];
 /*2348*/	float				unknown2348;		//seen ~128, ~47
 /*2352*/	char				servername[32];		// length probably not right
@@ -2560,7 +2560,7 @@ struct DyeStruct
 			struct Color_Struct secondary;	// or this
 		}
 		dyes;
-		struct Color_Struct dye[9];
+		struct Color_Struct dye[MAX_MATERIALS];
 	};
 };
 

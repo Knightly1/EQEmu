@@ -2693,15 +2693,18 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 			}
 		}
 	}
-
-
-
-	// notify caster of buff that it's worn off
+	
+	// notify caster (or their master) of buff that it's worn off
 	Mob *p = entity_list.GetMob(buffs[slot].casterid);
-	if (p && p->IsClient() && p != this && !IsBardSong(buffs[slot].spellid))
+	if (p && p != this && !IsBardSong(buffs[slot].spellid))
 	{
-		p->Message_StringID(MT_Broadcasts, SPELL_WORN_OFF_OF,
-			spells[buffs[slot].spellid].name, GetCleanName());
+		Mob *notify = p;
+		if(p->IsPet())
+			notify = p->GetOwner();
+		if(p) {
+			notify->Message_StringID(MT_Broadcasts, SPELL_WORN_OFF_OF,
+				spells[buffs[slot].spellid].name, GetCleanName());
+		}
 	}
 
 	buffs[slot].spellid = SPELL_UNKNOWN;

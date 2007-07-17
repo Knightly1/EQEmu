@@ -559,5 +559,19 @@ static const uint8 SkillDamageTypes[HIGHEST_SKILL+1] = {
  /*  TAUNT */  DamageTypeUnknown
 };
 
+// Indexing positions into item material arrays
+#define MATERIAL_HEAD		0
+#define MATERIAL_CHEST		1
+#define MATERIAL_ARMS		2
+#define MATERIAL_BRACER		3
+#define MATERIAL_HANDS		4
+#define MATERIAL_LEGS		5
+#define MATERIAL_FEET		6
+#define MATERIAL_PRIMARY	7
+#define MATERIAL_SECONDARY	8
+#define MAX_MATERIALS 9	//number of equipables
+
+
+
 
 #endif
