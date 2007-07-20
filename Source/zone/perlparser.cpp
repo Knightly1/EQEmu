@@ -1000,7 +1000,7 @@ XS(XS__setguild)
 		Perl_croak(aTHX_ "Usage: setguild(new_guild_id, new_rank)");
 
 		unsigned long		new_guild_id = (unsigned long)SvUV(ST(0));
-	char	new_rank = (char)*SvPV_nolen(ST(1));
+	int	new_rank = (int)SvIV(ST(1));
 
 	quest_manager.setguild(new_guild_id, new_rank);
 
@@ -1013,9 +1013,9 @@ XS(XS__settime)
 	dXSARGS;
 	if (items != 2)
 		Perl_croak(aTHX_ "Usage: settime(new_hour, new_min)");
-
-	char	new_hour = (char)*SvPV_nolen(ST(0));
-	char	new_min = (char)*SvPV_nolen(ST(1));
+	
+	int	new_hour = (int)SvIV(ST(0));
+	int	new_min = (int)SvIV(ST(1));
 
 	quest_manager.settime(new_hour, new_min);
 
@@ -1524,9 +1524,9 @@ EXTERN_C XS(boot_quest)
 	//add the strcpy stuff to get rid of const warnings....
 	
 	XS_VERSION_BOOTCHECK ;
-		newXS(strcpy(buf, "echo"), XS__say, file);
+		newXS(strcpy(buf, "echo"), XS__echo, file);
 		newXS(strcpy(buf, "say"), XS__say, file);
-		newXS(strcpy(buf, "me"), XS__say, file);
+		newXS(strcpy(buf, "me"), XS__me, file);
 		newXS(strcpy(buf, "summonitem"), XS__summonitem, file);
 		newXS(strcpy(buf, "write"), XS__write, file);
 		newXS(strcpy(buf, "spawn"), XS__spawn, file);

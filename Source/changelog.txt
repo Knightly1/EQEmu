@@ -1,6 +1,11 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==07/20/2007
+FatherNitwit: (Striat) Fix for typos in perlparser.cpp to fix quest::me and quest::echo.
+FatherNitwit: (Striat) Fix argument type in quest::setguild.
+FatherNitwit: Fixed quest::settime
+
 ==07/16/2007
 FatherNitwit: (Glather) Fix for mobs showing weapons
 FatherNitwit: (Cbodmer) Notify owner when buffs wear off pets.
