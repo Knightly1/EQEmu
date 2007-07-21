@@ -2217,6 +2217,12 @@ struct	ItemViewRequest_Struct {
 /*028*/	char	unknown028[16];
 };
 
+struct	LDONItemViewRequest_Struct {
+	uint32	item_id;
+	uint8	unknown004[4];
+	char	item_name[64];
+};
+
 /*
  *  Client to server packet
  */

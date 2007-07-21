@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==07/21/2007
+Rogean: Fixed LDoN Merchant Item Inspect
+
 ==07/20/2007
 FatherNitwit: (Striat) Fix for typos in perlparser.cpp to fix quest::me and quest::echo.
 FatherNitwit: (Striat) Fix argument type in quest::setguild.

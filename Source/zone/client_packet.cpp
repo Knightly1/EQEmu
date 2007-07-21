@@ -152,6 +152,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_Death] = &Client::Handle_OP_Death;
 	ConnectedOpcodes[OP_MoveCoin] = &Client::Handle_OP_MoveCoin;
 	ConnectedOpcodes[OP_ItemLinkClick] = &Client::Handle_OP_ItemLinkClick;
+	ConnectedOpcodes[OP_ItemLinkResponse] = &Client::Handle_OP_ItemLinkResponse;
 	ConnectedOpcodes[OP_MoveItem] = &Client::Handle_OP_MoveItem;
 	ConnectedOpcodes[OP_Camp] = &Client::Handle_OP_Camp;
 	ConnectedOpcodes[OP_Logout] = &Client::Handle_OP_Logout;
@@ -1899,6 +1900,16 @@ void Client::Handle_OP_ItemLinkClick(const EQApplicationPacket *app)
 		safe_delete(inst);
 	}
 	return;
+}
+
+void Client::Handle_OP_ItemLinkResponse(const EQApplicationPacket *app) {
+		LDONItemViewRequest_Struct* item = (LDONItemViewRequest_Struct*)app->pBuffer;
+		ItemInst* inst = database.CreateItem(item->item_id);
+		if (inst) {
+			SendItemPacket(0, inst, ItemPacketViewLink);
+			safe_delete(inst);
+		}
+		return;
 }
 
 void Client::Handle_OP_MoveItem(const EQApplicationPacket *app)

@@ -52,6 +52,7 @@
 	void Handle_OP_Death(const EQApplicationPacket *app);
 	void Handle_OP_MoveCoin(const EQApplicationPacket *app);
 	void Handle_OP_ItemLinkClick(const EQApplicationPacket *app);
+	void Handle_OP_ItemLinkResponse(const EQApplicationPacket *app);
 	void Handle_OP_MoveItem(const EQApplicationPacket *app);
 	void Handle_OP_Camp(const EQApplicationPacket *app);
 	void Handle_OP_Logout(const EQApplicationPacket *app);
