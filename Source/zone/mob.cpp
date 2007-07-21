@@ -1757,7 +1757,7 @@ bool Mob::HateSummon() {
         return false;
 
     // get summon target
-    target = GetHateTop();
+    SetTarget(GetHateTop());
     if( target)
     {
 		if (target->IsClient())
@@ -2176,7 +2176,11 @@ int Mob::GetHaste() {
 	return(h); 
 }
 
-
+void Mob::SetTarget(Mob* mob) {
+	if (target == mob) return;
+	target = mob;
+	entity_list.UpdateHoTT(this);
+}
 
 
 

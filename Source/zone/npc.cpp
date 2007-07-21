@@ -390,7 +390,8 @@ void NPC::SetTarget(Mob* mob) {
 		attack_timer.Disable();
 		attack_dw_timer.Disable();
 	}
-	target = mob;
+	//CastToMob()->SetTarget(mob);
+	Mob::SetTarget(mob);
 }
 
 ServerLootItem_Struct* NPC::GetItem(int slot_id) {

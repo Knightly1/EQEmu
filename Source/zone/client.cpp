@@ -3159,7 +3159,13 @@ void Client::SendPickPocketResponce(Mob *from, uint32 amt, int type, const Item_
 		safe_delete(outapp);
 }
 
-
+void Client::SetHoTT(int32 mobid) {
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_TargetHoTT, sizeof(ClientTarget_Struct));
+	ClientTarget_Struct *ct = (ClientTarget_Struct *) outapp->pBuffer;
+	ct->new_target = mobid;
+	QueuePacket(outapp);
+	safe_delete(outapp);
+}
 
 
 

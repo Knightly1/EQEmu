@@ -434,7 +434,7 @@ bool logpos;
 	inline const char*	GetName()			const { return name; }
 	const char *GetCleanName();
 	inline Mob*			GetTarget()			const { return target; }
-	virtual inline void	SetTarget(Mob* mob)	{ target = mob; }
+	virtual void SetTarget(Mob* mob);
 	virtual inline float		GetHPRatio() const { return max_hp == 0 ? 0 : ((float)cur_hp/max_hp*100); }
 	
 	bool IsLoggingEnabled() const { return(logging_enabled); }

@@ -375,6 +375,7 @@ OUT(OP_SomeItemPacketMaybe, Arrow_Struct);
 OUT(OP_Stamina, Stamina_Struct);
 OUT(OP_Stun, Stun_Struct);
 OUT(OP_TargetReject, TargetReject_Struct);
+OUT(OP_TargetHoTT, ClientTarget_Struct);
 OUT(OP_TimeOfDay, TimeOfDay_Struct);
 OUT(OP_Track, Track_Struct);
 OUT(OP_TradeCoins, TradeCoin_Struct);

@@ -5,6 +5,13 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 FatherNitwit: (Striat) Fix for typos in perlparser.cpp to fix quest::me and quest::echo.
 FatherNitwit: (Striat) Fix argument type in quest::setguild.
 FatherNitwit: Fixed quest::settime
+Rogean: Fixed up strikethrough a little
+Rogean: Removed ability to proc on a riposte attack
+Rogean: Implimented HoTT (Health of Target's Target) Functionality. This will only work for people with HoTT Built into their interface.
+	To get UI Files for a Target Window, see http://www.eqemulator.net/forums/showthread.php?p=135291
+Changes to opcode files:
+patch_Titanium.conf: OP_TargetHoTT=0x6a12
+patch_6.2.conf: OP_TargetHoTT=0x3ef6
 
 ==07/16/2007
 FatherNitwit: (Glather) Fix for mobs showing weapons

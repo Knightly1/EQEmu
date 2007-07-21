@@ -1109,7 +1109,9 @@ void EntityList::QueueClientsByTarget(Mob* sender, const EQApplicationPacket* ap
 	
 	iterator.Reset();
 	while(iterator.MoreElements()) {
-		if ((iSendToSender || (iterator.GetData() != sender && iterator.GetData()->GetTarget() == sender)) && iterator.GetData() != SkipThisMob) {
+		if ((iSendToSender || (iterator.GetData() != sender && (iterator.GetData()->GetTarget() == sender || 
+			(iterator.GetData()->GetTarget() && iterator.GetData()->GetTarget()->GetTarget() && iterator.GetData()->GetTarget()->GetTarget() == sender)))) 
+			&& iterator.GetData() != SkipThisMob) {
 			iterator.GetData()->QueuePacket(app, ackreq);
 		}
 		iterator.Advance();
@@ -3041,7 +3043,19 @@ void EntityList::RadialSetLogging(Mob *around, bool enabled, bool clients, bool 
 	}
 }
 
-
+void EntityList::UpdateHoTT(Mob* target) {
+	LinkedListIterator<Client*> iterator(client_list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		Client* c = iterator.GetData();
+		if (c->GetTarget() == target) {
+			if (target->GetTarget()) c->SetHoTT(target->GetTarget()->GetID());
+			else c->SetHoTT(0);
+		}
+		iterator.Advance();
+	}
+}
 
 
 

@@ -359,9 +359,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	float roll;
 	Mob *attacker=other;
 	Mob *defender=this;
-	bool sthrough = false;
-	if(MakeRandomInt(0, 100) <= (attacker->itembonuses.StrikeThrough + attacker->spellbonuses.StrikeThrough))
-		sthrough = true;
+
 /*
 	////////////////////////////////////////////////////////
 	// Mitigation goes here
@@ -415,7 +413,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	//////////////////////////////////////////////////////////
 	// make enrage same as riposte
 	/////////////////////////////////////////////////////////
-	if (IsEnraged() && !other->BehindMob(this, other->GetX(), other->GetY()) && !sthrough) {
+	if (IsEnraged() && !other->BehindMob(this, other->GetX(), other->GetY())) {
 		damage = -3;
 		mlog(COMBAT__DAMAGE, "I am enraged, riposting frontal attack.");
 	}
@@ -423,7 +421,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	/////////////////////////////////////////////////////////
 	// riposte
 	/////////////////////////////////////////////////////////
-	if (damage > 0 && CanThisClassRiposte() && !other->BehindMob(this, other->GetX(), other->GetY()) && !sthrough)
+	if (damage > 0 && CanThisClassRiposte() && !other->BehindMob(this, other->GetX(), other->GetY()))
 	{
         skill = GetSkill(RIPOSTE);
 		if (IsClient()) {
@@ -449,8 +447,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 			class_==BEASTLORD ||
 			class_==MONKGM ||
 			class_==BEASTLORDGM )
-            && !other->BehindMob(this, other->GetX(), other->GetY())
-			&& !sthrough)
+            && !other->BehindMob(this, other->GetX(), other->GetY()))
 	{
 		skill = CastToClient()->GetSkill(BLOCKSKILL);
 		if (IsClient()) {
@@ -470,7 +467,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	//////////////////////////////////////////////////////		
 	// parry
 	//////////////////////////////////////////////////////
-	if (damage > 0 && CanThisClassParry() && !other->BehindMob(this, other->GetX(), other->GetY()) && !sthrough)
+	if (damage > 0 && CanThisClassParry() && !other->BehindMob(this, other->GetX(), other->GetY()))
 	{
         skill = CastToClient()->GetSkill(PARRY);
 		if (IsClient()) {
@@ -491,7 +488,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	////////////////////////////////////////////////////////
 	// dodge
 	////////////////////////////////////////////////////////
-	if (damage > 0 && CanThisClassDodge() && !other->BehindMob(this, other->GetX(), other->GetY()) && !sthrough)
+	if (damage > 0 && CanThisClassDodge() && !other->BehindMob(this, other->GetX(), other->GetY()))
 	{
 	
         skill = CastToClient()->GetSkill(DODGE);
@@ -845,11 +842,24 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 			TryCriticalHit(other, skillinuse, damage);
 			mlog(COMBAT__DAMAGE, "Final damage after all reductions: %d", damage);
 		}
-		
+
+		if (damage == -3)  {
+			if (bRiposte) return false;
+			else DoRiposte(other);
+		}
+		/*
 		if (bRiposte && damage == -3) {	//cannot riposte a riposte
 			mlog(COMBAT__ATTACKS, "Attack canceled. Cannot riposte a riposte");
 			return false;
-    	}
+    	} */
+
+		if (damage < 0 && !bRiposte) {
+			if(MakeRandomInt(0, 100) <= (itembonuses.StrikeThrough + spellbonuses.StrikeThrough)) {
+				Message_StringID(MT_StrikeThrough, 9078); // You strike through your opponents defenses!
+				Attack(other, Hand, true); // Strikethrough only gives another attempted hit
+				return false;
+			}
+		}
 	}
 	
 	///////////////////////////////////////////////////////////
@@ -897,15 +907,15 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	////////  PROC CODE
 	////////  Kaiyodo - Check for proc on weapon based on DEX
 	///////////////////////////////////////////////////////////
-	if(other->GetHP() > -10) {
+	if(other->GetHP() > -10 && !bRiposte) {
 		TryWeaponProc(weapon, other);
 	}
-	
+	/* <Rogean> Moved above strikethrough
 	//handle riposet, ensuring they are in front is checked in AvoidDamage
 	//this used to test IsNPC, preventing riposte attacks in PvP
 	if( damage == -3 ) {
 		DoRiposte(other);
-	}
+	} */
 	
 	if (damage > 0)
         return true;

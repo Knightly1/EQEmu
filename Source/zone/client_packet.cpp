@@ -990,7 +990,11 @@ void Client::Handle_OP_TargetCommand(const EQApplicationPacket *app)
 	ClientTarget_Struct* ct=(ClientTarget_Struct*)app->pBuffer;
 	pClientSideTarget = ct->new_target;
 	if (!IsAIControlled())
-		target = entity_list.GetMob(ct->new_target);
+		SetTarget(entity_list.GetMob(ct->new_target));
+
+	// <Rogean> HoTT
+	if (GetTarget() && GetTarget()->GetTarget()) SetHoTT(GetTarget()->GetTarget()->GetID());
+	else SetHoTT(0);
 	
 	//ensure LOS to the target (image)
 	if((Admin() < 80) && (target != this && !CheckLosFN(target)))

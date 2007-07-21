@@ -509,7 +509,7 @@ void Client::AI_Stop() {
 	ps->pet_id = this->GetID();
 	ps->command = 0;
 	FastQueuePacket(&app);
-	target = entity_list.GetMob(pClientSideTarget);
+	SetTarget(entity_list.GetMob(pClientSideTarget));
 	SendAppearancePacket(AT_Anim, GetAppearanceValue(GetAppearance()));
 	SendAppearancePacket(AT_Linkdead, 0); // Removing LD packet so *LD* no longer appears by the player name when charmed/feared -Kasai
 	if (!auto_attack) {

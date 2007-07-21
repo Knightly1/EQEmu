@@ -476,6 +476,7 @@ public:
 	void CheckSongSkillIncrease(int16 spell_id);
 	bool	CheckIncreaseSkill(SkillType skillid, int chancemodi = 0);
 	void    SetLanguageSkill(int langid, int value);
+	void	SetHoTT(int32 mobid);
 
 	int16	MaxSkill(SkillType skillid, int16 class_, int16 level) const;
     inline	int16	MaxSkill(SkillType skillid) const { return MaxSkill(skillid, GetClass(), GetLevel()); }
