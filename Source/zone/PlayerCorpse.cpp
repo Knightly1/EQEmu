@@ -76,14 +76,14 @@ Corpse* Corpse::LoadFromDBData(int32 in_dbid, int32 in_charid, char* in_charname
 		cout << "Corpse::LoadFromDBData: Corrupt data: crc failure" << endl;
 		return 0;
 	}
-	ItemList* itemlist = new ItemList();
+	ItemList itemlist;
 	ServerLootItem_Struct* tmp = 0;
 	for (unsigned int i=0; i < dbpc->itemcount; i++) {
 		tmp = new ServerLootItem_Struct;
 		memcpy(tmp, &dbpc->items[i], sizeof(ServerLootItem_Struct));
-		itemlist->push_back(tmp);
+		itemlist.push_back(tmp);
 	}
-	Corpse* pc = new Corpse(in_dbid, in_charid, in_charname, itemlist, dbpc->copper, dbpc->silver, dbpc->gold, dbpc->plat, in_x, in_y, in_z, in_heading, dbpc->size, dbpc->gender, dbpc->race, dbpc->class_, dbpc->deity, dbpc->level, dbpc->texture, dbpc->helmtexture,dbpc->exp);
+	Corpse* pc = new Corpse(in_dbid, in_charid, in_charname, &itemlist, dbpc->copper, dbpc->silver, dbpc->gold, dbpc->plat, in_x, in_y, in_z, in_heading, dbpc->size, dbpc->gender, dbpc->race, dbpc->class_, dbpc->deity, dbpc->level, dbpc->texture, dbpc->helmtexture,dbpc->exp);
 	if (dbpc->locked)
 		pc->Lock();
 
@@ -311,6 +311,7 @@ Corpse::Corpse(int32 in_dbid, int32 in_charid, char* in_charname, ItemList* in_i
 	p_depop = false;
 	charid = in_charid;
 	itemlist = *in_itemlist;
+	in_itemlist->clear();
 
 	//we really should be loading the decay timer here...
 	

@@ -179,7 +179,7 @@ int32 AppendAnyLenString(char** ret, int32* bufsize, int32* strlen, const char* 
 		if (oldret) {
 			if (*strlen)
 				memcpy(*ret, oldret, *strlen);
-			safe_delete(oldret);
+			safe_delete_array(oldret);
 		}
 		chars = vsnprintf(&(*ret)[*strlen], (*bufsize-*strlen), format, argptr);
 	}

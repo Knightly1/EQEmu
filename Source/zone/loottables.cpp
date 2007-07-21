@@ -167,7 +167,7 @@ bool SharedDatabase::DBLoadLoot() {
 				if (!EMuShareMemDLL.Loot.cbAddLootTable(tmpid, tmpLT)) {
 					mysql_free_result(result);
 					mysql_free_result(result2);
-					safe_delete(tmpLT);
+					safe_delete_array(tmpLT);
 					cout << "Error in ZoneDatabase::DBLoadLoot: !cbAddLootTable(" << tmpid << ")" << endl;
 					return false;
 				}
@@ -216,11 +216,11 @@ bool SharedDatabase::DBLoadLoot() {
 				if (!EMuShareMemDLL.Loot.cbAddLootDrop(tmpid, tmpLD)) {
 					mysql_free_result(result);
 					mysql_free_result(result2);
-					safe_delete(tmpLD);
+					safe_delete_array(tmpLD);
 					cout << "Error in ZoneDatabase::DBLoadLoot: !cbAddLootDrop(" << tmpid << ")" << endl;
 					return false;
 				}
-				safe_delete(tmpLD);
+				safe_delete_array(tmpLD);
 				mysql_free_result(result2);
 			}
 			else {

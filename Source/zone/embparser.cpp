@@ -351,6 +351,7 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 				LogFile->write(EQEMuLog::Debug, "declare hasitem : %s",hi_decl);
 #endif
 				perl->eval(hi_decl);
+				safe_delete_array(hi_decl);
 			}
 		}
 	}

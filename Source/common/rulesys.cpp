@@ -330,6 +330,7 @@ int RuleManager::GetRulesetID(Database *db, const char *rulesetname) {
 		LogFile->write(EQEMuLog::Error, "Error in LoadRules query %s: %s", query, errbuf);
 	}
 	safe_delete_array(query);
+	safe_delete_array(rst);
 
 	return(res);
 }

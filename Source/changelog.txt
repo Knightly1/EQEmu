@@ -9,6 +9,7 @@ Rogean: Fixed up strikethrough a little
 Rogean: Removed ability to proc on a riposte attack
 Rogean: Implimented HoTT (Health of Target's Target) Functionality. This will only work for people with HoTT Built into their interface.
 	To get UI Files for a Target Window, see http://www.eqemulator.net/forums/showthread.php?p=135291
+FatherNitwit: Fix a few memory leaks.
 Changes to opcode files:
 patch_Titanium.conf: OP_TargetHoTT=0x6a12
 patch_6.2.conf: OP_TargetHoTT=0x3ef6
