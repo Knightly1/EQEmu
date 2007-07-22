@@ -15,7 +15,7 @@ EQStreamProxy::EQStreamProxy(EQStream *&stream, const StructStrategy *structs, O
 }
 
 EQStreamProxy::~EQStreamProxy() {
-	delete m_stream;
+	//delete m_stream;	//released by the stream factory.
 }
 
 std::string EQStreamProxy::Describe() const {
@@ -60,6 +60,12 @@ uint16 EQStreamProxy::GetRemotePort() const {
 
 void EQStreamProxy::ReleaseFromUse() {
 	m_stream->ReleaseFromUse();
+
+	//this is so ugly, but I cant think of a better way to deal with
+	//it right now...
+	if(!m_stream->IsInUse()) {
+		delete this;
+	}
 }
 
 void EQStreamProxy::RemoveData() {

@@ -1,5 +1,5 @@
 APP=build_packets
-SF=../common/MiscFunctions.o ../common/misc.o ../PacketCollector/packetfile.o \
+SF=../common/MiscFunctions.o ../common/misc.o ../common/packetfile.o \
    buildfile.o build_packets.o build_patches/current.o \
    build_patches/121504.o 
 

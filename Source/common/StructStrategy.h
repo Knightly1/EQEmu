@@ -15,6 +15,7 @@ public:
 	typedef void (*Decoder)(EQApplicationPacket *p);
 	
 	StructStrategy();
+	virtual ~StructStrategy() {}
 	
 	//this method takes an eqemu struct, and enqueues the produced structs into the stream.
 	void Encode(EQApplicationPacket **p, EQStream *dest, bool ack_req) const;

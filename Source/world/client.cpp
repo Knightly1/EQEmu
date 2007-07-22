@@ -83,11 +83,11 @@ Client::~Client() {
 	if (RunLoops && cle && zoneID == 0)
 		cle->SetOnline(CLE_Status_Offline);
 	
+	numclients--;
+	
 	//let the stream factory know were done with this stream
 	eqs->Close();
 	eqs->ReleaseFromUse();
-	
-	numclients--;
 }
 
 void Client::SendLogServer()

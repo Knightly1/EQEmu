@@ -20,13 +20,16 @@
 
 #include "BasePacket.h"
 #include "EQStreamType.h"
-#include "emu_opcodes.h"
 #include "op_codes.h"
 
-using namespace std;
+#ifdef STATIC_OPCODE
+	typedef unsigned short EmuOpcode;
+	static const EmuOpcode OP_Unknown = 0;
+#else
+#include "emu_opcodes.h"
+#endif
 
-class OpcodeManager;
-extern OpcodeManager *RawOpcodeManager;
+using namespace std;
 
 class EQStream;
 class EQStreamPair;

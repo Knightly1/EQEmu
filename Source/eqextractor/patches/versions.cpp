@@ -100,6 +100,8 @@ ExtractorAbstractFactory *ExtractorAbstractFactory::GetExtractorFactoryByDate(ui
 		// patch after 10-27-05 to 12-06-05
 		fprintf(stderr, "# Auto-detected patch date of 10-27-05 (Titanium)\n");
 		return(new EQE_Patch_Titanium::ExtractorConcreteFactory(filename));
+
+		//Anniversary is : 02/13/07 to 03/14/07
 	} //current patch on: 
 	
 	fprintf(stderr, "# Time Stamp is after any known patch, using current (live compat) structs.\n");

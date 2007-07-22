@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <time.h>
-#include "../PacketCollector/packetfile.h"
-#include "buildfile.h"
+#include "../common/packetfile.h"
+#include "../common/buildfile.h"
 #include "build_patches/writers.h"
 
 /*

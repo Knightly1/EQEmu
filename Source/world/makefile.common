@@ -7,7 +7,7 @@ SF= ../common/timer.o ../common/packet_dump.o ../common/races.o ../common/unix.o
    .obj/debug.o .obj/database.o .obj/Item.o ../common/extprofile.o .obj/EQStream.o \
    .obj/EQStreamFactory.o .obj/EQPacket.o ../common/CRC16.o ../common/packet_functions.o \
    ../common/timeoutmgr.o ../common/Condition.o ../common/opcodemgr.o ../common/emu_opcodes.o \
-   ../common/SharedLibrary.o world_logsys.o ../common/logsys.o \
+   ../common/SharedLibrary.o world_logsys.o ../common/logsys.o ../common/logsys_eqemu.o \
    ../common/EQEmuConfig.o WorldConfig.o ../common/XMLParser.o ../common/tinyxml/tinystr.o \
    ../common/tinyxml/tinyxml.o ../common/tinyxml/tinyxmlerror.o ../common/tinyxml/tinyxmlparser.o \
    ../common/BasePacket.o ../common/shareddb.o worlddb.o EQW.o HTTPRequest.o \
@@ -16,6 +16,7 @@ SF= ../common/timer.o ../common/packet_dump.o ../common/races.o ../common/unix.o
    ../common/EQStreamIdent.o ../common/StructStrategy.o \
    ../common/EQStreamProxy.o ../common/patches/patches.o \
    ../common/patches/Client62.o ../common/patches/Titanium.o ../common/patches/Live.o \
+   ../common/patches/Anniversary.o \
    ../common/EQDB.o ../common/perl_EQDB.o EQLConfig.o perl_EQLConfig.o \
    ../common/EQDBRes.o ../common/perl_EQDBRes.o ../common/EmuTCPServer.o \
    ../common/TCPServer.o ../common/EmuTCPConnection.o \

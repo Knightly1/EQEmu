@@ -1,5 +1,5 @@
 APP=eqlaunch
-SF=eqlaunch.o ../common/logsys.o \
+SF=eqlaunch.o ../common/logsys.o ../common/logsys_eqemu.o \
   .obj/debug.o ../common/misc.o .obj/Mutex.o ../common/unix.o \
   ../common/worldconn.o ../common/ProcLauncher.o \
   worldserver.o ../common/TCPConnection.o ../common/timer.o \

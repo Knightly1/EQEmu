@@ -234,7 +234,7 @@ ProcLauncher::ProcRef ProcLauncher::Launch(Spec *&to_launch) {
 			//we will put their output directly into a file.
 			int outfd = creat(it->logFile.c_str(), S_IRUSR | S_IWUSR);
 			if(outfd == -1) {
-				fprintf(stderr, "Unable to open log file %s: %s.\n", strerror(errno));
+				fprintf(stderr, "Unable to open log file %s: %s.\n", it->logFile.c_str(), strerror(errno));
 				close(STDOUT_FILENO);
 				close(STDERR_FILENO);
 				close(STDIN_FILENO);

@@ -2,8 +2,11 @@
 #include "../common/opcodemgr.h"
 #include "../common/emu_opcodes.h"
 #include "../common/packet_dump.h"
-#include "../common/eq_packet_structs.h"
 #include "../common/MiscFunctions.h"
+#include "../common/eq_constants.h"
+
+#include "../common/patches/Anniversary_structs.h"
+using namespace Anniversary::structs;
 
 
 StructMatcher::StructMatcher(MutableOpcodeManager *op) {
@@ -134,12 +137,15 @@ void StructMatcher::ProcessKnown(SMPacket *p) {
 	case OP_ZoneSpawns: {
 		MobInfoStruct cm;
 		
-		if ((p->size % sizeof(NewSpawn_Struct)) != 0)
+		if ((p->size % sizeof(NewSpawn_Struct)) != 0) {
+			printf("Invalid length of spawn struct: %d\n", p->size);
 			break;
+		}
 		
 		uint32 spawn_count = (p->size / sizeof(Spawn_Struct));
 		uchar* buffer=(uchar*)p->pBuffer;
 		uint32 i;
+printf("Processing %d spawns.\n", spawn_count);
 		for(i=0;i<spawn_count;i++){
 			Spawn_Struct* spawn=(Spawn_Struct*)buffer;
 			

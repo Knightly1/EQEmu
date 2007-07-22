@@ -259,7 +259,8 @@ INr(OP_TGB);		//4 bytes, value is 0, 1, or 2
 IN(OP_Split, Split_Struct);
 INz(OP_SenseTraps);		//?
 INz(OP_DisarmTraps);	//?
-IN(OP_StartTribute, StartTribute_Struct);
+IN(OP_OpenTributeMaster, StartTribute_Struct);
+IN(OP_OpenGuildTributeMaster, StartTribute_Struct);
 IN(OP_TributeItem, TributeItem_Struct);
 IN(OP_TributeMoney, TributeMoney_Struct);
 IN(OP_SelectTribute, SelectTributeReq_Struct);
@@ -336,7 +337,7 @@ OUT(OP_BankerChange, BankerChange_Struct);
 OUT(OP_BecomeTrader, BecomeTrader_Struct);
 OUT(OP_BeginCast, BeginCast_Struct);
 OUT(OP_Charm, Charm_Struct);
-OUT(OP_ClickObjectAck, ClickObjectAction_Struct);
+OUT(OP_ClickObjectAction, ClickObjectAction_Struct);
 OUT(OP_ConsentResponse, ConsentResponse_Struct);
 //OUT(OP_ConsumeAmmo, MoveItem_Struct);
 OUT(OP_ExpUpdate, ExpUpdate_Struct);
@@ -375,7 +376,6 @@ OUT(OP_SomeItemPacketMaybe, Arrow_Struct);
 OUT(OP_Stamina, Stamina_Struct);
 OUT(OP_Stun, Stun_Struct);
 OUT(OP_TargetReject, TargetReject_Struct);
-OUT(OP_TargetHoTT, ClientTarget_Struct);
 OUT(OP_TimeOfDay, TimeOfDay_Struct);
 OUT(OP_Track, Track_Struct);
 OUT(OP_TradeCoins, TradeCoin_Struct);

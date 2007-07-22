@@ -23,7 +23,7 @@
 using namespace std;
 
 #include "packet_dump.h"
-#include "EQStream.h"
+#include "EQPacket.h"
 #include "../common/servertalk.h"
 
 void DumpPacketAscii(const uchar* buf, int32 size, int32 cols, int32 skip) {

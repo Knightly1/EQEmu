@@ -661,6 +661,9 @@
 				RelativePath="..\common\logsys.cpp">
 			</File>
 			<File
+				RelativePath="..\common\logsys_eqemu.cpp">
+			</File>
+			<File
 				RelativePath="..\common\rulesys.cpp">
 			</File>
 			<File

@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==07/22/2007
+FatherNitwit: Fixed another memory leak in world and zone.
+
 ==07/21/2007
 Rogean: Fixed LDoN Merchant Item Inspect
 

@@ -343,6 +343,9 @@
 				RelativePath="..\common\logsys.cpp">
 			</File>
 			<File
+				RelativePath="..\common\logsys_eqemu.cpp">
+			</File>
+			<File
 				RelativePath="..\common\emu_opcodes.cpp">
 			</File>
 			<File

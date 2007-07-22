@@ -299,7 +299,6 @@ Client::~Client() {
 	//let the stream factory know were done with this stream
 	eqs->Close();
 	eqs->ReleaseFromUse();
-	eqs = NULL;
 }
 
 void Client::SendLogoutPackets() {

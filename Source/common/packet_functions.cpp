@@ -22,7 +22,6 @@
 #include <zlib.h>
 #include "packet_dump.h"
 #include "EQCheckTable.h"
-#include "EQStream.h"
 #include "packet_functions.h"
 
 #ifndef WIN32

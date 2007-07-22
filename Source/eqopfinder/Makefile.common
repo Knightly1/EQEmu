@@ -1,7 +1,8 @@
 #the set of objects needed to do something useful with packetfiles
 OFOBJS=.obj/Mutex.o .obj/unix.o .obj/packetfile.o \
   .obj/opcodemgr.o ../common/emu_opcodes.o structmatch.o matchers.o \
-  .obj/MiscFunctions.o .obj/packet_dump.o eqopfinder.o .obj/logsys.o
+  .obj/MiscFunctions.o .obj/packet_dump.o eqopfinder.o .obj/logsys.o \
+  ../common/logsys_eqemu.o ../common/debug.o ../common/misc.o 
 
 all: eqopfinder
 

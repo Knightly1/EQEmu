@@ -71,21 +71,6 @@ void log_raw_packet(LogType type, uint16 seq, const BasePacket *p) {
 	log_hex(type,(const char *)p->pBuffer,p->size);
 }
 
-void log_message(LogType type, const char *fmt, ...) {
-	va_list args;
-	va_start(args, fmt);
-	log_messageVA(type, fmt, args);
-	va_end(args);
-}
-
-void log_messageVA(LogType type, const char *fmt, va_list args) {
-	char prefix_buffer[256];
-	snprintf(prefix_buffer, 255, "[%s] ", log_type_info[type].name);
-	prefix_buffer[255] = '\0';
-	
-	LogFile->writePVA(EQEMuLog::Debug, prefix_buffer, fmt, args);
-}
-
 
 void log_enable(LogType t) {
 	real_log_type_info[t].enabled = true;

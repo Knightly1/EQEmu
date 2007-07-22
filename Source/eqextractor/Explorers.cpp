@@ -213,10 +213,10 @@ void SpellExplorer::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len
 				return;	//filtered
 		}
 		printf("OP_Action %s: Caster %d, target %d, seq %d, type %d, spell %d\n"
-				"\tuB %d, u6 %d, u8 %d, u16 %d, u18 %d, u23 %d, u29 %d\n",
+				"\tuB %d, imod %d, u8 %d, u16 %d, u18 %d, u23 %d, u29 %d\n",
 			to_server?"To Server":"To Client", 
 			i->source, i->target, i->sequence, i->type, i->spell,
-			i->buff_unknown, i->unknown06, i->unknown08, i->unknown16, i->unknown18, i->unknown23, i->unknown29);
+			i->buff_unknown, i->instrument_mod, i->unknown08, i->unknown16, i->unknown18, i->unknown23, i->unknown29);
 		break;
 	}
 	case OP_Action2: {
@@ -447,8 +447,8 @@ void PlayerProfileExplorer::GivePacket(EmuOpcode emu_op, unsigned char *data, ui
 	int r;
 	for(r = 0; r < BUFF_COUNT; r++) {
 		const SpellBuff_Struct &c = i->buffs[r];
-		printf("%d: id %d, lvl %d, bard %d, effect %d, dur %d, DS %d, D %d, P %d. PlayerID %d\n",
-			c.slotid, c.spellid, c.level, c.bard_modifier, c.effect, c.duration, c.dmg_shield_remaining, c.diseasecounters, c.poisoncounters, c.player_id);
+		printf("%d: id %d, lvl %d, bard %d, effect %d, dur %d, DS %d. PlayerID %d\n",
+			c.slotid, c.spellid, c.level, c.bard_modifier, c.effect, c.duration, c.dmg_shield_remaining, c.player_id);
 	}
 //	DumpPacket(((unsigned char *) i->buffs)-16, sizeof(i->buffs)+32);
 }

@@ -1,12 +1,16 @@
+struct LoginInfo_Struct {};
 #include "structmatch.h"
 #include "../common/emu_opcodes.h"
-#include "../common/eq_packet_structs.h"
 #include "../common/MiscFunctions.h"
 #include "../common/eq_constants.h"
 #include "../common/classes.h"
 #include "../common/skills.h"
-#include "../EMuShareMem/Items.h"
 #include "../zone/StringIDs.h"
+
+#define MMF_EQMAX_ITEMS 100000
+
+#include "../common/patches/Anniversary_structs.h"
+using namespace Anniversary::structs;
 
 #ifndef WIN32
 #include <netinet/in.h>
@@ -137,13 +141,27 @@ bool StructMatcher::Match_OP_FinishTrade(const SMPacket *p) {
 	return(false);
 }
 
-bool StructMatcher::Match_OP_StartTribute(const SMPacket *p) {
+bool StructMatcher::Match_OP_OpenTributeMaster(const SMPacket *p) {
 	if(p->size == sizeof(StartTribute_Struct)) {
 		StartTribute_Struct *s = (StartTribute_Struct *) p->pBuffer;
 		
 		CheckSelf(s->client_id);
 		
 		CheckMobClass(s->tribute_master_id, TRIBUTE_MASTER);
+		
+		//CheckUnsignedLimit(s->response, ULONG_MAX);
+		return(true);
+	}
+	return(false);
+}
+
+bool StructMatcher::Match_OP_OpenGuildTributeMaster(const SMPacket *p) {
+	if(p->size == sizeof(StartTribute_Struct)) {
+		StartTribute_Struct *s = (StartTribute_Struct *) p->pBuffer;
+		
+		CheckSelf(s->client_id);
+		
+		CheckMobClass(s->tribute_master_id, GUILD_TRIBUTE_MASTER);
 		
 		//CheckUnsignedLimit(s->response, ULONG_MAX);
 		return(true);
@@ -2462,7 +2480,7 @@ bool StructMatcher::Match_OP_AugmentItem(const SMPacket *p) {
 bool StructMatcher::Match_OP_GuildManageAdd(const SMPacket *p) {
 	if(p->size == sizeof(GuildJoin_Struct)) {
 		GuildJoin_Struct *s = (GuildJoin_Struct *) p->pBuffer;
-		CheckUnsignedLimit(s->guildid, MAX_GUILD_ID);
+		CheckUnsignedLimit(s->guild_id, MAX_GUILD_ID);
 		//unknown04 skipped
 		CheckUnsigned(s->level, 1, HIGHEST_LIVE_LEVEL);
 		CheckUnsignedLimit(s->class_, 64);

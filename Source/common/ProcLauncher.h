@@ -61,6 +61,7 @@ public:
 	};
 	class EventHandler {
 	public:
+		virtual ~EventHandler() {}
 		virtual void OnTerminate(const ProcRef &ref, const Spec *spec) = 0;
 	};
 	

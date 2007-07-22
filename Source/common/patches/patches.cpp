@@ -4,18 +4,21 @@
 
 #include "Client62.h"
 #include "Titanium.h"
+#include "Anniversary.h"
 #include "Live.h"
 
 
 void RegisterAllPatches(EQStreamIdentifier &into) {
 	Client62::Register(into);
 	Titanium::Register(into);
+	Anniversary::Register(into);
 	Live::Register(into);
 }
 
 void ReloadAllPatches() {
 	Client62::Reload();
 	Titanium::Reload();
+	Anniversary::Reload();
 	Live::Reload();
 }
 
