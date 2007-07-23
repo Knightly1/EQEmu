@@ -261,12 +261,22 @@ typedef enum {
 #define MT_Chat8Echo			322
 #define MT_Chat9Echo			323
 #define MT_Chat10Echo			324
-#define MT_DoTDamage			315
-#define MT_ItemLink				316
-#define MT_RaidSay				317
-#define MT_MyPet				318
-#define MT_DS					320
+#define MT_DoTDamage			325
+#define MT_ItemLink				326
+#define MT_RaidSay				327
+#define MT_MyPet				328
+#define MT_DS					329
+#define MT_Leadership			330
+#define MT_PetFlurry			331
+#define MT_PetCrit				332
+#define MT_FocusEffect			333
+#define MT_Experience			334
+#define MT_System				335
+#define MT_PetSpell				336
+#define MT_PetResponce			337
+#define MT_ItemSpeech			338
 #define MT_StrikeThrough		339
+#define MT_Stun					340
 
 //from showeq
 enum ChatColor
