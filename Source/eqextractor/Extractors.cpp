@@ -390,9 +390,11 @@ uint32 AAExtractor::AAAbilityExtractor::AAAbilityItem::FromPacket(unsigned char 
 	AA_Ability *i = (AA_Ability *) packet;
 	
 	data[ability] = ultoa(i->skill_id);
+#ifdef OUT_FOR_NOW
 	data[increase_amt] = ultoa(i->increase_amt);
 	data[last_level] = ultoa(i->last_level);
 	data[unknown08] = ultoa(i->unknown08);
+#endif
 	
 	return(sizeof(AA_Ability));
 }

@@ -8,7 +8,7 @@ EEOBJS=eqextractor.o $(PFOBJS) ../common/dbcore.o ExtractCollector.o \
   StructExplorer.o ../common/packet_dump.o ../common/buildfile.o \
   patches/versions.o patches/patch_021505.o patches/patch_current.o \
   patches/patch_local.o patches/patch_121504.o patches/patch_051105.o \
-  patches/patch_Titanium.o patches/patch_62.o
+  patches/patch_Titanium.o patches/patch_62.o patches/patch_Anniversary.o 
 
 all: eqextractor pf2text catalogpf restamppf
 

@@ -11,6 +11,7 @@
 #include "patches/patch_121504.h"
 #include "patches/patch_051105.h"
 #include "patches/patch_Titanium.h"
+#include "patches/patch_Anniversary.h"
 #include "patches/patch_62.h"
 
 ExtractorAbstractFactory::ExtractorAbstractFactory(const char *opcodes_file) {
@@ -31,6 +32,7 @@ void ExtractorAbstractFactory::ListExtractorFactories() {
 		"\tlocal\t- The current structures in patches/patch_local.h\n"
 		"\tDated:\n"
 		"\tTitanium - The Titanium boxed edition (10/27/2005->12/06/2005)\n"
+		"\tAnniversary - The Anniversary boxed edition (02/13/07->03/14/07)\n"
 		"\tClient62 - The eqemu 6.2 compatible client (July 11th 2005 -> 09/13/2005)\n"
 		"\t051105 - The May 11th 2005 patch\n"
 		"\t021505 - The Febuary 15 2005 patch, DoN release, new net code\n"
@@ -61,12 +63,16 @@ ExtractorAbstractFactory *ExtractorAbstractFactory::GetExtractorFactoryByName(co
 	if(!strcasecmp(patch_name, "Titanium")) {
 		return(new EQE_Patch_Titanium::ExtractorConcreteFactory(filename));
 	}
+	if(!strcasecmp(patch_name, "Anniversary")) {
+		return(new EQE_Patch_Anniversary::ExtractorConcreteFactory(filename));
+	}
 	return(NULL);
 }
 
 //second constants to make patch dates easier
 #define YEAR_2004 1072935480
 #define YEAR_2005 1104492410
+#define YEAR_2007 1167606262
 #define MONTH 2629743
 #define DAY 86400
 
@@ -101,7 +107,15 @@ ExtractorAbstractFactory *ExtractorAbstractFactory::GetExtractorFactoryByDate(ui
 		fprintf(stderr, "# Auto-detected patch date of 10-27-05 (Titanium)\n");
 		return(new EQE_Patch_Titanium::ExtractorConcreteFactory(filename));
 
-		//Anniversary is : 02/13/07 to 03/14/07
+	} else if(stamp < (YEAR_2007 + 1*MONTH + 12*DAY)) {
+		// No work done from 12/6/05 to 02/13/07
+		fprintf(stderr, "# Invalid Patch date 12/6/05 to 02/13/07\n");
+		return(NULL);
+	} else if(stamp < (YEAR_2007 + 2*MONTH + 14*DAY)) {
+		// patch after 02/13/07 to 03/14/07
+		fprintf(stderr, "# Auto-detected patch date of 02-13-07 (Anniversary)\n");
+		return(new EQE_Patch_Anniversary::ExtractorConcreteFactory(filename));
+		
 	} //current patch on: 
 	
 	fprintf(stderr, "# Time Stamp is after any known patch, using current (live compat) structs.\n");

@@ -142,8 +142,8 @@ ENCODE(OP_SendAATable) {
 	
 	OUT(id);
 	eq->unknown004 = 1;
-	eq->hotkey_sid = (emu->hotkey_sid==4294967295)?0:(emu->id - emu->current_level + 1);
-	eq->hotkey_sid2 = (emu->hotkey_sid2==4294967295)?0:(emu->id - emu->current_level + 1);
+	eq->hotkey_sid = (emu->hotkey_sid==4294967295UL)?0:(emu->id - emu->current_level + 1);
+	eq->hotkey_sid2 = (emu->hotkey_sid2==4294967295UL)?0:(emu->id - emu->current_level + 1);
 	eq->title_sid = emu->id - emu->current_level + 1;
 	eq->desc_sid = emu->id - emu->current_level + 1;
 	OUT(class_type);

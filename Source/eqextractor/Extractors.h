@@ -605,6 +605,7 @@ protected:
 
 
 class SpawnExtractor : public ExtractCollector {
+protected:
 	class SpawnItem;
 public:
 	SpawnExtractor(ZoneInfoExtractor *zi);
