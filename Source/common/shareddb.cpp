@@ -762,14 +762,19 @@ bool SharedDatabase::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 			item.AugType = (uint32)atoul(row[ItemField::augtype]);
 			item.AugSlotType[0] = (uint8)atoi(row[ItemField::augslot1type]);
 			item.AugSlotUnk[0] = (uint8)atoi(row[ItemField::augslot1unk]);
+			item.AugSlotUnk2[0] = 0;
 			item.AugSlotType[1] = (uint8)atoi(row[ItemField::augslot2type]);
 			item.AugSlotUnk[1] = (uint8)atoi(row[ItemField::augslot2unk]);
+			item.AugSlotUnk2[1] = 0;
 			item.AugSlotType[2] = (uint8)atoi(row[ItemField::augslot3type]);
 			item.AugSlotUnk[2] = (uint8)atoi(row[ItemField::augslot3unk]);
+			item.AugSlotUnk2[2] = 0;
 			item.AugSlotType[3] = (uint8)atoi(row[ItemField::augslot4type]);
 			item.AugSlotUnk[3] = (uint8)atoi(row[ItemField::augslot4unk]);
+			item.AugSlotUnk2[3] = 0;
 			item.AugSlotType[4] = (uint8)atoi(row[ItemField::augslot5type]);
 			item.AugSlotUnk[4] = (uint8)atoi(row[ItemField::augslot5unk]);
+			item.AugSlotUnk2[4] = 0;
 			item.LDoNTheme = (uint32)atoul(row[ItemField::ldontheme]);
 			item.LDoNPrice = (uint32)atoul(row[ItemField::ldonprice]);
 			item.LDoNSold = (uint32)atoul(row[ItemField::ldonsold]);
@@ -833,6 +838,7 @@ bool SharedDatabase::DBLoadItems(sint32 iItemCount, uint32 iMaxItemID) {
 			item.Scroll.Type = (uint8)atoul(row[ItemField::scrolltype]);
 			item.Scroll.Level = (uint8)atoul(row[ItemField::scrolllevel]);
 			item.Scroll.Level2 = (uint8)atoul(row[ItemField::scrolllevel2]);
+			item.QuestItemFlag = false;
 			
 			if (!EMuShareMemDLL.Items.cbAddItem(item.ID, &item)) {
 				LogFile->write(EQEMuLog::Error, "Database::DBLoadItems: Failure reported from EMuShareMemDLL.Items.cbAddItem(%i)", item.ID);

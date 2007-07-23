@@ -54,6 +54,11 @@ struct ItemEffect_Struct {
 	uint8	Type;
 	uint8	Level;
 	uint8	Level2;
+	//MaxCharges
+	//CastTime
+	//RecastDelay
+	//RecastType
+	//ProcRate
 };
 
 class ItemInst;
@@ -176,6 +181,7 @@ struct Item_Struct {
 	uint32	AugType;
 	uint8	AugSlotType[MAX_AUGMENT_SLOTS];		// LDoN: Augment Slot 1-5 Type
 	uint8	AugSlotUnk[MAX_AUGMENT_SLOTS];		// LDoN: Augment Slot 1-5 Unknown
+	uint8	AugSlotUnk2[MAX_AUGMENT_SLOTS];		// LDoN: Augment Slot 1-5 Unknown
 	uint32	LDoNTheme;
 	uint32	LDoNPrice;
 	uint32	LDoNSold;
@@ -197,6 +203,7 @@ struct Item_Struct {
 	bool	PotionBelt;
 	bool	Stackable;
 	bool	NoTransfer;
+	bool	QuestItemFlag;
 	uint8	StackSize;
 	uint8	PotionBeltSlots;
 	ItemEffect_Struct Click, Proc, Worn, Focus, Scroll;
