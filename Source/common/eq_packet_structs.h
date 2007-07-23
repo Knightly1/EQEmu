@@ -612,6 +612,7 @@ struct Disciplines_Struct {
 static const uint32 MAX_PLAYER_TRIBUTES = 5;
 static const uint32 MAX_PLAYER_BANDOLIER = 4;
 static const uint32 MAX_PLAYER_BANDOLIER_ITEMS = 4;
+static const uint32 MAX_POTIONS_IN_BELT = 4;
 static const uint32 TRIBUTE_NONE = 0xFFFFFFFF;
 struct Tribute_Struct {
 	uint32 tribute;
@@ -637,7 +638,7 @@ struct Bandolier_Struct {
 	BandolierItem_Struct items[MAX_PLAYER_BANDOLIER_ITEMS];
 };
 struct PotionBelt_Struct {
-	BandolierItem_Struct items[MAX_PLAYER_BANDOLIER_ITEMS];
+	BandolierItem_Struct items[MAX_POTIONS_IN_BELT];
 };
 
 static const uint32 MAX_GROUP_LEADERSHIP_AA_ARRAY = 16;
@@ -1066,8 +1067,6 @@ struct CombatDamage_Struct
 
 /*
 ** Consider Struct
-** Length: 24 Bytes
-** OpCode: 3721
 */
 struct Consider_Struct{
 /*000*/ uint32	playerid;               // PlayerID
@@ -2217,6 +2216,12 @@ struct	ItemViewRequest_Struct {
 /*028*/	char	unknown028[16];
 };
 
+struct	LDONItemViewRequest_Struct {
+	uint32	item_id;
+	uint8	unknown004[4];
+	char	item_name[64];
+};
+
 /*
  *  Client to server packet
  */
@@ -3204,6 +3209,51 @@ struct ZonePlayerToBind_Struct {
 /*016*/	float heading;
 /*020*/	char zone_name[1];
 };
+
+
+/**
+ * Shroud spawn. For others shrouding, this has their spawnId and
+ * spawnStruct.
+ * 
+ * Length: 586
+ * OpCode: OP_Shroud
+ */
+struct spawnShroudOther
+{
+/*0000*/ uint32 spawnId;          // Spawn Id of the shrouded player
+/*0004*/ Spawn_Struct spawn;         // Updated spawn struct for the player
+/*0586*/
+};
+
+/**
+ * Shroud yourself. For yourself shrouding, this has your spawnId, spawnStruct,
+ * bits of your charProfileStruct (no checksum, then charProfile up till
+ * but not including name), and an itemPlayerPacket for only items on the player
+ * and not the bank.
+ *
+ * Length: Variable
+ * OpCode: OP_Shroud
+ */
+#if 0
+struct spawnShroudSelf
+{
+/*00000*/ uint32_t spawnId;            // Spawn Id of you
+/*00004*/ Spawn_Struct spawn;           // Updated spawnStruct for you
+//this is a sub-struct of PlayerProfile, which we havent broken out yet.
+/*00586*/ playerProfileStruct profile; // Character profile for shrouded char
+/*13522*/ uint8_t items;               // Items on the player
+/*xxxxx*/
+};
+#endif
+
+
+
+
+
+
+
+
+
 
 //old structures live here:
 #include "eq_old_structs.h"

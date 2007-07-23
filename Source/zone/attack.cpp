@@ -33,6 +33,7 @@ using namespace std;
 #include "NpcAI.h"
 #include "../common/packet_dump.h"
 #include "../common/eq_packet_structs.h"
+#include "../common/eq_constants.h"
 #include "../common/skills.h"
 #include "spdat.h"
 #include "zone.h"

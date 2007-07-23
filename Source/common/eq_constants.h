@@ -266,6 +266,7 @@ typedef enum {
 #define MT_RaidSay				317
 #define MT_MyPet				318
 #define MT_DS					320
+#define MT_StrikeThrough		339
 
 //from showeq
 enum ChatColor
