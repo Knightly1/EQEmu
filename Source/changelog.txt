@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==07/26/2007
+KLS: Updated AA_Data.sql, still work to be done but should now be more complete than older AA sources.
+
 ==07/22/2007
 FatherNitwit: Fixed another memory leak in world and zone.
 KLS: Fixed up some message types so they match the client correctly.
