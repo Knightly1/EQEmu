@@ -606,6 +606,9 @@
 				RelativePath="..\common\patches\Titanium.cpp">
 			</File>
 			<File
+				RelativePath="..\common\patches\Anniversary.cpp">
+			</File>
+			<File
 				RelativePath="..\common\patches\Live.cpp">
 			</File>
 			<File

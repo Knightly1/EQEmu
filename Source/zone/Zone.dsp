@@ -1157,6 +1157,10 @@ SOURCE=..\common\patches\Titanium.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\common\patches\Anniversary.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\common\patches\Live.cpp
 # End Source File
 # Begin Source File

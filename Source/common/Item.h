@@ -156,6 +156,9 @@ public:
 
 	// Remove item from inventory
 	void DeleteItem(sint16 slot_id, uint8 quantity=0);
+
+	// Checks All items in a bag for No Drop
+	bool CheckNoDrop(sint16 slot_id);
 	
 	// Remove item from inventory (and take control of memory)
 	ItemInst* PopItem(sint16 slot_id);

@@ -714,6 +714,19 @@ void Inventory::DeleteItem(sint16 slot_id, uint8 quantity)
 	safe_delete(item_to_delete);
 }
 
+// Checks All items in a bag for No Drop
+bool Inventory::CheckNoDrop(sint16 slot_id) {
+    const ItemInst* inst = GetItem(SLOT_CURSOR);
+	if (!inst->GetItem()->NoDrop) return true;
+	if (inst->GetItem()->ItemClass == 1) {
+		for (int16 i=0; i<10; i++) {
+			const ItemInst* bagitem = GetItem(Inventory::CalcSlotId(slot_id, i));
+			if (bagitem && !bagitem->GetItem()->NoDrop) return true;
+		}
+	}
+	return false;
+}
+
 // Remove item from bucket without memory delete
 // Returns item pointer if full delete was successful
 ItemInst* Inventory::PopItem(sint16 slot_id)

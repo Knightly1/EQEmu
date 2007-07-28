@@ -595,6 +595,16 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 			return(false);
 		}
 	}
+
+	// Check for No Drop Hacks
+	Mob* with = trade->With();
+	if (((with && with->IsClient() && dst_slot_id>=3000 && dst_slot_id<=3007) || // Trade
+	(dst_slot_id >= 2500 && dst_slot_id <= 2550)) // Shared Bank
+	&& GetInv().CheckNoDrop(src_slot_id)) {
+		DeleteItemInInventory(src_slot_id);
+		WorldKick();
+		return false;
+	}
 	
 	// Step 3: Check for interaction with World Container (tradeskills)
 	if(m_tradeskill_object != NULL) {
@@ -669,16 +679,11 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	}
 	
 	// Step 4: Check for entity trade
-	Mob* with = trade->With();
 	if (with && dst_slot_id>=3000 && dst_slot_id<=3007) {
 		mlog(INVENTORY__SLOTS, "Trade item move from slot %d to slot %d (trade with %s)", src_slot_id, dst_slot_id, with->GetName());
 		// Fill Trade list with items from cursor
 		if (!m_inv[SLOT_CURSOR]) {
 			Message(13, "Error: Cursor item not located on server!");
-			return false;
-		}
-		if (with->IsClient() && src_inst->GetItem()->NoDrop == 0) {
-			Message(13, "This item is NODROP.");
 			return false;
 		}
 		
@@ -1140,5 +1145,6 @@ EQApplicationPacket* Client::ReturnItemPacket(sint16 slot_id, const ItemInst* in
 
 	return outapp;
 }
+
 
 
