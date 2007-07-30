@@ -102,6 +102,10 @@ void Trade::AddEntity(int16 from_slot_id, int16 trade_slot_id)
 	}
 	else
 	{
+		if (client->GetInv().GetItem(SLOT_CURSOR)->GetID() != client->GetInv().GetItem(trade_slot_id)->GetID()) {
+			client->Kick();
+			return;
+		}
 		new_charges = (inst2->GetCharges()+inst->GetCharges());
 		if (new_charges < 20)
 		{

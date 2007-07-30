@@ -679,18 +679,28 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	}
 	
 	// Step 4: Check for entity trade
-	if (with && dst_slot_id>=3000 && dst_slot_id<=3007) {
-		mlog(INVENTORY__SLOTS, "Trade item move from slot %d to slot %d (trade with %s)", src_slot_id, dst_slot_id, with->GetName());
-		// Fill Trade list with items from cursor
-		if (!m_inv[SLOT_CURSOR]) {
-			Message(13, "Error: Cursor item not located on server!");
+	if (dst_slot_id>=3000 && dst_slot_id<=3007) {
+		if (src_slot_id != SLOT_CURSOR) {
+			Kick();
 			return false;
 		}
-		
-		// Add cursor item to trade bucket
-		// Also sends trade information to other client of trade session
-		trade->AddEntity(src_slot_id, dst_slot_id);
-		return true;
+		if (with) {
+			mlog(INVENTORY__SLOTS, "Trade item move from slot %d to slot %d (trade with %s)", src_slot_id, dst_slot_id, with->GetName());
+			// Fill Trade list with items from cursor
+			if (!m_inv[SLOT_CURSOR]) {
+				Message(13, "Error: Cursor item not located on server!");
+				return false;
+			}
+			
+			// Add cursor item to trade bucket
+			// Also sends trade information to other client of trade session
+			trade->AddEntity(src_slot_id, dst_slot_id);
+			return true;
+		} else {
+			SummonItem(src_inst->GetID(), src_inst->GetCharges());
+			DeleteItemInInventory(SLOT_CURSOR);
+			return true;
+		}
 	}
 	
 	// Step 5: Swap (or stack) items
@@ -1145,6 +1155,7 @@ EQApplicationPacket* Client::ReturnItemPacket(sint16 slot_id, const ItemInst* in
 
 	return outapp;
 }
+
 
 
 

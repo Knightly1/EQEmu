@@ -1,8 +1,11 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==07/30/2007
+Rogean: Fixed an item dupe exploit.
+
 ==07/28/2007
-Rogean: Put in checks for No Drop Trading Hacks (Thanks "typenamehere"!)
+Rogean: Put in checks for No Drop Trading Hacks
 
 ==07/26/2007
 KLS: Updated AA_Data.sql, still work to be done but should now be more complete than older AA sources.
