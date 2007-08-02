@@ -315,6 +315,13 @@ void MapOpcodes() {
 int Client::HandlePacket(const EQApplicationPacket *app)
 {
 	_ZP(Client_HandlePacket);
+
+	if(is_log_enabled(CLIENT__NET_IN_TRACE)) {
+		char buffer[64];
+		app->build_header_dump(buffer);
+		mlog(CLIENT__NET_IN_TRACE, "Dispatch opcode: %s", buffer);
+		mpkt(CLIENT__NET_IN_TRACE, app);
+	}
 	
 	EmuOpcode opcode = app->GetOpcode();
 	if (opcode == OP_AckPacket) {
@@ -373,13 +380,6 @@ int Client::HandlePacket(const EQApplicationPacket *app)
 				DumpPacket(app->pBuffer, 1000);
 			}
 			break;
-		}
-
-		if(is_log_enabled(CLIENT__NET_IN_TRACE)) {
-			char buffer[64];
-			app->build_header_dump(buffer);
-			mlog(CLIENT__NET_IN_TRACE, "Dispatch opcode: %s", buffer);
-			mpkt(CLIENT__NET_IN_TRACE, app);
 		}
 		
 		//call the processing routine

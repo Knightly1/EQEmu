@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/01/2007
+FatherNitwit: (cavedude) Fix Iksar BL pet appearance.
+
 ==07/30/2007
 Rogean: Fixed an item dupe exploit.
 
