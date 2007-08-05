@@ -4972,6 +4972,13 @@ void Client::Handle_OP_GMServers(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Illusion(const EQApplicationPacket *app)
 {
+	if(app->size != sizeof(Illusion_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Received invalid sized OP_Illusion: got %d, expected %d", app->size, 
+			sizeof(Illusion_Struct));
+		DumpPacket(app);
+		return;
+	}
+	
 	Illusion_Struct* bnpc = (Illusion_Struct*)app->pBuffer;
 	// @merth: these need to be implemented
 	/*
@@ -5100,6 +5107,13 @@ void Client::Handle_OP_Mend(const EQApplicationPacket *app)
 
 void Client::Handle_OP_EnvDamage(const EQApplicationPacket *app)
 {
+	
+	if(app->size != sizeof(EnvDamage2_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Received invalid sized OP_EnvDamage: got %d, expected %d", app->size, 
+			sizeof(EnvDamage2_Struct));
+		DumpPacket(app);
+		return;
+	}
 	EnvDamage2_Struct* ed = (EnvDamage2_Struct*)app->pBuffer;
 	if(admin >= minStatusToAvoidFalling && GetGM()){
 		Message(13, "Your GM status protects you from %i points of type %i environmental damage.", ed->damage, ed->dmgtype);
@@ -5146,6 +5160,13 @@ void Client::Handle_OP_EnvDamage(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Damage(const EQApplicationPacket *app)
 {
+	if(app->size != sizeof(CombatDamage_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Received invalid sized OP_Damage: got %d, expected %d", app->size, 
+			sizeof(CombatDamage_Struct));
+		DumpPacket(app);
+		return;
+	}
+	
 	// Broadcast to other clients
 	CombatDamage_Struct* damage = (CombatDamage_Struct*)app->pBuffer;
 	//dont send to originator of falling damage packets

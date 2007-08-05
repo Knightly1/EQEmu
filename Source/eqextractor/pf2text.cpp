@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
 
 
 void DumpPacketHex(const uchar* buf, int32 size, int32 cols, int32 skip) {
-	if (size == 0 || size > 39565)
+	if (size == 0 || size > 65535)
 		return;
 	// Output as HEX
 	char output[4];

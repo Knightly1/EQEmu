@@ -327,7 +327,6 @@ struct ClientZoneEntry_Struct {
 
 /*
 ** Server Zone Entry Struct
-** Length: 452 Bytes
 ** OPCodes: OP_ServerZoneEntry
 **
 */

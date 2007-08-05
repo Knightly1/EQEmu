@@ -18,6 +18,11 @@ using namespace std;
 #define PrintFloats(from, field) \
  PrintFloatsReal(#field , (const char *) &from->field, sizeof(from->field))
 
+#define PrintSimple(from, field) \
+ printf(#field ": %lu\n", uint32(from->field))
+#define PrintSimpleStr(from, field) \
+ printf(#field ": %s\n", from->field)
+
 /*
 */
 class StructExplorer {

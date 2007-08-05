@@ -357,23 +357,54 @@ void UnknownExplorer::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 l
 
 #pragma pack(1)
 struct u2struct {
-	float f1;
-	float f2;
-	float f3;
-	uint8 unknown12[5];
+	uint32 item_count;
+	uint32 instance[13];
+	uint8 divider1;
+	uint8 ItemClass;
+	char Name[1];
+	char Lore[1];
+	char IDFile[1];
+	uint32 ID;
+	uint8 Weight;
+	uint8 NoRent;
+	uint16 NoDrop;
+	uint32 Size;
+	uint8 Slots;
+	uint32 Price;
+	uint32 Icon;
 };
 #pragma pack()
 void Unknown2Explorer::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {
-	if(emu_op != OP_ExploreUnknown)
+	if(emu_op != OP_CharInventory)
 		return;
+	const unsigned char *data_ptr = data;
 	
-	printf("\nNew Packet:\n");
-	u2struct *p = (u2struct *) data;
-	int count = (len-1)/sizeof(u2struct);
-	for(; count > 0; count--) {
-		printf("unknown: (%f, %f, %f):\n", p->f1, p->f2, p->f3);
-		PrintBlock(p, unknown12);
+	printf("\nInventory:\n");
+	const u2struct *p = (const u2struct *) data_ptr;
+	PrintSimple(p, item_count);
+	int r;
+	for(r = 0; r < 13; r++) {
+		PrintSimple(p, instance[r]);
 	}
+	PrintSimple(p, divider1);
+	PrintSimple(p, ItemClass);
+	PrintSimpleStr(p, Name);
+	data_ptr += strlen(p->Name);	//slide past name.
+	p = (u2struct *) data_ptr;
+	PrintSimpleStr(p, Lore);
+	data_ptr += strlen(p->Lore);	//slide past Lore.
+	p = (u2struct *) data_ptr;
+	PrintSimpleStr(p, IDFile);
+	data_ptr += strlen(p->IDFile);	//slide past IDFile.
+	p = (u2struct *) data_ptr;
+	PrintSimple(p, ID);
+	PrintSimple(p, Weight);
+	PrintSimple(p, NoRent);
+	PrintSimple(p, NoDrop);
+	PrintSimple(p, Size);
+	PrintSimple(p, Slots);
+	PrintSimple(p, Price);
+	PrintSimple(p, Icon);
 }
 
 void ClientUpdateExplorer::GivePacket(EmuOpcode emu_op, unsigned char *data, uint32 len, bool to_server) {

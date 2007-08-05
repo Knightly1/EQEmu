@@ -3,7 +3,7 @@ OBJS=eqemucollector.o .obj/EQStream.o .obj/EQPacket.o .obj/misc.o .obj/CRC16.o \
   .obj/unix.o StreamPairManager.o .obj/timeoutmgr.o .obj/timer.o \
   climain.o PacketHandler.o .obj/opcodemgr.o ../common/emu_opcodes.o \
   ../common/Condition.o ../common/packet_dump.o ../common/packet_functions.o \
-  .obj/BasePacket.o .obj/logsys.o .obj/debug.o
+  .obj/BasePacket.o .obj/logsys.o .obj/debug.o ../common/logsys_eqemu.o 
 
 PLUGS=dump_packet.so dump_packet_header.so dump_packetfiles.so watch_packet.so \
    dump_unknowns.so dump_pf_privacy.so dump_messages.so

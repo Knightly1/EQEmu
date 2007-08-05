@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
 			explorers.push_back(new ObjectExplorer());
 			break;
 		case '5':
-			explorers.push_back(new UnknownExplorer());
+			explorers.push_back(new Unknown2Explorer());
 			break;
 		case '6':
 			explorers.push_back(new SpellExplorer());

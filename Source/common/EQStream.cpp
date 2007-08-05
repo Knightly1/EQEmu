@@ -453,7 +453,7 @@ void EQStream::FastQueuePacket(EQApplicationPacket **p, bool ack_req)
 		return;
 	}*/
 	
-	_log(NET__APP_TRACE, "Queueing %sacked packet with opcode 0x%x and length %d", ack_req?"":"non-", opcode, pack->size);
+	_log(NET__APP_TRACE, "Queueing %sacked packet with opcode 0x%x (%s) and length %d", ack_req?"":"non-", opcode, OpcodeManager::EmuToName(pack->emu_opcode), pack->size);
 	
 	if (!ack_req) {
 		NonSequencedPush(new EQProtocolPacket(opcode, pack->pBuffer, pack->size));
