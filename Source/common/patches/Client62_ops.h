@@ -11,6 +11,8 @@ E(OP_ItemPacket)
 E(OP_ItemLinkResponse)
 E(OP_CharInventory)
 E(OP_GuildMemberList)
+E(OP_ZoneServerReady)
+E(OP_GuildMemberLevelUpdate)
 
 //list of packets we need to decode on the way in:
 D(OP_SetServerFilter)

@@ -2432,6 +2432,12 @@ struct GuildMemberUpdate_Struct {
 /*76*/
 };
 
+struct GuildMemberLevelUpdate_Struct {
+/*00*/	uint32 guild_id;
+/*04*/	char	member_name[64];
+/*68*/	uint32	level;	//not sure
+};
+
 struct Internal_GuildMemberEntry_Struct {
 //	char	name[64];					//variable length
 	int32	level;						//network byte order

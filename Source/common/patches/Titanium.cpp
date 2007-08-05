@@ -99,6 +99,8 @@ std::string Strategy::Describe() const {
 
 #include "SSDefine.h"
 
+EAT_ENCODE(OP_ZoneServerReady)
+EAT_ENCODE(OP_GuildMemberLevelUpdate)
 
 ENCODE(OP_SendCharInfo) {
 	ENCODE_LENGTH_EXACT(CharacterSelect_Struct);

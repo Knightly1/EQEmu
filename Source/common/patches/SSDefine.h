@@ -81,6 +81,13 @@
 #define ENCODE_FORWARD(other_op) \
 	Encode_##other_op(p, dest, ack_req);
 
+//destroy the packet, it is not sent to this client version
+#define EAT_ENCODE(op) \
+	ENCODE(op) { \
+	delete *p; \
+	*p = NULL; \
+	}
+
 
 
 /*

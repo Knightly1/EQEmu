@@ -97,21 +97,8 @@ std::string Strategy::Describe() const {
 #include "SSDefine.h"
 
 
-/*ENCODE(OP_PlayerProfile) {
-	SETUP_DIRECT(PlayerProfile_Struct, structs::PlayerProfile_Struct);
-	
-	
-	
-	FINISH_DIRECT();
-}
-
-ENCODE(OP_NewZone) {
-	SETUP_DIRECT(PlayerProfile_Struct, structs::PlayerProfile_Struct);
-	
-	
-	
-	FINISH_DIRECT();
-}*/
+EAT_ENCODE(OP_ZoneServerReady)
+EAT_ENCODE(OP_GuildMemberLevelUpdate)
 
 ENCODE(OP_SendCharInfo) {
 	ENCODE_LENGTH_EXACT(CharacterSelect_Struct);

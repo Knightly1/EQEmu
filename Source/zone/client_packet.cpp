@@ -570,19 +570,18 @@ void Client::Handle_Connect_OP_ReqClientSpawn(const EQApplicationPacket *app)
 			iterator.Advance();
 			count++;
 		}
-		QueuePacket(outapp);
-		safe_delete(outapp);
+		FastQueuePacket(&outapp);
 	}
 	
 	// Live does this - Doodman
 	outapp = new EQApplicationPacket(OP_SendAAStats, 0);
-	QueuePacket(outapp);
-	safe_delete(outapp);
+	FastQueuePacket(&outapp);
 
 	// Tell client they can continue we're done
+	outapp = new EQApplicationPacket(OP_ZoneServerReady, 0);
+	FastQueuePacket(&outapp);
 	outapp = new EQApplicationPacket(OP_SendExpZonein, 0);
-	QueuePacket(outapp);
-	safe_delete(outapp);
+	FastQueuePacket(&outapp);
 
 	if(strncasecmp(zone->GetShortName(),"bazaar",6)==0)
 		SendBazaarWelcome();
@@ -4822,6 +4821,14 @@ void Client::Handle_OP_PetitionRefresh(const EQApplicationPacket *app)
 
 void Client::Handle_OP_ReadBook(const EQApplicationPacket *app)
 {
+	if(app->size != sizeof(BookRequest_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Received invalid sized "
+										"OP_ReadBook: got %d, expected %d", app->size, 
+			sizeof(BookRequest_Struct));
+		DumpPacket(app);
+		return;
+	}
+	
 	BookRequest_Struct* book = (BookRequest_Struct*) app->pBuffer;
 	ReadBook(book);
 	return;
@@ -4829,8 +4836,13 @@ void Client::Handle_OP_ReadBook(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Emote(const EQApplicationPacket *app)
 {
-	if(app->size != sizeof(Emote_Struct))
+	if(app->size != sizeof(Emote_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Received invalid sized "
+										"OP_Emote: got %d, expected %d", app->size, 
+			sizeof(Emote_Struct));
+		DumpPacket(app);
 		return;
+	}
 	
 	// Calculate new packet dimensions
 	Emote_Struct* in	= (Emote_Struct*)app->pBuffer;
@@ -4876,8 +4888,13 @@ void Client::Handle_OP_Emote(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Animation(const EQApplicationPacket *app)
 {
-	if(app->size != sizeof(Animation_Struct))
+	if(app->size != sizeof(Animation_Struct)) {
+		LogFile->write(EQEMuLog::Error, "Received invalid sized "
+										"OP_Animation: got %d, expected %d", app->size, 
+			sizeof(Animation_Struct));
+		DumpPacket(app);
 		return;
+	}
 	
 	Animation_Struct *s = (Animation_Struct *) app->pBuffer;
 	
@@ -4892,7 +4909,9 @@ void Client::Handle_OP_Animation(const EQApplicationPacket *app)
 void Client::Handle_OP_SetServerFilter(const EQApplicationPacket *app)
 {
 	if(app->size != sizeof(SetServerFilter_Struct)) {
-		LogFile->write(EQEMuLog::Error, "Received invalid sized OP_SetServerFilter: got %d, expected %d", app->size, sizeof(SetServerFilter_Struct));
+		LogFile->write(EQEMuLog::Error, "Received invalid sized "
+										"OP_SetServerFilter: got %d, expected %d", app->size, 
+			sizeof(SetServerFilter_Struct));
 		DumpPacket(app);
 		return;
 	}
@@ -5107,7 +5126,6 @@ void Client::Handle_OP_Mend(const EQApplicationPacket *app)
 
 void Client::Handle_OP_EnvDamage(const EQApplicationPacket *app)
 {
-	
 	if(app->size != sizeof(EnvDamage2_Struct)) {
 		LogFile->write(EQEMuLog::Error, "Received invalid sized OP_EnvDamage: got %d, expected %d", app->size, 
 			sizeof(EnvDamage2_Struct));

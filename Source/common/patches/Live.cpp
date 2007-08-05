@@ -96,70 +96,8 @@ std::string Strategy::Describe() const {
 
 #include "SSDefine.h"
 
-
-/*ENCODE(OP_PlayerProfile) {
-	SETUP_DIRECT(PlayerProfile_Struct, structs::PlayerProfile_Struct);
-	
-	
-	
-	FINISH_DIRECT();
-}
-
-ENCODE(OP_NewZone) {
-	SETUP_DIRECT(PlayerProfile_Struct, structs::PlayerProfile_Struct);
-	
-	
-	
-	FINISH_DIRECT();
-}*/
-
-/*
-ENCODE(OP_SendAATable) {
-	SETUP_DIRECT_ENCODE(SendAA_Struct, structs::SendAA_Struct);
-	OUT(id);
-	OUT(hotkey_sid);
-	OUT(hotkey_sid2);
-	eq->title_sid = emu->id;
-	eq->desc_sid = emu->id;
-	OUT(class_type);
-	OUT(cost);
-	OUT(seq);
-	OUT(current_level);
-	OUT(prereq_skill);
-	OUT(prereq_minpoints);
-	OUT(type);
-	OUT(spellid);
-	OUT(spell_type);
-	OUT(spell_refresh);
-	OUT(classes);
-	OUT(berserker);
-	OUT(max_level);
-	OUT(last_id);
-	OUT(next_id);
-	OUT(cost2);
-	OUT(unknown80[0]);
-	OUT(unknown80[1]);
-	OUT(total_abilities);
-	unsigned int r;
-	for(r = 0; r < emu->total_abilities; r++) {
-		OUT(abilities[r].skill_id);
-		OUT(abilities[r].increase_amt);
-		OUT(abilities[r].unknown08);
-		OUT(abilities[r].last_level);
-	}
-	FINISH_DIRECT_ENCODE();
-}
-
-DECODE(OP_SetServerFilter) {
-	SETUP_DIRECT_DECODE(SetServerFilter_Struct, structs::SetServerFilter_Struct);
-	int r;
-	for(r = 0; r < 25; r++) {
-		IN(filters[r]);
-	}
-	emu->filters[25] = 1;
-	FINISH_DIRECT_DECODE();
-}
-*/
+EAT_ENCODE(OP_ZoneServerReady)
+EAT_ENCODE(OP_GuildMemberLevelUpdate)
 
 ENCODE(OP_SendCharInfo) {
 	ENCODE_LENGTH_EXACT(CharacterSelect_Struct);
