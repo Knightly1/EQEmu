@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/11/2007
+KLS: Fixed stackable potions in the item packet, they should now appear to have 1 charge instead of 0.
+
 ==08/10/2007
 KLS: Fixed a stacking issue and made res effects not count to normal stacking rules.
 KLS: Implemented a few more passive AA effects.

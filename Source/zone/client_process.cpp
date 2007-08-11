@@ -292,9 +292,9 @@ bool Client::Process() {
 				if (target && GetAA(aaPunishingBlade) > 0) {
 					ItemInst *wpn = GetInv().GetItem(SLOT_PRIMARY);
 					if(wpn){
-						if(wpn->GetItem()->ItemType == 1 || //2hslash
-							wpn->GetItem()->ItemType == 4 || //2hblunt
-							wpn->GetItem()->ItemType == 35 ) //2h pierce
+						if(wpn->GetItem()->ItemType == ItemType2HS || 
+							wpn->GetItem()->ItemType == ItemType2HB ||
+							wpn->GetItem()->ItemType == ItemType2HPierce )
 						{
 							int extatk = GetAA(aaPunishingBlade)*5;
 							if(MakeRandomInt(0, 100) < extatk)
