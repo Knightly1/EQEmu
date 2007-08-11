@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/10/2007
+KLS: Fixed a stacking issue and made res effects not count to normal stacking rules.
+
 ==08/01/2007
 FatherNitwit: (cavedude) Fix Iksar BL pet appearance.
 

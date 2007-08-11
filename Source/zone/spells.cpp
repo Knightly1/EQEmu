@@ -1728,8 +1728,26 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 	if(((spellid1 == spellid2) && (spellid1 == 2751)) || //special case spells that will block each other no matter what
 		((spellid1 == spellid2) && (spellid1 == 2755)) //manaburn / lifeburn
 		){
+			mlog(SPELLS__STACKING, "Blocking spell because manaburn/lifeburn does not stack with itself");
 			return -1;
 		}
+
+	//resurrection effects wont count for overwrite/block stacking
+	switch(spellid1)
+	{
+	case 756:
+	case 757:
+	case 5249:
+		return (0);
+	}
+
+	switch (spellid2)
+	{
+	case 756:
+	case 757:
+	case 5249:
+		return (0);
+	}
 	
 	/*
 	One of these is a bard song and one isn't and they're both beneficial so they should stack.
@@ -1769,7 +1787,10 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 					sp1.name, spellid1, blocked_effect, blocked_slot, blocked_below_value, sp2_value, (sp2_value < blocked_below_value)?"Blocked":"Not blocked");
 
 				if(sp2_value < blocked_below_value)
+				{
+					mlog(SPELLS__STACKING, "Blocking spell because sp2_value < blocked_below_value");
 					return -1;	// blocked
+				}
 			} else {
 				mlog(SPELLS__STACKING, "%s (%d) blocks effect %d on slot %d below %d, but we do not have that effect on that slot. Ignored.",
 					sp1.name, spellid1, blocked_effect, blocked_slot, blocked_below_value);
@@ -1794,7 +1815,10 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 					sp2.name, spellid2, overwrite_effect, overwrite_slot, overwrite_below_value, sp1_value, (sp1_value < overwrite_below_value)?"Overwriting":"Not overwriting");
 				
 				if(sp1_value < overwrite_below_value)
+				{
+					mlog(SPELLS__STACKING, "Overwrite spell because sp1_value < overwrite_below_value");
 					return 1;			// overwrite spell if its value is less
+				}
 			} else {
 				mlog(SPELLS__STACKING, "%s (%d) overwrites existing spell if effect %d on slot %d is below %d, but we do not have that effect on that slot. Ignored.",
 					sp2.name, spellid2, overwrite_effect, overwrite_slot, overwrite_below_value);
@@ -1821,6 +1845,9 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 		if(IsBlankSpellEffect(spellid1, i))
 			continue;
 
+		effect1 = sp1.effectid[i];
+		effect2 = sp2.effectid[i];
+
 		//Effects which really aren't going to affect stacking.
 		if(effect1 == SE_CurrentHPOnce ||
 			effect1 == SE_CurseCounter	||
@@ -1828,9 +1855,6 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 			effect1 == SE_PoisonCounter){
 			continue;
 			}
-
-		effect1 = sp1.effectid[i];
-		effect2 = sp2.effectid[i];
 
 		/*
 		Quick check, are the effects the same, if so then
@@ -1851,6 +1875,7 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 		}
 
 		if(effect1 == SE_CompleteHeal){ //SE_CompleteHeal never stacks or overwrites ever, always block.
+			mlog(SPELLS__STACKING, "Blocking spell because complete heal never stacks or overwries");
 			return (-1);
 		}
 
