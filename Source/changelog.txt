@@ -3,6 +3,9 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 
 ==08/10/2007
 KLS: Fixed a stacking issue and made res effects not count to normal stacking rules.
+KLS: Implemented a few more passive AA effects.
+KLS: Added CanThisClassBlock() for the avoid code
+KLS: Addressed some inconsistancies in the CanThisClass line of functions, GM classes should be able to do everything their base class can now.
 
 ==08/01/2007
 FatherNitwit: (cavedude) Fix Iksar BL pet appearance.

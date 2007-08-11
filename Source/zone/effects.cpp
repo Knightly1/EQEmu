@@ -111,6 +111,21 @@ sint32 Client::GetActSpellDamage(int16 spell_id, sint32 value) {
 		if(aa_item == 1) {chance+=2; ratio += 33;}
 		else if(aa_item == 2) {chance+=5; ratio += 66;}
 		else if(aa_item == 3) {chance+=7; ratio += 100;}
+
+		//Normal EQ: no class that has ingenuity has reg spell crit AAs too but people
+		//are free to customize so lets make sure they don't stack oddly.
+		//afaik all ranks provide a 100% bonus in damage on critical
+		switch(GetAA(aaIngenuity))
+		{
+		case 1:
+		case 2:
+		case 3: 
+			if(ratio < 100)
+				ratio = 100;
+			break;
+		default:
+			break;
+		}
 		
 		if(spells[spell_id].targettype == ST_Target || spells[spell_id].targettype == ST_Summoned ||spells[spell_id].targettype == ST_Undead) {
 			//DD spells only...
@@ -142,6 +157,7 @@ sint32 Client::GetActSpellDamage(int16 spell_id, sint32 value) {
 		chance += GetAA(aaFuryofMagic) * 2;
 		chance += GetAA(aaFuryofMagicMastery) * 2;
 		chance += GetAA(aaFuryofMagicMastery2) * 2;	//just in case
+		chance += GetAA(aaIngenuity);
 		
 		chance += GetFocusEffect(focusImprovedCritical, spell_id);
 		

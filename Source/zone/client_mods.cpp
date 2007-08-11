@@ -1457,7 +1457,10 @@ int16 Mob::GetInstrumentMod(int16 spell_id) const {
 	if(spells[spell_id].skill == SINGING)
 		effectmod += 2*GetAA(aaSingingMastery);
 	else
+	{
 		effectmod += 2*GetAA(aaInstrumentMastery);
+		effectmod += 2*GetAA(aaAyonaesTutelage);
+	}
 
 	if(effectmod < 10)
 		effectmod = 10;

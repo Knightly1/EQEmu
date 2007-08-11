@@ -618,6 +618,7 @@ bool logpos;
 	bool	CanThisClassRiposte(void) const;
 	bool	CanThisClassDodge(void) const;
 	bool	CanThisClassParry(void) const;
+	bool	CanThisClassBlock(void) const;
 	
 	int	GetMonkHandToHandDelay(void);
 	int16	GetClassLevelFactor();

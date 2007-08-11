@@ -288,6 +288,22 @@ bool Client::Process() {
 							Attack(target, 13, true);
 					}
 				}
+				
+				if (target && GetAA(aaPunishingBlade) > 0) {
+					ItemInst *wpn = GetInv().GetItem(SLOT_PRIMARY);
+					if(wpn){
+						if(wpn->GetItem()->ItemType == 1 || //2hslash
+							wpn->GetItem()->ItemType == 4 || //2hblunt
+							wpn->GetItem()->ItemType == 35 ) //2h pierce
+						{
+							int extatk = GetAA(aaPunishingBlade)*5;
+							if(MakeRandomInt(0, 100) < extatk)
+							{
+								Attack(target, 13, true);
+							}
+						}
+					}
+				}
 			}
 		}
 		

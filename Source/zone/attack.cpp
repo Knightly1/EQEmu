@@ -443,12 +443,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	///////////////////////////////////////////////////////	
 	// block
 	///////////////////////////////////////////////////////
-	if (damage > 0 && (
-			class_==MONK ||
-			class_==BEASTLORD ||
-			class_==MONKGM ||
-			class_==BEASTLORDGM )
-            && !other->BehindMob(this, other->GetX(), other->GetY()))
+	if (damage > 0 && CanThisClassBlock() && !other->BehindMob(this, other->GetX(), other->GetY()))
 	{
 		skill = CastToClient()->GetSkill(BLOCKSKILL);
 		if (IsClient()) {

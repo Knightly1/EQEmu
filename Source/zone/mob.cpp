@@ -1394,6 +1394,9 @@ bool Mob::CanThisClassDualWield(void) const //Dual wield not Duel, busy someone 
 	case WARRIOR:
 	case BERSERKER:
 	case ROGUE:
+	case WARRIORGM:
+	case BERSERKERGM:
+	case ROGUEGM:
 		{
 			if(GetLevel() < 13)
 				return false;
@@ -1401,12 +1404,15 @@ bool Mob::CanThisClassDualWield(void) const //Dual wield not Duel, busy someone 
 		}
 	case BARD:
 	case RANGER:
+	case BARDGM:
+	case RANGERGM:
 		{
 			if(GetLevel() < 17)
 				return false;
 			break;
 		}
 	case BEASTLORD:
+	case BEASTLORDGM:
 		{
 			if(GetLevel() < 17)
 				return false;
@@ -1414,6 +1420,7 @@ bool Mob::CanThisClassDualWield(void) const //Dual wield not Duel, busy someone 
 			break;
 		}
 	case MONK:
+	case MONKGM:
 		{
 			dh2h = true;
 			break;
@@ -1539,6 +1546,7 @@ bool Mob::CanThisClassParry(void) const
 	switch(GetClass()) // Lets make sure they are the right level! -image
 	{
 	case WARRIOR:
+	case WARRIORGM:
 		{
 		if(GetLevel() < 10)
 			return false;
@@ -1546,18 +1554,22 @@ bool Mob::CanThisClassParry(void) const
 		}
 	case ROGUE:
 	case BERSERKER:
+	case ROGUEGM:
+	case BERSERKERGM:
 		{
 		if(GetLevel() < 12)
 			return false;
 		break;
 		}
 	case BARD:
+	case BARDGM:
 		{
 		if(GetLevel() < 53)
 			return false;
 		break;
 		}
 	case RANGER:
+	case RANGERGM:
 		{
 		if(GetLevel() < 18)
 			return false;
@@ -1565,6 +1577,8 @@ bool Mob::CanThisClassParry(void) const
 		}
 	case SHADOWKNIGHT:
 	case PALADIN:
+	case SHADOWKNIGHTGM:
+	case PALADINGM:
 		{
 		if(GetLevel() < 17)
 			return false;
@@ -1588,22 +1602,26 @@ bool Mob::CanThisClassDodge(void) const
 	switch(GetClass()) // Lets make sure they are the right level! -image
 	{
 	case WARRIOR:
+	case WARRIORGM:
 		{
 			if(GetLevel() < 6)
 				return false;
 			break;
 		}
 	case MONK:
+	case MONKGM:
 		{
 			break;
 		}
 	case ROGUE:
+	case ROGUEGM:
 		{
 			if(GetLevel() < 4)
 				return false;
 			break;
 		}
 	case RANGER:
+	case RANGERGM:
 		{
 			if(GetLevel() < 8)
 				return false;
@@ -1614,6 +1632,11 @@ bool Mob::CanThisClassDodge(void) const
 	case SHADOWKNIGHT:
 	case BERSERKER:
 	case PALADIN:
+	case BARDGM:
+	case BEASTLORDGM:
+	case SHADOWKNIGHTGM:
+	case BERSERKERGM:
+	case PALADINGM:
 		{
 			if(GetLevel() < 10)
 				return false;
@@ -1622,6 +1645,9 @@ bool Mob::CanThisClassDodge(void) const
 	case CLERIC:
 	case SHAMAN:
 	case DRUID:
+	case CLERICGM:
+	case SHAMANGM:
+	case DRUIDGM:
 		{
 			if( GetLevel() < 15 )
 				return false;
@@ -1631,6 +1657,10 @@ bool Mob::CanThisClassDodge(void) const
 	case ENCHANTER:
 	case WIZARD:
 	case MAGICIAN:
+	case NECROMANCERGM:
+	case ENCHANTERGM:
+	case WIZARDGM:
+	case MAGICIANGM:
 		{
 			if( GetLevel() < 22 )
 				return false;
@@ -1654,6 +1684,7 @@ bool Mob::CanThisClassRiposte(void) const //Could just check if they have the sk
 	switch(GetClass()) // Lets make sure they are the right level! -image
 	{
 	case WARRIOR:
+	case WARRIORGM:
 		{
 			if(GetLevel() < 25)
 				return false;
@@ -1664,24 +1695,32 @@ bool Mob::CanThisClassRiposte(void) const //Could just check if they have the sk
 	case SHADOWKNIGHT:
 	case PALADIN:
 	case BERSERKER:
+	case ROGUEGM:
+	case RANGERGM:
+	case SHADOWKNIGHTGM:
+	case PALADINGM:
+	case BERSERKERGM:
 		{
 			if(GetLevel() < 30)
 				return false;
 			break;
 		}
 	case MONK:
+	case MONKGM:
 		{
 			if(GetLevel() < 35)
 				return false;
 			break;
 		}
 	case BEASTLORD:
+	case BEASTLORDGM:
 		{
 			if(GetLevel() < 40)
 				return false;
 			break;
 		}
 	case BARD:
+	case BARDGM:
 		{
 			if(GetLevel() < 58)
 				return false;
@@ -1695,6 +1734,36 @@ bool Mob::CanThisClassRiposte(void) const //Could just check if they have the sk
 	
 	if (this->IsClient())
 		return(this->CastToClient()->HasSkill(RIPOSTE));	// No skill = no chance
+	else
+		return true;
+}
+
+bool Mob::CanThisClassBlock(void) const
+{
+	switch(GetClass())
+	{
+	case BEASTLORDGM:
+	case BEASTLORD:
+		{
+		if(GetLevel() < 25)
+			return false;
+		break;
+		}
+	case MONKGM:
+	case MONK:
+		{
+		if(GetLevel() < 12)
+			return false;
+		break;
+		}
+	default:
+		{
+			return false;
+		}
+	}
+
+	if (this->IsClient())
+		return(this->CastToClient()->HasSkill(BLOCKSKILL));	// No skill = no chance
 	else
 		return true;
 }
