@@ -3,6 +3,8 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 
 ==08/11/2007
 KLS: Fixed stackable potions in the item packet, they should now appear to have 1 charge instead of 0.
+KLS: Added support for stackable items above 20.
+KLS: Fixed forage, it will no longer overwrite slot 30 to create it's item, instead it will push the item onto the cursor like it should.
 
 ==08/10/2007
 KLS: Fixed a stacking issue and made res effects not count to normal stacking rules.

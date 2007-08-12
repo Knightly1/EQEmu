@@ -107,15 +107,15 @@ void Trade::AddEntity(int16 from_slot_id, int16 trade_slot_id)
 			return;
 		}
 		new_charges = (inst2->GetCharges()+inst->GetCharges());
-		if (new_charges < 20)
+		if (new_charges < inst2->GetItem()->StackSize)
 		{
 			inst2->SetCharges(new_charges);
 			new_charges = 0;
 		}
 		else
 		{
-			new_charges = inst->GetCharges()-(20-inst2->GetCharges()); //Leftover charges = charges - difference
-			inst2->SetCharges(20);
+			new_charges = inst->GetCharges()-(inst2->GetItem()->StackSize-inst2->GetCharges()); //Leftover charges = charges - difference
+			inst2->SetCharges(inst2->GetItem()->StackSize);
 		}
 		SendItemData(inst2, trade_slot_id);
 	}

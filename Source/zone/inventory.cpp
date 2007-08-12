@@ -341,14 +341,14 @@ void Client::PutLootInInventory(sint16 slot_id, const ItemInst &inst, ServerLoot
 	CalcBonuses();
 }
 bool Client::TryStacking(ItemInst* item, int8 type, bool try_worn, bool try_cursor){
-	if(!item || !item->IsStackable() || item->GetCharges()>=20)
+	if(!item || !item->IsStackable() || item->GetCharges()>=item->GetItem()->StackSize)
 		return false;
 	sint16 i;
 	int32 item_id = item->GetItem()->ID;
 	for (i = 22; i <= 29; i++)
 	{
 		ItemInst* tmp_inst = m_inv.GetItem(i);	
-		if(tmp_inst && tmp_inst->GetItem()->ID == item_id && tmp_inst->GetCharges() < ITEM_MAX_STACK){
+		if(tmp_inst && tmp_inst->GetItem()->ID == item_id && tmp_inst->GetCharges() < tmp_inst->GetItem()->StackSize){
 			MoveItemCharges(*item, i, type);
 			CalcBonuses();
 			if(item->GetCharges())	// we didn't get them all
@@ -363,7 +363,7 @@ bool Client::TryStacking(ItemInst* item, int8 type, bool try_worn, bool try_curs
 			int16 slotid = Inventory::CalcSlotId(i, j);
 			ItemInst* tmp_inst = m_inv.GetItem(slotid);
 
-			if(tmp_inst && tmp_inst->GetItem()->ID == item_id && tmp_inst->GetCharges() < ITEM_MAX_STACK){
+			if(tmp_inst && tmp_inst->GetItem()->ID == item_id && tmp_inst->GetCharges() < tmp_inst->GetItem()->StackSize){
 				MoveItemCharges(*item, slotid, type);
 				CalcBonuses();
 				if(item->GetCharges())	// we didn't get them all
@@ -445,10 +445,10 @@ void Client::MoveItemCharges(ItemInst &from, sint16 to_slot, int8 type)
 {
 	ItemInst *tmp_inst = m_inv.GetItem(to_slot);
 
-	if(tmp_inst && tmp_inst->GetCharges() < ITEM_MAX_STACK)
+	if(tmp_inst && tmp_inst->GetCharges() < tmp_inst->GetItem()->StackSize)
 	{
 		// this is how much room is left on the item we're stacking onto
-		int charge_slots_left = ITEM_MAX_STACK - tmp_inst->GetCharges();
+		int charge_slots_left = tmp_inst->GetItem()->StackSize - tmp_inst->GetCharges();
 		// this is how many charges we can move from the looted item to
 		// the item in the inventory
 		int charges_to_move =
@@ -554,7 +554,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 		mlog(INVENTORY__SLOTS, "Src slot %d has item %s (%d) with %d charges in it.", src_slot_id, src_inst->GetItem()->Name, src_inst->GetItem()->ID, src_inst->GetCharges());
 		srcitemid = src_inst->GetItem()->ID;
 		SetTint(dst_slot_id,src_inst->GetColor());
-		if (src_inst->GetCharges() > 0 && (src_inst->GetCharges() < (sint16)move_in->number_in_stack || move_in->number_in_stack > 20))
+		if (src_inst->GetCharges() > 0 && (src_inst->GetCharges() < (sint16)move_in->number_in_stack || move_in->number_in_stack > src_inst->GetItem()->StackSize))
 		{
 			Message(13,"Error: Insufficent number in stack.");
 			return false;
@@ -639,9 +639,9 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 						
 						// Fill up destination stack as much as possible
 						world_charges += src_charges;
-						if (world_charges > ITEM_MAX_STACK) {
-							src_charges = world_charges - ITEM_MAX_STACK;
-							world_charges = ITEM_MAX_STACK;
+						if (world_charges > world_inst->GetItem()->StackSize) {
+							src_charges = world_charges - world_inst->GetItem()->StackSize;
+							world_charges = world_inst->GetItem()->StackSize;
 						}
 						else {
 							src_charges = 0;

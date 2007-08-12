@@ -44,8 +44,6 @@ class Client;
 #include <float.h>
 #include <set>
 
-#define ITEM_MAX_STACK 20
-
 #define CLIENT_TIMEOUT		90000
 #define CLIENT_LD_TIMEOUT	30000 // length of time client stays in zone after LDing
 #define TARGETING_RANGE		200	// range for /assist and /target

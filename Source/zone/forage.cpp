@@ -394,7 +394,7 @@ void Client::ForageItem() {
 		Message_StringID(MT_Skills, stringid);
 		const ItemInst* inst = database.CreateItem(food_item, 1);
 		if(inst != NULL) {
-			PutItemInInventory(SLOT_CURSOR,*inst);
+			PushItemOnCursor(*inst);
 			SendItemPacket(SLOT_CURSOR, inst, ItemPacketSummonItem);
 		}
 		
