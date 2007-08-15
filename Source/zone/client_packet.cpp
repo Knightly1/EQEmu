@@ -309,6 +309,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_FloatListThing] = &Client::Handle_OP_Ignore;
 	ConnectedOpcodes[OP_WorldUnknown001] = &Client::Handle_OP_Ignore;
 	ConnectedOpcodes[OP_LoadSpellSet] = &Client::Handle_OP_LoadSpellSet;
+	ConnectedOpcodes[OP_AutoFire] = &Client::Handle_OP_AutoFire;
 	
 }
 
@@ -4821,14 +4822,6 @@ void Client::Handle_OP_PetitionRefresh(const EQApplicationPacket *app)
 
 void Client::Handle_OP_ReadBook(const EQApplicationPacket *app)
 {
-	if(app->size != sizeof(BookRequest_Struct)) {
-		LogFile->write(EQEMuLog::Error, "Received invalid sized "
-										"OP_ReadBook: got %d, expected %d", app->size, 
-			sizeof(BookRequest_Struct));
-		DumpPacket(app);
-		return;
-	}
-	
 	BookRequest_Struct* book = (BookRequest_Struct*) app->pBuffer;
 	ReadBook(book);
 	return;
@@ -6728,4 +6721,16 @@ void Client::Handle_OP_BankerChange(const EQApplicationPacket *app)
 	FastQueuePacket(&outapp);
 
 	return;
+}
+
+void Client::Handle_OP_AutoFire(const EQApplicationPacket *app)
+{
+	if(app->size != sizeof(bool)) {
+		LogFile->write(EQEMuLog::Debug, "Size mismatch in OP_AutoFire expected %i got %i", sizeof(bool), app->size);
+		DumpPacket(app);
+		return;
+	}
+	bool *af = (bool*)app->pBuffer;
+	auto_fire = *af;
+	SetAttackTimer();
 }

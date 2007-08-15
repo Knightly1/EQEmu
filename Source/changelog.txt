@@ -1,6 +1,13 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/14/2007
+KLS: Added /autofire
+KLS: Fixed up SetAttackTimer() calculations a bit, especially when it comes to ranged attacks. Hopefully fewer instances where ranged attacks will be wasted because of the attack timer.
+KLS: Ranged attack crits will now work no matter your chance to hit, also changed the appearances a tiny bit and added a min range check for /autofire.
+KLS: Removed ReadBook packet size checking for now.. it was checking a wrong size and canceling out legitimate book requests
+Make sure to update your .conf files to get /autoattack to work.
+
 ==08/12/2007
 KLS: A little bit more tinkering with how potions and stacks work.
 

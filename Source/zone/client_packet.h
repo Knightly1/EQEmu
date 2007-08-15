@@ -210,4 +210,5 @@
 	void Handle_OP_PurchaseLeadershipAA(const EQApplicationPacket *app);
 	void Handle_OP_Ignore(const EQApplicationPacket *app);
 	void Handle_OP_LoadSpellSet(const EQApplicationPacket *app);
+	void Handle_OP_AutoFire(const EQApplicationPacket *app);
 

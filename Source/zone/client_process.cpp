@@ -204,6 +204,14 @@ bool Client::Process() {
 			printf("Auto Attack Enabled, mut=%d, at=%d, t=0x%x\n", may_use_attacks, attack_timer.Check(false), target);
 		*/
 		}
+
+		if(AutoFireEnabled()){
+			if(ranged_timer.Enabled()){
+				if(ranged_timer.Check(false)){
+					RangedAttack(target);
+				}
+			}
+		}
 		
 		
 		if (auto_attack && target != NULL && may_use_attacks && attack_timer.Check()) {

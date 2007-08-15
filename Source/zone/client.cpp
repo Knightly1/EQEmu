@@ -190,6 +190,7 @@ Client::Client(EQStreamInterface* ieqs)
 	playeraction = 0;
 	target = 0;
 	auto_attack = false;
+	auto_fire = false;
 	PendingGuildInvite = 0;
 	linkdead_timer.Disable();
 	zonesummon_x = -2;

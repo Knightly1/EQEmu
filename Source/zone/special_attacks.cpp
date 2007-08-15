@@ -503,7 +503,7 @@ float Client::RangedHitChance(SkillType skill, Mob *other) {
 
 void Client::RangedAttack(Mob* other) {
 	//conditions to use an attack checked before we are called
-	
+
 	//make sure the attack and ranged timers are up
 	//if the ranged timer is disabled, then they have no ranged weapon and shouldent be attacking anyhow
 	if((attack_timer.Enabled() && !attack_timer.Check(false)) || (ranged_timer.Enabled() && !ranged_timer.Check())) {
@@ -600,11 +600,14 @@ void Client::RangedAttack(Mob* other) {
 		//target is out of range, client does a message
 		return;
 	}
+	else if(DistNoRootNoZ(*target) < 625){
+		return;
+	}
 	
 	DoAnim(animShootBow);
 	
 	//send item animation struct
-	SendItemAnimation(target, AmmoItem);
+	//SendItemAnimation(target, AmmoItem);
 	
 	float chancetohit = RangedHitChance(ARCHERY, target);
 	
@@ -670,7 +673,7 @@ void Client::RangedAttack(Mob* other) {
 			TotalDmg = 1 + MakeRandomInt(0, MaxDmg);
 			
 			// no crits before level 12 cap is maxed
-			if(GetClass() == RANGER && GetSkill(ARCHERY) > 65 && chancetohit < 85 &&
+			if(GetClass() == RANGER && GetSkill(ARCHERY) > 65 &&
 			  ((uint16)MakeRandomInt(0, 355) < (GetSkill(ARCHERY)+GetDEX())/4)) {
 				
 				critDmg = (sint32)(TotalDmg * 2);
@@ -776,7 +779,7 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 	}
 	
 	// Throw stuff
-	DoAnim(animShootBow);
+	//DoAnim(animShootBow);
 //	DoAnim(anim1HWeapon);		//same number as 1HS/1HB, this is prolly wrong..
 	
 	//send item animation
@@ -865,7 +868,7 @@ void Mob::SendItemAnimation(Mob *to, const Item_Struct *item) {
 		Arc causes the object to form an arc in motion. A value too high will
 	*/
 	as->velocity = 4.0;
-	as->launch_angle = 140;
+	as->launch_angle = 20000;
 	as->tilt = 0;
 	as->arc = 1;
 	

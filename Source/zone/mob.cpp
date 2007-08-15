@@ -1246,10 +1246,12 @@ void Mob::Kill() {
 
 void Mob::SetAttackTimer() {
 	float PermaHaste;
-	if (GetHaste() == -100)
-		PermaHaste = 10.0f;   // 10x as slow as normal for 100% slowed mobs
+	if(GetHaste() > 0)
+		PermaHaste = 1 / (1 + (float)GetHaste()/100);
+	else if(GetHaste() < 0)
+		PermaHaste = 1 * (1 - (float)GetHaste()/100);
 	else
-		PermaHaste = 100.0f / (100.0f + GetHaste()); //PercentageHaste);  	// use #haste to set haste level
+		PermaHaste = 1.0f;
 	
 	//default value for attack timer in case they have
 	//an invalid weapon equipped:
@@ -1312,26 +1314,6 @@ void Mob::SetAttackTimer() {
 			}
 		}
 		
-		if(i == SLOT_RANGE) {
-			if(!ItemToUse) {
-				//no item, no timer.
-				ranged_timer.Disable();
-				continue;
-			}
-			
-			//dont enforce skill requirement, I dont think its required.
-			uint8 skill = 0;
-			if(ItemToUse->ItemType == ItemTypeBow) {
-				skill = ARCHERY;
-			} else if(ItemToUse->ItemType == ItemTypeThrowing || ItemToUse->ItemType == ItemTypeThrowingv2) {
-				skill = THROWING;
-			} else {
-				//not a throwing weapon, no timer.
-				ranged_timer.Disable();
-				continue;
-			}
-		}
-		
 		//see if we have a valid weapon
 		if(ItemToUse != NULL) {
 			//check type and damage/delay
@@ -1342,12 +1324,12 @@ void Mob::SetAttackTimer() {
 				ItemToUse = NULL;
 			}
 			// Check to see if skill is valid
-			else if((ItemToUse->ItemType > ItemType2HB) && (ItemToUse->ItemType != ItemTypeHand2Hand) && (ItemToUse->ItemType != ItemType2HPierce)) {
+			else if((ItemToUse->ItemType > ItemTypeThrowing) && (ItemToUse->ItemType != ItemTypeHand2Hand) && (ItemToUse->ItemType != ItemType2HPierce)) {
 				//no weapon
 				ItemToUse = NULL;
 			}
 		}
-		
+
 		//if we have no weapon..
 		if (ItemToUse == NULL) {
 			//above checks ensure ranged weapons do not fall into here
@@ -1356,14 +1338,14 @@ void Mob::SetAttackTimer() {
 				//we are a monk, use special delay
 				int speed = (int)(GetMonkHandToHandDelay()*(100.0f+attack_speed)*PermaHaste);
 				// neotokyo: 1200 seemed too much, with delay 10 weapons available
-				if(speed < 500)	//lower bound
-					speed = 500;
+				if(speed < 800)	//lower bound
+					speed = 800;
 				TimerToUse->SetAtTrigger(speed, true);	// Hand to hand, delay based on level or epic
 			} else {
 				//not a monk... using fist, regular delay
 				int speed = (int)(36*(100.0f+attack_speed)*PermaHaste);
-				if(speed < 1800 && IsClient())	//lower bound
-					speed = 1800;
+				if(speed < 800 && IsClient())	//lower bound
+					speed = 800;
 				TimerToUse->SetAtTrigger(speed, true); 	// Hand to hand, non-monk 2/36
 			}
 		} else {
@@ -1371,14 +1353,22 @@ void Mob::SetAttackTimer() {
 			// Convert weapon delay to timer resolution (milliseconds)
 			//delay * 100
 			int speed = (int)(ItemToUse->Delay*(100.0f+attack_speed)*PermaHaste);
-			if(speed < 500)
-				speed = 500;
+			if(speed < 800)
+				speed = 800;
+
+			if(TimerToUse == &ranged_timer){
+				//quiver haste?
+				//ranged timer is kinda off.. give it a LITTLE slack.. just a tiny bit though!
+				//I was able to still catch timers of 50ms or so if I spammed my button at 1950 speed base
+				speed = speed * 97 / 100;
+				}
 			TimerToUse->SetAtTrigger(speed, true);
 		}
 		
 		if(i == SLOT_PRIMARY)
 			PrimaryWeapon = ItemToUse;
 	}
+	
 }
 
 bool Mob::CanThisClassDualWield(void) const //Dual wield not Duel, busy someone else fix it (fixed! bUsh)

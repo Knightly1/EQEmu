@@ -245,6 +245,7 @@ public:
 	void CheckQuests(const char* zonename, const char* message, uint32 npc_id, uint32 item_id, Mob* other);
 	void LogLoot(Client* player,Corpse* corpse,const Item_Struct* item);
 	bool	AutoAttackEnabled() const { return auto_attack; }
+	bool	AutoFireEnabled() const { return auto_fire; }
 	bool	Attack(Mob* other, int Hand = 13, bool bRiposte = false);	// 13 = Primary (default), 14 = secondary
 	void	Damage(Mob* other, sint32 damage, int16 spell_id, SkillType attack_skill, bool avoidable = true, sint8 buffslot = -1, bool iBuffTic = false);
 	void	Death(Mob* other, sint32 damage, int16 spell_id, SkillType attack_skill);
@@ -735,6 +736,7 @@ private:
 	bool				LFG;
 	bool				AFK;
 	bool				auto_attack;
+	bool				auto_fire;
 	int8				gmspeed;
 	bool				medding;
 	int16				horseId;
