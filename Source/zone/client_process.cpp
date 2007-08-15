@@ -208,7 +208,10 @@ bool Client::Process() {
 		if(AutoFireEnabled()){
 			if(ranged_timer.Enabled()){
 				if(ranged_timer.Check(false)){
-					RangedAttack(target);
+					if(GetTarget() && (GetTarget()->IsNPC() || GetTarget()->IsClient()))
+						RangedAttack(target);
+					else
+						ranged_timer.Start();
 				}
 			}
 		}

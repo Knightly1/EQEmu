@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/15/2007
+KLS: Fixed an /autofire crash
+
 ==08/14/2007
 KLS: Added /autofire
 KLS: Fixed up SetAttackTimer() calculations a bit, especially when it comes to ranged attacks. Hopefully fewer instances where ranged attacks will be wasted because of the attack timer.
