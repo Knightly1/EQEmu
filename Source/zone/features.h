@@ -172,6 +172,8 @@ Zone extensions and features
 
 #define SACRIFICE_MIN_LEVEL 50
 #define SACRIFICE_ITEMID 9963
+
+#define MIN_RANGED_ATK_RANGE 25
 /*
 
 Zone Numerical configuration

@@ -1356,7 +1356,7 @@ void Mob::SetAttackTimer() {
 			if(speed < 800)
 				speed = 800;
 
-			if(TimerToUse == &ranged_timer){
+			if(ItemToUse && (ItemToUse->ItemType == ItemTypeBow || ItemToUse->ItemType == ItemTypeThrowing)){
 				//quiver haste?
 				//ranged timer is kinda off.. give it a LITTLE slack.. just a tiny bit though!
 				//I was able to still catch timers of 50ms or so if I spammed my button at 1950 speed base

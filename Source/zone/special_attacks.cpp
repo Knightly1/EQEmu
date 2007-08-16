@@ -599,8 +599,8 @@ void Client::RangedAttack(Mob* other) {
 		mlog(COMBAT__RANGED, "Ranged attack out of range... client should catch this. (%f > %f).\n", DistNoRootNoZ(*target), range);
 		//target is out of range, client does a message
 		return;
-	}
-	else if(DistNoRootNoZ(*target) < 625){
+	}//min range check only really comes into play with autofire because the client handles it for single shots
+	else if(DistNoRootNoZ(*target) < (MIN_RANGED_ATK_RANGE*MIN_RANGED_ATK_RANGE)){
 		return;
 	}
 
@@ -609,9 +609,7 @@ void Client::RangedAttack(Mob* other) {
 	}
 	
 	DoAnim(animShootBow);
-	
-	//send item animation struct
-	//SendItemAnimation(target, AmmoItem);
+	SendItemAnimation(target, AmmoItem);
 	
 	float chancetohit = RangedHitChance(ARCHERY, target);
 	
