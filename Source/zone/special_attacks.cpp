@@ -603,6 +603,10 @@ void Client::RangedAttack(Mob* other) {
 	else if(DistNoRootNoZ(*target) < 625){
 		return;
 	}
+
+	if(!IsAttackAllowed(target) || IsCasting() || (DivineAura() && !GetGM())){
+		return;
+	}
 	
 	DoAnim(animShootBow);
 	

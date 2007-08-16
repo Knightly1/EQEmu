@@ -3,6 +3,7 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 
 ==08/15/2007
 KLS: Fixed an /autofire crash
+KLS: Added some conditions to RangedAttack() for now. Should keep from using ranged attacks when we shouldn't be allowed to attack.
 
 ==08/14/2007
 KLS: Added /autofire
