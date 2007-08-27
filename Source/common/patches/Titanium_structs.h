@@ -240,8 +240,8 @@ struct Spawn_Struct {
 /*0238*/ uint32 guildID;        // Current guild
 /*0242*/ char     title[32];      // Title
 /*0274*/ uint8 unknown0274;
-/*0275*/ uint8  set_to_0xFF[8]; // ***Placeholder (all ff)
-/*0283*/ uint8  helm;           // Helm texture
+/*0275*/ uint8  helm;           // Helm texture
+/*0276*/ uint8  set_to_0xFF[8]; // ***Placeholder (all ff)
 /*0284*/ uint32 race;           // Spawn race
 /*0288*/ uint32 unknown0288;
 /*0292*/ char     lastName[32];   // Player's Lastname

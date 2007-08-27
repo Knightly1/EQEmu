@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/26/2007
+KLS: Fixed a misplaced field in the titanium spawn structure that was causing some spawn display issues on titanium.
+
 ==08/16/2007
 KLS: Some cleaning up on autofire code
 KLS: Reintroduction of item animation for archery

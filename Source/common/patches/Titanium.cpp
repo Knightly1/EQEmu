@@ -464,7 +464,7 @@ ENCODE(OP_ZoneSpawns) {
 //		eq->padding0070 = emu->padding0070;
 		eq->eyecolor1 = emu->eyecolor1;
 //		eq->unknown0115[24] = emu->unknown0115[24];
-		eq->showhelm = emu->showhelm;
+		eq->showhelm = true;
 //		eq->unknown0140[4] = emu->unknown0140[4];
 		eq->is_npc = emu->is_npc;
 		eq->hairstyle = emu->hairstyle;
@@ -484,6 +484,7 @@ ENCODE(OP_ZoneSpawns) {
 		for(k = 0; k < 8; k++) {
 			eq->set_to_0xFF[k] = 0xFF;
 		}
+
 		eq->runspeed = emu->runspeed;
 		eq->afk = emu->afk;
 		eq->guildID = emu->guildID;
