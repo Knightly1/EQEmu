@@ -1,6 +1,20 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/30/2007
+KLS: Reworked Mob::GetWeaponDamage(), it will now return damage done by any item and NULL and will return a 
+value zero or less if we can't hit a mob with said item
+KLS: Applied new GetWeaponDamage() to Attack and Special Attack code
+KLS: Seperated Finishing Blow code to it's own function
+KLS: Spell procs and innate procs should now function once again
+KLS: NPC Weapons have more of an impact on NPC attack code now
+KLS: Some NPC equipped items should correctly add bonuses to NPCs now
+KLS: NPCs should no longer be able to dual wield with two-handed weapons
+KLS: NPC weapons should properly show up if the item model is particularly high
+KLS: Changed NPC_DW_CHANCE in features.h to 100% as default as opposed to the previous 5%
+KLS: Archery will be affected by various crit AA effects and spell bonuses
+KLS: Applied haste and slow modifiers to basic NPC special attacks such as kick and bash.
+
 ==08/26/2007
 KLS: Fixed a misplaced field in the titanium spawn structure that was causing some spawn display issues on titanium.
 

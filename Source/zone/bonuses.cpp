@@ -37,12 +37,18 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemu.org)
 void Mob::CalcBonuses()
 {	
 	CalcSpellBonuses(&spellbonuses);
-	
+
 	CalcMaxHP();
 	CalcMaxMana();
 	SetAttackTimer();
 	
 	rooted = FindType(SE_Root);
+}
+
+void NPC::CalcBonuses()
+{
+	Mob::CalcBonuses();
+	CalcItemBonuses(&itembonuses);
 }
 
 void Client::CalcBonuses()
@@ -784,3 +790,68 @@ void Mob::ApplySpellsBonuses(int16 spell_id, int8 casterlevel, StatBonuses* newb
 	}
 }
 
+void NPC::CalcItemBonuses(StatBonuses *newbon)
+{
+	if(newbon){
+
+		for(int i = 0; i < 8; i++){
+			const Item_Struct *cur = database.GetItem(equipment[i]);
+			if(cur){
+				//basic stats
+				newbon->AC += cur->AC;
+				newbon->HP += cur->HP;
+				newbon->Mana += cur->Mana;
+				newbon->Endurance += cur->Endur;
+				newbon->STR += cur->AStr;
+				newbon->STA += cur->ASta;
+				newbon->DEX += cur->ADex;
+				newbon->AGI += cur->AAgi;
+				newbon->INT += cur->AInt;
+				newbon->WIS += cur->AWis;
+				newbon->CHA += cur->ACha;
+				newbon->MR += cur->MR;
+				newbon->FR += cur->FR;
+				newbon->CR += cur->CR;
+				newbon->PR += cur->PR;
+				newbon->DR += cur->DR;
+				
+
+				//more complex stats
+				if(cur->Regen > 0) {
+					newbon->HPRegen += cur->Regen;
+				}
+				if(cur->ManaRegen > 0) {
+					newbon->ManaRegen += cur->ManaRegen;
+				}
+				if(cur->DamageShield > 0) {
+					newbon->DamageShield += cur->DamageShield;
+				}
+				if(cur->SpellShield > 0) {
+					newbon->SpellDamageShield += cur->SpellShield;
+				}
+				if(cur->Shielding > 0) {
+					newbon->MeleeMitigation += cur->Shielding;
+				}
+				if(cur->StunResist > 0) {
+					newbon->StunResist += cur->StunResist;
+				}
+				if(cur->StrikeThrough > 0) {
+					newbon->StrikeThrough += cur->StrikeThrough;
+				}
+				if(cur->Avoidance > 0) {
+					newbon->AvoidMeleeChance += cur->Avoidance;
+				}
+				if(cur->Accuracy > 0) {
+					newbon->HitChance += cur->Accuracy;
+				}
+				if(cur->CombatEffects > 0) {
+					newbon->ProcChance += cur->CombatEffects;
+				}
+				if (cur->Worn.Effect>0 && (cur->Worn.Type == ET_WornEffect)) { // latent effects
+					ApplySpellsBonuses(cur->Worn.Effect, cur->Worn.Level, newbon);
+				}
+			}
+		}
+	
+	}
+}

@@ -288,7 +288,7 @@ bool logpos;
 //	static	int		CheckEffectIDMatch(int8 effectindex, int16 spellid1, int8 caster_level1, int16 spellid2, int8 caster_level2);
 
 	
-	void	RogueBackstab(Mob* other, const Item_Struct* weapon, bool min_damage = false);
+	void	RogueBackstab(Mob* other, bool min_damage = false);
 	void	RogueAssassinate(Mob* other); // solar
 	bool	BehindMob(Mob* other = 0, float playerx = 0.0f, float playery = 0.0f) const;
 	
@@ -369,7 +369,7 @@ bool logpos;
 	inline virtual void SetHP(sint32 hp) { if (hp >= max_hp) cur_hp = max_hp; else cur_hp = hp;} 
 	bool ChangeHP(Mob* other, sint32 amount, int16 spell_id = 0, sint8 buffslot = -1, bool iBuffTic = false);
 	int MonkSpecialAttack(Mob* other, int8 skill_used);
-	void TryBackstab(Mob *other, const Item_Struct* weapon);
+	void TryBackstab(Mob *other);
 	void DoAnim(const int animnum, int type=0, bool ackreq = true, eqFilterType filter = FilterNone);
 	
 	void ChangeSize(float in_size, bool bNoRestriction = false);
@@ -407,6 +407,7 @@ bool logpos;
 	bool AvoidDamage(Mob* attacker, sint32 &damage);
 	bool CheckHitChance(Mob* attacker, SkillType skillinuse, int Hand);
 	void TryCriticalHit(Mob *defender, int16 skill, sint32 &damage);
+	bool TryFinishingBlow(Mob *defender, SkillType skillinuse);
 	void DoRiposte(Mob* defender);
 	void ApplyMeleeDamageBonus(int16 skill, sint32 &damage);
 	
@@ -771,7 +772,7 @@ bool logpos;
 	inline int GetCWP() const { return(cur_wp); }
 	virtual FACTION_VALUE GetReverseFactionCon(Mob* iOther) { return FACTION_INDIFFERENT; }
 	inline bool IsTrackable() const { return(trackable); }
-	
+
 protected:
 	void CommonDamage(Mob* other, sint32 &damage, const uint16 spell_id, const SkillType attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic);
 	static uint16 GetProcID(uint16 spell_id, uint8 effect_index);
@@ -856,7 +857,8 @@ protected:
 	void TryWeaponProc(const ItemInst* weapon, Mob *on);
 	void ExecWeaponProc(uint16 spell_id, Mob *on);
 	float GetProcChances(float &ProcBonus, float &ProcChance);
-	int GetWeaponDamage(Mob *against, const Item_Struct *weapon_item, bool &was_bane);
+	int GetWeaponDamage(Mob *against, const Item_Struct *weapon_item);
+	int GetWeaponDamage(Mob *against, const ItemInst *weapon_item);
 	int GetKickDamage() const;
 	int GetBashDamage() const;
 	void DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage);
@@ -864,7 +866,7 @@ protected:
 	enum {MAX_PROCS = 4};
 	tProc PermaProcs[MAX_PROCS];
 	tProc SpellProcs[MAX_PROCS];
-	
+
 	char    name[64];
 	char		clean_name[64];
 	char    lastname[32];

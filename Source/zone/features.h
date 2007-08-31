@@ -246,7 +246,9 @@ enum {	//some random constants
 
 //this is the % chance that an NPC will dual weild a 2nd weapon 
 //in its loot table, if it is able to.
-#define NPC_DW_CHANCE 5
+//Aug 2007: was 5% chance.. changed to 100% by default since that seems more normal
+//Kept it intact codewise incase someone wants to or is already using it.
+#define NPC_DW_CHANCE 100
 
 //This is the entry in npc_types to spawn for trap damagaes
 #define TRAP_NPC_TYPE 1586

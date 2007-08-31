@@ -459,7 +459,7 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 			return;
 		
 		// @merth: IDFile size has been increased, this needs to change
-		uint8 emat;
+		uint16 emat;
 		if(item2->Material <= 0
 			|| item2->Slots & (1 << SLOT_PRIMARY | 1 << SLOT_SECONDARY)) {
 			memset(newid, 0, sizeof(newid));
@@ -469,6 +469,7 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 					i=8;
 				}
 			}
+
 			emat = atoi(newid);
 		} else {
 			emat = item2->Material;
@@ -481,7 +482,9 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 			eslot = MATERIAL_PRIMARY;
 		}
 		else if (item2->Slots & (1 << SLOT_SECONDARY) && (equipment[MATERIAL_SECONDARY]==0) 
-			&& (GetOwner() != NULL || (GetLevel() >= 13 && MakeRandomInt(0,99) < NPC_DW_CHANCE) || (item2->Damage==0)))
+			&& (GetOwner() != NULL || (GetLevel() >= 13 && MakeRandomInt(0,99) < NPC_DW_CHANCE) || (item2->Damage==0)) &&
+			(item2->ItemType == ItemType1HS || item2->ItemType == ItemType1HB || item2->ItemType == ItemTypeShield ||
+			item2->ItemType == ItemTypePierce))
 		{
 			if (item2->Proc.Effect!=0)
 				CastToMob()->AddProcToWeapon(item2->Proc.Effect, true);
@@ -530,14 +533,13 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, sint8 charge
 		if(eslot != 0xFF) {
 			//equip it...
 			equipment[eslot] = item2->ID;
-			AC += item2->AC;
-			STR += item2->AStr;
-			INT += item2->AInt;
 			
 			if(wearchange) {
 				wc->wear_slot_id = eslot;
 				wc->material = emat;
 			}
+			
+			CalcBonuses();
 		}
 		item->equipSlot = item2->Slots;
 	}

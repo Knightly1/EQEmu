@@ -569,49 +569,276 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	return false;
 }
 
-int Mob::GetWeaponDamage(Mob *other, const Item_Struct *weapon_item, bool &bane) {
-	bane = false;
-	int weapon_damage;
-	
-	//TODO: I think augments might be able to alter DMG
-	
-	if(IsClient() && GetLevel() < weapon_item->RecLevel) {
-		weapon_damage = CastToClient()->CalcRecommendedLevelBonus(GetLevel(), weapon_item->RecLevel, weapon_item->Damage);
-		mlog(COMBAT__DAMAGE, "Base DMG (below recommended level %d) is %d", weapon_item->RecLevel, weapon_damage);
-	} else {
-		weapon_damage = weapon_item->Damage;
-		mlog(COMBAT__DAMAGE, "Base DMG is %d", weapon_damage);
+//Returns the weapon damage against the input mob
+//if we cannot hit the mob with the current weapon we will get a value less than or equal to zero
+//Else we know we can hit.
+//GetWeaponDamage(mob*, const Item_Struct*) is intended to be used for mobs or any other situation where we do not have a client inventory item
+//GetWeaponDamage(mob*, const ItemInst*) is intended to be used for situations where we have a client inventory item
+int Mob::GetWeaponDamage(Mob *against, const Item_Struct *weapon_item) {
+	int dmg = 0;
+	int banedmg = 0;
+
+	//can't hit invulnerable stuff with weapons.
+	if(against->GetInvul() || against->SpecAttacks[IMMUNE_MELEE]){
+		return 0;
 	}
 	
-	if (weapon_damage < 1)
-		weapon_damage = 1;
-	
-	// Racial bane damage
-	if (weapon_item->BaneDmgRaceAmt && other->GetRace() == weapon_item->BaneDmgRace) {
-		mlog(COMBAT__DAMAGE, "Adding bane DMG %d on matching race %d", weapon_item->BaneDmgRaceAmt, weapon_item->BaneDmgRace);
-		weapon_damage += weapon_item->BaneDmgRaceAmt;
-		bane = true;
+	//check to see if our weapons or fists are magical.
+	if(against->SpecAttacks[IMMUNE_MELEE_NONMAGICAL]){
+		if(weapon_item){
+			if(weapon_item->Magic){
+				dmg = weapon_item->Damage;
+
+				//this is more for non weapon items, ex: boots for kick
+				//they don't have a dmg but we should be able to hit magical
+				dmg = dmg <= 0 ? 1 : dmg;
+			}
+		}
+		else{
+			if((GetClass() == MONK || GetClass() == BEASTLORD) && GetLevel() >= 30){
+				dmg = GetMonkHandToHandDamage();
+			}
+			else if(GetOwner() && GetLevel() >= PET_ATTACK_MAGICAL_LEVEL){
+				//pets wouldn't actually use this but...
+				//it gives us an idea if we can hit due to the dual nature of this function
+				dmg = 1;						   
+			}
+		}
 	}
-	
-	// Body bane damage
-	if (weapon_item->BaneDmgAmt && uint8(other->GetBodyType()) == weapon_item->BaneDmgBody) {
-		mlog(COMBAT__DAMAGE, "Adding bane DMG %d on matching body type %d", weapon_item->BaneDmgAmt, weapon_item->BaneDmgBody);
-		weapon_damage += weapon_item->BaneDmgAmt;
-		bane = true;
-	}
-	
-	// Elemental damage
-	if(weapon_item->ElemDmgAmt) {
-		float resist = other->ResistSpell(weapon_item->ElemDmgType, 0, this);
-		if(resist > 0) {
-			mlog(COMBAT__DAMAGE, "Adding Elemental damage of type %d. Base ammount %d, %.3f%% effective.", weapon_item->ElemDmgType, weapon_item->ElemDmgAmt, resist);
-			weapon_damage += (int)( (weapon_item->ElemDmgAmt * resist) / 100.0f);
-		} else {
-			mlog(COMBAT__DAMAGE, "Elemental damage of type %d. Base ammount %d, resisted.", weapon_item->ElemDmgType, weapon_item->ElemDmgAmt);
+	else{
+		if(weapon_item){
+			dmg = weapon_item->Damage;
+
+			dmg = dmg <= 0 ? 1 : dmg;
+		}
+		else{
+			if(GetClass() == MONK || GetClass() == BEASTLORD){
+				dmg = GetMonkHandToHandDamage();
+			}
+			else{
+				dmg = 1;
+			}
 		}
 	}
 	
-	return(weapon_damage);
+	if(against->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]){
+		if(weapon_item){
+			if(weapon_item->BaneDmgBody == against->GetBodyType()){
+				banedmg += weapon_item->BaneDmgAmt;
+			}
+
+			if(weapon_item->BaneDmgRace == against->GetRace()){
+				banedmg += weapon_item->BaneDmgRaceAmt;
+			}
+		}
+	}
+	else{
+		if(weapon_item){
+			if(weapon_item->BaneDmgBody == against->GetBodyType()){
+				banedmg += weapon_item->BaneDmgAmt;
+			}
+
+			if(weapon_item->BaneDmgRace == against->GetRace()){
+				banedmg += weapon_item->BaneDmgRaceAmt;
+			}
+		}
+	}
+
+	int eledmg = 0;
+	if(!against->SpecAttacks[IMMUNE_MAGIC]){
+		if(weapon_item && weapon_item->ElemDmgAmt){
+			//we don't check resist for npcs here
+			eledmg = weapon_item->ElemDmgAmt;
+			dmg += eledmg;
+		}
+	}
+
+	if(against->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]){
+		if(!eledmg && !banedmg){
+			return 0;
+		}
+		else
+			dmg = eledmg;
+	}
+	dmg += banedmg;
+
+	if(dmg <= 0){
+		return 0;
+	}
+	else
+		return dmg;
+}
+
+int Mob::GetWeaponDamage(Mob *against, const ItemInst *weapon_item)
+{
+	int dmg = 0;
+	int banedmg = 0;
+
+	if(against->GetInvul() || against->SpecAttacks[IMMUNE_MELEE]){
+		return 0;
+	}
+
+	if(against->SpecAttacks[IMMUNE_MELEE_NONMAGICAL]){
+		if(weapon_item){
+			if(weapon_item->GetItem() && weapon_item->GetItem()->Magic){
+
+				if(IsClient() && GetLevel() < weapon_item->GetItem()->RecLevel){
+					dmg = CastToClient()->CalcRecommendedLevelBonus(GetLevel(), weapon_item->GetItem()->RecLevel, weapon_item->GetItem()->Damage);
+				}
+				else{
+					dmg = weapon_item->GetItem()->Damage;
+				}
+
+				for(int x = 0; x < 5; x++){
+					if(weapon_item->GetAugment(x) && weapon_item->GetAugment(x)->GetItem()){
+						dmg += weapon_item->GetAugment(x)->GetItem()->Damage;
+					}
+				}
+				dmg = dmg <= 0 ? 1 : dmg;
+			}
+		}
+		else{
+			if((GetClass() == MONK || GetClass() == BEASTLORD) && GetLevel() >= 30){
+				dmg = GetMonkHandToHandDamage();
+			}
+			else if(GetOwner() && GetLevel() >= PET_ATTACK_MAGICAL_LEVEL){ //pets wouldn't actually use this but...
+				dmg = 1;						   //it gives us an idea if we can hit
+			}
+		}
+	}
+	else{
+		if(weapon_item){
+			if(weapon_item->GetItem()){
+
+				if(IsClient() && GetLevel() < weapon_item->GetItem()->RecLevel){
+					dmg = CastToClient()->CalcRecommendedLevelBonus(GetLevel(), weapon_item->GetItem()->RecLevel, weapon_item->GetItem()->Damage);
+				}
+				else{
+					dmg = weapon_item->GetItem()->Damage;
+				}
+
+				for(int x = 0; x < 5; x++){
+					if(weapon_item->GetAugment(x) && weapon_item->GetAugment(x)->GetItem()){
+						dmg += weapon_item->GetAugment(x)->GetItem()->Damage;
+					}
+				}
+				dmg = dmg <= 0 ? 1 : dmg;
+			}
+		}
+		else{
+			if(GetClass() == MONK || GetClass() == BEASTLORD){
+				dmg = GetMonkHandToHandDamage();
+			}
+			else{
+				dmg = 1;
+			}
+		}
+	}
+
+	if(against->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]){
+		if(weapon_item && weapon_item->GetItem()){
+			if(weapon_item->GetItem()->BaneDmgBody == against->GetBodyType()){
+				if(IsClient() && GetLevel() < weapon_item->GetItem()->RecLevel){
+					banedmg += CastToClient()->CalcRecommendedLevelBonus(GetLevel(), weapon_item->GetItem()->RecLevel, weapon_item->GetItem()->BaneDmgAmt);
+				}
+				else{
+					banedmg += weapon_item->GetItem()->BaneDmgAmt;
+				}
+			}
+
+			if(weapon_item->GetItem()->BaneDmgRace == against->GetRace()){
+				if(IsClient() && GetLevel() < weapon_item->GetItem()->RecLevel){
+					banedmg += CastToClient()->CalcRecommendedLevelBonus(GetLevel(), weapon_item->GetItem()->RecLevel, weapon_item->GetItem()->BaneDmgRaceAmt);
+				}
+				else{
+					banedmg += weapon_item->GetItem()->BaneDmgRaceAmt;
+				}
+			}
+
+			for(int x = 0; x < 5; x++){
+				if(weapon_item->GetAugment(x) && weapon_item->GetAugment(x)->GetItem()){
+					if(weapon_item->GetAugment(x)->GetItem()->BaneDmgBody == against->GetBodyType()){
+						banedmg += weapon_item->GetAugment(x)->GetItem()->BaneDmgAmt;
+					}
+
+					if(weapon_item->GetAugment(x)->GetItem()->BaneDmgRace == against->GetRace()){
+						banedmg += weapon_item->GetAugment(x)->GetItem()->BaneDmgRaceAmt;
+					}
+				}
+			}
+		}
+	}
+	else{
+		if(weapon_item && weapon_item->GetItem()){
+			if(weapon_item->GetItem()->BaneDmgBody == against->GetBodyType()){
+				if(IsClient() && GetLevel() < weapon_item->GetItem()->RecLevel){
+					banedmg += CastToClient()->CalcRecommendedLevelBonus(GetLevel(), weapon_item->GetItem()->RecLevel, weapon_item->GetItem()->BaneDmgAmt);
+				}
+				else{
+					banedmg += weapon_item->GetItem()->BaneDmgAmt;
+				}
+			}
+
+			if(weapon_item->GetItem()->BaneDmgRace == against->GetRace()){
+				if(IsClient() && GetLevel() < weapon_item->GetItem()->RecLevel){
+					banedmg += CastToClient()->CalcRecommendedLevelBonus(GetLevel(), weapon_item->GetItem()->RecLevel, weapon_item->GetItem()->BaneDmgRaceAmt);
+				}
+				else{
+					banedmg += weapon_item->GetItem()->BaneDmgRaceAmt;
+				}
+			}
+
+			for(int x = 0; x < 5; x++){
+				if(weapon_item->GetAugment(x) && weapon_item->GetAugment(x)->GetItem()){
+					if(weapon_item->GetAugment(x)->GetItem()->BaneDmgBody == against->GetBodyType()){
+						banedmg += weapon_item->GetAugment(x)->GetItem()->BaneDmgAmt;
+					}
+
+					if(weapon_item->GetAugment(x)->GetItem()->BaneDmgRace == against->GetRace()){
+						banedmg += weapon_item->GetAugment(x)->GetItem()->BaneDmgRaceAmt;
+					}
+				}
+			}
+		}
+	}
+
+	int eledmg = 0;
+	if(!against->SpecAttacks[IMMUNE_MAGIC]){
+		if(weapon_item && weapon_item->GetItem() && weapon_item->GetItem()->ElemDmgAmt){
+			if(IsClient() && GetLevel() < weapon_item->GetItem()->RecLevel){
+				eledmg = CastToClient()->CalcRecommendedLevelBonus(GetLevel(), weapon_item->GetItem()->RecLevel, weapon_item->GetItem()->ElemDmgAmt);
+			}
+			else{
+				eledmg = weapon_item->GetItem()->ElemDmgAmt;
+			}
+
+			dmg += (eledmg * against->ResistSpell(weapon_item->GetItem()->ElemDmgType, 0, this) / 100);		
+		}
+
+		if(weapon_item){
+			for(int x = 0; x < 5; x++){
+				if(weapon_item->GetAugment(x) && weapon_item->GetAugment(x)->GetItem()){
+					eledmg += weapon_item->GetAugment(x)->GetItem()->ElemDmgAmt;
+					dmg += (weapon_item->GetAugment(x)->GetItem()->ElemDmgAmt * against->ResistSpell(weapon_item->GetAugment(x)->GetItem()->ElemDmgType, 0, this) / 100);
+				}
+			}
+		}
+	}
+
+	if(against->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]){
+		if(!eledmg && !banedmg){
+			return 0;
+		}
+		else
+			dmg = eledmg;
+	}
+	dmg += banedmg;
+
+	if(dmg <= 0){
+		return 0;
+	}
+	else
+		return dmg;
 }
 
 //note: throughout this method, setting `damage` to a negative is a way to
@@ -654,14 +881,12 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		weapon = GetInv().GetItem(SLOT_SECONDARY);
 	else
 		weapon = GetInv().GetItem(SLOT_PRIMARY);
-	
-	const Item_Struct *weapon_item = NULL;
+
 	if(weapon != NULL) {
 		if (!weapon->IsWeapon()) {
 			mlog(COMBAT__ATTACKS, "Attack canceled, Item %s (%d) is not a weapon.", weapon->GetItem()->Name, weapon->GetID());
 			return(false);
 		}
-		weapon_item = weapon->GetItem();
 		mlog(COMBAT__ATTACKS, "Attacking with weapon: %s (%d)", weapon->GetItem()->Name, weapon->GetID());
 	} else {
 		mlog(COMBAT__ATTACKS, "Attacking without a weapon.");
@@ -671,163 +896,52 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	// also send Packet to near clients
 	SkillType skillinuse;
 	AttackAnimation(skillinuse, Hand, weapon);
-	mlog(COMBAT__ATTACKS, "Attacking with %s in slot %d using skill %d", weapon_item?weapon_item->Name:"Fist", Hand, skillinuse);
+	mlog(COMBAT__ATTACKS, "Attacking with %s in slot %d using skill %d", weapon?weapon->GetItem()->Name:"Fist", Hand, skillinuse);
 	
 	/// Now figure out damage
 	int damage = 0;
+	int8 mylevel = GetLevel() ? GetLevel() : 1;
+	int8 otherlevel = other->GetLevel() ? other->GetLevel() : 1;
+	int weapon_damage = GetWeaponDamage(other, weapon);
 	
-	
-	//watch for immunities
-	if(other->SpecAttacks[IMMUNE_MELEE]) {
-		damage = -5;
-		mlog(COMBAT__ATTACKS, "%s is immune to melee.", other->GetName());
-	} else if(other->SpecAttacks[IMMUNE_MELEE_NONMAGICAL]) {
-		if(weapon_item) {
-			if(!weapon_item->Magic) {
-				mlog(COMBAT__ATTACKS, "%s is immune to non-magical weapon attacks.", other->GetName());
-				damage = -5;
-			}
-		} else if((GetClass() == MONK || GetClass() == BEASTLORD) && GetLevel() >= 30) {
-			//monk fists are magical at 30.. 
-			//beastlords lumped in here cause im too lazy to figure out if they are different
-		} else {
-			mlog(COMBAT__ATTACKS, "%s is immune to non-magical attacks.", other->GetName());
-			damage = -5;
-		}
-	}
-	
-	int8 mylevel = GetLevel();
-	mylevel = mylevel ? mylevel : 1;
-	
-	//determine the weapon's damage
-	int weapon_damage = 0;
-	if ( damage >= 0 ) {
-		int8 otherlevel = other->GetLevel();
-		otherlevel = otherlevel ? otherlevel : 1;
+	//if weapon damage > 0 then we know we can hit the target with this weapon
+	//otherwise we cannot and we set the damage to -5 later on
+	if(weapon_damage > 0){
 		
-		
-		/*
-			Hand to hand weapons are treated just like any other weapon
-			and monks gain no advantage from using them. I dont know
-			if this is right..
-		*/
-		
-		if(!weapon) {		//we have no weapon, use fists
-			if(other->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]) {
-				mlog(COMBAT__ATTACKS, "%s is immune to non-bane attacks.", other->GetName());
-				damage = -5;
-			} else if(GetClass() == MONK || GetClass() == BEASTLORD) {
-				weapon_damage = GetMonkHandToHandDamage();	// Damage changes based on level
-				mlog(COMBAT__DAMAGE, "Using Monk H2H base DMG %d", weapon_damage);
-			} else {
-				weapon_damage = 2; // This isn't quite right, something more like level/10 is more appropriate
-				mlog(COMBAT__DAMAGE, "Using Non-Monk H2H base DMG %d", weapon_damage);
-			}
-		} else { //we have a weapon
-			
-			bool bane = false;
-			weapon_damage = GetWeaponDamage(other, weapon_item, bane);
-			
-			mlog(COMBAT__DAMAGE, "Using weapon DMG %d", weapon_damage);
-			if(!bane && other->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]) {
-				mlog(COMBAT__ATTACKS, "%s is immune to non-bane attacks.", other->GetName());
-				damage = -5;
-			}
-		}
-		
-		//berserker damage bonus
-		if(berserk && GetClass() == BERSERKER) {
+		//Berserker Berserk damage bonus
+		if(berserk && GetClass() == BERSERKER){
 			int bonus = 3 + GetLevel()/10;		//unverified
 			weapon_damage = weapon_damage * (100+bonus) / 100;
 			mlog(COMBAT__DAMAGE, "Berserker damage bonus increases DMG to %d", weapon_damage);
 		}
-	}
-	
-	// Determine players ability to hit based on:
-	// mob level difference, skillinuse, randomness
-	if(damage >= 0) {
-		int min_hit = 0;
-		int max_hit = 0;
+
+		//try a finishing blow.. if successful end the attack
+		if(TryFinishingBlow(other, skillinuse))
+			return (true);
+		
+		//damage formula needs some work
+		int min_hit = 1;
+		int max_hit = (weapon_damage * ((GetSTR()*20) + (GetSkill(OFFENSE)*15) + (mylevel*10)) / 1000);
 		CheckIncreaseSkill(skillinuse, -10);
 		CheckIncreaseSkill(OFFENSE, -10);
-		
-		//////////////////////////////////////////////////////////
-		/////////	Finishing Blow
-		/////////////////////////////////////////////////////////
-		//kathgar: Made it so players cannot be finishing blowed.. something wanky was going on
-		//			Added level limits and fixed the chances to the correct values?
-		uint16 aa_item = GetAA(aaFinishingBlow);
-		aa_item += GetAA(aaCoupdeGrace);
-		if(aa_item>0 && !other->IsClient() && other->GetHPRatio() < 10 && (other->GetLevel()<=54))	//Don't finishing blow players.. at least for now)
-		{
-			float tempchancerand = MakeRandomFloat(0, 100);
-			if
-			(
-				(aa_item==1 && (tempchancerand<=2)&& other->GetLevel() <= 54) ||
-				(aa_item==2 && (tempchancerand<=5)&& other->GetLevel() <= 52) ||
-				(aa_item==3 && (tempchancerand<=7)&& other->GetLevel() <= 50) ||
-				(aa_item==4 && (tempchancerand<=7)&& other->GetLevel() <= 55) ||
-				(aa_item==5 && (tempchancerand<=7)&& other->GetLevel() <= 57) ||
-				(aa_item==6 && (tempchancerand<=7)&& other->GetLevel() <= 59)
-			)
-			{
-				mlog(COMBAT__ATTACKS, "Landed a finishing blow: AA at %d, other level %d, roll %.1f", aa_item, other->GetLevel(), tempchancerand);
-				entity_list.MessageClose_StringID(this, false, 200, MT_CritMelee, FINISHING_BLOW, GetName());
-				other->Damage(this, 32000, SPELL_UNKNOWN, skillinuse);
-				return(true);
-			}
-			mlog(COMBAT__ATTACKS, "Failed a finishing blow: AA at %d, other level %d, roll %.1f", aa_item, other->GetLevel(), tempchancerand);
-		}
-		
-		min_hit = 1;
-		//This needs to be researched, it seems terribly off. Changed to use offense skill for now instead of weapon since we know that is correct
-		max_hit = (weapon_damage * (((GetSTR()*20) + (GetSkill(OFFENSE)*15) + (mylevel*10)) / 1000));	// Apply damage formula
-		
-		// Only apply the damage bonus to the main hand
-		if(Hand == 13) {	// Kaiyodo - If we're not using the DWDA stuff, will always be the primary hand
-			int damage_bonus = GetWeaponDamageBonus(weapon_item);	// Can be NULL, will then assume fists
+
+		//if mainhand only, get the bonus damage from level
+		if(Hand==13){
+			int damage_bonus = GetWeaponDamageBonus(weapon ? weapon->GetItem() : (const Item_Struct*)NULL);
 			min_hit += damage_bonus;
 			max_hit += damage_bonus;
 		}
-		
+
 		min_hit = min_hit * (100 + itembonuses.MinDamageModifier + spellbonuses.MinDamageModifier) / 100;
-	
+
 		if(max_hit <= min_hit)
 			damage = min_hit;
 		else
 			damage = MakeRandomInt(min_hit, max_hit);
-		
+
 		mlog(COMBAT__DAMAGE, "Damage calculated to %d (min %d, max %d, str %d, skill %d, DMG %d, lv %d)", damage, min_hit, max_hit
 		, GetSTR(), GetSkill(skillinuse), weapon_damage, mylevel);
-	
-		/*#if 0 // Weighted MDF type damage
-			float hml = (float) ((float)rand()/(float)RAND_MAX);
-			if(GetLevel()>=25){
-				if (hml <= 0.10f){ // Low
-					damage = (int32) (min_hit + (rand()%(weighted-min_hit)));
-					if(damage > min_hit || damage > weighted || damage < min_hit) {
-						damage = min_hit;
-					}
-				}
-				else if (hml >= 0.11f && hml <= 0.89f){ // Middle
-					damage = (int32) (weighted + (rand()%(magic_number-weighted)+1));
-					if(damage > magic_number || damage < weighted) {
-						damage = magic_number;
-					}
-				}
-				else { // High
-					damage = (int32) (magic_number + (rand()%(max_hit-magic_number)+1));
-					if(damage < magic_number || damage >max_hit) {
-						damage = magic_number;
-					}
-				}
-#if EQDEBUG>=11 
-					LogFile->write(EQEMuLog::Debug,"%s::Attack(): min_hit:%i max_hit:%i weapon_damage:%i damage:%i mod:%f MN:%i WN:%i HML:%f",
-						GetName(), min_hit, max_hit, weapon_damage, damage, (( ((float)GetSTR()) + (float)GetSkill(skillinuse)+ (float)mylevel) / 100), magic_number, weighted , hml);
-#endif
-			}
-		#endif // Weighted MDF type damage*/
-	
+
 		//check to see if we hit..
 		if(!other->CheckHitChance(this, skillinuse, Hand)) {
 			mlog(COMBAT__ATTACKS, "Attack missed. Damage set to 0.");
@@ -839,16 +953,13 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 			mlog(COMBAT__DAMAGE, "Final damage after all reductions: %d", damage);
 		}
 
+		//riposte
 		if (damage == -3)  {
 			if (bRiposte) return false;
 			else DoRiposte(other);
 		}
-		/*
-		if (bRiposte && damage == -3) {	//cannot riposte a riposte
-			mlog(COMBAT__ATTACKS, "Attack canceled. Cannot riposte a riposte");
-			return false;
-    	} */
 
+		//strikethrough..
 		if (damage < 0 && !bRiposte) {
 			if(MakeRandomInt(0, 100) <= (itembonuses.StrikeThrough + spellbonuses.StrikeThrough)) {
 				Message_StringID(MT_StrikeThrough, 9078); // You strike through your opponents defenses!
@@ -856,6 +967,9 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 				return false;
 			}
 		}
+	}
+	else{
+		damage = -5;
 	}
 	
 	///////////////////////////////////////////////////////////
@@ -906,12 +1020,6 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 	if(other->GetHP() > -10 && !bRiposte) {
 		TryWeaponProc(weapon, other);
 	}
-	/* <Rogean> Moved above strikethrough
-	//handle riposet, ensuring they are in front is checked in AvoidDamage
-	//this used to test IsNPC, preventing riposte attacks in PvP
-	if( damage == -3 ) {
-		DoRiposte(other);
-	} */
 	
 	if (damage > 0)
         return true;
@@ -1230,6 +1338,8 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	}
 	combat_event_timer.Start(CombatEventTimer_expire);
 	
+	SkillType skillinuse = HAND_TO_HAND;
+
 	//figure out what weapon they are using, if any
 	const Item_Struct* weapon = NULL;
 	if (Hand == 13 && equipment[7] > 0)
@@ -1237,96 +1347,97 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	else if (equipment[8])
 	    weapon = database.GetItem(equipment[8]);
 	
-	//we dont factor anything from the weapon into the attack.......
+	//We dont factor much from the weapon into the attack.
+	//Just the skill type so it doesn't look silly using punching animations and stuff while wielding weapons
 	if(weapon) {
-		mlog(COMBAT__ATTACKS, "Attacking with weapon: %s (%d) (too bad im not using it for anything)", weapon->Name, weapon->ID);
-	}
-	
-	//watch for immunities
-	if(other->SpecAttacks[IMMUNE_MELEE]) {
-		damage = -5;
-		mlog(COMBAT__ATTACKS, "%s is immune to melee attacks.", other->GetName());
-	} else if(other->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]) {
-		/*
-		if(weapon) {
-			//We dont take the bane damage into account here, just see if its there
-			if (weapon->BaneDmgRaceAmt && other->GetRace() == weapon->BaneDmgRace) {
-				//matched on race..
-			} else if (weapon->BaneDmgAmt && other->GetBodyType() == weapon->BaneDmgBody) {
-				//matched on body type
-			} else
-				damage = -5;	//no match, immune
-		} else {
-			//just attacking with hands, never a bane weapon
-			damage = -5;
-		}
-		*/
+		mlog(COMBAT__ATTACKS, "Attacking with weapon: %s (%d) (too bad im not using it for much)", weapon->Name, weapon->ID);
 		
-		//use same rules as magical attacks temporarily
-		if(weapon) {
-			if(!weapon->Magic && GetLevel() < PET_ATTACK_MAGICAL_LEVEL) {
-				mlog(COMBAT__ATTACKS, "%s is immune to non-bane attacks and %s is not magical.", other->GetName(), weapon->Name);
-				damage = -5;
-			}
-		} else {
-			//just attacking with hands
-			if(GetLevel() < PET_ATTACK_MAGICAL_LEVEL) {
-				mlog(COMBAT__ATTACKS, "%s is immune to non-bane attacks, and we have no weapon.", other->GetName());
-				damage = -5;
-			}
-		}
-	} else if(other->SpecAttacks[IMMUNE_MELEE_NONMAGICAL]) {
-		if(weapon) {
-			if(!weapon->Magic && GetLevel() < PET_ATTACK_MAGICAL_LEVEL) {
-				mlog(COMBAT__ATTACKS, "%s is immune to non-magical attacks and %s is not magical.", other->GetName(), weapon->Name);
-				damage = -5;
-			}
-		} else {
-			//just attacking with hands
-			if(GetLevel() < PET_ATTACK_MAGICAL_LEVEL) {
-				mlog(COMBAT__ATTACKS, "%s is immune to non-magical attacks, and we have no weapon.", other->GetName());
-				damage = -5;
-			}
-		}
-	}
-	
-	SkillType skillinuse = HAND_TO_HAND;
-	//basically "if not immune"
-	if(damage >= 0) {
-		
-	
-		if (Hand == 14 && weapon && weapon->ItemType == ItemTypeShield) {
+		if(Hand == 14 && weapon->ItemType == ItemTypeShield){
 			mlog(COMBAT__ATTACKS, "Attack with shield canceled.");
-			return false; // <Rogean> Cant Dual Wield with Shields
+			return false;
 		}
-		
-		sint16 charges = 0;
-		ItemInst weapon_inst(&database, weapon, charges);
-		AttackAnimation(skillinuse, Hand, &weapon_inst);
+
+		switch(weapon->ItemType){
+			case ItemType1HS:
+				skillinuse = _1H_SLASHING;
+				break;
+			case ItemType2HS:
+				skillinuse = _2H_SLASHING;
+				break;
+			case ItemTypePierce:
+			case ItemType2HPierce:
+				skillinuse = PIERCING;
+				break;
+			case ItemType1HB:
+				skillinuse = _1H_BLUNT;
+				break;
+			case ItemType2HB:
+				skillinuse = _2H_BLUNT;
+				break;
+			case ItemTypeBow:
+				skillinuse = ARCHERY;
+				break;
+			case ItemTypeThrowing:
+			case ItemTypeThrowingv2:
+				skillinuse = THROWING;
+				break;
+			default:
+				skillinuse = HAND_TO_HAND;
+				break;
+		}
+	}
+	
+	int weapon_damage = GetWeaponDamage(other, weapon);
+	
+	//do attack animation regardless of whether or not we can hit below
+	sint16 charges = 0;
+	ItemInst weapon_inst(&database, weapon, charges);
+	AttackAnimation(skillinuse, Hand, &weapon_inst);
+
+	//basically "if not immune" then do the attack
+	if((weapon_damage) > 0) {
+
+		//ele and bane dmg too
+		//NPCs add this differently than PCs
+		//if NPCs can't inheriently hit the target we don't add bane/magic dmg which isn't exactly the same as PCs
+		int16 eleBane = 0;
+		if(weapon){
+			if(weapon->BaneDmgBody == other->GetBodyType()){
+				eleBane += weapon->BaneDmgAmt;
+			}
+
+			if(weapon->BaneDmgRace == other->GetRace()){
+				eleBane += weapon->BaneDmgRaceAmt;
+			}
+
+			if(weapon->ElemDmgAmt){
+				eleBane += (weapon->ElemDmgAmt * other->ResistSpell(weapon->ElemDmgType, 0, this) / 100);
+			}
+		}
 		
 		int8 otherlevel = other->GetLevel();
 		int8 mylevel = this->GetLevel();
-		
+				
 		otherlevel = otherlevel ? otherlevel : 1;
 		mylevel = mylevel ? mylevel : 1;
 		
 		//instead of calcing damage in floats lets just go straight to ints
-		damage = MakeRandomInt(min_dmg, max_dmg);
+		damage = MakeRandomInt((min_dmg+eleBane), (max_dmg+eleBane));
 		
 		//check if we're hitting above our max or below it.
-		if(min_dmg != 0 && damage < min_dmg) {
-			mlog(COMBAT__DAMAGE, "Damage (%d) is below min (%d). Setting to min.", damage, min_dmg);
-		    damage = min_dmg;
+		if((min_dmg+eleBane) != 0 && damage < (min_dmg+eleBane)) {
+			mlog(COMBAT__DAMAGE, "Damage (%d) is below min (%d). Setting to min.", damage, (min_dmg+eleBane));
+		    damage = (min_dmg+eleBane);
 		}
-		if(max_dmg != 0 && damage > max_dmg) {
-			mlog(COMBAT__DAMAGE, "Damage (%d) is above max (%d). Setting to max.", damage, max_dmg);
-		    damage = max_dmg;
+		if((max_dmg+eleBane) != 0 && damage > (max_dmg+eleBane)) {
+			mlog(COMBAT__DAMAGE, "Damage (%d) is above max (%d). Setting to max.", damage, (max_dmg+eleBane));
+		    damage = (max_dmg+eleBane);
 		}
 		
 		//THIS IS WHERE WE CHECK TO SEE IF WE HIT:
 		if(other->IsClient() && other->CastToClient()->IsSitting()) {
-			mlog(COMBAT__DAMAGE, "Client %s is sitting. Hitting for max damage (%d).", other->GetName(), max_dmg);
-			damage = max_dmg;
+			mlog(COMBAT__DAMAGE, "Client %s is sitting. Hitting for max damage (%d).", other->GetName(), (max_dmg+eleBane));
+			damage = (max_dmg+eleBane);
 		} else {
 			if(!other->CheckHitChance(this, skillinuse, Hand)) {
 				damage = 0;	//miss
@@ -1344,6 +1455,8 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 			damage=damage/2;
 		}
 	}
+	else
+		damage = -5;
 		
 	//cant riposte a riposte
 	if (bRiposte && damage == -3) {
@@ -1396,7 +1509,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	
 	// Kaiyodo - Check for proc on weapon based on DEX
 	if( !bRiposte && other->GetHP() > 0 ) {
-		TryWeaponProc((const Item_Struct*) NULL, other);	//no weapon
+		TryWeaponProc(weapon, other);	//no weapon
 	}
 	
 	// now check ripostes
@@ -2325,7 +2438,7 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 	if(weapon != NULL) {
 		if (IsValidSpell(weapon->Proc.Effect) && (weapon->Proc.Type == ET_CombatProc)) {
 			float WPC = ProcChance*(100+weapon->ProcRate)/100;
-			if (MakeRandomFloat(0, 1) < WPC) {	// 255 dex = 0.084 chance of proc. No idea what this number should be really.
+			if (MakeRandomFloat(0, 1) <= WPC) {	// 255 dex = 0.084 chance of proc. No idea what this number should be really.
 				if(weapon->Proc.Level > ourlevel) {
 					mlog(COMBAT__PROCS, "Tried to proc (%s), but our level (%d) is lower than required (%d)", weapon->Name, ourlevel, weapon->Proc.Level);
 					Mob * own = GetOwner();
@@ -2346,10 +2459,11 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 	
 	//now try our proc arrays
 	float procmod =  float(GetDEX()) / 100.0f + ProcBonus*100.0;	//did somebody think about this???
+
 	uint32 i;
 	for(i = 0; i < MAX_PROCS; i++) {
 		if (PermaProcs[i].spellID != SPELL_UNKNOWN) {
-			float chance = PermaProcs[i].chance / 100; 
+			float chance = ((float)PermaProcs[i].chance) / 100; 
 			if(MakeRandomFloat(0, 1) < chance) {
 				mlog(COMBAT__PROCS, "Permanent proc %d procing spell %d (%.2f percent chance)", i, PermaProcs[i].spellID, chance);
 				ExecWeaponProc(PermaProcs[i].spellID, on);
@@ -2358,7 +2472,7 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 			}
 		}
 		if (SpellProcs[i].spellID != SPELL_UNKNOWN) {
-			float chance = ProcChance + (SpellProcs[i].chance / 100);
+			float chance = ProcChance + (((float)SpellProcs[i].chance) / 100);
 			if(MakeRandomFloat(0, 1) < chance) {
 				mlog(COMBAT__PROCS, "Spell proc %d procing spell %d (%.2f percent chance)", i, SpellProcs[i].spellID, chance);
 				ExecWeaponProc(SpellProcs[i].spellID, on);
@@ -2392,6 +2506,10 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 		}
 	}
  
+	if(skill == ARCHERY && GetClass() == RANGER && GetSkill(ARCHERY) >= 65){
+		critChance += 0.06f;
+	}
+
 	switch(GetAA(aaCombatFury))
 	{
 	case 1:
@@ -2456,6 +2574,57 @@ void Mob::TryCriticalHit(Mob *defender, int16 skill, sint32 &damage)
 			}
 		}
 	}
+}
+
+bool Mob::TryFinishingBlow(Mob *defender, SkillType skillinuse)
+{
+	int8 aa_item = GetAA(aaFinishingBlow) + GetAA(aaCoupdeGrace);
+	if(aa_item && !defender->IsClient() && defender->GetHPRatio() < 10){
+		int chance = 0;
+		int levelreq = 0;
+		switch(aa_item)
+		{
+		case 1:
+			chance = 2;
+			levelreq = 50;
+			break;
+		case 2:
+			chance = 5;
+			levelreq = 52;
+			break;
+		case 3:
+			chance = 7;
+			levelreq = 54;
+			break;
+		case 4:
+			chance = 7;
+			levelreq = 55;
+			break;
+		case 5:
+			chance = 7;
+			levelreq = 57;
+			break;
+		case 6:
+			chance = 7;
+			levelreq = 59;
+			break;
+		default:
+			break;
+		}
+
+		if(chance >= MakeRandomInt(0, 100) && defender->GetLevel() <= levelreq){
+			mlog(COMBAT__ATTACKS, "Landed a finishing blow: AA at %d, other level %d", aa_item, defender->GetLevel());
+			entity_list.MessageClose_StringID(this, false, 200, MT_CritMelee, FINISHING_BLOW, GetName());
+			defender->Damage(this, 32000, SPELL_UNKNOWN, skillinuse);
+			return true;
+		}
+		else
+		{
+			mlog(COMBAT__ATTACKS, "FAILED a finishing blow: AA at %d, other level %d", aa_item, defender->GetLevel());
+			return false;
+		}
+	}
+	return false;
 }
 
 void Mob::DoRiposte(Mob *defender){

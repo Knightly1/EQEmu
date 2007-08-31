@@ -73,6 +73,9 @@ public:
 /*  virtual void SetSkill(int in_skill_num, int8 in_skill_value) { // socket 12-29-01
         if (in_skill_num <= HIGHEST_SKILL) { skills[in_skill_num + 1] = in_skill_value; } }*/
 
+	void CalcItemBonuses(StatBonuses *newbon);
+	virtual void CalcBonuses();
+
 	
 #ifdef GUILDWARS
 	int32	GetGuildLocationID() { return guildlocationid; }

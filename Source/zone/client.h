@@ -669,7 +669,6 @@ protected:
 	void CalcEdibleBonuses(StatBonuses* newbon);
 	void MakeBuffFadePacket(int16 spell_id, int slot_id, bool send_message = true);
 	bool client_data_loaded;
-	float RangedHitChance(SkillType skill, Mob *other);
 	
 	sint16	GetFocusEffect(focusType type, int16 spell_id);
 	sint16	CalcFocusEffect(focusType type, int16 focus_id, int16 spell_id);
