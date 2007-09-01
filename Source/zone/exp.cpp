@@ -46,8 +46,12 @@ void Client::AddEXP(int32 add_exp, int8 conlevel, bool resexp) {
 	
 		float totalmod = 1.0;
 		//get modifiers
-		if (zone->GetEXPMod() > 0) {
+		if (zone->GetEXPMod() >= 0) {
 			totalmod = zone->GetEXPMod();
+		}
+
+		if(zone->newzone_data.zone_exp_multiplier >= 0){
+			totalmod *= zone->newzone_data.zone_exp_multiplier;
 		}
 
 		if(RuleR(Character, ExpMultiplier) >= 0){

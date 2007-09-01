@@ -1228,9 +1228,12 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skil
 					new_corpse->SetPKItem(0);
 				if(other->CastToClient()->isgrouped) {
 					Group* group = entity_list.GetGroupByClient(other->CastToClient());
-					if(group != 0) {
-						for(int i=0;i<6;i++) {
-							if(group->members[i] != NULL) {
+					if(group != 0) 
+					{
+						for(int i=0;i<6;i++) 
+						{
+							if(group->members[i] != NULL) 
+							{
 								new_corpse->AllowMobLoot(group->members[i],i);
 							}
 						}
@@ -1614,27 +1617,31 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skill) 
 	if(give_exp && give_exp->IsClient())
 		give_exp_client = give_exp->CastToClient();
 	
-    if (give_exp_client && !IsCorpse() && MerchantType == 0)
+	if(!(this->GetClass() == LDON_TREASURE && this->GetBodyType() == BT_Boxes))
 	{
-		Group *kg = entity_list.GetGroupByClient(give_exp_client);
-		if (give_exp_client->IsGrouped() && kg != NULL)
+		// cb: if we're not a LDON treasure chest, we give XP
+		if (give_exp_client && !IsCorpse() && MerchantType == 0)
 		{
-			if(give_exp_client->GetAdventureID()>0){
-				AdventureInfo AF = database.GetAdventureInfo(give_exp_client->GetAdventureID());
-				if(zone->GetZoneID() == AF.zonedungeonid && AF.type==ADVENTURE_MASSKILL)
-					give_exp_client->SendAdventureUpdate();
-				else if(zone->GetZoneID() == AF.zonedungeonid && AF.type==ADVENTURE_NAMED && (AF.Objetive==GetNPCTypeID() || AF.ObjetiveValue==GetNPCTypeID()))
-					give_exp_client->SendAdventureFinish(1, AF.points,true);
+			Group *kg = entity_list.GetGroupByClient(give_exp_client);
+			if (give_exp_client->IsGrouped() && kg != NULL)
+			{
+				if(give_exp_client->GetAdventureID()>0){
+					AdventureInfo AF = database.GetAdventureInfo(give_exp_client->GetAdventureID());
+					if(zone->GetZoneID() == AF.zonedungeonid && AF.type==ADVENTURE_MASSKILL)
+						give_exp_client->SendAdventureUpdate();
+					else if(zone->GetZoneID() == AF.zonedungeonid && AF.type==ADVENTURE_NAMED && (AF.Objetive==GetNPCTypeID() || AF.ObjetiveValue==GetNPCTypeID()))
+						give_exp_client->SendAdventureFinish(1, AF.points,true);
+				}
+				kg->SplitExp((EXP_FORMULA), this);
 			}
-			kg->SplitExp((EXP_FORMULA), this);
-		}
-		else
-        {
-        	int conlevel = give_exp->GetLevelCon(GetLevel());
-            if (conlevel != CON_GREEN)
-            {
-			    give_exp_client->AddEXP((EXP_FORMULA), conlevel); // Pyro: Comment this if NPC death crashes zone
-            }
+			else
+			{
+				int conlevel = give_exp->GetLevelCon(GetLevel());
+				if (conlevel != CON_GREEN)
+				{
+					give_exp_client->AddEXP((EXP_FORMULA), conlevel); // Pyro: Comment this if NPC death crashes zone
+				}
+			}
 		}
 	}
 	
@@ -1709,18 +1716,22 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 
 	if (other == myowner)
 		return;
+
+	// first add self
+	hate_list.Add(other, hate, damage, bFrenzy, !iBuffTic);
 	
+	// then add pet owner if there's one
 	if (owner) { // Other is a pet, add him and it
 		// EverHood 6/12/06
 		// Can't add a feigned owner to hate list
 		if(owner->IsClient() && owner->CastToClient()->GetFeigned()) {
 			//they avoid hate due to feign death...
 		} else {
-			hate_list.Add(owner, 1, damage, false, !iBuffTic);
+			// cb:2007-08-17
+			// owner must get on list, but he's not actually gained any hate yet
+			hate_list.Add(owner, 0, 0, false, !iBuffTic);
 		}
-	}
-	
-	hate_list.Add(other, hate, damage, bFrenzy, !iBuffTic);
+	}	
 	
 	if (mypet && (!(GetAA(aaPetDiscipline) && mypet->IsHeld()))) { // I have a pet, add other to it
 		if(!mypet->IsFamiliar())

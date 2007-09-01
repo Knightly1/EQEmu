@@ -2242,7 +2242,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		return(false);
 	}
 
-	if(!(IsClient() && CastToClient()->GetGM()))	// GMs can cast on anything
+	if(!(IsClient() && CastToClient()->GetGM()) && !IsHarmonySpell(spell_id))	// GMs can cast on anything
 	{
 		// Beneficial spells check
 		if(IsBeneficialSpell(spell_id))
@@ -2372,8 +2372,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		Shout("%s!", target_name);
 	}
 
-	if (spelltar->IsAIControlled() && IsDetrimentalSpell(spell_id)
-		) {
+	if (spelltar->IsAIControlled() && IsDetrimentalSpell(spell_id) && !IsHarmonySpell(spell_id)) {
 		int16 aggro_amount = CheckAggroAmount(spell_id);//*spelltar->CastToNPC()->AggroModifier();
 		mlog(SPELLS__CASTING, "Spell %d cast on %s generated %d hate", spell_id, spelltar->GetName(), aggro_amount);
 		spelltar->AddToHateList(this, aggro_amount);

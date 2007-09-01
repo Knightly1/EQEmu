@@ -1,6 +1,15 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/31/2007
+KLS(gernblan): Added spawn group info to #npcstats
+KLS:(TheLieka) Fix for zone exp modifiers not being used
+KLS:(inkubus) Lull and harmony spells should land on enemy targets and not cause any aggro, still some work to be done on the AE portion.
+KLS:(cbodmer) Pet aggro changed, owner will no longer gain more aggro from proximity than the pet
+KLS:(cbodmer) Support for LDoN style boxes (class 62 + body type 33) implemented
+KLS: The error in acmod() should no longer complain as much.
+Required: Opcode files have changed, be sure to update to the latest .conf files.
+
 ==08/30/2007
 KLS: Reworked Mob::GetWeaponDamage(), it will now return damage done by any item and NULL and will return a 
 value zero or less if we can't hit a mob with said item

@@ -157,6 +157,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_Camp] = &Client::Handle_OP_Camp;
 	ConnectedOpcodes[OP_Logout] = &Client::Handle_OP_Logout;
 //	ConnectedOpcodes[OP_SenseHeading] = &Client::Handle_OP_SenseHeading;
+	ConnectedOpcodes[OP_LDoNOpen] = &Client::Handle_OP_LDoNOpen;
 	ConnectedOpcodes[OP_FeignDeath] = &Client::Handle_OP_FeignDeath;
 	ConnectedOpcodes[OP_Sneak] = &Client::Handle_OP_Sneak;
 	ConnectedOpcodes[OP_Hide] = &Client::Handle_OP_Hide;
@@ -2311,6 +2312,18 @@ void Client::Handle_OP_LootRequest(const EQApplicationPacket *app)
 		Corpse::SendLootReqErrorPacket(this);
 	}
 	return;
+}
+
+void Client::Handle_OP_LDoNOpen(const EQApplicationPacket *app)
+{
+	Mob * target = GetTarget();
+	if(target)
+	{
+		if(target->IsMob() && target->GetClass()==LDON_TREASURE && target->GetBodyType()==BT_Boxes)
+			target->Damage(this, target->GetMaxHP()*2, SPELL_UNKNOWN, HAND_TO_HAND, false);
+		else
+		  Message(13, "Illegal target: OP_LDoNOpen expects mob class %d, bodytype %d", LDON_TREASURE, BT_Boxes);
+	}
 }
 
 void Client::Handle_OP_Dye(const EQApplicationPacket *app)

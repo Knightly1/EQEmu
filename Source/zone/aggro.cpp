@@ -455,6 +455,10 @@ bool Mob::IsAttackAllowed(Mob *target)
 	// solar: the format here is a matrix of mob type vs mob type.
 	// redundant ones are omitted and the reverse is tried if it falls through.
 
+	// cb: LDoN Treasure chests dont fight
+	if(this->GetClass() == LDON_TREASURE && this->GetBodyType() == BT_Boxes)
+		return(false);
+
 	
 	// first figure out if we're pets.  we always look at the master's flags.
 	// no need to compare pets to anything

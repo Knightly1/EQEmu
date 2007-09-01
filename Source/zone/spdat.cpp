@@ -199,6 +199,11 @@ bool IsHasteSpell(int16 spell_id)
 	return false;
 }
 
+bool IsHarmonySpell(int16 spell_id)
+{
+	return (IsEffectInSpell(spell_id, SE_Harmony) || IsEffectInSpell(spell_id, SE_Lull));
+}
+
 bool IsPercentalHealSpell(int16 spell_id)
 {
 	return IsEffectInSpell(spell_id, SE_PercentalHeal);
