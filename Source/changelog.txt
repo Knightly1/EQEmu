@@ -1,6 +1,13 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==09/02/2007
+KLS: Fixed an issue with items adding stats to NPCs exponentially.
+KLS: Added a rule (Boolean) NPC:UseItemBonusesForNonPets, if set to true (default) item bonuses will be applied to all npcs, but only to pets if it is false.
+KLS: Lockpicking should work once again
+KLS: Should hopefully no longer be possible to use teleport doors when they are in the closed position.
+KLS: Added basic AC mitigation, not on by default uncomment #define USE_INT_AC in features.h to use it.
+
 ==08/31/2007
 KLS(gernblan): Added spawn group info to #npcstats
 KLS:(TheLieka) Fix for zone exp modifiers not being used

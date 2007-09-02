@@ -74,6 +74,7 @@ RULE_CATEGORY_END()
 RULE_CATEGORY( NPC )
 RULE_INT ( NPC, MinorNPCCorpseDecayTimeMS, 450000 ) //level<55
 RULE_INT ( NPC, MajorNPCCorpseDecayTimeMS, 1500000 ) //level>=55
+RULE_BOOL (NPC, UseItemBonusesForNonPets, true)
 RULE_CATEGORY_END()
 
 #undef RULE_CATEGORY

@@ -361,55 +361,10 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 	Mob *attacker=other;
 	Mob *defender=this;
 
-/*
-	////////////////////////////////////////////////////////
-	// Mitigation goes here
-	////////////////////////////////////////////////////////
-	if (damage > 1) {
-	    if(this->IsClient()){
-	    	if (damage > 1 && spell_id == 0xFFFF){
-                float acMod = GetAC()/100;
-                float acDam = (damage/100)*(acMod*1.5);
-                damage = (sint32)((float)damage-acDam);
-                if(damage <= 0)
-					damage = 1;
-			}
-	    }
-	    else {
-	    	if (damage > 1 && spell_id == 0xFFFF){
-				float acMod = GetAC()/100;
-                float acDam = (damage/100)*acMod;
-                damage = (sint32)((float)damage-acDam);
-                if(damage <= 0)
-					damage = 1;
-			}
-	    }
-	}
-*/	
-	
 	//garunteed hit
 	bool ghit = false;
 	if((attacker->spellbonuses.MeleeSkillCheck + attacker->itembonuses.MeleeSkillCheck) > 500)
 		ghit = true;
-	
-	if(damage > 0) {
-	//handle discipline mitigation and shielding
-		sint16 mitigation = defender->spellbonuses.MeleeMitigation + defender->itembonuses.MeleeMitigation;
-		if(mitigation > 0) {
-			damage = int(damage * (100.0f - mitigation) / 100.0f);
-			mlog(COMBAT__DAMAGE, "Applied %.3f mitigation, remaining damage %d", mitigation, damage);
-		}
-		
-		//handle damage increase diciplines + items
-		//this is completely wrong, and needs to account for both attacker and defenders modifieres
-		/*int mod = attacker->spellbonuses.DamageModifier + attacker->itembonuses.DamageModifier;
-		if(mod < -99)
-			damage = 0;	//all absorbed, should this be legal?
-		else
-			damage = damage * (100 + mod) / 100;
-		*/
-	}
-	
 	
 	//////////////////////////////////////////////////////////
 	// make enrage same as riposte
@@ -503,10 +458,65 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 		}
 	}
 	
-	////////////////////////////////////////////////////////
-// Scorpious2k: Include AC in the calculation
+	mlog(COMBAT__DAMAGE, "Final damage after all avoidances: %d", damage);
+	
+	if (damage < 0)
+		return true;
+	return false;
+}
 
-// use serverop variables to set values
+void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
+{
+	if(damage <= 0)
+		return;
+
+	Mob* defender = this;
+	int totalMit = 0;
+
+	totalMit += (defender->spellbonuses.MeleeMitigation + defender->itembonuses.MeleeMitigation);
+	totalMit = totalMit > 15 ? 15 : totalMit;
+
+	switch(GetAA(aaCombatStability)){
+		case 1:
+			totalMit += 2;
+			break;
+		case 2:
+			totalMit += 5;
+			break;
+		case 3:
+			totalMit += 10;
+			break;
+	}
+
+	totalMit += GetAA(aaPhysicalEnhancement)*2;
+	totalMit += GetAA(aaInnateDefense);
+
+#ifdef USE_INT_AC
+	//AC Mitigation
+	sint32 attackRating = attacker->GetATK() + (attacker->GetSTR() + attacker->GetSkill(OFFENSE) * 9 / 10); 
+	sint32 defenseRating = defender->GetAC();
+	defenseRating += 125;
+	defenseRating = (defenseRating < attackRating)?attackRating:defenseRating;
+
+	int intervalsAllowed = 20; 
+	if(defender->IsClient())
+		intervalsAllowed *= 2;
+
+	uint32 intervalUsed = MakeRandomInt(0, 3);
+	uint32 intervalRoll = MakeRandomInt(0, (defenseRating - attackRating));
+	intervalUsed += (((intervalRoll)*intervalsAllowed*10000)/((40 * defender->GetLevel())))/8500;
+
+	mlog(COMBAT__DAMAGE, "attackRating: %d defenseRating: %d intervalRoll: %d intervalUsed: %d", attackRating, defenseRating, intervalRoll, intervalUsed);
+	if(intervalUsed >= 20){
+		damage = 0;
+	}
+	else{
+		damage -= (((damage - minhit) * intervalUsed) / intervalsAllowed);
+	}
+#else
+	////////////////////////////////////////////////////////
+	// Scorpious2k: Include AC in the calculation
+	// use serverop variables to set values
 	int myac = GetAC();
 	if (damage > 0 && myac > 0) {
 		int acfail=1000;
@@ -544,29 +554,13 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 			mlog(COMBAT__DAMAGE, "AC Damage Reduction: fail chance %d%%. Did not fail.", acfail);
 		}
 	}
+#endif
 
-	int aaMit = 0;
-	switch(GetAA(aaCombatStability)){
-		case 1:
-			aaMit = 2;
-			break;
-		case 2:
-			aaMit = 5;
-			break;
-		case 3:
-			aaMit = 10;
-			break;
-	}
+	damage -= (damage * totalMit / 100);
+	if(damage < 0)
+		damage = 0;
 
-	aaMit += GetAA(aaPhysicalEnhancement)*2;
-	aaMit += GetAA(aaInnateDefense);
-	damage = damage * (100-aaMit) / 100;
-	
-	mlog(COMBAT__DAMAGE, "Final damage after all avoidances: %d", damage);
-	
-	if (damage < 0)
-		return true;
-	return false;
+	mlog(COMBAT__DAMAGE, "Applied %d percent mitigation, remaining damage %d", totalMit, damage);
 }
 
 //Returns the weapon damage against the input mob
@@ -937,8 +931,11 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		if(max_hit <= min_hit)
 			damage = min_hit;
 		else
+#ifdef USE_INT_AC
+			damage = max_hit;
+#else
 			damage = MakeRandomInt(min_hit, max_hit);
-
+#endif
 		mlog(COMBAT__DAMAGE, "Damage calculated to %d (min %d, max %d, str %d, skill %d, DMG %d, lv %d)", damage, min_hit, max_hit
 		, GetSTR(), GetSkill(skillinuse), weapon_damage, mylevel);
 
@@ -948,6 +945,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 			damage = 0;
 		} else {	//we hit, try to avoid it
 			other->AvoidDamage(this, damage);
+			other->MeleeMitigation(this, damage, min_hit);
 			ApplyMeleeDamageBonus(skillinuse, damage);
 			TryCriticalHit(other, skillinuse, damage);
 			mlog(COMBAT__DAMAGE, "Final damage after all reductions: %d", damage);
@@ -1418,6 +1416,12 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 			}
 		}
 		
+		if(!RuleB(NPC, UseItemBonusesForNonPets)){
+			if(!GetOwner()){
+				eleBane = 0;
+			}
+		}
+		
 		int8 otherlevel = other->GetLevel();
 		int8 mylevel = this->GetLevel();
 				
@@ -1425,8 +1429,12 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		mylevel = mylevel ? mylevel : 1;
 		
 		//instead of calcing damage in floats lets just go straight to ints
-		damage = MakeRandomInt((min_dmg+eleBane), (max_dmg+eleBane));
-		
+#ifdef USE_INT_AC 
+		damage = (max_dmg+eleBane);
+#else
+		damage = MakeRandomInt((min_dmg+eleBane),(max_dmg+eleBane));
+#endif
+
 		//check if we're hitting above our max or below it.
 		if((min_dmg+eleBane) != 0 && damage < (min_dmg+eleBane)) {
 			mlog(COMBAT__DAMAGE, "Damage (%d) is below min (%d). Setting to min.", damage, (min_dmg+eleBane));
@@ -1446,6 +1454,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 				damage = 0;	//miss
 			} else {	//hit, check for damage avoidance
 				other->AvoidDamage(this, damage);
+				other->MeleeMitigation(this, damage, min_dmg+eleBane);
 				ApplyMeleeDamageBonus(skillinuse, damage);
 				TryCriticalHit(other, skillinuse, damage);
 			}
@@ -2388,7 +2397,7 @@ float Mob::GetProcChances(float &ProcBonus, float &ProcChance) {
 	}
 	ProcBonus += float(itembonuses.ProcChance + spellbonuses.ProcChance) / 1000.0f;
 	
-	ProcChance = float(mydex) / 3020.0f;
+	ProcChance = 0.03f + float(mydex) / 9000.0f;
 	ProcBonus += (ProcChance * AABonus) / 100;
 	ProcChance += ProcBonus;
 	mlog(COMBAT__PROCS, "Proc chance %.2f (%.2f from bonuses)", ProcChance, ProcBonus);

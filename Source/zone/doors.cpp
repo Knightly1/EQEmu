@@ -102,6 +102,7 @@ void Doors::HandleClick(Client* sender, int8 trigger)
 	uint32 keyneeded=GetKeyItem(); 
 	uint32 haskey = 0;
 	uint32 playerkey = 0;
+	const ItemInst *lockpicks = sender->GetInv().GetItem(SLOT_CURSOR);
 
 	haskey = sender->GetInv().HasItem(keyneeded, 1);
 
@@ -186,51 +187,47 @@ void Doors::HandleClick(Client* sender, int8 trigger)
 					md->action = CLOSE_DOOR; 
 				} 
 			}
-			else
-			{	// door is locked, either no key works for it or player doesn't have the key - try to pick it
-				if(sender->HasSkill(PICK_LOCK) && GetLockpick()!=0)
-				{	// client has the lock pick skill and this lock can be picked
-					float modskill=0.0f; 
-					const ItemInst* inst = sender->GetInv().GetItem(SLOT_CURSOR);
-					if (inst && inst->IsType(ItemClassCommon)
-						&& inst->GetItem()->ItemType == ItemTypeLockPick)
-					{	// we can try to pick the lock with these lock picking tools
-						modskill=sender->GetSkill(PICK_LOCK);
-						
-						sender->CheckIncreaseSkill(PICK_LOCK, 1);
+		}
+		else if(lockpicks != NULL)
+		{
+			if(sender->GetSkill(PICK_LOCK))
+			{
+				if(lockpicks->GetItem()->ItemType == ItemTypeLockPick)
+				{
+					float modskill=sender->GetSkill(PICK_LOCK);
+					sender->CheckIncreaseSkill(PICK_LOCK, 1);
 #if EQDEBUG>=5
-						LogFile->write(EQEMuLog::Debug,"Client has lockpicks: skill=%f", modskill);
+					LogFile->write(EQEMuLog::Debug,"Client has lockpicks: skill=%f", modskill);
 #endif
-						if(GetLockpick() <= modskill)
-						{ // lockpick is the minimum skill needed to open the lock
-							
-							if(!IsDoorOpen())
-							{ 
-								md->action = OPEN_DOOR; 
-							} 
-							else
-							{ 
-								md->action = CLOSE_DOOR; 
-							}
-							sender->Message_StringID(4,DOORS_SUCCESSFUL_PICK);
+
+					if(GetLockpick() <= modskill)
+					{
+						if(!IsDoorOpen())
+						{ 
+							md->action = OPEN_DOOR; 
 						} 
 						else
-						{	// failed to pick the lock
-							sender->Message_StringID(4,DOORS_INSUFFICIENT_SKILL);
-							return;
-						} 
-					} 
+						{ 
+							md->action = CLOSE_DOOR; 
+						}
+						sender->Message_StringID(4,DOORS_SUCCESSFUL_PICK);
+					}
 					else
-					{	// those aren't lock picks the client is using
-						sender->Message_StringID(4,DOORS_NO_PICK);
+					{
+						sender->Message_StringID(4,DOORS_INSUFFICIENT_SKILL);
 						return;
-					} 
+					}
 				}
 				else
-				{	// they can't pick this lock - skill not available or lock not pickable
-					sender->Message_StringID(4,DOORS_CANT_PICK);
+				{
+					sender->Message_StringID(4,DOORS_NO_PICK);
 					return;
 				}
+			}
+			else
+			{
+				sender->Message_StringID(4,DOORS_CANT_PICK);
+				return;
 			}
 		}
 		else
@@ -242,14 +239,29 @@ void Doors::HandleClick(Client* sender, int8 trigger)
 	
 
 	entity_list.QueueClients(sender, outapp, false);
+	if(!IsDoorOpen() || opentype == 58) {
+        close_timer.Start();
+				SetOpenState(true);
+    }
+    else {
+        close_timer.Disable();
+				SetOpenState(false);
+    }
+
+	//everything past this point assumes we opened the door
+	//and met all the reqs for opening
+	//everything to do with closed doors has already been taken care of
+	//we return because we don't want people using teleports on an unlocked door (exploit!)
 	safe_delete(outapp);
+	if(md->action == CLOSE_DOOR){
+		return;
+	}
 
 	if(GetTriggerDoorID() != 0 && GetTriggerType() == 1)
 	{
 		Doors* triggerdoor = entity_list.FindDoor(GetTriggerDoorID());
 		if(triggerdoor && !triggerdoor->triggered)
 		{
-			printf("Door %d triggering door %d\n", GetDoorID(), triggerdoor->GetDoorID());
 			triggered=true;
 			triggerdoor->HandleClick(sender,1);
 		}
@@ -263,7 +275,6 @@ void Doors::HandleClick(Client* sender, int8 trigger)
 		Doors* triggerdoor = entity_list.FindDoor(GetTriggerDoorID());
 		if(triggerdoor && !triggerdoor->triggered)
 		{
-			printf("Door %d triggering door %d\n", GetDoorID(), triggerdoor->GetDoorID());
 			triggered=true;
 			triggerdoor->HandleClick(sender,0);
 		}
@@ -272,14 +283,6 @@ void Doors::HandleClick(Client* sender, int8 trigger)
 			triggered=false;
 		}	
 	}
-    if(!IsDoorOpen() || opentype == 58) {
-        close_timer.Start();
-				SetOpenState(true);
-    }
-    else {
-        close_timer.Disable();
-				SetOpenState(false);
-    }
 
     if (opentype == 58 && strncmp(dest_zone,"NONE",strlen("NONE")) != 0 ){ // Teleport door!
         if ( strncmp(dest_zone,zone_name,strlen(zone_name)) == 0) {

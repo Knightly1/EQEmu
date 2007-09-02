@@ -410,6 +410,7 @@ bool logpos;
 	bool TryFinishingBlow(Mob *defender, SkillType skillinuse);
 	void DoRiposte(Mob* defender);
 	void ApplyMeleeDamageBonus(int16 skill, sint32 &damage);
+	void MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit);
 	
 	void	DamageShield(Mob* other);
 	bool	FindBuff(int16 spellid);
@@ -861,7 +862,7 @@ protected:
 	int GetWeaponDamage(Mob *against, const ItemInst *weapon_item);
 	int GetKickDamage() const;
 	int GetBashDamage() const;
-	void DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage);
+	void DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage, sint32 min_damage = 1);
 
 	enum {MAX_PROCS = 4};
 	tProc PermaProcs[MAX_PROCS];

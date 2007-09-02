@@ -714,6 +714,10 @@ sint16 Client::acmod() {
 				return(65);
 		}
 	}
+	else{
+		//seems about 21 agil per extra AC pt over 300...
+        return (65 + ((agility-300) / 21));
+	}
 #if EQDEBUG >= 11
 	LogFile->write(EQEMuLog::Error, "Error in Client::acmod(): Agility: %i, Level: %i",agility,level);
 #endif

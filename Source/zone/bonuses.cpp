@@ -25,6 +25,7 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemu.org)
 #include "../common/skills.h"
 #include "../common/bodytypes.h"
 #include "../common/classes.h"
+#include "../common/rulesys.h"
 #include <math.h>
 #include <assert.h>
 #ifndef WIN32
@@ -48,7 +49,17 @@ void Mob::CalcBonuses()
 void NPC::CalcBonuses()
 {
 	Mob::CalcBonuses();
-	CalcItemBonuses(&itembonuses);
+
+	if(RuleB(NPC, UseItemBonusesForNonPets)){
+		memset(&itembonuses, 0, sizeof(StatBonuses));
+		CalcItemBonuses(&itembonuses);
+	}
+	else{
+		if(GetOwner()){
+			memset(&itembonuses, 0, sizeof(StatBonuses));
+			CalcItemBonuses(&itembonuses);
+		}
+	}
 }
 
 void Client::CalcBonuses()

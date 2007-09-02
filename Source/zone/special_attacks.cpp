@@ -60,12 +60,13 @@ int Mob::GetBashDamage() const {
 	return(dmg);
 }
 
-void Mob::DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage) {
+void Mob::DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage, sint32 min_damage) {
 	//this really should go through the same code as normal melee damage to
 	//pick up all the special behavior there
 	
 	if(max_damage > 0) {
 		who->AvoidDamage(this, max_damage);
+		who->MeleeMitigation(this, max_damage, min_damage);
 		ApplyMeleeDamageBonus(skill, max_damage);
 		TryCriticalHit(who, skill, max_damage);
 	}
@@ -145,7 +146,11 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 					dmg = 0;
 				}
 				else{
+#ifdef USE_INT_AC
+					dmg = GetBashDamage();
+#else
 					dmg = MakeRandomInt(1, GetBashDamage());
+#endif
 				}
 			}
 
@@ -207,7 +212,11 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 					dmg = 0;
 				}
 				else{
+#ifdef USE_INT_AC
+					dmg = GetKickDamage();
+#else
 					dmg = MakeRandomInt(1, GetKickDamage());
+#endif
 				}
 			}
 
@@ -328,11 +337,15 @@ int Mob::MonkSpecialAttack(Mob* other, int8 unchecked_type)
 
 	if(ndamage == 0){
 		if(other->CheckHitChance(this, skill_type, 0)){
+#ifdef USE_INT_AC
+			ndamage = max_dmg;
+#else
 			ndamage = MakeRandomInt(min_dmg, max_dmg);
+#endif
 		}
 	}
 	
-	DoSpecialAttackDamage(other, skill_type, ndamage);
+	DoSpecialAttackDamage(other, skill_type, ndamage, min_dmg);
 	if(unchecked_type == DRAGON_PUNCH && GetAA(aaDragonPunch) && MakeRandomInt(0, 99) < 25){
 		SpellFinished(904, other);
 		other->Stun(100);
@@ -453,7 +466,11 @@ void Mob::RogueBackstab(Mob* other, bool min_damage)
 				if (max_hit < min_hit)
 					max_hit = min_hit;
 
-				ndamage = MakeRandomInt(min_hit, max_hit); 
+#ifdef USE_INT_AC
+				ndamage = max_hit; 
+#else
+				ndamage = MakeRandomInt(min_hit, max_hit);
+#endif
 			}
 		}
 	}
@@ -461,7 +478,7 @@ void Mob::RogueBackstab(Mob* other, bool min_damage)
 		ndamage = -5;
 	}
 
-	DoSpecialAttackDamage(other, BACKSTAB, ndamage);
+	DoSpecialAttackDamage(other, BACKSTAB, ndamage, min_hit);
 	DoAnim(animPiercing);
 }
 
@@ -629,9 +646,14 @@ void Client::RangedAttack(Mob* other) {
 			
 			if (MaxDmg == 0)
 				MaxDmg = 1;
-			
-			TotalDmg = 1 + MakeRandomInt(0, MaxDmg);
 
+#ifdef USE_INT_AC
+			TotalDmg = MaxDmg;
+#else
+			TotalDmg = MakeRandomInt(1, MaxDmg);
+#endif
+
+			target->MeleeMitigation(this, TotalDmg, 1);
 			ApplyMeleeDamageBonus(ARCHERY, TotalDmg);
 			TryCriticalHit(target, ARCHERY, TotalDmg);
 			target->Damage(this, TotalDmg, SPELL_UNKNOWN, ARCHERY);
@@ -735,9 +757,16 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 			uint8 MaxDmg = (WDmg)*levelBonus;
 			if (MaxDmg == 0)
 				MaxDmg = 1;
-			TotalDmg = 1 + MakeRandomInt(0, MaxDmg);
+
+#ifdef USE_INT_AC
+			TotalDmg = MaxDmg;
+#else
+			TotalDmg = MakeRandomInt(1, MaxDmg);
+#endif
+
 			mlog(COMBAT__RANGED, "Item DMG %d, level bonus %d. Max Damage %d. Hit for damage %d", WDmg, levelBonus, MaxDmg, TotalDmg);
-			
+
+			target->MeleeMitigation(this, TotalDmg, 1);
 			ApplyMeleeDamageBonus(THROWING, TotalDmg);
 			TryCriticalHit(target, THROWING, TotalDmg);
 			target->Damage(this, TotalDmg, SPELL_UNKNOWN, THROWING);
@@ -888,7 +917,11 @@ void NPC::DoClassAttacks(Mob *target) {
 					}
 					else{
 						if(target->CheckHitChance(this, KICK, 0)) {
+#ifdef USE_INT_AC
+							dmg = GetKickDamage();
+#else
 							dmg = MakeRandomInt(1, GetKickDamage());
+#endif
 						}
 					}
 
@@ -906,7 +939,11 @@ void NPC::DoClassAttacks(Mob *target) {
 					}
 					else{
 						if(target->CheckHitChance(this, BASH, 0)) {
+#ifdef USE_INT_AC
+							dmg = GetBashDamage();
+#else
 							dmg = MakeRandomInt(1, GetBashDamage());
+#endif
 						}
 					}
 
@@ -930,7 +967,11 @@ void NPC::DoClassAttacks(Mob *target) {
 				}
 				else{
 					if(target->CheckHitChance(this, KICK, 0)) {
+#ifdef USE_INT_AC
+						dmg = GetKickDamage();
+#else
 						dmg = MakeRandomInt(1, GetKickDamage());
+#endif
 					}
 				}
 
@@ -953,7 +994,11 @@ void NPC::DoClassAttacks(Mob *target) {
 				}
 				else{
 					if(target->CheckHitChance(this, BASH, 0)) {
+#ifdef USE_INT_AC
+						dmg = GetBashDamage();
+#else
 						dmg = MakeRandomInt(1, GetBashDamage());
+#endif
 					}
 				}
 
