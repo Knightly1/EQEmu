@@ -474,7 +474,6 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 	int totalMit = 0;
 
 	totalMit += (defender->spellbonuses.MeleeMitigation + defender->itembonuses.MeleeMitigation);
-	totalMit = totalMit > 15 ? 15 : totalMit;
 
 	switch(GetAA(aaCombatStability)){
 		case 1:
@@ -493,21 +492,35 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 
 #ifdef USE_INT_AC
 	//AC Mitigation
-	sint32 attackRating = attacker->GetATK() + (attacker->GetSTR() + attacker->GetSkill(OFFENSE) * 9 / 10); 
+	sint32 attackRating = 0;
+	if(attacker->IsClient())
+		attackRating = attacker->GetATK() + ((attacker->GetSTR() + attacker->GetSkill(OFFENSE)) * 9 / 10);
+	else
+		attackRating = attacker->GetATK() + (attacker->GetSTR() * 9 / 10);
+
 	sint32 defenseRating = defender->GetAC();
 	defenseRating += 125;
 	defenseRating = (defenseRating < attackRating)?attackRating:defenseRating;
 
+	//Add these to rules eventually
+	//double the clients intervals to make their damage output look right, move to rule eventually too
 	int intervalsAllowed = 20; 
 	if(defender->IsClient())
 		intervalsAllowed *= 2;
 
-	uint32 intervalUsed = MakeRandomInt(0, 3);
+	uint32 intervalUsed = 0;
 	uint32 intervalRoll = MakeRandomInt(0, (defenseRating - attackRating));
-	intervalUsed += (((intervalRoll)*intervalsAllowed*10000)/((40 * defender->GetLevel())))/8500;
+	if(MakeRandomInt(0, 9) < 1){ //still have a chance to hit for any value
+		intervalUsed = MakeRandomInt(0, intervalsAllowed);
+	}
+	else{
+		intervalUsed = MakeRandomInt(0, 6);
+		//move the hardcoded 30 to a rule eventually, it impacts how lenient or strict the AC is
+		intervalUsed += ((intervalRoll * intervalsAllowed) / (30 * defender->GetLevel()));
+	}
 
 	mlog(COMBAT__DAMAGE, "attackRating: %d defenseRating: %d intervalRoll: %d intervalUsed: %d", attackRating, defenseRating, intervalRoll, intervalUsed);
-	if(intervalUsed >= 20){
+	if(intervalUsed > intervalsAllowed){
 		damage = 0;
 	}
 	else{
@@ -557,6 +570,7 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 #endif
 
 	damage -= (damage * totalMit / 100);
+
 	if(damage < 0)
 		damage = 0;
 
@@ -587,6 +601,8 @@ int Mob::GetWeaponDamage(Mob *against, const Item_Struct *weapon_item) {
 				//they don't have a dmg but we should be able to hit magical
 				dmg = dmg <= 0 ? 1 : dmg;
 			}
+			else
+				return 0;
 		}
 		else{
 			if((GetClass() == MONK || GetClass() == BEASTLORD) && GetLevel() >= 30){
@@ -597,6 +613,8 @@ int Mob::GetWeaponDamage(Mob *against, const Item_Struct *weapon_item) {
 				//it gives us an idea if we can hit due to the dual nature of this function
 				dmg = 1;						   
 			}
+			else
+				return 0;
 		}
 	}
 	else{
@@ -615,6 +633,15 @@ int Mob::GetWeaponDamage(Mob *against, const Item_Struct *weapon_item) {
 		}
 	}
 	
+	int eledmg = 0;
+	if(!against->SpecAttacks[IMMUNE_MAGIC]){
+		if(weapon_item && weapon_item->ElemDmgAmt){
+			//we don't check resist for npcs here
+			eledmg = weapon_item->ElemDmgAmt;
+			dmg += eledmg;
+		}
+	}
+
 	if(against->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]){
 		if(weapon_item){
 			if(weapon_item->BaneDmgBody == against->GetBodyType()){
@@ -625,6 +652,13 @@ int Mob::GetWeaponDamage(Mob *against, const Item_Struct *weapon_item) {
 				banedmg += weapon_item->BaneDmgRaceAmt;
 			}
 		}
+
+		if(!eledmg && !banedmg){
+			return 0;
+		}
+		else
+			dmg = eledmg;
+		dmg += banedmg;
 	}
 	else{
 		if(weapon_item){
@@ -636,25 +670,9 @@ int Mob::GetWeaponDamage(Mob *against, const Item_Struct *weapon_item) {
 				banedmg += weapon_item->BaneDmgRaceAmt;
 			}
 		}
-	}
 
-	int eledmg = 0;
-	if(!against->SpecAttacks[IMMUNE_MAGIC]){
-		if(weapon_item && weapon_item->ElemDmgAmt){
-			//we don't check resist for npcs here
-			eledmg = weapon_item->ElemDmgAmt;
-			dmg += eledmg;
-		}
+		dmg += (banedmg + eledmg);
 	}
-
-	if(against->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]){
-		if(!eledmg && !banedmg){
-			return 0;
-		}
-		else
-			dmg = eledmg;
-	}
-	dmg += banedmg;
 
 	if(dmg <= 0){
 		return 0;
@@ -690,6 +708,8 @@ int Mob::GetWeaponDamage(Mob *against, const ItemInst *weapon_item)
 				}
 				dmg = dmg <= 0 ? 1 : dmg;
 			}
+			else
+				return 0;
 		}
 		else{
 			if((GetClass() == MONK || GetClass() == BEASTLORD) && GetLevel() >= 30){
@@ -698,6 +718,8 @@ int Mob::GetWeaponDamage(Mob *against, const ItemInst *weapon_item)
 			else if(GetOwner() && GetLevel() >= PET_ATTACK_MAGICAL_LEVEL){ //pets wouldn't actually use this but...
 				dmg = 1;						   //it gives us an idea if we can hit
 			}
+			else
+				return 0;
 		}
 	}
 	else{
@@ -729,6 +751,31 @@ int Mob::GetWeaponDamage(Mob *against, const ItemInst *weapon_item)
 		}
 	}
 
+	int eledmg = 0;
+	if(!against->SpecAttacks[IMMUNE_MAGIC]){
+		if(weapon_item && weapon_item->GetItem() && weapon_item->GetItem()->ElemDmgAmt){
+			if(IsClient() && GetLevel() < weapon_item->GetItem()->RecLevel){
+				eledmg = CastToClient()->CalcRecommendedLevelBonus(GetLevel(), weapon_item->GetItem()->RecLevel, weapon_item->GetItem()->ElemDmgAmt);
+			}
+			else{
+				eledmg = weapon_item->GetItem()->ElemDmgAmt;
+			}
+
+			if(eledmg)
+				dmg += (eledmg * against->ResistSpell(weapon_item->GetItem()->ElemDmgType, 0, this) / 100);		
+		}
+
+		if(weapon_item){
+			for(int x = 0; x < 5; x++){
+				if(weapon_item->GetAugment(x) && weapon_item->GetAugment(x)->GetItem()){
+					eledmg += weapon_item->GetAugment(x)->GetItem()->ElemDmgAmt;
+					if(weapon_item->GetAugment(x)->GetItem()->ElemDmgAmt)
+						dmg += (weapon_item->GetAugment(x)->GetItem()->ElemDmgAmt * against->ResistSpell(weapon_item->GetAugment(x)->GetItem()->ElemDmgType, 0, this) / 100);
+				}
+			}
+		}
+	}
+
 	if(against->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]){
 		if(weapon_item && weapon_item->GetItem()){
 			if(weapon_item->GetItem()->BaneDmgBody == against->GetBodyType()){
@@ -761,6 +808,13 @@ int Mob::GetWeaponDamage(Mob *against, const ItemInst *weapon_item)
 				}
 			}
 		}
+
+		if(!eledmg && !banedmg){
+			return 0;
+		}
+		else
+			dmg = eledmg;
+		dmg += banedmg;
 	}
 	else{
 		if(weapon_item && weapon_item->GetItem()){
@@ -794,39 +848,8 @@ int Mob::GetWeaponDamage(Mob *against, const ItemInst *weapon_item)
 				}
 			}
 		}
+		dmg += (banedmg + eledmg);
 	}
-
-	int eledmg = 0;
-	if(!against->SpecAttacks[IMMUNE_MAGIC]){
-		if(weapon_item && weapon_item->GetItem() && weapon_item->GetItem()->ElemDmgAmt){
-			if(IsClient() && GetLevel() < weapon_item->GetItem()->RecLevel){
-				eledmg = CastToClient()->CalcRecommendedLevelBonus(GetLevel(), weapon_item->GetItem()->RecLevel, weapon_item->GetItem()->ElemDmgAmt);
-			}
-			else{
-				eledmg = weapon_item->GetItem()->ElemDmgAmt;
-			}
-
-			dmg += (eledmg * against->ResistSpell(weapon_item->GetItem()->ElemDmgType, 0, this) / 100);		
-		}
-
-		if(weapon_item){
-			for(int x = 0; x < 5; x++){
-				if(weapon_item->GetAugment(x) && weapon_item->GetAugment(x)->GetItem()){
-					eledmg += weapon_item->GetAugment(x)->GetItem()->ElemDmgAmt;
-					dmg += (weapon_item->GetAugment(x)->GetItem()->ElemDmgAmt * against->ResistSpell(weapon_item->GetAugment(x)->GetItem()->ElemDmgType, 0, this) / 100);
-				}
-			}
-		}
-	}
-
-	if(against->SpecAttacks[IMMUNE_MELEE_EXCEPT_BANE]){
-		if(!eledmg && !banedmg){
-			return 0;
-		}
-		else
-			dmg = eledmg;
-	}
-	dmg += banedmg;
 
 	if(dmg <= 0){
 		return 0;
@@ -2483,21 +2506,20 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 	uint32 i;
 	for(i = 0; i < MAX_PROCS; i++) {
 		if (PermaProcs[i].spellID != SPELL_UNKNOWN) {
-			float chance = ((float)PermaProcs[i].chance) / 100; 
-			if(MakeRandomFloat(0, 1) < chance) {
-				mlog(COMBAT__PROCS, "Permanent proc %d procing spell %d (%.2f percent chance)", i, PermaProcs[i].spellID, chance);
+			if(MakeRandomInt(0, 100) < PermaProcs[i].chance) {
+				mlog(COMBAT__PROCS, "Permanent proc %d procing spell %d (%d percent chance)", i, PermaProcs[i].spellID, PermaProcs[i].chance);
 				ExecWeaponProc(PermaProcs[i].spellID, on);
 			} else {
-				mlog(COMBAT__PROCS, "Permanent proc %d failed to proc %d (%.2f percent chance)", i, PermaProcs[i].spellID, chance);
+				mlog(COMBAT__PROCS, "Permanent proc %d failed to proc %d (%d percent chance)", i, PermaProcs[i].spellID, PermaProcs[i].chance);
 			}
 		}
 		if (SpellProcs[i].spellID != SPELL_UNKNOWN) {
-			float chance = ProcChance + (((float)SpellProcs[i].chance) / 100);
-			if(MakeRandomFloat(0, 1) < chance) {
-				mlog(COMBAT__PROCS, "Spell proc %d procing spell %d (%.2f percent chance)", i, SpellProcs[i].spellID, chance);
+			int chance = ProcChance + SpellProcs[i].chance;
+			if(MakeRandomInt(0, 100) < chance) {
+				mlog(COMBAT__PROCS, "Spell proc %d procing spell %d (%d percent chance)", i, SpellProcs[i].spellID, chance);
 				ExecWeaponProc(SpellProcs[i].spellID, on);
 			} else {
-				mlog(COMBAT__PROCS, "Spell proc %d failed to proc %d (%.2f percent chance)", i, SpellProcs[i].spellID, chance);
+				mlog(COMBAT__PROCS, "Spell proc %d failed to proc %d (%d percent chance)", i, SpellProcs[i].spellID, chance);
 			}
 		}
 	}
@@ -2695,7 +2717,8 @@ void Mob::DoRiposte(Mob *defender){
 void Mob::ApplyMeleeDamageBonus(int16 skill, sint32 &damage){
 	if(damage < 1)
 		return;
- 
+
+#ifndef USE_INT_AC
 	if(IsNPC()){ //across the board NPC damage bonuses.
  		//only account for STR here, assume their base STR was factored into their DB damages
 		int dmgbonusmod = 0;
@@ -2704,6 +2727,7 @@ void Mob::ApplyMeleeDamageBonus(int16 skill, sint32 &damage){
 		mlog(COMBAT__DAMAGE, "Damage bonus: %d percent from ATK and STR bonuses.", (dmgbonusmod/100));
 		damage += (damage*dmgbonusmod/10000);
 	}
+#endif
   
 	if(spellbonuses.DamageModifierSkill == skill || spellbonuses.DamageModifierSkill == 255){
 		damage += ((damage * spellbonuses.DamageModifier)/100);

@@ -642,7 +642,6 @@ void Client::RangedAttack(Mob* other) {
 			}
 			
 			sint32 TotalDmg = 0;
-			sint32 critDmg = 0;
 			
 			if (MaxDmg == 0)
 				MaxDmg = 1;

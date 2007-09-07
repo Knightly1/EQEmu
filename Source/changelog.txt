@@ -1,6 +1,10 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==09/07/2007
+KLS: Fixed melee mitigation and tweaks and a small fix to AC.
+KLS: Small changes to the order in the getweapondamage code to make it a little more efficient
+
 ==09/02/2007
 KLS: Fixed an issue with items adding stats to NPCs exponentially.
 KLS: Added a rule (Boolean) NPC:UseItemBonusesForNonPets, if set to true (default) item bonuses will be applied to all npcs, but only to pets if it is false.
@@ -9,11 +13,11 @@ KLS: Should hopefully no longer be possible to use teleport doors when they are 
 KLS: Added basic AC mitigation, not on by default uncomment #define USE_INT_AC in features.h to use it.
 
 ==08/31/2007
-KLS(gernblan): Added spawn group info to #npcstats
-KLS:(TheLieka) Fix for zone exp modifiers not being used
-KLS:(inkubus) Lull and harmony spells should land on enemy targets and not cause any aggro, still some work to be done on the AE portion.
-KLS:(cbodmer) Pet aggro changed, owner will no longer gain more aggro from proximity than the pet
-KLS:(cbodmer) Support for LDoN style boxes (class 62 + body type 33) implemented
+KLS: (gernblan) Added spawn group info to #npcstats
+KLS: (TheLieka) Fix for zone exp modifiers not being used
+KLS: (inkubus) Lull and harmony spells should land on enemy targets and not cause any aggro, still some work to be done on the AE portion.
+KLS: (cbodmer) Pet aggro changed, owner will no longer gain more aggro from proximity than the pet
+KLS: (cbodmer) Support for LDoN style boxes (class 62 + body type 33) implemented
 KLS: The error in acmod() should no longer complain as much.
 Required: Opcode files have changed, be sure to update to the latest .conf files.
 
