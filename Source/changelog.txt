@@ -4,6 +4,10 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 ==09/07/2007
 KLS: Fixed melee mitigation and tweaks and a small fix to AC.
 KLS: Small changes to the order in the getweapondamage code to make it a little more efficient
+KLS: Added a field that allows you to override a factions innate desire to assist their own faction in battle to the npc_faction table
+
+Required SQL:
+alter table npc_faction add column ignore_primary_assist tinyint(3) not null default 0; 
 
 ==09/02/2007
 KLS: Fixed an issue with items adding stats to NPCs exponentially.

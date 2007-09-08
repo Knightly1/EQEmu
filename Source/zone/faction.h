@@ -39,6 +39,7 @@ enum FACTION_VALUE {
 struct NPCFactionList {
 	uint32	id;
 	uint32	primaryfaction;
+	bool	assistprimaryfaction;
 	uint32	factionid[MAX_NPC_FACTIONS];
 	sint32	factionvalue[MAX_NPC_FACTIONS];
 	sint8	factionnpcvalue[MAX_NPC_FACTIONS];

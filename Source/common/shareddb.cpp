@@ -953,12 +953,15 @@ bool SharedDatabase::DBLoadNPCFactionLists(sint32 iNPCFactionListCount, int32 iM
 			npcfactionlist_max = atoi(row[0]);
 			mysql_free_result(result);
 			NPCFactionList tmpnfl;
-			if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, primaryfaction from npc_faction"), errbuf, &result)) {
+			if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, primaryfaction, ignore_primary_assist from npc_faction"), errbuf, &result)) {
 				safe_delete_array(query);
 				while((row = mysql_fetch_row(result))) {
 					memset(&tmpnfl, 0, sizeof(NPCFactionList));
 					tmpnfl.id = atoi(row[0]);
 					tmpnfl.primaryfaction = atoi(row[1]);
+					//if we have ignore_primary_assist set to non-zero then we will not assist our own faction
+					//else we will assist (this is the default)
+					tmpnfl.assistprimaryfaction = (atoi(row[2]) == 0) ? true : false;
 					if (!EMuShareMemDLL.NPCFactionList.cbAddNPCFactionList(tmpnfl.id, &tmpnfl)) {
 						mysql_free_result(result);
 						cout << "Error: SharedDatabase::DBLoadNPCFactionLists: !EMuShareMemDLL.NPCFactionList.cbAddNPCFactionList" << endl;
