@@ -279,7 +279,7 @@ void Client::GoFish()
 		uint32 food_id = 0;
 		
 		//25% chance to fish an item.
-        if (MakeRandomInt(0, 99) >= 75) {
+        if (MakeRandomInt(0, 399) <= fishing_skill ) {
 			uint32 npc_id = 0;
 			uint8 npc_chance = 0;
 			food_id = database.GetZoneFishing(m_pp.zone_id, fishing_skill, npc_id, npc_chance);

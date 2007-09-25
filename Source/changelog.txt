@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==09/24/2007
+FatherNitwit: (sfisque) Quick adjustment to item fishing probability.
+
 ==09/07/2007
 KLS: Fixed melee mitigation and tweaks and a small fix to AC.
 KLS: Small changes to the order in the getweapondamage code to make it a little more efficient
