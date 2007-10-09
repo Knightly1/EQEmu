@@ -1,6 +1,10 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==10/09/2007
+KLS: Tweaked my AC system a bit, should get less default defense and the system should be much more lienent overall, 
+goal is to allow people to see more of a benefit from having AC.
+
 ==09/24/2007
 FatherNitwit: (sfisque) Quick adjustment to item fishing probability.
 

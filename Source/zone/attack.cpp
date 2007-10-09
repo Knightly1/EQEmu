@@ -514,9 +514,9 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 		intervalUsed = MakeRandomInt(0, intervalsAllowed);
 	}
 	else{
-		intervalUsed = MakeRandomInt(0, 6);
-		//move the hardcoded 30 to a rule eventually, it impacts how lenient or strict the AC is
-		intervalUsed += ((intervalRoll * intervalsAllowed) / (30 * defender->GetLevel()));
+		intervalUsed = MakeRandomInt(0, 2);
+		//move the hardcoded value to a rule eventually, it impacts how lenient or strict the AC is
+		intervalUsed += ((intervalRoll * intervalsAllowed) / (19 * defender->GetLevel()));
 	}
 
 	mlog(COMBAT__DAMAGE, "attackRating: %d defenseRating: %d intervalRoll: %d intervalUsed: %d", attackRating, defenseRating, intervalRoll, intervalUsed);
