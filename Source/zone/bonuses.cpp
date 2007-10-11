@@ -149,9 +149,24 @@ void Client::CalcItemBonuses(StatBonuses* newbon) {
 	SetAttackTimer();
 }
 		
-void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
+void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon, bool isAug) {
 	if(!inst || !inst->IsType(ItemClassCommon))
+	{
 		return;
+	}
+	if (GetLevel() < inst->GetItem()->ReqLevel)
+	{
+		return;
+	}
+	if (!inst->IsEquipable(GetBaseRace(),GetClass()))
+	{
+		return;
+	}
+	if(inst->GetAugmentType()==0 && isAug == true)
+	{
+		return;
+	}
+
 	const Item_Struct *item = inst->GetItem();
 	if( GetLevel() >= item->RecLevel )
 	{
@@ -292,7 +307,7 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 
 	int i;
 	for(i = 0; i < MAX_AUGMENT_SLOTS; i++) {
-		AddItemBonuses(inst->GetAugment(i),newbon);
+		AddItemBonuses(inst->GetAugment(i),newbon,true);
 	}
 }
 

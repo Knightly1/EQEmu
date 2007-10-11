@@ -567,6 +567,11 @@ void Mob::AI_Process() {
 		}
 	}
 #endif
+
+	// trigger EVENT_SIGNAL if required
+	if(IsNPC()) {
+		CastToNPC()->CheckSignal();
+	}
 	
 	if (engaged) 
 	{
@@ -742,10 +747,6 @@ void Mob::AI_Process() {
 			//SetHeading(CalculateHeadingToTarget(target->GetX(), target->GetY())*8);
 			//FaceTarget(GetOwner(), true);
 		
-		// trigger EVENT_SIGNAL if required
-		if(IsNPC()) {
-			CastToNPC()->CheckSignal();
-		}
 		if(AIfeignremember_timer->Check()) {
 			// EverHood - 6/14/06
 			// Improved Feign Death Memory

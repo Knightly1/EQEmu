@@ -203,8 +203,10 @@ bool ItemInst::IsEquipable(int16 race, int16 class_) const
 	#ifndef PACKETCOLLECTOR
 	race_ = GetArrayRace(race);
 	#endif
+
+	race_ = (race_==17? 15 : race_);
 	// @merth: can this be optimized?  i.e., will (race & common->Races) suffice?
-	for (int cur_class = 1; cur_class<=15; cur_class++) {
+	for (int cur_class = 1; cur_class<=16; cur_class++) {
 		if (classes_ % 2 == 1) {
     		if (cur_class == class_) {
     			isclass = true;
@@ -221,7 +223,6 @@ bool ItemInst::IsEquipable(int16 race, int16 class_) const
 		}
 		races_ >>= 1;
 	}
-	
 	return (israce && isclass);
 }
 

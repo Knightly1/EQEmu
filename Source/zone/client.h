@@ -664,7 +664,7 @@ public:
 protected:
 	friend class Mob;
 	void CalcItemBonuses(StatBonuses* newbon);
-	void AddItemBonuses(const ItemInst *inst, StatBonuses* newbon);
+	void AddItemBonuses(const ItemInst *inst, StatBonuses* newbon, bool isAug = false);
 	int  CalcRecommendedLevelBonus(int8 level, uint8 reclevel, int basestat);
 	void CalcEdibleBonuses(StatBonuses* newbon);
 	void MakeBuffFadePacket(int16 spell_id, int slot_id, bool send_message = true);

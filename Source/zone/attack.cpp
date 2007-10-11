@@ -690,6 +690,23 @@ int Mob::GetWeaponDamage(Mob *against, const ItemInst *weapon_item)
 		return 0;
 	}
 
+	//check for items being illegally attained
+	if(weapon_item){
+		const Item_Struct *mWeaponItem = weapon_item->GetItem();
+		if(mWeaponItem){
+			if(mWeaponItem->ReqLevel > GetLevel()){
+				return 0;
+			}
+
+			if(!weapon_item->IsEquipable(GetBaseRace(), GetClass())){
+				return 0;
+			}
+		}
+		else{
+			return 0;
+		}
+	}
+
 	if(against->SpecAttacks[IMMUNE_MELEE_NONMAGICAL]){
 		if(weapon_item){
 			if(weapon_item->GetItem() && weapon_item->GetItem()->Magic){
