@@ -81,7 +81,7 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 	if(!target)
 		return;
 	//make sure were actually able to use such an attack.
-	if(spellend_timer.Enabled() || IsStunned() || IsMezzed() || dead)
+	if(spellend_timer.Enabled() || IsStunned() || IsMezzed() || DivineAura() || dead)
 		return;
 	
 	CombatAbility_Struct* ca_atk = (CombatAbility_Struct*) app->pBuffer;

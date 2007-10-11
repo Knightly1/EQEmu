@@ -495,7 +495,7 @@ void Client::TemporaryPets(int16 spell_id, Mob *targ, const char *name_override,
 		}
 		
 		NPC* npca = new NPC(
-				npc_dup==NULL?npc_dup:npc_type,	//make sure we give the NPC the correct data pointer
+				(npc_dup!=NULL)?npc_dup:npc_type,	//make sure we give the NPC the correct data pointer
 				0, 
 				GetX()+swarm_pet_x[summon_count], GetY()+swarm_pet_y[summon_count], 
 				GetZ(), GetHeading());

@@ -578,6 +578,9 @@ void Mob::AI_Process() {
 
 		if (!target)
 			return;
+		
+		if(DivineAura())
+			return;
 
 		if (GetHPRatio() < 15)
 			StartEnrage();

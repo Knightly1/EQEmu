@@ -1337,6 +1337,10 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		LogFile->write(EQEMuLog::Error, "A null Mob object was passed to NPC::Attack() for evaluation!");
 		return false;
 	}
+	
+	if(DivineAura())
+		return(false);
+	
 	if(!GetTarget())
 		SetTarget(other);
 

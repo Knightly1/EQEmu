@@ -37,7 +37,7 @@
 using namespace std;
 
 
-ItemInst::ItemInst(SharedDatabase *db, const Item_Struct* item, sint16 charges) {
+ItemInst::ItemInst(const Item_Struct* item, sint16 charges) {
 	m_use_type = ItemUseNormal;
 	m_item = item;
 	m_charges = charges;

@@ -242,7 +242,7 @@ public:
 			m_color = 0;
 	}
 	
-	ItemInst(SharedDatabase *db, const Item_Struct* item = NULL, sint16 charges = 0);
+	ItemInst(const Item_Struct* item = NULL, sint16 charges = 0);
 	
 	ItemInst(SharedDatabase *db, uint32 item_id, sint16 charges = 0);
 	
