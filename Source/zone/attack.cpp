@@ -1419,7 +1419,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 	
 	//do attack animation regardless of whether or not we can hit below
 	sint16 charges = 0;
-	ItemInst weapon_inst(&database, weapon, charges);
+	ItemInst weapon_inst(weapon, charges);
 	AttackAnimation(skillinuse, Hand, &weapon_inst);
 
 	//basically "if not immune" then do the attack

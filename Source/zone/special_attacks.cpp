@@ -1026,6 +1026,9 @@ void Mob::Taunt(NPC* who, bool always_succeed) {
 	if (who == NULL)
 		return;
 	
+	if(DivineAura())
+		return;
+	
 	if (!always_succeed && IsClient())
 		CastToClient()->CheckIncreaseSkill(TAUNT);
 	
@@ -1094,6 +1097,9 @@ void Mob::InstillDoubt(Mob *who) {
 	
 	//make sure our target is an NPC
 	if(!who || !who->IsNPC())
+		return;
+	
+	if(DivineAura())
 		return;
 	
 	//range check

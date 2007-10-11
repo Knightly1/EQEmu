@@ -229,19 +229,6 @@ public:
 	/////////////////////////
 	
 	// Constructors/Destructor
-	ItemInst(const Item_Struct* item = NULL, sint16 charges = 0) {
-		m_use_type = ItemUseNormal;
-		m_item = item;
-		m_charges = charges;
-		m_price = 0;
-		m_instnodrop = false;
-		m_merchantslot = 0;
-		if(m_item &&m_item->ItemClass == ItemClassCommon)
-			m_color = m_item->Color;
-		else
-			m_color = 0;
-	}
-	
 	ItemInst(const Item_Struct* item = NULL, sint16 charges = 0);
 	
 	ItemInst(SharedDatabase *db, uint32 item_id, sint16 charges = 0);

@@ -316,7 +316,7 @@ bool SharedDatabase::SetStartingItems(PlayerProfile_Struct* pp, Inventory* inv, 
 		myitem = GetItem(itemid);
 		if(!myitem)
 			continue;
-		ItemInst myinst(this, myitem, charges);
+		ItemInst myinst(myitem, charges);
 		if(slot < 0)
 			slot = inv->FindFreeSlot(0,0);
 		inv->PutItem(slot, myinst);
@@ -364,7 +364,7 @@ bool SharedDatabase::GetSharedBank(uint32 id, Inventory* inv, bool is_charid) {
 			if (item) {
 				sint16 put_slot_id = SLOT_INVALID;
 				
-				ItemInst inst(this, item, charges);
+				ItemInst inst(item, charges);
 				if (item->ItemClass == ItemClassCommon) {
 					for(int i=0;i<5;i++) {
 						if (aug[i]) {
@@ -433,7 +433,7 @@ bool SharedDatabase::GetInventory(uint32 char_id, Inventory* inv) {
 			if (item) {
 				sint16 put_slot_id = SLOT_INVALID;
 				
-				ItemInst inst(this, item, charges);
+				ItemInst inst(item, charges);
 				if (instnodrop)
 						inst.SetInstNoDrop(true);
 				if (color > 0)
@@ -512,7 +512,7 @@ bool SharedDatabase::GetInventory(uint32 account_id, char* name, Inventory* inv)
 			if(!item)
 				continue;
 
-			ItemInst inst(this, item, charges);
+			ItemInst inst(item, charges);
 			inst.SetInstNoDrop(instnodrop);
 			if (color > 0)
 				inst.SetColor(color);
@@ -1139,7 +1139,7 @@ ItemInst* SharedDatabase::CreateItem(uint32 item_id, sint16 charges, uint32 aug1
 	ItemInst* inst = NULL;
 	item = GetItem(item_id);
 	if (item) {
-		inst = new ItemInst(this, item, charges);
+		inst = new ItemInst(item, charges);
 		inst->PutAugment(this, 0, aug1);
 		inst->PutAugment(this, 1, aug2);
 		inst->PutAugment(this, 2, aug3);
@@ -1159,7 +1159,7 @@ ItemInst* SharedDatabase::CreateItem(const Item_Struct* item, sint16 charges, ui
 	if (item) {
 		if (charges == 0)
 			charges = item->MaxCharges;
-		inst = new ItemInst(this, item, charges);
+		inst = new ItemInst(item, charges);
 		inst->PutAugment(this, 0, aug1);
 		inst->PutAugment(this, 1, aug2);
 		inst->PutAugment(this, 2, aug3);
