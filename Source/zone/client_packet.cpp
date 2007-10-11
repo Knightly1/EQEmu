@@ -325,6 +325,8 @@ int Client::HandlePacket(const EQApplicationPacket *app)
 		mpkt(CLIENT__NET_IN_TRACE, app);
 	}
 	
+	client_timeout.Start(RuleI(Zone,ClientTimeoutMS));
+
 	EmuOpcode opcode = app->GetOpcode();
 	if (opcode == OP_AckPacket) {
     	return true;
@@ -4634,7 +4636,7 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 	Mob* mypet = this->GetPet();
 	if(!mypet) return;
 	
-	if(mypet->GetPetType() == petAnimation)
+	if(mypet->GetPetType() == petAnimation && pet->command != PET_GETLOST)
 		return;
 	
 	// just let the command "/pet get lost" work for familiars
@@ -4680,9 +4682,6 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 			break;
 		} else {
 			SetPet(NULL);
-		}
-		if (mypet == GetFamiliar()) {
-			SetFamiliarID(0);
 		}
 		mypet->Say_StringID(PET_GETLOST_STRING);
 		mypet->CastToNPC()->Depop();

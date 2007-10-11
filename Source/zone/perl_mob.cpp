@@ -3586,56 +3586,6 @@ XS(XS_Mob_GetPetID)
 	XSRETURN(1);
 }
 
-XS(XS_Mob_SetFamiliarID); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_SetFamiliarID)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Mob::SetFamiliarID(THIS, NewPetID)");
-	{
-		Mob *		THIS;
-		int16		NewPetID = (int16)SvUV(ST(1));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->SetFamiliarID(NewPetID);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_GetFamiliarID); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetFamiliarID)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetFamiliarID(THIS)");
-	{
-		Mob *		THIS;
-		int16		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetFamiliarID();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
 XS(XS_Mob_SetOwnerID); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_SetOwnerID)
 {
@@ -5865,8 +5815,6 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "SetRunAnimSpeed"), XS_Mob_SetRunAnimSpeed, file, "$$");
 		newXSproto(strcpy(buf, "SetPetID"), XS_Mob_SetPetID, file, "$$");
 		newXSproto(strcpy(buf, "GetPetID"), XS_Mob_GetPetID, file, "$");
-		newXSproto(strcpy(buf, "SetFamiliarID"), XS_Mob_SetFamiliarID, file, "$$");
-		newXSproto(strcpy(buf, "GetFamiliarID"), XS_Mob_GetFamiliarID, file, "$");
 		newXSproto(strcpy(buf, "SetOwnerID"), XS_Mob_SetOwnerID, file, "$$");
 		newXSproto(strcpy(buf, "GetOwnerID"), XS_Mob_GetOwnerID, file, "$");
 		newXSproto(strcpy(buf, "GetPetType"), XS_Mob_GetPetType, file, "$");

@@ -79,6 +79,15 @@ bool Client::Process() {
 	adverrorinfo = 1;
 	bool ret = true;
 	//bool throughpacket = true;
+
+	//already connected to the zone
+	if(client_state == CLIENT_CONNECTED){
+		if(client_timeout.Check(false)){
+			if(!IsLD())
+				LinkDead();
+		}
+	}
+
 	if (Connected() || IsLD())
 	{
         // try to send all packets that weren't sent before
@@ -521,12 +530,14 @@ bool Client::Process() {
 			return false;
 		}
 		else if(!linkdead_timer.Enabled()){
-			linkdead_timer.Start(30000);
+			linkdead_timer.Start(RuleI(Zone,ClientLinkdeadMS));
 			client_state = CLIENT_LINKDEAD;
 			AI_Start(CLIENT_LD_TIMEOUT);
 			SendAppearancePacket(AT_Linkdead, 1);
 		}
 	}
+
+
 	/************ Get all packets from packet manager out queue and process them ************/
 	adverrorinfo = 5;
 	

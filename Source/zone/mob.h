@@ -569,7 +569,6 @@ bool logpos;
 	inline void			SetRunAnimSpeed(sint8 in)	{ if (pRunAnimSpeed != in) { pRunAnimSpeed = in; pLastChange = Timer::GetCurrentTime(); } }
 	
 	Mob*	GetPet();
-	Mob*	GetFamiliar();
 	void	SetPet(Mob* newpet);
 	Mob*	GetOwner();
 	Mob*	GetOwnerOrSelf();
@@ -578,14 +577,11 @@ bool logpos;
 	inline PetType GetPetType() const { return typeofpet; }
 	bool IsFamiliar() const { return(typeofpet == petFamiliar); }
 	bool IsAnimation() const { return(typeofpet == petAnimation); }
-	void	SetFamiliarID(int16 NewPetID);
-	inline int16	GetFamiliarID()	const			{ return familiarid;  }
 	void SetOwnerID(int16 NewOwnerID);
 	inline int16 GetOwnerID()	const			{ return ownerid; }
 	inline bool HasOwner() const { return(GetOwnerID() != 0); }
 	inline bool IsPet() const { return(GetOwnerID() != 0); }
 	inline bool HasPet() const { return(GetPetID() != 0); }
-	inline bool HasFamiliar() const { return(GetFamiliarID() != 0); }
 	
     inline const	bodyType	GetBodyType() const	{ return bodytype; }
 //    int16   FindSpell(int16 classp, int16 level, int type, FindSpellType spelltype, float distance, sint32 mana_avail);
@@ -828,7 +824,6 @@ protected:
 	StatBonuses		itembonuses;
 	StatBonuses		spellbonuses;
 	int16			petid;
-    int16           familiarid;
 	int16			ownerid;
 	PetType			typeofpet;
 	

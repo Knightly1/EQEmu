@@ -165,10 +165,9 @@ void Mob::MakePet(int16 spell_id, const char* pettype, const char *petname) {
 		type = petAnimation;
 	}
 	
-	if(type != petFamiliar && HasPet())
+	if(HasPet())
 		return;
-	if(type == petFamiliar && HasFamiliar())
-		return;
+
 	
 	//lookup our pets table record for this type
 	PetRecord record;
@@ -226,10 +225,7 @@ void Mob::MakePet(int16 spell_id, const char* pettype, const char *petname) {
 	Pet *npc = new Pet(npc_type, this, type, spell_id);
 	
 	entity_list.AddNPC(npc);
-    if (type == petFamiliar)
-	    this->SetFamiliarID(npc->GetID());	
-    else
-	    this->SetPetID(npc->GetID());
+	SetPetID(npc->GetID());
 }
 
 Pet::Pet(NPCType *type_data, Mob *owner, PetType type, int16 spell_id)
@@ -266,25 +262,6 @@ bool ZoneDatabase::GetPetEntry(const char *pet_type, PetRecord *into) {
 		safe_delete_array(query);
 	}
 	return(false);
-}
-
-
-Mob* Mob::GetFamiliar() {
-	if(GetFamiliarID() == 0)
-		return(NULL);
-	
-	Mob* tmp = entity_list.GetMob(this->GetFamiliarID());
-	if(tmp == NULL) {
-		SetFamiliarID(0);
-		return(NULL);
-	}
-	
-	if(tmp->GetOwnerID() != GetID()) {
-		SetFamiliarID(0);
-		return(NULL);
-	}
-	
-	return(tmp);
 }
 
 Mob* Mob::GetPet() {
@@ -325,12 +302,6 @@ void Mob::SetPetID(int16 NewPetID) {
 	if (NewPetID == GetID() && NewPetID != 0)
 		return;
 	petid = NewPetID;
-}
-
-void Mob::SetFamiliarID(int16 NewPetID) {
-	if (NewPetID == GetID() && NewPetID != 0)
-		return;
-	familiarid = NewPetID;
 }
 
 void NPC::GetPetState(SpellBuff_Struct *pet_buffs, int32 *items, char *name) {

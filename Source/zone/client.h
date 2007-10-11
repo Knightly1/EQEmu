@@ -803,6 +803,7 @@ private:
 //	Timer	LDTimer;
 	Timer	zoneinpacket_timer;
 	Timer	linkdead_timer;
+	Timer	client_timeout;
 	Timer	dead_timer;
 	Timer	ooc_timer;
 	Timer	shield_timer;

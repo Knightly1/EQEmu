@@ -134,7 +134,8 @@ Client::Client(EQStreamInterface* ieqs)
 	process_timer(100),
 	stamina_timer(40000),
 	zoneinpacket_timer(3000),
-	linkdead_timer(30000),
+	linkdead_timer(RuleI(Zone,ClientLinkdeadMS)),
+	client_timeout(RuleI(Zone,ClientTimeoutMS)),
 	dead_timer(2000),
 	ooc_timer(1000),
 	shield_timer(500),
@@ -193,6 +194,7 @@ Client::Client(EQStreamInterface* ieqs)
 	auto_fire = false;
 	PendingGuildInvite = 0;
 	linkdead_timer.Disable();
+	client_timeout.Enable();
 	zonesummon_x = -2;
 	zonesummon_y = -2;
 	zonesummon_z = -2;
@@ -2281,8 +2283,10 @@ void Client::LinkDead()
 		GetGroup()->DelMember(this);
 	}
 //	save_timer.Start(2500);
-	linkdead_timer.Start(180000);
+	linkdead_timer.Start(RuleI(Zone,ClientLinkdeadMS));
 	SendAppearancePacket(AT_Linkdead, 1);
+	client_state = CLIENT_LINKDEAD;
+	AI_Start(CLIENT_LD_TIMEOUT);
 }
 
 int8 Client::SlotConvert(int8 slot,bool bracer){

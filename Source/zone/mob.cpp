@@ -244,7 +244,6 @@ Mob::Mob(const char*   in_name,
 	SetPetID(0);
 	SetOwnerID(0);
 	typeofpet = petCharmed;		//default to charmed...
-    SetFamiliarID(0);
 	held = false;
 	
 	attacked_count = 0;
@@ -1167,9 +1166,6 @@ Mob* Mob::GetOwnerOrSelf() {
 	if (owner->GetPetID() == this->GetID()) {
 		return owner;
 	}
-    if (owner->GetFamiliarID() == this->GetID()) {
-        return owner;
-    }
     if (GetBodyType() == BT_SwarmPet) {		//Dook- swarm pets
 		return(owner);
 	}
@@ -1183,10 +1179,6 @@ Mob* Mob::GetOwner() {
 
 		return owner;
 	}
-    if (owner && owner->GetFamiliarID() == this->GetID())
-    {
-        return owner;
-    }
     if (GetBodyType() == BT_SwarmPet) {		//Dook- swarm pets
     	return(owner);
    	}

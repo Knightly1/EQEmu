@@ -296,15 +296,19 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					// Egress = 1566
 
 					if(!target_zone) {
-						#ifdef SPELL_EFFECT_SPAM
+#ifdef SPELL_EFFECT_SPAM
 						LogFile->write(EQEMuLog::Debug, "Succor/Evacuation Spell In Same Zone.");
-						#endif
+#endif
 						CastToClient()->MovePC(target_zone, x, y, z, heading, 0, false, ZoneToSafeCoords);
+						Mob *mypet = GetPet();
+						if(mypet){
+							entity_list.RemoveFromHateLists(mypet, false);
+						}
 					}
 					else {
-						#ifdef SPELL_EFFECT_SPAM
+#ifdef SPELL_EFFECT_SPAM
 						LogFile->write(EQEMuLog::Debug, "Succor/Evacuation Spell To Another Zone.");
-						#endif
+#endif
 						CastToClient()->MovePC(target_zone, x, y, z, heading);
 					}
 				}
@@ -766,27 +770,12 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 			case SE_SummonBSTPet:
 			case SE_NecPet:
 			case SE_SummonPet:
-			{
-#ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Summon Pet: %s", spell.teleport_zone);
-#endif
-				if(GetPet() || GetFamiliarID())
-				{
-					Message_StringID(MT_Shout, ONLY_ONE_PET);
-				}
-				else
-				{
-					MakePet(spell_id, spell.teleport_zone);
-				}
-				break;
-			}
-
 			case SE_Familiar:
 			{
 #ifdef SPELL_EFFECT_SPAM
-				snprintf(effect_desc, _EDLEN, "Summon Familiar: %s", spell.teleport_zone);
+				snprintf(effect_desc, _EDLEN, "Summon %s: %s", (effect==SE_Familiar)?"Familiar":"Pet" spell.teleport_zone);
 #endif
-				if (GetFamiliarID() || GetPet())
+				if(GetPet())
 				{
 					Message_StringID(MT_Shout, ONLY_ONE_PET);
 				}
@@ -2627,11 +2616,12 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 
 			case SE_Familiar:
 			{
-				Mob * myfamiliar = GetFamiliar();
-				if (!myfamiliar)
-					break; // familiar already gone
-				myfamiliar->CastToNPC()->Depop();
-				SetFamiliarID(0);
+				Mob *mypet = GetPet();
+				if (mypet){
+					if(mypet->IsNPC())
+						mypet->CastToNPC()->Depop();
+					SetPetID(0);
+				}
 				break;
 			}
 

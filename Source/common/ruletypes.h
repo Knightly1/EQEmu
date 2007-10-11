@@ -52,6 +52,9 @@ RULE_INT ( World, ClientKeepaliveTimeoutMS, 65000 )
 
 RULE_CATEGORY( Zone )
 RULE_INT ( Zone,  NPCGlobalPositionUpdateInterval, 60000 ) //ms between intervals of sending a position update to the entire zone.
+RULE_INT ( Zone,  ClientTimeoutMS, 30000) //the time in MS that it takes of a client not sending any packets to the server for them to timeout
+RULE_INT ( Zone,  ClientLinkdeadMS, 180000) //the time a client remains link dead on the server after a sudden disconnection
+RULE_CATEGORY_END()
 
 RULE_CATEGORY( Spells )
 RULE_INT (Spells, SpellAggroModifier, 100)

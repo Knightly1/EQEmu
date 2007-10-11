@@ -197,8 +197,8 @@ bool NPC::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
 						break;
 					}
 					case SpellType_Pet: {
-						if ((!IsPet() && !GetPetID()) && //keep mobs from recasting pets when they have them.
-							(!IsFamiliar() && !GetFamiliarID()) && MakeRandomInt(0, 99) < 25) {
+						 //keep mobs from recasting pets when they have them.
+						if (!IsPet() && !GetPetID() && MakeRandomInt(0, 99) < 25) {
 							AIDoSpellCast(i, tar, mana_cost);
 							return true;
 						}
