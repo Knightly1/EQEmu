@@ -763,7 +763,7 @@ void Group::TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z)
 		  if (members[i] != NULL && members[i]->IsClient() && members[i] != sender)
 	 #endif
 	 	{
-			members[i]->CastToClient()->MovePC(zoneID, x, y, z);
+			members[i]->CastToClient()->MovePC(int(zoneID), x, y, z, 0.0, 0, false, ZoneSolicited);
 		}
 	}	
 }

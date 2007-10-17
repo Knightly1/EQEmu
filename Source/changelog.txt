@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==10/17/2007
+KLS: Quick fix to quest::movegrp
+
 ==10/11/2007
 KLS: Familiars should fall under the pet system instead of their own system now, familiars should act in a much more behaved fashion when it comes to functionality shared with normal pets.
 KLS: Added a network timeout for clients in zone, clients should linkdead from zone when their connection is suddenly severed.
