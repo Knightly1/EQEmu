@@ -1016,14 +1016,15 @@ XS(XS_Client_MovePC); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_MovePC)
 {
 	dXSARGS;
-	if (items < 5 || items > 7)
-		Perl_croak(aTHX_ "Usage: Client::MovePC(THIS, zoneID, x, y, z, ignorerestrictions= 0, summoned= false)");
+	if (items < 5 || items > 8)
+		Perl_croak(aTHX_ "Usage: Client::MovePC(THIS, zoneID, x, y, z, heading, ignorerestrictions= 0, summoned= false)");
 	{
 		Client *		THIS;
 		int32		zoneID = (int32)SvUV(ST(1));
 		float		x = (float)SvNV(ST(2));
 		float		y = (float)SvNV(ST(3));
 		float		z = (float)SvNV(ST(4));
+		float		heading;
 		int8		ignorerestrictions;
 		bool		summoned;
 
@@ -1035,20 +1036,26 @@ XS(XS_Client_MovePC)
 			Perl_croak(aTHX_ "THIS is not of type Client");
 		if(THIS == NULL)
 			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
+		
 		if (items < 6)
-			ignorerestrictions = 0;
+			heading = 0;
 		else {
-			ignorerestrictions = (int8)SvUV(ST(5));
+			heading = (int8)SvUV(ST(5));
 		}
 
 		if (items < 7)
-			summoned = false;
+			ignorerestrictions = 0;
 		else {
-			summoned = (bool)SvTRUE(ST(6));
+			ignorerestrictions = (int8)SvUV(ST(6));
 		}
 
-		THIS->MovePC(zoneID, x, y, z, 0.0f, ignorerestrictions, summoned);
+		if (items < 8)
+			summoned = false;
+		else {
+			summoned = (bool)SvTRUE(ST(7));
+		}
+
+		THIS->MovePC(zoneID, x, y, z, heading, ignorerestrictions, summoned);
 	}
 	XSRETURN_EMPTY;
 }

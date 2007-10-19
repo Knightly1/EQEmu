@@ -779,7 +779,7 @@ int	ZoneDatabase::GetHighestGrid(uint32 zoneid) {
 	MYSQL_ROW row;
 	int res = 0;
 	if (RunQuery(query, MakeAnyLenString(&query,
-		"SELECT MAX(id) FROM grid WHERE zoneid= %i",
+		"SELECT COALESCE(MAX(id), 0) FROM grid WHERE zoneid = %i",
 		zoneid),errbuff,&result)) {
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {

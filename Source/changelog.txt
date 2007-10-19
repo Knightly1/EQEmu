@@ -1,6 +1,17 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==10/19/2007
+WildcardX: (Bleh) Enhancement to avoid a zone crash by avoiding a null pointer.
+WildcardX: (UrbeIT) Bug fix to allow pet spells to effect players in PVP.
+WildcardX: (UrbeIT) Bug fix to allow players to remain invisible while in PVP.
+WildcardX: (Foin) Bug fix to display the correct pet for Ogre and Iksar beastlords.
+WildcardX: (slowglass) Bug fix to properly update LDoN points.
+WildcardX: (cbodmer) Bug fix to allow the bank change button to properly work.
+WildcardX: (zydria) Bug fix to allow players to meditate while mounted.
+WildcardX: (Cavedude) Enhancement to allow berserkers and rangers the chance to triple attack.
+WildcardX: (Cavedude) Enhancement to quest::movepc method to accept a heading value.
+
 ==10/17/2007
 KLS: Quick fix to quest::movegrp
 

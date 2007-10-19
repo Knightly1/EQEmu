@@ -641,9 +641,9 @@ void QuestManager::pvp(const char *mode) {
 			initiator->SetPVP(false);
 }
 
-void QuestManager::movepc(int zone_id, float x, float y, float z) {
+void QuestManager::movepc(int zone_id, float x, float y, float z, float heading) {
 	if (initiator && initiator->IsClient())
-		 initiator->MovePC(zone_id, x, y, z, 0.0f);
+		 initiator->MovePC(zone_id, x, y, z, heading);
 }
 
 void QuestManager::gmmove(float x, float y, float z) {

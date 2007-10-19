@@ -84,7 +84,7 @@ public:
 	void unscribespells();
 	void givecash(int copper, int silver, int gold, int platinum);
 	void pvp(const char *mode);
-	void movepc(int zone_id, float x, float y, float z);
+	void movepc(int zone_id, float x, float y, float z, float heading);
 	void gmmove(float x, float y, float z);
 	void movegrp(int zoneid, float x, float y, float z);
 	void doanim(int anim_id);

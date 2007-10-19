@@ -1017,7 +1017,7 @@ int32 Client::GetEquipment(int8 material_slot) const
 	
 	item = m_inv.GetItem(invslot);
 
-	if(item != 0)
+	if(item && item->GetItem())
 	{
 		return item->GetItem()->ID;
 	}

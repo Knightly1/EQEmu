@@ -1504,7 +1504,7 @@ void Client::DoManaRegen() {
 		return;
 	int32 level=GetLevel();
 	int32 regen = 0;
-	if (IsSitting()) {		//this should be changed so we dont med while camping, etc...
+	if (IsSitting() ||(GetHorseId() != 0)) {		//this should be changed so we dont med while camping, etc...
 		if(HasSkill(MEDITATE)) {
 			medding = true;
 			regen = (((GetSkill(MEDITATE)/10)+(level-(level/4)))/4)+4;

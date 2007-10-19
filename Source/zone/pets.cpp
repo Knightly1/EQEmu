@@ -214,9 +214,9 @@ void Mob::MakePet(int16 spell_id, const char* pettype, const char *petname) {
 		switch ( GetBaseRace() ) {
 		case VAHSHIR: npc_type->race = TIGER; npc_type->size *= 1.7f; break;
 		case TROLL: npc_type->race = ALLIGATOR; break;
-		case OGRE: npc_type->race = BEAR; npc_type->texture=3; break;
+		case OGRE: npc_type->race = BEAR; npc_type->texture=3; npc_type->gender=2; break;
 		case BARBARIAN: npc_type->race = WOLF; npc_type->texture=2; npc_type->size *= 1.5f; break;
-		case IKSAR: npc_type->race = WOLF; npc_type->texture=1; npc_type->size *= 1.5f; break;
+		case IKSAR: npc_type->race = WOLF; npc_type->texture=1; npc_type->gender=1; npc_type->size *= 1.5f; break;
 		default: npc_type->race = WOLF; npc_type->texture=0; break;
 		}
 	}

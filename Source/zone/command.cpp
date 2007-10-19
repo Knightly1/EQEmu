@@ -4647,9 +4647,9 @@ void command_scribespells(Client *c, const Seperator *sep)
 
 	level = atoi(sep->arg[1]);
 
-	if(level < 1 || level > 70)
+	if(level < 1)
 	{
-		c->Message(0, "ERROR: Enter a level between 1 and 70 inclusive.");
+		c->Message(0, "ERROR: Enter a level greater than 1.");
 		return;
 	}
 
@@ -5212,6 +5212,11 @@ void command_npcemote(Client *c, const Seperator *sep)
 
 void command_npcedit(Client *c, const Seperator *sep)
 {
+if (!c->GetTarget() || !c->GetTarget()->IsNPC())
+		{
+			c->Message(0, "Error: Must have NPC targeted");
+			return;
+		}
    if ( strcasecmp( sep->arg[1], "help" ) == 0 ) {
    
       c->Message(0, "Help File for #npcedit. Syntax for commands are:");

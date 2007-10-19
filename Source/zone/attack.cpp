@@ -2052,7 +2052,7 @@ bool Client::CheckDoubleAttack(bool AAadd, bool Triple) {
 		if(!HasSkill(DOUBLE_ATTACK))
 			return(false);
 		
-		if (GetClass() == MONK || GetClass() == WARRIOR)
+		if (GetClass() == MONK || GetClass() == WARRIOR || GetClass() == RANGER || GetClass() == BERSERKER)
 		{
 			skill = GetSkill(DOUBLE_ATTACK)/2;
 		} else {

@@ -1161,7 +1161,7 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 			}
 			if(IsClient() && IsGrouped()){
 				Group *g = entity_list.GetGroupByMob(this);
-				if(g->IsGroupMember(spell_target) && spell_target != this){
+				if(g && g->IsGroupMember(spell_target) && spell_target != this){
 					CastAction = SingleTarget;
 				}
 				else{

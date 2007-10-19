@@ -863,7 +863,7 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 #endif
 
 	if(ppu->y_pos != y_pos || ppu->x_pos != x_pos){
-	    if(!sneaking){
+	    if(!sneaking && !invisible){
 			hidden = false;
 			improved_hidden = false;
 			EQApplicationPacket* outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
@@ -6694,7 +6694,9 @@ void Client::Handle_OP_RequestTitles(const EQApplicationPacket *app) {
 
 void Client::Handle_OP_BankerChange(const EQApplicationPacket *app)
 {
-	if(app->size != sizeof(BankerChange_Struct)) {
+	if(app->size != sizeof(BankerChange_Struct) && app->size!=4) // cb: Titanium only sends 4 Bytes for this
+	{
+
 		LogFile->write(EQEMuLog::Debug, "Size mismatch in OP_BankerChange expected %i got %i", sizeof(BankerChange_Struct), app->size);
 		DumpPacket(app);
 		return;

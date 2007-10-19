@@ -1007,7 +1007,7 @@ void EntityList::SendZonePVPUpdates(Client *to) {
 	while(iterator.MoreElements()) {
 		Client *c = iterator.GetData();
 		if(c->GetPVP())
-			c->SendAppearancePacket(AT_PVP, c->GetPVP(), false, false, to);
+			c->SendAppearancePacket(AT_PVP, c->GetPVP(), true, false, to);
 		iterator.Advance();
 	}
 }

@@ -789,15 +789,22 @@ XS(XS__movepc);
 XS(XS__movepc)
 {
 	dXSARGS;
-	if (items != 4)
-		Perl_croak(aTHX_ "Usage: movepc(zone_id, x, y, z)");
+	if (items != 4 && items != 5)
+		Perl_croak(aTHX_ "Usage: movepc(zone_id, x, y, z [,heading])");
 
 	int	zoneid = (int)SvIV(ST(0));
 	float	x = (float)SvNV(ST(1));
 	float	y = (float)SvNV(ST(2));
 	float	z = (float)SvNV(ST(3));
 
-	quest_manager.movepc(zoneid, x, y, z);
+	if (items == 4)
+
+	quest_manager.movepc(zoneid, x, y, z, 0.0f);
+
+	else {
+	float	heading = (float)SvNV(ST(4));
+	quest_manager.movepc(zoneid, x, y, z, heading);
+	}		
 
 	XSRETURN_EMPTY;
 }

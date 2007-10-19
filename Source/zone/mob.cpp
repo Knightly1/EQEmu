@@ -311,6 +311,7 @@ Mob::Mob(const char*   in_name,
 
 Mob::~Mob()
 {
+	entity_list.RemoveMob(GetID());
 	AI_Stop();
 	if (GetPet()) {
 		if (GetPet()->Charmed())

@@ -239,7 +239,6 @@ Client::Client(EQStreamInterface* ieqs)
 }
 
 Client::~Client() {
-	entity_list.RemoveFromTargets(this);
 	Mob* horse = entity_list.GetMob(this->CastToClient()->GetHorseId());
 	if (horse)
 		horse->Depop();
@@ -302,6 +301,8 @@ Client::~Client() {
 	//let the stream factory know were done with this stream
 	eqs->Close();
 	eqs->ReleaseFromUse();
+
+	entity_list.RemoveClient(GetID());
 }
 
 void Client::SendLogoutPackets() {
@@ -803,12 +804,12 @@ void Client::SetMaxHP() {
 bool Client::UpdateLDoNPoints(sint32 points, int32 theme)
 {
 
-// make sure total stays in sync with individual buckets
+/* make sure total stays in sync with individual buckets
 	m_pp.ldon_points_available = m_pp.ldon_points_guk
 		+m_pp.ldon_points_mir
 		+m_pp.ldon_points_mmc
 		+m_pp.ldon_points_ruj
-		+m_pp.ldon_points_tak;
+		+m_pp.ldon_points_tak; */
 
 	if(points < 0)
 	{
