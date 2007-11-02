@@ -41,6 +41,7 @@ using namespace std;
 #define atoul(str) strtoul(str, NULL, 10)
 
 //class Spawn;
+class Corpse;
 class Spawn2;
 class NPC;
 class SpawnGroupList;
@@ -175,7 +176,9 @@ public:
 	 * General Queries
 	 */
 	bool	LoadZoneNames();
-	bool	GetZoneLongName(const char* short_name, char** long_name, char* file_name = 0, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, int32* maxclients = 0);
+	bool	GetZoneLongName(const char* short_name, char** long_name, char* file_name = 0, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, int32* graveyard_id = 0, int32* maxclients = 0);
+	bool	GetZoneGraveyard(const int32 graveyard_id, int32* graveyard_zoneid = 0, float* graveyard_x = 0, float* graveyard_y = 0, float* graveyard_z = 0, float* graveyard_heading = 0);
+	int32	GetZoneGraveyardID(int32 zone_id);
 	int32	GetZoneID(const char* zonename);
 	const char*	GetZoneName(int32 zoneID, bool ErrorUnknown = false);
 	int8	GetServerType();

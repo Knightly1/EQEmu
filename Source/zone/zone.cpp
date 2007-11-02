@@ -663,13 +663,27 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name)
 	psafe_x = 0;
 	psafe_y = 0;
 	psafe_z = 0;
+	pgraveyard_id = 0;
+	pgraveyard_zoneid = 0;
+	pgraveyard_x = 0;
+	pgraveyard_y = 0;
+	pgraveyard_z = 0;
+	pgraveyard_heading = 0;
 	pMaxClients = 0;
 	pQueuedMerchantsWorkID = 0;
 	pvpzone = false;
 	if(database.GetServerType() == 1)
 		pvpzone = true;
-	database.GetZoneLongName(short_name, &long_name, file_name, &psafe_x, &psafe_y, &psafe_z, &pMaxClients);
-
+	database.GetZoneLongName(short_name, &long_name, file_name, &psafe_x, &psafe_y, &psafe_z, &pgraveyard_id, &pMaxClients);
+	if(graveyard_id() > 0)
+	{
+		LogFile->write(EQEMuLog::Debug, "Graveyard ID is %i.", graveyard_id());
+		bool GraveYardLoaded = database.GetZoneGraveyard(graveyard_id(), &pgraveyard_zoneid, &pgraveyard_x, &pgraveyard_y, &pgraveyard_z, &pgraveyard_heading);
+		if(GraveYardLoaded)
+			LogFile->write(EQEMuLog::Debug, "Loaded a graveyard for zone %s: graveyard zoneid is %u x is %f y is %f z is %f heading is %f.", short_name, graveyard_zoneid(), graveyard_x(), graveyard_y(), graveyard_z(), graveyard_heading());
+		else
+			LogFile->write(EQEMuLog::Error, "Unable to load the graveyard id %i for zone %s.", graveyard_id(), short_name);
+	}
 	if (long_name == 0) {
 		long_name = strcpy(new char[18], "Long zone missing");
 	}
@@ -1755,4 +1769,21 @@ void Zone::weatherSend()
 		outapp->pBuffer[4] = 0x10+(rand()%10); // This number changes in the packets, intensity?
 	entity_list.QueueClients(0, outapp);
 	safe_delete(outapp);
+}
+
+bool Zone::HasGraveyard() {
+	bool Result = false;
+
+	if(graveyard_zoneid() > 0)
+		Result = true;
+
+	return Result;
+}
+
+void Zone::SetGraveyard(int32 zoneid, int32 x, int32 y, int32 z, int32 heading) {
+	pgraveyard_zoneid = zoneid;
+	pgraveyard_x = x;
+	pgraveyard_y = y;
+	pgraveyard_z = z;
+	pgraveyard_heading = heading;
 }

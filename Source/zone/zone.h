@@ -85,6 +85,13 @@ public:
 	inline const float&	safe_x()		{ return psafe_x; }
 	inline const float&	safe_y()		{ return psafe_y; }
 	inline const float&	safe_z()		{ return psafe_z; }
+	inline const int32& graveyard_zoneid()	{ return pgraveyard_zoneid; }
+	inline const float& graveyard_x()	{ return pgraveyard_x; }
+	inline const float& graveyard_y()	{ return pgraveyard_y; }
+	inline const float& graveyard_z()	{ return pgraveyard_z; }
+	inline const float& graveyard_heading() { return pgraveyard_heading; }
+	inline const int32& graveyard_id()	{ return pgraveyard_id; }
+
 	inline const int32& GetMaxClients() { return pMaxClients; }
 
 	void	LoadAAs();
@@ -174,6 +181,9 @@ public:
 	float   GetEXPMod()  const { return EXPMod; } 
 	float   GetAAXPMod() const { return AAXPMod; } 
 
+	bool	HasGraveyard();
+	void	SetGraveyard(int32 zoneid, int32 x, int32 y, int32 z, int32 heading);
+
 #ifdef GUILDWARS
 	LinkedList<Spawn2*> spawn2_list; // CODER new spawn list
 	Timer* db_update;
@@ -193,6 +203,8 @@ private:
 	int32	pMaxClients;
 	bool	can_bind;
 	bool	can_combat;
+	int32	pgraveyard_id, pgraveyard_zoneid;
+	float	pgraveyard_x, pgraveyard_y, pgraveyard_z, pgraveyard_heading;
 	
 	int		totalAAs;
 	SendAA_Struct **aas;	//array of AA structs

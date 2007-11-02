@@ -118,7 +118,12 @@ public:
 	int32	CreatePlayerCorpse(int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading);
 	int32	UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading, bool rezzed = false);
 	bool	DeletePlayerCorpse(int32 dbid);
+	Corpse*	LoadPlayerCorpse(int32 player_corpse_id);
 	bool	LoadPlayerCorpses(int32 iZoneID);
+	int32	GraveyardPlayerCorpse(int32 dbid, int32 zoneid, float x, float y, float z, float heading);
+	int32	NewGraveyardRecord(int32 graveyard_zoneid, float graveyard_x, float graveyard_y, float graveyard_z, float graveyard_heading);
+	int32	AddGraveyardIDToZone(int32 zone_id, int32 graveyard_id);
+	bool	DeleteGraveyard(int32 zone_id, int32 graveyard_id);
 	
 	
 	/*

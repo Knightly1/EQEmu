@@ -114,6 +114,7 @@ private:
 	int			looters[MAX_LOOTERS]; // People allowed to loot the corpse, character id
 	Timer		corpse_decay_timer;
 	Timer		corpse_delay_timer;
+	Timer		corpse_graveyard_timer;
 	Color_Struct item_tint[9];
 };
 

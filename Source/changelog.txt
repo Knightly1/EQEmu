@@ -1,6 +1,31 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==11/01/2007
+WildcardX: (TheLieka) Bug fix to discontinue player invisibility when the player loots.
+WildcardX: (TheLieka) Bug fix to remove a type from the #npcedit loottable command.
+WildcardX: Implemented corpse graveyard support for all zones. Once a zone is configured for a graveyard, a zone restart is necessary.
+WildcardX: Zone shutdown and restart will result in all player corpses within the zone to be subject to the graveyard corpse timer.
+WildcardX: Implemented the command #setgraveyard [zone name]. This command will create a graveyard for the designated zone based on your target's LOC.
+WildcardX: Implemented the command #deletegraveyard [zone name]. This command will remove the graveyard for the designated zone (does not delete any corpses!).
+
+Required SQL:
+alter table zone add column graveyard_id float NOT NULL default '0' after safe_z;
+
+DROP TABLE IF EXISTS `graveyard`;
+CREATE TABLE `graveyard` (
+  `id` int(11) NOT NULL auto_increment,
+  `zone_id` int(4) NOT NULL default '0',
+  `x` float NOT NULL default '0',
+  `y` float NOT NULL default '0',
+  `z` float NOT NULL default '0',
+  `heading` float NOT NULL default '0',
+  PRIMARY KEY  (`id`),
+  UNIQUE KEY `zone_id` (`zone_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+insert into rule_values values(0, 'Zone:GraveyardTimeMS', 1200000);
+
 ==10/19/2007
 WildcardX: (Bleh) Enhancement to avoid a zone crash by avoiding a null pointer.
 WildcardX: (UrbeIT) Bug fix to allow pet spells to effect players in PVP.

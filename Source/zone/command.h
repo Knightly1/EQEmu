@@ -264,6 +264,8 @@ void command_rules(Client *c, const Seperator *sep);
 void command_altactivate(Client *c, const Seperator *sep);
 void command_refundaa(Client *c, const Seperator *sep);
 void command_traindisc(Client *c, const Seperator *sep);
+void command_deletegraveyard(Client *c, const Seperator *sep);
+void command_setgraveyard(Client *c, const Seperator *sep);
 
 #ifdef EMBPERL
 void command_embperl_plugin(Client *c, const Seperator *sep);

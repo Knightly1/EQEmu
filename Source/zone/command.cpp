@@ -386,7 +386,9 @@ int command_init(void) {
 		command_add("guildlist","[guildapproveid] - Lists character names who have approved the guild specified by the approve id",0,command_guildlist) ||
 		command_add("altactivate", "[argument] - activates alternate advancement abilities, use altactivate help for more information", 0, command_altactivate) ||
 		command_add("refundaa", "Refunds your target's AA points, will disconnect them in the process as well.", 100, command_refundaa) ||
-		command_add("traindisc","[level] - Trains all the disciplines usable by the target, up to level specified. (may freeze client for a few seconds)",150,command_traindisc)	
+		command_add("traindisc","[level] - Trains all the disciplines usable by the target, up to level specified. (may freeze client for a few seconds)",150,command_traindisc) ||
+		command_add("setgraveyard","[zone name] - Creates a graveyard for the specified zone based on your target's LOC.", 200, command_setgraveyard) ||
+		command_add("deletegraveyard","[zone name] - Deletes the graveyard for the specified zone.", 200, command_deletegraveyard)
 		)
 	{
 		command_deinit();
@@ -5233,7 +5235,7 @@ if (!c->GetTarget() || !c->GetTarget()->IsNPC())
       c->Message(0, "#npcedit Size - Sets an NPCs size");
       c->Message(0, "#npcedit Hpregen - Sets an NPCs hitpoint regen rate per tick");
       c->Message(0, "#npcedit Manaregen - Sets an NPCs mana regen rate per tick");
-      c->Message(0, "#npcedit Lootable - Sets the lootable ID for an NPC ");
+      c->Message(0, "#npcedit Loottable - Sets the lootable ID for an NPC ");
       c->Message(0, "#npcedit Merchantid - Sets the merchant ID for an NPC");
       c->Message(0, "#npcedit Spell - Sets the npc spells list ID for an NPC");
       c->Message(0, "#npcedit Faction - Sets the NPCs faction id");
@@ -5368,12 +5370,12 @@ if (!c->GetTarget() || !c->GetTarget()->IsNPC())
       c->LogSQL(query);
       safe_delete_array(query);
    }
-   else if ( strcasecmp( sep->arg[1], "lootable" ) == 0 )
+   else if ( strcasecmp( sep->arg[1], "loottable" ) == 0 )
    {
       char errbuf[MYSQL_ERRMSG_SIZE];
       char *query = 0;
-      c->Message(15,"NPCID %u is now on lootable_id %i",c->GetTarget()->CastToNPC()->GetNPCTypeID(),atoi(sep->arg[2]));
-      database.RunQuery(query, MakeAnyLenString(&query, "update npc_types set lootable_id=%i where id=%i",atoi(sep->argplus[2]),c->GetTarget()->CastToNPC()->GetNPCTypeID()), errbuf);
+      c->Message(15,"NPCID %u is now on loottable_id %i",c->GetTarget()->CastToNPC()->GetNPCTypeID(),atoi(sep->arg[2]));
+      database.RunQuery(query, MakeAnyLenString(&query, "update npc_types set loottable_id=%i where id=%i",atoi(sep->argplus[2]),c->GetTarget()->CastToNPC()->GetNPCTypeID()), errbuf);
       c->LogSQL(query);
       safe_delete_array(query);
    }
@@ -7032,4 +7034,73 @@ void command_traindisc(Client *c, const Seperator *sep)
 			}
 		}
 	}
+}
+
+void command_setgraveyard(Client *c, const Seperator *sep)
+{
+	int32 zoneid = 0;
+	int32 graveyard_id = 0;
+	Client *t=c;
+
+	if(c->GetTarget() && c->GetTarget()->IsClient() && c->GetGM())
+		t=c->GetTarget()->CastToClient();
+
+	if(!sep->arg[1][0]) {
+		c->Message(0, "Usage: #setgraveyard [zonename]");
+		return;
+	}
+	
+	zoneid = database.GetZoneID(sep->arg[1]);
+
+	if(zoneid > 0) {
+		graveyard_id = database.NewGraveyardRecord(zoneid, t->GetX(), t->GetY(), t->GetZ(), t->GetHeading());
+
+		if(graveyard_id > 0) {
+			c->Message(0, "Successfuly added a new record for this graveyard!");
+			if(database.AddGraveyardIDToZone(zoneid, graveyard_id) > 0) {
+				c->Message(0, "Successfuly added this new graveyard for the zone %s.", sep->arg[1]);
+				// TODO: Set graveyard data to the running zone process.
+				c->Message(0, "Done!");
+			}
+			else
+				c->Message(0, "Unable to add this new graveyard to the zone %s.", sep->arg[1]);
+		}
+		else {
+			c->Message(0, "Unable to create a new graveyard record in the database.");
+		}
+	}
+	else {
+		c->Message(0, "Unable to retrieve a ZoneID for the zone: %s", sep->arg[1]);
+	}
+
+	return;
+}
+
+void command_deletegraveyard(Client *c, const Seperator *sep)
+{
+	int32 zoneid = 0;
+	int32 graveyard_id = 0;
+	
+	if(!sep->arg[1][0]) {
+		c->Message(0, "Usage: #deletegraveyard [zonename]");
+		return;
+	}
+
+	zoneid = database.GetZoneID(sep->arg[1]);
+	graveyard_id = database.GetZoneGraveyardID(zoneid);
+	
+	if(zoneid > 0 & graveyard_id > 0) {
+		if(database.DeleteGraveyard(zoneid, graveyard_id))
+			c->Message(0, "Successfuly deleted graveyard %u for zone %s.", graveyard_id, sep->arg[1]);
+		else
+			c->Message(0, "Unable to delete graveyard %u for zone %s.", graveyard_id, sep->arg[1]);
+	}
+	else {
+		if(zoneid <= 0)
+			c->Message(0, "Unable to retrieve a ZoneID for the zone: %s", sep->arg[1]);
+		else if(graveyard_id <= 0)
+			c->Message(0, "Unable to retrieve a valid GraveyardID for the zone: %s", sep->arg[1]);
+	}
+
+	return;
 }

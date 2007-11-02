@@ -941,13 +941,13 @@ bool Database::GetSafePoints(const char* short_name, float* safe_x, float* safe_
 }
 
 
-bool Database::GetZoneLongName(const char* short_name, char** long_name, char* file_name, float* safe_x, float* safe_y, float* safe_z, int32* maxclients) {
+bool Database::GetZoneLongName(const char* short_name, char** long_name, char* file_name, float* safe_x, float* safe_y, float* safe_z, int32* graveyard_id, int32* maxclients) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
     MYSQL_ROW row;
 	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT long_name, file_name, safe_x, safe_y, safe_z, maxclients FROM zone WHERE short_name='%s'", short_name), errbuf, &result))
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT long_name, file_name, safe_x, safe_y, safe_z, graveyard_id, maxclients FROM zone WHERE short_name='%s'", short_name), errbuf, &result))
 	{
 		safe_delete_array(query);
 		if (mysql_num_rows(result) == 1) {
@@ -967,8 +967,10 @@ bool Database::GetZoneLongName(const char* short_name, char** long_name, char* f
 				*safe_y = atof(row[3]);
 			if (safe_z != 0)
 				*safe_z = atof(row[4]);
+			if (graveyard_id != 0)
+				*graveyard_id = atoi(row[5]);
 			if (maxclients)
-				*maxclients = atoi(row[5]);
+				*maxclients = atoi(row[6]);
 			mysql_free_result(result);
 			return true;
 		}
@@ -977,6 +979,63 @@ bool Database::GetZoneLongName(const char* short_name, char** long_name, char* f
 	else
 	{
 		cerr << "Error in GetZoneLongName query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+	
+	return false;
+}
+int32 Database::GetZoneGraveyardID(int32 zone_id) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+    int32 GraveyardID = 0;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT graveyard_id FROM zone WHERE zoneidnumber='%u'", zone_id), errbuf, &result))
+	{
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			GraveyardID = atoi(row[0]);
+		}
+		mysql_free_result(result);
+	}
+	else
+	{
+		cerr << "Error in GetZoneGraveyardID query '" << query << "' " << errbuf << endl;
+	}
+	safe_delete_array(query);
+	return GraveyardID;
+}
+bool Database::GetZoneGraveyard(const int32 graveyard_id, int32* graveyard_zoneid, float* graveyard_x, float* graveyard_y, float* graveyard_z, float* graveyard_heading) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT zone_id, x, y, z, heading FROM graveyard WHERE id=%i", graveyard_id), errbuf, &result))
+	{
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1) {
+			row = mysql_fetch_row(result);
+			if(graveyard_zoneid != 0)
+				*graveyard_zoneid = atoi(row[0]);
+			if(graveyard_x != 0)
+				*graveyard_x = atof(row[1]);
+			if(graveyard_y != 0)
+				*graveyard_y = atof(row[2]);
+			if(graveyard_z != 0)
+				*graveyard_z = atof(row[3]);
+			if(graveyard_heading != 0)
+				*graveyard_heading = atof(row[4]);
+			mysql_free_result(result);
+			return true;
+		}
+		mysql_free_result(result);
+	}
+	else
+	{
+		cerr << "Error in GetZoneGraveyard query '" << query << "' " << errbuf << endl;
 		safe_delete_array(query);
 		return false;
 	}

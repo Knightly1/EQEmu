@@ -760,6 +760,20 @@ printf("Got successful group leave message for '%s'\n", sgl->member_name);
 #endif
 			break;
 		}
+		case ServerOP_SpawnPlayerCorpse: {
+			SpawnPlayerCorpse_Struct* s = (SpawnPlayerCorpse_Struct*)pack->pBuffer;
+			Corpse* NewCorpse = database.LoadPlayerCorpse(s->player_corpse_id);
+			if(NewCorpse) {
+				EQApplicationPacket* app = new EQApplicationPacket;
+				NewCorpse->CreateSpawnPacket(app, NewCorpse);
+				entity_list.QueueClients(NewCorpse, app);
+				safe_delete(app);
+			}
+			else {
+				LogFile->write(EQEMuLog::Error,"Unable to load player corpse id %u for zone %s.", s->player_corpse_id, zone->GetShortName());
+			}
+			break;
+		}
 		default: {
 			cout << " Unknown ZSopcode:" << (int)pack->opcode;
 			cout << " size:" << pack->size << endl;

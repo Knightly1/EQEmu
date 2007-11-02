@@ -728,6 +728,19 @@ bool ZoneServer::Process() {
 			}
 			break;
 		}
+		case ServerOP_SpawnPlayerCorpse: {
+			SpawnPlayerCorpse_Struct* s = (SpawnPlayerCorpse_Struct*)pack->pBuffer;
+			ZoneServer* zs = zoneserver_list.FindByZoneID(s->zone_id);
+			if(zs) {
+				if (zs->SendPacket(pack)) {
+					zlog(WORLD__ZONE,"Sent request to spawn player corpse id %i in zone %u.",s->player_corpse_id, s->zone_id);
+				}
+				else {
+					zlog(WORLD__ZONE_ERR,"Could not send request to spawn player corpse id %i in zone %u.",s->player_corpse_id, s->zone_id);
+				}
+			}
+			break;
+		}
 		default:
 		{
 			zlog(WORLD__ZONE_ERR,"Unknown ServerOPcode from zone 0x%04x, size %d",pack->opcode,pack->size);

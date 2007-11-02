@@ -69,6 +69,7 @@
 #define ServerOP_SpawnEvent			0x0035
 #define ServerOP_SetLaunchName		0x0036
 //#define ServerOP_DeleteGuild		0x0037	//ServerGuildID_Struct
+#define ServerOP_SpawnPlayerCorpse	0x0038
 
 #define ServerOP_WhoAll				0x0210
 
@@ -593,6 +594,11 @@ struct ServerGuildMemberUpdate_Struct {
 	int32 guild_id;
 	int32 char_id;
 	//...
+};
+
+struct SpawnPlayerCorpse_Struct {
+	int32 player_corpse_id;
+	int32 zone_id;
 };
 
 

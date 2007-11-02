@@ -113,8 +113,10 @@ Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, const NPC
 	 0,0,0,0,0,0,0,0,0,
 	 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0,0,0,0,0),
 	corpse_decay_timer(in_decaytime),
-	corpse_delay_timer(in_decaytime/2)
+	corpse_delay_timer(in_decaytime/2),
+	corpse_graveyard_timer(0)
 {
+	corpse_graveyard_timer.Disable();
 	memset(item_tint, 0, sizeof(item_tint));
 	pIsChanged = false;
 	p_PlayerCorpse = false;
@@ -197,11 +199,16 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 	0	// qglobal
 ),
 	corpse_decay_timer(RuleI(Character, CorpseDecayTimeMS)),
-	corpse_delay_timer(600000)
+	corpse_delay_timer(600000),
+	corpse_graveyard_timer(RuleI(Zone, GraveyardTimeMS))
 {
 	int i;
 	PlayerProfile_Struct *pp = &client->GetPP();
 	ItemInst *item;
+
+	if(!zone->HasGraveyard()) {
+		corpse_graveyard_timer.Disable();
+	}
 
 	memset(item_tint, 0, sizeof(item_tint));
 	for (i=0; i<MAX_LOOTERS; i++)
@@ -300,7 +307,8 @@ Corpse::Corpse(int32 in_dbid, int32 in_charid, char* in_charname, ItemList* in_i
 	 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 	 0,0,0,0,0),
 	corpse_decay_timer(RuleI(Character, CorpseDecayTimeMS)),
-	corpse_delay_timer(600000)
+	corpse_delay_timer(600000),
+	corpse_graveyard_timer(RuleI(Zone, GraveyardTimeMS))
 {
 	memset(item_tint, 0, sizeof(item_tint));
 	pIsChanged = false;
@@ -570,6 +578,19 @@ bool Corpse::Process() {
 		return true;
 	}
 	
+	if(corpse_graveyard_timer.Check()) {
+		p_depop = true;
+		database.GraveyardPlayerCorpse(dbid, zone->graveyard_zoneid(), zone->graveyard_x(), zone->graveyard_y(), zone->graveyard_z(), zone->graveyard_heading());
+		corpse_graveyard_timer.Disable();
+		ServerPacket* pack = new ServerPacket(ServerOP_SpawnPlayerCorpse, sizeof(SpawnPlayerCorpse_Struct));
+		SpawnPlayerCorpse_Struct* spc = (SpawnPlayerCorpse_Struct*)pack->pBuffer;
+		spc->player_corpse_id = dbid;
+		spc->zone_id = zone->graveyard_zoneid();
+		worldserver.SendPacket(pack);
+		safe_delete(pack);
+		LogFile->write(EQEMuLog::Debug, "Moved %s player corpse to the designated graveyard in zone %s.", this->GetName(), database.GetZoneName(zone->graveyard_zoneid()));
+	}
+
 	if(corpse_decay_timer.Check()) {
 		Delete();
 		return false;
@@ -1032,7 +1053,149 @@ void Corpse::CompleteRezz(){
 	pIsChanged = true;
 	this->Save();
 }
+/*
+bool ZoneDatabase::DeleteGraveyard(int32 zone_id, int32 graveyard_id) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char* query = new char[256];
+	char* end = query;
+	int32 affected_rows = 0;
+	
+	end += sprintf(end,"UPDATE zone SET graveyard_id=0 WHERE zoneidnumber=%u", zone_id);
+	
+	if (!RunQuery(query, (int32) (end - query), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+        cerr << "Error1 in DeleteGraveyard query " << errbuf << endl;
+		return false;
+    }
+	
+	if (affected_rows == 0) {
+        cerr << "Error2 in DeleteGraveyard query: affected_rows = 0" << endl;
+		return false;
+	}
 
+	end += sprintf(end,"DELETE FROM graveyard WHERE id=%u", graveyard_id);
+
+	if (!RunQuery(query, (int32) (end - query), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+        cerr << "Error3 in DeleteGraveyard query " << errbuf << endl;
+		return false;
+    }
+	safe_delete_array(query);
+	
+	if (affected_rows == 0) {
+        cerr << "Error4 in DeleteGraveyard query: affected_rows = 0" << endl;
+		return false;
+	}
+
+	return true;
+}
+*/
+bool ZoneDatabase::DeleteGraveyard(int32 zone_id, int32 graveyard_id) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char* query = new char[256];
+	int32 query_length = 0;
+	int32 affected_rows = 0;
+	
+	query_length = sprintf(query,"UPDATE zone SET graveyard_id=0 WHERE zoneidnumber=%u", zone_id);
+	
+	if (!RunQuery(query, query_length, errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+        cerr << "Error1 in DeleteGraveyard query " << errbuf << endl;
+		return false;
+    }
+	
+	if (affected_rows == 0) {
+        cerr << "Error2 in DeleteGraveyard query: affected_rows = 0" << endl;
+		return false;
+	}
+
+	query_length = sprintf(query,"DELETE FROM graveyard WHERE id=%u", graveyard_id);
+
+	if (!RunQuery(query, query_length, errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+        cerr << "Error3 in DeleteGraveyard query " << errbuf << endl;
+		return false;
+    }
+	safe_delete_array(query);
+	
+	if (affected_rows == 0) {
+        cerr << "Error4 in DeleteGraveyard query: affected_rows = 0" << endl;
+		return false;
+	}
+
+	return true;
+}
+int32 ZoneDatabase::AddGraveyardIDToZone(int32 zone_id, int32 graveyard_id) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char* query = new char[256];
+	char* end = query;
+	int32 affected_rows = 0;
+	
+	end += sprintf(end,"UPDATE zone SET graveyard_id=%u WHERE zoneidnumber=%u", graveyard_id, zone_id);
+	
+	if (!RunQuery(query, (int32) (end - query), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+        cerr << "Error1 in AddGraveyardIDToZone query " << errbuf << endl;
+		return 0;
+    }
+	safe_delete_array(query);
+	
+	if (affected_rows == 0) {
+        cerr << "Error2 in AddGraveyardIDToZone query: affected_rows = 0" << endl;
+		return 0;
+	}
+
+	return zone_id;
+}
+int32 ZoneDatabase::NewGraveyardRecord(int32 graveyard_zoneid, float graveyard_x, float graveyard_y, float graveyard_z, float graveyard_heading) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char* query = new char[256];
+	char* end = query;
+	int32 affected_rows = 0;
+	int32 new_graveyard_id = 0;
+	
+	end += sprintf(end,"INSERT INTO graveyard SET zone_id=%u, x=%1.1f, y=%1.1f, z=%1.1f, heading=%1.1f", graveyard_zoneid, graveyard_x, graveyard_y, graveyard_z, graveyard_heading);
+	
+	if (!RunQuery(query, (int32) (end - query), errbuf, 0, &affected_rows, &new_graveyard_id)) {
+		safe_delete_array(query);
+        cerr << "Error1 in NewGraveyardRecord query " << errbuf << endl;
+		return 0;
+    }
+	safe_delete_array(query);
+	
+	if (affected_rows == 0) {
+        cerr << "Error2 in NewGraveyardRecord query: affected_rows = 0" << endl;
+		return 0;
+	}
+
+	if(new_graveyard_id <= 0) {
+		cerr << "Error3 in NewGraveyardRecord query: new_graveyard_id <= 0" << endl;
+		return 0;
+	}
+
+	return new_graveyard_id;
+}
+int32 ZoneDatabase::GraveyardPlayerCorpse(int32 dbid, int32 zoneid, float x, float y, float z, float heading) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char* query = new char[256];
+	char* end = query;
+	int32 affected_rows = 0;
+	
+	end += sprintf(end,"Update player_corpses SET zoneid=%u, x=%1.1f, y=%1.1f, z=%1.1f, heading=%1.1f WHERE id=%d", zoneid, x, y, z, heading, dbid);
+	
+	if (!RunQuery(query, (int32) (end - query), errbuf, 0, &affected_rows)) {
+		safe_delete_array(query);
+        cerr << "Error1 in GraveyardPlayerCorpse query " << errbuf << endl;
+		return 0;
+    }
+	safe_delete_array(query);
+	
+	if (affected_rows == 0) {
+        cerr << "Error2 in GraveyardPlayerCorpse query: affected_rows = 0" << endl;
+		return 0;
+	}
+	return dbid;
+}
 int32 ZoneDatabase::UpdatePlayerCorpse(int32 dbid, int32 charid, const char* charname, int32 zoneid, uchar* data, int32 datasize, float x, float y, float z, float heading, bool rezzed) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char* query = new char[256+(datasize*2)];
@@ -1098,6 +1261,37 @@ int32 ZoneDatabase::CreatePlayerCorpse(int32 charid, const char* charname, int32
 	}
 	
 	return last_insert_id;
+}
+
+Corpse* ZoneDatabase::LoadPlayerCorpse(int32 player_corpse_id) {
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	Corpse* NewCorpse = 0;
+	
+	//	int char_num = 0;
+	unsigned long* lengths;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT id, charid, charname, x, y, z, heading, data, timeofdeath, rezzed FROM player_corpses WHERE id='%u'", player_corpse_id), errbuf, &result)) {
+		//                                               0   1       2         3  4  5  6        7     8
+		//safe_delete_array(query);
+		row = mysql_fetch_row(result);
+		lengths = mysql_fetch_lengths(result);
+		NewCorpse = Corpse::LoadFromDBData(atoi(row[0]), atoi(row[1]), row[2], (uchar*) row[7], lengths[7], atof(row[3]), atoi(row[4]), atoi(row[5]), atoi(row[6]), row[8],atoi(row[9])==1);
+		entity_list.AddCorpse(NewCorpse);
+		mysql_free_result(result);
+	}
+	else {
+		cerr << "Error in LoadPlayerCorpse query '" << query << "' " << errbuf << endl;
+		cerr << "Note that if your missing the 'rezzed' field you can add it with:\nALTER TABLE `player_corpses` ADD `rezzed` TINYINT UNSIGNED DEFAULT \"0\";\n";
+		//safe_delete_array(query);
+		//return false;
+	}
+	
+	safe_delete_array(query);
+
+	return NewCorpse;
 }
 
 bool ZoneDatabase::LoadPlayerCorpses(int32 iZoneID) {
