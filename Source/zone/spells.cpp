@@ -2270,7 +2270,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 				return false;
 			}
 		}
-		else if	( !IsAttackAllowed(spelltar) ) // Detrimental spells - PVP check
+		else if	( !IsAttackAllowed(spelltar) && !IsResurrectionEffects(spell_id)) // Detrimental spells - PVP check
 		{
 			mlog(SPELLS__CASTING_ERR, "Detrimental spell %d can't take hold %s -> %s", spell_id, GetName(), spelltar->GetName());
 			spelltar->Message_StringID(MT_Shout, YOU_ARE_PROTECTED, GetCleanName());

@@ -605,3 +605,12 @@ bool IsDiscipline(int16 spell_id)
 	}
 	return false;
 }
+
+bool IsResurrectionEffects(int16 spell_id) {
+	bool Result = false;
+
+	if(IsValidSpell(spell_id) && spell_id == 756)		// spell id 756 is Resurrection Effects spell
+		Result = true;
+
+	return Result;
+}

@@ -2,6 +2,7 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
 ==11/03/2007
+WildcardX: Fixed a bug that prevented a player from experiencing resurrection effects in designated no combat zones.
 WildcardX: Fixed a bug in graveyard system that could leave a player corpse in the database, but without a location.
 WildcardX: Fixed a bug that could prevent the corpse decay timer from expiring because the graveyard timer would reset before.
 WildcardX: Implemented support for the Shadowrest zone. This is configured to be disabled by default.
