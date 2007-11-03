@@ -1,6 +1,20 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==11/03/2007
+WildcardX: Fixed a bug in graveyard system that could leave a player corpse in the database, but without a location.
+WildcardX: Fixed a bug that could prevent the corpse decay timer from expiring because the graveyard timer would reset before.
+WildcardX: Implemented support for the Shadowrest zone. This is configured to be disabled by default.
+WildcardX: Implemented the command #summonburriedplayercorpse.
+WildcardX: Implemented the command #getplayerburriedcorpsecount.
+WildcardX: Implemented the quest function bool summonburriedplayercorpse(int32 char_id, float dest_x, float dest_y, float dest_z, float dest_heading).
+WildcardX: Implemented the quest function int32 getplayerburriedcorpsecount(int32 char_id).
+
+Required SQL:
+alter table player_corpses add column IsBurried TINYINT(3) NOT NULL default 0;
+alter table player_corpses add column WasAtGraveyard TINYINT(3) NOT NULL default 0;
+insert into rule_values values(0, 'Zone:EnableShadowrest', 0);
+
 ==11/01/2007
 WildcardX: (TheLieka) Bug fix to discontinue player invisibility when the player loots.
 WildcardX: (TheLieka) Bug fix to remove a type from the #npcedit loottable command.

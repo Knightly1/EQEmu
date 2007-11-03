@@ -1220,3 +1220,28 @@ void QuestManager::sethp(int hpperc) {
 	newhp = (npc->GetMaxHP()*(100-hpperc))/100;
 	npc->Damage(npc, newhp, SPELL_UNKNOWN, HAND_TO_HAND, false, 0, false);
 }
+
+bool QuestManager::summonburriedplayercorpse(int32 char_id, float dest_x, float dest_y, float dest_z, float dest_heading) {
+	bool Result = false;
+
+	if(char_id > 0) {
+		Corpse* PlayerCorpse = database.SummonBurriedPlayerCorpse(char_id, zone->GetZoneID(), dest_x, dest_y, dest_z, dest_heading);
+		
+		if(PlayerCorpse) {
+			PlayerCorpse->Spawn();
+			Result = true;
+		}
+	}
+
+	return Result;
+}
+
+int32 QuestManager::getplayerburriedcorpsecount(int32 char_id) {
+	int32 Result = 0;
+
+	if(char_id > 0) {
+		Result = database.GetPlayerBurriedCorpseCount(char_id);
+	}
+
+	return Result;
+}

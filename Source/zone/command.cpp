@@ -388,7 +388,9 @@ int command_init(void) {
 		command_add("refundaa", "Refunds your target's AA points, will disconnect them in the process as well.", 100, command_refundaa) ||
 		command_add("traindisc","[level] - Trains all the disciplines usable by the target, up to level specified. (may freeze client for a few seconds)",150,command_traindisc) ||
 		command_add("setgraveyard","[zone name] - Creates a graveyard for the specified zone based on your target's LOC.", 200, command_setgraveyard) ||
-		command_add("deletegraveyard","[zone name] - Deletes the graveyard for the specified zone.", 200, command_deletegraveyard)
+		command_add("deletegraveyard","[zone name] - Deletes the graveyard for the specified zone.", 200, command_deletegraveyard) ||
+		command_add("getplayerburriedcorpsecount","- Get the target's total number of burried player corpses.", 100, command_getplayerburriedcorpsecount) ||
+		command_add("summonburriedplayercorpse","- Summons the target's oldest burried corpse, if any exist.", 100, command_summonburriedplayercorpse)
 		)
 	{
 		command_deinit();
@@ -7101,6 +7103,48 @@ void command_deletegraveyard(Client *c, const Seperator *sep)
 		else if(graveyard_id <= 0)
 			c->Message(0, "Unable to retrieve a valid GraveyardID for the zone: %s", sep->arg[1]);
 	}
+
+	return;
+}
+
+void command_summonburriedplayercorpse(Client *c, const Seperator *sep)
+{
+	Client *t=c;
+
+	if(c->GetTarget() && c->GetTarget()->IsClient() && c->GetGM())
+		t = c->GetTarget()->CastToClient();
+	else {
+		c->Message(0, "You must first select a target!");
+		return;
+	}
+	
+	Corpse* PlayerCorpse = database.SummonBurriedPlayerCorpse(t->CharacterID(), t->GetZoneID(), t->GetX(), t->GetY(), t->GetZ(), t->GetHeading());
+
+	if(PlayerCorpse)
+		PlayerCorpse->Spawn();
+	else
+		c->Message(0, "Your target doesn't have any burried corpses.");
+
+	return;
+}
+
+void command_getplayerburriedcorpsecount(Client *c, const Seperator *sep)
+{
+	Client *t=c;
+
+	if(c->GetTarget() && c->GetTarget()->IsClient() && c->GetGM())
+		t = c->GetTarget()->CastToClient();
+	else {
+		c->Message(0, "You must first select a target!");
+		return;
+	}
+	
+	int32 CorpseCount = database.GetPlayerBurriedCorpseCount(t->CharacterID());
+
+	if(CorpseCount > 0)
+		c->Message(0, "Your target has a total of %u burried corpses.", CorpseCount);
+	else
+		c->Message(0, "Your target doesn't have any burried corpses.");
 
 	return;
 }

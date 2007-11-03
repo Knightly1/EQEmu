@@ -31,11 +31,11 @@ class Corpse : public Mob
 public:
 	static void SendEndLootErrorPacket(Client* client);
 	static void SendLootReqErrorPacket(Client* client, int8 response = 2);
-	static Corpse* LoadFromDBData(int32 in_corpseid, int32 in_charid, char* in_charname, uchar* in_data, int32 in_datasize, float in_x, float in_y, float in_z, float in_heading, char* timeofdeath, bool rezzed = false);
+	static Corpse* LoadFromDBData(int32 in_corpseid, int32 in_charid, char* in_charname, uchar* in_data, int32 in_datasize, float in_x, float in_y, float in_z, float in_heading, char* timeofdeath, bool rezzed = false, bool wasAtGraveyard = false);
 
 	Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, const NPCType** in_npctypedata, int32 in_decaytime = 600000);
 	Corpse(Client* client, sint32 in_rezexp);
-	Corpse(int32 in_corpseid, int32 in_charid, char* in_charname, ItemList* in_itemlist, int32 in_copper, int32 in_silver, int32 in_gold, int32 in_plat, float in_x, float in_y, float in_z, float in_heading, float in_size, int8 in_gender, int16 in_race, int8 in_class, int8 in_deity, int8 in_level, int8 in_texture, int8 in_helmtexture,int32 in_rezexp);
+	Corpse(int32 in_corpseid, int32 in_charid, char* in_charname, ItemList* in_itemlist, int32 in_copper, int32 in_silver, int32 in_gold, int32 in_plat, float in_x, float in_y, float in_z, float in_heading, float in_size, int8 in_gender, int16 in_race, int8 in_class, int8 in_deity, int8 in_level, int8 in_texture, int8 in_helmtexture,int32 in_rezexp, bool wasAtGraveyard = false);
 	~Corpse();
 
 	bool	IsCorpse()			const { return true; }
@@ -88,6 +88,7 @@ public:
 	void AddLooter(Mob *who);
 	bool Rezzed() { return rez; }
 	void Rezzed(bool in_rez) { rez = in_rez; }
+	void	Spawn();
 
 	char		orgname[64];
 	int32 GetEquipment(int8 material_slot) const;	// returns item id
