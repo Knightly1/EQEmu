@@ -4,13 +4,13 @@
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation; version 2 of the License.
-  
+
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY except by those people which sell it, which
 	are required to give you total support for your newly bought product;
 	without even the implied warranty of MERCHANTABILITY or FITNESS FOR
 	A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-	
+
 	  You should have received a copy of the GNU General Public License
 	  along with this program; if not, write to the Free Software
 	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -41,7 +41,7 @@ SvPV_nolen == string with no length restriction
 */
 
 PerlXSParser::PerlXSParser() : PerlembParser() {
-	//we cannot rely on PerlembParser to call the rigth map_funs because 
+	//we cannot rely on PerlembParser to call the rigth map_funs because
 	//our virtual table is not set up until after we call them, so we need to move
 	//the call to ReloadQuests out of the constructor.
 }
@@ -56,28 +56,28 @@ void PerlXSParser::map_funs() {
 #ifdef EMBPERL_XS_CLASSES
 	"package Mob;"
 	"&boot_Mob;"			//load our Mob XS
-	
+
 	"package Client;"
 	"our @ISA = qw(Mob);"	//client inherits mob.
 	"&boot_Mob;"			//load our Mob XS
 	"&boot_Client;"			//load our Client XS
-	
+
 	"package NPC;"
 	"our @ISA = qw(Mob);"	//NPC inherits mob.
 	"&boot_Mob;"			//load our Mob XS
 	"&boot_NPC;"			//load our NPC XS
-	
+
 	"package Corpse;"
 	"our @ISA = qw(Mob);"	//Corpse inherits mob.
 	"&boot_Mob;"			//load our Mob XS
 	"&boot_Corpse;"			//load our Mob XS
-	
+
 	"package EntityList;"
 	"&boot_EntityList;"		//load our EntityList XS
-	
+
 	"package PerlPacket;"
 	"&boot_PerlPacket;"		//load our PerlPacket XS
-	
+
 	"package Group;"
 	"&boot_Group;"		//load our Group XS
 #endif
@@ -91,20 +91,20 @@ void PerlXSParser::SendCommands(const char * pkgprefix, const char *event, int32
 	if(!perl)
 		return;
 	_ZP(PerlXSParser_SendCommands);
-	
+
 	if(mob && mob->IsClient())
 		quest_manager.StartQuest(other, mob->CastToClient());
 	else
 		quest_manager.StartQuest(other, NULL);
-	
+
 	try {
 
 		std::string cmd = "package " + (std::string)(pkgprefix) + (std::string)(";");
 		perl->eval(cmd.c_str());
-		
+
 #ifdef EMBPERL_XS_CLASSES
 		char namebuf[64];
-		
+
 		//init a couple special vars: client, npc, entity_list
 		Client *curc = quest_manager.GetInitiator();
 		snprintf(namebuf, 64, "%s::client", pkgprefix);
@@ -115,28 +115,28 @@ void PerlXSParser::SendCommands(const char * pkgprefix, const char *event, int32
 			//clear out the value, mainly to get rid of blessedness
 			sv_setsv(client, _empty_sv);
 		}
-		
+
 		NPC *curn = quest_manager.GetNPC();
 		snprintf(namebuf, 64, "%s::npc", pkgprefix);
 		SV *npc = get_sv(namebuf, true);
 		sv_setref_pv(npc, "NPC", curn);
-		
+
 		snprintf(namebuf, 64, "%s::entity_list", pkgprefix);
 		SV *el = get_sv(namebuf, true);
 		sv_setref_pv(el, "EntityList", &entity_list);
 #endif
-		
+
 		//now call the requested sub
 		perl->dosub(std::string(pkgprefix).append("::").append(event).c_str());
 
 	} catch(const char * err) {
 
-		//try to reduce some of the console spam... 
+		//try to reduce some of the console spam...
 		//todo: tweak this to be more accurate at deciding what to filter (we don't want to gag legit errors)
 		if(!strstr(err,"Undefined subroutine"))
 			LogFile->write(EQEMuLog::Status, "Script error: %s::%s - %s", pkgprefix, event, err);
 	}
-	
+
 	quest_manager.EndQuest();
 }
 
@@ -203,40 +203,40 @@ XS(XS_EntityList_new)
 XS(XS__echo); // prototype to pass -Wmissing-prototypes
 XS(XS__echo) {
 	dXSARGS;
-	
+
 	if (items != 1)
 		Perl_croak(aTHX_ "Usage: say(str)");
-	
+
 	quest_manager.echo(SvPV_nolen(ST(0)));
-	
+
 	XSRETURN_EMPTY;
 }
 
 XS(XS__say); // prototype to pass -Wmissing-prototypes
 XS(XS__say) {
 	dXSARGS;
-	
+
 	if (items != 1)
 		Perl_croak(aTHX_ "Usage: say(str)");
-	
+
 	quest_manager.say(SvPV_nolen(ST(0)));
-	
+
 	XSRETURN_EMPTY;
 }
 
 XS(XS__me); // prototype to pass -Wmissing-prototypes
 XS(XS__me) {
 	dXSARGS;
-	
+
 	if (items != 1)
 		Perl_croak(aTHX_ "Usage: %s(str)", "me");
-	
+
 	quest_manager.me(SvPV_nolen(ST(0)));
-	
+
 	XSRETURN_EMPTY;
 }
 
-XS(XS__summonitem); // prototype to pass -Wmissing-prototypes 
+XS(XS__summonitem); // prototype to pass -Wmissing-prototypes
 XS(XS__summonitem)
 {
 	dXSARGS;
@@ -270,10 +270,10 @@ XS(XS__spawn)
 	dXSARGS;
 	if (items != 6)
 		Perl_croak(aTHX_ "Usage: spawn(npc_type, grid, unused, x, y, z)");
-	
+
 	int16		RETVAL;
 	dXSTARG;
-	
+
 	int	npc_type = (int)SvIV(ST(0));
 	int	grid = (int)SvIV(ST(1));
 	int	unused = (int)SvIV(ST(2));
@@ -283,7 +283,7 @@ XS(XS__spawn)
 
 	RETVAL = quest_manager.spawn2(npc_type, grid, unused, x, y, z, 0);
 	XSprePUSH; PUSHu((UV)RETVAL);
-	
+
 	XSRETURN(1);
 }
 
@@ -293,10 +293,10 @@ XS(XS__spawn2)
 	dXSARGS;
 	if (items != 7)
 		Perl_croak(aTHX_ "Usage: spawn2(npc_type, grid, unused, x, y, z, heading)");
-	
+
 	int16		RETVAL;
 	dXSTARG;
-	
+
 	int	npc_type = (int)SvIV(ST(0));
 	int	grid = (int)SvIV(ST(1));
 	int	unused = (int)SvIV(ST(2));
@@ -307,7 +307,7 @@ XS(XS__spawn2)
 
 	RETVAL = quest_manager.spawn2(npc_type, grid, unused, x, y, z, heading);
 	XSprePUSH; PUSHu((UV)RETVAL);
-	
+
 	XSRETURN(1);
 }
 
@@ -317,10 +317,10 @@ XS(XS__unique_spawn)
 	dXSARGS;
 	if (items != 6 && items != 7)
 		Perl_croak(aTHX_ "Usage: unique_spawn(npc_type, grid, unused, x, y, z[, heading])");
-	
+
 	int16		RETVAL;
 	dXSTARG;
-	
+
 	int	npc_type = (int)SvIV(ST(0));
 	int	grid = (int)SvIV(ST(1));
 	int	unused = (int)SvIV(ST(2));
@@ -333,7 +333,7 @@ XS(XS__unique_spawn)
 
 	RETVAL = quest_manager.unique_spawn(npc_type, grid, unused, x, y, z, heading);
 	XSprePUSH; PUSHu((UV)RETVAL);
-	
+
 	XSRETURN(1);
 }
 
@@ -400,7 +400,7 @@ XS(XS__addloot);
 XS(XS__addloot)
 {
 	dXSARGS;
-	
+
 	if(items == 1)
 		quest_manager.addloot(SvIV(ST(0)));
 	else if(items == 2)
@@ -509,7 +509,7 @@ XS(XS__depop)
 		npc_type = 0;
 	else
 		npc_type = (int)SvIV(ST(0));
-	
+
 
 	quest_manager.depop(npc_type);
 
@@ -608,9 +608,9 @@ XS(XS__traindisc)
 		Perl_croak(aTHX_ "Usage: traindisc(discipline_tome_item_id)");
 
 	int	discipline_tome_item_id = (int)SvIV(ST(0));
-	
+
 	quest_manager.traindisc(discipline_tome_item_id);
-	
+
 	XSRETURN_EMPTY;
 }
 
@@ -804,7 +804,7 @@ XS(XS__movepc)
 	else {
 	float	heading = (float)SvNV(ST(4));
 	quest_manager.movepc(zoneid, x, y, z, heading);
-	}		
+	}
 
 	XSRETURN_EMPTY;
 }
@@ -1020,7 +1020,7 @@ XS(XS__settime)
 	dXSARGS;
 	if (items != 2)
 		Perl_croak(aTHX_ "Usage: settime(new_hour, new_min)");
-	
+
 	int	new_hour = (int)SvIV(ST(0));
 	int	new_min = (int)SvIV(ST(1));
 
@@ -1047,7 +1047,7 @@ XS(XS__signalwith);
 XS(XS__signalwith)
 {
 	dXSARGS;
-	
+
 	if (items == 2) {
 		int	npc_id = (int)SvIV(ST(0));
 		int	signal_id = (int)SvIV(ST(1));
@@ -1068,7 +1068,7 @@ XS(XS__signal);
 XS(XS__signal)
 {
 	dXSARGS;
-	
+
 	if (items == 1) {
 		int	npc_id = (int)SvIV(ST(0));
 		quest_manager.signal(npc_id);
@@ -1311,13 +1311,13 @@ XS(XS__ChooseRandom)
 	dXSARGS;
 	if (items < 1)
 		Perl_croak(aTHX_ "Usage: ChooseRandom(... list ...)");
-	
+
 	int index = MakeRandomInt(0, items-1);
-	
+
 	SV *tmp = ST(0);
 	ST(0) = ST(index);
 	ST(index) = tmp;
-	
+
 	XSRETURN(1);	//return 1 element from the stack (ST(0))
 }
 
@@ -1327,7 +1327,7 @@ XS(XS__set_proximity)
 	dXSARGS;
 	if (items != 4 && items != 6)
 		Perl_croak(aTHX_ "Usage: set_proximity(minx, maxx, miny, maxy [, minz, maxz])");
-	
+
 	float minx = (float)SvNV(ST(0));
 	float maxx = (float)SvNV(ST(1));
 	float miny = (float)SvNV(ST(2));
@@ -1340,7 +1340,7 @@ XS(XS__set_proximity)
 		float maxz = (float)SvNV(ST(5));
 		quest_manager.set_proximity(minx, maxx, miny, maxy, minz, maxz);
 	}
-	
+
 	XSRETURN_EMPTY;
 }
 
@@ -1350,9 +1350,9 @@ XS(XS__clear_proximity)
 	dXSARGS;
 	if (items != 0)
 		Perl_croak(aTHX_ "Usage: clear_proximity()");
-	
+
 	quest_manager.clear_proximity();
-	
+
 	XSRETURN_EMPTY;
 }
 
@@ -1362,7 +1362,7 @@ XS(XS__setanim) //Cisyouc: mob->setappearance() addition
 	dXSARGS;
 	if(items != 2)
 		Perl_croak(aTHX_ "Usage: quest::setanim(npc_type, animnum);");
-	
+
 	quest_manager.setanim(SvUV(ST(0)), SvUV(ST(1)));
 
 	XSRETURN_EMPTY;
@@ -1374,7 +1374,7 @@ XS(XS__showgrid)
 	dXSARGS;
 	if(items != 1)
 		Perl_croak(aTHX_ "Usage: quest::showgrid(grid_id);");
-	
+
 	quest_manager.showgrid(SvUV(ST(0)));
 
 	XSRETURN_EMPTY;
@@ -1418,13 +1418,13 @@ XS(XS__spawn_condition)
 	dXSARGS;
 	if (items != 3)
 		Perl_croak(aTHX_ "Usage: spawn_condition(zone_short, condition_id, value)");
-	
+
 	char *	zone_short = (char *)SvPV_nolen(ST(0));
 	uint16	cond_id = (int)SvUV(ST(1));
 	sint16	value = (int)SvIV(ST(2));
-	
+
 	quest_manager.spawn_condition(zone_short, cond_id, value);
-	
+
 	XSRETURN_EMPTY;
 }
 
@@ -1434,16 +1434,16 @@ XS(XS__get_spawn_condition)
 	dXSARGS;
 	if (items != 2)
 		Perl_croak(aTHX_ "Usage: get_spawn_condition(zone_short, condition_id)");
-	
+
 	sint16		RETVAL;
 	dXSTARG;
-	
+
 	char *	zone_short = (char *)SvPV_nolen(ST(0));
 	uint16	cond_id = (int)SvIV(ST(1));
 
 	RETVAL = quest_manager.get_spawn_condition(zone_short, cond_id);
 	XSprePUSH; PUSHu((IV)RETVAL);
-	
+
 	XSRETURN(1);
 }
 
@@ -1453,13 +1453,13 @@ XS(XS__toggle_spawn_event)
 	dXSARGS;
 	if (items != 2)
 		Perl_croak(aTHX_ "Usage: toggle_spawn_event(event_id, enabled?, reset_base)");
-	
+
 	int32	event_id = (int)SvIV(ST(0));
 	bool	enabled = ((int)SvIV(ST(1))) == 0?false:true;
 	bool	reset_base = ((int)SvIV(ST(1))) == 0?false:true;
-	
+
 	quest_manager.toggle_spawn_event(event_id, enabled, reset_base);
-	
+
 	XSRETURN_EMPTY;
 }
 
@@ -1469,15 +1469,15 @@ XS(XS__has_zone_flag)
 	dXSARGS;
 	if (items != 1)
 		Perl_croak(aTHX_ "Usage: has_zone_flag(zone_id)");
-	
+
 	sint16		RETVAL;
 	dXSTARG;
-	
+
 	int32	zone_id = (int)SvIV(ST(0));
 
 	RETVAL = quest_manager.has_zone_flag(zone_id);
 	XSprePUSH; PUSHu((IV)RETVAL);
-	
+
 	XSRETURN(1);
 
 }
@@ -1488,11 +1488,11 @@ XS(XS__set_zone_flag)
 	dXSARGS;
 	if (items != 1)
 		Perl_croak(aTHX_ "Usage: set_zone_flag(zone_id)");
-	
+
 	int32	zone_id = (int)SvIV(ST(0));
-	
+
 	quest_manager.set_zone_flag(zone_id);
-	
+
 	XSRETURN_EMPTY;
 }
 
@@ -1502,12 +1502,51 @@ XS(XS__clear_zone_flag)
 	dXSARGS;
 	if (items != 1)
 		Perl_croak(aTHX_ "Usage: clear_zone_flag(zone_id)");
-	
+
 	int32	zone_id = (int)SvIV(ST(0));
-	
+
 	quest_manager.clear_zone_flag(zone_id);
-	
+
 	XSRETURN_EMPTY;
+}
+
+XS(XS__summonburriedplayercorpse);
+XS(XS__summonburriedplayercorpse)
+{
+    dXSARGS;
+    if (items != 5)
+        Perl_croak(aTHX_ "Usage: summonburriedplayercorpse(char_id,dest_x,dest_y,dest_z,dest_heading)");
+
+    bool RETVAL;
+    int32    char_id = (int)SvIV(ST(0));
+    float    dest_x = (float)SvIV(ST(1));
+    float    dest_y = (float)SvIV(ST(2));
+    float    dest_z = (float)SvIV(ST(3));
+    float    dest_heading = (float)SvIV(ST(4));
+
+    RETVAL = quest_manager.summonburriedplayercorpse(char_id, dest_x, dest_y, dest_z, dest_heading);
+
+    ST(0) = boolSV(RETVAL);
+    sv_2mortal(ST(0));
+    XSRETURN(1);
+}
+
+XS(XS__getplayerburriedcorpsecount);
+XS(XS__getplayerburriedcorpsecount)
+{
+    dXSARGS;
+    if (items != 1)
+        Perl_croak(aTHX_ "Usage: getplayerburriedcorpsecount(char_id)");
+
+    int32        RETVAL;
+    dXSTARG;
+
+    int32    char_id = (int)SvIV(ST(0));
+
+    RETVAL = quest_manager.getplayerburriedcorpsecount(char_id);
+    XSprePUSH; PUSHu((IV)RETVAL);
+
+    XSRETURN(1);
 }
 
 /*
@@ -1522,14 +1561,14 @@ EXTERN_C XS(boot_quest)
 	char file[256];
 	strncpy(file, __FILE__, 256);
 	file[255] = '\0';
-	
+
 	if(items != 1)
 		LogFile->write(EQEMuLog::Error, "boot_quest does not take any arguments.");
-	
+
 	char buf[128];	//shouldent have any function names longer than this.
-	
+
 	//add the strcpy stuff to get rid of const warnings....
-	
+
 	XS_VERSION_BOOTCHECK ;
 		newXS(strcpy(buf, "echo"), XS__echo, file);
 		newXS(strcpy(buf, "say"), XS__say, file);
@@ -1540,7 +1579,7 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "spawn2"), XS__spawn2, file);
 		newXS(strcpy(buf, "unique_spawn"), XS__unique_spawn, file);
 		newXS(strcpy(buf, "setstat"), XS__setstat, file);
-		newXS(strcpy(buf, "incstat"), XS__incstat, file);		
+		newXS(strcpy(buf, "incstat"), XS__incstat, file);
 		newXS(strcpy(buf, "castspell"), XS__castspell, file);
 		newXS(strcpy(buf, "selfcast"), XS__selfcast, file);
 		newXS(strcpy(buf, "addloot"), XS__addloot, file);
@@ -1618,6 +1657,8 @@ EXTERN_C XS(boot_quest)
         newXS(strcpy(buf, "has_zone_flag"), XS__has_zone_flag, file);
         newXS(strcpy(buf, "set_zone_flag"), XS__set_zone_flag, file);
         newXS(strcpy(buf, "clear_zone_flag"), XS__clear_zone_flag, file);
+        newXS(strcpy(buf, "summonburriedplayercorpse"), XS__summonburriedplayercorpse, file);
+		newXS(strcpy(buf, "getplayerburriedcorpsecount"), XS__getplayerburriedcorpsecount, file);
 	XSRETURN_YES;
 }
 
