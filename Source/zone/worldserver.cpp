@@ -592,7 +592,8 @@ void WorldServer::Process() {
                       // Not gm resurrection
                         client->BuffFadeAll();
                         client->SpellOnTarget(756,client);
-                        client->AddEXP(srs->exp);
+						if(srs->rez.spellid != 2168)
+							client->AddEXP(srs->exp);
                     }
                     else {
                       // GM resurrection

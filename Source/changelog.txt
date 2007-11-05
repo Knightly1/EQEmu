@@ -1,6 +1,12 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==11/04/2007
+WildcardX: The spell "Reanimation" will no longer restore any player experience. This is a 0% experience resurrection.
+WildcardX: Corpses moved by a consented player will now remember where it was moved to, even after a zone restart.
+WildcardX: Necromancers and Shadowknights can now summon corpses belonging to other players.
+WildcardX: Corrected a bug that would have allowed Necromancers and Shadownights to summon corpses belonging to non-grouped party members.
+
 ==11/03/2007
 WildcardX: (Cavedude) Implemented perl wrappers for new quest methods supporting the Shadowrest zone implementation.
 WildcardX: Fixed a bug that prevented a player from experiencing resurrection effects in designated no combat zones.

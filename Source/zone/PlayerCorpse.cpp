@@ -1056,6 +1056,7 @@ void Corpse::Summon(Client* client,bool spell) {
 				for(itr=owner->consent_list.begin();itr!=owner->consent_list.end();itr++){
 					if(*itr == client){
 						GMMove(client->GetX(), client->GetY(), client->GetZ());
+						pIsChanged = true;
 						consent = true;
 					}
 				}

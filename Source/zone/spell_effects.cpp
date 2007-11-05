@@ -1173,21 +1173,48 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Summon Corpse: %d", effect_value);
 #endif
-				if(IsClient())	// can only summon corpses of clients
-				{
-					Corpse *corpse = entity_list.GetCorpseByOwner(CastToClient());
-					if(corpse)
-					{
-						if(caster)
-							caster->Message_StringID(4, SUMMONING_CORPSE_OTHER, GetCleanName());
-						corpse->Summon(CastToClient(), true);
+				// can only summon corpses of clients
+				if(IsClient()) {
+					Client* TargetClient = 0;
+					if(this->GetTarget())
+						TargetClient = this->GetTarget()->CastToClient();
+					else
+						TargetClient = this->CastToClient();
+
+					// We now have a valid target for this spell. Either the caster himself or a targetted player. Lets see if the target is in the group.
+					Group* group = entity_list.GetGroupByClient(TargetClient);
+					if(group) {
+						if(!group->IsGroupMember(TargetClient)) {
+							Message(13, "Your target must be a group member for this spell.");
+							break;
+						}
 					}
-					else	// corpse not found
-					{
-						if(caster)
-							caster->Message_StringID(4, CORPSE_CANT_SENSE);
+					else
+						if(TargetClient != this->CastToClient())
+							Message(13, "Your target must be a group member for this spell.");
+							break;
+
+					// Now we should either be casting this on self or its being cast on a valid group member
+					if(TargetClient) {
+						Corpse *corpse = entity_list.GetCorpseByOwner(TargetClient);
+						if(corpse) {
+							if(TargetClient == this->CastToClient())
+								Message_StringID(4, SUMMONING_CORPSE, TargetClient->CastToMob()->GetCleanName());
+							else
+								Message_StringID(4, SUMMONING_CORPSE_OTHER, TargetClient->CastToMob()->GetCleanName());
+							corpse->Summon(CastToClient(), true);
+						}
+						else {
+							// No corpse found in the zone
+							Message_StringID(4, CORPSE_CANT_SENSE);
+						}
+					}
+					else {
+						Message_StringID(4, TARGET_NOT_FOUND);
+						LogFile->write(EQEMuLog::Error, "%s attempted to cast spell id %u with spell effect SE_SummonCorpse, but could not cast target into a Client object.", GetCleanName(), spell_id);
 					}
 				}
+
 				break;
 			}
 
