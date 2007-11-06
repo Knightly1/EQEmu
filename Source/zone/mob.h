@@ -335,6 +335,8 @@ bool logpos;
 		int8	in_see_invis_undead,		// Mongrel: see through invis vs. undead
 		int8	in_see_hide,
 		int8	in_see_improved_hide,
+		sint16	in_hp_regen,
+		sint16	in_mana_regen,
 		int8	in_qglobal
 
 	);

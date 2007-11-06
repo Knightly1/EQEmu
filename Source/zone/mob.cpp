@@ -89,6 +89,8 @@ Mob::Mob(const char*   in_name,
 		 int8   in_see_invis_undead,
 		 int8   in_see_hide,
 		 int8   in_see_improved_hide,
+		 sint16 in_hp_regen,
+		 sint16 in_mana_regen,
 		 int8	in_qglobal
 
 		 ) : 
@@ -189,8 +191,8 @@ Mob::Mob(const char*   in_name,
 	shield_target = NULL;
 	cur_mana = 0;
 	max_mana = 0;
-	hp_regen = 0;
-	mana_regen = 0;
+	hp_regen = in_hp_regen;
+	mana_regen = in_mana_regen;
 	invisible = false;
 	invisible_undead = false;
 	invisible_animals = false;

@@ -124,6 +124,8 @@ Client::Client(EQStreamInterface* ieqs)
 	0, // see_invis_undead 
 	0,
 	0,
+	0,
+	0,
 	0	// qglobal
 
 	),
