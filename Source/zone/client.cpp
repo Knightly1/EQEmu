@@ -135,7 +135,6 @@ Client::Client(EQStreamInterface* ieqs)
 	stamina_timer(40000),
 	zoneinpacket_timer(3000),
 	linkdead_timer(RuleI(Zone,ClientLinkdeadMS)),
-	client_timeout(RuleI(Zone,ClientTimeoutMS)),
 	dead_timer(2000),
 	ooc_timer(1000),
 	shield_timer(500),
@@ -194,7 +193,6 @@ Client::Client(EQStreamInterface* ieqs)
 	auto_fire = false;
 	PendingGuildInvite = 0;
 	linkdead_timer.Disable();
-	client_timeout.Enable();
 	zonesummon_x = -2;
 	zonesummon_y = -2;
 	zonesummon_z = -2;

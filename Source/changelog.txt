@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==11/06/2007
+KLS: Reverted client timeouts.
+
 ==11/05/2007
 WildcardX: Fixed a bug that prevented player corpse summoning spells from working on Linux platforms.
 

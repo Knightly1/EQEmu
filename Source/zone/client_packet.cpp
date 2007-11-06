@@ -324,8 +324,6 @@ int Client::HandlePacket(const EQApplicationPacket *app)
 		mlog(CLIENT__NET_IN_TRACE, "Dispatch opcode: %s", buffer);
 		mpkt(CLIENT__NET_IN_TRACE, app);
 	}
-	
-	client_timeout.Start(RuleI(Zone,ClientTimeoutMS));
 
 	EmuOpcode opcode = app->GetOpcode();
 	if (opcode == OP_AckPacket) {

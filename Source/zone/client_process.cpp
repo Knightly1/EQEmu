@@ -80,14 +80,6 @@ bool Client::Process() {
 	bool ret = true;
 	//bool throughpacket = true;
 
-	//already connected to the zone
-	if(client_state == CLIENT_CONNECTED){
-		if(client_timeout.Check(false)){
-			if(!IsLD())
-				LinkDead();
-		}
-	}
-
 	if (Connected() || IsLD())
 	{
         // try to send all packets that weren't sent before
