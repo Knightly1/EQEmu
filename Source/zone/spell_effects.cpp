@@ -1189,10 +1189,12 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 							break;
 						}
 					}
-					else
-						if(TargetClient != this->CastToClient())
+					else {
+						if(TargetClient != this->CastToClient()) {
 							Message(13, "Your target must be a group member for this spell.");
 							break;
+						}
+					}
 
 					// Now we should either be casting this on self or its being cast on a valid group member
 					if(TargetClient) {
@@ -1202,6 +1204,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 								Message_StringID(4, SUMMONING_CORPSE, TargetClient->CastToMob()->GetCleanName());
 							else
 								Message_StringID(4, SUMMONING_CORPSE_OTHER, TargetClient->CastToMob()->GetCleanName());
+							
 							corpse->Summon(CastToClient(), true);
 						}
 						else {
