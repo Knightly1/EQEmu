@@ -1,6 +1,11 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==11/07/2007
+KLS: Reworked swarm pets a bit
+KLS: Swarm pets should no longer crash zones(I hope)
+KLS: Swarm pets will now gain all their information from the normal pet tables and the spell data, as a result the aa_swarmpets table is now obsolete.
+
 ==11/06/2007
 KLS: Reverted client timeouts.
 KLS: Fixed NPC HP and Mana Regen not loading from DB for NPCs

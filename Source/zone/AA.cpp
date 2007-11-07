@@ -42,7 +42,6 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemulator.net)
 
 //static data arrays, really not big enough to warrant shared mem.
 AA_DBAction AA_Actions[aaHighestID][MAX_AA_ACTION_RANKS];	//[aaid][rank]
-map<int16, AA_SwarmPet> AA_SwarmPets;	//key=spell_id
 map<int32,SendAA_Struct*>aas_send;
 
 /*
@@ -441,14 +440,27 @@ void Client::TemporaryPets(int16 spell_id, Mob *targ, const char *name_override,
 	
 	//Dook- swarms and wards 
 	
-	if(AA_SwarmPets.count(spell_id) != 1) {
-		//log write
-		LogFile->write(EQEMuLog::Error, "Unknown swarm pet spell id: %d", spell_id);
-		Message(0,"Unknown pet!");
+	PetRecord record;
+	if(!database.GetPetEntry(spells[spell_id].teleport_zone, &record))
+	{
+		LogFile->write(EQEMuLog::Error, "Unknown swarm pet spell id: %d, check pets table", spell_id);
+		Message(13, "Unable to find data for pet %s", spells[spell_id].teleport_zone);
 		return;
 	}
 	
-	const AA_SwarmPet &pet = AA_SwarmPets[spell_id];
+	AA_SwarmPet pet;
+	pet.count = 1;
+	pet.duration = 1;
+
+	for(int x = 0; x < 12; x++)
+	{
+		if(spells[spell_id].effectid[x] == SE_TemporaryPets)
+		{
+			pet.count = spells[spell_id].base[x];
+			pet.duration = spells[spell_id].max[x];
+		}
+	}
+	pet.npc_id = record.npc_type;
 
 	NPCType *made_npc = NULL;
 	
@@ -500,19 +512,28 @@ void Client::TemporaryPets(int16 spell_id, Mob *targ, const char *name_override,
 				GetX()+swarm_pet_x[summon_count], GetY()+swarm_pet_y[summon_count], 
 				GetZ(), GetHeading());
 
-		//give the pets somebody to "love"
-		if(targ != NULL)
-			npca->AddToHateList(targ, 1000, 1000);
+		if(!npca->GetSwarmInfo()){
+			AA_SwarmPetInfo* nSI = new AA_SwarmPetInfo;
+			npca->SetSwarmInfo(nSI);
+			npca->GetSwarmInfo()->duration = new Timer(pet_duration*1000);
+		}
+		else{
+			npca->GetSwarmInfo()->duration->Start(pet_duration*1000);
+		}
 
+		npca->GetSwarmInfo()->owner = this;
+
+		//give the pets somebody to "love"
+		if(targ != NULL){
+			npca->AddToHateList(targ, 1000, 1000);
+			npca->GetSwarmInfo()->target = targ->GetID();
+		}
+		
 		//we allocated a new NPC type object, give the NPC ownership of that memory
 		if(npc_dup != NULL)
 			npca->GiveNPCTypeData(npc_dup);
 		
-		npca->SetOwnerID(GetID());
-		
 		entity_list.AddNPC(npca);
-		npca->StartSwarmTimer(pet_duration);
-		
 		summon_count--;
 	}
 
@@ -876,41 +897,6 @@ bool ZoneDatabase::LoadAAEffects() {
 	}
 	else {
 		LogFile->write(EQEMuLog::Error, "Error in LoadAAEffects query '%s': %s", query, errbuf);;
-		//safe_delete_array(query);
-		return false;
-	}
-
-	return true;
-}
-
-bool ZoneDatabase::LoadSwarmSpells() {
-	char errbuf[MYSQL_ERRMSG_SIZE];
-    MYSQL_RES *result;
-    MYSQL_ROW row;
-
-	AA_SwarmPets.clear();
-	
-	const char *query = "SELECT spell_id,count,npc_id,duration FROM aa_swarmpets";
-	if (RunQuery(query, strlen(query), errbuf, &result)) {
-		//safe_delete_array(query);
-		int r;
-		while ((row = mysql_fetch_row(result))) {
-			r = 0;
-			int16 spell_id = atoi(row[r++]);
-			if(spell_id > SPDAT_RECORDS)
-				continue;
-			AA_SwarmPet pet;
-			
-			pet.count = atoi(row[r++]);
-			pet.npc_id = strtoul(row[r++], NULL, 10);
-			pet.duration = atoi(row[r++]);
-			
-			AA_SwarmPets[spell_id] = pet;
-		}
-		mysql_free_result(result);
-	}
-	else {
-		LogFile->write(EQEMuLog::Error, "Error in LoadSwarmSpells query '%s': %s", query, errbuf);
 		//safe_delete_array(query);
 		return false;
 	}

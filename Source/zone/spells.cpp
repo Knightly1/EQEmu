@@ -138,14 +138,19 @@ void NPC::SpellProcess()
 {
 	Mob::SpellProcess();
 	
-	//Dook- swarm pets 
-	if(GetBodyType() == BT_SwarmPet) {
-		if(swarm_timer.Check()) {
-			Depop(); 
-			swarm_timer.Disable();
-		} 
-   } 
+	if(GetSwarmInfo()){
+		if(GetSwarmInfo()->duration->Check())
+		{
+			Depop();
+		}
 
+		Mob *targMob = entity_list.GetMob(GetSwarmInfo()->target);
+		if(GetSwarmInfo()->target != 0)
+        {
+			if(!targMob)
+				Depop();
+		}
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////

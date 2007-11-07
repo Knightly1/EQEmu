@@ -1169,8 +1169,8 @@ Mob* Mob::GetOwnerOrSelf() {
 	if (owner->GetPetID() == this->GetID()) {
 		return owner;
 	}
-    if (GetBodyType() == BT_SwarmPet) {		//Dook- swarm pets
-		return(owner);
+	if(IsNPC() && CastToNPC()->GetSwarmInfo()){
+		return (CastToNPC()->GetSwarmInfo()->owner);
 	}
 	SetOwnerID(0);
 	return this;
@@ -1182,9 +1182,9 @@ Mob* Mob::GetOwner() {
 
 		return owner;
 	}
-    if (GetBodyType() == BT_SwarmPet) {		//Dook- swarm pets
-    	return(owner);
-   	}
+	if(IsNPC() && CastToNPC()->GetSwarmInfo()){
+		return (CastToNPC()->GetSwarmInfo()->owner);
+	}
 	SetOwnerID(0);
 	return 0;
 }

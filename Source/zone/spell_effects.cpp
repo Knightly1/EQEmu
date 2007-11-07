@@ -1027,8 +1027,8 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #endif
 				if(caster && caster->IsClient()) {
 					char eye_name[64];
-					snprintf(eye_name, sizeof(eye_name), "eye_of_%s", GetName());
-					int duration = spells[spell_id].buffduration * 6000;
+					snprintf(eye_name, sizeof(eye_name), "Eye_of_%s", caster->GetCleanName());
+					int duration = CalcBuffDuration(caster, this, spell_id) * 6;
 					caster->CastToClient()->TemporaryPets(spell_id, NULL, eye_name, duration);
 				}
 				break;
@@ -1784,8 +1784,11 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 			case SE_TemporaryPets:         //Dook- swarms and wards:
 			{
 				// EverHood - this makes necro epic 1.5/2.0 proc work properly
-				if(caster->IsClient())
-					caster->CastToClient()->TemporaryPets(spell_id, this);
+				if(caster->IsClient()){
+					char pet_name[64];
+					snprintf(pet_name, sizeof(pet_name), "%s`s pet", caster->GetCleanName());
+					caster->CastToClient()->TemporaryPets(spell_id, this, pet_name);
+				}
 				break;
 			}
 

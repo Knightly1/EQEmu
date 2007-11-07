@@ -217,6 +217,11 @@ public:
 	NPCProximity* proximity;
 
 	Spawn2*	respawn2;
+
+	AA_SwarmPetInfo *GetSwarmInfo() { return (swarmInfoPtr); }
+	void SetSwarmInfo(AA_SwarmPetInfo *mSwarmInfo) { swarmInfoPtr = mSwarmInfo; }
+
+
 protected:
 	
 	const NPCType*	NPCTypedata;
@@ -302,6 +307,8 @@ protected:
 	int32   equipment[MAX_MATERIALS];	//this is an array of item IDs
 	int16	d_meele_texture1;		//this is an item Material value
 	int16	d_meele_texture2;		//this is an item Material value (offhand)
+
+	AA_SwarmPetInfo *swarmInfoPtr;
 	
 private:
 	int32	loottable_id;

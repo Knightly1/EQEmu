@@ -248,6 +248,15 @@ typedef enum {
 	petCharmed
 } PetType;
 
+class AA_SwarmPetInfo {
+public:
+	AA_SwarmPetInfo() { target = 0; owner = NULL; duration = NULL;}
+	~AA_SwarmPetInfo() { target = 0; owner = NULL; safe_delete(duration); }
+	Timer *duration;
+	int32 target; //the target ID
+	Mob *owner;
+};
+
 typedef enum {
 	SingleTarget,	// causes effect to spell_target
 	AETarget,			// causes effect in aerange of target + target

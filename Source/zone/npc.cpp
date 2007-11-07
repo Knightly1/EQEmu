@@ -148,6 +148,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	guard_y = 0;
 	guard_z = 0;
 	guard_heading = 0;
+	swarmInfoPtr = NULL;
 	
 //	SaveSpawnSpot();
 
@@ -380,12 +381,22 @@ NPC::~NPC()
 	}
 	faction_list.clear();
 	}
+
+	safe_delete(swarmInfoPtr);
 }
 
 void NPC::SetTarget(Mob* mob) {
 	if(mob == target)		//dont bother if they are allready our target
 		return;
 	
+	//our target is already set, do not turn from the course
+	if(GetSwarmInfo()){
+		Mob *targ = entity_list.GetMob(GetSwarmInfo()->target);
+		if(targ != mob){
+			return;
+		}
+	}
+
 	if (mob) {
 		SetAttackTimer();
 	} else {
@@ -497,9 +508,9 @@ bool NPC::Process()
         Mob* owner = entity_list.GetMob(this->ownerid);
         if (owner != 0)
         {
-        	if(GetBodyType() != BT_SwarmPet)
-	            owner->SetPetID(0);
-		this->ownerid = 0;
+        	//if(GetBodyType() != BT_SwarmPet)
+	        //    owner->SetPetID(0);
+			this->ownerid = 0;
             this->petid = 0;
         }
         return false;

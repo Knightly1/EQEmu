@@ -592,31 +592,7 @@ void Mob::AI_Process() {
 		
 		bool is_combat_range = CombatRange(target);
 		
-		//swarm pet procs. Adapted from Dook's work
-		if(GetBodyType() == BT_SwarmPet 
-			&& is_combat_range
-			&& IsAttackAllowed(target) ) {
-			if(GetClass() == RANGER) {
-				//Dook- Swarm Pets -Swarm of Decay
-				if(DistNoRoot(*target) <= 10000) {
-					FaceTarget(target); 
-					DoAnim(animSwarmAttack, 9); 
-					int dmg=MakeRandomInt(50,200);
-					target->Damage(this, dmg, SPELL_UNKNOWN, ARCHERY, true); 
-				}
-			} else if(GetRace() == 89) {
-	//WTF is up with classes 90 and 91???
-				//Dook- Servant of Ro castin Bolt of Lava 
-				CastSpell(3005,target->GetID(),9,3000,0,0,0); 
-			} else if(GetRace()==127 && GetClass()==90) {
-				if(MakeRandomInt(0,10) >= 9) {
-					CastSpell(1638,target->GetID(),9,0,0,0,0); 
-				}
-			} else if(GetRace() == 120 && GetClass() == 91) {
-				//Dook- ToDo Add GoD shaman swarm puppy proc here 
-			}
-		}
-		
+	
         if (is_combat_range) 
         {
 			if (AImovement_timer->Check()) 
