@@ -568,6 +568,8 @@ bool logpos;
 	inline	bool	IsCasting() const { return((casting_spell_id != 0)); }
 	int16	CastingSpellID() const { return casting_spell_id; }
 	float	GetAOERange(uint16 spell_id);
+	void	TemporaryPets(int16 spell_id, Mob *target, const char *name_override = NULL, uint32 duration_override = 0);
+	//void	WakeTheDead(int16 spell_id, Mob *target);
 	
 // vesuvias - appearence fix
 	void	SendIllusionPacket(int16 in_race, int8 in_gender = 0xFF, int16 in_texture = 0xFFFF, int16 in_helmtexture = 0xFFFF, int8 in_haircolor = 0xFF, int8 in_beardcolor = 0xFF, int8 in_eyecolor1 = 0xFF, int8 in_eyecolor2 = 0xFF, int8 in_hairstyle = 0xFF, int8 in_luclinface = 0xFF, int8 in_beard = 0xFF, int8 in_aa_title = 0xFF);
@@ -593,6 +595,8 @@ bool logpos;
 	inline bool HasOwner() const { return(GetOwnerID() != 0); }
 	inline bool IsPet() const { return(GetOwnerID() != 0); }
 	inline bool HasPet() const { return(GetPetID() != 0); }
+	bool HadTempPets() const { return(hasTempPet); }
+	void TempPets(bool i) { hasTempPet = i; }
 	
     inline const	bodyType	GetBodyType() const	{ return bodytype; }
 //    int16   FindSpell(int16 classp, int16 level, int type, FindSpellType spelltype, float distance, sint32 mana_avail);
@@ -1002,6 +1006,9 @@ protected:
 	// hp event
 	int nexthpevent;
 	int nextinchpevent;
+
+	//temppet
+	bool hasTempPet;
 
 	EGNode *_egnode;	//the EG node we are in
 	

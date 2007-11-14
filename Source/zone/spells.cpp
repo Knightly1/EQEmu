@@ -139,6 +139,11 @@ void NPC::SpellProcess()
 	Mob::SpellProcess();
 	
 	if(GetSwarmInfo()){
+		if(!GetSwarmInfo()->owner)
+		{
+			Depop();
+		}
+
 		if(GetSwarmInfo()->duration->Check())
 		{
 			Depop();

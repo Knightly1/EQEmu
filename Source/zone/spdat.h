@@ -260,11 +260,11 @@ typedef enum {
 #define SE_CurrentEndurance			189
 #define SE_Amnesia					191	//Amnesia (Silence vs Melee Effect)
 #define SE_Hate2					192	//not implemented
-
+#define SE_SkillAttack				193
 #define SE_FadingMemories			194
 #define SE_StunResist				195
 #define SE_Strikethrough			196
-
+#define SE_SkillDamageTaken			197
 #define SE_Endurance2				198
 
 #define SE_ProcChance				200
@@ -272,7 +272,6 @@ typedef enum {
 #define SE_IllusionOther			202	//not implemented
 #define SE_MassGroupBuff			203	//not implemented
 #define SE_GroupFearImmunity		204
-
 #define SE_Rampage					205
 #define SE_AETaunt					206
 #define SE_FleshToBone				207
@@ -301,8 +300,11 @@ typedef enum {
 #define SE_DivineSave				232	//not implemented (base == % chance on death to insta-res)
 
 #define	SE_ChannelingChance			235 //Appears to only be used in AAs
+
 #define SE_GivePetGroupTarget		237 //aaeffect, makes pets targetable by group spells
+
 #define SE_SetBreathLevel			246 //aa effect
+
 #define SE_SecondaryForte			248 //aa effect, lets you gain a 2nd forte, gives you a 2nd specialize skill that can go past 50 to 100
 #define SE_SecondaryDmgInc			249 //aa effect, sinister strikes
 
@@ -311,6 +313,7 @@ typedef enum {
 #define SE_PetDiscipline			257 //aa effect /pet hold
 #define SE_TripleBackstab			258 //not implemented
 #define SE_CombatStability			259 //aa effect
+#define SE_AddInstrumentMod			260
 
 #define SE_RaiseStatCap				262 //not implemented
 #define	SE_TradeSkillMastery		263	//lets you raise more than one tradeskill above master.
@@ -321,7 +324,7 @@ typedef enum {
 #define SE_ReduceTradeskillFail		268 //aa effect, reduces chance to fail with given tradeskill by a percent chance
 
 #define SE_BaseMovementSpeed		271 //mods basemove speed, doesn't stack with other move mods, aa effect
-
+#define SE_CastingLevel2			272
 #define SE_CriticalDoTChance		273	//not implemented
 #define SE_CriticalHealChance		274	//not implemented
 
@@ -331,13 +334,16 @@ typedef enum {
 #define SE_Flurry					279	//not implemented
 #define SE_PetFlurry				280
 
-#define SE_SomeRecourse				289 //not implemented
+#define SE_FocusCombatDurationMod	287
+
+#define SE_ImprovedSpellEffect		289 //This effect turns into this?
 
 #define SE_Purify					291 //not implemented
 
 #define SE_CriticalSpellChance		294 //not implemented
-#define SE_SpellVulnerability		296	//not implemented, base % increase in incoming spell damage
 
+#define SE_SpellVulnerability		296	//not implemented, base % increase in incoming spell damage
+#define SE_Empathy					297 //some kind of damage focus effect, maybe defensive?
 #define SE_ChangeHeight				298	//not implemented
 #define SE_WakeTheDead				299
 #define SE_Doppelganger				300
@@ -371,7 +377,10 @@ typedef enum {
 #define SE_SummonToCorpse			332 //not implemented
 #define SE_EffectOnFade				333 //not implemented
 #define SE_BardAEDot				334	//needs a better name (spell id 703 and 730)
+
 #define SE_PercentXPIncrease		337 //not implemented
+#define SE_SummonAndResAllCorpses	338 //not implemented
+#define SE_TriggerOnCast			339 //not implemented
 
 #define DF_Permanent		50
 

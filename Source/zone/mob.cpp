@@ -309,6 +309,7 @@ Mob::Mob(const char*   in_name,
 	nextinchpevent = -1;
 	
 	fix_pathing = false;
+	TempPets(false);
 }
 
 Mob::~Mob()
@@ -336,6 +337,9 @@ Mob::~Mob()
 #ifdef ENABLE_FEAR_PATHING
 	safe_delete(fear_path_state);
 #endif
+	if(HadTempPets()){
+		entity_list.DestroyTempPets(this);
+	}
 }
 
 int32 Mob::GetAppearanceValue(EmuAppearance iAppearance) {

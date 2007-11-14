@@ -434,7 +434,7 @@ void Client::HandleAAAction(aaID activate) {
 
 //Originally written by Branks
 //functionality rewritten by Father Nitwit
-void Client::TemporaryPets(int16 spell_id, Mob *targ, const char *name_override, uint32 duration_override) {
+void Mob::TemporaryPets(int16 spell_id, Mob *targ, const char *name_override, uint32 duration_override) {
 	
 	//It might not be a bad idea to put these into the database, eventually..
 	
@@ -492,7 +492,8 @@ void Client::TemporaryPets(int16 spell_id, Mob *targ, const char *name_override,
 	static const float swarm_pet_y[MAX_SWARM_PETS] = { 	5, 5, -5, -5, 
 														10, 10, -10, -10,
 														8, 8, -8, -8 };
-	
+	TempPets(true);
+
 	while(summon_count > 0) {
 		int pet_duration = pet.duration;
 		if(duration_override > 0)

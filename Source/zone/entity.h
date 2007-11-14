@@ -181,6 +181,7 @@ public:
 	void	RemoveAllTraps();
 	void	RemoveAllObjects();
 	void	RemoveAllLocalities();
+	void	DestroyTempPets(Mob *owner);
 	Entity*	GetEntityMob(int16 id);
 	Entity* GetEntityMob(const char *name);
 	Entity*	GetEntityDoor(int16 id);

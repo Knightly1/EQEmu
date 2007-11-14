@@ -593,12 +593,12 @@ void WorldServer::Process() {
                         client->BuffFadeAll();
                         client->SpellOnTarget(756,client);
 						if(srs->rez.spellid != 2168)
-							client->AddEXP(srs->exp);
+							client->SetEXP((client->GetEXP()+srs->exp), client->GetAAXP(), true);
                     }
                     else {
                       // GM resurrection
                       _log(ZONE__WORLD, "Sending gm cast rez");
-                        client->AddEXP(srs->exp);
+					    client->SetEXP((client->GetEXP()+srs->exp), client->GetAAXP(), true);
                     }
 					ServerPacket* pack = new ServerPacket(ServerOP_RezzPlayerAccept,sizeof(SimpleName_Struct));
 					SimpleName_Struct* corpse = (SimpleName_Struct*)pack->pBuffer;

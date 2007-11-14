@@ -3057,6 +3057,24 @@ void EntityList::UpdateHoTT(Mob* target) {
 	}
 }
 
+void EntityList::DestroyTempPets(Mob *owner)
+{
+	LinkedListIterator<NPC*> iterator(npc_list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		NPC* n = iterator.GetData();
+		if(n->GetSwarmInfo())
+		{
+			if(n->GetSwarmInfo()->owner == owner)
+			{
+				n->Depop();
+			}
+		}
+		iterator.Advance();
+	}
+}
+
 
 
 

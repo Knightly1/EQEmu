@@ -7026,6 +7026,7 @@ void command_traindisc(Client *c, const Seperator *sep)
 				for(int r = 0; r < MAX_PP_DISCIPLINES; r++) {
 					if(t->GetPP().disciplines.values[r] == curspell) {
 						t->Message(13, "You already know this discipline.");
+						r = MAX_PP_DISCIPLINES;
 					} else if(t->GetPP().disciplines.values[r] == 0) {
 						t->GetPP().disciplines.values[r] = curspell;
 						t->SendDisciplineUpdate();

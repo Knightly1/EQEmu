@@ -1,6 +1,13 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==11/14/2007
+KLS: Swarm pets should be forced to correctly depop after their owner disappears.
+KLS: NPCs should be able to use swarm pets correctly now.
+KLS: #traindisc should no longer learn disciplines over already known disciplines.
+KLS: Added a few more known spell effects to spdat.h, not implemented any yet
+KLS: Rez experience should now only goto regular experience, not AA experience.
+
 ==11/07/2007
 KLS: Reworked swarm pets a bit
 KLS: Swarm pets should no longer crash zones(I hope)
