@@ -329,7 +329,9 @@ bool IsImprovedDamageSpell(int16 spell_id)
 
 bool IsAEDurationSpell(int16 spell_id)
 {
-	return IsValidSpell(spell_id) && spells[spell_id].AEDuration !=0;
+	return IsValidSpell(spell_id) &&
+		(spells[spell_id].targettype == ST_AETarget || spells[spell_id].targettype == ST_UndeadAE )
+		&& spells[spell_id].AEDuration !=0;
 }
 
 bool IsPureNukeSpell(int16 spell_id)

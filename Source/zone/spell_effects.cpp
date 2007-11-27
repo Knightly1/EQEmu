@@ -65,7 +65,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 
 	const SPDat_Spell_Struct &spell = spells[spell_id];
 
-	if((spell.buffdurationformula != 0 && spell.buffduration > 0) || spell.buffdurationformula == 50) {	//50 is a special case of "unlimited", which has a 0 duration
+	if((CalcBuffDuration(caster,this,spell_id)-1) != 0){
 		buffslot = AddBuff(caster, spell_id);
 		if(buffslot == -1)	// stacking failure
 			return false;
@@ -274,9 +274,15 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				else
 				{
 					target_zone = spell.teleport_zone;
-					if(IsNPC()){
-						CastToNPC()->Depop();
-						break;
+					if(IsNPC() && target_zone != zone->GetShortName()){
+						if(!GetOwner()){
+							CastToNPC()->Depop();
+							break;
+						}else{
+							if(!GetOwner()->IsClient())
+								CastToNPC()->Depop();
+								break;
+						}
 					}
 				}
 
@@ -299,7 +305,10 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 						LogFile->write(EQEMuLog::Debug, "Succor/Evacuation Spell In Same Zone.");
 #endif
-						CastToClient()->MovePC(target_zone, x, y, z, heading, 0, false, ZoneToSafeCoords);
+						if(IsClient())
+							CastToClient()->MovePC(target_zone, x, y, z, heading, 0, false, ZoneToSafeCoords);
+						else
+							GMMove(x, y, z, heading);
 						Mob *mypet = GetPet();
 						if(mypet){
 							entity_list.RemoveFromHateLists(mypet, false);
@@ -309,7 +318,8 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 						LogFile->write(EQEMuLog::Debug, "Succor/Evacuation Spell To Another Zone.");
 #endif
-						CastToClient()->MovePC(target_zone, x, y, z, heading);
+						if(IsClient())
+							CastToClient()->MovePC(target_zone, x, y, z, heading);
 					}
 				}
 
@@ -333,9 +343,15 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				else
 				{
 					target_zone = spell.teleport_zone;
-					if(IsNPC()){
-						CastToNPC()->Depop();
-						break;
+					if(IsNPC() && target_zone != zone->GetShortName()){
+						if(!GetOwner()){
+							CastToNPC()->Depop();
+							break;
+						}else{
+							if(!GetOwner()->IsClient())
+								CastToNPC()->Depop();
+								break;
+						}
 					}
 				}
 
@@ -356,6 +372,10 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				if(IsClient())
 				{
 					CastToClient()->MovePC(target_zone, x, y, z, heading);
+				}
+				else{
+					if(!target_zone)
+						GMMove(x, y, z, heading);
 				}
 				break;
 			}

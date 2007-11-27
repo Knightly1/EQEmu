@@ -1169,10 +1169,17 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 				Message_StringID(13,SPELL_NEED_TAR);
 				return false;
 			}
-			if(IsClient() && IsGrouped()){
-				Group *g = entity_list.GetGroupByMob(this);
-				if(g && g->IsGroupMember(spell_target) && spell_target != this){
-					CastAction = SingleTarget;
+			if(spell_target != this){
+				if(IsClient() && IsGrouped()){
+					Group *g = entity_list.GetGroupByMob(this);
+					if(g && g->IsGroupMember(spell_target) && spell_target != this){
+						CastAction = SingleTarget;
+					}
+					else{
+						mlog(SPELLS__CASTING_ERR, "Spell %d canceled: Attempted to cast a Single Target Group spell on a member not in the group.", spell_id);
+						Message(13, "You must have a group member targeted for this spell.");
+						return false;
+					}
 				}
 				else{
 					mlog(SPELLS__CASTING_ERR, "Spell %d canceled: Attempted to cast a Single Target Group spell on a member not in the group.", spell_id);
@@ -1180,11 +1187,8 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 					return false;
 				}
 			}
-			else{
-				mlog(SPELLS__CASTING_ERR, "Spell %d canceled: Attempted to cast a Single Target Group spell on a member not in the group.", spell_id);
-				Message(13, "You must have a group member targeted for this spell.");
-				return false;
-			}
+			else
+				CastAction = SingleTarget;
 			break;
 		}		
 
@@ -1672,7 +1676,7 @@ int CalcBuffDuration_formula(int level, int formula, int duration)
 			return i < duration ? (i < 1 ? 1 : i) : duration;
 
 		case 4:	// only used by 'LowerElement'
-			return duration;
+			return ((duration != 0) ? duration : 50);
 
 		case 5:	// solar: 2/7/04
 			i = duration;
@@ -1684,7 +1688,7 @@ int CalcBuffDuration_formula(int level, int formula, int duration)
 
 		case 7:	// solar: 2/7/04
 			i = level;
-			return i < duration ? (i < 1 ? 1 : i) : duration;
+			return i > duration ? (i < 1 ? 1 : i) : duration;
 
 		case 8:	// solar: 2/7/04
 			i = level + 10;
@@ -2799,7 +2803,7 @@ float Mob::ResistSpell(int8 resist_type, int16 spell_id, Mob *caster)
 			resistchance -= (lvldiff)*0.6;
 		}
 		else{
-			resistchance -= (lvldiff)*4.0;
+			resistchance -= (lvldiff)*2.0;
 		}
 	}
 	else{

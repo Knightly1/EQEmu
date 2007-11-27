@@ -222,6 +222,9 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon, bool isAu
 	if(item->ManaRegen > 0) {
 		newbon->ManaRegen += item->ManaRegen;
 	}
+	if(item->Attack > 0) {
+		newbon->ATK += item->Attack;
+	}
 	if(item->EnduranceRegen > 0){
 		newbon->EnduranceRegen += item->EnduranceRegen;
 	}
@@ -848,6 +851,9 @@ void NPC::CalcItemBonuses(StatBonuses *newbon)
 				}
 				if(cur->ManaRegen > 0) {
 					newbon->ManaRegen += cur->ManaRegen;
+				}
+				if(cur->Attack > 0) {
+					newbon->ATK += cur->Attack;
 				}
 				if(cur->DamageShield > 0) {
 					newbon->DamageShield += cur->DamageShield;

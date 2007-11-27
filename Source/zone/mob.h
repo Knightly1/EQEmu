@@ -93,6 +93,7 @@ enum {
 	IMMUNE_FLEEING,		//f
 	IMMUNE_MELEE_EXCEPT_BANE,	//O
 	IMMUNE_MELEE_NONMAGICAL,	//W
+	IMMUNE_AGGRO, //H, wont aggro, ever.
 	SPECATK_MAXNUM
 				//X,Y,Z are old interactive NPC codes
 };

@@ -228,34 +228,37 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 
 	ExportVar(packagename.c_str(), "charid", charid);
 
-	// Delete expired global variables
-	database.RunQuery(query, MakeAnyLenString(&query,
-		"DELETE FROM quest_globals WHERE expdate < UNIX_TIMESTAMP()"), errbuf);
-	safe_delete_array(query);
+	//only export globals if the npcmob has the qglobal flag
+	if(npcmob && npcmob->GetQglobal()){
+		// Delete expired global variables
+		database.RunQuery(query, MakeAnyLenString(&query,
+			"DELETE FROM quest_globals WHERE expdate < UNIX_TIMESTAMP()"), errbuf);
+		safe_delete_array(query);
 
-	map<string, string> globhash;
+		map<string, string> globhash;
 
-	// Load global variables
-	database.RunQuery(query, MakeAnyLenString(&query,
-	  "SELECT name,value"
-	  " FROM quest_globals"
-	  " WHERE (npcid=%i || npcid=0) && (charid=%i || charid=0) && (zoneid=%i || zoneid=0)",
-		  npcmob->GetNPCTypeID(),charid,zone->GetZoneID()), errbuf, &result);
-	if (result)
-	{
-		while ((row = mysql_fetch_row(result)))
+		// Load global variables
+		database.RunQuery(query, MakeAnyLenString(&query,
+		"SELECT name,value"
+		" FROM quest_globals"
+		" WHERE (npcid=%i || npcid=0) && (charid=%i || charid=0) && (zoneid=%i || zoneid=0)",
+			npcmob->GetNPCTypeID(),charid,zone->GetZoneID()), errbuf, &result);
+		if (result)
 		{
-			globhash[row[0]] = row[1];
+			while ((row = mysql_fetch_row(result)))
+			{
+				globhash[row[0]] = row[1];
 
-			// DEPRECATED: Export variables as $var in addition to hash
-			ExportVar(packagename.c_str(), row[0], row[1]);
+				// DEPRECATED: Export variables as $var in addition to hash
+				ExportVar(packagename.c_str(), row[0], row[1]);
+			}
+			mysql_free_result(result);
 		}
-		mysql_free_result(result);
-	}
-	safe_delete_array(query);
+		safe_delete_array(query);
 
-	// Put key-value pairs in perl hash
-	ExportHash(packagename.c_str(), "qglobals", globhash);
+		// Put key-value pairs in perl hash
+		ExportHash(packagename.c_str(), "qglobals", globhash);
+	}
 
 	int8 fac = 0;
 	if (mob && mob->IsClient()) {

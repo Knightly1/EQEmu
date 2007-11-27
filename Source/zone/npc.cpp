@@ -1295,6 +1295,9 @@ void Mob::NPCSpecialAttacks(const char* parse, int permtag) {
 		case 'W':
 			SpecAttacks[IMMUNE_MELEE_NONMAGICAL] = true;
 			break;
+		case 'H':
+			SpecAttacks[IMMUNE_AGGRO] = true;
+			break;
         default:
             break;
         }

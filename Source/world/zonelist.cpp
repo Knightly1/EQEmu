@@ -570,6 +570,15 @@ int32 ZSList::TriggerBootup(int32 iZoneID) {
 	LinkedListIterator<ZoneServer*> iterator(list);
 	iterator.Reset();
 	while(iterator.MoreElements()) {
+		if(iterator.GetData()->GetZoneID() == iZoneID)
+		{
+			return iterator.GetData()->GetID();
+		}
+		iterator.Advance();
+	}
+
+	iterator.Reset();
+	while(iterator.MoreElements()) {
 		if (iterator.GetData()->GetZoneID() == 0 && !iterator.GetData()->IsBootingUp()) {
 			ZoneServer* zone=iterator.GetData();
 			zone->TriggerBootup(iZoneID);

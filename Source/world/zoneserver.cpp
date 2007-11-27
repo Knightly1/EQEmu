@@ -814,6 +814,8 @@ void ZoneServer::ChangeWID(int32 iCharID, int32 iWID) {
 
 void ZoneServer::TriggerBootup(int32 iZoneID, const char* adminname, bool iMakeStatic) {
 	BootingUp = true;
+	zoneID = iZoneID;
+
 	ServerPacket* pack = new ServerPacket(ServerOP_ZoneBootup, sizeof(ServerZoneStateChange_struct));
 	ServerZoneStateChange_struct* s = (ServerZoneStateChange_struct *) pack->pBuffer;
 	s->ZoneServerID = ID;

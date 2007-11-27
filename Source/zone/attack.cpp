@@ -1765,7 +1765,7 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 		return; 
 	}	
 
-	if(IsFamiliar()) //familiars can't really attack anything
+	if(IsFamiliar() || SpecAttacks[IMMUNE_AGGRO])
 		return;	
 
 	if (other == myowner)
@@ -1783,15 +1783,16 @@ void Mob::AddToHateList(Mob* other, sint32 hate, sint32 damage, bool iYellForHel
 		} else {
 			// cb:2007-08-17
 			// owner must get on list, but he's not actually gained any hate yet
-			hate_list.Add(owner, 0, 0, false, !iBuffTic);
+			if(!owner->SpecAttacks[IMMUNE_AGGRO])
+				hate_list.Add(owner, 0, 0, false, !iBuffTic);
 		}
 	}	
 	
 	if (mypet && (!(GetAA(aaPetDiscipline) && mypet->IsHeld()))) { // I have a pet, add other to it
-		if(!mypet->IsFamiliar())
+		if(!mypet->IsFamiliar() && !mypet->SpecAttacks[IMMUNE_AGGRO])
 			mypet->hate_list.Add(other, 0, 0, bFrenzy);
 	} else if (myowner) { // I am a pet, add other to owner if it's NPC/LD
-		if (myowner->IsAIControlled())
+		if (myowner->IsAIControlled() && !myowner->SpecAttacks[IMMUNE_AGGRO])
 			myowner->hate_list.Add(other, 0, 0, bFrenzy);
 	}
 	if (!wasengaged) { 

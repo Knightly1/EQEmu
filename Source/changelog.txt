@@ -1,6 +1,17 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==11/26/2007
+KLS: Dynamic zones will now not attempt to boot up more than one instance of the zone if two or more clients request it in quick succession.
+KLS: Fixed: qglobals will now not be exported for npcs that do not have the qglobal flag set in the perl parser.
+KLS: Added a new npc special attack 'H' for immune to aggro, mobs with this set should not aggro no matter what a person does to them.
+KLS: Fixed ATK loading in item bonuses
+KLS: AEDuration calculation will now take target type into account correctly
+KLS: Player pets should now persist through a teleport spell
+KLS: Players will now be able to target themselves for group spells if they are not in a group
+KLS: Fixed some buff duration oddities.
+KLS: Level should have somewhat less of an impact for players in the resist code.
+
 ==11/14/2007
 KLS: Swarm pets should be forced to correctly depop after their owner disappears.
 KLS: NPCs should be able to use swarm pets correctly now.
