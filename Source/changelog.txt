@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==11/28/2007
+Rogean: Fixed another no-drop trade hack.
+
 ==11/26/2007
 KLS: Dynamic zones will now not attempt to boot up more than one instance of the zone if two or more clients request it in quick succession.
 KLS: Fixed: qglobals will now not be exported for npcs that do not have the qglobal flag set in the perl parser.

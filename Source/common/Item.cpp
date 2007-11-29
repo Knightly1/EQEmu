@@ -717,11 +717,12 @@ void Inventory::DeleteItem(sint16 slot_id, uint8 quantity)
 
 // Checks All items in a bag for No Drop
 bool Inventory::CheckNoDrop(sint16 slot_id) {
-    const ItemInst* inst = GetItem(SLOT_CURSOR);
+    ItemInst* inst = GetItem(slot_id);
+	if (!inst) return false;
 	if (!inst->GetItem()->NoDrop) return true;
 	if (inst->GetItem()->ItemClass == 1) {
 		for (int16 i=0; i<10; i++) {
-			const ItemInst* bagitem = GetItem(Inventory::CalcSlotId(slot_id, i));
+			ItemInst* bagitem = GetItem(Inventory::CalcSlotId(slot_id, i));
 			if (bagitem && !bagitem->GetItem()->NoDrop) return true;
 		}
 	}

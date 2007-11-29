@@ -160,6 +160,13 @@ void Client::SummonItem(uint32 item_id, sint8 charges, uint32 aug1, uint32 aug2,
 // Drop item from inventory to ground (generally only dropped from SLOT_CURSOR)
 void Client::DropItem(sint16 slot_id)
 {
+
+	if (GetInv().CheckNoDrop(slot_id)) {
+		Message(0, "No Drop Exploit: Items Destroyed.");
+		GetInv().DeleteItem(slot_id);
+		return;
+	}
+
 	// Take control of item in client inventory
 	ItemInst* inst = m_inv.PopItem(slot_id);
 	
@@ -175,11 +182,7 @@ void Client::DropItem(sint16 slot_id)
 		database.SaveCursor(CharacterID(), s, e);
 	} else
 		database.SaveInventory(CharacterID(), NULL, slot_id);
-	if (inst->GetItem()->NoDrop == 0)
-	{
-		Message(0, "You can't drop a no drop item.");
-		return;
-	}
+
 	// Package as zone object
 	Object* object = new Object(this, inst);
 	entity_list.AddObject(object, true);
