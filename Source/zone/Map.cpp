@@ -551,8 +551,6 @@ bool Map::LineIntersectsFace( PFACE cface, VERTEX p1, VERTEX p2, VERTEX *result)
 	if( cface == NULL ) {
 		return(false);  //cant intersect a face we dont have... i guess
 	}
-
-#define ABS(x) ((x)<0?-(x):(x))
 	
 	const VERTEX &pa = cface->a;
 	const VERTEX &pb = cface->b;

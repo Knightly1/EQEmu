@@ -201,9 +201,8 @@ void NPC::UpdateWaypoint(int wp_index)
 				
 				mlog(AI__WAYPOINTS, "Next waypoint %d: (%.3f, %.3f, %.3f)", wp_index, cur_wp_x, cur_wp_y, cur_wp_z);
 				
-#ifdef FIX_PATHING_WHEN_MOVING
 			    //fix up pathing Z
-			    if(zone->map != NULL) {
+			    if(zone->map != NULL && RuleB(Map, FixPathingZAtWaypoints) ) {
 			    	VERTEX dest;
 			    	dest.x = cur_wp_x;
 			    	dest.y = cur_wp_y;
@@ -211,12 +210,11 @@ void NPC::UpdateWaypoint(int wp_index)
 			    	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
 			    	if(n != NODE_NONE) {
 			    		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-			    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+			    		if( (newz > -2000) && ABS(newz-dest.z) < RuleR(Map, FixPathingZMaxDeltaWaypoint)) { // Sanity check.
 							cur_wp_z = newz+1;
 			    		}
 			    	}
 			    }
-#endif
 	
 }
 
@@ -404,9 +402,8 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 		
 		mlog(AI__WAYPOINTS, "Calculating new position2 to (%.3f, %.3f, %.3f), old vector (%.3f, %.3f, %.3f)", x, y, z, tar_vx, tar_vy, tar_vz);
 		
-#ifdef FIX_PATHING_WHEN_MOVING
 	    //fix up pathing Z
-	    if(checkZ && zone->map != NULL) {
+	    if(checkZ && zone->map != NULL && RuleB(Map, FixPathingZWhenMoving)) {
 	    	VERTEX dest;
 	    	dest.x = x_pos;
 	    	dest.y = y_pos;
@@ -414,12 +411,11 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 	    	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), x_pos, y_pos);
 	    	if(n != NODE_NONE) {
 	    		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-	    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+	    		if( (newz > -2000) && ABS(newz-dest.z) < RuleR(Map, FixPathingZMaxDeltaMoving)) { // Sanity check.
 					z_pos = newz+1;
 	    		}
 	    	}
 	    }
-#endif
 		tar_ndx++;
 		return true;
 	}
@@ -493,9 +489,8 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 		mlog(AI__WAYPOINTS, "Next position2 (%.3f, %.3f, %.3f) (%d steps)", x_pos, y_pos, z_pos, numsteps);
 	}
 	
-#ifdef FIX_PATHING_WHEN_MOVING
     //fix up pathing Z
-    if(checkZ && zone->map != NULL) {
+    if(checkZ && zone->map != NULL && RuleB(Map, FixPathingZWhenMoving)) {
     	VERTEX dest;
     	dest.x = x_pos;
     	dest.y = y_pos;
@@ -503,12 +498,11 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
     	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), x_pos, y_pos);
     	if(n != NODE_NONE) {
     		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+    		if( (newz > -2000) && ABS(newz-dest.z) < RuleR(Map, FixPathingZMaxDeltaMoving)) { // Sanity check.
 				z_pos = newz+1;
     		}
     	}
     }
-#endif
 	
 	SetMoving(true);
 	moved=true;
@@ -580,9 +574,8 @@ bool Mob::CalculateNewPosition(float x, float y, float z, float speed, bool chec
 		mlog(AI__WAYPOINTS, "Next position (%.3f, %.3f, %.3f)", x_pos, y_pos, z_pos);
 	}
 	
-#ifdef FIX_PATHING_WHEN_MOVING
     //fix up pathing Z
-    if(checkZ && zone->map != NULL) {
+    if(checkZ && zone->map != NULL && RuleB(Map, FixPathingZWhenMoving)) {
     	VERTEX dest;
     	dest.x = x_pos;
     	dest.y = y_pos;
@@ -590,12 +583,11 @@ bool Mob::CalculateNewPosition(float x, float y, float z, float speed, bool chec
     	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
     	if(n != NODE_NONE) {
     		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+    		if( (newz > -2000) && ABS(newz-dest.z) < RuleR(Map, FixPathingZMaxDeltaMoving)) { // Sanity check. 
 				z_pos = newz+1;
     		}
     	}
     }
-#endif
 	
 	//OP_MobUpdate
 	if((old_test_vector!=test_vector) || tar_ndx>20){ //send update
@@ -677,27 +669,29 @@ void NPC::AssignWaypoints(int32 grid) {
 					newwp.x = atof(row[0]);
 					newwp.y = atof(row[1]);
 					newwp.z = atof(row[2]);
-
-#ifdef ASSIGN_BESTZ_WAYPOINTS_ON_LOAD
-					// Experimental. This code will send any waypoint that is 'in the air' down to ground level.
-
-					VERTEX dest;
-					dest.x = newwp.x;
-					dest.y = newwp.y;
-					dest.z = newwp.z;
-															                                        				   NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
-					if(n != NODE_NONE) {
-						float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-						// The following test is a sanity check. 45 is an arbitrary value, chosen during testing
-						// because all the Z co-ordinates of the waypoints in The Grey where <45 units above the ground.
-						if( (newz > -2000) && ABS(newz-dest.z)<45) {
-							newwp.z = newz+1;
-							// printf("Updated Z for Grid %d, Waypoint %d from %.3f to %.3f\n",  grid, newwp.index,dest.z,newwp.z);
+					
+					if(zone->map != NULL && RuleB(Map, FixPathingZWhenLoading) ) {
+						// Experimental. This code will send any waypoint that is 'in the air' down to ground level.
+	
+						VERTEX dest;
+						dest.x = newwp.x;
+						dest.y = newwp.y;
+						dest.z = newwp.z;
+						
+						NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
+						
+						if(n != NODE_NONE) {
+							float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
+							// The following test is a sanity check. 45 is an arbitrary value, chosen during testing
+							// because all the Z co-ordinates of the waypoints in The Grey where <45 units above the ground.
+							if( (newz > -2000) && ABS(newz-dest.z) < RuleR(Map, FixPathingZMaxDeltaLoading)) {
+								newwp.z = newz+1;
+								// printf("Updated Z for Grid %d, Waypoint %d from %.3f to %.3f\n",  grid, newwp.index,dest.z,newwp.z);
+							}
+							//else if(newz > -2000) 
+							//	printf("Delta Z %.3f too big for Grid %d, Waypoint %d from %.3f to %.3f\n", ABS(newz-dest.z), grid, newwp.index,dest.z,newz);
 						}
-						//else if(newz > -2000) 
-						//	printf("Delta Z %.3f too big for Grid %d, Waypoint %d from %.3f to %.3f\n", ABS(newz-dest.z), grid, newwp.index,dest.z,newz);
 					}
-#endif
 
 					newwp.pause = atoi(row[3]);
 					Waypoints.push_back(newwp);
@@ -762,8 +756,7 @@ void Mob::SendTo(float new_x, float new_y, float new_z) {
 	
     //fix up pathing Z, this shouldent be needed IF our waypoints 
     //are corrected instead
-#ifdef FIX_SENDTO_Z
-    if(zone->map != NULL) {
+    if(zone->map != NULL && RuleB(Map, FixPathingZOnSendTo) ) {
     	VERTEX dest;
     	dest.x = x_pos;
     	dest.y = y_pos;
@@ -771,12 +764,11 @@ void Mob::SendTo(float new_x, float new_y, float new_z) {
     	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
     	if(n != NODE_NONE) {
     		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+    		if( (newz > -2000) && ABS(newz-dest.z) < RuleR(Map, FixPathingZMaxDeltaSendTo)) { // Sanity check.
 				z_pos = newz+1;
     		}
     	}
     }
-#endif
 }
 
 void Mob::SendToFixZ(float new_x, float new_y, float new_z) {
@@ -786,7 +778,7 @@ void Mob::SendToFixZ(float new_x, float new_y, float new_z) {
 	
     //fix up pathing Z, this shouldent be needed IF our waypoints 
     //are corrected instead
-    if(zone->map != NULL) {
+    if(zone->map != NULL && RuleB(Map, FixPathingZOnSendTo) ) {
     	VERTEX dest;
     	dest.x = x_pos;
     	dest.y = y_pos;
@@ -794,7 +786,7 @@ void Mob::SendToFixZ(float new_x, float new_y, float new_z) {
     	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
     	if(n != NODE_NONE) {
     		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+    		if( (newz > -2000) && ABS(newz-dest.z) < RuleR(Map, FixPathingZMaxDeltaSendTo)) { // Sanity check.
 				z_pos = newz+1;
     		}
     	}

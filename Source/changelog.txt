@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==11/30/2007
+FatherNitwit: Reworked pathing z code to be rules based instead of built time options.
+
 ==11/29/2007
 FatherNitwit: (Derision) Fix BestZ pathing cleanup code top stop hopping.
 FatherNitwit: (Derision) New fix-z-on-load feature.
