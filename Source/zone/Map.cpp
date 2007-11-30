@@ -485,46 +485,64 @@ float Map::FindBestZ( NodeRef node_r, VERTEX p1, VERTEX *result, FACE **on) {
 		return(BEST_Z_INVALID);   //not a final node... could find the proper node...
 	}
 	
-	p1.z -= 1;
+	p1.z++;
+
+	VERTEX tmp_result;	//dummy placeholder if they do not ask for a result.
+	if(result == NULL)
+		result = &tmp_result;
 	
 	VERTEX p2(p1);
 	p2.z = BEST_Z_INVALID;
 	
 	float best_z = BEST_Z_INVALID;
+	int zAttempt;
 
 	unsigned long i;
 
 	PFACE cur;
-	unsigned long *cfl = mFaceLists + _node->faces.offset;
+
+	// If we don't find a bestZ on the first attempt, we try again from a position CurrentZ + 10 higher
+	// This is in case the pathing between waypoints temporarily sends the NPC below ground level.
+	// 
+	for(zAttempt=1; zAttempt<=2; zAttempt++) {
+
+		unsigned long *cfl = mFaceLists + _node->faces.offset;
 
 #ifdef DEBUG_BEST_Z
 printf("Start finding best Z...\n");
 #endif
-	for(i = 0; i < _node->faces.count; i++) {
-		cur = &mFinalFaces[ *cfl ];
+		for(i = 0; i < _node->faces.count; i++) {
+			if(*cfl > m_Faces)
+		               continue;       //watch for invalid lists, they seem to happen, e.g. in eastwastes.map
+
+			cur = &mFinalFaces[ *cfl ];
 //printf("Intersecting with face %lu\n", *cfl);
-		if(LineIntersectsFace(cur, p1, p2, result)) {
+			if(LineIntersectsFace(cur, p1, p2, result)) {
 #ifdef DEBUG_BEST_Z
-				printf("  %lu (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n",
-				*cfl, cur->a.x, cur->a.y, cur->a.z,
-				cur->b.x, cur->b.y, cur->b.z, 
-				cur->c.x, cur->c.y, cur->c.z);
-				printf("Found a z: %.2f\n", result->z);
+					printf("  %lu (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n",
+					*cfl, cur->a.x, cur->a.y, cur->a.z,
+					cur->b.x, cur->b.y, cur->b.z, 
+					cur->c.x, cur->c.y, cur->c.z);
+					printf("Found a z: %.2f\n", result->z);
 #endif
-			if (result->z > best_z) {
-				if(on != NULL)
-					*on = cur;
-				best_z = result->z;
+				if (result->z > best_z) {
+					if(on != NULL)
+						*on = cur;
+					best_z = result->z;
+				}
 			}
+			cfl++;
 		}
-		cfl++;
+
+		if(best_z != BEST_Z_INVALID) return best_z;
+
+		 p1.z = p1.z + 10 ;   // If we can't find a best Z, the NPC is probably just under the world. Try again from 10 units higher up.
 	}
-	
+
 #ifdef DEBUG_BEST_Z
 fflush(stdout);
 printf("Best Z found: %.2f\n", best_z);
 #endif
-	
 	return best_z;
 }
 

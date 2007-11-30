@@ -73,11 +73,13 @@ problems, consider turning them off.
 //when no map file is loaded, opposed to the default nobody-sees-anybody
 //#define LOS_DEFAULT_CAN_SEE
 
-//THESE ARE BROKEN RIGHT NOW:
 //enable these to prevent mob hopping when they are pathing
 //#define FIX_PATHING_WHEN_MOVING // expensive but accurate
 //fix Z on sendto as well, if you still have hopping problems.
 //#define FIX_SENDTO_Z
+//Enable this to apply BestZ to waypoints as they are loaded from the database
+//this will increase zone load times, but eliminate the impact of FIX_PATHING_WHEN_MOVING
+#define ASSIGN_BESTZ_WAYPOINTS_ON_LOAD
 
 /*
 

@@ -31,6 +31,13 @@ using namespace std;
 #include "parser.h"
 #include "StringIDs.h"
 #include "../common/MiscFunctions.h"
+#include "features.h"
+
+static inline float ABS(float x) {
+	if(x < 0)
+		return(-x);
+	return(x);
+}
 
 void NPC::AI_SetRoambox(float iDist, float iRoamDist, int32 iDelay) {
 	AI_SetRoambox(iDist, GetX()+iRoamDist, GetX()-iRoamDist, GetY()+iRoamDist, GetY()-iRoamDist, iDelay);
@@ -204,8 +211,8 @@ void NPC::UpdateWaypoint(int wp_index)
 			    	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
 			    	if(n != NODE_NONE) {
 			    		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-			    		if(newz < cur_wp_z && newz > -2000) {
-							cur_wp_z = newz;
+			    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+							cur_wp_z = newz+1;
 			    		}
 			    	}
 			    }
@@ -407,8 +414,8 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
 	    	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), x_pos, y_pos);
 	    	if(n != NODE_NONE) {
 	    		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-	    		if(newz < z_pos && newz > -2000) {
-					z_pos = newz;
+	    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+					z_pos = newz+1;
 	    		}
 	    	}
 	    }
@@ -496,8 +503,8 @@ bool Mob::CalculateNewPosition2(float x, float y, float z, float speed, bool che
     	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), x_pos, y_pos);
     	if(n != NODE_NONE) {
     		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-    		if(newz < z_pos && newz > -2000) {
-				z_pos = newz;
+    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+				z_pos = newz+1;
     		}
     	}
     }
@@ -583,8 +590,8 @@ bool Mob::CalculateNewPosition(float x, float y, float z, float speed, bool chec
     	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
     	if(n != NODE_NONE) {
     		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-    		if(newz < z_pos && newz > -2000) {
-				z_pos = newz;
+    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+				z_pos = newz+1;
     		}
     	}
     }
@@ -670,6 +677,28 @@ void NPC::AssignWaypoints(int32 grid) {
 					newwp.x = atof(row[0]);
 					newwp.y = atof(row[1]);
 					newwp.z = atof(row[2]);
+
+#ifdef ASSIGN_BESTZ_WAYPOINTS_ON_LOAD
+					// Experimental. This code will send any waypoint that is 'in the air' down to ground level.
+
+					VERTEX dest;
+					dest.x = newwp.x;
+					dest.y = newwp.y;
+					dest.z = newwp.z;
+															                                        				   NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
+					if(n != NODE_NONE) {
+						float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
+						// The following test is a sanity check. 45 is an arbitrary value, chosen during testing
+						// because all the Z co-ordinates of the waypoints in The Grey where <45 units above the ground.
+						if( (newz > -2000) && ABS(newz-dest.z)<45) {
+							newwp.z = newz+1;
+							// printf("Updated Z for Grid %d, Waypoint %d from %.3f to %.3f\n",  grid, newwp.index,dest.z,newwp.z);
+						}
+						//else if(newz > -2000) 
+						//	printf("Delta Z %.3f too big for Grid %d, Waypoint %d from %.3f to %.3f\n", ABS(newz-dest.z), grid, newwp.index,dest.z,newz);
+					}
+#endif
+
 					newwp.pause = atoi(row[3]);
 					Waypoints.push_back(newwp);
 			    }
@@ -742,8 +771,8 @@ void Mob::SendTo(float new_x, float new_y, float new_z) {
     	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
     	if(n != NODE_NONE) {
     		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-    		if(newz < z_pos && newz > -2000) {
-				z_pos = newz + 0.1;
+    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+				z_pos = newz+1;
     		}
     	}
     }
@@ -765,8 +794,8 @@ void Mob::SendToFixZ(float new_x, float new_y, float new_z) {
     	NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
     	if(n != NODE_NONE) {
     		float newz = zone->map->FindBestZ(n, dest, NULL, NULL);
-    		if(newz < z_pos && newz > -2000) {
-				z_pos = newz + 0.1;
+    		if( (newz > -2000) && ABS(newz-dest.z)<20) { // Sanity check. 20 is an arbirtary value
+				z_pos = newz+1;
     		}
     	}
     }
