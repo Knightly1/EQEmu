@@ -31,6 +31,7 @@ using namespace std;
 #include "parser.h"
 #include "StringIDs.h"
 #include "../common/MiscFunctions.h"
+#include "../common/rulesys.h"
 #include "features.h"
 
 static inline float ABS(float x) {
