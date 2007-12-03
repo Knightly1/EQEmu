@@ -1688,7 +1688,7 @@ int CalcBuffDuration_formula(int level, int formula, int duration)
 
 		case 7:	// solar: 2/7/04
 			i = level;
-			return i > duration ? (i < 1 ? 1 : i) : duration;
+			return (duration != 0) ? (i < 1 ? 1 : i) : duration;
 
 		case 8:	// solar: 2/7/04
 			i = level + 10;

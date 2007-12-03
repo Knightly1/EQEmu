@@ -1,6 +1,10 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==12/02/2007
+KLS: Reworked buff duration formula 7 calculations. 
+KLS: (Cripp)Added (Missing?) pathing z rules.
+
 ==11/30/2007
 FatherNitwit: Reworked pathing z code to be rules based instead of built time options.
 

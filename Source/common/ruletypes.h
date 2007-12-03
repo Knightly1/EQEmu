@@ -81,6 +81,17 @@ RULE_INT ( NPC, MajorNPCCorpseDecayTimeMS, 1500000 ) //level>=55
 RULE_BOOL (NPC, UseItemBonusesForNonPets, true)
 RULE_CATEGORY_END()
 
+RULE_CATEGORY( Map )
+RULE_BOOL ( Map, FixPathingZAtWaypoints, false )
+RULE_BOOL ( Map, FixPathingZWhenMoving, false )
+RULE_BOOL ( Map, FixPathingZOnSendTo, false )
+RULE_BOOL ( Map, FixPathingZWhenLoading, false )
+RULE_REAL ( Map, FixPathingZMaxDeltaSendTo, 20.0 )
+RULE_REAL ( Map, FixPathingZMaxDeltaLoading, 20.0 )
+RULE_REAL ( Map, FixPathingZMaxDeltaMoving, 20.0 )
+RULE_REAL ( Map, FixPathingZMaxDeltaWaypoint, 20.0 )
+RULE_CATEGORY_END()
+
 #undef RULE_CATEGORY
 #undef RULE_INT
 #undef RULE_REAL
