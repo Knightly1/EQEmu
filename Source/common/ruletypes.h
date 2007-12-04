@@ -36,25 +36,42 @@ RULE_CATEGORY_END()
 
 RULE_CATEGORY( Guild )
 RULE_INT ( Guild, MaxMembers, 2048 )
+RULE_CATEGORY_END()
 
 RULE_CATEGORY( Skills )
 RULE_INT ( Skills, MaxTrainTradeskills, 21 )
+RULE_CATEGORY_END()
 
 RULE_CATEGORY( Pets )
 RULE_REAL( Pets, AttackCommandRange, 150 )
+RULE_CATEGORY_END()
 
 RULE_CATEGORY( GM )
 RULE_INT ( GM, MinStatusToZoneAnywhere, 250 )
+RULE_CATEGORY_END()
 
 RULE_CATEGORY( World )
 RULE_INT ( World, ZoneAutobootTimeoutMS, 60000 )
 RULE_INT ( World, ClientKeepaliveTimeoutMS, 65000 )
+RULE_CATEGORY_END()
 
 RULE_CATEGORY( Zone )
 RULE_INT ( Zone,  NPCGlobalPositionUpdateInterval, 60000 ) //ms between intervals of sending a position update to the entire zone.
 RULE_INT ( Zone,  ClientLinkdeadMS, 180000) //the time a client remains link dead on the server after a sudden disconnection
 RULE_INT ( Zone,  GraveyardTimeMS, 1200000) //ms time until a player corpse is moved to a zone's graveyard, if one is specified for the zone
 RULE_BOOL ( Zone, EnableShadowrest, 0 ) // enables or disables the shadowrest zone feature for player corpses. Default is turned off.
+RULE_CATEGORY_END()
+
+RULE_CATEGORY( Map )
+//enable these to help prevent mob hopping when they are pathing
+RULE_BOOL ( Map, FixPathingZWhenLoading, true )		//increases zone boot times a bit to reduce hopping.
+RULE_BOOL ( Map, FixPathingZAtWaypoints, false )	//alternative to `WhenLoading`, accomplishes the same thing but does it at each waypoint instead of once at boot time.
+RULE_BOOL ( Map, FixPathingZWhenMoving, false )		//very CPU intensive, but helps hopping with widely spaced waypoints.
+RULE_BOOL ( Map, FixPathingZOnSendTo, false )		//try to repair Z coords in the SendTo routine as well.
+RULE_REAL ( Map, FixPathingZMaxDeltaMoving, 20 )	//at runtime while pathing: max change in Z to allow the BestZ code to apply.
+RULE_REAL ( Map, FixPathingZMaxDeltaWaypoint, 20 )	//at runtime at each waypoint: max change in Z to allow the BestZ code to apply.
+RULE_REAL ( Map, FixPathingZMaxDeltaSendTo, 20 )	//at runtime in SendTo: max change in Z to allow the BestZ code to apply.
+RULE_REAL ( Map, FixPathingZMaxDeltaLoading, 45 )	//while loading each waypoint: max change in Z to allow the BestZ code to apply.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Spells )
@@ -79,17 +96,6 @@ RULE_CATEGORY( NPC )
 RULE_INT ( NPC, MinorNPCCorpseDecayTimeMS, 450000 ) //level<55
 RULE_INT ( NPC, MajorNPCCorpseDecayTimeMS, 1500000 ) //level>=55
 RULE_BOOL (NPC, UseItemBonusesForNonPets, true)
-RULE_CATEGORY_END()
-
-RULE_CATEGORY( Map )
-RULE_BOOL ( Map, FixPathingZAtWaypoints, false )
-RULE_BOOL ( Map, FixPathingZWhenMoving, false )
-RULE_BOOL ( Map, FixPathingZOnSendTo, false )
-RULE_BOOL ( Map, FixPathingZWhenLoading, false )
-RULE_REAL ( Map, FixPathingZMaxDeltaSendTo, 20.0 )
-RULE_REAL ( Map, FixPathingZMaxDeltaLoading, 20.0 )
-RULE_REAL ( Map, FixPathingZMaxDeltaMoving, 20.0 )
-RULE_REAL ( Map, FixPathingZMaxDeltaWaypoint, 20.0 )
 RULE_CATEGORY_END()
 
 #undef RULE_CATEGORY
