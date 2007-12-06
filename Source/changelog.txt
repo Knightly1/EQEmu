@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==12/06/2007
+KLS: Fixed logic on duration 7 formula.. again.
+
 ==12/02/2007
 KLS: Reworked buff duration formula 7 calculations. 
 KLS: (Cripp)Added (Missing?) pathing z rules.
