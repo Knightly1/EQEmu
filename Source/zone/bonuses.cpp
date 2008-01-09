@@ -140,10 +140,10 @@ void Client::CalcItemBonuses(StatBonuses* newbon) {
 	}
 	
 	//caps
-	if(newbon->ManaRegen > eqManaRegenItemCap)
-		newbon->ManaRegen = eqManaRegenItemCap;
-	if(newbon->HPRegen > eqHPRegenItemCap)
-		newbon->HPRegen = eqHPRegenItemCap;
+	if(newbon->ManaRegen > RuleI(Character, ItemManaRegenCap))
+		newbon->ManaRegen = RuleI(Character, ItemManaRegenCap);
+	if(newbon->HPRegen > RuleI(Character, ItemHealthRegenCap))
+		newbon->HPRegen = RuleI(Character, ItemHealthRegenCap);
 	
 	
 	SetAttackTimer();

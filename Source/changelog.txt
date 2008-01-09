@@ -1,6 +1,24 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==01/09/2008
+KLS: Starting items will now be saved if they are placed in slots other than the primary 8, this includes inside bags and on the character's inventory and bank slots
+KLS: Kick at level 55 or higher now has a chance to act as a spell interrupt as bash does.
+KLS: (TheLieka) Stun Immunity for Frontal Stuns on Ogres
+KLS: (TheLieka) Added out of combat regen to NPCs based on rule NPC:OOCRegen
+KLS: NPCs with quests using the Perl Quest Parser should no longer stop if they do not have an EVENT_SAY sub
+KLS: /autofire cleaned up some, fixed many situations where it shouldn't fire and it now will auto. use throwing weapons as well as bows
+KLS: Ranged and Throwing attacks will break invis. correctly.
+KLS: Added the following rules:
+Character:HealOnLevel (Default: false)
+Character:FeignKillsPet (Default: false)
+Character:ItemManaRegenCap (Default: 15)
+Character:ItemHealthRegenCap (Default: 15)
+Combat:UseIntervalAC (Default: false)
+Combat:PetAttackMagicLevel (Default: 30)
+NPC:SayPauseTimeInSec (Default: 5)
+NPC:OOCRegen (Default: 0)
+
 ==12/06/2007
 KLS: Fixed logic on duration 7 formula.. again.
 

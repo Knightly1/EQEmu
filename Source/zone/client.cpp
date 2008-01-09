@@ -65,6 +65,10 @@ extern bool spells_loaded;
 #include "client_logs.h"
 #include "guild_mgr.h"
 
+#ifdef EMBPERL
+#include "embparser.h"
+#endif
+
 
 extern EntityList entity_list;
 extern Zone* zone;
@@ -696,17 +700,23 @@ void Client::ChannelMessageReceived(int8 chan_num, int8 language, const char* me
 			break;
 		
 		if (target != 0 && target->IsNPC() && !target->CastToNPC()->IsEngaged()) {
-			if (DistNoRootNoZ(*target) <= 200) {
-				if(target->CastToNPC()->IsMoving() && !target->CastToNPC()->IsOnHatelist(target))
-					target->CastToNPC()->PauseWandering(5);
-				parse->Event(EVENT_SAY, target->GetNPCTypeID(), message, target->CastToNPC(), this);
-			#ifdef IPC
-                if(target->CastToNPC()->IsInteractive()) {
-					target->CastToNPC()->InteractiveChat(chan_num,language,message,targetname,this);
+#ifdef EMBPERL
+			if(((PerlembParser *)parse)->HasQuestSub(target->GetNPCTypeID(),"EVENT_SAY")){
+#endif
+				if (DistNoRootNoZ(*target) <= 200) {
+					if(target->CastToNPC()->IsMoving() && !target->CastToNPC()->IsOnHatelist(target))
+						target->CastToNPC()->PauseWandering(RuleI(NPC, SayPauseTimeInSec));
+					parse->Event(EVENT_SAY, target->GetNPCTypeID(), message, target->CastToNPC(), this);
+				#ifdef IPC
+					if(target->CastToNPC()->IsInteractive()) {
+						target->CastToNPC()->InteractiveChat(chan_num,language,message,targetname,this);
+					}
+				#endif
+					//parse->Event(EVENT_SAY, target->GetNPCTypeID(), message, target->CastToNPC(), this);
 				}
-			#endif
-				//parse->Event(EVENT_SAY, target->GetNPCTypeID(), message, target->CastToNPC(), this);
+#ifdef EMBPERL
 			}
+#endif
 		}
 		break;
 	}
@@ -1761,9 +1771,10 @@ void Client::MemorizeSpell(int32 slot,int32 spellid,int32 scribing){
 void Client::SetFeigned(bool in_feigned) {
 	if (in_feigned)
 	{
-#ifdef FEIGN_KILLS_PET
-		SetPet(0);
-#endif
+		if(RuleB(Character, FeignKillsPet))
+		{
+			SetPet(0);
+		}
 		SetHorseId(0);
 		entity_list.ClearFeignAggro(this);
 		forget_timer.Start(FeignMemoryDuration);

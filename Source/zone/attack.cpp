@@ -490,84 +490,85 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 	totalMit += GetAA(aaPhysicalEnhancement)*2;
 	totalMit += GetAA(aaInnateDefense);
 
-#ifdef USE_INT_AC
-	//AC Mitigation
-	sint32 attackRating = 0;
-	if(attacker->IsClient())
-		attackRating = attacker->GetATK() + ((attacker->GetSTR() + attacker->GetSkill(OFFENSE)) * 9 / 10);
-	else
-		attackRating = attacker->GetATK() + (attacker->GetSTR() * 9 / 10);
+	if(RuleB(Combat, UseIntervalAC)){
+		//AC Mitigation
+		sint32 attackRating = 0;
+		if(attacker->IsClient())
+			attackRating = attacker->GetATK() + ((attacker->GetSTR() + attacker->GetSkill(OFFENSE)) * 9 / 10);
+		else
+			attackRating = attacker->GetATK() + (attacker->GetSTR() * 9 / 10);
 
-	sint32 defenseRating = defender->GetAC();
-	defenseRating += 125;
-	defenseRating = (defenseRating < attackRating)?attackRating:defenseRating;
+		sint32 defenseRating = defender->GetAC();
+		defenseRating += 125;
+		defenseRating = (defenseRating < attackRating)?attackRating:defenseRating;
 
-	//Add these to rules eventually
-	//double the clients intervals to make their damage output look right, move to rule eventually too
-	int intervalsAllowed = 20; 
-	if(defender->IsClient())
-		intervalsAllowed *= 2;
+		//Add these to rules eventually
+		//double the clients intervals to make their damage output look right, move to rule eventually too
+		int intervalsAllowed = 20; 
+		if(defender->IsClient())
+			intervalsAllowed *= 2;
 
-	uint32 intervalUsed = 0;
-	uint32 intervalRoll = MakeRandomInt(0, (defenseRating - attackRating));
-	if(MakeRandomInt(0, 9) < 1){ //still have a chance to hit for any value
-		intervalUsed = MakeRandomInt(0, intervalsAllowed);
-	}
-	else{
-		intervalUsed = MakeRandomInt(0, 2);
-		//move the hardcoded value to a rule eventually, it impacts how lenient or strict the AC is
-		intervalUsed += ((intervalRoll * intervalsAllowed) / (19 * defender->GetLevel()));
-	}
-
-	mlog(COMBAT__DAMAGE, "attackRating: %d defenseRating: %d intervalRoll: %d intervalUsed: %d", attackRating, defenseRating, intervalRoll, intervalUsed);
-	if(intervalUsed > intervalsAllowed){
-		damage = 0;
-	}
-	else{
-		damage -= (((damage - minhit) * intervalUsed) / intervalsAllowed);
-	}
-#else
-	////////////////////////////////////////////////////////
-	// Scorpious2k: Include AC in the calculation
-	// use serverop variables to set values
-	int myac = GetAC();
-	if (damage > 0 && myac > 0) {
-		int acfail=1000;
-		char tmp[10];
-
-		if (database.GetVariable("ACfail", tmp, 9)) {
-			acfail = (int) (atof(tmp) * 100);
-			if (acfail>100) acfail=100;
+		uint32 intervalUsed = 0;
+		uint32 intervalRoll = MakeRandomInt(0, (defenseRating - attackRating));
+		if(MakeRandomInt(0, 9) < 1){ //still have a chance to hit for any value
+			intervalUsed = MakeRandomInt(0, intervalsAllowed);
+		}
+		else{
+			intervalUsed = MakeRandomInt(0, 2);
+			//move the hardcoded value to a rule eventually, it impacts how lenient or strict the AC is
+			intervalUsed += ((intervalRoll * intervalsAllowed) / (19 * defender->GetLevel()));
 		}
 
-		if (acfail<=0 || rand()%101>acfail) {
-			float acreduction=1;
-			int acrandom=300;
-			if (database.GetVariable("ACreduction", tmp, 9))
-			{
-				acreduction=atof(tmp);
-				if (acreduction>100) acreduction=100;
-			}
-	
-			if (database.GetVariable("ACrandom", tmp, 9))
-			{
-				acrandom = (int) ((atof(tmp)+1) * 100);
-				if (acrandom>10100) acrandom=10100;
-			}
-			
-			if (acreduction>0) {
-				damage -= (int) (GetAC() * acreduction/100.0f);
-			}		
-			if (acrandom>0) {
-				damage -= (myac * MakeRandomInt(0, acrandom) / 10000);
-			}
-			if (damage<1) damage=1;
-			mlog(COMBAT__DAMAGE, "AC Damage Reduction: fail chance %d%%. Failed. Reduction %.3f%%, random %d. Resulting damage %d.", acfail, acreduction, acrandom, damage);
-		} else {
-			mlog(COMBAT__DAMAGE, "AC Damage Reduction: fail chance %d%%. Did not fail.", acfail);
+		mlog(COMBAT__DAMAGE, "attackRating: %d defenseRating: %d intervalRoll: %d intervalUsed: %d", attackRating, defenseRating, intervalRoll, intervalUsed);
+		if(intervalUsed > intervalsAllowed){
+			damage = 0;
+		}
+		else{
+			damage -= (((damage - minhit) * intervalUsed) / intervalsAllowed);
 		}
 	}
-#endif
+	else{
+		////////////////////////////////////////////////////////
+		// Scorpious2k: Include AC in the calculation
+		// use serverop variables to set values
+		int myac = GetAC();
+		if (damage > 0 && myac > 0) {
+			int acfail=1000;
+			char tmp[10];
+
+			if (database.GetVariable("ACfail", tmp, 9)) {
+				acfail = (int) (atof(tmp) * 100);
+				if (acfail>100) acfail=100;
+			}
+
+			if (acfail<=0 || rand()%101>acfail) {
+				float acreduction=1;
+				int acrandom=300;
+				if (database.GetVariable("ACreduction", tmp, 9))
+				{
+					acreduction=atof(tmp);
+					if (acreduction>100) acreduction=100;
+				}
+		
+				if (database.GetVariable("ACrandom", tmp, 9))
+				{
+					acrandom = (int) ((atof(tmp)+1) * 100);
+					if (acrandom>10100) acrandom=10100;
+				}
+				
+				if (acreduction>0) {
+					damage -= (int) (GetAC() * acreduction/100.0f);
+				}		
+				if (acrandom>0) {
+					damage -= (myac * MakeRandomInt(0, acrandom) / 10000);
+				}
+				if (damage<1) damage=1;
+				mlog(COMBAT__DAMAGE, "AC Damage Reduction: fail chance %d%%. Failed. Reduction %.3f%%, random %d. Resulting damage %d.", acfail, acreduction, acrandom, damage);
+			} else {
+				mlog(COMBAT__DAMAGE, "AC Damage Reduction: fail chance %d%%. Did not fail.", acfail);
+			}
+		}
+	}
 
 	damage -= (damage * totalMit / 100);
 
@@ -608,7 +609,7 @@ int Mob::GetWeaponDamage(Mob *against, const Item_Struct *weapon_item) {
 			if((GetClass() == MONK || GetClass() == BEASTLORD) && GetLevel() >= 30){
 				dmg = GetMonkHandToHandDamage();
 			}
-			else if(GetOwner() && GetLevel() >= PET_ATTACK_MAGICAL_LEVEL){
+			else if(GetOwner() && GetLevel() >= RuleI(Combat, PetAttackMagicLevel)){
 				//pets wouldn't actually use this but...
 				//it gives us an idea if we can hit due to the dual nature of this function
 				dmg = 1;						   
@@ -657,8 +658,7 @@ int Mob::GetWeaponDamage(Mob *against, const Item_Struct *weapon_item) {
 			return 0;
 		}
 		else
-			dmg = eledmg;
-		dmg += banedmg;
+			dmg += banedmg;
 	}
 	else{
 		if(weapon_item){
@@ -732,7 +732,7 @@ int Mob::GetWeaponDamage(Mob *against, const ItemInst *weapon_item)
 			if((GetClass() == MONK || GetClass() == BEASTLORD) && GetLevel() >= 30){
 				dmg = GetMonkHandToHandDamage();
 			}
-			else if(GetOwner() && GetLevel() >= PET_ATTACK_MAGICAL_LEVEL){ //pets wouldn't actually use this but...
+			else if(GetOwner() && GetLevel() >= RuleI(Combat, PetAttackMagicLevel)){ //pets wouldn't actually use this but...
 				dmg = 1;						   //it gives us an idea if we can hit
 			}
 			else
@@ -830,8 +830,7 @@ int Mob::GetWeaponDamage(Mob *against, const ItemInst *weapon_item)
 			return 0;
 		}
 		else
-			dmg = eledmg;
-		dmg += banedmg;
+			dmg += banedmg;
 	}
 	else{
 		if(weapon_item && weapon_item->GetItem()){
@@ -971,11 +970,12 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		if(max_hit <= min_hit)
 			damage = min_hit;
 		else
-#ifdef USE_INT_AC
+
+		if(RuleB(Combat, UseIntervalAC))
 			damage = max_hit;
-#else
+		else
 			damage = MakeRandomInt(min_hit, max_hit);
-#endif
+
 		mlog(COMBAT__DAMAGE, "Damage calculated to %d (min %d, max %d, str %d, skill %d, DMG %d, lv %d)", damage, min_hit, max_hit
 		, GetSTR(), GetSkill(skillinuse), weapon_damage, mylevel);
 
@@ -1473,11 +1473,11 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		mylevel = mylevel ? mylevel : 1;
 		
 		//instead of calcing damage in floats lets just go straight to ints
-#ifdef USE_INT_AC 
-		damage = (max_dmg+eleBane);
-#else
-		damage = MakeRandomInt((min_dmg+eleBane),(max_dmg+eleBane));
-#endif
+		if(RuleB(Combat, UseIntervalAC))
+			damage = (max_dmg+eleBane);
+		else
+			damage = MakeRandomInt((min_dmg+eleBane),(max_dmg+eleBane));
+
 
 		//check if we're hitting above our max or below it.
 		if((min_dmg+eleBane) != 0 && damage < (min_dmg+eleBane)) {
@@ -2234,13 +2234,17 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 		}
     	
     	//check stun chances if bashing
-		if (skill_used == BASH && GetLevel() < 56) {
+		if ((skill_used == BASH || skill_used == KICK && (attacker && attacker->GetLevel() >= 55)) && GetLevel() < 56) {
 			int stun_resist = itembonuses.StunResist+spellbonuses.StunResist;
-			if(stun_resist <= 0 || MakeRandomInt(0,99) >= stun_resist) {
-				mlog(COMBAT__HITS, "Stunned. We had %dpercent resist chance.");
-				Stun(0);
+			if(this->GetBaseRace() == OGRE && this->IsClient() && !attacker->BehindMob(this, attacker->GetX(), attacker->GetY())) {
+				mlog(COMBAT__HITS, "Stun Resisted. Ogres are immune to frontal melee stuns.");
 			} else {
-				mlog(COMBAT__HITS, "Stun Resisted. We had %dpercent resist chance.");
+				if(stun_resist <= 0 || MakeRandomInt(0,99) >= stun_resist) {
+					mlog(COMBAT__HITS, "Stunned. We had %dpercent resist chance.");
+					Stun(0);
+				} else {
+					mlog(COMBAT__HITS, "Stun Resisted. We had %dpercent resist chance.");
+				}
 			}
 		}
 		
@@ -2741,16 +2745,16 @@ void Mob::ApplyMeleeDamageBonus(int16 skill, sint32 &damage){
 	if(damage < 1)
 		return;
 
-#ifndef USE_INT_AC
-	if(IsNPC()){ //across the board NPC damage bonuses.
- 		//only account for STR here, assume their base STR was factored into their DB damages
-		int dmgbonusmod = 0;
-		dmgbonusmod += (100*(itembonuses.STR + spellbonuses.STR))/3;
-		dmgbonusmod += (100*(spellbonuses.ATK + itembonuses.ATK))/5;
-		mlog(COMBAT__DAMAGE, "Damage bonus: %d percent from ATK and STR bonuses.", (dmgbonusmod/100));
-		damage += (damage*dmgbonusmod/10000);
+	if(!RuleB(Combat, UseIntervalAC)){
+		if(IsNPC()){ //across the board NPC damage bonuses.
+ 			//only account for STR here, assume their base STR was factored into their DB damages
+			int dmgbonusmod = 0;
+			dmgbonusmod += (100*(itembonuses.STR + spellbonuses.STR))/3;
+			dmgbonusmod += (100*(spellbonuses.ATK + itembonuses.ATK))/5;
+			mlog(COMBAT__DAMAGE, "Damage bonus: %d percent from ATK and STR bonuses.", (dmgbonusmod/100));
+			damage += (damage*dmgbonusmod/10000);
+		}
 	}
-#endif
   
 	if(spellbonuses.DamageModifierSkill == skill || spellbonuses.DamageModifierSkill == 255){
 		damage += ((damage * spellbonuses.DamageModifier)/100);

@@ -124,9 +124,6 @@ Zone extensions and features
 #define FLEE_CHECK_TIMER 2000
 #endif
 
-//give the player a heal when they gain a level
-//#define HEAL_ON_LEVEL
-
 //enable functionality to send log message to the client
 //it still needs to be enabled with the #logs command
 #define CLIENT_LOGS
@@ -149,9 +146,6 @@ Zone extensions and features
 //New aggro system to reduce overhead.
 #define REVERSE_AGGRO
 
-//Uncomment this to enable the live-like behaviour to kill your pet if you feign death
-//#define FEIGN_KILLS_PET
-
 //Uncomment this to enable Race and Class based XP modifiers (removed from live)
 //#define USE_RACE_CLASS_XP_MODS
 
@@ -168,9 +162,6 @@ Zone extensions and features
 #define SACRIFICE_ITEMID 9963
 
 #define MIN_RANGED_ATK_RANGE 25
-
-//define to use interval AC
-//#define USE_INT_AC
 
 /*
 
@@ -203,11 +194,6 @@ enum {	//reuse times
 	HarmTouchReuseTime = 4300,
 	LayOnHandsReuseTime = 4300,
 	FrenzyReuseTime = 10
-};
-
-enum {	//various hard caps
-	eqManaRegenItemCap = 15,
-	eqHPRegenItemCap = 35 // EverHood - 15 was totally wrong.
 };
 
 enum {	//timer settings, all in milliseconds
@@ -262,9 +248,6 @@ enum {	//some random constants
 
 //minimum level to do alchemy
 #define MIN_LEVEL_ALCHEMY 25
-
-//Pets this level and higher are considered to have a magical attack
-#define PET_ATTACK_MAGICAL_LEVEL 30
 
 //chance ratio that a 
 #define THREATENLY_ARRGO_CHANCE 32 // 32/128 (25%) chance that a mob will arrgo on con Threatenly

@@ -297,13 +297,16 @@ void Client::SetLevel(int8 set_level, bool command)
     LogFile->write(EQEMuLog::Normal,"Setting Level for %s to %i", GetName(), set_level);
 
 	CalcBonuses();
-#ifndef HEAL_ON_LEVEL
-	int mhp = CalcMaxHP();
-	if(GetHP() > mhp)
-		SetHP(mhp);
-#else
-	SetHP(CalcMaxHP());		// Why not, lets give them a free heal
-#endif
+	if(!RuleB(Character, HealOnLevel))
+	{
+		int mhp = CalcMaxHP();
+		if(GetHP() > mhp)
+			SetHP(mhp);
+	}
+	else
+	{
+		SetHP(CalcMaxHP());		// Why not, lets give them a free heal
+	}
 
 	SendHPUpdate();
 	SetMana(CalcMaxMana());

@@ -545,12 +545,24 @@ bool NPC::Process()
 		if(GetAppearance() == eaSitting)
 			bonus+=3;
 		
-		if(GetHP() < GetMaxHP()) {
-			if(GetOwnerID()!=0 && !IsEngaged()) //pet
+		sint32 OOCRegen = 0;
+		if(RuleI(NPC, OOCRegen) > 0){
+			OOCRegen += GetMaxHP() * RuleI(NPC, OOCRegen) / 100;
+			}
+		//Lieka Edit:  Fixing NPC regen.  NPCs should regen to full during a set duration, not based on their HPs.  Increase NPC's HPs by % of total HPs / tick.
+		if((GetHP() < GetMaxHP()) && !IsPet()) {
+			if(!IsEngaged()) //NPC out of combat
+				SetHP(GetHP() + hp_regen + OOCRegen);
+			else
+				SetHP(GetHP()+hp_regen);
+		} else if(GetHP() < GetMaxHP() && GetOwnerID() !=0) {
+			if(!IsEngaged()) //pet
 				SetHP(GetHP()+hp_regen+bonus+(GetLevel()/5));
 			else
 				SetHP(GetHP()+hp_regen+bonus);
-		}
+		} else 
+			SetHP(GetHP()+hp_regen);
+
 		if(GetMana() < GetMaxMana()) {
 			SetMana(GetMana()+mana_regen+bonus);
 		}

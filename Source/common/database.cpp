@@ -548,7 +548,8 @@ bool Database::StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inven
 
 	// Doodman: Is this even used?
 	// now the inventory
-	for (i=22; i<=29; i++)
+
+	for (i=0; i<=2190;)
 	{
 		const ItemInst* newinv = inv->GetItem((sint16)i);
 		if (newinv)
@@ -574,8 +575,22 @@ bool Database::StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inven
 				LogFile->write(EQEMuLog::Debug, "StoreCharacter inventory succeeded.  Query '%s' %s", invquery, errbuf);
 			}
 #endif
-		} 
+		}
+
+		if(i==30){ //end of standard inventory/cursor, jump to internals of bags/cursor
+			i = 251;
+			continue;
+		} else if(i==340){ //end of internals of bags/cursor, jump to bank slots
+			i = 2000;
+			continue;
+		} else if(i==2015){ //end of bank slots, jump to internals of bank bags
+			i = 2031;
+			continue;
+		}		
+		
+		i++;
 	}
+	
 	return true;
 }
 

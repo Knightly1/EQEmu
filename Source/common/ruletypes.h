@@ -32,6 +32,10 @@ RULE_INT ( Character, HPRegenMultiplier, 100)
 RULE_INT ( Character, ManaRegenMultiplier, 100)
 RULE_INT ( Character, EnduranceRegenMultiplier, 100)
 RULE_INT ( Character, ConsumptionMultiplier, 100) //item's hunger restored = this value * item's food level, 100 = normal, 50 = people eat 2x as fast, 200 = people eat 2x as slow
+RULE_BOOL( Character, HealOnLevel, false)
+RULE_BOOL( Character, FeignKillsPet, false)
+RULE_INT ( Character, ItemManaRegenCap, 15)
+RULE_INT ( Character, ItemHealthRegenCap, 35)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Guild )
@@ -90,12 +94,16 @@ RULE_REAL ( Combat, WarBerBaseCritChance, 0.03 ) //The base crit chance for warr
 RULE_REAL ( Combat, BerserkBaseCritChance, 0.06 ) //The bonus base crit chance you get when you're berserk
 RULE_INT ( Combat, NPCBashKickLevel, 6 ) //The level that npcs can KICK/BASH
 RULE_REAL ( Combat, ClientBaseCritChance, 0.0 ) //The base crit chance for all clients, this will stack with warrior's/zerker's crit chance.
+RULE_BOOL ( Combat, UseIntervalAC, false)
+RULE_INT ( Combat, PetAttackMagicLevel, 30)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( NPC )
 RULE_INT ( NPC, MinorNPCCorpseDecayTimeMS, 450000 ) //level<55
 RULE_INT ( NPC, MajorNPCCorpseDecayTimeMS, 1500000 ) //level>=55
 RULE_BOOL (NPC, UseItemBonusesForNonPets, true)
+RULE_INT ( NPC, SayPauseTimeInSec, 5)
+RULE_INT ( NPC, OOCRegen, 0)
 RULE_CATEGORY_END()
 
 #undef RULE_CATEGORY

@@ -146,11 +146,11 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 					dmg = 0;
 				}
 				else{
-#ifdef USE_INT_AC
-					dmg = GetBashDamage();
-#else
-					dmg = MakeRandomInt(1, GetBashDamage());
-#endif
+					if(RuleB(Combat, UseIntervalAC))
+						dmg = GetBashDamage();
+					else
+						dmg = MakeRandomInt(1, GetBashDamage());
+
 				}
 			}
 
@@ -212,11 +212,10 @@ void Client::OPCombatAbility(const EQApplicationPacket *app) {
 					dmg = 0;
 				}
 				else{
-#ifdef USE_INT_AC
-					dmg = GetKickDamage();
-#else
-					dmg = MakeRandomInt(1, GetKickDamage());
-#endif
+					if(RuleB(Combat, UseIntervalAC))
+						dmg = GetKickDamage();
+					else
+						dmg = MakeRandomInt(1, GetKickDamage());
 				}
 			}
 
@@ -337,11 +336,10 @@ int Mob::MonkSpecialAttack(Mob* other, int8 unchecked_type)
 
 	if(ndamage == 0){
 		if(other->CheckHitChance(this, skill_type, 0)){
-#ifdef USE_INT_AC
-			ndamage = max_dmg;
-#else
-			ndamage = MakeRandomInt(min_dmg, max_dmg);
-#endif
+			if(RuleB(Combat, UseIntervalAC))
+				ndamage = max_dmg;
+			else
+				ndamage = MakeRandomInt(min_dmg, max_dmg);
 		}
 	}
 	
@@ -466,11 +464,11 @@ void Mob::RogueBackstab(Mob* other, bool min_damage)
 				if (max_hit < min_hit)
 					max_hit = min_hit;
 
-#ifdef USE_INT_AC
-				ndamage = max_hit; 
-#else
-				ndamage = MakeRandomInt(min_hit, max_hit);
-#endif
+				if(RuleB(Combat, UseIntervalAC))
+					ndamage = max_hit; 
+				else
+					ndamage = MakeRandomInt(min_hit, max_hit);
+
 			}
 		}
 	}
@@ -596,7 +594,13 @@ void Client::RangedAttack(Mob* other) {
 		return;
 	}
 
-	if(!IsAttackAllowed(target) || IsCasting() || (DivineAura() && !GetGM())){
+	if(!IsAttackAllowed(target) || 
+		IsCasting() || 
+		IsSitting() || 
+		(DivineAura() && !GetGM()) ||
+		IsStunned() ||
+		IsMezzed() ||
+		(GetAppearance() == eaDead)){
 		return;
 	}
 	
@@ -646,11 +650,11 @@ void Client::RangedAttack(Mob* other) {
 			if (MaxDmg == 0)
 				MaxDmg = 1;
 
-#ifdef USE_INT_AC
-			TotalDmg = MaxDmg;
-#else
-			TotalDmg = MakeRandomInt(1, MaxDmg);
-#endif
+			if(RuleB(Combat, UseIntervalAC))
+				TotalDmg = MaxDmg;
+			else
+				TotalDmg = MakeRandomInt(1, MaxDmg);
+
 
 			target->MeleeMitigation(this, TotalDmg, 1);
 			ApplyMeleeDamageBonus(ARCHERY, TotalDmg);
@@ -676,6 +680,37 @@ void Client::RangedAttack(Mob* other) {
 	}
 	
 	CheckIncreaseSkill(ARCHERY);
+
+	//break invis when you attack
+	if(invisible) {
+		mlog(COMBAT__ATTACKS, "Removing invisibility due to melee attack.");
+		BuffFadeByEffect(SE_Invisibility);
+		BuffFadeByEffect(SE_Invisibility2);
+		invisible = false;
+	}
+	if(invisible_undead) {
+		mlog(COMBAT__ATTACKS, "Removing invisibility vs. undead due to melee attack.");
+		BuffFadeByEffect(SE_InvisVsUndead);
+		BuffFadeByEffect(SE_InvisVsUndead2);
+		invisible_undead = false;
+	}
+	if(invisible_animals){
+		mlog(COMBAT__ATTACKS, "Removing invisibility vs. animals due to melee attack.");
+		BuffFadeByEffect(SE_InvisVsAnimals);
+		invisible_animals = false;
+	}
+
+	if(hidden || improved_hidden){
+		hidden = false;
+		improved_hidden = false;
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+		SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
+		sa_out->spawn_id = GetID();
+		sa_out->type = 0x03;
+		sa_out->parameter = 0;
+		entity_list.QueueClients(this, outapp, true);
+		safe_delete(outapp);
+	}
 }
 
 void Client::ThrowingAttack(Mob* other) { //old was 51
@@ -735,7 +770,19 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 		//target is out of range, client does a message
 		return;
 	}
+	else if(DistNoRootNoZ(*target) < (MIN_RANGED_ATK_RANGE*MIN_RANGED_ATK_RANGE)){
+		return;
+	}
 
+	if(!IsAttackAllowed(target) || 
+		IsCasting() || 
+		IsSitting() || 
+		(DivineAura() && !GetGM()) ||
+		IsStunned() ||
+		IsMezzed() ||
+		(GetAppearance() == eaDead)){
+		return;
+	}
 	//send item animation, also does the throw animation
 	SendItemAnimation(target, item);
 	 
@@ -757,11 +804,10 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 			if (MaxDmg == 0)
 				MaxDmg = 1;
 
-#ifdef USE_INT_AC
-			TotalDmg = MaxDmg;
-#else
-			TotalDmg = MakeRandomInt(1, MaxDmg);
-#endif
+			if(RuleB(Combat, UseIntervalAC))
+				TotalDmg = MaxDmg;
+			else
+				TotalDmg = MakeRandomInt(1, MaxDmg);
 
 			mlog(COMBAT__RANGED, "Item DMG %d, level bonus %d. Max Damage %d. Hit for damage %d", WDmg, levelBonus, MaxDmg, TotalDmg);
 
@@ -781,6 +827,37 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 	DeleteItemInInventory(ammo_slot, 1, true);
 	
 	CheckIncreaseSkill(THROWING);
+
+	//break invis when you attack
+	if(invisible) {
+		mlog(COMBAT__ATTACKS, "Removing invisibility due to melee attack.");
+		BuffFadeByEffect(SE_Invisibility);
+		BuffFadeByEffect(SE_Invisibility2);
+		invisible = false;
+	}
+	if(invisible_undead) {
+		mlog(COMBAT__ATTACKS, "Removing invisibility vs. undead due to melee attack.");
+		BuffFadeByEffect(SE_InvisVsUndead);
+		BuffFadeByEffect(SE_InvisVsUndead2);
+		invisible_undead = false;
+	}
+	if(invisible_animals){
+		mlog(COMBAT__ATTACKS, "Removing invisibility vs. animals due to melee attack.");
+		BuffFadeByEffect(SE_InvisVsAnimals);
+		invisible_animals = false;
+	}
+
+	if(hidden || improved_hidden){
+		hidden = false;
+		improved_hidden = false;
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
+		SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
+		sa_out->spawn_id = GetID();
+		sa_out->type = 0x03;
+		sa_out->parameter = 0;
+		entity_list.QueueClients(this, outapp, true);
+		safe_delete(outapp);
+	}
 }
 
 void Mob::SendItemAnimation(Mob *to, const Item_Struct *item) {
@@ -916,11 +993,11 @@ void NPC::DoClassAttacks(Mob *target) {
 					}
 					else{
 						if(target->CheckHitChance(this, KICK, 0)) {
-#ifdef USE_INT_AC
-							dmg = GetKickDamage();
-#else
-							dmg = MakeRandomInt(1, GetKickDamage());
-#endif
+							if(RuleB(Combat, UseIntervalAC))
+								dmg = GetKickDamage();
+							else
+								dmg = MakeRandomInt(1, GetKickDamage());
+
 						}
 					}
 
@@ -938,11 +1015,10 @@ void NPC::DoClassAttacks(Mob *target) {
 					}
 					else{
 						if(target->CheckHitChance(this, BASH, 0)) {
-#ifdef USE_INT_AC
-							dmg = GetBashDamage();
-#else
-							dmg = MakeRandomInt(1, GetBashDamage());
-#endif
+							if(RuleB(Combat, UseIntervalAC))
+								dmg = GetBashDamage();
+							else
+								dmg = MakeRandomInt(1, GetBashDamage());
 						}
 					}
 
@@ -966,11 +1042,10 @@ void NPC::DoClassAttacks(Mob *target) {
 				}
 				else{
 					if(target->CheckHitChance(this, KICK, 0)) {
-#ifdef USE_INT_AC
-						dmg = GetKickDamage();
-#else
-						dmg = MakeRandomInt(1, GetKickDamage());
-#endif
+						if(RuleB(Combat, UseIntervalAC))
+							dmg = GetKickDamage();
+						else
+							dmg = MakeRandomInt(1, GetKickDamage());
 					}
 				}
 
@@ -993,11 +1068,10 @@ void NPC::DoClassAttacks(Mob *target) {
 				}
 				else{
 					if(target->CheckHitChance(this, BASH, 0)) {
-#ifdef USE_INT_AC
-						dmg = GetBashDamage();
-#else
-						dmg = MakeRandomInt(1, GetBashDamage());
-#endif
+						if(RuleB(Combat, UseIntervalAC))
+							dmg = GetBashDamage();
+						else
+							dmg = MakeRandomInt(1, GetBashDamage());
 					}
 				}
 
