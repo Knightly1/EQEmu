@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==01/12/2008
+WildcardX: (cavedude) Fixed beastlord pet sizes.
+
 ==01/09/2008
 KLS: Starting items will now be saved if they are placed in slots other than the primary 8, this includes inside bags and on the character's inventory and bank slots
 KLS: Kick at level 55 or higher now has a chance to act as a spell interrupt as bash does.
