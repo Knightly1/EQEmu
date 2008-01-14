@@ -19,6 +19,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include <iostream>
 using namespace std;
 #include <stdlib.h>
+#include <math.h>
 
 #ifdef WIN32
 #define snprintf	_snprintf
@@ -28,8 +29,10 @@ using namespace std;
 #include "entity.h"
 #include "masterentity.h"
 #include "npc.h"
+#include "watermap.h"
 #include "StringIDs.h"
 #include "../common/MiscFunctions.h"
+#include "../common/rulesys.h"
 
 #include "zonedb.h"
 #ifdef WIN32
@@ -264,7 +267,44 @@ void Client::GoFish()
 		Message(0, "You do not have any bait.");
 		return;
 	}
-	
+
+	if(zone->map!=NULL && zone->watermap != NULL && RuleB(Watermap, CheckForWaterWhenFishing)) {
+		float RodX, RodY, RodZ;
+		// Tweak Rod and LineLength if required
+		const float RodLength = RuleR(Watermap, FishingRodLength);
+		const float LineLength = RuleR(Watermap, FishingLineLength);
+		int HeadingDegrees;
+
+		HeadingDegrees = (int) ((GetHeading()*360)/256);
+		HeadingDegrees = HeadingDegrees % 360;
+		
+		RodX = x_pos + RodLength * sin(HeadingDegrees * M_PI/180.0f);
+		RodY = y_pos + RodLength * cos(HeadingDegrees * M_PI/180.0f);
+		
+		// Do BestZ to find where the line hanging from the rod intersects the water (if it is water).
+		// and go 1 unit into the water.
+		VERTEX dest;
+		dest.x = RodX;
+		dest.y = RodY;
+		dest.z = z_pos+10;
+		NodeRef n = zone->map->SeekNode( zone->map->GetRoot(), dest.x, dest.y);
+		if(n != NODE_NONE) {
+			RodZ = zone->map->FindBestZ(n, dest, NULL, NULL) - 1;
+			bool in_water = zone->watermap->InWater(RodX, RodY, RodZ);
+			Message(0, "Rod is at %4.3f, %4.3f, %4.3f, InWater says %d", RodX, RodY, RodZ, in_water);
+			if((z_pos-RodZ)>LineLength) {
+				// The water is too far below us
+				Message(0, "Trying to catch lands sharks perhaps?");
+				return;
+			}
+			if(!in_water) {
+				Message(0, "Trying to catch lands sharks perhaps?");
+				return;
+			}
+		}
+	}
+
+
 	//if the bait isnt equipped, need to add its skill bonus
 	if(bslot >= IDX_INV && Bait->GetItem()->SkillModType == FISHING) {
 		fishing_skill += Bait->GetItem()->SkillModValue;

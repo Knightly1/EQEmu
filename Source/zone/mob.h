@@ -943,6 +943,7 @@ protected:
 	bool	charmed;	//this isnt fully implemented yet
 	bool	rooted;
 	bool	silenced;
+	bool	inWater;	// Set to true or false by Water Detection code if enabled by rules
 //	Timer mezzed_timer;
 	Timer  stunned_timer;
 	Timer	bardsong_timer;

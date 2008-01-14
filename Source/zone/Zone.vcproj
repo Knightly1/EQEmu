@@ -231,6 +231,9 @@
 				RelativePath=".\Map.cpp">
 			</File>
 			<File
+				RelativePath=".\watermap.cpp">
+			</File>
+			<File
 				RelativePath=".\mob.cpp">
 			</File>
 			<File
@@ -404,6 +407,9 @@
 			</File>
 			<File
 				RelativePath=".\map.h">
+			</File>
+			<File
+				RelativePath=".\watermap.h">
 			</File>
 			<File
 				RelativePath=".\mob.h">

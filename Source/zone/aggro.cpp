@@ -867,7 +867,7 @@ bool Mob::CheckLos(Mob* other) {
 		NodeRef pnode = NODE_NONE;
 		if (pnode != NODE_NONE)
 		{
-			int *iface = zone->map->SeekFace( pnode, tmp_x, tmp_y );
+			const int *iface = zone->map->SeekFace( pnode, tmp_x, tmp_y );
 			if (*iface == -1) {
 				return false;
 			}

@@ -252,6 +252,7 @@ Mob::Mob(const char*   in_name,
 	mezzed = false;
 	stunned = false;
 	silenced = false;
+	inWater = false;
 	rune = 0;
     magicrune = 0;
     int m;

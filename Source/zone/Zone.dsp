@@ -298,6 +298,10 @@ SOURCE=.\Map.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\watermap.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\mob.cpp
 # End Source File
 # Begin Source File

@@ -6,7 +6,7 @@ SF= .obj/EQPacket.o .obj/EQStream.o .obj/EQStreamFactory.o .obj/CRC16.o \
    ../common/unix.o ../common/packet_dump_file.o ../common/Mutex.o ../common/MiscFunctions.o \
    zone.o entity.o mob.o client.o client_process.o npc.o net.o spawn2.o attack.o hate_list.o \
    ../common/serverinfo.o ../common/moremath.o worldserver.o spells.o spawngroup.o loottables.o \
-   faction.o Map.o PlayerCorpse.o petitions.o MobAI.o Object.o ../common/eqtime.o \
+   faction.o Map.o watermap.o PlayerCorpse.o petitions.o MobAI.o Object.o ../common/eqtime.o \
    groups.o ../common/classes.o ../common/races.o ../common/TCPConnection.o forage.o \
    ../common/crc32.o ../common/guilds.o ../common/md5.o ../common/dbcore.o \
    ../common/dbasync.o zonedbasync.o parser.o embperl.o embparser.o \

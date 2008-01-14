@@ -49,6 +49,7 @@ using namespace std;
 #include "ZoneConfig.h"
 #include "../common/breakdowns.h"
 #include "map.h"
+#include "watermap.h"
 #include "object.h"
 #include "petitions.h"
 #include "pathing.h"
@@ -653,6 +654,7 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name)
 {
 	zoneid = in_zoneid;
 	map = Map::LoadMapfile(in_short_name);
+	watermap = WaterMap::LoadWaterMapfile(in_short_name);
 	pathing = PathManager::LoadPathFile(in_short_name);
 	short_name = strcpy(new char[strlen(in_short_name)+1], in_short_name);
 	strlwr(short_name);
@@ -703,6 +705,7 @@ Zone::~Zone() {
 		dbasync->CancelWork(pQueuedMerchantsWorkID);
 	spawn2_list.Clear();
 	safe_delete(map);
+	safe_delete(watermap);
 	safe_delete(pathing);
 	if (worldserver.Connected()) {
 		worldserver.SetZone(0);

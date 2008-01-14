@@ -222,7 +222,7 @@ Map::~Map() {
 }
 
 
-NodeRef Map::SeekNode( NodeRef node_r, float x, float y ) {
+NodeRef Map::SeekNode( NodeRef node_r, float x, float y ) const {
 	if(node_r == NODE_NONE || node_r >= m_Nodes) {
 		return(NODE_NONE);
 	}
@@ -328,7 +328,7 @@ int* Map::SeekFace(  NodeRef node_r, float x, float y ) {
 	if( node_r == NODE_NONE || node_r >= m_Nodes) {
 		return(NULL);
 	}
-	PNODE _node = &mNodes[node_r];
+	const PNODE _node = &mNodes[node_r];
 	if(!(_node->flags & nodeFinal)) {
 		return(NULL);   //not a final node... could find the proper node...
 	}
@@ -364,8 +364,8 @@ int* Map::SeekFace(  NodeRef node_r, float x, float y ) {
 }
 
 // can be op?
-float Map::GetFaceHeight( int _idx, float x, float y ) {
-	PFACE	pface = &mFinalFaces[ _idx ];
+float Map::GetFaceHeight( int _idx, float x, float y ) const {
+	const PFACE	pface = &mFinalFaces[ _idx ];
 	return ( pface->nd - x * pface->nx - y * pface->ny ) / pface->nz;
 }
 
@@ -374,7 +374,7 @@ float Map::GetFaceHeight( int _idx, float x, float y ) {
 //p1=start of segment
 //p2=end of segment
 
-bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *result, FACE **on) {
+bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *result, FACE **on) const {
 	_ZP(Map_LineIntersectsZone);
 	VERTEX step;
 	VERTEX cur = start;
@@ -429,22 +429,22 @@ bool Map::LineIntersectsZone(VERTEX start, VERTEX end, float step_mag, VERTEX *r
 	return(false);
 }
 
-bool Map::LocWithinNode( NodeRef node_r, float x, float y ) {
+bool Map::LocWithinNode( NodeRef node_r, float x, float y ) const {
 	if( node_r == NODE_NONE || node_r >= m_Nodes) {
 		return(false);
 	}
-	PNODE _node = &mNodes[node_r];
+	const PNODE _node = &mNodes[node_r];
 	//this function exists so nobody outside of MAP needs to know
 	//how the NODE sturcture works
 	return( x>= _node->minx && x<= _node->maxx && y>= _node->miny && y<= _node->maxy );
 }
 
-bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *result, FACE **on) {
+bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *result, FACE **on) const {
 	_ZP(Map_LineIntersectsNode);
 	if( node_r == NODE_NONE || node_r >= m_Nodes) {
 		return(true);   //can see through empty nodes, just allow LOS on error...
 	}
-	PNODE _node = &mNodes[node_r];
+	const PNODE _node = &mNodes[node_r];
 	if(!(_node->flags & nodeFinal)) {
 		return(true);   //not a final node... not sure best action
 	}
@@ -452,7 +452,7 @@ bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *resu
 	unsigned long i;
 	
 	PFACE cur;
-	unsigned long *cfl = mFaceLists + _node->faces.offset;
+	const unsigned long *cfl = mFaceLists + _node->faces.offset;
 	
 	for(i = 0; i < _node->faces.count; i++) {
 		if(*cfl > m_Faces)
@@ -472,7 +472,7 @@ bool Map::LineIntersectsNode( NodeRef node_r, VERTEX p1, VERTEX p2, VERTEX *resu
 }
 
 
-float Map::FindBestZ( NodeRef node_r, VERTEX p1, VERTEX *result, FACE **on) {
+float Map::FindBestZ( NodeRef node_r, VERTEX p1, VERTEX *result, FACE **on) const {
 	_ZP(Map_FindBestZ);
 	if(node_r == GetRoot()) {
 		node_r = SeekNode(node_r, p1.x, p1.y);
@@ -480,7 +480,7 @@ float Map::FindBestZ( NodeRef node_r, VERTEX p1, VERTEX *result, FACE **on) {
 	if( node_r == NODE_NONE || node_r >= m_Nodes) {
 		return(BEST_Z_INVALID);
 	}
-	PNODE _node = &mNodes[node_r];
+	const PNODE _node = &mNodes[node_r];
 	if(!(_node->flags & nodeFinal)) {
 		return(BEST_Z_INVALID);   //not a final node... could find the proper node...
 	}
@@ -506,7 +506,7 @@ float Map::FindBestZ( NodeRef node_r, VERTEX p1, VERTEX *result, FACE **on) {
 	// 
 	for(zAttempt=1; zAttempt<=2; zAttempt++) {
 
-		unsigned long *cfl = mFaceLists + _node->faces.offset;
+		const unsigned long *cfl = mFaceLists + _node->faces.offset;
 
 #ifdef DEBUG_BEST_Z
 printf("Start finding best Z...\n");
@@ -547,7 +547,7 @@ printf("Best Z found: %.2f\n", best_z);
 }
 
 
-bool Map::LineIntersectsFace( PFACE cface, VERTEX p1, VERTEX p2, VERTEX *result) {
+bool Map::LineIntersectsFace( PFACE cface, VERTEX p1, VERTEX p2, VERTEX *result) const {
 	if( cface == NULL ) {
 		return(false);  //cant intersect a face we dont have... i guess
 	}

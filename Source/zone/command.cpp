@@ -55,6 +55,7 @@ Copyright (C) 2001-2002	EQEMu Development Team (http://eqemulator.net)
 #include "worldserver.h"
 #include "masterentity.h"
 #include "map.h"
+#include "watermap.h"
 #include "features.h"
 #include "pathing.h"
 #include "client_logs.h"
@@ -6373,6 +6374,37 @@ void command_bestz(Client *c, const Seperator *sep) {
 	{
 		c->Message(0,"Found no Z.");
 	}
+
+	if(zone->watermap == NULL) {
+		c->Message(0,"Water Region Map not loaded for this zone");
+	} else {
+		WaterRegionType RegionType;
+		float z;
+		
+		if(c->GetTarget())  {
+			z=c->GetTarget()->GetZ();
+			RegionType = zone->watermap->BSPReturnRegionType(1,  c->GetTarget()->GetX(), c->GetTarget()->GetY(), z);
+			c->Message(0,"InWater returns %d", zone->watermap->InWater(c->GetTarget()->GetX(), c->GetTarget()->GetY(), z));
+			c->Message(0,"InLava returns %d", zone->watermap->InLava(c->GetTarget()->GetX(), c->GetTarget()->GetY(), z));
+									 
+		}
+		else {
+			z=c->GetZ();
+			RegionType = zone->watermap->BSPReturnRegionType(1, c->GetX(), c->GetY(),z);
+			c->Message(0,"InWater returns %d", zone->watermap->InWater(c->GetX(), c->GetY(), z));
+					c->Message(0,"InLava returns %d", zone->watermap->InLava(c->GetX(), c->GetY(), z));
+	
+		}
+	
+		switch(RegionType) {
+			case RegionTypeNormal:	{ c->Message(0,"There is nothing special about the region you are in!"); break; }
+			case RegionTypeWater:	{ c->Message(0,"You/your target are in Water."); break; }
+			case RegionTypeLava:	{ c->Message(0,"You/your target are in Lava."); break; }
+			default:  c->Message(0,"You/your target are in an unknown region type."); 
+		}
+	}
+
+
 }
 
 

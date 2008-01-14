@@ -32,6 +32,8 @@
 #include "spawn2.h"
 
 class Map;
+class WaterMap;
+
 struct ZonePoint {
 	float x;
 	float y;
@@ -153,6 +155,7 @@ public:
 	map<uint32,std::list<MerchantList> > merchanttable;
 	map<uint32,std::list<TempMerchantList> > tmpmerchanttable;
 	Map*	map;
+	WaterMap* watermap;
 	PathManager *pathing;
 	NewZone_Struct	newzone_data;
 //	uchar	zone_header_data[142];

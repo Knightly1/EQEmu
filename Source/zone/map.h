@@ -118,27 +118,27 @@ public:
 	bool loadMap(FILE *fp);
 	
 	//the result is always final, except special NODE_NONE
-	NodeRef SeekNode( NodeRef _node, float x, float y );
+	NodeRef SeekNode( NodeRef _node, float x, float y ) const;
 	
 	//these are untested since rewrite:
 	int *SeekFace( NodeRef _node, float x, float y );
-	float GetFaceHeight( int _idx, float x, float y );
+	float GetFaceHeight( int _idx, float x, float y ) const;
 	
-	bool LocWithinNode( NodeRef _node, float x, float y );
+	bool LocWithinNode( NodeRef _node, float x, float y ) const;
 	
-	bool LineIntersectsZone(VERTEX start, VERTEX end, float step, VERTEX *result, FACE **on = NULL);
+	bool LineIntersectsZone(VERTEX start, VERTEX end, float step, VERTEX *result, FACE **on = NULL) const;
 	
 	//nodes to these functions must be final
-	bool LineIntersectsNode( NodeRef _node, VERTEX start, VERTEX end, VERTEX *result, FACE **on = NULL);
-	bool LineIntersectsFace( PFACE cface, VERTEX start, VERTEX end, VERTEX *result);
-	float FindBestZ( NodeRef _node, VERTEX start, VERTEX *result, FACE **on = NULL);
+	bool LineIntersectsNode( NodeRef _node, VERTEX start, VERTEX end, VERTEX *result, FACE **on = NULL) const;
+	bool LineIntersectsFace( PFACE cface, VERTEX start, VERTEX end, VERTEX *result) const;
+	float FindBestZ( NodeRef _node, VERTEX start, VERTEX *result, FACE **on = NULL) const;
 	
 //	inline unsigned int		GetVertexNumber( ) {return m_Vertex; }
-	inline unsigned int		GetFacesNumber( ) { return m_Faces; }
+	inline unsigned int		GetFacesNumber( ) const { return m_Faces; }
 //	inline PVERTEX	GetVertex( int _idx ) {return mFinalVertex + _idx;	}
 	inline PFACE		GetFace( int _idx) {return mFinalFaces + _idx;		}
 	inline PFACE		GetFaceFromlist( int _idx) {return &mFinalFaces[ mFaceLists[_idx] ];	}
-	inline NodeRef		GetRoot( ) { return MAP_ROOT_NODE; }
+	inline NodeRef		GetRoot( ) const { return MAP_ROOT_NODE; }
 	inline PNODE		GetNode( NodeRef r ) { return( mNodes + r ); }
 	
 	inline float GetMinX() const { return(_minx); }
