@@ -930,23 +930,21 @@ void Client::Handle_OP_Consent(const EQApplicationPacket *app)
 {
 	if(app->size<64){
 		Consent_Struct* c = (Consent_Struct*)app->pBuffer;
-		Client* client = entity_list.GetClientByName(c->name);
-		if(client && client!=this){
-			consent_list.push_back(client);
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_ConsentResponse, sizeof(ConsentResponse_Struct));
-			ConsentResponse_Struct* crs = (ConsentResponse_Struct*)outapp->pBuffer;
-			strcpy(crs->grantname,client->GetName());
-			strcpy(crs->ownername,GetName());
-			crs->permission=1;
-			strcpy(crs->zonename,"all zones");
-			client->QueuePacket(outapp);
-			QueuePacket(outapp);
-			safe_delete(outapp);
+		if(strcmp(c->name, GetName()) != 0) {
+			ServerPacket* pack = new ServerPacket(ServerOP_Consent, sizeof(ServerOP_Consent_Struct));
+			ServerOP_Consent_Struct* scs = (ServerOP_Consent_Struct*)pack->pBuffer;
+			strcpy(scs->grantname, c->name);
+			strcpy(scs->ownername, GetName());
+			scs->message_string_id = 0;
+			scs->permission = 1;
+			scs->zone_id = zone->GetZoneID();
+			//consent_list.push_back(scs->grantname);
+			worldserver.SendPacket(pack);
+			safe_delete(pack);
 		}
-		else if(client==this)
-			Message_StringID(0,CONSENT_YOURSELF);
-		else
-			Message_StringID(0,CONSENT_INVALID_NAME);
+		else {
+			Message_StringID(0, CONSENT_YOURSELF);
+		}
 	}
 	return;
 }
@@ -955,21 +953,16 @@ void Client::Handle_OP_ConsentDeny(const EQApplicationPacket *app)
 {
 	if(app->size<64){
 		Consent_Struct* c = (Consent_Struct*)app->pBuffer;
-		Client* client = entity_list.GetClientByName(c->name);
-		if(client){
-			consent_list.remove(client);
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_ConsentResponse, sizeof(ConsentResponse_Struct));
-			ConsentResponse_Struct* crs = (ConsentResponse_Struct*)outapp->pBuffer;
-			strcpy(crs->grantname,client->GetName());
-			strcpy(crs->ownername,GetName());
-			crs->permission=0;
-			strcpy(crs->zonename,"all zones");
-			client->QueuePacket(outapp);
-			QueuePacket(outapp);
-			safe_delete(outapp);
-		}
-		else
-			Message_StringID(0,TARGET_NOT_FOUND);
+		ServerPacket* pack = new ServerPacket(ServerOP_Consent, sizeof(ServerOP_Consent_Struct));
+		ServerOP_Consent_Struct* scs = (ServerOP_Consent_Struct*)pack->pBuffer;
+		strcpy(scs->grantname, c->name);
+		strcpy(scs->ownername, GetName());
+		scs->message_string_id = 0;
+		scs->permission = 0;
+		scs->zone_id = zone->GetZoneID();
+		//consent_list.remove(scs->grantname);
+		worldserver.SendPacket(pack);
+		safe_delete(pack);
 	}
 	return;
 }

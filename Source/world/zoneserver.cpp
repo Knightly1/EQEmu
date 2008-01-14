@@ -741,6 +741,81 @@ bool ZoneServer::Process() {
 			}
 			break;
 		}
+	    case ServerOP_Consent: {
+			// Message string id's likely to be used here are:
+			// CONSENT_YOURSELF = 399
+			// CONSENT_INVALID_NAME = 397
+			// TARGET_NOT_FOUND = 101
+			ZoneServer* zs;
+			ServerOP_Consent_Struct* s = (ServerOP_Consent_Struct*)pack->pBuffer;
+			ClientListEntry* cle = client_list.FindCharacter(s->grantname);
+			if(cle) {
+				zs = zoneserver_list.FindByZoneID(cle->zone());
+				if(zs) {
+					if(zs->SendPacket(pack)) {
+						zlog(WORLD__ZONE, "Sent consent packet from player %s to player %s in zone %u.", s->ownername, s->grantname, cle->zone());
+					}
+					else {
+						zlog(WORLD__ZONE_ERR, "Unable to locate zone record for zone id %u in zoneserver list for ServerOP_Consent operation.", s->zone_id);
+					}
+				}
+				else {
+					// send target not found back to requester
+					delete pack;
+					pack = new ServerPacket(ServerOP_Consent_Response, sizeof(ServerOP_Consent_Struct));
+					ServerOP_Consent_Struct* scs = (ServerOP_Consent_Struct*)pack->pBuffer;
+					strcpy(scs->grantname, s->grantname);
+					strcpy(scs->ownername, s->ownername);
+					scs->permission = s->permission;
+					scs->zone_id = s->zone_id;
+					scs->message_string_id = 101;
+					zs = zoneserver_list.FindByZoneID(s->zone_id);
+					if(zs) {
+						if(!zs->SendPacket(pack))
+							zlog(WORLD__ZONE_ERR, "Unable to send consent response back to player %s in zone %s.", s->ownername, zs->GetZoneName());
+					}
+					else {
+						zlog(WORLD__ZONE_ERR, "Unable to locate zone record for zone id %u in zoneserver list for ServerOP_Consent_Response operation.", s->zone_id);
+					}
+				}
+			}
+			else {
+				// send target not found back to requester
+				delete pack;
+				pack = new ServerPacket(ServerOP_Consent_Response, sizeof(ServerOP_Consent_Struct));
+				ServerOP_Consent_Struct* scs = (ServerOP_Consent_Struct*)pack->pBuffer;
+				strcpy(scs->grantname, s->grantname);
+				strcpy(scs->ownername, s->ownername);
+				scs->permission = s->permission;
+				scs->zone_id = s->zone_id;
+				scs->message_string_id = 397;
+				zs = zoneserver_list.FindByZoneID(s->zone_id);
+				if(zs) {
+					if(!zs->SendPacket(pack))
+						zlog(WORLD__ZONE_ERR, "Unable to send consent response back to player %s in zone %s.", s->ownername, zs->GetZoneName());
+				}
+				else {
+					zlog(WORLD__ZONE_ERR, "Unable to locate zone record for zone id %u in zoneserver list for ServerOP_Consent_Response operation.", s->zone_id);
+				}
+			}
+			break;
+		}
+		case ServerOP_Consent_Response: {
+			// Message string id's likely to be used here are:
+			// CONSENT_YOURSELF = 399
+			// CONSENT_INVALID_NAME = 397
+			// TARGET_NOT_FOUND = 101
+			ServerOP_Consent_Struct* s = (ServerOP_Consent_Struct*)pack->pBuffer;
+			ZoneServer* zs = zoneserver_list.FindByZoneID(s->zone_id);
+			if(zs) {
+				if(!zs->SendPacket(pack))
+					zlog(WORLD__ZONE_ERR, "Unable to send consent response back to player %s in zone %s.", s->ownername, zs->GetZoneName());
+			}
+			else {
+				zlog(WORLD__ZONE_ERR, "Unable to locate zone record for zone id %u in zoneserver list for ServerOP_Consent_Response operation.", s->zone_id);
+			}
+			break;
+		}
 		default:
 		{
 			zlog(WORLD__ZONE_ERR,"Unknown ServerOPcode from zone 0x%04x, size %d",pack->opcode,pack->size);

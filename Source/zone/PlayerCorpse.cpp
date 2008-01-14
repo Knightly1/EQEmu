@@ -1041,7 +1041,7 @@ void Corpse::Summon(Client* client,bool spell) {
 	if (!spell) {
 		if (this->GetCharID() == client->CharacterID()) {
 			if (IsLocked() && client->Admin() < 100) {
-				client->Message(13, "Error: Corpse locked by GM.");
+				client->Message(13, "That corpse is locked by a GM.");
 			}
 			else if (DistNoRootNoZ(*client) <= dist2) {
 				GMMove(client->GetX(), client->GetY(), client->GetZ());
@@ -1051,20 +1051,17 @@ void Corpse::Summon(Client* client,bool spell) {
 				client->Message(0, "Corpse is too far away.");
 		}
 		else {
-			Client* owner = entity_list.GetClientByCharID(charid);
-			bool consent = false;
-			if(owner){
-				std::list<Client*>::const_iterator itr;
-				for(itr=owner->consent_list.begin();itr!=owner->consent_list.end();itr++){
-					if(*itr == client){
+			bool consented = false;
+			std::list<std::string>::iterator itr;
+			for(itr = client->consent_list.begin(); itr != client->consent_list.end(); itr++) {
+				if(strcmp(this->GetOwnerName(), itr->c_str()) == 0) {
 						GMMove(client->GetX(), client->GetY(), client->GetZ());
 						pIsChanged = true;
-						consent = true;
+					consented = true;
 					}
 				}
-			}
-			if(!consent)
-				client->Message(0, "Error: You dont own the corpse");
+			if(!consented)
+				client->Message(0, "You do not have permission to move this corpse.");
 		}
 	}
 	else {

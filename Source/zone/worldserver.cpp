@@ -771,6 +771,52 @@ printf("Got successful group leave message for '%s'\n", sgl->member_name);
 
 			break;
 		}
+	    case ServerOP_Consent: {
+			ServerOP_Consent_Struct* s = (ServerOP_Consent_Struct*)pack->pBuffer;
+			Client* client = entity_list.GetClientByName(s->grantname);
+			if(client) {
+				if(s->permission == 1)
+					client->consent_list.push_back(s->ownername);
+				else
+					client->consent_list.remove(s->ownername);
+
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_ConsentResponse, sizeof(ConsentResponse_Struct));
+				ConsentResponse_Struct* crs = (ConsentResponse_Struct*)outapp->pBuffer;
+				strcpy(crs->grantname, s->grantname);
+				strcpy(crs->ownername, s->ownername);
+				crs->permission = s->permission;
+				strcpy(crs->zonename,"all zones");
+				client->QueuePacket(outapp);
+				safe_delete(outapp);
+			}
+			else {
+				// target not found
+
+				// Message string id's likely to be used here are:
+				// CONSENT_YOURSELF = 399
+				// CONSENT_INVALID_NAME = 397
+				// TARGET_NOT_FOUND = 101
+
+				safe_delete(pack);
+				pack = new ServerPacket(ServerOP_Consent_Response, sizeof(ServerOP_Consent_Struct));
+				ServerOP_Consent_Struct* scs = (ServerOP_Consent_Struct*)pack->pBuffer;
+				strcpy(scs->grantname, s->grantname);
+				strcpy(scs->ownername, s->ownername);
+				scs->permission = s->permission;
+				scs->zone_id = s->zone_id;
+				scs->message_string_id = TARGET_NOT_FOUND;
+				worldserver.SendPacket(pack);
+			}
+			break;
+		}
+		case ServerOP_Consent_Response: {
+			ServerOP_Consent_Struct* s = (ServerOP_Consent_Struct*)pack->pBuffer;
+			Client* client = entity_list.GetClientByName(s->ownername);
+			if(client) {
+				client->Message_StringID(0, s->message_string_id);
+			}
+			break;
+		}
 		default: {
 			cout << " Unknown ZSopcode:" << (int)pack->opcode;
 			cout << " size:" << pack->size << endl;

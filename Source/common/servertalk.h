@@ -70,6 +70,8 @@
 #define ServerOP_SetLaunchName		0x0036
 //#define ServerOP_DeleteGuild		0x0037	//ServerGuildID_Struct
 #define ServerOP_SpawnPlayerCorpse	0x0038
+#define ServerOP_Consent			0x0039
+#define ServerOP_Consent_Response	0x0040
 
 #define ServerOP_WhoAll				0x0210
 
@@ -601,6 +603,13 @@ struct SpawnPlayerCorpse_Struct {
 	int32 zone_id;
 };
 
+struct ServerOP_Consent_Struct {
+	char grantname[64];
+	char ownername[64];
+	int8 permission;
+	int32 zone_id;
+	int32 message_string_id;
+};
 
 #pragma pack()
 

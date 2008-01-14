@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==01/14/2008
+WildcardX: Replaced the corpse consent system with one that allows cross zone player consents.
+
 ==01/13/2008
 FatherNitwit: (Derision) Added tool (awater) to extract BSP tree with region type info from .s3d files into .wtr files.
 FatherNitwit: (Derision) Added support for zone to load .wtr files.
