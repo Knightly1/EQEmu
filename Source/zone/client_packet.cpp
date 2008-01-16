@@ -2337,10 +2337,10 @@ void Client::Handle_OP_LDoNOpen(const EQApplicationPacket *app)
 	Mob * target = GetTarget();
 	if(target)
 	{
-		if(target->IsMob() && target->GetClass()==LDON_TREASURE && target->GetBodyType()==BT_Boxes)
+		if(target->IsMob() && target->GetClass()==LDON_TREASURE)
 			target->Damage(this, target->GetMaxHP()*2, SPELL_UNKNOWN, HAND_TO_HAND, false);
 		else
-		  Message(13, "Illegal target: OP_LDoNOpen expects mob class %d, bodytype %d", LDON_TREASURE, BT_Boxes);
+		  Message(13, "Illegal target: OP_LDoNOpen expects mob class %d, please report this NPC to the server op.", LDON_TREASURE);
 	}
 }
 
@@ -5392,9 +5392,6 @@ void Client::Handle_OP_PickPocket(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Bind_Wound(const EQApplicationPacket *app)
 {
-	if(!HasSkill(BIND_WOUND))
-		return;
-	
 	if (app->size != sizeof(BindWound_Struct)){
 		LogFile->write(EQEMuLog::Error, "Size mismatch for Bind wound packet");
 		DumpPacket(app);

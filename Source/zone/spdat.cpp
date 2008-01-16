@@ -475,7 +475,12 @@ int GetMinLevel(int16 spell_id) {
 			min = spell.classes[r];
 	}
 	
-	return(min);
+	//if we can't cast the spell return 0
+	//just so it wont screw up calculations used in other areas of the code
+	if(min == 255)
+		return 0;
+	else
+		return(min);
 }
 
 // solar: this will find the first occurance of effect.  this is handy

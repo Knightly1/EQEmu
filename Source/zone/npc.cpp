@@ -651,7 +651,7 @@ bool NPC::DatabaseCastAccepted(int spell_id) {
 							  }
 		case SE_NecPet:
 		case SE_SummonPet: {
-			if(HasPet()){
+			if(GetPet()){
 #ifdef SPELLQUEUE
 				printf("%s: Attempted to make a second pet, denied.\n",GetName());
 #endif
@@ -1086,6 +1086,8 @@ int32 NPC::GetMaxDamage(int8 tlevel)
 }
 
 void NPC::PickPocket(Client* thief) {
+	
+	thief->CheckIncreaseSkill(PICK_POCKETS);
 	
 	//make sure were allowed to targte them:
 	int olevel = GetLevel();

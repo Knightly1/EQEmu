@@ -464,7 +464,7 @@ bool Mob::IsAttackAllowed(Mob *target)
 	// redundant ones are omitted and the reverse is tried if it falls through.
 
 	// cb: LDoN Treasure chests dont fight
-	if(this->GetClass() == LDON_TREASURE && this->GetBodyType() == BT_Boxes)
+	if(this->GetClass() == LDON_TREASURE)
 		return(false);
 
 	

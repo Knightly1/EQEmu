@@ -285,9 +285,9 @@ bool Client::Process() {
 						}
 					}
 					
-					//triple attack: warriors and monks over level 60
-					if((((GetClass() == WARRIOR || GetClass() == MONK) && GetLevel() >= 60) 
-						|| SpecAttacks[SPECATK_TRIPLE])
+					//triple attack: rangers, monks, warriors, berserkers over level 60
+					if((((GetClass() == MONK || GetClass() == WARRIOR || GetClass() == RANGER || GetClass() == BERSERKER)
+						&& GetLevel() >= 60) || SpecAttacks[SPECATK_TRIPLE])
 					   && CheckDoubleAttack(false,true))
 					{
 						Attack(target, 13, true);

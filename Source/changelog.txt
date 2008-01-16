@@ -1,5 +1,14 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==01/15/2008
+KLS: LDoN /open will only check for class now, client does not enforce bodytype so neither will the server.
+KLS: Numhits in disciplines should work correctly now
+KLS: Changed many instances where HasPet() was being checked to verify that we have a valid pet pointer from GetPet(), GetPet() will be used instead, (it is possible to have a valid pet ID and an invalid GetPet() pointer)
+KLS: Bind wound will no longer check for existance of skill, everyone gets this skill and it was breaking bind wound for people with 0 skill.
+KLS: Fixed an issue that was keeping berserkers and rangers from triple attacking.
+KLS: PickPocket should now correctly skill up on it's own through normal use.
+KLS: GetMinLevel(int16 spell_id) will now return 0 if the level for the class was 255 instead of 255, many buff formulas do not work well with 255 which can cause some issues when a class can use a clicky item with a spell they cannot scribe normally.
+KLS: GetProcID() should no longer have hard coded values.. whatever these represented are no longer valid in the current spell data.
 
 ==01/14/2008
 WildcardX: Replaced the corpse consent system with one that allows cross zone player consents.

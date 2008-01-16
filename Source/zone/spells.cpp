@@ -1354,7 +1354,7 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 						SpellOnTarget(spell_id, this);
 	#ifdef GROUP_BUFF_PETS
 						//pet too
-						if (HasPet())
+						if (GetPet())
 							SpellOnTarget(spell_id, GetPet());
 	#endif					
 					}
@@ -1362,7 +1362,7 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 					SpellOnTarget(spell_id, spell_target);
 	#ifdef GROUP_BUFF_PETS
 					//pet too
-					if (spell_target->HasPet())
+					if (spell_target->GetPet())
 						SpellOnTarget(spell_id, spell_target->GetPet());
 	#endif
 				}
@@ -1545,7 +1545,7 @@ bool Mob::ApplyNextBardPulse(int16 spell_id, Mob *spell_target, int16 slot) {
 				mlog(SPELLS__BARDS, "Bard Song Pulse: spell %d, Group target without group. Affecting caster.", spell_id);
 				BardPulse(spell_id, this);
 #ifdef GROUP_BUFF_PETS
-				if (HasPet())
+				if (GetPet())
 					GetPet()->BardPulse(spell_id, this);
 #endif
 			}
@@ -2365,7 +2365,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 				{
 					SpellOnTarget(recourse_spell, this);
 #ifdef GROUP_BUFF_PETS
-					if (HasPet())
+					if (GetPet())
 						SpellOnTarget(recourse_spell, GetPet());
 #endif
 				}	

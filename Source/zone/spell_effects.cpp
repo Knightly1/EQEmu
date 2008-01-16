@@ -2999,32 +2999,7 @@ sint16 Client::GetFocusEffect(focusType type, int16 spell_id) {
 
 //this method needs work, I cannot figure out how to tell if a spell's base is off by one or not..
 uint16 Mob::GetProcID(uint16 spell_id, uint8 effect_index) {
-	int16 procid;
-	switch(spell_id) {
-		case 1376:	//shroud of undeath
-		case 1459:	//shroud of death
-			procid = 1471;
-			break;
-		case 2574:	//scream of death
-			procid = 2718;
-			break;
-		case 2576:	//mental corruption
-			procid = 2712;
-			break;
-		case 3227:	//shroud of chaos
-			procid = 3228;
-			break;
-		case 4903:	//black shroud
-			procid = 4910;
-			break;
-		case 4902:	//mental horror
-			procid = 4908;
-			break;
-		default:
-			procid = spells[spell_id].base[effect_index];
-			break;
-	}
-	return(procid);
+	return(spells[spell_id].base[effect_index]);
 }
 
 

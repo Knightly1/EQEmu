@@ -2105,7 +2105,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 	if (attacker && damage > 0 && spell_id == SPELL_UNKNOWN) {
 		this->DamageShield(attacker);
 		for(int bs = 0; bs < BUFF_COUNT; bs++){
-			if(buffs[bs].numhits > 0){
+			if(buffs[bs].numhits > 0 && !IsDiscipline(buffs[bs].spellid)){
 				if(buffs[bs].numhits == 1){
 					BuffFadeBySlot(bs, true);
 				}
@@ -2169,16 +2169,14 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 			}
 			
 			// if we got a pet, thats not already fighting something send it into battle
-			if(HasPet()) {
-				Mob *pet = GetPet();
-			    if (pet && !pet->IsEngaged() && attacker != this) {
-			    	mlog(PETS__AGGRO, "Sending pet %s into battle due to attack.", pet->GetName());
-					pet->AddToHateList(attacker, 1);
-					pet->SetTarget(attacker);
-					Message_StringID(10, PET_ATTACKING, pet->GetCleanName(), attacker->GetCleanName());
-				}
-			}
-			
+			Mob *pet = GetPet();
+			if (pet && !pet->IsFamiliar() && !pet->SpecAttacks[IMMUNE_AGGRO] && !pet->IsEngaged() && attacker != this) 
+			{
+				mlog(PETS__AGGRO, "Sending pet %s into battle due to attack.", pet->GetName());
+				pet->AddToHateList(attacker, 1);
+				pet->SetTarget(attacker);
+				Message_StringID(10, PET_ATTACKING, pet->GetCleanName(), attacker->GetCleanName());
+			}			
 		}	//end `if there is some damage being done and theres anattacker person involved`
 	
 		//see if any runes want to reduce this damage
@@ -2763,6 +2761,20 @@ void Mob::ApplyMeleeDamageBonus(int16 skill, sint32 &damage){
 	if(itembonuses.DamageModifierSkill == skill || itembonuses.DamageModifierSkill == 255){
 		damage += ((damage * itembonuses.DamageModifier)/100);
 	}
+
+	//Rogue sneak attack disciplines make use of this, they are active for one hit
+	for(int bs = 0; bs < BUFF_COUNT; bs++){
+		if(buffs[bs].numhits > 0 && IsDiscipline(buffs[bs].spellid)){
+			if(skill == spells[buffs[bs].spellid].skill){
+				if(buffs[bs].numhits == 1){
+					BuffFadeBySlot(bs, true);
+				}
+				else{
+					buffs[bs].numhits--;
+				}
+			}
+		}	
+	}	
 }
 
 
