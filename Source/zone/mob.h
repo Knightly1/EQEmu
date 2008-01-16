@@ -595,7 +595,7 @@ bool logpos;
 	inline int16 GetOwnerID()	const			{ return ownerid; }
 	inline bool HasOwner() const { return(GetOwnerID() != 0); }
 	inline bool IsPet() const { return(GetOwnerID() != 0); }
-	inline bool HasPet() const { return(GetPetID() != 0); }
+	inline bool HasPet() const { if(GetPetID()==0){return false;} return (entity_list.GetMob(GetPetID()) != 0);}
 	bool HadTempPets() const { return(hasTempPet); }
 	void TempPets(bool i) { hasTempPet = i; }
 	

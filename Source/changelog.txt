@@ -1,5 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==01/16/2008
+KLS: Updated AA_Data.sql with various small fixes.
+KLS: Changed HasPet() to check for the existance of the pet as mob as well as the petid, should sync up with GetPet() nicely now.
+
 ==01/15/2008
 KLS: LDoN /open will only check for class now, client does not enforce bodytype so neither will the server.
 KLS: Numhits in disciplines should work correctly now
