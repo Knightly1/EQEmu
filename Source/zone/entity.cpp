@@ -2568,7 +2568,7 @@ void EntityList::HalveAggro(Mob* who)
 
 void EntityList::Evade(Mob *who)
 {
-	uint32 flatval = who->GetLevel() * 12;
+	uint32 flatval = who->GetLevel() * 13;
 	int amt = 0;
 	LinkedListIterator<NPC*> iterator(npc_list);
 	iterator.Reset();
@@ -2576,7 +2576,6 @@ void EntityList::Evade(Mob *who)
 	{
 		if (iterator.GetData()->CastToNPC()->CheckAggro(who)){
 			amt = iterator.GetData()->CastToNPC()->GetHateAmount(who);
-			amt = amt * 85 / 100;
 			amt -= flatval;
 			if(amt > 0)
 				iterator.GetData()->CastToNPC()->SetHate(who, amt);
@@ -2758,13 +2757,19 @@ void EntityList::AddHealAggro(Mob* target, Mob* caster, int16 thedam)
 	while(iterator.MoreElements())
 	{
 		cur = iterator.GetData();
-		if (!cur->HasPet() && !cur->IsMezzed() && !cur->IsStunned() 
+		if (!cur->IsMezzed() && !cur->IsStunned() 
 			&& cur->CheckAggro(target))
 		{
-			int16 tmpd = thedam;
-			if (cur->GetHateAmount(caster) < 100)
-				tmpd /= 20;
-			cur->AddToHateList(caster, tmpd);
+			if(cur->IsPet()){
+				if(caster){
+					if(cur->CheckAggro(caster))
+						cur->AddToHateList(caster, thedam);
+				}
+			}
+			else{
+				if(caster)
+					cur->AddToHateList(caster, thedam);
+			}
 		}
 		iterator.Advance();
 	}

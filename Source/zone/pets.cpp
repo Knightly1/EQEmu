@@ -235,6 +235,7 @@ Pet::Pet(NPCType *type_data, Mob *owner, PetType type, int16 spell_id)
 	typeofpet = type;
 	SetOwnerID(owner->GetID());
 	SetPetSpellID(spell_id);
+	taunting = true;
 }
 
 bool ZoneDatabase::GetPetEntry(const char *pet_type, PetRecord *into) {

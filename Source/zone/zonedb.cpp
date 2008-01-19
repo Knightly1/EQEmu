@@ -138,7 +138,7 @@ void ZoneDatabase::UpdateSpawn2Timeleft(int32 id, int32 timeleft)
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	//printf("id: %i timeleft: %i\n",id,timeleft);
-	if (!RunQuery(query, MakeAnyLenString(&query, "Update spawn2 set timeleft=(%i*1000) where id=%i",timeleft,id, errbuf)))	{
+	if (!RunQuery(query, MakeAnyLenString(&query, "Update spawn2 set timeleft=(%i*1000) where id=%i",timeleft,id),errbuf))	{
 		LogFile->write(EQEMuLog::Error, "Error in UpdateTimeLeft query %s: %s", query, errbuf);
 	}
 	safe_delete_array(query);

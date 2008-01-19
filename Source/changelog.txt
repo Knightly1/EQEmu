@@ -1,5 +1,15 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==0/19/2008
+KLS: Slightly reduced the effectivness of the Flurry AA
+KLS: Speed of the Knight AA implemented
+KLS: Evade will now reduce hate by a static amount, the static amount of hate increased slightly.
+KLS: Healing aggro should now not aggro pets instead of their owners,
+KLS: Removed the clause that made it so healing aggro was only effective if the healer had 100 hate or more on the target, effectivly making healers below level 30 immune to healer aggro.
+KLS: HideReuseTime on the server reduced by 1 second, should reduce the number of times a player sees the 'Reuse time not met' error message.
+KLS: Pets should now default to taunt ON instead of taunt OFF
+KLS: Fixed a typo in ZoneDatabase::UpdateSpawn2TimeLeft()
+
 ==01/16/2008
 KLS: Updated AA_Data.sql with various small fixes.
 KLS: Changed HasPet() to check for the existance of the pet as mob as well as the petid, should sync up with GetPet() nicely now.

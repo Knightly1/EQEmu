@@ -174,7 +174,7 @@ Zone Numerical configuration
 enum {	//reuse times
 	FeignDeathReuseTime = 9,
 	SneakReuseTime = 7,
-	HideReuseTime = 9,
+	HideReuseTime = 8,
 	TauntReuseTime = 5,
 	InstillDoubtReuseTime = 9,
 	FishingReuseTime = 11,

@@ -303,13 +303,13 @@ bool Client::Process() {
 					int flurrychance = 0;
 					switch (GetAA(aaFlurry)) {
 						case 1:
-							flurrychance += 15;
+							flurrychance += 10;
 							break;
 						case 2:
-							flurrychance += 30;
+							flurrychance += 20;
 							break;
 						case 3:
-							flurrychance += 50;
+							flurrychance += 30;
 							break;
 					}
 					switch (GetAA(aaRagingFlurry)) {
@@ -333,7 +333,7 @@ bool Client::Process() {
 					}
 				}
 				
-				if (target && GetAA(aaPunishingBlade) > 0) {
+				if (target && (GetAA(aaPunishingBlade) > 0 || GetAA(aaSpeedoftheKnight) > 0)) {
 					ItemInst *wpn = GetInv().GetItem(SLOT_PRIMARY);
 					if(wpn){
 						if(wpn->GetItem()->ItemType == ItemType2HS || 
@@ -341,6 +341,7 @@ bool Client::Process() {
 							wpn->GetItem()->ItemType == ItemType2HPierce )
 						{
 							int extatk = GetAA(aaPunishingBlade)*5;
+							extatk += GetAA(aaSpeedoftheKnight)*5;
 							if(MakeRandomInt(0, 100) < extatk)
 							{
 								Attack(target, 13, true);
