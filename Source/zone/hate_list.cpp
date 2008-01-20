@@ -22,6 +22,7 @@
 #include <math.h>
 #include "masterentity.h"
 #include "../common/linked_list.h"
+#include "../common/rulesys.h"
 #include "hate_list.h"
 
 class tHateEntry
@@ -211,25 +212,106 @@ void HateList::DoFactionHits(sint32 nfl_id) {
     }
 }
 
-Mob *HateList::GetTop()
+Mob *HateList::GetTop(Mob *center)
 {
 	_ZP(HateList_GetTop);
 	Mob* top = NULL;
 	sint32 hate = -1;
 	
-    LinkedListIterator<tHateEntry*> iterator(list);
-    iterator.Reset();
-	while(iterator.MoreElements())
-    {
-    	tHateEntry *cur = iterator.GetData();
-		if(cur->ent != NULL && ((cur->hate > hate) || cur->bFrenzy ))
+		if (RuleB(Aggro,SmartAggroList)){
+		Mob* topClientInRange = NULL;
+		sint32 hateClientInRange = -1;
+		LinkedListIterator<tHateEntry*> iterator(list);
+		iterator.Reset();
+		while(iterator.MoreElements())
 		{
-            top = cur->ent;
-            hate = cur->hate;
+    		tHateEntry *cur = iterator.GetData();
+			sint16 aggroMod = 0;
+
+			if(!cur){
+				iterator.Advance();
+				continue;
+			}			
+
+			if(!cur->ent){
+				iterator.Advance();
+				continue;
+			}
+
+			sint32 currentHate = cur->hate;
+
+			if(cur->ent->IsClient()){
+				
+				if(cur->ent->CastToClient()->IsSitting()){
+					aggroMod += RuleI(Aggro, SittingAggroMod);
+				}
+
+				if(center){
+					if(center->CombatRange(cur->ent)){
+						aggroMod += RuleI(Aggro, MeleeRangeAggroMod);
+
+						if(currentHate > hateClientInRange || cur->bFrenzy){
+							hateClientInRange = currentHate;
+							topClientInRange = cur->ent;
+						}
+					}
+				}
+
+			}
+			else{
+				if(center){
+					if(center->CombatRange(cur->ent)){
+						aggroMod += RuleI(Aggro, MeleeRangeAggroMod);
+					}
+				}
+			}
+
+			if((cur->ent->GetHP()*100/cur->ent->GetMaxHP()) < 20){
+				aggroMod += RuleI(Aggro, CriticallyWoundedAggroMod);
+			}
+
+			if(center){
+				if(center->GetTarget() == cur->ent)
+					aggroMod += RuleI(Aggro, CurrentTargetAggroMod);
+			}
+
+			if(cur->ent->DivineAura() || cur->ent->IsMezzed()){
+				aggroMod = 0;
+				currentHate = 0;
+			}
+
+			if(aggroMod){
+				currentHate += (currentHate * aggroMod / 100);
+			}
+
+			if(currentHate > hate || cur->bFrenzy){
+				hate = currentHate;
+				top = cur->ent;
+			}
+
+			iterator.Advance();
 		}
-        iterator.Advance();
+
+		if(topClientInRange != NULL && !top->IsClient())
+			return topClientInRange;
+		else
+			return top;
 	}
-    return top;
+	else{
+		LinkedListIterator<tHateEntry*> iterator(list);
+		iterator.Reset();
+		while(iterator.MoreElements())
+		{
+    		tHateEntry *cur = iterator.GetData();
+			if(cur->ent != NULL && ((cur->hate > hate) || cur->bFrenzy ))
+			{
+				top = cur->ent;
+				hate = cur->hate;
+			}
+			iterator.Advance();
+		}
+		return top;
+	}
 }
 
 Mob *HateList::GetRandom()

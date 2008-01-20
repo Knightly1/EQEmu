@@ -1,6 +1,6 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
-==0/19/2008
+==01/19/2008
 KLS: Slightly reduced the effectivness of the Flurry AA
 KLS: Speed of the Knight AA implemented
 KLS: Evade will now reduce hate by a static amount, the static amount of hate increased slightly.
@@ -9,6 +9,33 @@ KLS: Removed the clause that made it so healing aggro was only effective if the 
 KLS: HideReuseTime on the server reduced by 1 second, should reduce the number of times a player sees the 'Reuse time not met' error message.
 KLS: Pets should now default to taunt ON instead of taunt OFF
 KLS: Fixed a typo in ZoneDatabase::UpdateSpawn2TimeLeft()
+
+KLS: LDoN treasure should now really check only class and not body type.
+KLS: Added new rule NPC:BuffFriends, if false npcs will only heal and not buff their friends, defaults to false.
+KLS: Changed Mob::CheckHitChance() should be more consistant throughout the levels; puts more value into skill levels.
+KLS: Changed Mob:AvoidDamage() to use a single roll system, as well as applied dex to parry, block and riposte chance and agil to dodge.
+KLS: Brought the melee attack formula more in line with what it should be.
+KLS: Added a moderate melee damage bonus to monks, and a small one to all classes at 50, 55 and 60.
+KLS: Fixed an issue with strikethrough where it could go off even if you had no chance to strikethrough.
+KLS: NPCs will now load their skills from the max skills of their level via the skill caps database instead of being randomly generated.
+KLS: Increased the damage of backstab from str and dex and the general damage of several monk abilities.
+KLS: Mob::GetProcID() should now try to fix SK spells automatically.
+KLS: Aggro changes: Aggro has been changed to be based on a more live-like system, it is now based on potential damage instead of actual inflicted damage, hate is now unaffected by melee mitigation and resists.
+KLS: Implemented jolt like effects straight into the aggro system, such effects should be calculated into a spells aggro regardless of resistance now.
+KLS: Added an optional smart aggro list controlled by rule Aggro:SmartAggroList; true will enable it.  This aggro list attempts to choose targets in a much smarter fashion, prefering players to pets, sitting and critically injured players to normal players, and players in melee range to players not.
+
+Added several rules to adjust the aggro system with:
+Aggro:SmartAggroList ( true )
+Aggro:SittingAggroMod ( 35 )
+Aggro:MeleeRangeAggroMod ( 20 )
+Aggro:CurrentTargetAggroMod ( 0 )
+Aggro:CriticallyWoundedAggroMod ( 100 )
+Aggro:SlowAggroMod ( 450 )
+Aggro:IncapacitateAggroMod ( 500 )
+Aggro:MovementImpairAggroMod ( 175 )
+Changed Spells:SpellAggroModifier to Aggro:SpellAggroMod ( 100 )
+Changed Spells:BardSpellAggroMod to Aggro:SongAggroMod ( 33 )
+Changed Spells:PetSpellAggroMod to Aggro:PetSpellAggroMod ( 10 )
 
 ==01/16/2008
 KLS: Updated AA_Data.sql with various small fixes.

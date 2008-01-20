@@ -327,10 +327,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	int r;
 	int skil;
 	for(r = 0; r <= HIGHEST_SKILL; r++) {
-		skil = 4 + moblevel*4 + MakeRandomInt(1, moblevel);
-		if(skil > 250)
-			skil = 250;	//cap them just like players... to keep it fairer
-		skills[r] = skil;
+		skills[r] = database.GetSkillCap(GetClass(),(SkillType)r,moblevel);
 	}
 }
 	  
@@ -583,7 +580,7 @@ bool NPC::Process()
 	
 	//Handle assists...
 	Mob *hated = NULL;	//charmed NPCs dont ask for help.
-	if(assist_timer.Check() && !Charmed() && (hated = hate_list.GetTop()) != NULL) {
+	if(assist_timer.Check() && !Charmed() && (hated = hate_list.GetTop(this)) != NULL) {
 		entity_list.AIYellForHelp(this, hated);
 	}
 	

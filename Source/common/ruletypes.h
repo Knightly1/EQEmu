@@ -90,9 +90,6 @@ RULE_REAL ( Watermap, FishingLineLength, 40)			// If water is more than this far
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Spells )
-RULE_INT (Spells, SpellAggroModifier, 100)
-RULE_INT (Spells, BardSpellAggroMod, 3)
-RULE_INT (Spells, PetSpellAggroMod, 10)
 RULE_INT (Spells, AutoResistDiff, 15)
 RULE_REAL (Spells, ResistChance, 2.0) //chance to resist given no resists and same level
 RULE_REAL (Spells, ResistMod, 0.40) //multiplier, chance to resist = this * ResistAmount
@@ -115,6 +112,21 @@ RULE_INT ( NPC, MajorNPCCorpseDecayTimeMS, 1500000 ) //level>=55
 RULE_BOOL (NPC, UseItemBonusesForNonPets, true)
 RULE_INT ( NPC, SayPauseTimeInSec, 5)
 RULE_INT ( NPC, OOCRegen, 0)
+RULE_BOOL ( NPC, BuffFriends, false )
+RULE_CATEGORY_END()
+
+RULE_CATEGORY ( Aggro )
+RULE_BOOL ( Aggro, SmartAggroList, true )
+RULE_INT ( Aggro, SittingAggroMod, 35 ) //35%
+RULE_INT ( Aggro, MeleeRangeAggroMod, 10 ) //10%
+RULE_INT ( Aggro, CurrentTargetAggroMod, 0 ) //0% --will prefer our current target to any other; makes it harder for our npcs to switch targets.
+RULE_INT ( Aggro, CriticallyWoundedAggroMod, 100 ) //100%
+RULE_INT ( Aggro, SlowAggroMod, 450 )
+RULE_INT ( Aggro, IncapacitateAggroMod, 500 ) //mez, blind, stun, charm etc etc
+RULE_INT ( Aggro, MovementImpairAggroMod, 175 )
+RULE_INT ( Aggro, SpellAggroMod, 100 )
+RULE_INT ( Aggro, SongAggroMod, 33 )
+RULE_INT ( Aggro, PetSpellAggroMod, 10 )
 RULE_CATEGORY_END()
 
 #undef RULE_CATEGORY

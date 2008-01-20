@@ -148,7 +148,7 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 */
 	Mob *attacker=other;
 	Mob *defender=this;
-	float chancetohit = 0;
+	float chancetohit = 70.0;
 
 #if ATTACK_DEBUG>=11
 		LogFile->write(EQEMuLog::Debug, "CheckHitChance(%s) attacked by %s", defender->GetName(), attacker->GetName());
@@ -167,108 +167,58 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 	int8 attacker_level = attacker->GetLevel() ? attacker->GetLevel() : 1;
 	int8 defender_level = defender->GetLevel() ? defender->GetLevel() : 1;
 
-	//
-	// we start by giving them a base chance to hit
-	//
-	chancetohit = 50;
-
+	//Calculate the level difference
 	sint32 level_difference = attacker_level - defender_level;
 	if(level_difference < -20) level_difference = -20;
 	if(level_difference > 20) level_difference = 20;
-	// if attacker is higher level, they have a better chance of hitting their
-	// target right from the start.  for each level difference it's 2% chance,
-	// up to 20. so, if you're level 21 attacking a level 10 mob, that's a 22% 
-	// chance bonus. the level difference shouldn't be that big of a bonus, 
-	// otherwise when exping off an even con monster, after you level up it would
-	// become significantly easier.  this effect should be subtle, and should
-	// increase as you have more and more level on the monster, but it needs to
-	// be capped too
-	mlog(COMBAT__TOHIT, "Base chance to hit %.2f. Adding level diffrence mod %d*2", chancetohit, level_difference);
-	chancetohit += (float) level_difference * 2;
-		
-	//Quagmire: Take into account offense/defense skill
-	// solar: with this formula if you have an attacker with 185 offense skill
-	// and a defender with 180 defense, the net effect is
-	// 24.05 - 16.2 == 7.85% added
-	// an example with the defender having a defense of 85, and the attacker
-	// having an offense of 60
-	// 7.8 - 7.65 = 0.15% added
-	// so basically defense is for cancelling out the attacker's offense,
-	// but offense is more effective than defense
-#if ATTACK_DEBUG>=15
-		LogFile->write(EQEMuLog::Debug, "%s::AvoidDamage(%s) pre off/def %f", GetName(), other->GetName(), chancetohit);
-#endif
-	if(pvpmode) {
-		bonus = 0;
-		bonus += (float)((float)attacker->GetSkill(OFFENSE) * 0.20f);
-		bonus -= (float)((float)defender->GetSkill(DEFENSE) * 0.05f);
-		chancetohit += bonus;
-		mlog(COMBAT__TOHIT, "Applied PVP Offense (%d) and Defense (%d) bonus of %.2f, yeilding %.2f", attacker->GetSkill(OFFENSE), defender->GetSkill(DEFENSE), bonus, chancetohit);
-	} else {
-		//this was a bit unbalanced, since the primary determinate is
-		//level difference, and thats allready accounted for
-		//so we leave its effects in, shrink them a little and cap it
-		//at 10%
-		bonus = 0;
-		bonus += attacker->GetSkill(OFFENSE);
-		bonus -= defender->GetSkill(DEFENSE);
-		bonus /= 10;
-		if(bonus > 10)
-			bonus = 10;
-		chancetohit += bonus;
-		mlog(COMBAT__TOHIT, "Applied Offense (%d) and Defense (%d) bonus of %.2f, yeilding %.2f", attacker->GetSkill(OFFENSE), defender->GetSkill(DEFENSE), bonus, chancetohit);
-	}
-	
-	sint16 defender_agi = defender->GetAGI();
-	// skill points over 200 are 1/5 as effective
-	// at max stat of 252 this is a 10.52% bonus
-	defender_agi = (defender_agi <= 200) ? defender_agi : (defender_agi + ((defender_agi-200)/10));
-	chancetohit -= (float)((float)defender_agi * 0.05f);
-	
-	// this comes out to about 1% for every 7 dex over 50
-	// so someone with 105 dex gets 8.25% added here
-	sint16 attacker_dex = attacker->GetDEX();
-	attacker_dex = (attacker_dex <= 200) ? attacker_dex : (attacker_dex + ((attacker_dex-200)/25));
-	attacker_dex -= 50;
-	chancetohit += (float) ((float)attacker_dex * 0.15f);
+	chancetohit += (145 * level_difference / 100); 
 
-	mlog(COMBAT__TOHIT, "Applied Defending AGI (%d) and Attacking (DEX-50=%d) yeilding %.2f", defender_agi, attacker_dex, chancetohit);
-	
-	//divided these bonuses by 4... higher level battles were basically always 95%
-	//hit chance because of this 50% bonus...
-	
-	//Got rid of this because it is really a function of level, and we 
-	//allready account for level difference. Also, this is a pure bonus, 
-	//so at higher levels, it is as much as 50%, basically ensuring a 95%
-	//chance to hit, which seems dumb.
-/*#ifdef IPC
-	if (attacker->IsClient() || attacker->CastToNPC()->IsInteractive())
-#else
-	if (attacker->IsClient())
-#endif
-	{
-		Client *client_attack = attacker->CastToClient();
-		//
-		// if this is a client we want to take their weapon skill and give them
-		// a bonus to their chance to hit.  at 200 skill you will get 10% added
-		// to your chance to hit
-		//
-		bonus = ((float)client_attack->GetSkill(skillinuse) / 20.0f);
+	if(attacker->IsClient()){
+		int skilldiff = defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse);
+		bonus = 0;
+		if(pvpmode){
+			if(skilldiff > 10){
+				bonus = -(5 + ((defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse) - 10) / 10));
+			}
+			else if(skilldiff <= 10 && skilldiff > 0){
+				bonus = -(1 + ((defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse)) / 25));
+			}
+			else{
+				bonus = (attacker->GetSkill(skillinuse) - defender->GetSkill(DEFENSE)) / 25;
+			}
+		}
+		else{
+			if(skilldiff > 10){
+				bonus = -(10 + ((defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse) - 10) * 2 / 5));
+			}
+			else if(skilldiff <= 10 && skilldiff > 0){
+				bonus = -(2 + ((defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse)) / 10));
+			}
+			else{
+				bonus = 1 + (((attacker->GetSkill(skillinuse) - defender->GetSkill(DEFENSE)) / 25));
+			}
+		}
+		chancetohit += bonus;
+	}
+	else{
+		//some class combos have odd caps, base our attack skill based off of a warriors 1hslash since 
+		//it scales rather evenly across all levels for warriors, based on the defenders level so things like
+		//light blues can still hit their target.
+		uint16 atkSkill = (database.GetSkillCap(WARRIOR, (SkillType)_1H_SLASHING, defender->GetLevel()) + 5);
+		int skilldiff = defender->GetSkill(DEFENSE) - atkSkill;
+		bonus = 0;
+		if(skilldiff > 10){
+			bonus = -(10 + ((defender->GetSkill(DEFENSE) - atkSkill - 10) * 2 / 5));
+		}
+		else if(skilldiff <= 10 && skilldiff > 0){
+			bonus = -(2 + ((defender->GetSkill(DEFENSE) - atkSkill) / 10));
+		}
+		else{
+			bonus = 1 + ((atkSkill - defender->GetSkill(DEFENSE)) / 25);
+		}
+		chancetohit += bonus;
+	}
 		
-	}
-	else
-	{
-//		chancetohit += 20; // assume NPCs have 120 skill with their weapon
-		//NPCs should have skills proportional to their level
-		//skill = level*5 + 5, chance to hit = skill / 5
-		//so chancetohit gets level + 1 bonus...
-		chancetohit += (attacker->GetLevel() + 1) / 4;
-	}
-	
-#if ATTACK_DEBUG>=15
-		LogFile->write(EQEMuLog::Debug, "%s::AvoidDamage(%s) after weapon skills %f", GetName(), other->GetName(), chancetohit);
-#endif*/
-	
 	//I dont think this is 100% correct, but at least it does something...
 	if(attacker->spellbonuses.MeleeSkillCheckSkill == skillinuse || attacker->spellbonuses.MeleeSkillCheckSkill == 255) {
 		chancetohit += attacker->spellbonuses.MeleeSkillCheck;
@@ -278,7 +228,6 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 		chancetohit += attacker->itembonuses.MeleeSkillCheck;
 		mlog(COMBAT__TOHIT, "Applied item melee skill bonus %d, yeilding %.2f", attacker->spellbonuses.MeleeSkillCheck, chancetohit);
 	}
-	
 	
 	//add in our hit chance bonuses if we are using the right skill
 	//does the hit chance cap apply to spell bonuses from disciplines?
@@ -318,10 +267,12 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 	// Chance to hit;   Max 95%, Min 30%
 	if(chancetohit > 1000) {
 		//if chance to hit is crazy high, that means a discipline is in use, and let it stay there
-	} else if(chancetohit > 95) {
-		chancetohit = 95;
-	} else if(chancetohit < 30) {
-		chancetohit = 30;
+	} 
+	else if(chancetohit > 99) {
+		chancetohit = 99;
+	} 
+	else if(chancetohit < 5) {
+		chancetohit = 5;
 	}
 	
 	//I dont know the best way to handle a garunteed hit discipline being used
@@ -357,6 +308,7 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 {
 	float skill;
 	float bonus;
+	float RollTable[4] = {0,0,0,0};
 	float roll;
 	Mob *attacker=other;
 	Mob *defender=this;
@@ -387,11 +339,8 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 		
 		if (!ghit) {	//if they are not using a garunteed hit discipline
 			bonus = (defender->spellbonuses.RiposteChance + defender->itembonuses.RiposteChance);
-			bonus += 2.0 + skill/35.0;
-			roll = MakeRandomFloat(0,100);
-			mlog(COMBAT__DAMAGE, "Check riposte. skill %.0f. %.2f percent chance, roll %.2f", skill, bonus, roll);
-			if(roll < bonus)
-				damage = -3;
+			bonus += 2.0 + skill/35.0 + (GetDEX()/200);
+			RollTable[0] = bonus;
 		}
 	}
 	
@@ -407,12 +356,12 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 		}
 		
 		if (!ghit) {	//if they are not using a garunteed hit discipline
-			bonus = 2.0 + skill/35.0;
-			roll = MakeRandomFloat(0,100);
-			mlog(COMBAT__DAMAGE, "Check block. skill %.0f. %.2fpercent chance, roll %.2f", skill, bonus, roll);
-			if(roll < bonus)
-				damage = -1;
+			bonus = 2.0 + skill/35.0 + (GetDEX()/200);
+			RollTable[1] = RollTable[0] + bonus;
 		}
+	}
+	else{
+		RollTable[1] = RollTable[0];
 	}
 	
 	//////////////////////////////////////////////////////		
@@ -428,12 +377,12 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 		
 		bonus = (defender->spellbonuses.ParryChance + defender->itembonuses.ParryChance) / 100.0f;
 		if (!ghit) {	//if they are not using a garunteed hit discipline
-			bonus += 2.0 + skill/35.0;
-			roll = MakeRandomFloat(0,100);
-			mlog(COMBAT__DAMAGE, "Check parry. skill %.0f. %.2fpercent chance, roll %.2f", skill, bonus, roll);
-			if(roll < bonus)
-				damage = -2;
+			bonus += 2.0 + skill/35.0 + (GetDEX()/200);
+			RollTable[2] = RollTable[1] + bonus;
 		}
+	}
+	else{
+		RollTable[2] = RollTable[1];
 	}
 	
 	////////////////////////////////////////////////////////
@@ -450,14 +399,30 @@ bool Mob::AvoidDamage(Mob* other, sint32 &damage)
 		
 		bonus = (defender->spellbonuses.DodgeChance + defender->itembonuses.DodgeChance) / 100.0f;
 		if (!ghit) {	//if they are not using a garunteed hit discipline
-			bonus += 2.0 + skill/35.0;
-			roll = MakeRandomFloat(0,100);
-			mlog(COMBAT__DAMAGE, "Check dodge. skill %.0f. %.2fpercent chance, roll %.2f", skill, bonus, roll);
-			if(roll < bonus)
-				damage = -4;
+			bonus += 2.0 + skill/35.0 + (GetAGI()/200);
+			RollTable[3] = RollTable[2] + bonus;
 		}
 	}
-	
+	else{
+		RollTable[3] = RollTable[2];
+	}
+
+	if(damage > 0){
+		roll = MakeRandomFloat(0,100);
+		if(roll <= RollTable[0]){
+			damage = -3;
+		}
+		else if(roll <= RollTable[1]){
+			damage = -1;
+		}
+		else if(roll <= RollTable[2]){
+			damage = -2;
+		}
+		else if(roll <= RollTable[3]){
+			damage = -4;
+		}
+	}
+
 	mlog(COMBAT__DAMAGE, "Final damage after all avoidances: %d", damage);
 	
 	if (damage < 0)
@@ -954,7 +919,15 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		
 		//damage formula needs some work
 		int min_hit = 1;
-		int max_hit = (weapon_damage * ((GetSTR()*20) + (GetSkill(OFFENSE)*15) + (mylevel*10)) / 1000);
+
+		//old formula:  max_hit = (weapon_damage * ((GetSTR()*20) + (GetSkill(OFFENSE)*15) + (mylevel*10)) / 1000);
+		int max_hit = (2*weapon_damage) + (weapon_damage*(GetSTR()+GetSkill(OFFENSE))/225);
+
+		if(GetLevel() < 10 && max_hit > 20)
+			max_hit = 20;
+		else if(GetLevel() < 20 && max_hit > 40)
+			max_hit = 40;
+
 		CheckIncreaseSkill(skillinuse, -10);
 		CheckIncreaseSkill(OFFENSE, -10);
 
@@ -967,14 +940,27 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 
 		min_hit = min_hit * (100 + itembonuses.MinDamageModifier + spellbonuses.MinDamageModifier) / 100;
 
-		if(max_hit <= min_hit)
-			damage = min_hit;
-		else
+		if(max_hit < min_hit)
+			max_hit = min_hit;
 
 		if(RuleB(Combat, UseIntervalAC))
 			damage = max_hit;
 		else
 			damage = MakeRandomInt(min_hit, max_hit);
+
+		//monks are supposed to be a step ahead of other classes in
+		//toe to toe combat, small bonuses for hitting key levels too
+		int bonus = 0;
+		if(GetClass() == MONK)
+			bonus += 15;
+		if(GetLevel() > 50)
+			bonus += 3;
+		if(GetLevel() > 55)
+			bonus += 3;
+		if(GetLevel() > 60)
+			bonus += 3;
+		
+		damage += (damage * bonus / 100);
 
 		mlog(COMBAT__DAMAGE, "Damage calculated to %d (min %d, max %d, str %d, skill %d, DMG %d, lv %d)", damage, min_hit, max_hit
 		, GetSTR(), GetSkill(skillinuse), weapon_damage, mylevel);
@@ -983,12 +969,26 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		if(!other->CheckHitChance(this, skillinuse, Hand)) {
 			mlog(COMBAT__ATTACKS, "Attack missed. Damage set to 0.");
 			damage = 0;
+			other->AddToHateList(this, 0);
 		} else {	//we hit, try to avoid it
 			other->AvoidDamage(this, damage);
 			other->MeleeMitigation(this, damage, min_hit);
 			ApplyMeleeDamageBonus(skillinuse, damage);
 			TryCriticalHit(other, skillinuse, damage);
 			mlog(COMBAT__DAMAGE, "Final damage after all reductions: %d", damage);
+
+			if(damage != 0){
+				sint32 hate = max_hit;
+				if(GetFeigned()) {
+					mlog(COMBAT__HITS, "Attacker %s avoids %d hate due to feign death", GetName(), hate);
+				} else {
+					mlog(COMBAT__HITS, "Generating hate %d towards %s", hate, GetName());
+					// now add done damage to the hate list
+					other->AddToHateList(this, hate);
+				}
+			}
+			else
+				other->AddToHateList(this, 0);
 		}
 
 		//riposte
@@ -999,7 +999,7 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 
 		//strikethrough..
 		if (damage < 0 && !bRiposte) {
-			if(MakeRandomInt(0, 100) <= (itembonuses.StrikeThrough + spellbonuses.StrikeThrough)) {
+			if(MakeRandomInt(0, 100) < (itembonuses.StrikeThrough + spellbonuses.StrikeThrough)) {
 				Message_StringID(MT_StrikeThrough, 9078); // You strike through your opponents defenses!
 				Attack(other, Hand, true); // Strikethrough only gives another attempted hit
 				return false;
@@ -1489,18 +1489,32 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		    damage = (max_dmg+eleBane);
 		}
 		
+		sint32 hate = 0;
 		//THIS IS WHERE WE CHECK TO SEE IF WE HIT:
 		if(other->IsClient() && other->CastToClient()->IsSitting()) {
 			mlog(COMBAT__DAMAGE, "Client %s is sitting. Hitting for max damage (%d).", other->GetName(), (max_dmg+eleBane));
 			damage = (max_dmg+eleBane);
+			hate = damage;
+
+			mlog(COMBAT__HITS, "Generating hate %d towards %s", hate, GetName());
+			// now add done damage to the hate list
+			other->AddToHateList(this, hate);
 		} else {
 			if(!other->CheckHitChance(this, skillinuse, Hand)) {
 				damage = 0;	//miss
 			} else {	//hit, check for damage avoidance
+				hate = damage;
 				other->AvoidDamage(this, damage);
 				other->MeleeMitigation(this, damage, min_dmg+eleBane);
 				ApplyMeleeDamageBonus(skillinuse, damage);
 				TryCriticalHit(other, skillinuse, damage);
+
+				mlog(COMBAT__HITS, "Generating hate %d towards %s", hate, GetName());
+				// now add done damage to the hate list
+				if(damage != 0)
+					other->AddToHateList(this, hate);
+				else
+					other->AddToHateList(this, 0);
 			}
 		}
 		
@@ -1670,7 +1684,7 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skill) 
 	if(give_exp && give_exp->IsClient())
 		give_exp_client = give_exp->CastToClient();
 	
-	if(!(this->GetClass() == LDON_TREASURE && this->GetBodyType() == BT_Boxes))
+	if(!(this->GetClass() == LDON_TREASURE))
 	{
 		// cb: if we're not a LDON treasure chest, we give XP
 		if (give_exp_client && !IsCorpse() && MerchantType == 0)
@@ -2116,34 +2130,8 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 		}		
 	}
 	
-/*	not sure what this was all about
-    if ((spell_id != SPELL_UNKNOWN || (skill_used>200 && skill_used<250)) && damage>0) {
-			// todo: exchange that for EnvDamage-Packets when we know how to do it
-			char val1[20]={0};
-			Message_StringID(4,attacker_HIT_NONMELEE,GetName(),ConvertArray(damage,val1));
-			//Message(4,"%s was hit by non-melee for %d points of damage.", GetName(), damage);
-    }
-*/
-	
-	if(attacker && damage != -5) {	//no hate if we are completely immune, just laugh it off
-		sint32 hate = 0;
-		if (skill_used == ARCHERY)
-			hate = 1;	// almost no aggro for archery
-		else if(damage < 1)
-			hate = 1;
-		else if(spell_id != SPELL_UNKNOWN)
-			hate = (damage+1) / 2;	// half aggro for spells
-		else
-			hate = damage; // normal aggro for everything else
-
-		if(attacker->IsClient() && attacker->CastToClient()->GetFeigned()) {
-			mlog(COMBAT__HITS, "Attacker %s avoids %d hate due to feign death", attacker->GetName(), hate);
-		} else {
-			mlog(COMBAT__HITS, "Generating hate %d towards %s", hate, attacker->GetName());
-			// now add done damage to the hate list
-			AddToHateList(attacker, hate, damage, true, false, iBuffTic);
-		}
-	}
+	if(attacker)
+		AddToHateList(attacker, 0, damage, true, false, iBuffTic);
     
 	if(damage > 0) {
 		//if there is some damage being done and theres an attacker involved
@@ -2445,7 +2433,7 @@ float Mob::GetProcChances(float &ProcBonus, float &ProcChance) {
 	}
 	ProcBonus += float(itembonuses.ProcChance + spellbonuses.ProcChance) / 1000.0f;
 	
-	ProcChance = 0.03f + float(mydex) / 9000.0f;
+	ProcChance = 0.05f + float(mydex) / 9000.0f;
 	ProcBonus += (ProcChance * AABonus) / 100;
 	ProcChance += ProcBonus;
 	mlog(COMBAT__PROCS, "Proc chance %.2f (%.2f from bonuses)", ProcChance, ProcBonus);

@@ -30,6 +30,7 @@ using namespace std;
 #include "parser.h"
 #include "StringIDs.h"
 #include "../common/MiscFunctions.h"
+#include "../common/rulesys.h"
 
 #ifndef NEW_LoadSPDat
 	extern SPDat_Spell_Struct spells[SPDAT_RECORDS];
@@ -324,6 +325,7 @@ bool EntityList::AICheckCloseBeneficialSpells(NPC* caster, int8 iChance, float i
 	
 	float t1, t2, t3;
 	
+
 	//Only iterate through NPCs
     LinkedListIterator<NPC*> iterator(npc_list);
     for(iterator.Reset(); iterator.MoreElements(); iterator.Advance()) {
@@ -355,6 +357,11 @@ bool EntityList::AICheckCloseBeneficialSpells(NPC* caster, int8 iChance, float i
 		//since we assume these are beneficial spells, which do not
 		//require LOS, we just go for it.
 		// we have a winner!
+		if((iSpellTypes & SpellType_Buff) && !RuleB(NPC, BuffFriends)){
+			if (mob != caster)
+				iSpellTypes = SpellType_Heal;
+		}
+
 		if (caster->AICastSpell(mob, 100, iSpellTypes))
 			return true;
 	}
@@ -579,7 +586,7 @@ void Mob::AI_Process() {
 		if (IsRooted())
 			SetTarget(hate_list.GetClosest(this));
 		else
-			SetTarget(hate_list.GetTop());
+			SetTarget(hate_list.GetTop(this));
 
 		if (!target)
 			return;

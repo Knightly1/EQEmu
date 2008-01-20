@@ -64,11 +64,18 @@ void Mob::DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage, si
 	//this really should go through the same code as normal melee damage to
 	//pick up all the special behavior there
 	
+	sint32 hate = max_damage;
 	if(max_damage > 0) {
 		who->AvoidDamage(this, max_damage);
 		who->MeleeMitigation(this, max_damage, min_damage);
 		ApplyMeleeDamageBonus(skill, max_damage);
 		TryCriticalHit(who, skill, max_damage);
+		if(max_damage != 0)
+		{
+			who->AddToHateList(this, hate);
+		}
+		else
+			who->AddToHateList(this, 0);
 	}
 	who->Damage(this, max_damage, SPELL_UNKNOWN, skill, false);
 	
@@ -268,7 +275,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 unchecked_type)
 	{
 	case FLYING_KICK:{
 		skill_type = FLYING_KICK;
-		max_dmg = (((level/10)+2)*(24)*(GetSkill(skill_type)+GetSTR()+level))/600;
+		max_dmg = ((GetSTR()+GetSkill(skill_type)) * 75 / 100) + (level);
 		min_dmg = ((level*8)/10);
 
 		DoAnim(animFlyingKick);
@@ -277,7 +284,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 unchecked_type)
 		}
 	case TIGER_CLAW:{
 		skill_type = TIGER_CLAW;
-		max_dmg = (((level/10)+ 2)*(9)*(GetSkill(skill_type)+GetSTR()+level)/700);
+		max_dmg = ((GetSTR()+GetSkill(skill_type)) * 30 / 100);
 		itemslot = SLOT_HANDS;
 
 		DoAnim(animTigerClaw);
@@ -286,7 +293,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 unchecked_type)
 		}
 	case ROUND_KICK:{
 		skill_type = ROUND_KICK;
-		max_dmg = (((level/10)+ 2)*(14)*(GetSkill(skill_type)+GetSTR()+level)/800);
+		max_dmg = ((GetSTR()+GetSkill(skill_type)) * 15 / 100);
 
 		DoAnim(animRoundKick);
 		reuse = RoundKickReuseTime;
@@ -294,7 +301,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 unchecked_type)
 		}
 	case EAGLE_STRIKE:{
 		skill_type = EAGLE_STRIKE;
-		max_dmg = (((level/10)+ 2)*(19)*(GetSkill(skill_type)+GetSTR()+level)/700);
+		max_dmg = ((GetSTR()+GetSkill(skill_type)) * 45 / 100);
 		itemslot = SLOT_HANDS;
 
 		DoAnim(animEagleStrike);
@@ -303,7 +310,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 unchecked_type)
 		}
 	case DRAGON_PUNCH:{
 		skill_type = DRAGON_PUNCH;
-		max_dmg = (((level/10)+ 2)*(24)*(GetSkill(skill_type)+GetSTR()+level)/600);
+		max_dmg = ((GetSTR()+GetSkill(skill_type)) * 65 / 100);
 		itemslot = SLOT_HANDS;
 
 		DoAnim(animTailRake);
@@ -434,10 +441,10 @@ void Mob::RogueBackstab(Mob* other, bool min_damage)
 	if(primaryweapondamage > 0){
 		// formula is (weapon damage * 2) + 1 + (level - 25)/3 + (strength+skill)/100
 		if(level > 25){
-			max_hit = ((primaryweapondamage*2) + 1 + ((level-25)/3) + ((GetSTR()+bs_skill)/100));
+			max_hit = ((primaryweapondamage*2) + 1 + ((level-25)/3) + ((GetSTR()+GetDEX()+GetSkill(OFFENSE))/20));
 		}
 		else{
-			max_hit = ((primaryweapondamage*2) + 1 + ((GetSTR()+bs_skill)/100));
+			max_hit = ((primaryweapondamage*2) + 1 + ((GetSTR()+GetDEX()+GetSkill(OFFENSE))/20));
 		}
 
 		// determine minimum hits
@@ -617,7 +624,7 @@ void Client::RangedAttack(Mob* other) {
 		sint16 WDmg = GetWeaponDamage(target, RangeWeapon);
 		sint16 ADmg = GetWeaponDamage(target, Ammo);
 		if((WDmg > 0) || (ADmg > 0)){
-			uint16 levelBonus = (GetSTR()+GetLevel()+GetSkill(ARCHERY)) / 100;
+			uint16 levelBonus = (GetDEX()+GetLevel()+GetSkill(ARCHERY)) / 100;
 			if(WDmg < 0)
 				WDmg = 0;
 			if(ADmg < 0)
@@ -799,8 +806,7 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 
 		if(WDmg > 0)
 		{
-			uint8 levelBonus = (GetSTR()+GetLevel()+GetSkill(THROWING)) / 100;
-			uint8 MaxDmg = (WDmg)*levelBonus;
+			sint16 MaxDmg = (WDmg) * (GetDEX()+GetLevel()+GetSkill(THROWING)) / 100;
 			if (MaxDmg == 0)
 				MaxDmg = 1;
 
@@ -809,7 +815,7 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 			else
 				TotalDmg = MakeRandomInt(1, MaxDmg);
 
-			mlog(COMBAT__RANGED, "Item DMG %d, level bonus %d. Max Damage %d. Hit for damage %d", WDmg, levelBonus, MaxDmg, TotalDmg);
+			mlog(COMBAT__RANGED, "Item DMG %d. Max Damage %d. Hit for damage %d", WDmg, MaxDmg, TotalDmg);
 
 			target->MeleeMitigation(this, TotalDmg, 1);
 			ApplyMeleeDamageBonus(THROWING, TotalDmg);

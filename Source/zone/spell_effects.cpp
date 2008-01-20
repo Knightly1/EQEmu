@@ -1252,23 +1252,12 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				break;
 			}
 
-			case SE_Calm:	// cinder jolt, enraging blow
+			case SE_Hate2:
+			case SE_Calm:	// cinder jolt, enraging blow, handled in the aggro code
 			{
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Hate Mod: %+i%%", effect_value);
 #endif
-				if (!IsNPC() || !caster)
-					break;
-				if (effect_value > 0) {
-					AddToHateList(caster, effect_value);
-				} else {
-					int newhate = CastToNPC()->GetHateAmount(caster) + effect_value;
-					if (newhate < 1) {
-						SetHate(caster,1);
-					} else {
-						SetHate(caster,newhate);
-					}
-				}
 				break;
 			}
 
@@ -2457,6 +2446,8 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 				sint32 modifier = 100;
 				modifier += caster->CastToClient()->GetFocusEffect(focusImprovedDamage, spell_id);
 
+				if(caster)
+					AddToHateList(caster, -effect_value);
 				effect_value = effect_value * modifier / 100;
 			}
 
@@ -2465,6 +2456,7 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 				Damage(caster, effect_value, spell_id, spell.skill, false, i, true);
 			} else if(effect_value > 0) {
 				//healing spell...
+				entity_list.AddHealAggro(this, caster, effect_value);
 				if(caster)
 					effect_value = caster->GetActSpellHealing(spell_id, effect_value);
 				HealDamage(effect_value, caster);
@@ -2478,6 +2470,7 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 
 			//is this affected by stuff like GetActSpellHealing??
 			HealDamage(effect_value, caster);
+			entity_list.AddHealAggro(this, caster, effect_value);
 			break;
 		}
 
@@ -2507,10 +2500,31 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 
 			if(effect_value < 0) {
 				effect_value = -effect_value;
+				if(caster)
+					AddToHateList(caster, effect_value);
 				Damage(caster, effect_value, spell_id, spell.skill, false, i, true);
 			} else if(effect_value > 0) {
 				//healing spell...
 				HealDamage(effect_value, caster);
+				entity_list.AddHealAggro(this, caster, effect_value);
+			}
+			break;
+		}
+
+		case SE_Hate2:{
+			effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
+			if(caster){
+				if(effect_value > 0)
+					if(caster)
+						AddToHateList(caster, effect_value);
+				else{
+					sint32 newhate = GetHateAmount(caster) + effect_value;
+					if (newhate < 1) {
+						SetHate(caster,1);
+					} else {
+						SetHate(caster,newhate);
+					}
+				}
 			}
 			break;
 		}
@@ -2996,10 +3010,29 @@ sint16 Client::GetFocusEffect(focusType type, int16 spell_id) {
 	return realTotal + realTotal2;
 }
 
-
-//this method needs work, I cannot figure out how to tell if a spell's base is off by one or not..
+//for some stupid reason SK procs return theirs one base off...
 uint16 Mob::GetProcID(uint16 spell_id, uint8 effect_index) {
-	return(spells[spell_id].base[effect_index]);
+	bool sk = false;
+	bool other = false;
+	for(int x = 0; x < 16; x++)
+	{
+		if(x == 4){
+			if(spells[spell_id].classes[4] < 255)
+				sk = true;
+		}
+		else{
+			if(spells[spell_id].classes[x] < 255)
+				other = true;
+		}
+	}
+	
+	if(sk && !other)
+	{
+		return(spells[spell_id].base[effect_index] + 1);
+	}
+	else{
+		return(spells[spell_id].base[effect_index]);
+	}
 }
 
 

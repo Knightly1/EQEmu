@@ -1894,7 +1894,7 @@ bool Mob::RemoveFromHateList(Mob* mob) {
 		}
 	}
 	if (GetTarget() == mob)
-		SetTarget(hate_list.GetTop());
+		SetTarget(hate_list.GetTop(this));
 	return bFound;
 }
 void Mob::WhipeHateList() {

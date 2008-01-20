@@ -996,18 +996,26 @@ bool Mob::CheckLosFN(Mob* other) {
 }
 
 //offensive spell aggro
-int16 Mob::CheckAggroAmount(int16 spellid) {
+sint32 Mob::CheckAggroAmount(int16 spellid) {
 	int16 spell_id = spellid;
-	int16 AggroAmount = 1;
+	sint32 AggroAmount = 0;
+	sint32 nonModifiedAggro = 0;
 	int16 slevel = GetLevel();
 
 	for (int o = 0; o < EFFECT_COUNT; o++) {
 		switch(spells[spell_id].effectid[o]) {
+			case SE_CurrentHPOnce:
+			case SE_CurrentHP:{
+					int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
+					if(val < 0)
+						AggroAmount -= val;
+					break;
+				}
 			case SE_MovementSpeed: {
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
 				if (val < 0)
 				{
-					AggroAmount+=slevel*7; //Eqiv 455 melee damage at 65
+					AggroAmount+=((1 + slevel*2)*RuleI(Aggro, MovementImpairAggroMod)/100);
 					break;
 				}
 				break;
@@ -1018,35 +1026,35 @@ int16 Mob::CheckAggroAmount(int16 spellid) {
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
 				if (val < 100)
 				{
-					AggroAmount+=slevel*15; //Eqiv 975 melee damage at 65
+					AggroAmount+=((1 + slevel*2)*RuleI(Aggro, SlowAggroMod)/100);
 				}
 				break;
 			}
 			case SE_Stun: {
 				if (spells[spell_id].base[o] > 1)
-					AggroAmount+=slevel*10; //Eqiv 650 melee damage at 65
+					AggroAmount+=((1 + slevel*4)*RuleI(Aggro, IncapacitateAggroMod)/100);
 				else
-					AggroAmount+=slevel*5; //Eqiv 325 melee damage at 65
+					AggroAmount+=((1 + slevel*2)*RuleI(Aggro, IncapacitateAggroMod)/100);
 				break;
 			}
 			case SE_Blind: {
-				AggroAmount+=slevel*8; //Eqiv 520 melee damage at 65
+				AggroAmount+=((1 + slevel*2)*RuleI(Aggro, IncapacitateAggroMod)/100);
 				break;
 			}
 			case SE_Mez: {
-				AggroAmount+=slevel*18; //Eqiv 1170 melee damage at 65
+				AggroAmount+=((1 + slevel*2)*RuleI(Aggro, IncapacitateAggroMod)/100);
 				break;
 			}
 			case SE_Charm: {
-				AggroAmount+=slevel*15; //Eqiv 975 melee damage at 65
+				AggroAmount+=((1 + slevel*2)*RuleI(Aggro, IncapacitateAggroMod)/100);
 				break;
 			}
 			case SE_Root: {
-				AggroAmount+=slevel*4; //Eqiv 260 melee damage at 65
+				AggroAmount+=((1 + slevel*2)*RuleI(Aggro, MovementImpairAggroMod)/100);
 				break;
 			}
 			case SE_Fear: {
-				AggroAmount+=slevel*8; //Eqiv 520 melee damage at 65
+				AggroAmount+=((1 + slevel*2)*RuleI(Aggro, IncapacitateAggroMod)/100);
 				break;
 			}
 			case SE_ATK:
@@ -1066,7 +1074,7 @@ int16 Mob::CheckAggroAmount(int16 spellid) {
 					int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
 					if (val < 0)
 					{
-						AggroAmount -= val*4;
+						AggroAmount -= val*2;
 					}
 					break;
 			}
@@ -1074,7 +1082,7 @@ int16 Mob::CheckAggroAmount(int16 spellid) {
 					int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
 					if (val < 0)
 					{
-						AggroAmount -= val*12;
+						AggroAmount -= val*6;
 					}
 					break;
 			}
@@ -1105,16 +1113,16 @@ int16 Mob::CheckAggroAmount(int16 spellid) {
 					break;
 			}
 			case SE_SpinTarget:{
-					AggroAmount += slevel*6;
+					AggroAmount+=((1 + slevel*2)*RuleI(Aggro, IncapacitateAggroMod)/100);
 					break;
 			}
 			case SE_Amnesia:
 			case SE_Silence:{
-				AggroAmount += slevel*6;			
+				AggroAmount += slevel*2;			
 				break;
 			}
 			case SE_Destroy:{
-				AggroAmount += slevel*3;
+				AggroAmount += slevel*2;
 				break;
 			}
 			case SE_CastingLevel:
@@ -1132,7 +1140,7 @@ int16 Mob::CheckAggroAmount(int16 spellid) {
 			case SE_MinDamageModifier:
 			case SE_IncreaseBlockChance:
 			case SE_Accuracy:{
-				AggroAmount += slevel*3;
+				AggroAmount += slevel*2;
 				break;
 			}
 			case SE_CurrentMana:	
@@ -1150,12 +1158,17 @@ int16 Mob::CheckAggroAmount(int16 spellid) {
 				AggroAmount += slevel;			
 				break;
 			}
+			case SE_Calm:{
+				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
+				nonModifiedAggro = val;
+				break;
+			}
 		}
 	}
 	if (IsBardSong(spell_id))
-		AggroAmount /= RuleI(Spells, BardSpellAggroMod);
+		AggroAmount = AggroAmount * RuleI(Aggro, SongAggroMod) / 100;
 	if (GetOwner())
-		AggroAmount /= RuleI(Spells, PetSpellAggroMod);
+		AggroAmount = AggroAmount * RuleI(Aggro, PetSpellAggroMod) / 100;
 		
 	switch (GetAA(aaSpellCastingSubtlety))
 	{
@@ -1170,16 +1183,16 @@ int16 Mob::CheckAggroAmount(int16 spellid) {
 		break;
 	}
 
-	AggroAmount += spells[spell_id].HateAdded + spells[spell_id].bonushate;
-	AggroAmount = (AggroAmount * RuleI(Spells, SpellAggroModifier))/100;
+	AggroAmount = (AggroAmount * RuleI(Aggro, SpellAggroMod))/100;
+	AggroAmount += spells[spell_id].HateAdded + spells[spell_id].bonushate + nonModifiedAggro;
 	return AggroAmount;
 }
 
 //healing and buffing aggro
 //I dont think this accounts for direct healing spells.
-int16 Mob::CheckHealAggroAmount(int16 spellid) {
+sint32 Mob::CheckHealAggroAmount(int16 spellid) {
 	int16 spell_id = spellid;
-	int16 AggroAmount = 1;
+	sint32 AggroAmount = 1;
 	int16 slevel = GetLevel();
 
 	for (int o = 0; o < EFFECT_COUNT; o++) {
@@ -1204,11 +1217,11 @@ int16 Mob::CheckHealAggroAmount(int16 spellid) {
 		}
 	}
 	if (IsBardSong(spell_id))
-		AggroAmount /= RuleI(Spells, BardSpellAggroMod);
+		AggroAmount = AggroAmount * RuleI(Aggro, SongAggroMod) / 100;
 	if (GetOwner())
-		AggroAmount /= RuleI(Spells, PetSpellAggroMod);
+		AggroAmount = AggroAmount * RuleI(Aggro, PetSpellAggroMod) / 100;
 
-	AggroAmount = (AggroAmount * RuleI(Spells, SpellAggroModifier))/100;
+	AggroAmount = (AggroAmount * RuleI(Aggro, SpellAggroMod))/100;
 	return AggroAmount;
 }
 

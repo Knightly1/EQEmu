@@ -593,8 +593,8 @@ bool logpos;
 	bool IsAnimation() const { return(typeofpet == petAnimation); }
 	void SetOwnerID(int16 NewOwnerID);
 	inline int16 GetOwnerID()	const			{ return ownerid; }
-	inline bool HasOwner() const { return(GetOwnerID() != 0); }
-	inline bool IsPet() const { return(GetOwnerID() != 0); }
+	inline bool HasOwner() const { if(GetOwnerID()==0){return false;} return( entity_list.GetMob(GetOwnerID()) != 0); }
+	inline bool IsPet() const { return(HasOwner()); }
 	inline bool HasPet() const { if(GetPetID()==0){return false;} return (entity_list.GetMob(GetPetID()) != 0);}
 	bool HadTempPets() const { return(hasTempPet); }
 	void TempPets(bool i) { hasTempPet = i; }
@@ -690,7 +690,7 @@ bool logpos;
 	void				SetHate(Mob* other, sint32 hate = 0, sint32 damage = 0) {hate_list.Set(other,hate,damage);}
 	int32				GetHateAmount(Mob* tmob, bool is_dam = false)  {return hate_list.GetEntHate(tmob,is_dam);}
 	int32				GetDamageAmount(Mob* tmob)  {return hate_list.GetEntHate(tmob, true);}
-	Mob*				GetHateTop()  {return hate_list.GetTop();}
+	Mob*				GetHateTop()  {return hate_list.GetTop(this);}
 	Mob*				GetHateDamageTop(Mob* other)  {return hate_list.GetDamageTop(other);}
 	Mob*				GetHateRandom()  {return hate_list.GetRandom();}
 	bool				IsEngaged()   {return(!hate_list.IsEmpty()); }
@@ -751,8 +751,8 @@ bool logpos;
 	bool	Charmed() const { return charmed; }
 	static int32	GetLevelHP(int8 tlevel);
 	int32	GetZoneID() const;	//for perl
-	int16	CheckAggroAmount(int16 spellid);
-	int16	CheckHealAggroAmount(int16 spellid);
+	sint32	CheckAggroAmount(int16 spellid);
+	sint32	CheckHealAggroAmount(int16 spellid);
 	virtual int32 GetAA(int32 aa_id) const { return(0); }
 	
 	int16	GetInstrumentMod(int16 spell_id) const;

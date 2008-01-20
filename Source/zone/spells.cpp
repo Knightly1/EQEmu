@@ -2321,8 +2321,19 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 				Message_StringID(MT_Shout, TARGET_RESISTED, spells[spell_id].name);
 				spelltar->Message_StringID(MT_Shout, YOU_RESIST, spells[spell_id].name);
 
-				if(spelltar->IsAIControlled())
-					spelltar->AddToHateList(this, 1);
+				if(spelltar->IsAIControlled()){
+					sint32 aggro = CheckAggroAmount(spell_id);
+					if(aggro > 0)
+						spelltar->AddToHateList(this, aggro);
+					else{
+						sint32 newhate = spelltar->GetHateAmount(this) + aggro;
+						if (newhate < 1) {
+							spelltar->SetHate(this,1);
+						} else {
+							spelltar->SetHate(this,newhate);
+						}
+					}
+				}
 
 				safe_delete(action_packet);
 				return false;
@@ -2387,9 +2398,18 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	}
 
 	if (spelltar->IsAIControlled() && IsDetrimentalSpell(spell_id) && !IsHarmonySpell(spell_id)) {
-		int16 aggro_amount = CheckAggroAmount(spell_id);//*spelltar->CastToNPC()->AggroModifier();
+		sint32 aggro_amount = CheckAggroAmount(spell_id);
 		mlog(SPELLS__CASTING, "Spell %d cast on %s generated %d hate", spell_id, spelltar->GetName(), aggro_amount);
-		spelltar->AddToHateList(this, aggro_amount);
+		if(aggro_amount > 0)
+			spelltar->AddToHateList(this, aggro_amount);
+		else{
+			sint32 newhate = spelltar->GetHateAmount(this) + aggro_amount;
+			if (newhate < 1) {
+				spelltar->SetHate(this,1);
+			} else {
+				spelltar->SetHate(this,newhate);
+			}
+		}
 	}
 	else if (IsBeneficialSpell(spell_id))
 		entity_list.AddHealAggro(spelltar, this, CheckHealAggroAmount(spell_id));
