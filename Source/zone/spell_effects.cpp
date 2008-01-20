@@ -2446,8 +2446,13 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 				sint32 modifier = 100;
 				modifier += caster->CastToClient()->GetFocusEffect(focusImprovedDamage, spell_id);
 
-				if(caster)
-					AddToHateList(caster, -effect_value);
+				if(caster){
+					if(caster->IsClient() && !caster->CastToClient()->GetFeigned()){
+						AddToHateList(caster, -effect_value);
+					}
+					else if(!caster->IsClient())
+						AddToHateList(caster, -effect_value);
+				}
 				effect_value = effect_value * modifier / 100;
 			}
 
@@ -2456,7 +2461,13 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 				Damage(caster, effect_value, spell_id, spell.skill, false, i, true);
 			} else if(effect_value > 0) {
 				//healing spell...
-				entity_list.AddHealAggro(this, caster, effect_value);
+				if(caster){
+					if(caster->IsClient() && !caster->CastToClient()->GetFeigned()){
+						entity_list.AddHealAggro(this, caster, effect_value);
+					}
+					else if(!caster->IsClient())
+						entity_list.AddHealAggro(this, caster, effect_value);
+				}
 				if(caster)
 					effect_value = caster->GetActSpellHealing(spell_id, effect_value);
 				HealDamage(effect_value, caster);
@@ -2500,13 +2511,24 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 
 			if(effect_value < 0) {
 				effect_value = -effect_value;
-				if(caster)
-					AddToHateList(caster, effect_value);
+				if(caster){
+					if(caster->IsClient() && !caster->CastToClient()->GetFeigned()){
+						AddToHateList(caster, effect_value);
+					}
+					else if(!caster->IsClient())
+						AddToHateList(caster, effect_value);
+				}
 				Damage(caster, effect_value, spell_id, spell.skill, false, i, true);
 			} else if(effect_value > 0) {
 				//healing spell...
 				HealDamage(effect_value, caster);
-				entity_list.AddHealAggro(this, caster, effect_value);
+				if(caster){
+					if(caster->IsClient() && !caster->CastToClient()->GetFeigned()){
+						entity_list.AddHealAggro(this, caster, effect_value);
+					}
+					else if(!caster->IsClient())
+						entity_list.AddHealAggro(this, caster, effect_value);
+				}
 			}
 			break;
 		}
@@ -2514,10 +2536,15 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 		case SE_Hate2:{
 			effect_value = CalcSpellEffectValue(spell_id, i, caster_level);
 			if(caster){
-				if(effect_value > 0)
-					if(caster)
-						AddToHateList(caster, effect_value);
-				else{
+				if(effect_value > 0){
+					if(caster){
+						if(caster->IsClient() && !caster->CastToClient()->GetFeigned()){
+							AddToHateList(caster, effect_value);
+						}
+						else if(!caster->IsClient())
+							AddToHateList(caster, effect_value);
+					}
+				}else{
 					sint32 newhate = GetHateAmount(caster) + effect_value;
 					if (newhate < 1) {
 						SetHate(caster,1);

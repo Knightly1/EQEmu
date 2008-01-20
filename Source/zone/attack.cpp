@@ -2130,8 +2130,14 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 		}		
 	}
 	
-	if(attacker)
-		AddToHateList(attacker, 0, damage, true, false, iBuffTic);
+	if(attacker){
+		if(attacker->IsClient()){
+			if(!attacker->CastToClient()->GetFeigned())
+				AddToHateList(attacker, 0, damage, true, false, iBuffTic);
+		}
+		else
+			AddToHateList(attacker, 0, damage, true, false, iBuffTic);
+	}
     
 	if(damage > 0) {
 		//if there is some damage being done and theres an attacker involved
