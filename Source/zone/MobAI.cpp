@@ -1229,6 +1229,9 @@ bool Mob::Flurry()
 
 bool Mob::AddRampage(Mob *mob)
 {
+	if(!mob)
+		return false;
+
     if (!SpecAttacks[SPECATK_RAMPAGE])
         return false;
     for (int i = 0; i < MAX_RAMPAGE_LIST; i++)

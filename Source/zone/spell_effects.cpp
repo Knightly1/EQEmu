@@ -2461,13 +2461,7 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 				Damage(caster, effect_value, spell_id, spell.skill, false, i, true);
 			} else if(effect_value > 0) {
 				//healing spell...
-				if(caster){
-					if(caster->IsClient() && !caster->CastToClient()->GetFeigned()){
-						entity_list.AddHealAggro(this, caster, effect_value);
-					}
-					else if(!caster->IsClient())
-						entity_list.AddHealAggro(this, caster, effect_value);
-				}
+				//healing aggro would go here; removed for now
 				if(caster)
 					effect_value = caster->GetActSpellHealing(spell_id, effect_value);
 				HealDamage(effect_value, caster);
@@ -2481,7 +2475,7 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 
 			//is this affected by stuff like GetActSpellHealing??
 			HealDamage(effect_value, caster);
-			entity_list.AddHealAggro(this, caster, effect_value);
+			//healing aggro would go here; removed for now
 			break;
 		}
 
@@ -2522,13 +2516,7 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 			} else if(effect_value > 0) {
 				//healing spell...
 				HealDamage(effect_value, caster);
-				if(caster){
-					if(caster->IsClient() && !caster->CastToClient()->GetFeigned()){
-						entity_list.AddHealAggro(this, caster, effect_value);
-					}
-					else if(!caster->IsClient())
-						entity_list.AddHealAggro(this, caster, effect_value);
-				}
+				//healing aggro would go here; removed for now
 			}
 			break;
 		}

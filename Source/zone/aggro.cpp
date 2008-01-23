@@ -237,6 +237,11 @@ void NPC::DescribeAggro(Client *towho, Mob *mob, bool verbose) {
 */
 bool Mob::CheckWillAggro(Mob *mob) {
 	_ZP(Mob_CheckWillAggro);
+
+	//sometimes if a client has some lag while zoning into a dangerous place while either invis or a GM
+	//they will aggro mobs even though it's supposed to be impossible, to lets make sure we've finished connecting
+	if(mob->IsClient() && !mob->CastToClient()->ClientFinishedLoading())
+		return false;
 	
 	float iAggroRange = GetAggroRange();
 	
@@ -378,6 +383,9 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 	
 	for(iterator.Reset(); iterator.MoreElements(); iterator.Advance()) {
 		NPC* mob = iterator.GetData();
+		if(!mob){
+			continue;
+		}
 		float r = mob->GetAssistRange();
 		r = r * r;
 

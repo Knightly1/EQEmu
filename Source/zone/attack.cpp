@@ -148,7 +148,9 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 */
 	Mob *attacker=other;
 	Mob *defender=this;
-	float chancetohit = 70.0;
+	float chancetohit = 62.0;
+	if(attacker->IsNPC())
+		chancetohit = 70.0;
 
 #if ATTACK_DEBUG>=11
 		LogFile->write(EQEMuLog::Debug, "CheckHitChance(%s) attacked by %s", defender->GetName(), attacker->GetName());
@@ -481,7 +483,10 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 		else{
 			intervalUsed = MakeRandomInt(0, 2);
 			//move the hardcoded value to a rule eventually, it impacts how lenient or strict the AC is
-			intervalUsed += ((intervalRoll * intervalsAllowed) / (19 * defender->GetLevel()));
+			if(defender->GetLevel() != 0)
+				intervalUsed += ((intervalRoll * intervalsAllowed) / (19 * defender->GetLevel()));
+			else
+				intervalUsed += ((intervalRoll * intervalsAllowed) / (19 * 1));
 		}
 
 		mlog(COMBAT__DAMAGE, "attackRating: %d defenseRating: %d intervalRoll: %d intervalUsed: %d", attackRating, defenseRating, intervalRoll, intervalUsed);
@@ -489,7 +494,8 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 			damage = 0;
 		}
 		else{
-			damage -= (((damage - minhit) * intervalUsed) / intervalsAllowed);
+			if(intervalsAllowed != 0)
+				damage -= (((damage - minhit) * intervalUsed) / intervalsAllowed);
 		}
 	}
 	else{
@@ -536,6 +542,9 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 	}
 
 	damage -= (damage * totalMit / 100);
+
+	if(damage < minhit)
+		damage = minhit;
 
 	if(damage < 0)
 		damage = 0;
@@ -931,6 +940,23 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 		CheckIncreaseSkill(skillinuse, -10);
 		CheckIncreaseSkill(OFFENSE, -10);
 
+		//monks are supposed to be a step ahead of other classes in
+		//toe to toe combat, small bonuses for hitting key levels too
+		int bonus = 0;
+		if(GetClass() == MONK)
+			bonus += 20;
+		if(GetLevel() > 50)
+			bonus += 15;
+		if(GetLevel() >= 55)
+			bonus += 15;
+		if(GetLevel() >= 60)
+			bonus += 15;
+		if(GetLevel() >= 65)
+			bonus += 15;
+		
+		min_hit += (min_hit * bonus / 100);
+		max_hit += (max_hit * bonus / 100);
+
 		//if mainhand only, get the bonus damage from level
 		if(Hand==13){
 			int damage_bonus = GetWeaponDamageBonus(weapon ? weapon->GetItem() : (const Item_Struct*)NULL);
@@ -947,20 +973,6 @@ bool Client::Attack(Mob* other, int Hand, bool bRiposte)
 			damage = max_hit;
 		else
 			damage = MakeRandomInt(min_hit, max_hit);
-
-		//monks are supposed to be a step ahead of other classes in
-		//toe to toe combat, small bonuses for hitting key levels too
-		int bonus = 0;
-		if(GetClass() == MONK)
-			bonus += 15;
-		if(GetLevel() > 50)
-			bonus += 3;
-		if(GetLevel() > 55)
-			bonus += 3;
-		if(GetLevel() > 60)
-			bonus += 3;
-		
-		damage += (damage * bonus / 100);
 
 		mlog(COMBAT__DAMAGE, "Damage calculated to %d (min %d, max %d, str %d, skill %d, DMG %d, lv %d)", damage, min_hit, max_hit
 		, GetSTR(), GetSkill(skillinuse), weapon_damage, mylevel);

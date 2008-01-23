@@ -1,5 +1,18 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==01/22/2008
+KLS: Clients will be immune to proximity aggro until they are finished loading now.
+KLS: Slightly reduced the melee accuracy of clients.
+KLS: Melee mitigation should now properly enforce minimum damage.
+KLS: Increased the level based damage bonus for high level characters in melee combat.
+KLS: Removed tic by tic healing aggro.
+KLS: Fixed several potential crashes in various parts of the code.
+KLS: (Knightly)Merchants will now use their clean names when conversing with players.
+KLS: Fixed some improper casting in the GMSummon code.
+KLS: Figured in a work around for corpses between the server and client becoming unsynced for /corpse
+KLS: AA Consumption of the soul should now function correctly.
+KLS: AA Soul Abrasion should now function correctly
+
 ==01/19/2008
 KLS: Slightly reduced the effectivness of the Flurry AA
 KLS: Speed of the Knight AA implemented

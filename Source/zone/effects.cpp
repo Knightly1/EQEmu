@@ -69,19 +69,9 @@ sint32 Client::GetActSpellDamage(int16 spell_id, sint32 value) {
 	
 	//these spell IDs could be wrong
 	if (spell_id == SPELL_LEECH_TOUCH) {	//leech touch
-		switch (GetAA(aaConsumptionoftheSoul)) {
-			case 1:
-				modifier += 25;
-				break;
-			case 2:
-				modifier += 50;
-				break;
-			case 3:
-				modifier += 75;
-				break;
-		}
+		value += GetAA(aaConsumptionoftheSoul) * 500;
 	}
-	if (spell_id == SPELL_HARM_TOUCH) {	//harm touch
+	if (spell_id == SPELL_IMP_HARM_TOUCH) {	//harm touch
 		switch(GetAA(aaUnholyTouch)) {
 			case 1:
 				modifier += 25;
@@ -140,17 +130,19 @@ sint32 Client::GetActSpellDamage(int16 spell_id, sint32 value) {
 			if(ratio < 100)	//chance increase and ratio are made up, not confirmed
 				ratio = 100;
 			
-			switch (GetAA(aaSoulAbrasion)) //Soul Abrasion
-			{
-				case 1:
-					modifier += 75;
-					break;
-				case 2:
-					modifier += 100;
-					break;
-				case 3:
-					modifier += 150;
-					break;
+			if(spells[spell_id].classes[SHADOWKNIGHT-1] < 255){
+				switch (GetAA(aaSoulAbrasion)) //Soul Abrasion
+				{
+					case 1:
+						modifier += 75;
+						break;
+					case 2:
+						modifier += 100;
+						break;
+					case 3:
+						modifier += 150;
+						break;
+				}
 			}
 		}
 		

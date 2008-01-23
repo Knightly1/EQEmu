@@ -266,7 +266,7 @@ Mob *HateList::GetTop(Mob *center)
 				}
 			}
 
-			if((cur->ent->GetHP()*100/cur->ent->GetMaxHP()) < 20){
+			if(cur->ent->GetMaxHP() != 0 && ((cur->ent->GetHP()*100/cur->ent->GetMaxHP()) < 20)){
 				aggroMod += RuleI(Aggro, CriticallyWoundedAggroMod);
 			}
 
@@ -292,7 +292,7 @@ Mob *HateList::GetTop(Mob *center)
 			iterator.Advance();
 		}
 
-		if(topClientInRange != NULL && !top->IsClient())
+		if(topClientInRange != NULL && top != NULL && !top->IsClient())
 			return topClientInRange;
 		else
 			return top;

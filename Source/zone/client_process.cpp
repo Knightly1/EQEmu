@@ -897,7 +897,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
         }
 		sprintf(handy_id,"%i",greet_id);
 		char merchantname[64]={0};
-		strncpy(merchantname,merch->GetName(),strlen(merch->GetName())-2);
+		strcpy(merchantname,merch->GetCleanName());
 		if(greet_id!=MERCHANT_GREETING){
 			Message_StringID(10,GENERIC_STRINGID_SAY,merchantname,handy_id,this->GetName(),handyitem->Name);
 		
@@ -1486,7 +1486,7 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 		{
 			Message(0, "Local: Summoning %s to %i, %i, %i", gms->charname, gms->x, gms->y, gms->z);
 			if (st->IsClient() && (st->CastToClient()->GetAnon() != 1 || this->Admin() >= st->CastToClient()->Admin()))
-				st->CastToClient()->MovePC(gms->x, gms->y, gms->z, this->GetHeading(), 2, true);
+				st->CastToClient()->MovePC((float)gms->x, (float)gms->y, (float)gms->z, this->GetHeading(), 2, true);
 			else
 				st->GMMove(this->GetX(), this->GetY(), this->GetZ(),this->GetHeading());
 		}
@@ -1505,12 +1505,19 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 				szp->adminrank = this->Admin();
 				strcpy(szp->name, gms->charname);
 				strcpy(szp->zone, zone->GetShortName());
-				szp->x_pos = gms->x;
-				szp->y_pos = gms->y;
-				szp->z_pos = gms->z;
+				szp->x_pos = (float)gms->x;
+				szp->y_pos = (float)gms->y;
+				szp->z_pos = (float)gms->z;
 				szp->ignorerestrictions = 2;
 				worldserver.SendPacket(pack);
 				safe_delete(pack);
+			}
+			else {
+				//all options have been exhausted
+				//summon our target...
+				if(GetTarget() && GetTarget()->IsCorpse()){
+					GetTarget()->CastToCorpse()->Summon(this, false);
+				}
 			}
 		}
 	}

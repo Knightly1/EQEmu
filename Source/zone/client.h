@@ -660,6 +660,8 @@ public:
 	//Doesn't appear to work directly after the client recieves an action packet.
 	void SendBuffDurationPacket(int16 spell_id, int duration, int inlevel);
 
+	bool ClientFinishedLoading() { return (conn_state == ClientConnectFinished); }
+
 
 protected:
 	friend class Mob;
