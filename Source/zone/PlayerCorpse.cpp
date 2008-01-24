@@ -236,7 +236,7 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 
 	SetPKItem(0);
 
-	if(!RuleB(Character, LeaveNakedCorpses)) {
+	if(!RuleB(Character, LeaveNakedCorpses) || RuleB(Character, LeaveCorpses) && GetLevel() >= RuleI(Character, DeathItemLossLevel)) {
 		// cash
 		SetCash(pp->copper, pp->silver, pp->gold, pp->platinum);
 		pp->copper = 0;

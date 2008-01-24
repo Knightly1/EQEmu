@@ -1314,8 +1314,8 @@ void command_summon(Client *c, const Seperator *sep)
 			else
 			{ // player is in another zone
 				// @merth: Taking this command out until we test the factor of 8 in ServerOP_ZonePlayer
-				c->Message(0, "Summoning player from another zone not yet implemented.");
-				return;
+				//c->Message(0, "Summoning player from another zone not yet implemented.");
+				//return;
 
 				ServerPacket* pack = new ServerPacket(ServerOP_ZonePlayer, sizeof(ServerZonePlayer_Struct));
 				ServerZonePlayer_Struct* szp = (ServerZonePlayer_Struct*) pack->pBuffer;
@@ -1363,7 +1363,7 @@ void command_summon(Client *c, const Seperator *sep)
 			return;
 		}
 		c->Message(0, "Summoning player %s to %1.1f, %1.1f, %1.1f", t->GetName(), c->GetX(), c->GetY(), c->GetZ());
-		t->CastToClient()->MovePC(zone->GetZoneID(), c->GetX(), c->GetY(), c->GetZ(), c->GetHeading(), 2, true);
+		t->CastToClient()->MovePC(zone->GetZoneID(), c->GetX(), c->GetY(), c->GetZ(), c->GetHeading(), 2, GMSummon);
 	}
 }
 
@@ -1409,7 +1409,7 @@ void command_zone(Client *c, const Seperator *sep)
 		
 	if (sep->IsNumber(2) || sep->IsNumber(3) || sep->IsNumber(4))
 		//zone to specific coords
-		c->MovePC(zoneid, atof(sep->arg[2]), atof(sep->arg[3]), atof(sep->arg[4]), 0.0f, 0, false);
+		c->MovePC(zoneid, atof(sep->arg[2]), atof(sep->arg[3]), atof(sep->arg[4]), 0.0f, 0);
 	else
 		//zone to safe coords
 		c->GoToSafeCoords(zoneid);

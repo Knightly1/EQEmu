@@ -3149,7 +3149,7 @@ void Client::Sacrifice(Client *caster)
 							entity_list.QueueClients(this, &app2, true);
 						}						
 						Save();
-						GoToBind();
+						GoToDeath();
 						caster->SummonItem(SACRIFICE_ITEMID);
 					}
 				}

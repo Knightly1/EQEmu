@@ -142,11 +142,13 @@ typedef enum {	//disciplines for disc_inuse
 
 //Modes for the zoning state of the client.
 typedef enum {
-	ZoneToSafeCoords,
-	ZoneSummoned,		//might be eliminated using solicited
-	ZoneToBindPoint,
-	ZoneSolicited,		//we told the client to zone.
-	ZoneUnsolicited
+	ZoneToSafeCoords,		// Always send ZonePlayerToBind_Struct to client: Succor/Evac
+	GMSummon,				// Always send ZonePlayerToBind_Struct to client: Only a GM Summon
+	ZoneToBindPoint,		// Always send ZonePlayerToBind_Struct to client: Death Only
+	ZoneSolicited,			// Always send ZonePlayerToBind_Struct to client: Portal, Translocate, Evac spells that have a x y z coord in the spell data
+	ZoneUnsolicited,
+	GateToBindPoint,		// Always send RequestClientZoneChange_Struct to client: Gate spell or Translocate To Bind Point spell
+	SummonPC				// In-zone GMMove() always: Call of the Hero spell or some other type of in zone only summons
 } ZoneMode;
 
 class ClientFactory {
@@ -390,15 +392,15 @@ public:
 	void	GoToSafeCoords(uint16 zone_id);
 	void	Gate();
 	void	SetBindPoint(int to_zone = -1, float new_x = 0.0f, float new_y = 0.0f, float new_z = 0.0f);
-	void	MovePC(const char* zonename, float x, float y, float z, float heading, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
-	void	MovePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
-	void	MovePC(float x, float y, float z, float heading, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
+	void	MovePC(const char* zonename, float x, float y, float z, float heading, int8 ignorerestrictions = 0, ZoneMode zm = ZoneSolicited);
+	void	MovePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions = 0, ZoneMode zm = ZoneSolicited);
+	void	MovePC(float x, float y, float z, float heading, int8 ignorerestrictions = 0, ZoneMode zm = ZoneSolicited);
 	void	WhoAll();
 	bool	CheckLoreConflict(const Item_Struct* item);
 	void	ChangeLastName(const char* in_lastname);
 	void	GetGroupAAs(GroupLeadershipAA_Struct *into) const;
 	void	Sacrifice(Client* caster);
-	void	ZonePCToBindPointAfterDeath();
+	void	GoToDeath();
 	
 	FACTION_VALUE	GetReverseFactionCon(Mob* iOther);
     FACTION_VALUE   GetFactionLevel(int32 char_id, int32 npc_id, int32 p_race, int32 p_class, int32 p_deity, sint32 pFaction, Mob* tnpc);
@@ -782,9 +784,8 @@ private:
 	void SendZoneCancel(ZoneChange_Struct *zc);
 	void SendZoneError(ZoneChange_Struct *zc, sint8 err);
 	void DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, float dest_x, float dest_y, float dest_z, float dest_h, sint8 ignore_r);
-	void InZoneMovePC(float x, float y, float z, float heading, int8 ignorerestrictions, bool summoned, ZoneMode zm);
-	void ZonePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions, bool summoned, ZoneMode zm);
-	void ProcessMovePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions = 0, bool summoned = false, ZoneMode zm = ZoneSolicited);
+	void ZonePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions, ZoneMode zm);
+	void ProcessMovePC(int32 zoneID, float x, float y, float z, float heading, int8 ignorerestrictions = 0, ZoneMode zm = ZoneSolicited);
 	//	char	zonesummon_name[32];
 	float	zonesummon_x;
 	float	zonesummon_y;

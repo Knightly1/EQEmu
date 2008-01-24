@@ -1825,7 +1825,7 @@ bool Mob::HateSummon() {
 
 		// RangerDown - GMMove doesn't seem to be working well with players, so use MovePC for them, GMMove for NPC's
 		if (target->IsClient())
-			target->CastToClient()->MovePC(zone->GetZoneID(), x_pos, y_pos, z_pos, target->GetHeading(), 0, true);
+			target->CastToClient()->MovePC(zone->GetZoneID(), x_pos, y_pos, z_pos, target->GetHeading(), 0, SummonPC);
 		else
 			GetHateTop()->GMMove(x_pos, y_pos, z_pos, target->GetHeading());
         return true;

@@ -1,5 +1,15 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==01/24/2008
+WildcardX: Druids and Wizards rejoice! Succor/Evac will now perform a real zone and clear your aggro!
+WildcardX: GM's can now summon players from one zone to another.
+WildcardX: Cleaned up some of the code that handles zoning.
+WildcardX: (cavedude) Reworked LeaveCorpses and LeaveNakedCorpses rules to allow for more options.
+WildcardX: (cavedude) Created Character:DeathItemLossLevel rule to define when a player will leave items on a corpse.
+
+Required SQL:
+insert into rule_values values(0, 'Character:DeathItemLossLevel', 10);
+
 ==01/22/2008
 KLS: Clients will be immune to proximity aggro until they are finished loading now.
 KLS: Slightly reduced the melee accuracy of clients.

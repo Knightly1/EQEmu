@@ -1253,7 +1253,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skil
 		BuffFadeAll();
 		UnmemSpellAll(false);
 		
-		if(RuleB(Character, LeaveCorpses))
+		if(RuleB(Character, LeaveCorpses) && GetLevel() >= RuleI(Character, DeathItemLossLevel) || RuleB(Character, LeaveNakedCorpses))
 		{
 			// creating the corpse takes the cash/items off the player too
 			Corpse *new_corpse = new Corpse(this, exploss);
@@ -1353,7 +1353,7 @@ void Client::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skil
 		
 	Save();
 	
-	GoToBind();
+	GoToDeath();
 }
 
 bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base function has changed prototype, need to update overloaded version

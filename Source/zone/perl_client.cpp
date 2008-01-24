@@ -1055,7 +1055,10 @@ XS(XS_Client_MovePC)
 			summoned = (bool)SvTRUE(ST(7));
 		}
 
-		THIS->MovePC(zoneID, x, y, z, heading, ignorerestrictions, summoned);
+		if(summoned)
+			THIS->MovePC(zoneID, x, y, z, heading, ignorerestrictions, SummonPC);
+		else
+			THIS->MovePC(zoneID, x, y, z, heading, ignorerestrictions);
 	}
 	XSRETURN_EMPTY;
 }

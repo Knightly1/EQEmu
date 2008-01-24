@@ -22,7 +22,8 @@
 
 RULE_CATEGORY( Character )
 RULE_INT ( Character, MaxLevel, 65 )
-RULE_INT ( Character, DeathExpLossLevel, 6 )
+RULE_INT ( Character, DeathExpLossLevel, 10 )
+RULE_INT ( Character, DeathItemLossLevel, 10 )
 RULE_INT ( Character, CorpseDecayTimeMS, 10800000 )
 RULE_BOOL( Character, LeaveCorpses, false )
 RULE_BOOL( Character, LeaveNakedCorpses, false )

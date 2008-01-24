@@ -286,7 +286,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					}
 				}
 
-				entity_list.RemoveFromHateLists(this, false);
+				// entity_list.RemoveFromHateLists(this, false);
 
 				if(IsClient())
 				{
@@ -306,13 +306,15 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 						LogFile->write(EQEMuLog::Debug, "Succor/Evacuation Spell In Same Zone.");
 #endif
 						if(IsClient())
-							CastToClient()->MovePC(target_zone, x, y, z, heading, 0, false, ZoneToSafeCoords);
+							CastToClient()->MovePC(target_zone, x, y, z, heading, 0, ZoneToSafeCoords);
 						else
 							GMMove(x, y, z, heading);
+						/*
 						Mob *mypet = GetPet();
 						if(mypet){
 							entity_list.RemoveFromHateLists(mypet, false);
 						}
+						*/
 					}
 					else {
 #ifdef SPELL_EFFECT_SPAM
@@ -1668,13 +1670,11 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 
 			case SE_SummonPC:
 			{
-				if(IsClient()){
-					CastToClient()->MovePC(zone->GetZoneID(), caster->GetX(), caster->GetY(), caster->GetZ(), caster->GetHeading(), 2, true);
-					Message(15, "You have been summoned!");
-				}
-				else{
+				if(IsClient())
+					CastToClient()->MovePC(zone->GetZoneID(), caster->GetX(), caster->GetY(), caster->GetZ(), caster->GetHeading(), 2, SummonPC);
+				else
 					caster->Message(13, "This spell can only be cast on players.");
-				}
+
 				break;
 			}
 
