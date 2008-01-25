@@ -585,6 +585,7 @@ bool Corpse::Process() {
 	
 	if(corpse_graveyard_timer.Check()) {
 		if(zone->HasGraveyard()) {
+			Save();
 			p_depop = true;
 			database.GraveyardPlayerCorpse(dbid, zone->graveyard_zoneid(), zone->graveyard_x(), zone->graveyard_y(), zone->graveyard_z(), zone->graveyard_heading());
 			corpse_graveyard_timer.Disable();
@@ -607,6 +608,7 @@ bool Corpse::Process() {
 			Delete();
 		else {
 			if(database.BuryPlayerCorpse(dbid)) {
+				Save();
 				p_depop = true;
 				dbid = 0;
 				LogFile->write(EQEMuLog::Debug, "Tagged %s player corpse has burried.", this->GetName());
