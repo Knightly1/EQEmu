@@ -1,6 +1,7 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 ==01/24/2008
+WildcardX: Removed a 64 character cap legnth on merchant names sent during a merchant greeting.
 WildcardX: Fixed a bug that allowed players looting their corpse at just the right time, to duplicate their items.
 WildcardX: Fixed a bug I caused in group portals when I corrected the Succor/Evac line.
 
