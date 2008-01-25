@@ -1,6 +1,8 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 ==01/24/2008
+WildcardX: Fixed a bug I caused in group portals when I corrected the Succor/Evac line.
+
 WildcardX: Druids and Wizards rejoice! Succor/Evac will now perform a real zone and clear your aggro!
 WildcardX: GM's can now summon players from one zone to another.
 WildcardX: Cleaned up some of the code that handles zoning.

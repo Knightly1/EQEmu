@@ -415,9 +415,9 @@ void Client::ZonePC(int32 zoneID, float x, float y, float z, float heading, int8
 		
 	switch(zm) {
 		case ZoneToSafeCoords:
-			x = x_pos = zone->safe_x();
-			y = y_pos = zone->safe_y();
-			z = z_pos = zone->safe_z();
+			x = zone->safe_x();
+			y = zone->safe_y();
+			z = zone->safe_z();
 			heading = heading;
 			break;
 		case GMSummon:
@@ -430,9 +430,9 @@ void Client::ZonePC(int32 zoneID, float x, float y, float z, float heading, int8
 			zonesummon_ignorerestrictions = 1;
 			break;
 		case ZoneSolicited:
-			zonesummon_x = x_pos = x;
-			zonesummon_y = y_pos = y;
-			zonesummon_z = z_pos = z;
+			zonesummon_x = x;
+			zonesummon_y = y;
+			zonesummon_z = z;
 			heading = heading;
 			
 			zonesummon_id = zoneID;
