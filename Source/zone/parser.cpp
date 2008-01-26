@@ -686,7 +686,7 @@ void Parser::ClearAliasesByNPCID(int32 iNPCID) {
 	}*/
 }
 
-void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid, NPC* other, Mob* mob )
+void Parser::ExCommands(string o_command, string parms, int argnums, int32 npcid, Mob* other, Mob* mob )
 {
 	char arglist[10][1024];
 	//Work out the argument list, if there needs to be one
@@ -1538,7 +1538,7 @@ int Parser::ParseIf(string text)
 	return 1;
 }
 
-int Parser::ParseCommands(string text, int line, int justcheck, int32 npcid, NPC* other, Mob* mob,  std::string filename)
+int Parser::ParseCommands(string text, int line, int justcheck, int32 npcid, Mob* other, Mob* mob,  std::string filename)
 {
 	string buffer,command,parms,temp,temp2;
 	temp2 = text;

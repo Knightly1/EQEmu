@@ -4046,17 +4046,17 @@ void command_time(Client *c, const Seperator *sep)
 			minutes=atoi(sep->arg[2]);
 		}
 		c->Message(13, "Setting world time to %s:%i (Timezone: 0)...", sep->arg[1], minutes);
-		zone->SetTime(atoi(sep->arg[1]), minutes);
+		zone->SetTime(atoi(sep->arg[1])+1, minutes);
 	}
 	else {
 		c->Message(13, "To set the Time: #time HH [MM]");
 		TimeOfDay_Struct eqTime;
 		zone->zone_time.getEQTimeOfDay( time(0), &eqTime);
 		sprintf(timeMessage,"%02d:%s%d %s (Timezone: %ih %im)",
-			(eqTime.hour % 12) == 0 ? 12 : (eqTime.hour % 12),
+			((eqTime.hour - 1) % 12) == 0 ? 12 : ((eqTime.hour - 1) % 12),
 			(eqTime.minute < 10) ? "0" : "",
 			eqTime.minute,
-			(eqTime.hour >= 12) ? "pm" : "am",
+			(eqTime.hour >= 13) ? "pm" : "am",
 			zone->zone_time.getEQTimeZoneHr(),
 			zone->zone_time.getEQTimeZoneMin()
 			);

@@ -752,7 +752,7 @@ void Group::EstablishLink(int32 link_id)
 #endif
 
 
-void Group::TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z)
+void Group::TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z, float heading)
 {
 	uint32 i;
 	 for (i = 0; i < MAX_GROUP_MEMBERS; i++)
@@ -763,7 +763,7 @@ void Group::TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z)
 		  if (members[i] != NULL && members[i]->IsClient() && members[i] != sender)
 	 #endif
 	 	{
-			members[i]->CastToClient()->MovePC(int(zoneID), x, y, z, 0.0, 0, ZoneSolicited);
+			members[i]->CastToClient()->MovePC(int(zoneID), x, y, z, heading, 0, ZoneSolicited);
 		}
 	}	
 }

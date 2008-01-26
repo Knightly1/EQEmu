@@ -22,6 +22,10 @@
 #include "../common/MiscFunctions.h"
 #include "../common/rulesys.h"
 
+#ifdef EMBPERL
+#include "embparser.h"
+#endif
+
 //experience modifiers based on race and class, used if USE_RACE_CLASS_XP_MODS is defined
 //                            hum     bar     eru     elf     hie     def     hef     dwa     tro     ogr     hal    gno     iks,    vah     frog
 float  race_modifiers[15] = { 100.0f, 105.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 120.0f, 115.0f, 95.0f, 100.0f, 120.0f, 100.0f, 100.0f}; // Quagmire - Guessed on iks and vah
@@ -277,6 +281,10 @@ void Client::SetLevel(int8 set_level, bool command)
 
 	if(set_level > m_pp.level) { // Yes I am aware that you could delevel yourself and relevel this is just to test!
 		m_pp.points += 5 * (set_level - m_pp.level);
+
+#ifdef EMBPERL
+		((PerlembParser*)parse)->Event(EVENT_LEVEL_UP, 0, "", (NPC*)NULL, this);
+#endif
 	}
 
 	m_pp.level = set_level;

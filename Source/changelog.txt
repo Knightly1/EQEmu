@@ -1,10 +1,31 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==01/25/2008
+WildcardX: Regenerated perl_client.cpp and perl_groups.cpp due to parameter changes for Group::TeleportGroup and Client::MovePC methods. Changes to some quest files may be necessary.
+WildcardX: void	MovePC(int32 zoneID, float x, float y, float z, float heading)
+WildcardX: void	TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z, float heading)
+WildcardX: Pets will now report their buff list along with their health.
+WildcardX: Fixed a bug that resulted in a zone crash if spell error logging is turned on.
+WildcardX: (cavedude) Corrected an item id and some small typos in fishing.
+KLS: Fixed a potential crash in Mob::CheckWillAggro()
+KLS: Tweaked melee accuracy.
+KLS: Ironed out some quirks between min hit and the AC code that was keeping it from mitigating some hits into misses.
+KLS: (Knightly)#time should no longer be off by an hour, $zonehour, $zonemin and $zonetime are now exported to perl
+KLS: Added player quests, player quests are quests designed to be attached to player processes such as zoning and clicking objects.
+KLS: Player quests are loaded as either 'quests/zonename/player.pl' or as a template in 'quests/template/player.pl'
+KLS: Player quests will export qglobals the client should be able to see and the following events are available for player quests: 
+EVENT_TIMER with var $timer
+EVENT_CLICKDOOR with var $doorid
+EVENT_LOOT with vars $looted_id and $looted_charges
+EVENT_ZONE with var $target_zone_id
+EVENT_ENTERZONE with no special var
+EVENT_LEVEL_UP with no special var
+
+
 ==01/24/2008
 WildcardX: Removed a 64 character cap legnth on merchant names sent during a merchant greeting.
 WildcardX: Fixed a bug that allowed players looting their corpse at just the right time, to duplicate their items.
 WildcardX: Fixed a bug I caused in group portals when I corrected the Succor/Evac line.
-
 WildcardX: Druids and Wizards rejoice! Succor/Evac will now perform a real zone and clear your aggro!
 WildcardX: GM's can now summon players from one zone to another.
 WildcardX: Cleaned up some of the code that handles zoning.

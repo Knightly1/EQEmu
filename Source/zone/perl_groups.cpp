@@ -504,8 +504,8 @@ XS(XS_Group_TeleportGroup); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Group_TeleportGroup)
 {
 	dXSARGS;
-	if (items != 6)
-		Perl_croak(aTHX_ "Usage: Group::TeleportGroup(THIS, sender, zoneID, x, y, z)");
+	if (items != 7)
+		Perl_croak(aTHX_ "Usage: Group::TeleportGroup(THIS, sender, zoneID, x, y, z, heading)");
 	{
 		Group *		THIS;
 		Mob*		sender;
@@ -513,6 +513,7 @@ XS(XS_Group_TeleportGroup)
 		float		x = (float)SvNV(ST(3));
 		float		y = (float)SvNV(ST(4));
 		float		z = (float)SvNV(ST(5));
+		float		heading = (float)SvNV(ST(6));
 
 		if (sv_derived_from(ST(0), "Group")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -532,7 +533,7 @@ XS(XS_Group_TeleportGroup)
 		if(sender == NULL)
 			Perl_croak(aTHX_ "sender is NULL, avoiding crash.");
 
-		THIS->TeleportGroup(sender, zoneID, x, y, z);
+		THIS->TeleportGroup(sender, zoneID, x, y, z, heading);
 	}
 	XSRETURN_EMPTY;
 }
@@ -599,7 +600,7 @@ XS(boot_Group)
 		newXSproto(strcpy(buf, "IsLeader"), XS_Group_IsLeader, file, "$$");
 		newXSproto(strcpy(buf, "GroupCount"), XS_Group_GroupCount, file, "$");
 		newXSproto(strcpy(buf, "GetHighestLevel"), XS_Group_GetHighestLevel, file, "$");
-		newXSproto(strcpy(buf, "TeleportGroup"), XS_Group_TeleportGroup, file, "$$$$$$");
+		newXSproto(strcpy(buf, "TeleportGroup"), XS_Group_TeleportGroup, file, "$$$$$$$");
 		newXSproto(strcpy(buf, "GetID"), XS_Group_GetID, file, "$");
 	XSRETURN_YES;
 }

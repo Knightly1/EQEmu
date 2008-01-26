@@ -86,7 +86,7 @@ void PerlXSParser::map_funs() {
 	);//eval
 }
 
-void PerlXSParser::SendCommands(const char * pkgprefix, const char *event, int32 npcid, NPC* other, Mob* mob)
+void PerlXSParser::SendCommands(const char * pkgprefix, const char *event, int32 npcid, Mob* other, Mob* mob)
 {
 	if(!perl)
 		return;
@@ -116,10 +116,13 @@ void PerlXSParser::SendCommands(const char * pkgprefix, const char *event, int32
 			sv_setsv(client, _empty_sv);
 		}
 
-		NPC *curn = quest_manager.GetNPC();
-		snprintf(namebuf, 64, "%s::npc", pkgprefix);
-		SV *npc = get_sv(namebuf, true);
-		sv_setref_pv(npc, "NPC", curn);
+		//only export NPC if it's a npc quest
+		if(!other->IsClient()){
+			NPC *curn = quest_manager.GetNPC();
+			snprintf(namebuf, 64, "%s::npc", pkgprefix);
+			SV *npc = get_sv(namebuf, true);
+			sv_setref_pv(npc, "NPC", curn);
+		}
 
 		snprintf(namebuf, 64, "%s::entity_list", pkgprefix);
 		SV *el = get_sv(namebuf, true);

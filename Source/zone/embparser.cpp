@@ -30,6 +30,7 @@
 #include "embparser.h"
 #include "questmgr.h"
 #include "command.h"
+#include "../common/seperator.h"
 #include "../common/MiscFunctions.h"
 
 #include <algorithm>
@@ -50,7 +51,12 @@ const char *QuestEventSubroutines[_LargestEventID] = {
 	"EVENT_SIGNAL",
 	"EVENT_HP",
 	"EVENT_ENTER",
-	"EVENT_EXIT"
+	"EVENT_EXIT",
+	"EVENT_ENTERZONE",
+	"EVENT_CLICKDOOR",
+	"EVENT_LOOT",
+	"EVENT_ZONE",
+	"EVENT_LEVEL_UP"
 };
 
 PerlembParser::PerlembParser(void) : Parser()
@@ -204,11 +210,29 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 		return;
 	}
 
-	string packagename = GetPkgPrefix(npcid);
+	bool isPlayerQuest = false;
+	if(!npcmob && mob)
+		isPlayerQuest = true;
 
-	if(!isloaded(packagename.c_str()))
-	{
-		LoadScript(npcid, zone->GetShortName());
+	string packagename;
+	
+	if(!isPlayerQuest){
+		packagename = GetPkgPrefix(npcid);
+
+		if(!isloaded(packagename.c_str()))
+		{
+			LoadScript(npcid, zone->GetShortName());
+		}
+	}
+	else {
+		packagename = "player";
+		packagename += "_"; 
+		packagename += zone->GetShortName();
+
+		if(!isloaded(packagename.c_str()))
+		{
+			LoadPlayerScript(zone->GetShortName());
+		}
 	}
 
 	const char *sub_name = QuestEventSubroutines[event];
@@ -228,36 +252,71 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 
 	ExportVar(packagename.c_str(), "charid", charid);
 
-	//only export globals if the npcmob has the qglobal flag
-	if(npcmob && npcmob->GetQglobal()){
-		// Delete expired global variables
-		database.RunQuery(query, MakeAnyLenString(&query,
-			"DELETE FROM quest_globals WHERE expdate < UNIX_TIMESTAMP()"), errbuf);
-		safe_delete_array(query);
+	if(!isPlayerQuest){
+		//only export globals if the npcmob has the qglobal flag
+		if(npcmob && npcmob->GetQglobal()){
+			// Delete expired global variables
+			database.RunQuery(query, MakeAnyLenString(&query,
+				"DELETE FROM quest_globals WHERE expdate < UNIX_TIMESTAMP()"), errbuf);
+			safe_delete_array(query);
 
-		map<string, string> globhash;
+			map<string, string> globhash;
 
-		// Load global variables
-		database.RunQuery(query, MakeAnyLenString(&query,
-		"SELECT name,value"
-		" FROM quest_globals"
-		" WHERE (npcid=%i || npcid=0) && (charid=%i || charid=0) && (zoneid=%i || zoneid=0)",
-			npcmob->GetNPCTypeID(),charid,zone->GetZoneID()), errbuf, &result);
-		if (result)
-		{
-			while ((row = mysql_fetch_row(result)))
+			// Load global variables
+			database.RunQuery(query, MakeAnyLenString(&query,
+			"SELECT name,value"
+			" FROM quest_globals"
+			" WHERE (npcid=%i || npcid=0) && (charid=%i || charid=0) && (zoneid=%i || zoneid=0)",
+				npcmob->GetNPCTypeID(),charid,zone->GetZoneID()), errbuf, &result);
+			if (result)
 			{
-				globhash[row[0]] = row[1];
+				while ((row = mysql_fetch_row(result)))
+				{
+					globhash[row[0]] = row[1];
 
-				// DEPRECATED: Export variables as $var in addition to hash
-				ExportVar(packagename.c_str(), row[0], row[1]);
+					// DEPRECATED: Export variables as $var in addition to hash
+					ExportVar(packagename.c_str(), row[0], row[1]);
+				}
+				mysql_free_result(result);
 			}
-			mysql_free_result(result);
-		}
-		safe_delete_array(query);
+			safe_delete_array(query);
 
-		// Put key-value pairs in perl hash
-		ExportHash(packagename.c_str(), "qglobals", globhash);
+			// Put key-value pairs in perl hash
+			ExportHash(packagename.c_str(), "qglobals", globhash);
+		}
+	}
+	else{
+		//only export globals if the npcmob has the qglobal flag
+		if(mob){
+			// Delete expired global variables
+			database.RunQuery(query, MakeAnyLenString(&query,
+				"DELETE FROM quest_globals WHERE expdate < UNIX_TIMESTAMP()"), errbuf);
+			safe_delete_array(query);
+
+			map<string, string> globhash;
+
+			// Load global variables
+			database.RunQuery(query, MakeAnyLenString(&query,
+			"SELECT name,value"
+			" FROM quest_globals"
+			" WHERE (npcid=0) && (charid=%i || charid=0) && (zoneid=%i || zoneid=0)",
+				charid,zone->GetZoneID()), errbuf, &result);
+			if (result)
+			{
+				while ((row = mysql_fetch_row(result)))
+				{
+					globhash[row[0]] = row[1];
+
+					// DEPRECATED: Export variables as $var in addition to hash
+					ExportVar(packagename.c_str(), row[0], row[1]);
+				}
+				mysql_free_result(result);
+			}
+			safe_delete_array(query);
+
+			// Put key-value pairs in perl hash
+			ExportHash(packagename.c_str(), "qglobals", globhash);
+		}
 	}
 
 	int8 fac = 0;
@@ -268,22 +327,21 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 //		ExportVar(packagename.c_str(), "cumflag", mob->CastToClient()->flag[50]);
 	}
 
-	if (mob && npcmob && mob->IsClient() && npcmob->IsNPC()) {
-		Client* client = mob->CastToClient();
-		NPC* npc = npcmob->CastToNPC();
+	if(!isPlayerQuest){
+		if (mob && npcmob && mob->IsClient() && npcmob->IsNPC()) {
+			Client* client = mob->CastToClient();
+			NPC* npc = npcmob->CastToNPC();
 
-		// Need to figure out why one of these casts would fail..
-		if (client && npc) {
-			fac = client->GetFactionLevel(client->GetID(), npcmob->GetID(), client->GetRace(), client->GetClass(), DEITY_AGNOSTIC, npc->GetPrimaryFaction(), npcmob);
-		}
-		else if (!client) {
-			//avoid cerr, since the zone servers may eventually not be running on the same machine/interface
-//			cerr << "WARNING: cast failure on mob->CastToClient()" << endl;
-			LogFile->write(EQEMuLog::Status, "WARNING: cast failure on mob->CastToClient()");
-		}
-		else if (!npc) {
-//			cerr << "WARNING: cast failure on npcmob->CastToNPC()" << endl;
-			LogFile->write(EQEMuLog::Status, "WARNING: cast failure on npcmob->CastToNPC()");
+			// Need to figure out why one of these casts would fail..
+			if (client && npc) {
+				fac = client->GetFactionLevel(client->GetID(), npcmob->GetID(), client->GetRace(), client->GetClass(), DEITY_AGNOSTIC, npc->GetPrimaryFaction(), npcmob);
+			}
+			else if (!client) {
+				LogFile->write(EQEMuLog::Status, "WARNING: cast failure on mob->CastToClient()");
+			}
+			else if (!npc) {
+				LogFile->write(EQEMuLog::Status, "WARNING: cast failure on npcmob->CastToNPC()");
+			}
 		}
 	}
 	if (mob) {
@@ -294,37 +352,44 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 		ExportVar(packagename.c_str(), "userid", mob->GetID());
 	}
 
-	if (npcmob)
-	{
-		ExportVar(packagename.c_str(), "mname", npcmob->GetName());
-// MYRA - added vars $mobid & $mlevel per Eglin
-		ExportVar(packagename.c_str(), "mobid", npcmob->GetID());
-		ExportVar(packagename.c_str(), "mlevel", npcmob->GetLevel());
-//end Myra
-// hp event
-		ExportVar(packagename.c_str(), "hpevent", npcmob->GetNextHPEvent());
-		ExportVar(packagename.c_str(), "inchpevent", npcmob->GetNextIncHPEvent());
-		ExportVar(packagename.c_str(), "hpratio",npcmob->GetHPRatio());
-// sandy bug fix
-		ExportVar(packagename.c_str(), "x", npcmob->GetX() );
-		ExportVar(packagename.c_str(), "y", npcmob->GetY() );
-		ExportVar(packagename.c_str(), "z", npcmob->GetZ() );
-		ExportVar(packagename.c_str(), "h", npcmob->GetHeading() );
-		if ( npcmob->GetTarget() ) {
-			ExportVar(packagename.c_str(), "targetid", npcmob->GetTarget()->GetID());
-			ExportVar(packagename.c_str(), "targetname", npcmob->GetTarget()->GetName());
+	if(!isPlayerQuest){
+		if (npcmob)
+		{
+			ExportVar(packagename.c_str(), "mname", npcmob->GetName());
+			// MYRA - added vars $mobid & $mlevel per Eglin
+			ExportVar(packagename.c_str(), "mobid", npcmob->GetID());
+			ExportVar(packagename.c_str(), "mlevel", npcmob->GetLevel());
+			//end Myra
+			// hp event
+			ExportVar(packagename.c_str(), "hpevent", npcmob->GetNextHPEvent());
+			ExportVar(packagename.c_str(), "inchpevent", npcmob->GetNextIncHPEvent());
+			ExportVar(packagename.c_str(), "hpratio",npcmob->GetHPRatio());
+			// sandy bug fix
+			ExportVar(packagename.c_str(), "x", npcmob->GetX() );
+			ExportVar(packagename.c_str(), "y", npcmob->GetY() );
+			ExportVar(packagename.c_str(), "z", npcmob->GetZ() );
+			ExportVar(packagename.c_str(), "h", npcmob->GetHeading() );
+			if ( npcmob->GetTarget() ) {
+				ExportVar(packagename.c_str(), "targetid", npcmob->GetTarget()->GetID());
+				ExportVar(packagename.c_str(), "targetname", npcmob->GetTarget()->GetName());
+			}
+		}
+
+		if (fac) {
+			ExportVar(packagename.c_str(), "faction", itoa(fac));
 		}
 	}
 
-	if (fac) {
-		ExportVar(packagename.c_str(), "faction", itoa(fac));
-	}
-
 	if (zone) {
-// SCORPIOUS2K- added variable zoneid
+		// SCORPIOUS2K- added variable zoneid
 		ExportVar(packagename.c_str(), "zoneid", zone->GetZoneID());
 		ExportVar(packagename.c_str(), "zoneln", zone->GetLongName());
 		ExportVar(packagename.c_str(), "zonesn", zone->GetShortName());
+		TimeOfDay_Struct eqTime;
+		zone->zone_time.getEQTimeOfDay( time(0), &eqTime);
+		ExportVar(packagename.c_str(), "zonehour", eqTime.hour - 1);
+		ExportVar(packagename.c_str(), "zonemin", eqTime.minute);
+		ExportVar(packagename.c_str(), "zonetime", (eqTime.hour - 1) * 100 + eqTime.minute);
 	}
 
 // $hasitem - compliments of smogo
@@ -363,14 +428,12 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 	switch (event) {
 		case EVENT_SAY: {
 			npcmob->FaceTarget(mob);
-
 			ExportVar(packagename.c_str(), "data", npcid);
 			ExportVar(packagename.c_str(), "text", data);
 			break;
 		}
 		case EVENT_ITEM: {
 			npcmob->FaceTarget(mob);
-
 			//this is such a hack... why arnt these just set directly..
 			ExportVar(packagename.c_str(), "item1", GetVar("item1", npcid).c_str());
 			ExportVar(packagename.c_str(), "item2", GetVar("item2", npcid).c_str());
@@ -393,8 +456,6 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 			break;
 		}
 		case EVENT_HP: {
-			if (!npcmob)	//not sure if this is needed...
-				return;
 			break;
 		}
 		case EVENT_TIMER: {
@@ -413,6 +474,25 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 			ExportVar(packagename.c_str(), "combat_state", data);
 			break;
 		}
+
+		case EVENT_CLICKDOOR: {
+			ExportVar(packagename.c_str(), "doorid", data);
+			break;
+		}
+
+		case EVENT_LOOT:{
+			Seperator *sep = new Seperator(data);
+			ExportVar(packagename.c_str(), "looted_id", sep->arg[0]);
+			ExportVar(packagename.c_str(), "looted_charges", sep->arg[1]);
+			safe_delete(sep);
+			break;
+		}
+
+		case EVENT_ZONE:{
+			ExportVar(packagename.c_str(), "target_zone_id", data);
+			break;
+		}
+
 		//nothing special about these events
 		case EVENT_DEATH:
 		case EVENT_SPAWN:
@@ -421,6 +501,8 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 		case EVENT_AGGRO:
 		case EVENT_ENTER:
 		case EVENT_EXIT:
+		case EVENT_ENTERZONE:
+		case EVENT_LEVEL_UP:		
 			break;
 
 		default: {
@@ -429,7 +511,12 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 		}
 	}
 
-	SendCommands(packagename.c_str(), sub_name, npcid, npcmob, mob);
+	if(isPlayerQuest){
+		SendCommands(packagename.c_str(), sub_name, 0, mob, mob);
+	}
+	else {
+		SendCommands(packagename.c_str(), sub_name, npcid, npcmob, mob);
+	}
 
 	//now handle any events that cropped up...
 	HandleQueue();
@@ -462,6 +549,7 @@ void PerlembParser::ReloadQuests() {
 	}
 
 	hasQuests.clear();
+	playerQuestLoaded.clear();
 }
 
 int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
@@ -654,6 +742,53 @@ int PerlembParser::LoadScript(int npcid, const char * zone, Mob* activater)
 	return(1);
 }
 
+int PerlembParser::LoadPlayerScript(const char *zone)
+{
+	if(!perl)
+		return(0);
+
+	if(playerQuestLoaded.count(zone) == 1) {
+		return(1);
+	}
+
+	string filename= "quests/";
+	filename += zone;
+	filename += "/player.pl";
+	string packagename = "player";
+	packagename += "_";
+	packagename += zone;
+
+	try {
+		perl->eval_file(packagename.c_str(), filename.c_str());
+	}
+	catch(const char * err)
+	{
+			LogFile->write(EQEMuLog::Quest, "WARNING: error compiling quest file %s: %s", filename.c_str(), err);
+	}
+	//todo: change this to just read eval_file's %cache - duh!
+	if(!isloaded(packagename.c_str()))
+	{
+		filename = "quests/";
+		filename += QUEST_TEMPLATES_DIRECTORY;
+		filename += "/player.pl";
+		try {
+			perl->eval_file(packagename.c_str(), filename.c_str());
+		}
+		catch(const char * err)
+		{
+				LogFile->write(EQEMuLog::Quest, "WARNING: error compiling quest file %s: %s", filename.c_str(), err);
+		}
+		if(!isloaded(packagename.c_str()))
+		{
+			playerQuestLoaded[zone] = pQuestUnloaded;
+			return 0;
+		}
+	}
+
+	playerQuestLoaded[zone] = pQuestLoaded;
+	return 1;
+}
+
 bool PerlembParser::isloaded(const char *packagename) const {
 	char buffer[120];
 	snprintf(buffer, 120, "$%s::isloaded", packagename);
@@ -703,6 +838,13 @@ bool PerlembParser::HasQuestSub(int32 npcid, const char *subname) {
 	return(perl->SubExists(packagename.c_str(), subname));
 }
 
+bool PerlembParser::PlayerHasQuestSub(const char *subname) {
+
+	string packagename = "player";
+
+	return(perl->SubExists(packagename.c_str(), subname));
+}
+
 //utility - return something of the form "qst1234"...
 //will return "qst[DEFAULT_QUEST_PREFIX]" if the npc in question has no script of its own or failed to compile and defaultOK is set to true
 std::string PerlembParser::GetPkgPrefix(int32 npcid, bool defaultOK)
@@ -720,7 +862,7 @@ std::string PerlembParser::GetPkgPrefix(int32 npcid, bool defaultOK)
 	return(std::string(buf));
 }
 
-void PerlembParser::SendCommands(const char * pkgprefix, const char *event, int32 npcid, NPC* other, Mob* mob)
+void PerlembParser::SendCommands(const char * pkgprefix, const char *event, int32 npcid, Mob* other, Mob* mob)
 {
 	if(!perl)
 		return;
@@ -755,6 +897,7 @@ void PerlembParser::SendCommands(const char * pkgprefix, const char *event, int3
 		sprintf(var,"$quest::cmd_queue[%d]{args}",c);
 		std::string args = perl->getstr(var);
 		size_t num_args = std::count(args.begin(), args.end(), ',') + 1;
+	
 		ExCommands(cmd, args, num_args, npcid, other, mob);
 	}
 

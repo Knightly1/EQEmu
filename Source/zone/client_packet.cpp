@@ -68,6 +68,9 @@
 #include "guild_mgr.h"
 using namespace std;
 
+#ifdef EMBPERL
+#include "embparser.h"
+#endif
 
 extern Zone* zone;
 extern volatile bool ZoneLoaded;
@@ -2109,7 +2112,7 @@ void Client::Handle_OP_Hide(const EQApplicationPacket *app)
 void Client::Handle_OP_ChannelMessage(const EQApplicationPacket *app)
 {
 	ChannelMessage_Struct* cm=(ChannelMessage_Struct*)app->pBuffer;
-	
+
 	if (app->size < sizeof(ChannelMessage_Struct)) {
 		cout << "Wrong size " << app->size << ", should be " << sizeof(ChannelMessage_Struct) << "+ on 0x" << hex << setfill('0') << setw(4) << app->GetOpcode() << dec << endl;
 		return;
@@ -4228,6 +4231,13 @@ void Client::Handle_OP_ClickDoor(const EQApplicationPacket *app)
 	        return;
 	}
 
+#ifdef EMBPERL
+	char buf[10];
+	snprintf(buf, 9, "%u", cd->doorid);
+	buf[9] = '\0';
+	((PerlembParser *)parse)->Event(EVENT_CLICKDOOR, 0, buf, (NPC*)NULL, this);
+#endif
+	
 	currentdoor->HandleClick(this,0);
 	return;
 }
@@ -6615,13 +6625,15 @@ void Client::CompleteConnect()
 	if(!CanBeInZone()) {
 		_log(CLIENT__ERROR, "Kicking char from zone, not allowed here");
 		GoToSafeCoords(database.GetZoneID("arena"));
-		Save();
-		Kick();
 		return;
 	}
 
 	if(zone)
 		zone->weatherSend();
+
+#ifdef EMBPERL
+	((PerlembParser *)parse)->Event(EVENT_ENTERZONE, 0, "", (NPC*)NULL, this);
+#endif
 }
 
 

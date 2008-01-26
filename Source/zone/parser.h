@@ -67,7 +67,7 @@ public:
 	//that's what you get for using globals! :)
 	virtual void    Event(QuestEventID event, int32 npcid, const char * data, NPC* npcmob, Mob* mob);
 
-	void	ExCommands(std::string command, std::string parms, int argnums, int32 npcid, NPC* other, Mob* mob );
+	void	ExCommands(std::string command, std::string parms, int argnums, int32 npcid, Mob* other, Mob* mob );
 
 	void	GetCommandName(char * command1, char * arg);
 	int		GetFreeID();
@@ -86,7 +86,7 @@ public:
 
 	int		numtok(const char *text, char character);
 
-	int		ParseCommands(std::string text, int line, int justcheck, int32 npcid, NPC* other, Mob* mob, std::string filename=string("none"));
+	int		ParseCommands(std::string text, int line, int justcheck, int32 npcid, Mob* other, Mob* mob, std::string filename=string("none"));
 	int		ParseIf(std::string text);
 	int		pcalc(const char * string);
 	void    ParseVars(std::string& text, int32 npcid, Mob* mob);

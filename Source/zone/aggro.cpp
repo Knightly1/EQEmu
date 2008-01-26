@@ -236,6 +236,8 @@ void NPC::DescribeAggro(Client *towho, Mob *mob, bool verbose) {
 	to keep the #aggro command accurate.
 */
 bool Mob::CheckWillAggro(Mob *mob) {
+	if(!mob)
+		return false;
 	_ZP(Mob_CheckWillAggro);
 
 	//sometimes if a client has some lag while zoning into a dangerous place while either invis or a GM

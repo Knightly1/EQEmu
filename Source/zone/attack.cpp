@@ -148,9 +148,7 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 */
 	Mob *attacker=other;
 	Mob *defender=this;
-	float chancetohit = 62.0;
-	if(attacker->IsNPC())
-		chancetohit = 70.0;
+	float chancetohit = 54.0f;
 
 #if ATTACK_DEBUG>=11
 		LogFile->write(EQEMuLog::Debug, "CheckHitChance(%s) attacked by %s", defender->GetName(), attacker->GetName());
@@ -491,7 +489,10 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 
 		mlog(COMBAT__DAMAGE, "attackRating: %d defenseRating: %d intervalRoll: %d intervalUsed: %d", attackRating, defenseRating, intervalRoll, intervalUsed);
 		if(intervalUsed > intervalsAllowed){
-			damage = 0;
+			if((intervalUsed-intervalsAllowed) > 5)
+				damage = 0;
+			else
+				damage = 1;
 		}
 		else{
 			if(intervalsAllowed != 0)
@@ -543,7 +544,7 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 
 	damage -= (damage * totalMit / 100);
 
-	if(damage < minhit)
+	if(damage != 0 && damage < minhit)
 		damage = minhit;
 
 	if(damage < 0)

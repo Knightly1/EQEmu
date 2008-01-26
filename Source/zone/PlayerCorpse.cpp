@@ -41,6 +41,10 @@ using namespace std;
 #include "../common/rulesys.h"
 
 
+#ifdef EMBPERL
+#include "embparser.h"
+#endif
+
 extern EntityList entity_list;
 extern Zone* zone;
 extern WorldServer worldserver;
@@ -898,6 +902,13 @@ void Corpse::LootItem(Client* client, const EQApplicationPacket* app)
 			delete inst;
 			return;
 		}
+
+#ifdef EMBPERL
+		char buf[24];
+		snprintf(buf, 23, "%d %d", inst->GetItem()->ID, inst->GetCharges());
+		buf[23] = '\0';
+		((PerlembParser*)parse)->Event(EVENT_LOOT, 0, buf, (NPC*)NULL, client);
+#endif
 
 		if (zone->lootvar != 0)
 		{

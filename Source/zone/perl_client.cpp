@@ -1016,17 +1016,15 @@ XS(XS_Client_MovePC); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_MovePC)
 {
 	dXSARGS;
-	if (items < 5 || items > 8)
-		Perl_croak(aTHX_ "Usage: Client::MovePC(THIS, zoneID, x, y, z, heading, ignorerestrictions= 0, summoned= false)");
+	if (items != 6)
+		Perl_croak(aTHX_ "Usage: Client::MovePC(THIS, zoneID, x, y, z, heading)");
 	{
 		Client *		THIS;
 		int32		zoneID = (int32)SvUV(ST(1));
 		float		x = (float)SvNV(ST(2));
 		float		y = (float)SvNV(ST(3));
 		float		z = (float)SvNV(ST(4));
-		float		heading;
-		int8		ignorerestrictions;
-		bool		summoned;
+		float		heading = (float)SvNV(ST(5));
 
 		if (sv_derived_from(ST(0), "Client")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -1037,28 +1035,7 @@ XS(XS_Client_MovePC)
 		if(THIS == NULL)
 			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
 		
-		if (items < 6)
-			heading = 0;
-		else {
-			heading = (int8)SvUV(ST(5));
-		}
-
-		if (items < 7)
-			ignorerestrictions = 0;
-		else {
-			ignorerestrictions = (int8)SvUV(ST(6));
-		}
-
-		if (items < 8)
-			summoned = false;
-		else {
-			summoned = (bool)SvTRUE(ST(7));
-		}
-
-		if(summoned)
-			THIS->MovePC(zoneID, x, y, z, heading, ignorerestrictions, SummonPC);
-		else
-			THIS->MovePC(zoneID, x, y, z, heading, ignorerestrictions);
+		THIS->MovePC(zoneID, x, y, z, heading);
 	}
 	XSRETURN_EMPTY;
 }
@@ -3524,7 +3501,7 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "AddEXP"), XS_Client_AddEXP, file, "$$;$$");
 		newXSproto(strcpy(buf, "SetEXP"), XS_Client_SetEXP, file, "$$$;$");
 		newXSproto(strcpy(buf, "SetBindPoint"), XS_Client_SetBindPoint, file, "$;$$$$");
-		newXSproto(strcpy(buf, "MovePC"), XS_Client_MovePC, file, "$$$$$;$$");
+		newXSproto(strcpy(buf, "MovePC"), XS_Client_MovePC, file, "$$$$$$");
 		newXSproto(strcpy(buf, "ChangeLastName"), XS_Client_ChangeLastName, file, "$$");
 		newXSproto(strcpy(buf, "GetFactionLevel"), XS_Client_GetFactionLevel, file, "$$$$$$$$");
 		newXSproto(strcpy(buf, "SetFactionLevel"), XS_Client_SetFactionLevel, file, "$$$$$$");

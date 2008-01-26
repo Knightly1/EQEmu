@@ -17,6 +17,11 @@ typedef enum {
 	EVENT_HP,
 	EVENT_ENTER,		//PC entering your set proximity
 	EVENT_EXIT,			//PC leaving your set proximity
+	EVENT_ENTERZONE,		//PC only, you enter zone
+	EVENT_CLICKDOOR,		//pc only, you click a door
+	EVENT_LOOT,			//pc only
+	EVENT_ZONE,			//pc only
+	EVENT_LEVEL_UP,		//pc only
 	
 	_LargestEventID
 } QuestEventID;

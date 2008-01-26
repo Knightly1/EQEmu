@@ -79,7 +79,9 @@ extern Zone* zone;
 extern WorldServer worldserver;
 extern EntityList entity_list;
 
-
+#ifdef EMBPERL
+#include "embparser.h"
+#endif
 
 #include "questmgr.h"
 
@@ -100,8 +102,19 @@ void QuestManager::Process() {
 	while (cur != end) {
 		if (cur->Timer_.Enabled() && cur->Timer_.Check()) {
 			//make sure the mob is still in zone.
+			if(entity_list.IsMobInZone(cur->mob)){
+#ifdef EMBPERL
+				if(cur->mob->IsNPC()) {
+					parse->Event(EVENT_TIMER, cur->mob->GetNPCTypeID(), cur->name.c_str(), cur->mob->CastToNPC(), NULL);
+				}
+				else{
+					((PerlembParser*)parse)->Event(EVENT_TIMER, 0, cur->name.c_str(), (NPC*)NULL, cur->mob);
+				}
+#else
 			if(entity_list.IsMobInZone(cur->mob)) {
 				parse->Event(EVENT_TIMER, cur->mob->GetNPCTypeID(), cur->name.c_str(), cur->mob, NULL);
+#endif
+
 				//we MUST reset our iterator since the quest could have removed/added any
 				//number of timers... worst case we have to check a bunch of timers twice
 				cur = QTimerList.begin();
@@ -115,7 +128,6 @@ void QuestManager::Process() {
 		} else
 			cur++;
 	}
-
 
 	list<SignalTimer>::iterator curS, endS, tmpS;
 
@@ -143,22 +155,23 @@ void QuestManager::Process() {
 	}
 }
 
-void QuestManager::StartQuest(NPC *_npc, Client *_initiator) {
+void QuestManager::StartQuest(Mob *_owner, Client *_initiator) {
 	quest_mutex.lock();
-	npc = _npc;
+	owner = _owner;
 	initiator = _initiator;
 	depop_npc = false;
 }
 
 void QuestManager::EndQuest() {
 	quest_mutex.unlock();
-	if(depop_npc) {
+
+	if(depop_npc && owner->IsNPC()) {
 		//clear out any timers for them...
 		list<QuestTimer>::iterator cur = QTimerList.begin(), end, tmp;
 
 		end = QTimerList.end();
 		while (cur != end) {
-			if(cur->mob == npc) {
+			if(cur->mob == owner) {
 				tmp = cur;
 				tmp++;
 				QTimerList.erase(cur);
@@ -168,8 +181,8 @@ void QuestManager::EndQuest() {
 			}
 		}
 
-		npc->Depop();
-		npc = NULL;	//just to be safe
+		owner->Depop();
+		owner = NULL;	//just to be safe
 	}
 }
 
@@ -180,7 +193,7 @@ void QuestManager::echo(const char *str) {
 }
 
 void QuestManager::say(const char *str) {
-	npc->Say(str);
+	owner->Say(str);
 }
 
 void QuestManager::me(const char *str) {
@@ -275,10 +288,10 @@ void QuestManager::incstat(int stat, int value) { //old setstat command aza
 }
 
 void QuestManager::castspell(int spell_id, int target_id) {
-	if (npc) {
+	if (owner) {
 		Mob *tgt = entity_list.GetMob(target_id);
 		if(tgt != NULL)
-			npc->SpellFinished(spell_id, tgt);
+			owner->SpellFinished(spell_id, tgt);
 	}
 }
 
@@ -288,8 +301,10 @@ void QuestManager::selfcast(int spell_id) {
 }
 
 void QuestManager::addloot(int item_id, int charges) {
-	if(item_id != 0)
-		npc->AddItem(item_id, charges);
+	if(item_id != 0){
+		if(owner->IsNPC())
+			owner->CastToNPC()->AddItem(item_id, charges);
+	}
 }
 
 void QuestManager::Zone(const char *zone_name) {
@@ -310,12 +325,13 @@ void QuestManager::Zone(const char *zone_name) {
 }
 
 void QuestManager::settimer(const char *timer_name, int seconds) {
+
 	list<QuestTimer>::iterator cur = QTimerList.begin(), end;
 
 	end = QTimerList.end();
 	while (cur != end) {
-		if (cur->mob == npc && cur->name == timer_name) {
-			cur->mob = npc;
+		if (cur->mob == owner && cur->name == timer_name) {
+			cur->mob = owner;
 			cur->Timer_.Enable();
 			cur->Timer_.Start(seconds * 1000, false);
 			printf("Reseting: %s for %d seconds\n", cur->name.c_str(), seconds);
@@ -331,16 +347,17 @@ void QuestManager::settimer(const char *timer_name, int seconds) {
 	tmp->name = timer_name;
 	printf("Adding: %s for %d seconds\n", tmp->name.c_str(), seconds);
 	QTimerList.push_back(tmp);*/
-	QTimerList.push_back(QuestTimer(seconds * 1000, npc, timer_name));
+	QTimerList.push_back(QuestTimer(seconds * 1000, owner, timer_name));
 }
 
 void QuestManager::stoptimer(const char *timer_name) {
+
 	list<QuestTimer>::iterator cur = QTimerList.begin(), end;
 
 	end = QTimerList.end();
 	while (cur != end)
 	{
-		if(cur->mob == npc && cur->name == timer_name)
+		if(cur->mob == owner && cur->name == timer_name)
 		{
 			QTimerList.erase(cur);
 			return;
@@ -350,22 +367,24 @@ void QuestManager::stoptimer(const char *timer_name) {
 }
 
 void QuestManager::emote(const char *str) {
-	npc->Emote(str);
+	owner->Emote(str);
 }
 
 void QuestManager::shout(const char *str) {
-	npc->Shout(str);
+	owner->Shout(str);
 }
 
 void QuestManager::shout2(const char *str) {
-	worldserver.SendEmoteMessage(0,0,0,13, "%s shouts, '%s'", npc->GetCleanName(), str);
+	worldserver.SendEmoteMessage(0,0,0,13, "%s shouts, '%s'", owner->GetCleanName(), str);
 }
 
 void QuestManager::depop(int npc_type) {
+	if(!owner->IsNPC())
+		return;
 	if (npc_type != 0){
 		Mob * tmp = entity_list.GetMobByNpcTypeID(npc_type);
 		if (tmp) {
-			if(tmp != npc){
+			if(tmp != owner){
 				tmp->CastToNPC()->Depop();
 				entity_list.RemoveNPC(tmp->GetID());
 				entity_list.RemoveMob(tmp->GetID());
@@ -380,6 +399,8 @@ void QuestManager::depop(int npc_type) {
 }
 
 void QuestManager::settarget(const char *type, int target_id) {
+	if(!owner->IsNPC())
+		return;
 	Mob* tmp = NULL;
 	if (!strcasecmp(type,"npctype")) {
 		tmp = entity_list.GetMobByNpcTypeID(target_id);
@@ -388,16 +409,20 @@ void QuestManager::settarget(const char *type, int target_id) {
 		tmp = entity_list.GetMob(target_id);
 	}
 	if(tmp != NULL) {
-		npc->SetTarget(tmp);
+		owner->SetTarget(tmp);
 	}
 }
 
 void QuestManager::follow(int entity_id) {
-	npc->SetFollowID(entity_id);
+	if(!owner->IsNPC())
+		return;
+	owner->SetFollowID(entity_id);
 }
 
 void QuestManager::sfollow() {
-	npc->SetFollowID(0);
+	if(!owner->IsNPC())
+		return;
+	owner->SetFollowID(0);
 }
 
 /*
@@ -517,7 +542,7 @@ void QuestManager::rain(int weather) {
 	zone->zone_weather = weather;
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Weather, 8);
 	*((int32*) &outapp->pBuffer[4]) = (int32) weather; // Why not just use 0x01/2/3?
-	entity_list.QueueClients(npc, outapp);
+	entity_list.QueueClients(owner, outapp);
 	safe_delete(outapp);
 }
 
@@ -660,7 +685,7 @@ void QuestManager::movegrp(int zoneid, float x, float y, float z) {
 	{
 		Group *g = entity_list.GetGroupByClient(initiator);
        	if (g != NULL){
-			g->TeleportGroup(initiator, zoneid, x, y, z);
+			g->TeleportGroup(initiator, zoneid, x, y, z, 0.0f);
 		}
 		else {
 			initiator->MovePC(zoneid, x, y, z, 0.0f);
@@ -669,7 +694,7 @@ void QuestManager::movegrp(int zoneid, float x, float y, float z) {
 }
 
 void QuestManager::doanim(int anim_id) {
-	npc->DoAnim(anim_id);
+	owner->DoAnim(anim_id);
 }
 
 void QuestManager::addskill(int skill_id, int value) {
@@ -703,29 +728,35 @@ void QuestManager::setallskill(int value) {
 }
 
 void QuestManager::attack(const char *client_name) {
+	if(!owner->IsNPC())
+		return;
 	Client* getclient = entity_list.GetClientByName(client_name);
-	if(getclient && npc->IsAttackAllowed(getclient)) {
-		npc->AddToHateList(getclient,1);
+	if(getclient && owner->IsAttackAllowed(getclient)) {
+		owner->AddToHateList(getclient,1);
 	} else {
-		npc->Say("I am unable to attack %s.", client_name);
+		owner->Say("I am unable to attack %s.", client_name);
 	}
 }
 
 void QuestManager::attacknpc(int npc_entity_id) {
+	if(!owner->IsNPC())
+		return;
 	Mob *it = entity_list.GetMob(npc_entity_id);
-	if(it && npc->IsAttackAllowed(it)) {
-		npc->AddToHateList(it,1);
+	if(it && owner->IsAttackAllowed(it)) {
+		owner->AddToHateList(it,1);
 	} else {
-		npc->Say("I am unable to attack %s.", it->GetName());
+		owner->Say("I am unable to attack %s.", it->GetName());
 	}
 }
 
 void QuestManager::attacknpctype(int npc_type_id) {
+	if(!owner->IsNPC())
+		return;
 	Mob *it = entity_list.GetMobByNpcTypeID(npc_type_id);
-	if(it && npc->IsAttackAllowed(it)) {
-		npc->AddToHateList(it,1);
+	if(it && owner->IsAttackAllowed(it)) {
+		owner->AddToHateList(it,1);
 	} else {
-		npc->Say("I am unable to attack %s.", it->GetName());
+		owner->Say("I am unable to attack %s.", it->GetName());
 	}
 }
 
@@ -768,7 +799,7 @@ void QuestManager::setguild(int32 new_guild_id, int8 new_rank) {
 
 void QuestManager::settime(int8 new_hour, int8 new_min) {
 	if (zone)
-		zone->SetTime(new_hour, new_min);
+		zone->SetTime(new_hour + 1, new_min);
 }
 
 void QuestManager::itemlink(int item_id) {
@@ -825,7 +856,7 @@ sprintf(hashstr, "%d%s%d%d", id, name, weight, booktype);
 	const Item_Struct* item = 0;
 	int16 itemid = item_id;
 	item = database.GetItem(itemid);
-	initiator->Message(0, "%s tells you, '%c00%i %s%c",npc->GetName(),0x12, item->ID, item->Name, 0x12);
+	initiator->Message(0, "%s tells you, '%c00%i %s%c",owner->GetName(),0x12, item->ID, item->Name, 0x12);
 }
 
 void QuestManager::signalwith(int npc_id, int signal_id, int wait_ms) {
@@ -859,7 +890,7 @@ void QuestManager::setglobal(const char *varname, const char *newvalue, int opti
 	//MYSQL_ROW row;
 	int qgZoneid=zone->GetZoneID();
 	int qgCharid=0;
-	int qgNpcid = npc->GetNPCTypeID();
+	int qgNpcid = owner->GetNPCTypeID();
 
 	/*	options value determines the availability of global variables to NPCs when a quest begins
 	------------------------------------------------------------------
@@ -961,7 +992,7 @@ void QuestManager::delglobal(const char *varname) {
 	char *query = 0;
 	int qgZoneid=zone->GetZoneID();
 	int qgCharid=0;
-	int qgNpcid=npc->GetNPCTypeID();
+	int qgNpcid=owner->GetNPCTypeID();
 	if (initiator && initiator->IsClient())  // some events like waypoint and spawn don't have a player involved
 	{
 		qgCharid=initiator->CharacterID();
@@ -1054,23 +1085,33 @@ void QuestManager::rebind(int zoneid, float x, float y, float z) {
 }
 
 void QuestManager::start(int wp) {
-	npc->AssignWaypoints(wp);
+	if(!owner->IsNPC())
+		return;
+	owner->CastToNPC()->AssignWaypoints(wp);
 }
 
 void QuestManager::stop() {
-	npc->StopWandering();
+	if(!owner->IsNPC())
+		return;
+	owner->CastToNPC()->StopWandering();
 }
 
 void QuestManager::pause(int duration) {
-	npc->PauseWandering(duration);
+	if(!owner->IsNPC())
+		return;
+	owner->CastToNPC()->PauseWandering(duration);
 }
 
 void QuestManager::moveto(float x, float y, float z) {
-	npc->MoveTo(x, y, z);
+	if(!owner->IsNPC())
+		return;
+	owner->CastToNPC()->MoveTo(x, y, z);
 }
 
 void QuestManager::resume() {
-	npc->ResumeWandering();
+	if(!owner->IsNPC())
+		return;
+	owner->CastToNPC()->ResumeWandering();
 }
 
 void QuestManager::addldonpoints(sint32 points, int32 theme) {
@@ -1079,53 +1120,60 @@ void QuestManager::addldonpoints(sint32 points, int32 theme) {
 }
 
 void QuestManager::setnexthpevent(int at) {
-	npc->SetNextHPEvent( at );
+	owner->SetNextHPEvent( at );
 }
 
 void QuestManager::setnextinchpevent(int at) {
-	npc->SetNextIncHPEvent( at );
+	owner->SetNextIncHPEvent( at );
 }
 
 void QuestManager::respawn(int npc_type, int grid) {
+	if(!owner->IsNPC())
+		return;
 	//char tempa[100];
 	float x,y,z,h;
-	if ( !npc )
+	if ( !owner )
 		return;
 
-	x = npc->GetX();
-	y = npc->GetY();
-	z = npc->GetZ();
-	h = npc->GetHeading();
+	x = owner->GetX();
+	y = owner->GetY();
+	z = owner->GetZ();
+	h = owner->GetHeading();
 	depop_npc = true;
 
 	const NPCType* tmp = 0;
 	//int8 guildwarset = atoi(arglist[2]);
 	if ((tmp = database.GetNPCType(npc_type)))
 	{
-		npc = new NPC(tmp, 0, x, y, z, h);
-		npc->AddLootTable();
-		entity_list.AddNPC(npc,true,true);
+		owner = new NPC(tmp, 0, x, y, z, h);
+		owner->CastToNPC()->AddLootTable();
+		entity_list.AddNPC(owner->CastToNPC(),true,true);
 		if(grid > 0)
-			npc->AssignWaypoints(grid);
+			owner->CastToNPC()->AssignWaypoints(grid);
 
-		npc->SendPosUpdate();
+		owner->SendPosUpdate();
 	}
 }
 
 void QuestManager::set_proximity(float minx, float maxx, float miny, float maxy, float minz, float maxz) {
-	entity_list.AddProximity(npc);
+	if(!owner->IsNPC())
+		return;
 
-	npc->proximity->min_x = minx;
-	npc->proximity->max_x = maxx;
-	npc->proximity->min_y = miny;
-	npc->proximity->max_y = maxy;
-	npc->proximity->min_z = minz;
-	npc->proximity->max_z = maxz;
+	entity_list.AddProximity(owner->CastToNPC());
+
+	owner->CastToNPC()->proximity->min_x = minx;
+	owner->CastToNPC()->proximity->max_x = maxx;
+	owner->CastToNPC()->proximity->min_y = miny;
+	owner->CastToNPC()->proximity->max_y = maxy;
+	owner->CastToNPC()->proximity->min_z = minz;
+	owner->CastToNPC()->proximity->max_z = maxz;
 }
 
 void QuestManager::clear_proximity() {
-	safe_delete(npc->proximity);
-	entity_list.RemoveProximity(npc->GetID());
+	if(!owner->IsNPC())
+		return;
+	safe_delete(owner->CastToNPC()->proximity);
+	entity_list.RemoveProximity(owner->GetID());
 }
 
 void QuestManager::setanim(int npc_type, int animnum) {
@@ -1217,8 +1265,8 @@ void QuestManager::clear_zone_flag(int zone_id) {
 void QuestManager::sethp(int hpperc) {
 	int newhp;
 
-	newhp = (npc->GetMaxHP()*(100-hpperc))/100;
-	npc->Damage(npc, newhp, SPELL_UNKNOWN, HAND_TO_HAND, false, 0, false);
+	newhp = (owner->GetMaxHP()*(100-hpperc))/100;
+	owner->Damage(owner, newhp, SPELL_UNKNOWN, HAND_TO_HAND, false, 0, false);
 }
 
 bool QuestManager::summonburriedplayercorpse(int32 char_id, float dest_x, float dest_y, float dest_z, float dest_heading) {

@@ -33,12 +33,12 @@ public:
 	QuestManager();
 	virtual ~QuestManager();
 	
-	void StartQuest(NPC *_npc, Client *_initiator = NULL);
+	void StartQuest(Mob *_owner, Client *_initiator = NULL);
 	void EndQuest();
 	
 	void Process();
 	
-	void ClearTimers(NPC *who);
+	void ClearTimers(Mob *who);
 	
 	//quest perl functions
 	void echo(const char *str);
@@ -138,9 +138,10 @@ public:
 	//thing ChooseRandom(array_of_things)
 	
 	inline Client *GetInitiator() const { return(initiator); }
-	inline NPC *GetNPC() const { return(npc); }
+	inline NPC *GetNPC() const { return(owner->IsNPC()?owner->CastToNPC():NULL); }
+	inline Mob *GetOwner() const { return(owner); }
 protected:
-	NPC *npc;	//NPC is never NULL when functions are called.
+	Mob *owner;	//NPC is never NULL when functions are called.
 	Client *initiator;	//this can be null.
 	
 	bool depop_npc;	//true if EndQuest should depop the NPC
@@ -152,8 +153,8 @@ protected:
 
 	class QuestTimer {
 	public:
-		inline QuestTimer(int duration, NPC *_mob, string _name) : mob(_mob), name(_name), Timer_(duration) { Timer_.Start(duration, false); }
-		NPC*   mob;
+		inline QuestTimer(int duration, Mob *_mob, string _name) : mob(_mob), name(_name), Timer_(duration) { Timer_.Start(duration, false); }
+		Mob*   mob;
 		string name;
 		Timer Timer_;
 	};

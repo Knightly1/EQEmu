@@ -82,7 +82,7 @@ public:
 	int32	GetHighestLevel();
 	int32	GetLowestLevel();
 	void	QueuePacket(const EQApplicationPacket *app, bool ack_req = true);
-	void	TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z);
+	void	TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z, float heading);
 	bool	LearnMembers();
 	void	VerifyGroup();
 	void	BalanceHP(sint32 penalty);
