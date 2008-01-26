@@ -4684,6 +4684,7 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 	}
 	case PET_HEALTHREPORT: {
 		Message_StringID(10, PET_REPORT_HP, ConvertArrayF(mypet->GetHPRatio(), val1));
+		mypet->ShowBuffList(this);
 		//Message(10,"%s tells you, 'I have %d percent of my hit points left.'",mypet->GetName(),(int8)mypet->GetHPRatio());
 		break;
 	}

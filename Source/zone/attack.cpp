@@ -2460,7 +2460,12 @@ float Mob::GetProcChances(float &ProcBonus, float &ProcChance) {
 
 
 void Mob::TryWeaponProc(const ItemInst* weapon_g, Mob *on) {
-	if(!weapon_g || !weapon_g->IsType(ItemClassCommon)) {
+	if(!weapon_g) {
+		TryWeaponProc((const Item_Struct*) NULL, on);
+		return;
+	}
+
+	if(!weapon_g->IsType(ItemClassCommon)) {
 		TryWeaponProc((const Item_Struct*) NULL, on);
 		return;
 	}
@@ -2531,6 +2536,11 @@ void Mob::TryWeaponProc(const Item_Struct* weapon, Mob *on) {
 		}
 	}
 	
+	if(ProcBonus == -1) {
+		LogFile->write(EQEMuLog::Error, "ProcBonus was -1 value!");
+		return;
+	}
+
 	//now try our proc arrays
 	float procmod =  float(GetDEX()) / 100.0f + ProcBonus*100.0;	//did somebody think about this???
 

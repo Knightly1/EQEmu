@@ -948,6 +948,22 @@ void Mob::ShowBuffs(Client* client) {
 	}
 }
 
+void Mob::ShowBuffList(Client* client) {
+	if (!spells_loaded)
+		return;
+
+	client->Message(0, "Buffs on: %s", this->GetCleanName());
+	uint32 i;
+	for (i=0; i < BUFF_COUNT; i++) {
+		if (buffs[i].spellid != SPELL_UNKNOWN) {
+			if (buffs[i].durationformula == DF_Permanent)
+				client->Message(0, "  %i: %s: Permanent", i, spells[buffs[i].spellid].name);
+			else
+				client->Message(0, "  %i: %s: %i tics left", i, spells[buffs[i].spellid].name, buffs[i].ticsremaining);
+		}
+	}
+}
+
 void Mob::GMMove(float x, float y, float z, float heading) {
 	x_pos = x;
 	y_pos = y;

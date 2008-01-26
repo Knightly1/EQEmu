@@ -857,10 +857,15 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 					c->Message_StringID(13, MISSING_SPELL_COMP);
 	
 					const Item_Struct *item = database.GetItem(component);
-					if(item)
+					if(item) {
 						c->Message_StringID(13, MISSING_SPELL_COMP_ITEM, item->Name);
-					
-					mlog(SPELLS__CASTING_ERR, "Spell %d: Canceled. Missing required reagent %s (%d)", spell_id, component, item?item->Name:"Unknown");
+						mlog(SPELLS__CASTING_ERR, "Spell %d: Canceled. Missing required reagent %s (%d)", spell_id, component, item->Name);
+					}
+					else {
+						char TempItemName[64];
+						strcpy((char*)&TempItemName, "UNKNOWN");
+						mlog(SPELLS__CASTING_ERR, "Spell %d: Canceled. Missing required reagent %s (%d)", spell_id, component, TempItemName);
+					}
 					
 					if(c->GetGM())
 						c->Message(0, "Your GM status allows you to finish casting even though you're missing required components.");

@@ -206,9 +206,9 @@ void Client::GoFish()
 	
 	//multiple entries yeilds higher probability of dropping...
 	uint32 common_fish_ids[MAX_COMMON_FISH_IDS] = {
-		1012, // Cloth Sandals, this ID is not the right sandals
-		1012, // Cloth Sandals
-		1012, // Cloth Sandals
+		1038, // Tattered Cloth Sandals
+		1038, // Tattered Cloth Sandals
+		1038, // Tattered Cloth Sandals
 		13019, // Fresh Fish
 		13019, // Fresh Fish
 		13019, // Fresh Fish
@@ -291,14 +291,14 @@ void Client::GoFish()
 		if(n != NODE_NONE) {
 			RodZ = zone->map->FindBestZ(n, dest, NULL, NULL) - 1;
 			bool in_water = zone->watermap->InWater(RodX, RodY, RodZ);
-			Message(0, "Rod is at %4.3f, %4.3f, %4.3f, InWater says %d", RodX, RodY, RodZ, in_water);
+			//Message(0, "Rod is at %4.3f, %4.3f, %4.3f, InWater says %d", RodX, RodY, RodZ, in_water);
 			if((z_pos-RodZ)>LineLength) {
 				// The water is too far below us
-				Message(0, "Trying to catch lands sharks perhaps?");
+				Message(0, "Trying to catch land sharks perhaps?");
 				return;
 			}
 			if(!in_water) {
-				Message(0, "Trying to catch lands sharks perhaps?");
+				Message(0, "Trying to catch land sharks perhaps?");
 				return;
 			}
 		}

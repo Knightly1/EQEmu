@@ -510,6 +510,7 @@ bool logpos;
 	
 	void ShowStats(Client* client);
 	void ShowBuffs(Client* client);
+	void ShowBuffList(Client* client);
 	int32 GetNPCTypeID()			const { return npctype_id; } // rembrant, Dec. 20, 2001
 	
 	float Dist(const Mob &) const;
