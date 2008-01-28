@@ -51,6 +51,7 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 		//try to figure it out for them.
 		
 		switch(zone_mode) {
+		case EvacToSafeCoords:
 		case ZoneToSafeCoords:
 			//going to safe coords, but client dosent know where?
 			//assume it is this zone for now.
@@ -85,8 +86,13 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 			}
 			break;
 		};
-	} else {
-		//they asked for a specific zone.
+	}
+	else {
+		// This is to allow both 6.2 and Titanium clients to perform a proper zoning of the client when evac/succor
+		// WildcardX 27 January 2008
+		if(zone_mode == EvacToSafeCoords && zonesummon_id > 0)
+			target_zone_id = zonesummon_id;
+		else
 		target_zone_id = zc->zoneID;
 		
 		//if we are zoning to a specific zone unsolicied,
@@ -137,6 +143,7 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	float dest_x=0, dest_y=0, dest_z=0, dest_h;
 	dest_h = GetHeading();
 	switch(zone_mode) {
+	case EvacToSafeCoords:
 	case ZoneToSafeCoords:
 		LogFile->write(EQEMuLog::Debug, "Zoning %s to safe coords (%f,%f,%f) in %s (%d)", GetName(), safe_x, safe_y, safe_z, target_zone_name, target_zone_id);
 		dest_x = safe_x;
@@ -295,6 +302,9 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, float dest_x, 
 	//dont clear aggro until the zone is successful
 	entity_list.RemoveFromHateLists(this);
 	
+	if(this->GetPet())
+		entity_list.RemoveFromHateLists(this->GetPet());
+	
 	LogFile->write(EQEMuLog::Status, "Zoning '%s' to: %s (%i) x=%f, y=%f, z=%f",
 		m_pp.name, database.GetZoneName(zone_id), zone_id,
 		dest_x, dest_y, dest_z);
@@ -380,6 +390,7 @@ void Client::ProcessMovePC(int32 zoneID, float x, float y, float z, float headin
 		case GateToBindPoint:
 			ZonePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
 			break;
+		case EvacToSafeCoords:
 		case ZoneToSafeCoords:
 			ZonePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
 			break;
@@ -414,6 +425,7 @@ void Client::ZonePC(int32 zoneID, float x, float y, float z, float heading, int8
 	iZoneNameLength = strlen(pZoneName);
 		
 	switch(zm) {
+		case EvacToSafeCoords:
 		case ZoneToSafeCoords:
 			x = zone->safe_x();
 			y = zone->safe_y();
@@ -468,7 +480,7 @@ void Client::ZonePC(int32 zoneID, float x, float y, float z, float heading, int8
 	if(ReadyToZone) {
 		zone_mode = zm;
 		
-		if(zm == ZoneToBindPoint || zm == ZoneToSafeCoords) {
+		if(zm == ZoneToBindPoint) {
 			EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZonePlayerToBind, sizeof(ZonePlayerToBind_Struct) + iZoneNameLength);
 			ZonePlayerToBind_Struct* gmg = (ZonePlayerToBind_Struct*) outapp->pBuffer;
 		
@@ -483,7 +495,7 @@ void Client::ZonePC(int32 zoneID, float x, float y, float z, float heading, int8
 			FastQueuePacket(&outapp);
 			safe_delete(outapp);
 		}
-		else if(zm == ZoneSolicited) {
+		else if(zm == ZoneSolicited || zm == ZoneToSafeCoords) {
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
 	RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
 
@@ -498,6 +510,38 @@ void Client::ZonePC(int32 zoneID, float x, float y, float z, float heading, int8
 	FastQueuePacket(&outapp);
 	safe_delete(outapp);
 	}
+		else if(zm == EvacToSafeCoords) {
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
+			RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
+
+			// if we are in the same zone we want to evac to, client will not send OP_ZoneChange back to do an actual
+			// zoning of the client, so we have to send a viable zoneid that the client *could* zone to to make it believe
+			// we are leaving the zone, even though we are not. We have to do this because we are missing the correct op code
+			// and struct that should be used for evac/succor.
+			// 213 is Plane of War
+			// 76 is orignial Plane of Hate
+			// WildcardX 27 January 2008. Tested this for 6.2 and Titanium clients.
+
+			if(this->GetZoneID() == 213)
+				gmg->zone_id = 76;
+			else if(this->GetZoneID() == 76)
+				gmg->zone_id = 213;
+			else
+				gmg->zone_id = 213;
+
+			gmg->x = x;
+			gmg->y = y;
+			gmg->z = z;
+			gmg->heading = heading;
+			gmg->type = 0x01;				// '0x01' was an observed value for the type field, not sure of meaning
+			
+			// we hide the real zoneid we want to evac/succor to here
+			zonesummon_id = zoneID;
+
+			outapp->priority = 6;
+			FastQueuePacket(&outapp);
+			safe_delete(outapp);
+		}
 		else {
 			if(zoneID == this->GetZoneID()) {
 		//properly handle proximities

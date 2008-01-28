@@ -148,7 +148,8 @@ typedef enum {
 	ZoneSolicited,			// Always send ZonePlayerToBind_Struct to client: Portal, Translocate, Evac spells that have a x y z coord in the spell data
 	ZoneUnsolicited,
 	GateToBindPoint,		// Always send RequestClientZoneChange_Struct to client: Gate spell or Translocate To Bind Point spell
-	SummonPC				// In-zone GMMove() always: Call of the Hero spell or some other type of in zone only summons
+	SummonPC,				// In-zone GMMove() always: Call of the Hero spell or some other type of in zone only summons
+	EvacToSafeCoords
 } ZoneMode;
 
 class ClientFactory {

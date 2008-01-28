@@ -1,5 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==01/27/2008
+WildcardX: Subtle changes to zoning code to allow both the 6.2 and Titanium client to perform all zoning operations similiar to live.
+WildcardX: Fixed #zone and #goto commands for both the 6.2 and Titanium client.
+
 ==01/25/2008
 WildcardX: Regenerated perl_client.cpp and perl_groups.cpp due to parameter changes for Group::TeleportGroup and Client::MovePC methods. Changes to some quest files may be necessary.
 WildcardX: void	MovePC(int32 zoneID, float x, float y, float z, float heading)

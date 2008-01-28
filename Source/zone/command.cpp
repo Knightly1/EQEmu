@@ -1412,7 +1412,7 @@ void command_zone(Client *c, const Seperator *sep)
 		c->MovePC(zoneid, atof(sep->arg[2]), atof(sep->arg[3]), atof(sep->arg[4]), 0.0f, 0);
 	else
 		//zone to safe coords
-		c->GoToSafeCoords(zoneid);
+		c->MovePC(zoneid, 0.0f, 0.0f, 0.0f, 0.0f, 0, ZoneToSafeCoords);
 }
 
 void command_showbuffs(Client *c, const Seperator *sep)
@@ -3938,7 +3938,7 @@ void command_goto(Client *c, const Seperator *sep)
 	else if (!(sep->IsNumber(1) && sep->IsNumber(2) && sep->IsNumber(3)))
 		c->Message(0, "Usage: #goto [x y z]");
 	else
-		c->MovePC(atof(sep->arg[1]), atof(sep->arg[2]), atof(sep->arg[3]), 0.0f, 1, false);
+		c->MovePC(atof(sep->arg[1]), atof(sep->arg[2]), atof(sep->arg[3]), 0.0f);
 }
 
 #ifdef BUGTRACK

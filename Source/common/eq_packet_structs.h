@@ -1007,6 +1007,10 @@ struct ZoneChange_Struct {
 /*088*/
 };
 
+// Whatever you send to the client in RequestClientZoneChange_Struct.type, the client will send back
+// to the server in ZoneChange_Struct.zone_reason. My guess is this is a memo field of sorts.
+// WildcardX 27 January 2008
+
 struct RequestClientZoneChange_Struct {
 /*00*/	uint16	zone_id;
 /*02*/	uint16	instance_id;

@@ -286,8 +286,6 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					}
 				}
 
-				// entity_list.RemoveFromHateLists(this, false);
-
 				if(IsClient())
 				{
 					// Below are the spellid's for known evac/succor spells that send player
@@ -306,15 +304,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 						LogFile->write(EQEMuLog::Debug, "Succor/Evacuation Spell In Same Zone.");
 #endif
 						if(IsClient())
-							CastToClient()->MovePC(target_zone, x, y, z, heading, 0, ZoneToSafeCoords);
+							CastToClient()->MovePC(target_zone, x, y, z, heading, 0, EvacToSafeCoords);
 						else
 							GMMove(x, y, z, heading);
-						/*
-						Mob *mypet = GetPet();
-						if(mypet){
-							entity_list.RemoveFromHateLists(mypet, false);
-						}
-						*/
 					}
 					else {
 #ifdef SPELL_EFFECT_SPAM
