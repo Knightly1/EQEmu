@@ -6177,6 +6177,16 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 				buffs[i].numhits			= spells[buffs[i].spellid].numhits;
 				buffs[i].persistant_buff	= m_pp.buffs[i].persistant_buff;
 				buffs[i].UpdateClient		= false;
+				if(IsRuneSpell(m_pp.buffs[i].spellid) || IsMagicRuneSpell(m_pp.buffs[i].spellid)) {
+					if(IsRuneSpell(m_pp.buffs[i].spellid))
+						 buffs[i].melee_rune = m_pp.buffs[i].dmg_shield_remaining;
+					else
+						 buffs[i].magic_rune = m_pp.buffs[i].dmg_shield_remaining;
+				}
+				else {
+					buffs[i].melee_rune = 0;
+					buffs[i].magic_rune = 0;
+				}
 			}
 			else {
 				buffs[i].spellid = SPELL_UNKNOWN;
@@ -6185,7 +6195,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 				m_pp.buffs[i].level = 0;
 				m_pp.buffs[i].duration = 0;
 				m_pp.buffs[i].effect = 0;
-
+				m_pp.buffs[i].dmg_shield_remaining = 0;
 			}
 		}
 		
@@ -6196,7 +6206,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 				for (uint32 x1=0; x1 < EFFECT_COUNT; x1++) {
 					switch (spells[buffs[j1].spellid].effectid[x1]) {
 						case SE_Charm:
-						case SE_Rune:
+						//case SE_Rune:
 							buffs[j1].spellid = SPELL_UNKNOWN;
 							m_pp.buffs[j1].spellid = SPELLBOOK_UNKNOWN;
 							m_pp.buffs[j1].slotid = 0;
@@ -6563,12 +6573,6 @@ void Client::CompleteConnect()
 				case SE_SummonHorse: {
 					SummonHorse(buffs[j1].spellid);
 					//hasmount = true;	//this was false, is that the correct thing?
-					break;
-				}
-				case SE_Rune: {
-					BuffFadeBySpellID(buffs[j1].spellid);
-					//SetRune(buffs[j1].durationformula);
-					//Somehow we need to toss the remaining rune value over..
 					break;
 				}
 				case SE_Silence:

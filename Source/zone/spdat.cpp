@@ -621,3 +621,33 @@ bool IsResurrectionEffects(int16 spell_id) {
 
 	return Result;
 }
+
+bool IsRuneSpell(int16 spell_id) {
+	bool Result = false;
+
+	if(IsValidSpell(spell_id)) {
+		for(int i = 0; i < EFFECT_COUNT; i++) {
+			if(spells[spell_id].effectid[i] == SE_Rune) {
+				Result = true;
+				break;
+			}
+		}
+	}
+
+	return Result;
+}
+
+bool IsMagicRuneSpell(int16 spell_id) {
+	bool Result = false;
+
+	if(IsValidSpell(spell_id)) {
+		for(int i = 0; i < EFFECT_COUNT; i++) {
+			if(spells[spell_id].effectid[i] == SE_AbsorbMagicAtt) {
+				Result = true;
+				break;
+			}
+		}
+	}
+
+	return Result;
+}

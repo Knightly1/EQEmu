@@ -129,6 +129,8 @@ struct Buffs_Struct {
 	uint32	numhits; //the number of physical hits this buff can take before it fades away, lots of druid armor spells take advantage of this mixed with powerful effects
 	bool	client;  //True if the caster is a client
 	bool	UpdateClient;
+	int16	melee_rune;
+	int16	magic_rune;
 };
 
 struct StatBonuses {
@@ -643,16 +645,9 @@ bool logpos;
 	inline bool	IsSilenced() const { return silenced; }
 	inline int16	GetErrorNumber() const {return adverrorinfo;}
 	
-	inline int16	GetRune() const { return rune; }
-	inline void	SetRune(int16 in_rune) { rune = in_rune; }
-	
 	sint32	ReduceDamage(sint32 damage);
 	sint32  ReduceMagicalDamage(sint32 damage);
 
-	
-   	inline int16 GetMagicRune() const { return magicrune; }
-	void	SetMagicRune(int16 in_rune) { magicrune = in_rune; }
-	
 #define MAX_RAMPAGE_TARGETS 3
 #define MAX_RAMPAGE_LIST 20
 #define MAX_FLURRY_HITS 2
@@ -936,8 +931,6 @@ protected:
 
 	Mob*	shield_target;
 	
-	int16	rune;
-	int16	magicrune;
 	int ExtraHaste;	// for the #haste command
 	bool	mezzed;
 	bool	stunned;

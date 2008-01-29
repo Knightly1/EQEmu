@@ -1,5 +1,11 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==01/28/2008
+WildcardX: Regenerated perl_mob.cpp due to deprecating the following methods: GetFamiliar(), SetFamiliar(), GetRune(), SetRune(), GetMagicRune(), SetMagicRune().
+WildcardX: Enchanters, this is your patch! Characters will now benefit from all rune and spell rune spell effects all spell buffs will provide, consistent with spell rules.
+WildcardX: Rune and spell rune spell buffs will now persist zoning and camping.
+WildcardX: Fixed a zone crash caused by TryWeaponProc() method.
+
 ==01/27/2008
 WildcardX: Subtle changes to zoning code to allow both the 6.2 and Titanium client to perform all zoning operations similiar to live.
 WildcardX: Fixed #zone and #goto commands for both the 6.2 and Titanium client.

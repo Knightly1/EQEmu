@@ -83,6 +83,9 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 		}
 #endif
 
+		buffs[buffslot].melee_rune = 0;
+		buffs[buffslot].magic_rune = 0;
+
 	// iterate through the effects in the spell
 	for (i = 0; i < EFFECT_COUNT; i++)
 	{
@@ -875,8 +878,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Melee Absorb Rune: %+i", effect_value);
 #endif
-				if(effect_value > GetRune())
-					SetRune(effect_value);
+				buffs[buffslot].melee_rune = effect_value;	
 				break;
 			}
 
@@ -885,8 +887,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Spell Absorb Rune: %+i", effect_value);
 #endif
-				if(effect_value > GetMagicRune())
-					SetMagicRune(effect_value);
+				buffs[buffslot].magic_rune = effect_value;	
 				break;
 			}
 
@@ -2676,13 +2677,13 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 
 			case SE_Rune:
 			{
-				SetRune(0);
+				buffs[slot].melee_rune = 0;
 				break;
 			}
 
 			case SE_AbsorbMagicAtt:
 			{
-				SetMagicRune(0);
+				buffs[slot].magic_rune = 0;
 				break;
 			}
 

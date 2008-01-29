@@ -4141,105 +4141,6 @@ XS(XS_Mob_IsStunned)
 	XSRETURN(1);
 }
 
-XS(XS_Mob_GetRune); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetRune)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetRune(THIS)");
-	{
-		Mob *		THIS;
-		int16		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetRune();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_SetRune); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_SetRune)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Mob::SetRune(THIS, in_rune)");
-	{
-		Mob *		THIS;
-		int16		in_rune = (int16)SvUV(ST(1));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->SetRune(in_rune);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_GetMagicRune); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetMagicRune)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetMagicRune(THIS)");
-	{
-		Mob *		THIS;
-		int16		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		RETVAL = THIS->GetMagicRune();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_SetMagicRune); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_SetMagicRune)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Mob::SetMagicRune(THIS, in_rune)");
-	{
-		Mob *		THIS;
-		int16		in_rune = (int16)SvUV(ST(1));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->SetMagicRune(in_rune);
-	}
-	XSRETURN_EMPTY;
-}
 
 XS(XS_Mob_StartEnrage); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Mob_StartEnrage)
@@ -5837,10 +5738,6 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "Mesmerize"), XS_Mob_Mesmerize, file, "$");
 		newXSproto(strcpy(buf, "IsMezzed"), XS_Mob_IsMezzed, file, "$");
 		newXSproto(strcpy(buf, "IsStunned"), XS_Mob_IsStunned, file, "$");
-		newXSproto(strcpy(buf, "GetRune"), XS_Mob_GetRune, file, "$");
-		newXSproto(strcpy(buf, "SetRune"), XS_Mob_SetRune, file, "$$");
-		newXSproto(strcpy(buf, "GetMagicRune"), XS_Mob_GetMagicRune, file, "$");
-		newXSproto(strcpy(buf, "SetMagicRune"), XS_Mob_SetMagicRune, file, "$$");
 		newXSproto(strcpy(buf, "StartEnrage"), XS_Mob_StartEnrage, file, "$");
 		newXSproto(strcpy(buf, "IsEnraged"), XS_Mob_IsEnraged, file, "$");
 		newXSproto(strcpy(buf, "GetReverseFactionCon"), XS_Mob_GetReverseFactionCon, file, "$$");

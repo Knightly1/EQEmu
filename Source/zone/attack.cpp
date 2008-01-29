@@ -2014,56 +2014,60 @@ int Mob::GetMonkHandToHandDelay(void)
 	}
 }
 
-
-sint32 Mob::ReduceMagicalDamage(sint32 damage) {
-	if(damage < 0)
-		return(damage);
-	
-	int16 in_rune = GetMagicRune();
-	if(in_rune == 0)
-		return(damage);
-	
-	if (in_rune >= damage)
-	{
-		in_rune -= damage;
-		damage = 0;
-	}
-	else
-	{
-		damage += in_rune;
-		in_rune = 0;
-        int slot = GetBuffSlotFromType(SE_AbsorbMagicAtt);
-        if (slot >= 0)
-            BuffFadeBySlot(slot);
-	}
-	SetMagicRune(in_rune);
-	return damage;
-}
-
 sint32 Mob::ReduceDamage(sint32 damage){
-	if(damage < 0)
-		return(damage);
+	if(damage > 0) {
+		int slot = GetBuffSlotFromType(SE_Rune);
+
+		while(slot >= 0) {
+			int16 melee_rune_left = this->buffs[slot].melee_rune;
 	
-	int16 in_rune = GetRune();
-	if(in_rune == 0)
-		return(damage);
-	
-	if (in_rune >= damage)
-	{
-		in_rune -= damage;
-		damage = -6;
+			if(melee_rune_left >= damage) {
+				melee_rune_left -= damage;
+				damage = -6;
+				this->buffs[slot].melee_rune = melee_rune_left;
+				break;
 	}
-	else
-	{
-		damage -= in_rune;
-		in_rune = 0;
-        int slot = GetBuffSlotFromType(SE_Rune);
-		LogFile->write(EQEMuLog::Normal, "Fading rune from slot %d",slot);
-        if (slot >= 0)
+			else {
+				if(melee_rune_left > 0) {
+					damage -= melee_rune_left;
+					melee_rune_left = 0;
+				}
+				LogFile->write(EQEMuLog::Debug, "Fading rune from slot %d", slot);
             BuffFadeBySlot(slot);
+				slot = GetBuffSlotFromType(SE_Rune);
+			}
+		}
 	}
-	SetRune(in_rune);
-	return damage;
+
+		return(damage);
+}
+	
+sint32 Mob::ReduceMagicalDamage(sint32 damage) {
+	if(damage > 0) {
+		int slot = GetBuffSlotFromType(SE_AbsorbMagicAtt);
+	
+		while(slot >= 0) {
+			int16 magic_rune_left = this->buffs[slot].magic_rune;
+
+			if(magic_rune_left >= damage) {
+				magic_rune_left -= damage;
+		damage = -6;
+				this->buffs[slot].magic_rune = magic_rune_left;
+				break;
+	}
+			else {
+				if(magic_rune_left > 0) {
+					damage -= magic_rune_left;
+					magic_rune_left = 0;
+				}
+				LogFile->write(EQEMuLog::Debug, "Fading spell rune from slot %d", slot);
+            BuffFadeBySlot(slot);
+				slot = GetBuffSlotFromType(SE_AbsorbMagicAtt);
+			}
+	}
+	}
+
+	return(damage);
 }
 
 bool Mob::HasProcs() const
@@ -2461,6 +2465,12 @@ float Mob::GetProcChances(float &ProcBonus, float &ProcChance) {
 
 
 void Mob::TryWeaponProc(const ItemInst* weapon_g, Mob *on) {
+	if(!on) {
+		SetTarget(NULL);
+		LogFile->write(EQEMuLog::Error, "A null Mob object was passed  to Mob::TryWeaponProc for evaluation!");
+		return;
+	}
+
 	if(!weapon_g) {
 		TryWeaponProc((const Item_Struct*) NULL, on);
 		return;

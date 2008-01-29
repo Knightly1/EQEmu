@@ -253,8 +253,6 @@ Mob::Mob(const char*   in_name,
 	stunned = false;
 	silenced = false;
 	inWater = false;
-	rune = 0;
-    magicrune = 0;
     int m;
 /*	for (m = 0; m < 60; m++) {
 		flag[m]=0;

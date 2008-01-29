@@ -409,6 +409,14 @@ bool Client::Save(int8 iCommitNow) {
 			m_pp.buffs[i].reserved = 0;
 			//temp hack, just put some number in here to make the client think its a real player ID
 			m_pp.buffs[i].player_id = 0x2211;
+			if(IsRuneSpell(buffs[i].spellid) || IsMagicRuneSpell(buffs[i].spellid)) {
+				if(IsRuneSpell(buffs[i].spellid))
+					m_pp.buffs[i].dmg_shield_remaining = buffs[i].melee_rune;
+				else
+					m_pp.buffs[i].dmg_shield_remaining = buffs[i].magic_rune;
+			}
+			else
+				m_pp.buffs[i].dmg_shield_remaining = 0;
 		}
 		else {
 			m_pp.buffs[i].spellid = SPELLBOOK_UNKNOWN;
@@ -420,6 +428,7 @@ bool Client::Save(int8 iCommitNow) {
 			m_pp.buffs[i].persistant_buff = 0;
 			m_pp.buffs[i].reserved = 0;
 			m_pp.buffs[i].player_id = 0;
+			m_pp.buffs[i].dmg_shield_remaining = 0;
 		}
 	}
 	if (pQueuedSaveWorkID) {
