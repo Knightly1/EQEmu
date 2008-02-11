@@ -224,6 +224,19 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 
 			case SE_CurrentMana:
 			{
+				if(IsManaTapSpell(spell_id)) {
+					if(GetCasterClass() != 'N') {
+#ifdef SPELL_EFFECT_SPAM
+						snprintf(effect_desc, _EDLEN, "Current Mana: %+i", effect_value);
+#endif
+						SetMana(GetMana() + effect_value);
+						caster->SetMana(caster->GetMana() + abs(effect_value));
+#ifdef SPELL_EFFECT_SPAM
+						caster->Message(0, "You have gained %+i mana!", effect_value);
+#endif
+					}
+				}
+				else {
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Current Mana: %+i", effect_value);
 #endif
@@ -231,6 +244,8 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					break;
 
 				SetMana(GetMana() + effect_value);
+				}
+
 				break;
 			}
 

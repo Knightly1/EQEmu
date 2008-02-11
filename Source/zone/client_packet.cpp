@@ -6178,10 +6178,12 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 				buffs[i].persistant_buff	= m_pp.buffs[i].persistant_buff;
 				buffs[i].UpdateClient		= false;
 				if(IsRuneSpell(m_pp.buffs[i].spellid) || IsMagicRuneSpell(m_pp.buffs[i].spellid)) {
-					if(IsRuneSpell(m_pp.buffs[i].spellid))
+					if(IsRuneSpell(m_pp.buffs[i].spellid)) {
 						 buffs[i].melee_rune = m_pp.buffs[i].dmg_shield_remaining;
-					else
+					}
+					else {
 						 buffs[i].magic_rune = m_pp.buffs[i].dmg_shield_remaining;
+				}
 				}
 				else {
 					buffs[i].melee_rune = 0;

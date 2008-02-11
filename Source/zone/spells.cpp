@@ -1264,11 +1264,19 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 	}
 
 	// solar: check line of sight to target if it's a detrimental spell
-	if(spell_target && IsDetrimentalSpell(spell_id) && !CheckLosFN(spell_target))
+	if(spell_target && IsDetrimentalSpell(spell_id) && !CheckLosFN(spell_target) && !IsHarmonySpell(spell_id))
 	{
 		mlog(SPELLS__CASTING, "Spell %d: cannot see target %s", spell_target->GetName());
 		Message_StringID(13,CANT_SEE_TARGET);
 		return false;
+	}
+	
+	// WildcardX: check to see if target is a caster mob before performing a mana tap
+	if(spell_target && IsManaTapSpell(spell_id)) {
+		if(spell_target->GetCasterClass() == 'N') {
+			Message(13, "Your target does not have any mana.");
+			return false;
+		}
 	}
 	
 	//range check our target, if we have one and it is not us
@@ -2577,6 +2585,7 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 		if(SpecAttacks[UNMEZABLE]) {
 			mlog(SPELLS__RESISTS, "We are immune to Mez spells.");
 			caster->Message_StringID(MT_Shout, CANNOT_MEZ);
+			AddToHateList(caster);
 			return true;
 		}
 

@@ -1,5 +1,10 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==02/10/2008
+WildcardX: Mesmerize line of spells will now cause aggro when casted on a mesmerize immune mob.
+WildcardX: Fixed enchanter spell Theft of Thought. This spell will now work as described.
+WildcardX: The pacify/harmony line of spells will no longer require a line of sight check to complete a cast.
+
 ==01/28/2008
 WildcardX: Regenerated perl_mob.cpp due to deprecating the following methods: GetFamiliar(), SetFamiliar(), GetRune(), SetRune(), GetMagicRune(), SetMagicRune().
 WildcardX: Enchanters, this is your patch! Characters will now benefit from all rune and spell rune spell effects all spell buffs will provide, consistent with spell rules.

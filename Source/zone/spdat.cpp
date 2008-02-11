@@ -651,3 +651,27 @@ bool IsMagicRuneSpell(int16 spell_id) {
 
 	return Result;
 }
+
+bool IsManaTapSpell(int16 spell_id) {
+	bool Result = false;
+
+	if(IsValidSpell(spell_id)) {
+		for(int i = 0; i < EFFECT_COUNT; i++) {
+			if(spells[spell_id].effectid[i] == SE_CurrentMana && spells[spell_id].targettype == ST_Tap) {
+				Result = true;
+				break;
+			}
+		}
+	}
+
+	return Result;
+}
+
+bool IsAllianceSpellLine(int16 spell_id) {
+	bool Result = false;
+
+	if(IsValidSpell(spell_id))
+		Result = IsEffectInSpell(spell_id, SE_AddFaction);
+
+	return Result;
+}
