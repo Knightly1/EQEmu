@@ -893,7 +893,10 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Melee Absorb Rune: %+i", effect_value);
 #endif
+				if(effect_value > 0) {
 				buffs[buffslot].melee_rune = effect_value;	
+					SetHasRune(true);
+				}
 				break;
 			}
 
@@ -902,7 +905,10 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Spell Absorb Rune: %+i", effect_value);
 #endif
+				if(effect_value > 0) {
 				buffs[buffslot].magic_rune = effect_value;	
+					SetHasSpellRune(true);
+				}
 				break;
 			}
 

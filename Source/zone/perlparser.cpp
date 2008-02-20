@@ -519,6 +519,26 @@ XS(XS__depop)
 	XSRETURN_EMPTY;
 }
 
+XS(XS__depopall);
+XS(XS__depopall)
+{
+	dXSARGS;
+	if (items < 0 || items > 1)
+		Perl_croak(aTHX_ "Usage: depopall(npc_type= 0)");
+
+	int	npc_type;
+
+	if (items < 1)
+		npc_type = 0;
+	else
+		npc_type = (int)SvIV(ST(0));
+
+
+	quest_manager.depopall(npc_type);
+
+	XSRETURN_EMPTY;
+}
+
 XS(XS__settarget);
 XS(XS__settarget)
 {
@@ -1552,6 +1572,19 @@ XS(XS__getplayerburriedcorpsecount)
     XSRETURN(1);
 }
 
+XS(XS__depopzone);
+XS(XS__depopzone)
+{
+	dXSARGS;
+	if (items != 0)
+		Perl_croak(aTHX_ "Usage: depopzone()");
+
+
+	quest_manager.depopzone();
+
+	XSRETURN_EMPTY;
+}
+
 /*
 
 This is the callback perl will look for to setup the
@@ -1662,6 +1695,8 @@ EXTERN_C XS(boot_quest)
         newXS(strcpy(buf, "clear_zone_flag"), XS__clear_zone_flag, file);
         newXS(strcpy(buf, "summonburriedplayercorpse"), XS__summonburriedplayercorpse, file);
 		newXS(strcpy(buf, "getplayerburriedcorpsecount"), XS__getplayerburriedcorpsecount, file);
+		newXS(strcpy(buf, "depopall"), XS__depopall, file);
+		newXS(strcpy(buf, "depopzone"), XS__depopzone, file);
 	XSRETURN_YES;
 }
 

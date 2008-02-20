@@ -2015,7 +2015,7 @@ int Mob::GetMonkHandToHandDelay(void)
 }
 
 sint32 Mob::ReduceDamage(sint32 damage){
-	if(damage > 0) {
+	if(damage > 0 && HasRune()) {
 		int slot = GetBuffSlotFromType(SE_Rune);
 
 		while(slot >= 0) {
@@ -2035,6 +2035,8 @@ sint32 Mob::ReduceDamage(sint32 damage){
 				LogFile->write(EQEMuLog::Debug, "Fading rune from slot %d", slot);
             BuffFadeBySlot(slot);
 				slot = GetBuffSlotFromType(SE_Rune);
+				if(slot < 0)
+					SetHasRune(false);
 			}
 		}
 	}
@@ -2043,7 +2045,7 @@ sint32 Mob::ReduceDamage(sint32 damage){
 }
 	
 sint32 Mob::ReduceMagicalDamage(sint32 damage) {
-	if(damage > 0) {
+	if(damage > 0 && HasSpellRune()) {
 		int slot = GetBuffSlotFromType(SE_AbsorbMagicAtt);
 	
 		while(slot >= 0) {
@@ -2063,6 +2065,8 @@ sint32 Mob::ReduceMagicalDamage(sint32 damage) {
 				LogFile->write(EQEMuLog::Debug, "Fading spell rune from slot %d", slot);
             BuffFadeBySlot(slot);
 				slot = GetBuffSlotFromType(SE_AbsorbMagicAtt);
+				if(slot < 0)
+					SetHasSpellRune(false);
 			}
 	}
 	}

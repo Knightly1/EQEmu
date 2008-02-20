@@ -309,6 +309,8 @@ Mob::Mob(const char*   in_name,
 	
 	fix_pathing = false;
 	TempPets(false);
+	SetHasRune(false);
+	SetHasSpellRune(false);
 }
 
 Mob::~Mob()

@@ -6180,14 +6180,20 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 				if(IsRuneSpell(m_pp.buffs[i].spellid) || IsMagicRuneSpell(m_pp.buffs[i].spellid)) {
 					if(IsRuneSpell(m_pp.buffs[i].spellid)) {
 						 buffs[i].melee_rune = m_pp.buffs[i].dmg_shield_remaining;
+						 if(buffs[i].melee_rune > 0)
+							 SetHasRune(true);
 					}
 					else {
 						 buffs[i].magic_rune = m_pp.buffs[i].dmg_shield_remaining;
+						 if(buffs[i].magic_rune > 0)
+							 SetHasSpellRune(true);
 				}
 				}
 				else {
 					buffs[i].melee_rune = 0;
 					buffs[i].magic_rune = 0;
+					SetHasRune(false);
+					SetHasSpellRune(false);
 				}
 			}
 			else {

@@ -61,6 +61,8 @@ public:
 	void shout(const char *str);
 	void shout2(const char *str);
 	void depop(int npc_type = 0);
+	void depopall(int npc_type = 0);
+	void depopzone();
 	void settarget(const char *type, int target_id);
 	void follow(int entity_id);
 	void sfollow();

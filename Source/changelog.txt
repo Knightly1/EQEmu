@@ -1,5 +1,11 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==02/19/2008
+WildcardX: Found a small efficiency for the code that determines if an item is equipable.
+WildcardX: Re-worked the rune spell buff code to make it more efficient and reduce CPU utilization.
+WildcardX: Added the quest function depopall(int npctype_id). This will remove all mobs from the zone with the specified npctype_id.
+WildcardX: Added the quest function depopzone(). This will remove all mobs from the zone and NOT cause a repop.
+
 ==02/10/2008
 WildcardX: Mesmerize line of spells will now cause aggro when casted on a mesmerize immune mob.
 WildcardX: Fixed enchanter spell Theft of Thought. This spell will now work as described.

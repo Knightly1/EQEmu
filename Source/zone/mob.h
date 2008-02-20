@@ -781,6 +781,10 @@ bool logpos;
 	inline int GetCWP() const { return(cur_wp); }
 	virtual FACTION_VALUE GetReverseFactionCon(Mob* iOther) { return FACTION_INDIFFERENT; }
 	inline bool IsTrackable() const { return(trackable); }
+	inline bool HasRune() const { return m_hasRune; }
+	inline bool HasSpellRune() const { return m_hasSpellRune; }
+	inline void SetHasRune(bool hasRune) { m_hasRune = hasRune; }
+	inline void SetHasSpellRune(bool hasSpellRune) { m_hasSpellRune = hasSpellRune; }
 
 protected:
 	void CommonDamage(Mob* other, sint32 &damage, const uint16 spell_id, const SkillType attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic);
@@ -1007,6 +1011,9 @@ protected:
 	bool hasTempPet;
 
 	EGNode *_egnode;	//the EG node we are in
+	
+	bool	m_hasRune;
+	bool	m_hasSpellRune;
 	
 private:
 	void	_StopSong();		//this is not what you think it is
