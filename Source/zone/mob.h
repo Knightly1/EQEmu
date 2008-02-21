@@ -785,6 +785,7 @@ bool logpos;
 	inline bool HasSpellRune() const { return m_hasSpellRune; }
 	inline void SetHasRune(bool hasRune) { m_hasRune = hasRune; }
 	inline void SetHasSpellRune(bool hasSpellRune) { m_hasSpellRune = hasSpellRune; }
+	bool PassCharismaCheck(sint16 casterCHA, sint16 maximumCasterCHA);
 
 protected:
 	void CommonDamage(Mob* other, sint32 &damage, const uint16 spell_id, const SkillType attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic);

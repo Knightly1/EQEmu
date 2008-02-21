@@ -34,6 +34,7 @@
 #include "misc.h"
 #include "races.h"
 #include "shareddb.h"
+#include "classes.h"
 using namespace std;
 
 
@@ -206,19 +207,21 @@ bool ItemInst::IsEquipable(int16 race, int16 class_) const
 
 	race_ = (race_==17? 15 : race_);
 	// @merth: can this be optimized?  i.e., will (race & common->Races) suffice?
-	for (int cur_class = 1; cur_class<=16; cur_class++) {
+	for (int cur_class = 1; cur_class<=PLAYER_CLASS_COUNT; cur_class++) {
 		if (classes_ % 2 == 1) {
     		if (cur_class == class_) {
     			isclass = true;
+				break;
 			}
 		}
 		classes_ >>= 1;
 	}
-	for (unsigned int cur_race = 1; cur_race <= 15; cur_race++) {
+	for (unsigned int cur_race = 1; cur_race <= PLAYER_RACE_COUNT; cur_race++) {
 		
 		if (races_ % 2 == 1) {
     		if (cur_race == race_) {
     			israce = true;
+				break;
    			}
 		}
 		races_ >>= 1;

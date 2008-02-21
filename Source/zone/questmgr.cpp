@@ -415,8 +415,14 @@ void QuestManager::depopall(int npc_type) {
 	}
 }
 
-void QuestManager::depopzone() {
-	zone->Depop();
+void QuestManager::depopzone(bool StartSpawnTimer) {
+	if(zone)
+		zone->Depop(StartSpawnTimer);
+}
+
+void QuestManager::repopzone() {
+	if(zone)
+		zone->Repop();
 }
 
 void QuestManager::settarget(const char *type, int target_id) {

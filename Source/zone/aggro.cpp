@@ -1135,6 +1135,7 @@ sint32 Mob::CheckAggroAmount(int16 spellid) {
 				AggroAmount += slevel*2;
 				break;
 			}
+			case SE_Harmony:
 			case SE_CastingLevel:
 			case SE_MeleeMitigation:
 			case SE_CriticalHitChance:
@@ -1251,6 +1252,25 @@ void Mob::ClearFeignMemory() {
 	feign_memory_list.clear();
 	if(AIfeignremember_timer != NULL)
 		AIfeignremember_timer->Disable();
+}
+
+bool Mob::PassCharismaCheck(sint16 casterCHA, sint16 maximumCasterCHA) {
+	bool Result = false;
+
+	if(casterCHA > 0 && maximumCasterCHA > 0) {
+		float tempCHA = 0.00f;
+		float tempMaxCHA = 0.00f;
+
+		tempCHA = casterCHA;
+		tempMaxCHA = maximumCasterCHA;
+
+		float PercentOfMaxCharisma = tempCHA / tempMaxCHA;
+
+		if(MakeRandomInt(0, 100) <= (PercentOfMaxCharisma * 100))
+			Result = true;
+	}
+
+	return Result;
 }
 
 

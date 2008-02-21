@@ -1576,11 +1576,24 @@ XS(XS__depopzone);
 XS(XS__depopzone)
 {
 	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: depopzone(StartSpawnStatus)");
+
+	bool StartSpawnStatus = ((int)SvIV(ST(0))) == 0?false:true;
+
+	quest_manager.depopzone(StartSpawnStatus);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__repopzone);
+XS(XS__repopzone)
+{
+	dXSARGS;
 	if (items != 0)
-		Perl_croak(aTHX_ "Usage: depopzone()");
+		Perl_croak(aTHX_ "Usage: repopzone()");
 
-
-	quest_manager.depopzone();
+	quest_manager.repopzone();
 
 	XSRETURN_EMPTY;
 }
@@ -1697,6 +1710,7 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "getplayerburriedcorpsecount"), XS__getplayerburriedcorpsecount, file);
 		newXS(strcpy(buf, "depopall"), XS__depopall, file);
 		newXS(strcpy(buf, "depopzone"), XS__depopzone, file);
+		newXS(strcpy(buf, "repopzone"), XS__repopzone, file);
 	XSRETURN_YES;
 }
 

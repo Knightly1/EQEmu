@@ -1,5 +1,13 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==02/20/2008
+KLS: Zone crash fix caused by calling the TryWeaponProc() method when dead.
+WildcardX: Changed the quest function depopzone() to accept a parameter to specify if the spawn timers should resume or become disabled. 0 = Disable, 1 = Enable.
+WildcardX: Added the quest function repopzone(). This function will cause a zone to repop it's spawns normally.
+WildcardX: Possible fix for a zoning bug caused by the Call Of Hero spell.
+WildcardX: Harmony/Pacify line of spells will now cause aggro when resisted.
+WildcardX: Added a check against CHA to avoid aggro from a resisted Harmony/Pacify spell.
+
 ==02/19/2008
 WildcardX: Found a small efficiency for the code that determines if an item is equipable.
 WildcardX: Re-worked the rune spell buff code to make it more efficient and reduce CPU utilization.

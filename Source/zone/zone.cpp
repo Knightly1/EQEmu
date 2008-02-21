@@ -1108,9 +1108,9 @@ void Zone::StartShutdownTimer(int32 set_time) {
 	MZoneLock.unlock();
 }
 
-bool Zone::Depop() {
+bool Zone::Depop(bool StartSpawnTimer) {
 std::map<uint32,NPCType *>::iterator itr;
-	entity_list.Depop();
+	entity_list.Depop(StartSpawnTimer);
 
    // Refresh npctable, getting current info from database.
    while(npctable.size()) {
@@ -1128,8 +1128,6 @@ void Zone::Repop(int32 delay) {
 	if(!Depop())
 		return;
 	
-	entity_list.Message(0, 0, "<SYSTEM_MSG>:Zone REPOP IMMINENT");
-
 	LinkedListIterator<Spawn2*> iterator(spawn2_list);
 
 	MZoneLock.lock();
@@ -1138,9 +1136,8 @@ void Zone::Repop(int32 delay) {
 		iterator.RemoveCurrent();
 	}
 
-	if (!database.PopulateZoneSpawnList(short_name, spawn2_list, delay)) {
-		entity_list.Message(0, 0, "Error in Zone::Repop: database.PopulateZoneSpawnList failed");
-	}
+	if (!database.PopulateZoneSpawnList(short_name, spawn2_list, delay))
+		LogFile->write(EQEMuLog::Debug, "Error in Zone::Repop: database.PopulateZoneSpawnList failed");
 
 	MZoneLock.unlock();
 	

@@ -2148,7 +2148,7 @@ void EntityList::DoZoneDump(ZSDump_Spawn2* spawn2_dump, ZSDump_NPC* npc_dump, ZS
 		zone->DumpAllSpawn2(spawn2_dump, &spawn2index);
 }
 
-void EntityList::Depop() {
+void EntityList::Depop(bool StartSpawnTimer) {
 	LinkedListIterator<NPC*> iterator(npc_list);
 	
 	iterator.Reset();
@@ -2159,7 +2159,7 @@ void EntityList::Depop() {
 		//do not depop player's pets...
 		if(it && own && own->IsClient())
 			continue;
-		it->Depop();
+		it->Depop(StartSpawnTimer);
 	}
 }
 

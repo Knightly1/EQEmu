@@ -2336,8 +2336,13 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 
 				if(spelltar->IsAIControlled()){
 					sint32 aggro = CheckAggroAmount(spell_id);
-					if(aggro > 0)
+					if(aggro > 0) {
+						if(!IsHarmonySpell(spell_id))
 						spelltar->AddToHateList(this, aggro);
+						else
+							if(!PassCharismaCheck(GetCHA(), GetMaxCHA()))
+								spelltar->AddToHateList(this, aggro);
+					}
 					else{
 						sint32 newhate = spelltar->GetHateAmount(this) + aggro;
 						if (newhate < 1) {

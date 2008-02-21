@@ -91,6 +91,7 @@ int32 GetArrayRace(int16 race);
 #define Array_Race_PET			16
 #define Array_Race_FROGLOK		17
 #define Count_Array_Race		18 // used for array defines, must be the max + 1
+#define PLAYER_RACE_COUNT		15 // The count of all player races
 
 /*
 

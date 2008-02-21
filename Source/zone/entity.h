@@ -283,7 +283,7 @@ public:
 	bool	AICheckCloseBeneficialSpells(NPC* caster, int8 iChance, float iRange, int16 iSpellTypes);
 protected:
 	friend class Zone;
-	void	Depop();
+	void	Depop(bool StartSpawnTimer = true);
 private:
 	int16   GetFreeID();
 	void	AddToSpawnQueue(int16 entityid, NewSpawn_Struct** app);
