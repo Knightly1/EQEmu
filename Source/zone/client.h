@@ -664,6 +664,8 @@ public:
 	void SendBuffDurationPacket(int16 spell_id, int duration, int inlevel);
 
 	bool ClientFinishedLoading() { return (conn_state == ClientConnectFinished); }
+	int FindSpellBookSlotBySpellID(int16 spellid);
+	int GetNextAvailableSpellBookSlot();
 
 
 protected:

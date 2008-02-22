@@ -335,6 +335,8 @@ int command_init(void) {
 		command_add("face","TODO: describe this command",250,command_face) ||
 		command_add("scribespells","[level] - Scribe all spells for you or your player target that are usable by them, up to level specified. (may freeze client for a few seconds)",150,command_scribespells) ||
 		command_add("unscribespells","Clear out your or your player target's spell book.",180,command_unscribespells) ||
+		command_add("scribespell", "[spellid] - Scribe specified spell in your target's spell book.", 180, command_scribespell) ||
+		command_add("unscribespell", "[spellid] - Unscribe specified spell from your target's spell book.", 180, command_unscribespell) ||
 		command_add("interrupt","[message id] [color] - Interrupt your casting.  Arguments are optional.",50,command_interrupt) ||
 		command_add("d1","[type] [spell] [damage] - Send an OP_Action packet with the specified values",200,command_d1) ||
 		command_add("summonitem","[itemid] [charges] - Summon an item onto your cursor.  Charges are optional.",200,command_summonitem) ||
@@ -4675,6 +4677,85 @@ void command_scribespells(Client *c, const Seperator *sep)
 			if(!IsDiscipline(curspell)){
 				t->ScribeSpell(curspell, book_slot++);
 			}
+		}
+	}
+}
+
+void command_scribespell(Client *c, const Seperator *sep) {
+	int16 spell_id = 0;
+	int16 book_slot = -1;
+	Client *t=c;
+
+	if(c->GetTarget() && c->GetTarget()->IsClient() && c->GetGM())
+		t=c->GetTarget()->CastToClient();
+
+	if(!sep->arg[1][0]) {
+		c->Message(0, "FORMAT: #scribespell <spellid>");
+		return;
+	}
+
+	spell_id = atoi(sep->arg[1]);
+
+	if(IsValidSpell(spell_id)) {
+		t->Message(0, "Scribing spell: %s (%i) to spellbook.", spells[spell_id].name, spell_id);
+
+		if(t != c)
+			c->Message(0, "Scribing spell: %s (%i) for %s.", spells[spell_id].name, spell_id, t->GetName());
+
+		LogFile->write(EQEMuLog::Normal, "Scribe spell: %s (%i) request for %s from %s.", spells[spell_id].name, spell_id, t->GetName(), c->GetName());
+
+		if (spells[spell_id].classes[WARRIOR] != 0 && spells[spell_id].skill != 52 && spells[spell_id].classes[t->GetPP().class_ - 1] > 0 && !IsDiscipline(spell_id)) {
+			book_slot = t->GetNextAvailableSpellBookSlot();
+
+			if(book_slot >= 0 && t->FindSpellBookSlotBySpellID(spell_id) < 0)
+				t->ScribeSpell(spell_id, book_slot);
+			else {
+				t->Message(13, "Unable to scribe spell: %s (%i) to your spellbook.", spells[spell_id].name, spell_id);
+
+				if(t != c)
+					c->Message(13, "Unable to scribe spell: %s (%i) for %s.", spells[spell_id].name, spell_id, t->GetName());
+			}
+		}
+		else
+			c->Message(13, "Your target can not scribe this spell.");
+	}
+	else
+		c->Message(13, "Spell ID: %i is an unknown spell and cannot be scribed.", spell_id);
+}
+
+void command_unscribespell(Client *c, const Seperator *sep) {
+	int16 spell_id = 0;
+	int16 book_slot = -1;
+	Client *t=c;
+
+	if(c->GetTarget() && c->GetTarget()->IsClient() && c->GetGM())
+		t=c->GetTarget()->CastToClient();
+
+	if(!sep->arg[1][0]) {
+		c->Message(0, "FORMAT: #unscribespell <spellid>");
+		return;
+	}
+
+	spell_id = atoi(sep->arg[1]);
+
+	if(IsValidSpell(spell_id)) {
+		book_slot = t->FindSpellBookSlotBySpellID(spell_id);
+
+		if(book_slot >= 0) {
+			t->UnscribeSpell(book_slot);
+
+			t->Message(0, "Unscribing spell: %s (%i) from spellbook.", spells[spell_id].name, spell_id);
+
+			if(t != c)
+				c->Message(0, "Unscribing spell: %s (%i) for %s.", spells[spell_id].name, spell_id, t->GetName());
+
+			LogFile->write(EQEMuLog::Normal, "Unscribe spell: %s (%i) request for %s from %s.", spells[spell_id].name, spell_id, t->GetName(), c->GetName());
+		}
+		else {
+			t->Message(13, "Unable to unscribe spell: %s (%i) from your spellbook. This spell is not scribed.", spells[spell_id].name, spell_id);
+
+			if(t != c)
+				c->Message(13, "Unable to unscribe spell: %s (%i) for %s due to spell not scribed.", spells[spell_id].name, spell_id, t->GetName());
 		}
 	}
 }

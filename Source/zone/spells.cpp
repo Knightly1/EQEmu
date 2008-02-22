@@ -3202,6 +3202,28 @@ void Client::UnscribeSpellAll(bool update_client)
 	}
 }
 
+int Client::GetNextAvailableSpellBookSlot() {
+	int Result = -1;
+
+	for(int i = (MAX_PP_SPELLBOOK - 1); i >= 0; i--) {
+		if(!IsValidSpell(m_pp.spell_book[i]))
+			Result = i;
+	}
+
+	return Result;
+}
+
+int Client::FindSpellBookSlotBySpellID(int16 spellid) {
+	int Result = -1;
+
+	for(int i = 0; i < MAX_PP_SPELLBOOK; i++) {
+		if(m_pp.spell_book[i] == spellid)
+			Result = i;
+	}
+
+	return Result;
+}
+
 //this is one nasty function... FindType and FindSpell are rather complex operations...
 /*void Mob::CheckBuffs() {
 	if (!IsCasting()) {

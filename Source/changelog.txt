@@ -1,5 +1,10 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==02/21/2008
+WildcardX: Removed the possible fix for the Call of Hero spell as it didnt actually fix the issue after extensive testing.
+WildcardX: Added new command #scribespell. This will scribe a specified spell into the target's spell book.
+WildcardX: Added new command #unscribespell. This will unscribe a specified spell from the target's spell book.
+
 ==02/20/2008
 KLS: Zone crash fix caused by calling the TryWeaponProc() method when dead.
 WildcardX: Changed the quest function depopzone() to accept a parameter to specify if the spawn timers should resume or become disabled. 0 = Disable, 1 = Enable.
