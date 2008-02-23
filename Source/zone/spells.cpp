@@ -1367,7 +1367,7 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 						SpellOnTarget(spell_id, this);
 	#ifdef GROUP_BUFF_PETS
 						//pet too
-						if (GetPet())
+						if (GetPet() && GetAA(aaPetAffinity))
 							SpellOnTarget(spell_id, GetPet());
 	#endif					
 					}
@@ -1375,7 +1375,7 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 					SpellOnTarget(spell_id, spell_target);
 	#ifdef GROUP_BUFF_PETS
 					//pet too
-					if (spell_target->GetPet())
+					if (spell_target->GetPet() && GetAA(aaPetAffinity))
 						SpellOnTarget(spell_id, spell_target->GetPet());
 	#endif
 				}

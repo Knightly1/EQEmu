@@ -1,5 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==02/23/2008
+WildcardX: Only characters with Pet Affinity AA can have group buffs casted on their pets.
+WildcardX: Fixed a bug that would not allow a rune buff to be used in some situations.
+
 ==02/22/2008
 WildcardX: Characters can now have only one caster specialization skill above 50. If more than one specialization skill is detected above 50, then all specialization skills are reset to 1.
 WildcardX: Reworked mana reduction calculations.

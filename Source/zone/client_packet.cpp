@@ -6180,21 +6180,24 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 				if(IsRuneSpell(m_pp.buffs[i].spellid) || IsMagicRuneSpell(m_pp.buffs[i].spellid)) {
 					if(IsRuneSpell(m_pp.buffs[i].spellid)) {
 						 buffs[i].melee_rune = m_pp.buffs[i].dmg_shield_remaining;
-						 if(buffs[i].melee_rune > 0)
 							 SetHasRune(true);
+						 LogFile->write(EQEMuLog::Debug, "%s has a melee rune spell buff with %i points remaining.", GetCleanName(), buffs[i].melee_rune);
 					}
 					else {
 						 buffs[i].magic_rune = m_pp.buffs[i].dmg_shield_remaining;
-						 if(buffs[i].magic_rune > 0)
 							 SetHasSpellRune(true);
+						 LogFile->write(EQEMuLog::Debug, "%s has a spell rune buff with %i points remaining.", GetCleanName(), buffs[i].magic_rune);
 				}
 				}
+				/*
 				else {
 					buffs[i].melee_rune = 0;
 					buffs[i].magic_rune = 0;
 					SetHasRune(false);
 					SetHasSpellRune(false);
+					LogFile->write(EQEMuLog::Debug, "%s doesn't have any rune type spells as a buff at all.", GetCleanName());
 				}
+				*/
 			}
 			else {
 				buffs[i].spellid = SPELL_UNKNOWN;
