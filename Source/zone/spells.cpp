@@ -336,7 +336,7 @@ bool Mob::DoCastSpell(int16 spell_id, int16 target_id, int16 slot,
 	// mana is checked for clients on the frontend. we need to recheck it for NPCs though
 	// fix: items dont need mana :-/
 	// Quagmire: If you're at full mana, let it cast even if you dont have enough mana
-	// solar: TODO reduce mana cost focus items
+
 	// we calculated this above, now enforce it
 	if(mana_cost > 0 && slot != 10)
 	{

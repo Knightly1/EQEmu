@@ -1331,7 +1331,7 @@ void Client::OPGMTraining(const EQApplicationPacket *app)
 		if(sk == TINKERING && GetRace() != GNOME) {
 			gmtrain->skills[sk] = 0; //Non gnomes can't tinker!
 		} else {
-			gmtrain->skills[sk] = MaxSkill(sk, GetClass(), RuleI(Character, MaxLevel)); 
+			gmtrain->skills[sk] = GetMaxSkillAfterSpecializationRules(sk, MaxSkill(sk, GetClass(), RuleI(Character, MaxLevel))); 
 			//this is the highest level that the trainer can train you to, this is enforced clientside so we can't just
 			//Set it to 1 with CanHaveSkill or you wont be able to train past 1.
 		}

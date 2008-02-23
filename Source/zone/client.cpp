@@ -982,7 +982,7 @@ void Client::AddSkill(SkillType skillid, int16 value) {
 	if (skillid > HIGHEST_SKILL)
 		return;
 	value = GetRawSkill(skillid) + value;
-	int16 max = MaxSkill(skillid);
+	int16 max = GetMaxSkillAfterSpecializationRules(skillid, MaxSkill(skillid));
 	if (value > max)
 		value = max;
 	SetSkill(skillid, value);
@@ -1671,7 +1671,7 @@ bool Client::CheckIncreaseSkill(SkillType skillid, int chancemodi) {
 	if (skillid > HIGHEST_SKILL)
 		return false;
 	int skillval = GetRawSkill(skillid);
-	int maxskill = MaxSkill(skillid);
+	int maxskill = GetMaxSkillAfterSpecializationRules(skillid, MaxSkill(skillid));
 	// Make sure we're not already at skill cap
 	if (skillval < maxskill)
 	{
@@ -1708,6 +1708,41 @@ int16 Client::MaxSkill(SkillType skillid, int16 class_, int16 level) const {
 
 int8 Client::SkillTrainLevel(SkillType skillid, int16 class_){
 	return(database.GetTrainLevel(class_, skillid, RuleI(Character, MaxLevel)));
+}
+
+int16 Client::GetMaxSkillAfterSpecializationRules(SkillType skillid, int16 maxSkill) {
+	int16 Result = maxSkill;
+
+	if(skillid >= SPECIALIZE_ABJURE && skillid <= SPECIALIZE_EVOCATION) {
+		bool HasPrimarySpecSkill = false;
+		int NumberOfPrimarySpecSkills = 0;
+
+		for(int i = SPECIALIZE_ABJURE; i <= SPECIALIZE_EVOCATION; i++) {
+			if(m_pp.skills[i] > 50 && i != skillid) {
+				HasPrimarySpecSkill = true;
+				NumberOfPrimarySpecSkills++;
+			}
+		}
+
+		if(HasPrimarySpecSkill && NumberOfPrimarySpecSkills == 1)
+			Result = 50;
+		else if(HasPrimarySpecSkill && NumberOfPrimarySpecSkills > 1) {
+			// Tell player we are resetting specialization skills
+			Message(13, "Your spell casting specializations skills have been reset. Only one primary specialization skill is allowed.");
+
+			// Reset all Specialization Skills to 1
+			for(int i = SPECIALIZE_ABJURE; i <= SPECIALIZE_EVOCATION; i++)
+				this->SetSkill((SkillType)i, 1);
+
+			// Save player's profile since we just changed it and tell player
+			Save();
+
+			// Leave a log entry
+			LogFile->write(EQEMuLog::Normal, "Reset %s's caster specialization skills to 1. One or more specializations skills were above 50.", GetCleanName());
+		}
+	}
+
+	return Result;
 }
 
 void Client::SendLevelAppearance(){

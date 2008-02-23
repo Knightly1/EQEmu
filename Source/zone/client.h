@@ -666,6 +666,7 @@ public:
 	bool ClientFinishedLoading() { return (conn_state == ClientConnectFinished); }
 	int FindSpellBookSlotBySpellID(int16 spellid);
 	int GetNextAvailableSpellBookSlot();
+	int16	GetMaxSkillAfterSpecializationRules(SkillType skillid, int16 maxSkill);
 
 
 protected:

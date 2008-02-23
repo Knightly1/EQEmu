@@ -246,7 +246,39 @@ sint32 Client::GetActSpellHealing(int16 spell_id, sint32 value) {
 
 sint32 Client::GetActSpellCost(int16 spell_id, sint32 cost)
 {
-//	int16 modspellid = 0;
+	sint32 Result = 0;
+
+	if(GetClass() == WIZARD || GetClass() == ENCHANTER || GetClass() == MAGICIAN || GetClass() == NECROMANCER || GetClass() == DRUID || GetClass() == SHAMAN || GetClass() == CLERIC || GetClass() == BARD) {
+		// This formula was derived from the following resource:
+		// http://www.eqsummoners.com/eq1/specialization-library.html
+		// WildcardX
+		float PercentManaReduction = 0;
+		float PercentOfMaxSpecializeSkill = 0;
+		float MaxSpecilizationSkillAllowed = MaxSkill(spells[spell_id].skill);
+		float SpecializeSkill = GetSpecializeSkillValue(spell_id);
+		int SuccessChance = MakeRandomInt(0, 100);
+		
+		if(MaxSpecilizationSkillAllowed > 0)
+			PercentOfMaxSpecializeSkill = SpecializeSkill / MaxSpecilizationSkillAllowed;
+		
+		if(SuccessChance <= (PercentOfMaxSpecializeSkill * 100))
+			PercentManaReduction = (SpecializeSkill * .053) - 5.65;
+		
+		PercentManaReduction += GetAA(aaSpellCastingMastery);
+		PercentManaReduction += GetAA(aaAdvancedSpellCastingMastery);
+		PercentManaReduction += this->CastToClient()->GetFocusEffect(focusManaCost, spell_id);
+		cost -= (cost * (PercentManaReduction / 100));
+	}
+
+	if(cost < 0)
+		cost = 0;
+
+	Result = cost;
+
+	return Result;
+
+	/*
+	//	int16 modspellid = 0;
 
 	int reduce = 100;
 	
@@ -267,6 +299,7 @@ sint32 Client::GetActSpellCost(int16 spell_id, sint32 cost)
 	if(reduce < 10)
 		reduce = 10;
 	return (cost * reduce) / 100;
+	*/
 }
 
 sint32 Client::GetActSpellDuration(int16 spell_id, sint32 duration)

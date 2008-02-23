@@ -1,5 +1,10 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==02/22/2008
+WildcardX: Characters can now have only one caster specialization skill above 50. If more than one specialization skill is detected above 50, then all specialization skills are reset to 1.
+WildcardX: Reworked mana reduction calculations.
+WildcardX: Implemented spell casting specilization checks.
+
 ==02/21/2008
 WildcardX: Removed the possible fix for the Call of Hero spell as it didnt actually fix the issue after extensive testing.
 WildcardX: Added new command #scribespell. This will scribe a specified spell into the target's spell book.
@@ -57,7 +62,7 @@ EVENT_LEVEL_UP with no special var
 
 
 ==01/24/2008
-WildcardX: Removed a 64 character cap legnth on merchant names sent during a merchant greeting.
+WildcardX: Removed a 64 character cap length on merchant names sent during a merchant greeting.
 WildcardX: Fixed a bug that allowed players looting their corpse at just the right time, to duplicate their items.
 WildcardX: Fixed a bug I caused in group portals when I corrected the Succor/Evac line.
 WildcardX: Druids and Wizards rejoice! Succor/Evac will now perform a real zone and clear your aggro!

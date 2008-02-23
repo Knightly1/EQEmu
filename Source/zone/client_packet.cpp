@@ -6350,7 +6350,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	
 	p_timers.SetCharID(CharacterID());
 	if(!p_timers.Load(&database)) {
-		//report it...
+		LogFile->write(EQEMuLog::Error, "Unable to load ability timers from the database for %s (%i)!", GetCleanName(), CharacterID());
 	}
 
 #ifdef _EQDEBUG	
