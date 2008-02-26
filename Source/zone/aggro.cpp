@@ -1254,21 +1254,45 @@ void Mob::ClearFeignMemory() {
 		AIfeignremember_timer->Disable();
 }
 
-bool Mob::PassCharismaCheck(sint16 casterCHA, sint16 maximumCasterCHA) {
+bool Mob::PassCharismaCheck(Mob* caster, Mob* spellTarget, int16 spell_id) {
 	bool Result = false;
 
-	if(casterCHA > 0 && maximumCasterCHA > 0) {
-		float tempCHA = 0.00f;
-		float tempMaxCHA = 0.00f;
+	float r1 = ((((float)spellTarget->GetMR() + spellTarget->GetLevel()) / 3) / spellTarget->GetMaxMR()) + ((float)MakeRandomFloat(-10, 10) / 100.0f);
+	float r2 = 0.0f;
 
-		tempCHA = casterCHA;
-		tempMaxCHA = maximumCasterCHA;
+	if(IsCharmSpell(spell_id)) {
+		// Assume this is a charm spell
+		int32 TotalDominationRank = 0.00f;
+		float TotalDominationBonus = 0.00f;
 
-		float PercentOfMaxCharisma = tempCHA / tempMaxCHA;
+		if(caster->IsClient())
+			TotalDominationRank = caster->CastToClient()->GetAA(aaTotalDomination);
 
-		if(MakeRandomInt(0, 100) <= (PercentOfMaxCharisma * 100))
-			Result = true;
+		// WildcardX: If someone ever finds for certain what value the TotalDomination ranks provide, please change the values
+		// I implemented below.
+
+		switch(TotalDominationRank) {
+			case 1 :
+				TotalDominationBonus = 0.05f;
+				break;
+			case 2 :
+				TotalDominationBonus = 0.10f;
+				break;
+			case 3 :
+				TotalDominationBonus = 0.15f;
+				break;
+			default :
+				TotalDominationBonus = 0.00f;
+		}
+
+		r2 = ((((float)caster->GetCHA()  + caster->GetLevel()) / 3) / caster->GetMaxCHA()) + ((float)MakeRandomFloat(-10, 10) / 100.0f) + TotalDominationBonus;
 	}
+	else
+		// Assume this is a harmony/pacify spell
+		r2 = ((((float)caster->GetCHA()  + caster->GetLevel()) / 3) / caster->GetMaxCHA()) + ((float)MakeRandomFloat(-10, 10) / 100.0f);
+
+	if(r1 < r2)
+			Result = true;
 
 	return Result;
 }

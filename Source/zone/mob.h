@@ -500,6 +500,11 @@ bool logpos;
 	inline virtual sint16  GetMaxINT() const { return GetINT(); }
 	inline virtual sint16  GetMaxWIS() const { return GetWIS(); }
 	inline virtual sint16  GetMaxCHA() const { return GetCHA(); }
+	inline virtual sint16  GetMaxMR() const { return 255; }
+	inline virtual sint16  GetMaxPR() const { return 255; }
+	inline virtual sint16  GetMaxDR() const { return 255; }
+	inline virtual sint16  GetMaxCR() const { return 255; }
+	inline virtual sint16  GetMaxFR() const { return 255; }
 	
 	virtual float GetActSpellRange(int16 spell_id, float range){ return range;}
 	virtual sint32  GetActSpellDamage(int16 spell_id, sint32 value) { return value; }
@@ -611,6 +616,7 @@ bool logpos;
  	void    SendSpellBarDisable();
  	void    SendSpellBarEnable(int16 spellid);
  	virtual void    Stun(int duration);
+	virtual void	UnStun();
 	inline void Silence(bool newval) { silenced = newval; }
 	
 	bool	invulnerable;
@@ -785,7 +791,7 @@ bool logpos;
 	inline bool HasSpellRune() const { return m_hasSpellRune; }
 	inline void SetHasRune(bool hasRune) { m_hasRune = hasRune; }
 	inline void SetHasSpellRune(bool hasSpellRune) { m_hasSpellRune = hasSpellRune; }
-	bool PassCharismaCheck(sint16 casterCHA, sint16 maximumCasterCHA);
+	bool PassCharismaCheck(Mob* caster, Mob* spellTarget, int16 spell_id);
 
 protected:
 	void CommonDamage(Mob* other, sint32 &damage, const uint16 spell_id, const SkillType attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic);

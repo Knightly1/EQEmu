@@ -152,6 +152,7 @@ public:
 	uint32	MerchantType;
 	void	Depop(bool StartSpawnTimer = true);
 	void	Stun(int duration);
+	void	UnStun();
 	
 	inline void SignalNPC(int _signal_id) { signaled = true; signal_id = _signal_id; }
 	

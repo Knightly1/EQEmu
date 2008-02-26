@@ -74,7 +74,21 @@ sint16 Client::GetMaxWIS() const {
 sint16 Client::GetMaxCHA() const {
 	return GetMaxStat();
 }
-
+sint16 Client::GetMaxMR() const {
+	return GetMaxStat();
+}
+sint16 Client::GetMaxPR() const {
+	return GetMaxStat();
+}
+sint16 Client::GetMaxDR() const {
+	return GetMaxStat();
+}
+sint16 Client::GetMaxCR() const {
+	return GetMaxStat();
+}
+sint16 Client::GetMaxFR() const {
+	return GetMaxStat();
+}
 sint32 Client::LevelRegen()
 {
 	bool sitting = IsSitting();

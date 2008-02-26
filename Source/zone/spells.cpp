@@ -2340,7 +2340,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 						if(!IsHarmonySpell(spell_id))
 						spelltar->AddToHateList(this, aggro);
 						else
-							if(!PassCharismaCheck(GetCHA(), GetMaxCHA()))
+							if(!PassCharismaCheck(this, spelltar, spell_id))
 								spelltar->AddToHateList(this, aggro);
 					}
 					else{
@@ -3019,6 +3019,13 @@ void Mob::Stun(int duration)
 	}
 }
 		
+void Mob::UnStun() {
+	if(stunned && stunned_timer.Enabled()) {
+		stunned = false;
+		stunned_timer.Disable();
+	}
+}
+		
 // Hogie - Stuns "this"
 void Client::Stun(int duration)
 {
@@ -3032,9 +3039,26 @@ void Client::Stun(int duration)
 	safe_delete(outapp);
 }
 
+void Client::UnStun() {
+	Mob::UnStun();
+
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Stun, sizeof(Stun_Struct));
+	Stun_Struct* stunon = (Stun_Struct*) outapp->pBuffer;
+	stunon->duration = 0;
+	outapp->priority = 5;
+	QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
 void NPC::Stun(int duration) {
 	Mob::Stun(duration);
 	SetRunAnimSpeed(0);
+	SendPosition();
+}
+
+void NPC::UnStun() {
+	Mob::UnStun();
+	SetRunAnimSpeed(this->GetRunspeed());
 	SendPosition();
 }
 

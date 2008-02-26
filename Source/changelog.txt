@@ -1,5 +1,13 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==02/25/2008
+WildcardX: Enchanters can now control their pets if they purchased the Animation Empathy AA.
+WildcardX: Mobs now have a chance to resist fear spell line each tic.
+WildcardX: Mobs now have a chance to resist charm spell line each tic.
+WildcardX: Implemented Total Domination AA.
+WildcardX: Reworked new charisma test. This test now evaluates factors like MR, CHA, mob and caster levels. It yields better live-like results.
+WildcardX: Enchanter pets now get the /pet report and /pet health commands by default.
+
 ==02/23/2008
 WildcardX: Only characters with Pet Affinity AA can have group buffs casted on their pets.
 WildcardX: Fixed a bug that would not allow a rune buff to be used in some situations.

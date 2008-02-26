@@ -327,7 +327,7 @@ typedef enum {	//AA IDs
 	aaAyonaesTutelage = 571,		
 	aaFeignedMinion = 574,			
 	aaUnfailingDivinity = 577,		
-	aaAnimationEmpathy = 580,		
+	aaAnimationEmpathy = 580,			// Implemented	
 	aaRushtoJudgement = 583,		
 	aaLivingShield = 586,			
 	aaConsumptionoftheSoul = 589,		//untested
@@ -353,7 +353,7 @@ typedef enum {	//AA IDs
 	aaHeadshot = 644,			
 	aaEntrap = 645,				//DB
 	aaUnholyTouch = 646,			//untested
-	aaTotalDomination = 649,		
+	aaTotalDomination = 649,		// Implemented
 	aaStalwartEndurance = 652,		
 	aaQuickSummoning2 = 655,		//whats the difference?
 	aaMentalClarity2 = 658,			//whats the difference?
@@ -382,7 +382,7 @@ typedef enum {	//AA IDs
 	aaFeralSwipe = 723,			//DB?
 	aaWardersFury = 724,
 	aaWardersAlacrity = 729,
-	aaPetAffinity = 734,
+	aaPetAffinity = 734,			// Implemented
 	aaMasteryofthePast2 = 735,		//whats the difference?
 	aaSpellCastingSubtlety2 = 738,		//whats the difference?
 	aaTouchoftheDivine = 741,
@@ -478,7 +478,7 @@ typedef enum {	//AA IDs
 	aaDeathblow = 1053,
 	aaReflexiveMastery = 1061,
 	aaDefensiveInstincts = 1066,
-	aaMnemonicRetention = 1071,
+	aaMnemonicRetention = 1071,		//Implemented
 	aaExpansiveMind = 1072,
 	aaSleightofHand = 1077,
 	aaSleightofHand2 = 1080,	//whats the difference?

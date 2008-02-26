@@ -2556,6 +2556,37 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 			break;
 		}
 
+		case SE_Charm: {
+			if (!PassCharismaCheck(caster, this, spell_id)) {
+				if(caster->IsClient())
+					caster->Message_StringID(MT_Shout, TARGET_RESISTED, spells[spell_id].name);
+
+				if(IsClient())
+					Message_StringID(MT_Shout, YOU_RESIST, spells[spell_id].name);
+
+				BuffFadeByEffect(SE_Charm);
+			}
+
+			break;
+		}
+
+		case SE_Fear: {
+			float SpellEffectiveness = ResistSpell(spells[spell_id].resisttype, spell_id, caster);
+			if(SpellEffectiveness < 100) {
+				if(SpellEffectiveness == 0 || !IsPartialCapableSpell(spell_id)) {
+					if(caster->IsClient())
+						caster->Message_StringID(MT_Shout, TARGET_RESISTED, spells[spell_id].name);
+
+					if(IsClient())
+						Message_StringID(MT_Shout, YOU_RESIST, spells[spell_id].name);
+
+					BuffFadeByEffect(SE_Fear);
+				}
+			}
+
+			break;
+		}
+
    /* case SE_Charm: { //Do it once in Effect instead of every tic
 		bool bBreak = false;
 
@@ -2771,6 +2802,8 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 #ifdef ENABLE_FEAR_PATHING
 				SetFeared(NULL, 0);
 #endif
+				// If fear pathing is over implemented, we can remove the the Stun() and UnStun() calls.
+				UnStun();
 				break;
 			}
 		}

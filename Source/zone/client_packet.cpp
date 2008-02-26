@@ -4662,15 +4662,14 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 	Mob* mypet = this->GetPet();
 	if(!mypet) return;
 	
-	if(mypet->GetPetType() == petAnimation && pet->command != PET_GETLOST)
+	if(mypet->GetPetType() == petAnimation && pet->command != PET_HEALTHREPORT && !GetAA(aaAnimationEmpathy))
 		return;
 	
 	// just let the command "/pet get lost" work for familiars
 	if(mypet->GetPetType() == petFamiliar && pet->command != PET_GETLOST)
 		return;
 	
-	switch(pet->command)
-	{
+	switch(pet->command) {
 	case PET_ATTACK: {
 		if (!target)
 			break;
@@ -4678,6 +4677,7 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 			Message_StringID(10, CANNOT_WAKE, mypet->GetCleanName(), target->GetCleanName());
 			break;
 		}
+		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 2) || mypet->GetPetType() != petAnimation) {
 		if (mypet->GetHateTop()==0 && target != this && DistNoRootNoZ(*target) <= (RuleR(Pets, AttackCommandRange)*RuleR(Pets, AttackCommandRange))) {
 			mypet->SetHeld(false); //break the hold and guard if we explicitly tell the pet to attack.
 			mypet->SetPetOrder(SPO_Follow);
@@ -4685,11 +4685,14 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 			mypet->AddToHateList(target, 1);
 			Message_StringID(10, PET_ATTACKING, mypet->GetCleanName(), target->GetCleanName());
 		}
+		}
 		break;
 	}
 	case PET_BACKOFF: {
+		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 3) || mypet->GetPetType() != petAnimation) {
 		mypet->Say_StringID(PET_CALMING);
 		mypet->WhipeHateList();
+		}
 		break;
 	}
 	case PET_HEALTHREPORT: {
@@ -4710,8 +4713,18 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 		} else {
 			SetPet(NULL);
 		}
+
 		mypet->Say_StringID(PET_GETLOST_STRING);
 		mypet->CastToNPC()->Depop();
+
+		// WildcardX: Oddly, the client (Titanium) will still allow "/pet get lost" command despite me adding the code below. If someone can figure that out, you can uncomment this code and use it.
+		/*
+		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 2) || mypet->GetPetType() != petAnimation) {
+		mypet->Say_StringID(PET_GETLOST_STRING);
+		mypet->CastToNPC()->Depop();
+		}
+		*/
+
 		break;
 	}
 	case PET_LEADER: {
@@ -4719,60 +4732,76 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 		break;
 	}
 	case PET_GUARDHERE: {
+		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 1) || mypet->GetPetType() != petAnimation) {
 		if(mypet->IsNPC()) {
 			mypet->SetHeld(false);
 			mypet->Say_StringID(PET_GUARDINGLIFE);
 			mypet->SetPetOrder(SPO_Guard);
 			mypet->CastToNPC()->SaveGuardSpot();
 		}
+		}
 		break;
 	}
 	case PET_FOLLOWME: {
+		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 1) || mypet->GetPetType() != petAnimation) {
 		mypet->SetHeld(false);
 		mypet->Say_StringID(PET_FOLLOWING);
 		mypet->SetPetOrder(SPO_Follow);
 		mypet->SendAppearancePacket(AT_Anim, ANIM_STAND);
+		}
 		break;
 	}
 	case PET_TAUNT: {
+		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 3) || mypet->GetPetType() != petAnimation) {
 		Message(0,"%s says, 'Now taunting foes, Master!",mypet->GetCleanName());
 		mypet->CastToNPC()->SetTaunting(true);
+		}
 		break;
 	}
 	case PET_NOTAUNT: {
+		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 3) || mypet->GetPetType() != petAnimation) {
 		Message(0,"%s says, 'No longer taunting foes, Master!",mypet->GetCleanName());
 		mypet->CastToNPC()->SetTaunting(false);
+		}
 		break;
 	}
 	case PET_GUARDME: {
+		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 1) || mypet->GetPetType() != petAnimation) {
 		mypet->SetHeld(false);
 		mypet->Say_StringID(PET_GUARDME_STRING);
 		mypet->SetPetOrder(SPO_Follow);
 		mypet->SendAppearancePacket(AT_Anim, ANIM_STAND);
+		}
 		break;
 	}
 	case PET_SITDOWN: {
+		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 3) || mypet->GetPetType() != petAnimation) {
 		mypet->Say_StringID(PET_SIT_STRING);
 		mypet->SetPetOrder(SPO_Sit);
 		mypet->SetRunAnimSpeed(0);
 		if(!mypet->UseBardSpellLogic())	// solar: maybe we can have a bard pet
 			mypet->InterruptSpell(); //Baron-Sprite: No cast 4 u. // neotokyo: i guess the pet should start casting
 		mypet->SendAppearancePacket(AT_Anim, ANIM_SIT);
+		}
 		break;
 	}
 	case PET_STANDUP: {
+		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 3) || mypet->GetPetType() != petAnimation) {
 		mypet->Say_StringID(PET_SIT_STRING);
 		mypet->SetPetOrder(SPO_Follow);
 		mypet->SendAppearancePacket(AT_Anim, ANIM_STAND);
+		}
 		break;
 	}
 	case PET_SLUMBER: {
+		if(mypet->GetPetType() != petAnimation) {
 		mypet->Say_StringID(PET_SIT_STRING);
 		mypet->SetPetOrder(SPO_Sit);
 		mypet->SetRunAnimSpeed(0);
 		if(!mypet->UseBardSpellLogic())	// solar: maybe we can have a bard pet
 			mypet->InterruptSpell(); //Baron-Sprite: No cast 4 u. // neotokyo: i guess the pet should start casting
 		mypet->SendAppearancePacket(AT_Anim, ANIM_DEATH);
+		}
 		break;
 	}
 	case PET_HOLD: {
@@ -6189,15 +6218,6 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 						 LogFile->write(EQEMuLog::Debug, "%s has a spell rune buff with %i points remaining.", GetCleanName(), buffs[i].magic_rune);
 				}
 				}
-				/*
-				else {
-					buffs[i].melee_rune = 0;
-					buffs[i].magic_rune = 0;
-					SetHasRune(false);
-					SetHasSpellRune(false);
-					LogFile->write(EQEMuLog::Debug, "%s doesn't have any rune type spells as a buff at all.", GetCleanName());
-				}
-				*/
 			}
 			else {
 				buffs[i].spellid = SPELL_UNKNOWN;

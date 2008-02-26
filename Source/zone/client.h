@@ -327,6 +327,11 @@ public:
     sint16  GetMaxINT() const;
     sint16  GetMaxWIS() const;
     sint16  GetMaxCHA() const;
+	sint16  GetMaxMR() const;
+	sint16  GetMaxPR() const;
+	sint16  GetMaxDR() const;
+	sint16  GetMaxCR() const;
+	sint16  GetMaxFR() const;
 	inline int8	GetBaseSTR()	const { return m_pp.STR; }
 	inline int8	GetBaseSTA()	const { return m_pp.STA; }
 	inline int8	GetBaseCHA()	const { return m_pp.CHA; }
@@ -448,6 +453,7 @@ public:
 	void	WhoAll(Who_All_Struct* whom);
 	
 	void	Stun(int duration);
+	void	UnStun();
 	void	ReadBook(BookRequest_Struct *book);
 	void	SendClientMoneyUpdate(int8 type,int32 amount);
 	void	SendMoneyUpdate();
