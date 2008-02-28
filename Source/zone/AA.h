@@ -316,7 +316,7 @@ typedef enum {	//AA IDs
 	aaMithanielsBinding = 537,		//untested
 	aaMendingoftheTranquil = 539,		
 	aaRagingFlurry = 542,			
-	aaGuardianoftheForest = 545,		
+	aaGuardianoftheForest = 545,	//DB	
 	aaSpiritoftheWood = 548,		//DB
 	aaBestialFrenzy = 551,			//untested
 	aaHarmoniousAttack = 556,		//untested

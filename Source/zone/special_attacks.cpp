@@ -383,7 +383,7 @@ void Mob::TryBackstab(Mob *other) {
 			&& other->IsNPC()
 			&& MakeRandomFloat(0, 99) < chance // chance
 			) {
-			entity_list.MessageClose_StringID(this, false, 200, 10, ASSASSINATES, GetName());
+			entity_list.MessageClose_StringID(this, false, 200, MT_CritMelee, ASSASSINATES, GetName());
 			if(IsClient())
 				CastToClient()->CheckIncreaseSkill(BACKSTAB);
 			RogueAssassinate(other);
@@ -621,6 +621,7 @@ void Client::RangedAttack(Mob* other) {
 	} else {
 		mlog(COMBAT__RANGED, "Ranged attack hit %s.", target->GetName());
 		
+		if(!TryHeadShot(target, ARCHERY)) {
 		sint16 WDmg = GetWeaponDamage(target, RangeWeapon);
 		sint16 ADmg = GetWeaponDamage(target, Ammo);
 		if((WDmg > 0) || (ADmg > 0)){
@@ -668,10 +669,10 @@ void Client::RangedAttack(Mob* other) {
 			TryCriticalHit(target, ARCHERY, TotalDmg);
 			target->Damage(this, TotalDmg, SPELL_UNKNOWN, ARCHERY);
 		}
-		else
-		{
+			else {
 			target->Damage(this, -5, SPELL_UNKNOWN, ARCHERY);
 		}
+	}
 	}
 	
 	//try proc on hits and misses
@@ -1214,6 +1215,34 @@ void Mob::InstillDoubt(Mob *who) {
 			entity_list.AEAttack(target, 50);
 		}*/
 	}
+}
+
+bool Mob::TryHeadShot(Mob* defender, SkillType skillInUse) {
+	bool Result = false;
+
+	if(defender && skillInUse == ARCHERY && IsClient()) {
+		if(CastToClient()->GetAA(aaHeadshot) && defender->GetBodyType() == BT_Humanoid) {
+			if((GetLevelCon(GetLevel(), defender->GetLevel()) == CON_LIGHTBLUE || GetLevelCon(GetLevel(), defender->GetLevel()) == CON_GREEN) && defender->GetLevel() <= 60 && !defender->IsClient()) {
+				// WildcardX: These chance formula's below are arbitrary. If someone has a better formula that is more
+				// consistent with live, feel free to update these.
+				float AttackerChance = 0.20f + ((float)(GetLevel() - 51) * 0.005f);
+				float DefenderChance = (float)MakeRandomFloat(0.00f, 1.00f);
+				if(AttackerChance > DefenderChance) {
+					mlog(COMBAT__ATTACKS, "Landed a headshot: Attacker chance was %f and Defender chance was %f.", AttackerChance, DefenderChance);
+					// WildcardX: At the time I wrote this, there wasnt a string id for something like HEADSHOT_BLOW
+					//entity_list.MessageClose_StringID(this, false, 200, MT_CritMelee, FINISHING_BLOW, GetName());
+					entity_list.MessageClose(this, false, 200, MT_CritMelee, "%s has scored a HEADSHOT!", GetName());
+					defender->Damage(this, 32000, SPELL_UNKNOWN, skillInUse);
+					Result = true;
+				}
+				else {
+					mlog(COMBAT__ATTACKS, "FAILED a headshot: Attacker chance was %f and Defender chance was %f.", AttackerChance, DefenderChance);
+				}
+			}
+		}
+	}
+
+	return Result;
 }
 
 

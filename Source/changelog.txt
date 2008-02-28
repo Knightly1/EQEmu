@@ -1,5 +1,12 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==02/27/2008
+WildcardX: Implemented HeadShot AA Ability.
+WildcardX: Archery and throwing attacks will not cause you to suffer injury from your target's damage shield.
+WildcardX: Implemented Spell: Death Pact.
+WildcardX: Implemented Spell: Divine Intervention.
+WildcardX: Implemented Unfailing Divinity AA Ability.
+
 ==02/25/2008
 WildcardX: Enchanters can now control their pets if they purchased the Animation Empathy AA.
 WildcardX: Mobs now have a chance to resist fear spell line each tic.

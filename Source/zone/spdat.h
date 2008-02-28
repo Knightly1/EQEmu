@@ -532,6 +532,10 @@ bool IsResurrectionEffects(int16 spell_id);
 bool IsRuneSpell(int16 spell_id);
 bool IsMagicRuneSpell(int16 spell_id);
 bool IsManaTapSpell(int16 spell_id);
+bool IsAllianceSpellLine(int16 spell_id);
+bool IsDeathSaveSpell(int16 spell_id);
+bool IsFullDeathSaveSpell(int16 spell_id);
+bool IsPartialDeathSaveSpell(int16 spell_id);
 
 int CalcPetHp(int levelb, int classb, int STA = 75);
 const char *GetRandPetName();

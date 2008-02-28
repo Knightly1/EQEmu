@@ -6218,6 +6218,11 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 						 LogFile->write(EQEMuLog::Debug, "%s has a spell rune buff with %i points remaining.", GetCleanName(), buffs[i].magic_rune);
 				}
 				}
+				if(IsDeathSaveSpell(m_pp.buffs[i].spellid)) {
+					buffs[i].deathSaveSuccessChance = m_pp.buffs[i].effect;
+					SetDeathSaveChance(true);
+					LogFile->write(EQEMuLog::Debug, "%s has a %i percent chance of successfully being saved from death.", GetCleanName(), buffs[i].deathSaveSuccessChance);
+				}
 			}
 			else {
 				buffs[i].spellid = SPELL_UNKNOWN;

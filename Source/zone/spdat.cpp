@@ -675,3 +675,32 @@ bool IsAllianceSpellLine(int16 spell_id) {
 
 	return Result;
 }
+
+bool IsDeathSaveSpell(int16 spell_id) {
+	bool Result = false;
+
+	if(IsValidSpell(spell_id))
+		Result = IsEffectInSpell(spell_id, SE_DeathSave);
+
+	return Result;
+}
+
+bool IsPartialDeathSaveSpell(int16 spell_id) {
+	bool Result = false;
+
+	// Death Pact
+	if(spell_id == 1547)
+		Result = true;
+
+	return Result;
+}
+
+bool IsFullDeathSaveSpell(int16 spell_id) {
+	bool Result = false;
+
+	// Divine Intervention
+	if(spell_id == 1546)
+		Result = true;
+
+	return Result;
+}

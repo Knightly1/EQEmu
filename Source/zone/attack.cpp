@@ -2137,7 +2137,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 	
     // only apply DS if physical damage (no spell damage)
     // damage shield calls this function with spell_id set, so its unavoidable
-	if (attacker && damage > 0 && spell_id == SPELL_UNKNOWN) {
+	if (attacker && damage > 0 && spell_id == SPELL_UNKNOWN && skill_used != ARCHERY && skill_used != THROWING) {
 		this->DamageShield(attacker);
 		for(int bs = 0; bs < BUFF_COUNT; bs++){
 			if(buffs[bs].numhits > 0 && !IsDiscipline(buffs[bs].spellid)){
@@ -2217,13 +2217,12 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 		attacker->CastToClient()->sneaking = false;
 		attacker->SendAppearancePacket(AT_Sneak, 0);
 	}
-	
-	
 		//final damage has been determined.
 		
+		/*
 		//check for death conditions
 		if(IsClient()) {
-			if((GetHP() - damage) <= -10) {
+			if((GetHP()) <= -10) {
 				Death(attacker, damage, spell_id, skill_used);
 				return;
 			}
@@ -2235,10 +2234,25 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 				return;
 			}
 		}
+		*/
 		
-		//not killed. Apply the damage
 		SetHP(GetHP() - damage);
 		
+		if(HasDied()) {
+			bool IsSaved = false;
+
+			if(HasDeathSaveChance()) {
+				if(TryDeathSave()) {
+					IsSaved = true;
+				}
+			}
+			
+			if(!IsSaved) {
+				SetHP(-100);
+				Death(attacker, damage, spell_id, skill_used);
+				return;
+			}
+		}
 		
     	//fade mez if we are mezzed
 		if (IsMezzed()) {
@@ -2253,7 +2267,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 				mlog(COMBAT__HITS, "Stun Resisted. Ogres are immune to frontal melee stuns.");
 			} else {
 				if(stun_resist <= 0 || MakeRandomInt(0,99) >= stun_resist) {
-					mlog(COMBAT__HITS, "Stunned. We had %dpercent resist chance.");
+					mlog(COMBAT__HITS, "Stunned. We had %d percent resist chance.");
 					Stun(0);
 				} else {
 					mlog(COMBAT__HITS, "Stun Resisted. We had %dpercent resist chance.");
@@ -2808,4 +2822,22 @@ void Mob::ApplyMeleeDamageBonus(int16 skill, sint32 &damage){
 	}	
 }
 
+bool Mob::HasDied() {
+	bool Result = false;
 
+	/*
+	if(IsClient()) {
+		if((GetHP()) <= -10)
+			Result = true;
+	}
+	else {
+		if(GetHP() <= 0)
+			Result = true;
+	}
+	*/
+
+	if(GetHP() <= -10 || GetHP() <= 0)
+		Result = true;
+
+	return Result;
+}

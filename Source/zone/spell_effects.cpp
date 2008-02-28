@@ -2167,11 +2167,62 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				break;
 			}
 
+			case SE_DeathSave: {
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Death Save: %+i", effect_value);
+#endif
+				if(caster) {
+					int8 SuccessChance = 0;
+					float BaseChance = 0.00f;
+					float BonusChance = 0.00f;
+
+					switch(effect_value) {
+						case 1: {
+							BaseChance = 0.10f;
+							break;
+						}
+						case 2: {
+							BaseChance = 0.25f;
+							break;
+						}
+						default: {
+							LogFile->write(EQEMuLog::Error, "Unknown SE_DeathSave effect value in spell: %s (%i).", spells[spell_id].name, spell_id);
+						}
+					}
+
+					switch(GetAA(aaUnfailingDivinity)) {
+						case 1: {
+							BonusChance = 0.25f;
+							break;
+						}
+						case 2: {
+							BonusChance = 0.50f;
+							break;
+						}
+						case 3: {
+							BonusChance = 1.00f;
+							break;
+						}
+					}
+
+					if(BonusChance == 1.00f)
+						SuccessChance = 100;
+					else
+						SuccessChance = (((float)caster->GetCHA() * 0.0005f) + BaseChance + BonusChance) * 100;
+#ifdef SPELL_EFFECT_SPAM
+					snprintf(effect_desc, _EDLEN, "Death Save Chance: %+i", SuccessChance);
+#endif
+					buffs[buffslot].deathSaveSuccessChance = SuccessChance;
+					SetDeathSaveChance(true);
+				}
+
+				break;
+			}
+
 			//currently missing effects:
 			//SE_SummonItem2
 			//SE_ReduceSpellHate
 			//SE_NoCombatSkills
-			//SE_DeathSave
 			//SE_CriticalDamageMob
 			//SE_Cloak
 
@@ -3093,6 +3144,42 @@ uint16 Mob::GetProcID(uint16 spell_id, uint8 effect_index) {
 	else{
 		return(spells[spell_id].base[effect_index]);
 	}
+}
+
+bool Mob::TryDeathSave() {
+	bool Result = false;
+
+	int buffSlot = GetBuffSlotFromType(SE_DeathSave);
+
+	if(buffSlot >= 0) {
+		int8 SuccessChance = buffs[buffSlot].deathSaveSuccessChance;
+		int16 BuffSpellID = buffs[buffSlot].spellid;
+		int SaveRoll = MakeRandomInt(0, 100);
+
+		LogFile->write(EQEMuLog::Debug, "%s chance for a death save was %i and the roll was %i", GetCleanName(), SuccessChance, SaveRoll);
+
+		if(SuccessChance >= SaveRoll) {
+			// Success
+			Result = true;
+
+			if(IsFullDeathSaveSpell(BuffSpellID)) {
+				SetHP(20000);
+			}
+			else {
+				SetHP(300);
+			}
+
+			// WildcardX: If anyone finds out what the real text for this is suppose to be, please change it here.
+			entity_list.MessageClose(this, false, 200, MT_CritMelee, "The Gods smile upon %s.", GetCleanName());
+
+			// Fade the buff
+			BuffFadeBySlot(buffSlot);
+
+			SetDeathSaveChance(false);
+		}
+	}
+
+	return Result;
 }
 
 

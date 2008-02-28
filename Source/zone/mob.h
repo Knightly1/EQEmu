@@ -131,6 +131,7 @@ struct Buffs_Struct {
 	bool	UpdateClient;
 	int16	melee_rune;
 	int16	magic_rune;
+	int8	deathSaveSuccessChance;
 };
 
 struct StatBonuses {
@@ -422,6 +423,7 @@ bool logpos;
 	bool CheckHitChance(Mob* attacker, SkillType skillinuse, int Hand);
 	void TryCriticalHit(Mob *defender, int16 skill, sint32 &damage);
 	bool TryFinishingBlow(Mob *defender, SkillType skillinuse);
+	bool TryHeadShot(Mob* defender, SkillType skillInUse);
 	void DoRiposte(Mob* defender);
 	void ApplyMeleeDamageBonus(int16 skill, sint32 &damage);
 	void MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit);
@@ -791,7 +793,10 @@ bool logpos;
 	inline bool HasSpellRune() const { return m_hasSpellRune; }
 	inline void SetHasRune(bool hasRune) { m_hasRune = hasRune; }
 	inline void SetHasSpellRune(bool hasSpellRune) { m_hasSpellRune = hasSpellRune; }
+	inline bool HasDeathSaveChance() const { return m_hasDeathSaveChance; }
+	inline void SetDeathSaveChance(bool hasDeathSaveChance) { m_hasDeathSaveChance = hasDeathSaveChance; }
 	bool PassCharismaCheck(Mob* caster, Mob* spellTarget, int16 spell_id);
+	bool TryDeathSave();
 
 protected:
 	void CommonDamage(Mob* other, sint32 &damage, const uint16 spell_id, const SkillType attack_skill, bool &avoidable, const sint8 buffslot, const bool iBuffTic);
@@ -881,6 +886,7 @@ protected:
 	int GetKickDamage() const;
 	int GetBashDamage() const;
 	void DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage, sint32 min_damage = 1);
+	bool HasDied();
 
 	enum {MAX_PROCS = 4};
 	tProc PermaProcs[MAX_PROCS];
@@ -1021,6 +1027,7 @@ protected:
 	
 	bool	m_hasRune;
 	bool	m_hasSpellRune;
+	bool	m_hasDeathSaveChance;
 	
 private:
 	void	_StopSong();		//this is not what you think it is
