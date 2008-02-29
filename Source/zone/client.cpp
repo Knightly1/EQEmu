@@ -418,10 +418,14 @@ bool Client::Save(int8 iCommitNow) {
 			else
 				m_pp.buffs[i].dmg_shield_remaining = 0;
 
-			if(IsDeathSaveSpell(buffs[i].spellid))
+			if(IsDeathSaveSpell(buffs[i].spellid)) {
 				m_pp.buffs[i].effect = buffs[i].deathSaveSuccessChance;
-			else
+				m_pp.buffs[i].reserved = buffs[i].casterAARank;
+			}
+			else {
 				m_pp.buffs[i].effect = 0;
+				m_pp.buffs[i].reserved = 0;
+			}
 		}
 		else {
 			m_pp.buffs[i].spellid = SPELLBOOK_UNKNOWN;

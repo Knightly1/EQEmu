@@ -1,5 +1,8 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==02/28/2008
+WildcardX: Tweaked the code for the Divine Intervention spell line code and the Unfailing Divinity AA ability.
+
 ==02/27/2008
 WildcardX: Implemented HeadShot AA Ability.
 WildcardX: Archery and throwing attacks will not cause you to suffer injury from your target's damage shield.

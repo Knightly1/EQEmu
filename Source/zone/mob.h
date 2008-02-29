@@ -132,6 +132,7 @@ struct Buffs_Struct {
 	int16	melee_rune;
 	int16	magic_rune;
 	int8	deathSaveSuccessChance;
+	int8	casterAARank;				// The idea here is if you need to know what the caster AA rank was for a buff long after is has been casted.
 };
 
 struct StatBonuses {

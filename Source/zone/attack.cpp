@@ -2836,7 +2836,7 @@ bool Mob::HasDied() {
 	}
 	*/
 
-	if(GetHP() <= -10 || GetHP() <= 0)
+	if(GetHP() <= 0)
 		Result = true;
 
 	return Result;

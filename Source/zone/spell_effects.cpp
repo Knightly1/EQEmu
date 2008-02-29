@@ -2182,7 +2182,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 							break;
 						}
 						case 2: {
-							BaseChance = 0.25f;
+							BaseChance = 0.30f;
 							break;
 						}
 						default: {
@@ -2190,29 +2190,28 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 						}
 					}
 
-					switch(GetAA(aaUnfailingDivinity)) {
+					switch(caster->GetAA(aaUnfailingDivinity)) {
 						case 1: {
-							BonusChance = 0.25f;
+							BonusChance = 0.10f;
 							break;
 						}
 						case 2: {
-							BonusChance = 0.50f;
+							BonusChance = 0.20f;
 							break;
 						}
 						case 3: {
-							BonusChance = 1.00f;
+							BonusChance = 0.30f;
 							break;
 						}
 					}
 
-					if(BonusChance == 1.00f)
-						SuccessChance = 100;
-					else
-						SuccessChance = (((float)caster->GetCHA() * 0.0005f) + BaseChance + BonusChance) * 100;
+					SuccessChance = (((float)GetCHA() * 0.0005f) + BaseChance + BonusChance) * 100;
+						
 #ifdef SPELL_EFFECT_SPAM
 					snprintf(effect_desc, _EDLEN, "Death Save Chance: %+i", SuccessChance);
 #endif
 					buffs[buffslot].deathSaveSuccessChance = SuccessChance;
+					buffs[buffslot].casterAARank = caster->GetAA(aaUnfailingDivinity);
 					SetDeathSaveChance(true);
 				}
 
@@ -3153,6 +3152,7 @@ bool Mob::TryDeathSave() {
 
 	if(buffSlot >= 0) {
 		int8 SuccessChance = buffs[buffSlot].deathSaveSuccessChance;
+		int8 CasterUnfailingDivinityAARank = buffs[buffSlot].casterAARank;
 		int16 BuffSpellID = buffs[buffSlot].spellid;
 		int SaveRoll = MakeRandomInt(0, 100);
 
@@ -3163,7 +3163,8 @@ bool Mob::TryDeathSave() {
 			Result = true;
 
 			if(IsFullDeathSaveSpell(BuffSpellID)) {
-				SetHP(20000);
+				// Lazy man's full heal.
+				SetHP(50000);
 			}
 			else {
 				SetHP(300);
@@ -3176,6 +3177,18 @@ bool Mob::TryDeathSave() {
 			BuffFadeBySlot(buffSlot);
 
 			SetDeathSaveChance(false);
+		}
+		else if (CasterUnfailingDivinityAARank >= 1) {
+			// Roll the virtual dice to see if the target atleast gets a heal out of this
+			SuccessChance = 30;
+			SaveRoll = MakeRandomInt(0, 100);
+
+			LogFile->write(EQEMuLog::Debug, "%s chance for a Unfailing Divinity AA proc was %i and the roll was %i", GetCleanName(), SuccessChance, SaveRoll);
+
+			if(SuccessChance >= SaveRoll) {
+				// Yep, target gets a modest heal
+				SetHP(1500);
+			}
 		}
 	}
 

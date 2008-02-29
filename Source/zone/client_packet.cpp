@@ -6220,8 +6220,9 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 				}
 				if(IsDeathSaveSpell(m_pp.buffs[i].spellid)) {
 					buffs[i].deathSaveSuccessChance = m_pp.buffs[i].effect;
+					buffs[i].casterAARank = m_pp.buffs[i].reserved;
 					SetDeathSaveChance(true);
-					LogFile->write(EQEMuLog::Debug, "%s has a %i percent chance of successfully being saved from death.", GetCleanName(), buffs[i].deathSaveSuccessChance);
+					LogFile->write(EQEMuLog::Debug, "%s has a %i percent chance of successfully being saved from death. Caster UnfailingDivinityAA rank was %i.", GetCleanName(), buffs[i].deathSaveSuccessChance, buffs[i].casterAARank);
 				}
 			}
 			else {
