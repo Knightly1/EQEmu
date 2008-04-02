@@ -1,5 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+
+==04/01/2008
+Rogean: Fixed a merchant purchase packet exploit.
+
 ==02/28/2008
 WildcardX: Tweaked the code for the Divine Intervention spell line code and the Unfailing Divinity AA ability.
 

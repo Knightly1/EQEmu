@@ -3676,6 +3676,8 @@ void Client::Handle_OP_ShopPlayerBuy(const EQApplicationPacket *app)
 	
 	if (tmp == 0 || !tmp->IsNPC() || tmp->GetClass() != MERCHANT)
 		return;
+
+	if (mp->quantity < 1) return;
 	
 	//you have to be somewhat close to them to be properly using them
 	if(DistNoRoot(*tmp) > USE_NPC_RANGE2)
