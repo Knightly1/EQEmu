@@ -862,7 +862,9 @@ const NPCType* ZoneDatabase::GetNPCType (uint32 id) {
             "npc_types.npc_aggro,"
 			"npc_types.spawn_limit,"
 			"npc_types.see_hide,"
-			"npc_types.see_improved_hide";
+			"npc_types.see_improved_hide,"
+			"npc_types.ATK,"
+			"npc_types.Accuracy";
       if (id == 0)
          MakeAnyLenString(&query,
             "%s FROM npc_types,spawn2 WHERE spawn2.zone='%s'"
@@ -954,6 +956,8 @@ const NPCType* ZoneDatabase::GetNPCType (uint32 id) {
 				tmpNPCType->spawn_limit = atoi(row[r++]);
 				tmpNPCType->see_hide = atoi(row[r++])==0?false:true;
 				tmpNPCType->see_improved_hide = atoi(row[r++])==0?false:true;
+				tmpNPCType->ATK = atoi(row[r++]);
+				tmpNPCType->accuracy_rating = atoi(row[r++]);
 
 				// If NPC with duplicate NPC id already in table,
 				// free item we attempted to add.

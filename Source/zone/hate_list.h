@@ -51,7 +51,9 @@ public:
     bool IsOnHateList(Mob *);
     // used to remove or add frenzy hate
     void CheckFrenzyHate();
-    
+	//Gets the target with the most hate regardless of things like frenzy etc.
+	Mob* GetMostHate();
+
     bool IsEmpty();
 	void PrintToClient(Client *c);
 

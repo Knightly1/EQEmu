@@ -318,6 +318,44 @@ void Doors::NPCOpen(NPC* sender)
     }
 }
 
+void Doors::ForceOpen(Mob *sender)
+{
+    EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoveDoor, sizeof(MoveDoor_Struct));
+	MoveDoor_Struct* md=(MoveDoor_Struct*)outapp->pBuffer;
+	md->doorid = door_id;
+	md->action = OPEN_DOOR;
+	entity_list.QueueClients(sender,outapp,false);
+	safe_delete(outapp);
+
+    if(!isopen) {
+        close_timer.Start();
+        isopen=true;
+    }
+    else {
+        close_timer.Disable();
+        isopen=false;
+    }
+}
+
+void Doors::ForceClose(Mob *sender)
+{
+    EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoveDoor, sizeof(MoveDoor_Struct));
+	MoveDoor_Struct* md=(MoveDoor_Struct*)outapp->pBuffer;
+	md->doorid = door_id;
+	md->action = OPEN_DOOR;
+	entity_list.QueueClients(sender,outapp,false);
+	safe_delete(outapp);
+
+    if(!isopen) {
+        close_timer.Start();
+        isopen=true;
+    }
+    else {
+        close_timer.Disable();
+        isopen=false;
+    }
+}
+
 void Doors::DumpDoor(){
     LogFile->write(EQEMuLog::Debug,
         "db_id:%i door_id:%i zone_name:%s door_name:%s pos_x:%f pos_y:%f pos_z:%f heading:%f",

@@ -4664,7 +4664,7 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 	Mob* mypet = this->GetPet();
 	if(!mypet) return;
 	
-	if(mypet->GetPetType() == petAnimation && pet->command != PET_HEALTHREPORT && !GetAA(aaAnimationEmpathy))
+	if(mypet->GetPetType() == petAnimation && (pet->command != PET_HEALTHREPORT && pet->command != PET_GETLOST) && !GetAA(aaAnimationEmpathy))
 		return;
 	
 	// just let the command "/pet get lost" work for familiars
@@ -4680,20 +4680,20 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 			break;
 		}
 		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 2) || mypet->GetPetType() != petAnimation) {
-		if (mypet->GetHateTop()==0 && target != this && DistNoRootNoZ(*target) <= (RuleR(Pets, AttackCommandRange)*RuleR(Pets, AttackCommandRange))) {
-			mypet->SetHeld(false); //break the hold and guard if we explicitly tell the pet to attack.
-			mypet->SetPetOrder(SPO_Follow);
-			zone->AddAggroMob();
-			mypet->AddToHateList(target, 1);
-			Message_StringID(10, PET_ATTACKING, mypet->GetCleanName(), target->GetCleanName());
-		}
+			if (mypet->GetHateTop()==0 && target != this && DistNoRootNoZ(*target) <= (RuleR(Pets, AttackCommandRange)*RuleR(Pets, AttackCommandRange))) {
+				mypet->SetHeld(false); //break the hold and guard if we explicitly tell the pet to attack.
+				mypet->SetPetOrder(SPO_Follow);
+				zone->AddAggroMob();
+				mypet->AddToHateList(target, 1);
+				Message_StringID(10, PET_ATTACKING, mypet->GetCleanName(), target->GetCleanName());
+			}
 		}
 		break;
 	}
 	case PET_BACKOFF: {
 		if((mypet->GetPetType() == petAnimation && GetAA(aaAnimationEmpathy) >= 3) || mypet->GetPetType() != petAnimation) {
-		mypet->Say_StringID(PET_CALMING);
-		mypet->WhipeHateList();
+			mypet->Say_StringID(PET_CALMING);
+			mypet->WhipeHateList();
 		}
 		break;
 	}

@@ -208,6 +208,7 @@ struct StatBonuses {
 	sint16 MinDamageModifier;   //i
 	sint16 ProcChance;			// ProcChance/10 == % increase i
 	sint16 ExtraAttackChance;
+	sint16 DoTShielding;
 	
 	sint8 HundredHands;		//extra haste, stacks with all other haste  i
 	bool MeleeLifetap;  //i
@@ -698,6 +699,8 @@ bool logpos;
 	Mob*				GetHateTop()  {return hate_list.GetTop(this);}
 	Mob*				GetHateDamageTop(Mob* other)  {return hate_list.GetDamageTop(other);}
 	Mob*				GetHateRandom()  {return hate_list.GetRandom();}
+	//this is diff from GetHateTop as it does not account for things like frenzy, just the person with the most hate
+	Mob*				GetHateMost()	{return hate_list.GetMostHate();} 
 	bool				IsEngaged()   {return(!hate_list.IsEmpty()); }
 	bool				HateSummon();
 	void				FaceTarget(Mob* MobToFace = 0, bool update = false);

@@ -1320,3 +1320,31 @@ int32 QuestManager::getplayerburriedcorpsecount(int32 char_id) {
 
 	return Result;
 }
+
+void QuestManager::forcedooropen(int32 doorid) {
+	Doors* d = entity_list.FindDoor(doorid);
+	if(d){
+		if(GetInitiator())
+			d->ForceOpen(GetInitiator());
+		else if(GetOwner())
+			d->ForceOpen(GetOwner());
+	}
+}
+
+void QuestManager::forcedoorclose(int32 doorid) {
+	Doors* d = entity_list.FindDoor(doorid);
+	if(d){
+		if(GetInitiator())
+			d->ForceClose(GetInitiator());
+		else if(GetOwner())
+			d->ForceClose(GetOwner());
+	}
+}
+
+bool QuestManager::isdooropen(int32 doorid) {
+	Doors* d = entity_list.FindDoor(doorid);
+	if(d){
+		return d->IsDoorOpen();
+	}
+	return false;
+}

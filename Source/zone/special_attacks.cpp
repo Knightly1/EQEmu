@@ -625,13 +625,12 @@ void Client::RangedAttack(Mob* other) {
 		sint16 WDmg = GetWeaponDamage(target, RangeWeapon);
 		sint16 ADmg = GetWeaponDamage(target, Ammo);
 		if((WDmg > 0) || (ADmg > 0)){
-			uint16 levelBonus = (GetDEX()+GetLevel()+GetSkill(ARCHERY)) / 100;
 			if(WDmg < 0)
 				WDmg = 0;
 			if(ADmg < 0)
 				ADmg = 0;
 
-			uint16 MaxDmg = (WDmg+ADmg)*levelBonus;
+			uint16 MaxDmg = (WDmg+ADmg) * 2 + ((WDmg+ADmg) * (GetDEX() + GetSkill(ARCHERY)) / 225);
 						
 			switch(GetAA(aaArcheryMastery)) {
 				case 1:
@@ -645,7 +644,7 @@ void Client::RangedAttack(Mob* other) {
 					break;
 			}
 			
-			mlog(COMBAT__RANGED, "Bow DMG %d, Arrow DMG %d, level bonus %d. Max Damage %d", WDmg, ADmg, levelBonus, MaxDmg);
+			mlog(COMBAT__RANGED, "Bow DMG %d, Arrow DMG %d, Max Damage %d.", WDmg, ADmg, MaxDmg);
 			
 			
 			if(GetClass()==RANGER && target->IsNPC() && !target->IsMoving() && !target->IsRooted() && GetLevel() > 50){
@@ -663,8 +662,27 @@ void Client::RangedAttack(Mob* other) {
 			else
 				TotalDmg = MakeRandomInt(1, MaxDmg);
 
+			int minDmg = 1;
+			if(GetLevel() > 25){
+				//twice, for ammo and weapon
+				TotalDmg += (2*((GetLevel()-25)/3));
+				minDmg += (2*((GetLevel()-25)/3));
+			}
 
-			target->MeleeMitigation(this, TotalDmg, 1);
+			int bonus = 0;
+			if(GetLevel() > 50)
+				bonus += 15;
+			if(GetLevel() >= 55)
+				bonus += 15;
+			if(GetLevel() >= 60)
+				bonus += 15;
+			if(GetLevel() >= 65)
+				bonus += 15;
+			
+			TotalDmg += (TotalDmg * bonus / 100);
+			minDmg += (minDmg * bonus / 100);
+
+			target->MeleeMitigation(this, TotalDmg, minDmg);
 			ApplyMeleeDamageBonus(ARCHERY, TotalDmg);
 			TryCriticalHit(target, ARCHERY, TotalDmg);
 			target->Damage(this, TotalDmg, SPELL_UNKNOWN, ARCHERY);
@@ -807,7 +825,7 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 
 		if(WDmg > 0)
 		{
-			sint16 MaxDmg = (WDmg) * (GetDEX()+GetLevel()+GetSkill(THROWING)) / 100;
+			uint16 MaxDmg = (WDmg) * 2 + ((WDmg) * (GetDEX() + GetSkill(THROWING)) / 225);
 			if (MaxDmg == 0)
 				MaxDmg = 1;
 
@@ -816,9 +834,28 @@ void Client::ThrowingAttack(Mob* other) { //old was 51
 			else
 				TotalDmg = MakeRandomInt(1, MaxDmg);
 
+			int minDmg = 1;
+			if(GetLevel() > 25){
+				TotalDmg += ((GetLevel()-25)/3);
+				minDmg += ((GetLevel()-25)/3);
+			}
+
+			int bonus = 0;
+			if(GetLevel() > 50)
+				bonus += 15;
+			if(GetLevel() >= 55)
+				bonus += 15;
+			if(GetLevel() >= 60)
+				bonus += 15;
+			if(GetLevel() >= 65)
+				bonus += 15;
+			
+			TotalDmg += (TotalDmg * bonus / 100);
+			minDmg += (minDmg * bonus / 100);
+
 			mlog(COMBAT__RANGED, "Item DMG %d. Max Damage %d. Hit for damage %d", WDmg, MaxDmg, TotalDmg);
 
-			target->MeleeMitigation(this, TotalDmg, 1);
+			target->MeleeMitigation(this, TotalDmg, minDmg);
 			ApplyMeleeDamageBonus(THROWING, TotalDmg);
 			TryCriticalHit(target, THROWING, TotalDmg);
 			target->Damage(this, TotalDmg, SPELL_UNKNOWN, THROWING);
@@ -1115,7 +1152,7 @@ void Mob::Taunt(NPC* who, bool always_succeed) {
 	
 	int level = GetLevel();
 	
-	Mob *hate_top = who->GetHateTop();
+	Mob *hate_top = who->GetHateMost();
 	
 	// Check to see if we're already at the top of the target's hate list
 	// a mob will not be taunted if its target's health is below 20%
@@ -1159,17 +1196,21 @@ void Mob::Taunt(NPC* who, bool always_succeed) {
 		}
 		if (tauntchance > MakeRandomFloat(0, 100)) {
 			// this is the max additional hate added per succesfull taunt
-			tauntvalue = (int)MakeRandomFloat(1, level * 10.0);
+			tauntvalue = (MakeRandomInt(5, 10) * level);
 			//tauntvalue = (sint32) ((float)level * 10.0 * (float)rand()/(float)RAND_MAX + 1);
 			// new hate: find diff of player's hate and whoever's at top of list, add that plus tauntvalue to players hate
 			newhate = who->GetNPCHate(hate_top) - who->GetNPCHate(this) + tauntvalue;
 			// add the hate
 			who->CastToNPC()->AddToHateList(this, newhate);
 		}
+		else{
+			//generate at least some hate reguardless of the outcome.
+			who->CastToNPC()->AddToHateList(this, (MakeRandomInt(5, 10)*level));
+		}
 	}
 	
-	//generate at least one hate reguardless of the outcome.
-	who->CastToNPC()->AddToHateList(this, 1);
+	//generate at least some hate reguardless of the outcome.
+	who->CastToNPC()->AddToHateList(this, (MakeRandomInt(5, 10)*level));
 }
 
 void Mob::InstillDoubt(Mob *who) {

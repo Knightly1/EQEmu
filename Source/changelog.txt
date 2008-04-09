@@ -1,6 +1,33 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==04/09/2008
+KLS: (AiliaMorisato)Fixed death packet bindzoneid and attack_skill fields being switched.
+KLS: Added rule based caps for all PoP item abilities.
+KLS: Agility will now affect a defenders chance to be missed slightly.
+KLS: Added accuracy rating (10 AR. = 1% chance to hit) and (LordKahel)ATK to npcs.
+KLS: Changed how mitigation is calculated slightly.
+KLS: Enc animations will now respond to /pet get lost no matter what level of the animation empathy aa they have.
+KLS: Hopefully fixed soul abrasion and consumption of the soul aas... again.
+KLS: Added quest::forcedooropen(doorid), quest::forcedoorclose(doorid), and quest::isdooropen(doorid).
+KLS: Changed archery calculations to be more similar to normal weapon damage calculations.
+KLS: Taunt will now always add hate if the user is already on the top of the hate list.
+KLS: Fixed EVENT_ZONE player event.
+
+Character:ItemDamageShieldCap (30)
+Character:ItemAccuracyCap (150)
+Character:ItemAvoidanceCap (100)
+Character:ItemCombatEffectsCap (100)
+Character:ItemShieldingCap (35)
+Character:ItemSpellShieldingCap (35)
+Character:ItemDoTShieldingCap (35)
+Character:ItemStunResistCap (35)
+Character:ItemStrikethroughCap (35)
+
+Required SQL:
+ALTER TABLE npc_types ADD ATK MEDIUMINT NOT NULL DEFAULT '0';
+ALTER TABLE npc_types ADD Accuracy MEDIUMINT NOT NULL DEFAULT '0';
+
 ==04/01/2008
 Rogean: Fixed a merchant purchase packet exploit.
 

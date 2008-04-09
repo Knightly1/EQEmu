@@ -248,6 +248,9 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 			max_dmg = (max_dmg * clfact) / 220;	
 	}	
 	
+	accuracy_rating = d->accuracy_rating;
+	ATK = d->ATK;
+
     CalcMaxMana();
     SetMana(GetMaxMana());
 

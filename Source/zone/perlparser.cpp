@@ -1572,6 +1572,52 @@ XS(XS__getplayerburriedcorpsecount)
     XSRETURN(1);
 }
 
+XS(XS__forcedooropen);
+XS(XS__forcedooropen)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: forcedooropen(doorid)");
+
+	int32	did = (int)SvIV(ST(0));
+
+	quest_manager.forcedooropen(did);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__forcedoorclose);
+XS(XS__forcedoorclose)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: forcedoorclose(doorid)");
+
+	int32	did = (int)SvIV(ST(0));
+
+	quest_manager.forcedoorclose(did);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__isdooropen);
+XS(XS__isdooropen)
+{
+    dXSARGS;
+    if (items != 1)
+        Perl_croak(aTHX_ "Usage: isdooropen(doorid)");
+
+    bool        RETVAL;
+    dXSTARG;
+
+    int32    doorid = (int)SvIV(ST(0));
+
+	RETVAL = quest_manager.isdooropen(doorid);
+	XSprePUSH; PUSHu((IV)RETVAL);
+
+	XSRETURN(1);
+}
+
 XS(XS__depopzone);
 XS(XS__depopzone)
 {
@@ -1708,6 +1754,9 @@ EXTERN_C XS(boot_quest)
         newXS(strcpy(buf, "clear_zone_flag"), XS__clear_zone_flag, file);
         newXS(strcpy(buf, "summonburriedplayercorpse"), XS__summonburriedplayercorpse, file);
 		newXS(strcpy(buf, "getplayerburriedcorpsecount"), XS__getplayerburriedcorpsecount, file);
+		newXS(strcpy(buf, "forcedooropen"), XS__forcedooropen, file);
+		newXS(strcpy(buf, "forcedoorclose"), XS__forcedoorclose, file);
+		newXS(strcpy(buf, "isdooropen"), XS__isdooropen, file);
 		newXS(strcpy(buf, "depopall"), XS__depopall, file);
 		newXS(strcpy(buf, "depopzone"), XS__depopzone, file);
 		newXS(strcpy(buf, "repopzone"), XS__repopzone, file);

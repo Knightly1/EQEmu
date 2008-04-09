@@ -229,28 +229,58 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon, bool isAu
 		newbon->EnduranceRegen += item->EnduranceRegen;
 	}
 	if(item->DamageShield > 0) {
-		newbon->DamageShield += item->DamageShield;
+		if((newbon->DamageShield + item->DamageShield) > RuleI(Character, ItemDamageShieldCap))
+			newbon->DamageShield = RuleI(Character, ItemDamageShieldCap);
+		else
+			newbon->DamageShield += item->DamageShield;
 	}
 	if(item->SpellShield > 0) {
-		newbon->SpellDamageShield += item->SpellShield;
+		if((newbon->SpellDamageShield + item->SpellShield) > RuleI(Character, ItemSpellShieldingCap))
+			newbon->SpellDamageShield = RuleI(Character, ItemSpellShieldingCap);
+		else
+			newbon->SpellDamageShield += item->SpellShield;
 	}
 	if(item->Shielding > 0) {
-		newbon->MeleeMitigation += item->Shielding;
+		if((newbon->MeleeMitigation + item->Shielding) > RuleI(Character, ItemShieldingCap))
+			newbon->MeleeMitigation = RuleI(Character, ItemShieldingCap);
+		else
+			newbon->MeleeMitigation += item->Shielding;
 	}
 	if(item->StunResist > 0) {
-		newbon->StunResist += item->StunResist;
+		if((newbon->StunResist + item->StunResist) > RuleI(Character, ItemStunResistCap))
+			newbon->StunResist = RuleI(Character, ItemStunResistCap);
+		else
+			newbon->StunResist += item->StunResist;
 	}
 	if(item->StrikeThrough > 0) {
-		newbon->StrikeThrough += item->StrikeThrough;
+		if((newbon->StrikeThrough + item->StrikeThrough) > RuleI(Character, ItemStrikethroughCap))
+			newbon->StrikeThrough = RuleI(Character, ItemStrikethroughCap);
+		else
+			newbon->StrikeThrough += item->StrikeThrough;
 	}
 	if(item->Avoidance > 0) {
-		newbon->AvoidMeleeChance += item->Avoidance;
+		if((newbon->AvoidMeleeChance + item->Avoidance) > RuleI(Character, ItemAvoidanceCap))
+			newbon->AvoidMeleeChance = RuleI(Character, ItemAvoidanceCap);
+		else
+			newbon->AvoidMeleeChance += item->Avoidance;
 	}
 	if(item->Accuracy > 0) {
-		newbon->HitChance += item->Accuracy;
+		if((newbon->HitChance + item->Accuracy) > RuleI(Character, ItemAccuracyCap))
+			newbon->HitChance = RuleI(Character, ItemAccuracyCap);
+		else
+			newbon->HitChance += item->Accuracy;
 	}
 	if(item->CombatEffects > 0) {
-		newbon->ProcChance += item->CombatEffects;
+		if((newbon->ProcChance + item->CombatEffects) > RuleI(Character, ItemCombatEffectsCap))
+			newbon->ProcChance = RuleI(Character, ItemCombatEffectsCap);
+		else
+			newbon->ProcChance += item->CombatEffects;
+	}
+	if(item->DotShielding > 0) {
+		if((newbon->DoTShielding + item->DotShielding) > RuleI(Character, ItemDoTShieldingCap))
+			newbon->DoTShielding = RuleI(Character, ItemDoTShieldingCap);
+		else
+			newbon->DoTShielding += item->DotShielding;
 	}
 	else if (item->Worn.Effect>0 && (item->Worn.Type == ET_WornEffect)) { // latent effects
 		ApplySpellsBonuses(item->Worn.Effect, item->Worn.Level, newbon);

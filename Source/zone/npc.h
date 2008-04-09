@@ -222,6 +222,8 @@ public:
 	AA_SwarmPetInfo *GetSwarmInfo() { return (swarmInfoPtr); }
 	void SetSwarmInfo(AA_SwarmPetInfo *mSwarmInfo) { swarmInfoPtr = mSwarmInfo; }
 
+	sint32	GetAccuracyRating() { return (accuracy_rating); }
+	void	SetAccuracyRating(sint32 d) { accuracy_rating = d;}
 
 protected:
 	
@@ -276,6 +278,7 @@ protected:
 	
 	int16	max_dmg;
 	int16	min_dmg;
+	sint32	accuracy_rating;
 	
 	//pet crap:
 	int16	pet_spell_id;

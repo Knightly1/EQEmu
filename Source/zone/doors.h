@@ -49,7 +49,9 @@ public:
 	float	GetDestHeading() { return dest_heading; }
 	
 	void	NPCOpen(NPC* sender);
-	
+	void	ForceOpen(Mob *sender);
+	void	ForceClose(Mob *sender);
+
 private:
 int32	db_id;
 sint8	door_id;

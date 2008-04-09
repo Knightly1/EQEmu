@@ -314,6 +314,27 @@ Mob *HateList::GetTop(Mob *center)
 	}
 }
 
+Mob *HateList::GetMostHate(){
+	_ZP(HateList_GetMostHate);
+	Mob* top = NULL;
+	sint32 hate = -1;
+
+	LinkedListIterator<tHateEntry*> iterator(list);
+	iterator.Reset();
+	while(iterator.MoreElements())
+	{
+		tHateEntry *cur = iterator.GetData();
+		if(cur->ent != NULL && (cur->hate > hate))
+		{
+			top = cur->ent;
+			hate = cur->hate;
+		}
+		iterator.Advance();
+	}
+	return top;
+}
+
+
 Mob *HateList::GetRandom()
 {
     int count = 0;

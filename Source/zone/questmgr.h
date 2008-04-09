@@ -135,7 +135,9 @@ public:
 	void sethp(int hpperc);
 	bool summonburriedplayercorpse(int32 char_id, float dest_x, float dest_y, float dest_z, float dest_heading);
 	int32 getplayerburriedcorpsecount(int32 char_id);
-	
+	void forcedooropen(int32 doorid);
+	void forcedoorclose(int32 doorid);
+	bool isdooropen(int32 doorid);
 	
 	//not in here because it retains perl types
 	//thing ChooseRandom(array_of_things)

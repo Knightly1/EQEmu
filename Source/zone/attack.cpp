@@ -171,7 +171,8 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 	sint32 level_difference = attacker_level - defender_level;
 	if(level_difference < -20) level_difference = -20;
 	if(level_difference > 20) level_difference = 20;
-	chancetohit += (145 * level_difference / 100); 
+	chancetohit += (145 * level_difference / 100);
+	chancetohit -= ((float)defender->GetAGI() * 0.015);
 
 	if(attacker->IsClient()){
 		int skilldiff = defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse);
@@ -246,6 +247,9 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 		chancetohit -= (bonus) / 10;
 		mlog(COMBAT__TOHIT, "Applied avoidance chance %.2f/10, yeilding %.2f", bonus, chancetohit);
 	}
+
+	if(attacker->IsNPC())
+		chancetohit += (chancetohit * attacker->CastToNPC()->GetAccuracyRating() / 1000);
 
 	uint16 AA_mod = 0;
 	switch(GetAA(aaCombatAgility))
@@ -438,8 +442,6 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 	Mob* defender = this;
 	int totalMit = 0;
 
-	totalMit += (defender->spellbonuses.MeleeMitigation + defender->itembonuses.MeleeMitigation);
-
 	switch(GetAA(aaCombatStability)){
 		case 1:
 			totalMit += 2;
@@ -466,6 +468,7 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 		sint32 defenseRating = defender->GetAC();
 		defenseRating += 125;
 		defenseRating = (defenseRating < attackRating)?attackRating:defenseRating;
+		defenseRating += (totalMit * defenseRating / 100);
 
 		//Add these to rules eventually
 		//double the clients intervals to make their damage output look right, move to rule eventually too
@@ -540,12 +543,17 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 				mlog(COMBAT__DAMAGE, "AC Damage Reduction: fail chance %d%%. Did not fail.", acfail);
 			}
 		}
-	}
 
-	damage -= (damage * totalMit / 100);
+		damage -= (totalMit * damage / 100);
+	}
 
 	if(damage != 0 && damage < minhit)
 		damage = minhit;
+
+	//reduce the damage from shielding item and aa based on the min dmg
+	//spells offer pure mitigation
+	damage -= (minhit * defender->itembonuses.MeleeMitigation / 100);
+	damage -= (damage * defender->spellbonuses.MeleeMitigation / 100);
 
 	if(damage < 0)
 		damage = 0;

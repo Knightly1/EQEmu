@@ -1092,9 +1092,9 @@ struct Death_Struct
 /*000*/	int32	spawn_id;
 /*004*/	int32	killer_id;
 /*008*/	int32	corpseid;	// was corpseid
-/*012*/	int32	attack_skill;	// was type
+/*012*/	int32	bindzoneid;
 /*016*/	int32	spell_id;
-/*020*/ int32	bindzoneid;	//bindzoneid?
+/*020*/  int32	attack_skill;
 /*024*/	int32	damage;
 /*028*/	int32	unknown028;
 };

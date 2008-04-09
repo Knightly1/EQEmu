@@ -284,7 +284,7 @@ Mob::Mob(const char*   in_name,
 	flee_timer.Start();
 #endif
 #endif
-	permarooted = ( runspeed == 0 );
+	permarooted = (runspeed > 0) ? false : true;
 
 	movetimercompleted = false;
 	roamer = false;
@@ -893,6 +893,7 @@ void Mob::ShowStats(Client* client) {
 			if(this->CastToNPC()->respawn2 != 0)
 				spawngroupid = this->CastToNPC()->respawn2->SpawnGroupID();
 			client->Message(0, "  NPCID: %u  SpawnGroupID: %u LootTable: %u  FactionID: %i  SpellsID: %u MerchantID: %i", this->GetNPCTypeID(),spawngroupid, this->CastToNPC()->GetLoottableID(), this->CastToNPC()->GetNPCFactionID(), this->CastToNPC()->GetNPCSpellsID(),this->CastToNPC()->MerchantType);
+			client->Message(0, "  Accuracy: %i", CastToNPC()->GetAccuracyRating());
 		}
 		if (this->IsAIControlled()) {
 			client->Message(0, "  AIControlled: AggroRange: %1.0f  AssistRange: %1.0f", this->GetAggroRange(), this->GetAssistRange());
