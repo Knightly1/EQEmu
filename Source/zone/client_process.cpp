@@ -1481,9 +1481,9 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 		}
 		if(st)
 		{
-			Message(0, "Local: Summoning %s to %i, %i, %i", gms->charname, gms->x, gms->y, gms->z);
+			Message(0, "Local: Summoning %s to %f, %f, %f", gms->charname, gms->x, gms->y, gms->z);
 			if (st->IsClient() && (st->CastToClient()->GetAnon() != 1 || this->Admin() >= st->CastToClient()->Admin()))
-				st->CastToClient()->MovePC((float)gms->x, (float)gms->y, (float)gms->z, this->GetHeading(), 2, true);
+				st->CastToClient()->MovePC((float)gms->x, (float)gms->y, (float)gms->z, this->GetHeading(), true);
 			else
 				st->GMMove(this->GetX(), this->GetY(), this->GetZ(),this->GetHeading());
 		}

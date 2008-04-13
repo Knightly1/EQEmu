@@ -650,7 +650,7 @@ void Client::Handle_Connect_OP_SendExpZonein(const EQApplicationPacket *app)
 	
 	CreateSpawnPacket(outapp);
 	outapp->priority = 6;
-	entity_list.QueueClients(this, outapp, true);
+	if (!GetHideMe()) entity_list.QueueClients(this, outapp, true);
 	safe_delete(outapp);
 	if(GetPVP())	//force a PVP update until we fix the spawn struct
 		SendAppearancePacket(AT_PVP, GetPVP(), true, false);
@@ -3346,7 +3346,8 @@ void Client::Handle_OP_GMHideMe(const EQApplicationPacket *app)
 		return;
 	}
 	SpawnAppearance_Struct* sa = (SpawnAppearance_Struct*)app->pBuffer;
-	SetHideMe(sa->parameter == 1);
+	Message(13, "#: %i, %i", sa->type, sa->parameter);
+	SetHideMe(!sa->parameter);
 	return;
 
 }
@@ -3855,6 +3856,11 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 	}
 	if(mp->quantity > 1 && (sint16)mp->quantity > inst->GetCharges())
 		return;
+
+	if (item && !item->NoDrop) {
+		//Message(13,"%s tells you, 'LOL NOPE'", vendor->GetName());
+		return;
+	}
 
 	if (item){
 		price=(int)((item->Price*mp->quantity)*.884);
@@ -6454,8 +6460,9 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 	//safe_delete(outapp);
 	
 	//I think this should happen earlier, not sure
-	if(GetHideMe())
-		SetHideMe(true);
+	/* if(GetHideMe())
+		SetHideMe(true); */
+	// Moved to Handle_Connect_OP_SendExpZonein();
 	
 	
 	////////////////////////////////////////////////////////////
@@ -6548,6 +6555,8 @@ void Client::CompleteConnect()
 			m_pp.spell_book[spellInt] = 0xFFFFFFFF;
 	}
 	//SendAATable();
+
+	if (GetHideMe()) Message(13, "[GM] You are currently hidden to all clients");
 	
 	//reapply some buffs
 	for (uint32 j1=0; j1 < BUFF_COUNT; j1++) {

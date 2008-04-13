@@ -312,8 +312,9 @@ void ClientList::SendWhoAll(int32 fromid,const char* to, sint16 admin, Who_All_S
 		countcle = countclients.GetData();
 		const char* tmpZone = database.GetZoneName(countcle->zone());
 		if (
-	(countcle->Online() >= CLE_Status_Zoning)
-	&& (whom == 0 || (
+	(countcle->Online() >= CLE_Status_Zoning) &&
+	(!countcle->GetGM() || countcle->Anon() != 1 || admin >= countcle->Admin()) && 
+	(whom == 0 || (
 		((countcle->Admin() >= 80 && countcle->GetGM()) || whom->gmlookup == 0xFFFF) && 
 		(whom->lvllow == 0xFFFF || (countcle->level() >= whom->lvllow && countcle->level() <= whom->lvlhigh && (countcle->Anon()==0 || admin > countcle->Admin()))) && 
 		(whom->wclass == 0xFFFF || (countcle->class_() == whom->wclass && (countcle->Anon()==0 || admin > countcle->Admin()))) && 
@@ -391,8 +392,9 @@ void ClientList::SendWhoAll(int32 fromid,const char* to, sint16 admin, Who_All_S
 		
 		const char* tmpZone = database.GetZoneName(cle->zone());
 		if (
-	(cle->Online() >= CLE_Status_Zoning)
-	&& (whom == 0 || (
+	(cle->Online() >= CLE_Status_Zoning) &&
+	(!cle->GetGM() || cle->Anon() != 1 || admin >= cle->Admin()) && 
+	(whom == 0 || (
 		((cle->Admin() >= 80 && cle->GetGM()) || whom->gmlookup == 0xFFFF) && 
 		(whom->lvllow == 0xFFFF || (cle->level() >= whom->lvllow && cle->level() <= whom->lvlhigh && (cle->Anon()==0 || admin>cle->Admin()))) && 
 		(whom->wclass == 0xFFFF || (cle->class_() == whom->wclass && (cle->Anon()==0 || admin>cle->Admin()))) && 
@@ -407,41 +409,42 @@ void ClientList::SendWhoAll(int32 fromid,const char* to, sint16 admin, Who_All_S
 ) {
 			line[0] = 0;
 			int32 rankstring=0xFFFFFFFF;
-				if(cle->Anon()==1 && cle->Admin()>admin && !cle->GetGM() || (idx>=20 && admin<100)){ //hide gms that are anon from lesser gms and normal players, cut off at 20
+				if((cle->Anon()==1 && cle->GetGM() && cle->Admin()>admin) || (idx>=20 && admin<100)){ //hide gms that are anon from lesser gms and normal players, cut off at 20
 					rankstring=0;
 					iterator.Advance();
 					continue;
+				} else if (cle->GetGM()) {
+					if (cle->Admin() >=250)
+						rankstring=5021;
+					else if (cle->Admin() >= 200)
+						rankstring=5020;
+					else if (cle->Admin() >= 180)
+						rankstring=5019;
+					else if (cle->Admin() >= 170)
+						rankstring=5018;
+					else if (cle->Admin() >= 160)
+						rankstring=5017;
+					else if (cle->Admin() >= 150)
+						rankstring=5016;
+					else if (cle->Admin() >= 100)
+						rankstring=5015;
+					else if (cle->Admin() >= 95)
+						rankstring=5014;
+					else if (cle->Admin() >= 90)
+						rankstring=5013;
+					else if (cle->Admin() >= 85)
+						rankstring=5012;
+					else if (cle->Admin() >= 81)
+						rankstring=5011;
+					else if (cle->Admin() >= 80)
+						rankstring=5010;
+					else if (cle->Admin() >= 50)
+						rankstring=5009;
+					else if (cle->Admin() >= 20)
+						rankstring=5008;
+					else if (cle->Admin() >= 10)
+						rankstring=5007;
 				}
-				else if (cle->Admin() >=250)
-					rankstring=5021;
-				else if (cle->Admin() >= 200)
-					rankstring=5020;
-				else if (cle->Admin() >= 180)
-					rankstring=5019;
-				else if (cle->Admin() >= 170)
-					rankstring=5018;
-				else if (cle->Admin() >= 160)
-					rankstring=5017;
-				else if (cle->Admin() >= 150)
-					rankstring=5016;
-				else if (cle->Admin() >= 100)
-					rankstring=5015;
-				else if (cle->Admin() >= 95)
-					rankstring=5014;
-				else if (cle->Admin() >= 90)
-					rankstring=5013;
-				else if (cle->Admin() >= 85)
-					rankstring=5012;
-				else if (cle->Admin() >= 81)
-					rankstring=5011;
-				else if (cle->Admin() >= 80)
-					rankstring=5010;
-				else if (cle->Admin() >= 50)
-					rankstring=5009;
-				else if (cle->Admin() >= 20)
-					rankstring=5008;
-				else if (cle->Admin() >= 10)
-					rankstring=5007;
 			idx++;
 			char guildbuffer[67]={0};
 			if (cle->GuildID() != GUILD_NONE && cle->GuildID()>0)

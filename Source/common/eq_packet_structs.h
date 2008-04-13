@@ -1410,9 +1410,9 @@ struct GMSummon_Struct {
 /* 30*/	char    gmname[64];
 /* 60*/ int32	success;
 /* 61*/	int32	zoneID;
-/*92*/	sint32  y;
-/*96*/	sint32  x;
-/*100*/ sint32  z;
+/*92*/	float  y;
+/*96*/	float  x;
+/*100*/ float  z;
 /*104*/	int32 unknown2; // E0 E0 56 00
 };
 

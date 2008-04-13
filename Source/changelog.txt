@@ -1,6 +1,15 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==04/13/2008
+Rogean: Fixed a hack to sell no-drop items to merchants. (Reported by KingMort)
+Rogean: Fixed #hideme, it won't show you zone in and then disappear anymore. (Reported by KingMort)
+Rogean: Fixed /summon.
+Rogean: Changes to /who all and GM's:
+	* GM * Tags will no longer show up unless your #gm on
+	You will not show up to players of lower status if your /anon and #gm on, if your #gm off and /anon you will show up as 
+	a normal player, regardless of statuses.
+
 ==04/09/2008
 KLS: (AiliaMorisato)Fixed death packet bindzoneid and attack_skill fields being switched.
 KLS: Added rule based caps for all PoP item abilities.
