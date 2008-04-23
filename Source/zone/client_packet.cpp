@@ -3330,7 +3330,7 @@ void Client::Handle_OP_Buff(const EQApplicationPacket *app)
 	
 	SpellBuffFade_Struct* sbf = (SpellBuffFade_Struct*) app->pBuffer;
 	mlog(SPELLS__BUFFS, "Client requested that buff with spell id %d be canceled.", sbf->spellid);
-	if(sbf->spellid == 0xFFFF)
+	if(sbf->spellid == 0xFFFF || IsDetrimentalSpell(sbf->spellid))
 		QueuePacket(app);
 	else
 		BuffFadeBySpellID(sbf->spellid);

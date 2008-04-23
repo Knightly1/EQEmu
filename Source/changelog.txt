@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==04/22/2008
+Rogean: Server-side check for removing detrimental spells.
+
 ==04/13/2008
 Rogean: Fixed a hack to sell no-drop items to merchants. (Reported by KingMort)
 Rogean: Fixed #hideme, it won't show you zone in and then disappear anymore. (Reported by KingMort)
