@@ -171,6 +171,8 @@ public:
 	void	weatherSend();
 	bool	CanBind() const { return(can_bind); }
 	bool	CanDoCombat() const { return(can_combat); }
+	bool	CanLevitate() const {return(can_levitate); } // Magoth78
+	bool    CanCastOutdoor() const {return(can_castoutdoor);} //qadar
 	
 	time_t	weather_timer;
 	int8	weather_type;
@@ -206,6 +208,8 @@ private:
 	int32	pMaxClients;
 	bool	can_bind;
 	bool	can_combat;
+	bool    can_castoutdoor;
+	bool	can_levitate;
 	int32	pgraveyard_id, pgraveyard_zoneid;
 	float	pgraveyard_x, pgraveyard_y, pgraveyard_z, pgraveyard_heading;
 	

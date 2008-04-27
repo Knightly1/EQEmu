@@ -38,8 +38,8 @@ enum {	//values for pTimerType
 	pTimerSenseTraps = 12,
 	pTimerDisarmTraps = 13,
 	pTimerDisciplineReuseStart = 14,
-	pTimerDisciplineReuseEnd = 22,
-	pTimerCombatAbility = 23,
+	pTimerDisciplineReuseEnd = 24,
+	pTimerCombatAbility = 25,
 	
 	pTimerLayHands = 87,		//these IDs are used by client too
 	pTimerHarmTouch = 89,		//so dont change them

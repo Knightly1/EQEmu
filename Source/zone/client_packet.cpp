@@ -3329,11 +3329,16 @@ void Client::Handle_OP_Buff(const EQApplicationPacket *app)
 	}
 	
 	SpellBuffFade_Struct* sbf = (SpellBuffFade_Struct*) app->pBuffer;
-	mlog(SPELLS__BUFFS, "Client requested that buff with spell id %d be canceled.", sbf->spellid);
-	if(sbf->spellid == 0xFFFF || IsDetrimentalSpell(sbf->spellid))
+	uint32 spid = sbf->spellid;
+	mlog(SPELLS__BUFFS, "Client requested that buff with spell id %d be canceled.", spid);
+
+	//something about IsDetrimentalSpell() crashes this portion of code..
+	//tbh we shouldn't use it anyway since this is a simple red vs blue buff check and
+	//isdetrimentalspell() is much more complex
+	if(spid == 0xFFFF || (IsValidSpell(spid) && (spells[spid].goodEffect == 0)))
 		QueuePacket(app);
 	else
-		BuffFadeBySpellID(sbf->spellid);
+		BuffFadeBySpellID(spid);
 
 	return;
 }
@@ -6642,7 +6647,17 @@ void Client::CompleteConnect()
 					}
 				case SE_Levitate:
 					{
-					SendAppearancePacket(AT_Levitate, 2);
+                        if( !zone->CanLevitate() )
+                        {
+                            if(!GetGM())
+                            {
+                                SendAppearancePacket(AT_Levitate, 0);
+                                BuffFadeByEffect(SE_Levitate);
+                                Message(13, "You can't levitate in this zone.");
+                            }
+                        }else{
+                            SendAppearancePacket(AT_Levitate, 2);
+                        }
 					break;
 					}
 				case SE_InvisVsUndead2:	

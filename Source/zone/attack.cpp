@@ -1721,6 +1721,14 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skill) 
 						give_exp_client->SendAdventureFinish(1, AF.points,true);
 				}
 				kg->SplitExp((EXP_FORMULA), this);
+
+				/* Send the EVENT_KILLED_MERIT event for all group members */
+				for (int i = 0; i < MAX_GROUP_MEMBERS; i++) {
+					if (kg->members[i] != NULL && kg->members[i]->IsClient()) { // If Group Member is Client
+						Client *c = kg->members[i]->CastToClient();
+						parse->Event(EVENT_KILLED_MERIT, GetNPCTypeID(), "killed", this, c);
+					}
+				}
 			}
 			else
 			{
@@ -1729,6 +1737,8 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skill) 
 				{
 					give_exp_client->AddEXP((EXP_FORMULA), conlevel); // Pyro: Comment this if NPC death crashes zone
 				}
+				 /* Send the EVENT_KILLED_MERIT event */
+				parse->Event(EVENT_KILLED_MERIT, GetNPCTypeID(), "killed", this, give_exp_client);
 			}
 		}
 	}

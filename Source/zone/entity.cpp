@@ -2580,7 +2580,7 @@ void EntityList::Evade(Mob *who)
 			if(amt > 0)
 				iterator.GetData()->CastToNPC()->SetHate(who, amt);
 			else
-				iterator.GetData()->CastToNPC()->SetHate(who, 1);
+				iterator.GetData()->CastToNPC()->SetHate(who, 0);
 		}
 		iterator.Advance();
 	}

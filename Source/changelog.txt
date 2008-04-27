@@ -1,6 +1,21 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==04/26/2008
+KLS: Should have fixed discipline and combat ability timer overlap.
+KLS: Added a rule for partial hits on fear, seperate from normal resist partial hits.
+KLS: Fixed some quirks in the aggro system.
+KLS: (Bulle)Added quest event EVENT_KILLED_MERIT will trigger if you got credit for doing the most damage to a lootable npc.
+KLS: (Bulle)Added quest event EVENT_CAST_ON will trigger if a player casts on a npc.
+KLS: Fixed crash in server-side check for removing detrimental effects.
+KLS: (Magoth78), (Angelox)Added zone checks for levitating and being outdoors.
+KLS: (haecz) Fix to dupe corpse money on a zone crash.
+KLS: Changed root to resist per tic instead of partial hit.
+
+Required SQL:
+alter table `zone` add column `canlevitate` tinyint (4) DEFAULT '1' NOT NULL  after `cancombat`
+alter table `zone` add column `castoutdoor` tinyint (4) DEFAULT '1' NOT NULL  after `canlevitate`;
+
 ==04/22/2008
 Rogean: Server-side check for removing detrimental spells.
 

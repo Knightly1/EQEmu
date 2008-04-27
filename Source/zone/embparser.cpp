@@ -56,7 +56,9 @@ const char *QuestEventSubroutines[_LargestEventID] = {
 	"EVENT_CLICKDOOR",
 	"EVENT_LOOT",
 	"EVENT_ZONE",
-	"EVENT_LEVEL_UP"
+	"EVENT_LEVEL_UP",
+	"EVENT_KILLED_MERIT",
+	"EVENT_CAST_ON"
 };
 
 PerlembParser::PerlembParser(void) : Parser()
@@ -502,7 +504,9 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 		case EVENT_ENTER:
 		case EVENT_EXIT:
 		case EVENT_ENTERZONE:
-		case EVENT_LEVEL_UP:		
+		case EVENT_LEVEL_UP:
+		case EVENT_KILLED_MERIT:
+		case EVENT_CAST_ON:
 			break;
 
 		default: {

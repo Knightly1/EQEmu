@@ -773,6 +773,8 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQApplicationPacket* a
 				client->AddMoneyToPP(GetCopper(),GetSilver(),GetGold(),GetPlatinum(),false);
 			}
 			RemoveCash();
+			Save();
+			client->Save();
 		}
 		outapp->priority = 6;
 		client->QueuePacket(outapp); 

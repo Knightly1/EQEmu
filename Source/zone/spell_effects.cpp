@@ -1182,7 +1182,6 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 
 			case SE_Root:
 			{
-				buffs[buffslot].ticsremaining = ((buffs[buffslot].ticsremaining * partial) / 100);
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Root: %+i", effect_value);
 #endif
@@ -2608,30 +2607,16 @@ void Mob::DoBuffTic(int16 spell_id, int32 ticsremaining, int8 caster_level, Mob*
 
 		case SE_Charm: {
 			if (!PassCharismaCheck(caster, this, spell_id)) {
-				if(caster->IsClient())
-					caster->Message_StringID(MT_Shout, TARGET_RESISTED, spells[spell_id].name);
-
-				if(IsClient())
-					Message_StringID(MT_Shout, YOU_RESIST, spells[spell_id].name);
-
 				BuffFadeByEffect(SE_Charm);
 			}
 
 			break;
 		}
 
-		case SE_Fear: {
+		case SE_Root: {
 			float SpellEffectiveness = ResistSpell(spells[spell_id].resisttype, spell_id, caster);
-			if(SpellEffectiveness < 100) {
-				if(SpellEffectiveness == 0 || !IsPartialCapableSpell(spell_id)) {
-					if(caster->IsClient())
-						caster->Message_StringID(MT_Shout, TARGET_RESISTED, spells[spell_id].name);
-
-					if(IsClient())
-						Message_StringID(MT_Shout, YOU_RESIST, spells[spell_id].name);
-
-					BuffFadeByEffect(SE_Fear);
-				}
+			if(SpellEffectiveness < 25) {
+				BuffFadeByEffect(SE_Root);
 			}
 
 			break;

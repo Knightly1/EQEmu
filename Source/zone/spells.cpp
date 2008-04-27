@@ -1221,6 +1221,30 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 	if(!IsValidSpell(spell_id))
 		return false;
 
+	// qadar start
+
+	if( spells[spell_id].zonetype == 1 && !zone->CanCastOutdoor()){
+		if(IsClient()){
+				if(!CastToClient()->GetGM()){
+					Message(13, "You can't cast this spell indoors.");
+					return false;
+				}
+			}
+		}
+
+	// qadar end
+
+	// angelox start
+
+	if(IsEffectInSpell(spell_id, SE_Levitate) && !zone->CanLevitate()){
+			if(IsClient()){
+				if(!CastToClient()->GetGM()){
+					Message(13, "You can't levitate in this zone.");
+					return false;
+				}
+			}
+		}
+
 	if
 	(
 		this->IsClient() && 
@@ -2251,6 +2275,12 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 
 // end of action packet
 
+       /* Send the EVENT_CAST_ON event */
+       if(spelltar->IsNPC())
+       {       char temp1[100];
+               sprintf(temp1, "%d", spell_id);
+               parse->Event(EVENT_CAST_ON, spelltar->GetNPCTypeID(), temp1, spelltar->CastToNPC(), this);
+       }
 
 	// solar: now check if the spell is allowed to land
 	
@@ -2429,7 +2459,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 			}
 		}
 	}
-	else if (IsBeneficialSpell(spell_id))
+	else if (IsBeneficialSpell(spell_id) && spelltar->GetHateAmount(this) > 1)
 		entity_list.AddHealAggro(spelltar, this, CheckHealAggroAmount(spell_id));
 
 	// cause the effects to the target
@@ -2868,7 +2898,11 @@ float Mob::ResistSpell(int8 resist_type, int16 spell_id, Mob *caster)
 	resistchance += spellbonuses.ResistSpellChance + itembonuses.ResistSpellChance;
 	//Resist chance makes up the upper limit of our partial range
 	//Fullchance makes up the lower limit of our partial range
-	fullchance = (resistchance * (1 - RuleR(Spells, PartialHitChance))); //default 0.7
+	if(!IsFearSpell(spell_id))
+		fullchance = (resistchance * (1 - RuleR(Spells, PartialHitChance))); //default 0.7
+	else
+		fullchance = (resistchance * (1 - RuleR(Spells, PartialHitChanceFear))); //default 0.25
+
 	roll = MakeRandomFloat(0, 100);
 
 	mlog(SPELLS__RESISTS, "Spell %d: Resist Amount: %d, ResistChance: %.2f, Resist Bonuses: %.2f", 

@@ -22,6 +22,8 @@ typedef enum {
 	EVENT_LOOT,			//pc only
 	EVENT_ZONE,			//pc only
 	EVENT_LEVEL_UP,		//pc only
+	EVENT_KILLED_MERIT, //killed by a PC or group, gave experience; will repeat several times for groups
+	EVENT_CAST_ON,		//pc casted a spell on npc
 	
 	_LargestEventID
 } QuestEventID;
