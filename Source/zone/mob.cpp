@@ -118,6 +118,11 @@ Mob::Mob(const char*   in_name,
 	tarx=0;
 	tary=0;
 	tarz=0;
+	fear_walkto_x = -999999;
+	fear_walkto_y = -999999;
+	fear_walkto_z = -999999;
+	curfp = false;
+
 	AI_Init();
 	SetMoving(false);
 	moved=false;
@@ -2259,6 +2264,63 @@ void Mob::SetTarget(Mob* mob) {
 }
 
 
+void Mob::CalculateNewFearpoint()
+{
+	int loop = 0;
+	float ranx, rany, ranz;
+	curfp = false;
+	while (loop < 100) //Max 100 tries
+	{
+		int ran = 250 - (loop*2);
+		loop++;
+		ranx = GetX()+rand()%ran-rand()%ran;
+		rany = GetY()+rand()%ran-rand()%ran;
+		ranz = FindGroundZ(ranx,rany);
+		if (ranz == -999999)
+			continue;
+		float fdist = ranz - GetZ();
+		if (fdist >= -12 && fdist <= 12 && CheckCoordLosNoZLeaps(GetX(),GetY(),GetZ(),ranx,rany,ranz))
+		{
+			curfp = true;
+			break;
+		}
+	}
+	if (curfp)
+	{
+		fear_walkto_x = ranx;
+		fear_walkto_y = rany;
+		fear_walkto_z = ranz;
+	}
+	else //Break fear
+	{
+		BuffFadeByEffect(SE_Fear);
+	}
+}
+
+
+float Mob::FindGroundZ(float new_x, float new_y, float z_offset)
+{
+	float ret = -999999;
+	if (zone->map != 0)
+	{
+		NodeRef pnode = zone->map->SeekNode( zone->map->GetRoot(), new_x, new_y );
+		if (pnode != NODE_NONE)
+		{
+			VERTEX me;
+			me.x = new_x;
+			me.y = new_y;
+			me.z = z_pos+z_offset;
+			VERTEX hit;
+			FACE *onhit;
+			float best_z = zone->map->FindBestZ(pnode, me, &hit, &onhit);
+			if (best_z != -999999)
+			{
+				ret = best_z;
+			}
+		}
+	}
+	return ret;
+}
 
 
 

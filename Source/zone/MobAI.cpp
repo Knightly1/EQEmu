@@ -63,6 +63,7 @@ const int SpellTypes_Beneficial = SpellType_Heal|SpellType_Buff|SpellType_Escape
 #else
 	#define MobAI_DEBUG_Spells	-1
 #endif
+#define ABS(x) ((x)<0?-(x):(x))
 
 //NOTE: do NOT pass in beneficial and detrimental spell types into the same call here!
 bool NPC::AICastSpell(Mob* tar, int8 iChance, int16 iSpellTypes) {
@@ -544,6 +545,36 @@ void Mob::AI_Process() {
 		return;
 	
 	bool engaged = IsEngaged();
+
+	// Begin: Additions for Wiz Fear Code
+	//
+	if(curfp) {
+
+		if(IsRooted()) {
+			//make sure everybody knows were not moving, for appearance sake
+			if(IsMoving())
+			{
+				SetHeading(CalculateHeadingToTarget(target->GetX(), target->GetY()));
+				SetRunAnimSpeed(0);
+				SendPosition();
+				SetMoving(false);
+				moved=false;
+			}
+			//continue on to attack code, ensuring that we execute the engaged code
+			engaged = true;
+		} else {
+			if(AImovement_timer->Check()) {
+				// Check if we have reached the last fear point
+				if((ABS(GetX()-fear_walkto_x) < 0.1) && (ABS(GetY()-fear_walkto_y) <0.1)) {
+					// Calculate a new point to run to
+					CalculateNewFearpoint();
+				}
+				CalculateNewPosition2(fear_walkto_x, fear_walkto_y, fear_walkto_z, GetRunspeed(), true);
+			}
+			return;
+		}
+	}
+	// End: Additions for Wiz Fear Code
 	
 #ifdef ENABLE_FEAR_PATHING
 	if(fear_state != fearStateNotFeared) {

@@ -29,6 +29,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #include "../common/files.h"
 #include "zone_profile.h"
 #include "map.h"
+#include "zone.h"
 #ifdef WIN32
 #define snprintf	_snprintf
 #endif
@@ -38,7 +39,7 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 //#define TRUST_MAPFILE_NORMALS
 
 //#define OPTIMIZE_QT_LOOKUPS
-
+extern Zone* zone;
 #define EPS 0.002f	//acceptable error
 
 //#define DEBUG_SEEK 1
@@ -857,5 +858,95 @@ void Map::Normalize(VERTEX *p) {
 }
 
 
+bool Map::LineIntersectsZoneNoZLeaps(VERTEX start, VERTEX end, float step_mag, VERTEX *result, FACE **on) {
+	float z = -999999;
+	VERTEX step;
+	VERTEX cur;
+	cur.x = start.x;
+	cur.y = start.y;
+	cur.z = start.z;
+	
+	step.x = end.x - start.x;
+	step.y = end.y - start.y;
+	step.z = end.z - start.z;
+	float factor = step_mag / sqrt(step.x*step.x + step.y*step.y + step.z*step.z);
+
+	step.x *= factor;
+	step.y *= factor;
+	step.z *= factor;
+
+	int steps = 0;
+
+	if (step.x > 0 && step.x < 0.001f)
+		step.x = 0.001f;
+	if (step.y > 0 && step.y < 0.001f)
+		step.y = 0.001f;
+	if (step.z > 0 && step.z < 0.001f)
+		step.z = 0.001f;
+	if (step.x < 0 && step.x > -0.001f)
+		step.x = -0.001f;
+	if (step.y < 0 && step.y > -0.001f)
+		step.y = -0.001f;
+	if (step.z < 0 && step.z > -0.001f)
+		step.z = -0.001f;
+	
+	NodeRef cnode, lnode;
+	lnode = NULL;
+	int i = 0;
+	//while we are not past end
+	//always do this once, even if start == end.
+	while(cur.x != end.x || cur.y != end.y || cur.z != end.z)
+	{
+		steps++;
+		cnode = SeekNode(GetRoot(), cur.x, cur.y);
+		if (cnode == NODE_NONE)
+		{
+			return(true);
+		}		
+		VERTEX me;
+		me.x = cur.x;
+		me.y = cur.y;
+		me.z = cur.z;
+		VERTEX hit;
+		FACE *onhit;
+		float best_z = zone->map->FindBestZ(cnode, me, &hit, &onhit);
+		float diff = ABS(best_z-z);
+//		diff *= sign(diff);
+		if (z == -999999 || best_z == -999999 || diff < 12.0)
+			z = best_z;
+		else
+			return(true);
+		//look at current location
+		if(cnode != NODE_NONE && cnode != lnode) {
+			if(LineIntersectsNode(cnode, start, end, result, on))
+			{
+				return(true);
+			}
+			lnode = cnode;
+		}
+		
+		//move 1 step
+		if (cur.x != end.x)
+			cur.x += step.x;
+		if (cur.y != end.y)
+			cur.y += step.y;
+		if (cur.z != end.z)
+			cur.z += step.z;
+		
+		//watch for end conditions
+		if ( (cur.x > end.x && end.x >= start.x) || (cur.x < end.x && end.x <= start.x) || (step.x == 0) ) {
+			cur.x = end.x;
+		}
+		if ( (cur.y > end.y && end.y >= start.y) || (cur.y < end.y && end.y <= start.y) || (step.y == 0) ) {
+			cur.y = end.y;
+		}
+		if ( (cur.z > end.z && end.z >= start.z) || (cur.z < end.z && end.z < start.z) || (step.z == 0) ) {
+			cur.z = end.z;
+		}
+	}
+	
+	//walked entire line and didnt run into anything...
+	return(false);
+}
 
 

@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==05/30/2008
+Scorpious2k: (Derision/Wiz) Added code to implement fear
+
 ==04/26/2008
 KLS: Should have fixed discipline and combat ability timer overlap.
 KLS: Added a rule for partial hits on fear, seperate from normal resist partial hits.

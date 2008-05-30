@@ -891,6 +891,8 @@ protected:
 	int GetBashDamage() const;
 	void DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage, sint32 min_damage = 1);
 	bool HasDied();
+	void CalculateNewFearpoint();
+	float FindGroundZ(float new_x, float new_y, float z_offset=0.0);
 
 	enum {MAX_PROCS = 4};
 	tProc PermaProcs[MAX_PROCS];
@@ -1010,6 +1012,11 @@ protected:
 	int		cur_wp_pause;
 	
 	int		patrol;
+	float fear_walkto_x;
+    float fear_walkto_y;
+    float fear_walkto_z;
+	bool curfp;
+
 	
 	int32	pDontHealMeBefore;
 	int32	pDontBuffMeBefore;

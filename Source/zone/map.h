@@ -147,6 +147,7 @@ public:
 	inline float GetMaxY() const { return(_maxy); }
 	inline float GetMinZ() const { return(_minz); }
 	inline float GetMaxZ() const { return(_maxz); }
+	bool LineIntersectsZoneNoZLeaps(VERTEX start, VERTEX end, float step_mag, VERTEX *result, FACE **on);
 private:
 //	unsigned long m_Vertex;
 	unsigned long m_Faces;

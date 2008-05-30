@@ -3080,6 +3080,32 @@ void EntityList::DestroyTempPets(Mob *owner)
 	}
 }
 
+bool Entity::CheckCoordLosNoZLeaps(float cur_x, float cur_y, float cur_z, float trg_x, float trg_y, float trg_z, float perwalk)
+{
+	if(zone->map == NULL) {
+		return(true);
+	}
+	VERTEX myloc;
+	VERTEX oloc;
+	VERTEX hit;
+
+	myloc.x = cur_x;
+	myloc.y = cur_y;
+	myloc.z = cur_z+5;
+
+	oloc.x = trg_x;
+	oloc.y = trg_y;
+	oloc.z = trg_z+5;
+
+	if (myloc.x == oloc.x && myloc.y == oloc.y && myloc.z == oloc.z)
+		return true;
+
+	FACE *onhit;
+
+	if (!zone->map->LineIntersectsZoneNoZLeaps(myloc,oloc,perwalk,&hit,&onhit))
+		return true;
+	return false;
+}
 
 
 
