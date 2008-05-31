@@ -1639,10 +1639,8 @@ void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, SkillType attack_ski
 	CommonDamage(other, damage, spell_id, attack_skill, avoidable, buffslot, iBuffTic);
 	
 	if(damage > 0) {
-#ifdef FLEE_HP_RATIO
 		//see if we are gunna start fleeing
 		CheckFlee();
-#endif
 	}
 }
 

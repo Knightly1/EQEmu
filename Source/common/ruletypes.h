@@ -74,6 +74,17 @@ RULE_INT ( Zone,  NPCGlobalPositionUpdateInterval, 60000 ) //ms between interval
 RULE_INT ( Zone,  ClientLinkdeadMS, 180000) //the time a client remains link dead on the server after a sudden disconnection
 RULE_INT ( Zone,  GraveyardTimeMS, 1200000) //ms time until a player corpse is moved to a zone's graveyard, if one is specified for the zone
 RULE_BOOL ( Zone, EnableShadowrest, 0 ) // enables or disables the shadowrest zone feature for player corpses. Default is turned off.
+RULE_INT ( Zone, MQWarpExemptStatus, -1 ) //Lieka:  Required status level to exempt the MQWarpDetector.  Set to -1 to disable this feature.
+RULE_INT ( Zone, MQZoneExemptStatus, -1 ) //Lieka:  Required status level to exempt the MQZoneDetector.  Set to -1 to disable this feature.
+RULE_INT ( Zone, MQGateExemptStatus, -1 ) //Lieka:  Required status level to exempt the MQGateDetector.  Set to -1 to disable this feature.
+RULE_INT ( Zone, MQGhostExemptStatus, -1 ) //Lieka:  Required status level to exempt the MGhostDetector.  Set to -1 to disable this feature.
+RULE_BOOL ( Zone, EnableMQWarpDetector, true ) //Lieka:  Enable the MQWarp Detector.  Set to False to disable this feature.
+RULE_BOOL ( Zone, EnableMQZoneDetector, true ) //Lieka:  Enable the MQZone Detector.  Set to False to disable this feature.
+RULE_BOOL ( Zone, EnableMQGateDetector, true ) //Lieka:  Enable the MQGate Detector.  Set to False to disable this feature.
+RULE_BOOL ( Zone, EnableMQGhostDetector, true ) //Lieka:  Enable the MQGhost Detector.  Set to False to disable this feature.
+RULE_REAL ( Zone, MQWarpDetectorDistance, 4900 ) //Lieka:  Distance a player must travel between client to server location updates before a warp is registered.  30 allows for beyond GM speed without lag.
+RULE_REAL ( Zone, MQWarpLagThreshold, 140 ) //Lieka:  Distance beyond the Zone:MQWarpDetectorDistance that a player must travel within the MQWarpThresholdTimer amount of time before tripping the MQWarp detector.  Set to 0 to disable this feature.
+RULE_REAL ( Zone, MQWarpThresholdTimer, 90000 ) //Lieka:  Amount of time before the warp_threshold resets to the Zone:MQWarpLagThreshold value.  Default: 90000 (900 seconds/15 minutes).  Set to -1 to disable this feature.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Map )
@@ -115,6 +126,8 @@ RULE_INT ( Combat, NPCBashKickLevel, 6 ) //The level that npcs can KICK/BASH
 RULE_REAL ( Combat, ClientBaseCritChance, 0.0 ) //The base crit chance for all clients, this will stack with warrior's/zerker's crit chance.
 RULE_BOOL ( Combat, UseIntervalAC, false)
 RULE_INT ( Combat, PetAttackMagicLevel, 30)
+RULE_BOOL ( Combat, EnableFearPathing, true)
+RULE_INT ( Combat, FleeHPRatio, 25)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( NPC )

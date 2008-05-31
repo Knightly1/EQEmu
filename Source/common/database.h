@@ -118,6 +118,7 @@ public:
 	bool	MoveCharacterToZone(int32 iCharID, const char* iZonename);
 	bool	UpdateName(const char* oldname, const char* newname);
 	bool	SetHackerFlag(const char* accountname, const char* charactername, const char* hacked);
+	bool	SetMQDetectionFlag(const char* accountname, const char* charactername, const char* hacked, const char* zone);
 	bool	AddToNameFilter(const char* name);
 	bool	ReserveName(int32 account_id, char* name);
 	bool	CreateCharacter(uint32 account_id, char* name, int16 gender, int16 race, int16 class_, int8 str, int8 sta, int8 cha, int8 dex, int8 int_, int8 agi, int8 wis, int8 face);

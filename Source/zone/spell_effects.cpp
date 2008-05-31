@@ -632,19 +632,21 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #endif
 				//use resistance value for duration...
 				buffs[buffslot].ticsremaining = ((buffs[buffslot].ticsremaining * partial) / 100);
-				// Begin: Code to use Wiz fear code
-				CalculateNewFearpoint();
-				if(curfp) {
-					break;
-				}
-				// End: Code to use Wiz fear code
 
-#ifdef ENABLE_FEAR_PATHING
-				SetFeared(caster, buffs[buffslot].ticsremaining * 6000);
-#else				//poor man's fear
+				if(RuleB(Combat, EnableFearPathing)){
+					if(IsClient())
+					{
+						Stun(buffs[buffslot].ticsremaining * 6000 - (6000 - tic_timer.GetRemainingTime()));
+					}
+					// Begin: Code to use Wiz fear code
+					CalculateNewFearpoint();
+					if(curfp) {
+						break;
+					}
+				} else { //poor man's fear
 					//kathgar: Its basicly fear, they don't move
-				Stun(buffs[buffslot].ticsremaining * 6000);
-#endif
+					Stun(buffs[buffslot].ticsremaining * 6000 - (6000 - tic_timer.GetRemainingTime()));
+				}
 				break;
 			}
 
@@ -1687,8 +1689,11 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 
 			case SE_SummonPC:
 			{
-				if(IsClient())
+			if(IsClient()){
+					CastToClient()->cheat_timer.Start(3500, false);
 					CastToClient()->MovePC(zone->GetZoneID(), caster->GetX(), caster->GetY(), caster->GetZ(), caster->GetHeading(), 2, SummonPC);
+					Message(15, "You have been summoned!");
+				}
 				else
 					caster->Message(13, "This spell can only be cast on players.");
 
@@ -2840,17 +2845,17 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 
 			case SE_Fear:
 			{
-#ifdef ENABLE_FEAR_PATHING
-				SetFeared(NULL, 0);
-#endif
+				if(RuleB(Combat, EnableFearPathing)){
+					if(IsClient())
+						UnStun();
+					// Begin: Code to use Wiz fear code
+					if(curfp) {
+						curfp = false;
+						break;
+					}
+				}
 				// If fear pathing is over implemented, we can remove the the Stun() and UnStun() calls.
 				//
-				// Begin: Code to use Wiz fear code
-				if(curfp) {
-					curfp = false;
-					break;
-				}
-				// End: Code to use Wiz Fear code
 				UnStun();
 				break;
 			}

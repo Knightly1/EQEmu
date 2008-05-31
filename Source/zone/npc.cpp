@@ -540,6 +540,10 @@ bool NPC::Process()
 		}
 		
 		BuffProcess();
+		
+		if(curfp)
+			ProcessFlee();
+		
 		int32 bonus = 0;
 		
 		if(GetAppearance() == eaSitting)

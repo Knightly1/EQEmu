@@ -921,6 +921,7 @@ void Client::OPRezzAnswer(const EQApplicationPacket* app) {
 		return;
 	const Resurrect_Struct* ra = (const Resurrect_Struct*) app->pBuffer;
 	if (ra->action == 1) {
+		cheat_timer.Start(3500, false);
 		cout << "Player " << this->name << " got a " << (int16)spells[ra->spellid].base[0] << "% Rezz" << endl;
 		this->BuffFadeAll();
 		SetMana(0);
@@ -1481,6 +1482,7 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 		}
 		if(st)
 		{
+			cheat_timer.Start(3500, false);
 			Message(0, "Local: Summoning %s to %f, %f, %f", gms->charname, gms->x, gms->y, gms->z);
 			if (st->IsClient() && (st->CastToClient()->GetAnon() != 1 || this->Admin() >= st->CastToClient()->Admin()))
 				st->CastToClient()->MovePC((float)gms->x, (float)gms->y, (float)gms->z, this->GetHeading(), true);
@@ -1512,6 +1514,7 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 			else {
 				//all options have been exhausted
 				//summon our target...
+				cheat_timer.Start(3500, false);
 				if(GetTarget() && GetTarget()->IsCorpse()){
 					GetTarget()->CastToCorpse()->Summon(this, false);
 				}

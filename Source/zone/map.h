@@ -126,13 +126,12 @@ public:
 	
 	bool LocWithinNode( NodeRef _node, float x, float y ) const;
 	
-	bool LineIntersectsZone(VERTEX start, VERTEX end, float step, VERTEX *result, FACE **on = NULL) const;
-	
 	//nodes to these functions must be final
 	bool LineIntersectsNode( NodeRef _node, VERTEX start, VERTEX end, VERTEX *result, FACE **on = NULL) const;
 	bool LineIntersectsFace( PFACE cface, VERTEX start, VERTEX end, VERTEX *result) const;
 	float FindBestZ( NodeRef _node, VERTEX start, VERTEX *result, FACE **on = NULL) const;
-	
+	bool LineIntersectsZone(VERTEX start, VERTEX end, float step, VERTEX *result, FACE **on = NULL) const;
+		
 //	inline unsigned int		GetVertexNumber( ) {return m_Vertex; }
 	inline unsigned int		GetFacesNumber( ) const { return m_Faces; }
 //	inline PVERTEX	GetVertex( int _idx ) {return mFinalVertex + _idx;	}

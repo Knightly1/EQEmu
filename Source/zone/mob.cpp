@@ -98,13 +98,13 @@ Mob::Mob(const char*   in_name,
 		attack_dw_timer(2000),
 		ranged_timer(2000),
 		tic_timer(6000),
+		cheat_timer(0),
+		threshold_timer(0),
 		mana_timer(2000),
 		spellend_timer(0),
 		stunned_timer(0),
 		bardsong_timer(6000),
-#ifdef FLEE_HP_RATIO
 		flee_timer(FLEE_CHECK_TIMER),
-#endif
 		bindwound_timer(10000)
 	//	mezzed_timer(0)
 {
@@ -127,6 +127,9 @@ Mob::Mob(const char*   in_name,
 	SetMoving(false);
 	moved=false;
 
+	warp_threshold = 140;
+	last_warp_distance = 0;	
+	
 	_egnode = NULL;
 	adverrorinfo = 0;
 	name[0]=0;
@@ -236,7 +239,7 @@ Mob::Mob(const char*   in_name,
 //	guildeqid = GUILD_NONE;
 	
     spellend_timer.Disable();
-	
+	cheat_timer.Disable();
 	bardsong_timer.Disable();
 	bardsong = 0;
 	bardsong_target_id = 0;
@@ -281,14 +284,13 @@ Mob::Mob(const char*   in_name,
 	cur_wp_pause = 0;
 	patrol=0;
 	follow=0;
-#ifdef ENABLE_FEAR_PATHING
-	fear_state = fearStateNotFeared;
-	fear_path_state = NULL;
 	flee_mode = false;
-#ifdef FLEE_HP_RATIO
+	fear_walkto_x = -999999;
+	fear_walkto_y = -999999;
+	fear_walkto_z = -999999;
+	curfp = false;	
 	flee_timer.Start();
-#endif
-#endif
+
 	permarooted = (runspeed > 0) ? false : true;
 
 	movetimercompleted = false;
@@ -340,9 +342,6 @@ Mob::~Mob()
 	entity_list.RemoveFromTargets(this);
 	
 	safe_delete(trade);
-#ifdef ENABLE_FEAR_PATHING
-	safe_delete(fear_path_state);
-#endif
 	if(HadTempPets()){
 		entity_list.DestroyTempPets(this);
 	}
@@ -879,6 +878,7 @@ void Mob::ShowStats(Client* client) {
 	client->Message(0, "  STR: %i  STA: %i  DEX: %i  AGI: %i  INT: %i  WIS: %i  CHA: %i", GetSTR(), GetSTA(), GetDEX(), GetAGI(), GetINT(), GetWIS(), GetCHA());
 	client->Message(0, "  MR: %i  PR: %i  FR: %i  CR: %i  DR: %i", GetMR(), GetPR(), GetFR(), GetCR(), GetDR());
 	client->Message(0, "  Race: %i  BaseRace: %i  Texture: %i  HelmTexture: %i  Gender: %i  BaseGender: %i", GetRace(), GetBaseRace(), GetTexture(), GetHelmTexture(), GetGender(), GetBaseGender());
+	client->Message(0, "  Last Warp Distance: %f Threshold Remaining: %f", GetLWDistance(), GetWarpThreshold());
 	if (client->Admin() >= 100) {
 		client->Message(0, "  EntityID: %i  PetID: %i  OwnerID: %i  AIControlled: %i", this->GetID(), this->GetPetID(), this->GetOwnerID(), this->IsAIControlled());
 		if (this->IsClient()) {
@@ -1846,8 +1846,10 @@ bool Mob::HateSummon() {
 		entity_list.MessageClose(this, true, 500, 10, "%s says,'You will not evade me, %s!' ", GetCleanName(), GetHateTop()->GetName() );
 
 		// RangerDown - GMMove doesn't seem to be working well with players, so use MovePC for them, GMMove for NPC's
-		if (target->IsClient())
+		if (target->IsClient()) {
+			target->CastToClient()->cheat_timer.Start(3500,false); //Lieka:  Prevent Mob Summons from tripping hack detector.
 			target->CastToClient()->MovePC(zone->GetZoneID(), x_pos, y_pos, z_pos, target->GetHeading(), 0, SummonPC);
+		}
 		else
 			GetHateTop()->GMMove(x_pos, y_pos, z_pos, target->GetHeading());
         return true;
@@ -2262,41 +2264,6 @@ void Mob::SetTarget(Mob* mob) {
 	target = mob;
 	entity_list.UpdateHoTT(this);
 }
-
-
-void Mob::CalculateNewFearpoint()
-{
-	int loop = 0;
-	float ranx, rany, ranz;
-	curfp = false;
-	while (loop < 100) //Max 100 tries
-	{
-		int ran = 250 - (loop*2);
-		loop++;
-		ranx = GetX()+rand()%ran-rand()%ran;
-		rany = GetY()+rand()%ran-rand()%ran;
-		ranz = FindGroundZ(ranx,rany);
-		if (ranz == -999999)
-			continue;
-		float fdist = ranz - GetZ();
-		if (fdist >= -12 && fdist <= 12 && CheckCoordLosNoZLeaps(GetX(),GetY(),GetZ(),ranx,rany,ranz))
-		{
-			curfp = true;
-			break;
-		}
-	}
-	if (curfp)
-	{
-		fear_walkto_x = ranx;
-		fear_walkto_y = rany;
-		fear_walkto_z = ranz;
-	}
-	else //Break fear
-	{
-		BuffFadeByEffect(SE_Fear);
-	}
-}
-
 
 float Mob::FindGroundZ(float new_x, float new_y, float z_offset)
 {

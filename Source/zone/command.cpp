@@ -1364,6 +1364,7 @@ void command_summon(Client *c, const Seperator *sep)
 			c->Message(0, "You may not summon a player.");
 			return;
 		}
+		t->CastToClient()->cheat_timer.Start(3500,false);
 		c->Message(0, "Summoning player %s to %1.1f, %1.1f, %1.1f", t->GetName(), c->GetX(), c->GetY(), c->GetZ());
 		t->CastToClient()->MovePC(zone->GetZoneID(), c->GetX(), c->GetY(), c->GetZ(), c->GetHeading(), 2, GMSummon);
 	}
@@ -1409,9 +1410,11 @@ void command_zone(Client *c, const Seperator *sep)
 		}
 	}
 		
-	if (sep->IsNumber(2) || sep->IsNumber(3) || sep->IsNumber(4))
+	if (sep->IsNumber(2) || sep->IsNumber(3) || sep->IsNumber(4)){
 		//zone to specific coords
+		c->CastToClient()->cheat_timer.Start(3500,false);
 		c->MovePC(zoneid, atof(sep->arg[2]), atof(sep->arg[3]), atof(sep->arg[4]), 0.0f, 0);
+		}
 	else
 		//zone to safe coords
 		c->MovePC(zoneid, 0.0f, 0.0f, 0.0f, 0.0f, 0, ZoneToSafeCoords);
@@ -5938,8 +5941,8 @@ void command_fear(Client *c, const Seperator *sep) {
 //		c->Message(0, "...list - show a list of all fear hint points for this zone");
 //		c->Message(0, "...find [range] - show a list of all fear hint points eithin range of you");
 //		c->Message(0, "...del [id] - remove the fear hint 'id'");
-		c->Message(0, "...start - fears your target until you #fear stop them");
-		c->Message(0, "...stop - Stops fear on your target");
+//		c->Message(0, "...start - fears your target until you #fear stop them");
+//		c->Message(0, "...stop - Stops fear on your target");
 		return;
 	}
 	
@@ -5960,20 +5963,6 @@ void command_fear(Client *c, const Seperator *sep) {
 				c->Message(13, "Unable to spawn new NPC marker.");
 			//do we need to do anything else?
 		}
-#ifdef ENABLE_FEAR_PATHING
-	} else if(!strcasecmp(sep->arg[1], "start")) {
-		if(c->GetTarget() != NULL) {
-			c->GetTarget()->SetFeared(c, 999999);
-		} else {
-			c->Message(0, "You need a target,");
-		}
-	} else if(!strcasecmp(sep->arg[1], "stop")) {
-		if(c->GetTarget() != NULL) {
-			c->GetTarget()->SetFeared(NULL, 0);
-		} else {
-			c->Message(0, "You need a target,");
-		}
-#endif
 	} else if(!strcasecmp(sep->arg[1], "path")) {
 		if(zone->pathing == NULL) {
 			c->Message(13, "There is no fear grid file loaded for this zone.");

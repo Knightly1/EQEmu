@@ -1458,6 +1458,27 @@ bool Database::SetHackerFlag(const char* accountname, const char* charactername,
 	return true;
 }
 
+bool Database::SetMQDetectionFlag(const char* accountname, const char* charactername, const char* hacked, const char* zone) { //Lieka:  Utilize the "hacker" table, but also give zone information.
+
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char *query = 0;
+	int32	affected_rows = 0;
+
+	if (!RunQuery(query, MakeAnyLenString(&query, "INSERT INTO hackers(account,name,hacked,zone) values('%s','%s','%s','%s')", accountname, charactername, hacked, zone), errbuf, 0,&affected_rows)) {
+		cerr << "Error in SetMQDetectionFlag query '" << query << "' " << errbuf << endl;
+		return false;
+	}
+
+	safe_delete_array(query);
+	
+	if (affected_rows == 0)
+	{
+		return false;
+	}
+	
+	return true;
+}
+
 int8 Database::GetRaceSkill(int8 skillid, int8 in_race)
 {
 	int16 race_cap = 0;

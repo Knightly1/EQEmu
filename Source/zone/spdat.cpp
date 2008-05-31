@@ -704,3 +704,40 @@ bool IsFullDeathSaveSpell(int16 spell_id) {
 
 	return Result;
 }
+
+bool IsShadowStepSpell(int16 spell_id) {
+	if (IsEffectInSpell(spell_id, SE_ShadowStep)){
+		return true;
+
+	}
+	else {
+		return false;
+	}
+}
+
+bool IsSuccorSpell(int16 spell_id) {
+	if (IsEffectInSpell(spell_id, SE_Succor)){
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+bool IsTeleportSpell(int16 spell_id) {
+	if (IsEffectInSpell(spell_id, SE_Teleport)){
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+bool IsGateSpell(int16 spell_id) {
+	if (IsEffectInSpell(spell_id, SE_Gate)){
+		return true;
+	}
+	else {
+		return false;
+	}
+}

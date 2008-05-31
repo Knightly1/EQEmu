@@ -2303,8 +2303,8 @@ void Client::SetTint(sint16 in_slot, Color_Struct& color) {
 bool Client::CheckCheat(){
 	float dx=cheat_x-x_pos;
 	float dy=cheat_y-y_pos;
-	float result=sqrtf((dx*dx)+(dy*dy));
-	return result>70;
+	float result=((dx*dx)+(dy*dy));
+	return result>(RuleR(Zone, MQWarpDetectorDistance));
 }
 
 void Client::SetHideMe(bool flag)

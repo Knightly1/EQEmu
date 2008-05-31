@@ -536,6 +536,10 @@ bool IsAllianceSpellLine(int16 spell_id);
 bool IsDeathSaveSpell(int16 spell_id);
 bool IsFullDeathSaveSpell(int16 spell_id);
 bool IsPartialDeathSaveSpell(int16 spell_id);
+bool IsShadowStepSpell(int16 spell_id);
+bool IsSuccorSpell(int16 spell_id);
+bool IsTeleportSpell(int16 spell_id);
+bool IsGateSpell(int16 spell_id);
 
 int CalcPetHp(int levelb, int classb, int STA = 75);
 const char *GetRandPetName();

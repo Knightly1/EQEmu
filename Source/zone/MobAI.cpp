@@ -31,6 +31,7 @@ using namespace std;
 #include "StringIDs.h"
 #include "../common/MiscFunctions.h"
 #include "../common/rulesys.h"
+#include "features.h"
 
 #ifndef NEW_LoadSPDat
 	extern SPDat_Spell_Struct spells[SPDAT_RECORDS];
@@ -548,64 +549,34 @@ void Mob::AI_Process() {
 
 	// Begin: Additions for Wiz Fear Code
 	//
-	if(curfp) {
-
-		if(IsRooted()) {
-			//make sure everybody knows were not moving, for appearance sake
-			if(IsMoving())
-			{
-				SetHeading(CalculateHeadingToTarget(target->GetX(), target->GetY()));
-				SetRunAnimSpeed(0);
-				SendPosition();
-				SetMoving(false);
-				moved=false;
-			}
-			//continue on to attack code, ensuring that we execute the engaged code
-			engaged = true;
-		} else {
-			if(AImovement_timer->Check()) {
-				// Check if we have reached the last fear point
-				if((ABS(GetX()-fear_walkto_x) < 0.1) && (ABS(GetY()-fear_walkto_y) <0.1)) {
-					// Calculate a new point to run to
-					CalculateNewFearpoint();
+	if(RuleB(Combat, EnableFearPathing)){
+		if(curfp) {
+			if(IsRooted()) {
+				//make sure everybody knows were not moving, for appearance sake
+				if(IsMoving())
+				{
+					SetHeading(CalculateHeadingToTarget(target->GetX(), target->GetY()));
+					SetRunAnimSpeed(0);
+					SendPosition();
+					SetMoving(false);
+					moved=false;
 				}
-				CalculateNewPosition2(fear_walkto_x, fear_walkto_y, fear_walkto_z, GetRunspeed(), true);
+				//continue on to attack code, ensuring that we execute the engaged code
+				engaged = true;
+			} else {
+				if(AImovement_timer->Check()) {
+					// Check if we have reached the last fear point
+					if((ABS(GetX()-fear_walkto_x) < 0.1) && (ABS(GetY()-fear_walkto_y) <0.1)) {
+						// Calculate a new point to run to
+						CalculateNewFearpoint();
+					}
+					CalculateNewPosition2(fear_walkto_x, fear_walkto_y, fear_walkto_z, GetFearSpeed(), true);
+				}
+				return;
 			}
-			return;
 		}
 	}
-	// End: Additions for Wiz Fear Code
 	
-#ifdef ENABLE_FEAR_PATHING
-	if(fear_state != fearStateNotFeared) {
-		if(fear_state == fearStateStuck)
-			return;	//just be idle, we cant run anywhere.
-		
-		//otherwise we should be in some sort of moving state
-		
-		//if we are rooted, dont even try to move.
-		if(IsRooted()) {
-			//make sure everybody knows were not moving, for appearance sake
-			if(IsMoving())
-			{
-				SetHeading(CalculateHeadingToTarget(target->GetX(), target->GetY()));
-				SetRunAnimSpeed(0);
-				SendPosition();
-				SetMoving(false);
-				moved=false;
-			}
-			//continue on to attack code, ensuring that we execute the engaged code
-			engaged = true;
-		} else {
-			//see if its time to think about where to go next.
-			if(AImovement_timer->Check()) {
-				CalculateFearPosition();
-			}
-			return;
-		}
-	}
-#endif
-
 	// trigger EVENT_SIGNAL if required
 	if(IsNPC()) {
 		CastToNPC()->CheckSignal();

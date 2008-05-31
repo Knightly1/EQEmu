@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "../common/files.h"
+#include "../common/rulesys.h"
 #include "zone_profile.h"
 #include "map.h"
 #include "zone.h"
@@ -33,16 +34,13 @@
 
 extern Zone* zone;
 
-#ifdef ENABLE_FEAR_PATHING
-
 #define FEAR_PATHING_DEBUG
 
 
-#ifdef FLEE_HP_RATIO
 //this is called whenever we are damaged to process possible fleeing
 void Mob::CheckFlee() {
 	//if were allready fleeing, dont need to check more...
-	if(flee_mode)
+	if(flee_mode && curfp)
 		return;
 	
 	//dont bother if we are immune to fleeing
@@ -55,7 +53,7 @@ void Mob::CheckFlee() {
 	
 	//see if were possibly hurt enough
 	float ratio = GetHPRatio();
-	if(ratio >= FLEE_HP_RATIO)
+	if(ratio >= RuleI(Combat, FleeHPRatio))
 		return;
 	
 	//we might be hurt enough, check con now..
@@ -79,16 +77,16 @@ void Mob::CheckFlee() {
 	switch(con) {
 		//these values are not 100% researched
 		case CON_GREEN:
-			run_ratio = FLEE_HP_RATIO;
+			run_ratio = RuleI(Combat, FleeHPRatio);
 			break;
 		case CON_LIGHTBLUE:
-			run_ratio = FLEE_HP_RATIO * 0.8f;
+			run_ratio = RuleI(Combat, FleeHPRatio) * 8 / 10;
 			break;
 		case CON_BLUE:
-			run_ratio = FLEE_HP_RATIO * 0.6f;
+			run_ratio = RuleI(Combat, FleeHPRatio) * 6 / 10;
 			break;
 		default:
-			run_ratio = FLEE_HP_RATIO * 0.4f;
+			run_ratio = RuleI(Combat, FleeHPRatio) * 4 / 10;
 			break;
 	}
 	if(ratio < run_ratio) {
@@ -99,7 +97,7 @@ void Mob::CheckFlee() {
 
 void Mob::ProcessFlee() {
 	//see if we are still dying, if so, do nothing
-	if(GetHPRatio() < FLEE_HP_RATIO)
+	if(GetHPRatio() < (float)RuleI(Combat, FleeHPRatio))
 		return;
 	
 	//we are not dying anymore... see what we do next
@@ -110,49 +108,66 @@ void Mob::ProcessFlee() {
 	sint8 slot = GetBuffSlotFromType(SE_Fear);
 	if(slot == -1) {
 		//not feared... were done...
-		SetFeared(NULL, 0); //turn off our fear...
+		curfp = false;
 		return;
 	}
-	
-	//we are still feared...
-	
-	//if we are forged to run with fear, start the fear over again if
-	//we got into a stuck state when fleeing, since its not allowed now
-#ifdef FORCE_FEAR_TO_RUN
-	if(fear_state == fearStateStuck) {
-		//start up fear again running from our hate top
-		SetFeared(GetHateTop(), buffs[slot].ticsremaining);
-		return;
-	}
-#endif
-	
-	//otherwise, just use our last flee pathing state for fear
 }
 
-#endif	//FLEE_HP_RATIO
-
 float Mob::GetFearSpeed() {
-#ifdef FLEE_HP_RATIO
-	if(flee_mode) {
-		//we know ratio < FLEE_HP_RATIO
-		float speed = GetRunspeed();
-		float ratio = GetHPRatio();
-		
-		if(ratio < FLEE_HP_MINSPEED) {
-			ratio = FLEE_HP_RATIO-FLEE_HP_MINSPEED;
-		} else {
-			ratio = ratio - FLEE_HP_MINSPEED;
-		}
-		
-		speed -= speed * 0.8 * ratio / (FLEE_HP_RATIO-FLEE_HP_MINSPEED);
-		return(speed);
+    if(flee_mode) {
+	//we know ratio < FLEE_HP_RATIO
+	float speed = GetRunspeed();
+	float ratio = GetHPRatio();
+ 
+	if(ratio < FLEE_HP_MINSPEED) {
+		ratio = RuleI(Combat, FleeHPRatio)-FLEE_HP_MINSPEED;
+	} else {
+		ratio = ratio - FLEE_HP_MINSPEED;
 	}
-#endif
+ 
+	speed -= speed * 0.8 * ratio / (RuleI(Combat, FleeHPRatio)-FLEE_HP_MINSPEED);
+	return(speed);
+	}
 	return(GetRunspeed());
 }
 
+
+void Mob::CalculateNewFearpoint()
+{
+	int loop = 0;
+	float ranx, rany, ranz;
+	curfp = false;
+	while (loop < 100) //Max 100 tries
+	{
+		int ran = 250 - (loop*2);
+		loop++;
+		ranx = GetX()+rand()%ran-rand()%ran;
+		rany = GetY()+rand()%ran-rand()%ran;
+		ranz = FindGroundZ(ranx,rany);
+		if (ranz == -999999)
+			continue;
+		float fdist = ranz - GetZ();
+		if (fdist >= -12 && fdist <= 12 && CheckCoordLosNoZLeaps(GetX(),GetY(),GetZ(),ranx,rany,ranz))
+		{
+			curfp = true;
+			break;
+		}
+	}
+	if (curfp)
+	{
+		fear_walkto_x = ranx;
+		fear_walkto_y = rany;
+		fear_walkto_z = ranz;
+	}
+	else //Break fear
+	{
+		BuffFadeByEffect(SE_Fear);
+	}
+}
+
 //we need to start acting scared...
-void Mob::SetFeared(Mob *caster, int32 duration, bool flee) {
+//old fear function, kept for ref.
+/*void Mob::SetFeared(Mob *caster, int32 duration, bool flee) {
 	//special args to stop fear
 	if(caster == NULL && duration == 0) {
 		fear_state = fearStateNotFeared;
@@ -225,7 +240,7 @@ void Mob::SetFeared(Mob *caster, int32 duration, bool flee) {
 	cur_wp_z = GetZ();
 	fear_state = fearStateRunning;
 }
-
+//old fear function, kept for ref.
 bool Mob::FearTryStraight(Mob *caster, int32 duration, bool flee, VERTEX &hit, VERTEX &fear_vector) {
 	//gotta have somebody to run from
 	if(caster == NULL)
@@ -270,6 +285,7 @@ bool Mob::FearTryStraight(Mob *caster, int32 duration, bool flee, VERTEX &hit, V
 	return(false);
 }
 
+//old fear function, kept for ref.
 void Mob::CalculateFearPosition() {
 	if(zone->map == NULL || fear_state == fearStateStuck) {
 		return;	//just stand there
@@ -405,7 +421,7 @@ void Mob::CalculateFearPosition() {
 		
 		
 	*/
-	
+	/*
 	//first try our original fear vector again...
 	VERTEX start, end, hit, normalhit;
 	start.x = GetX() - fear_vector.x * 0.4;
@@ -508,7 +524,7 @@ void Mob::CalculateFearPosition() {
 		return;
 	}
 	*/
-	
+	/*
 	//cant run along our vector at all....
 	//one last ditch effort... try to move to the side a little
 	//along the minor component of the fear vector.
@@ -571,8 +587,8 @@ void Mob::CalculateFearPosition() {
 		GetX(), GetY(), GetZ(), normalhit.x, normalhit.y, normalhit.z);
 #endif
 #endif	//OLD_FEAR_PATHING
-}
-#endif
+}*/
+
 
 
 

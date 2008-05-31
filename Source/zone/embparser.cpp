@@ -494,6 +494,11 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 			ExportVar(packagename.c_str(), "target_zone_id", data);
 			break;
 		}
+		
+		case EVENT_CAST_ON:{
+			ExportVar(packagename.c_str(), "spell_id", data);
+			break;
+		}		
 
 		//nothing special about these events
 		case EVENT_DEATH:
@@ -506,7 +511,6 @@ void PerlembParser::Event(QuestEventID event, int32 npcid, const char * data, NP
 		case EVENT_ENTERZONE:
 		case EVENT_LEVEL_UP:
 		case EVENT_KILLED_MERIT:
-		case EVENT_CAST_ON:
 			break;
 
 		default: {

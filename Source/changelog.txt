@@ -2,7 +2,23 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
 ==05/30/2008
-Scorpious2k: (Derision/Wiz) Added code to implement fear
+Scorpious2k: (Derision/Wiz) Added code to implement fear.
+KLS: (Leika) Implemented detection of various MQ activities.
+KLS: EVENT_CAST_ON should now export $spell_id properly.
+KLS: Further expanded on fear implementation including addition of rules to govern it's behavior.
+KLS: Fear on clients still uses stun but the stun should match up with the buff duration in a more accurate manner.
+
+Hackers SQL table:
+DROP TABLE IF EXISTS `hackers`;
+CREATE TABLE `hackers` (
+  `id` int(4) NOT NULL auto_increment,
+  `account` text NOT NULL,
+  `name` text NOT NULL,
+  `hacked` text NOT NULL,
+  `zone` text,
+  `date` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
+  PRIMARY KEY  (`id`)
+) AUTO_INCREMENT=8; 
 
 ==04/26/2008
 KLS: Should have fixed discipline and combat ability timer overlap.

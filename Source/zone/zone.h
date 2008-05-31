@@ -108,7 +108,7 @@ public:
 	
 	int32	CountSpawn2();
 	ZonePoint* GetClosestZonePoint(float x, float y, float z, const char* to_name, float max_distance = 40000.0f);
-	ZonePoint* GetClosestZonePoint(float x, float y, float z, int32	to, float max_distance = 40000.0f);
+	ZonePoint* GetClosestZonePoint(float x, float y, float z, int32	to, float max_distance = 40000.0f, Client* client = NULL);
 	ZonePoint* GetClosestZonePointWithoutZone(float x, float y, float z, float max_distance = 40000.0f);
 	SpawnGroupList spawn_group_list;
 

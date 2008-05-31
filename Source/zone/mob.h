@@ -456,6 +456,9 @@ bool logpos;
 	inline Mob*			GetTarget()			const { return target; }
 	virtual void SetTarget(Mob* mob);
 	virtual inline float		GetHPRatio() const { return max_hp == 0 ? 0 : ((float)cur_hp/max_hp*100); }
+
+	float GetLWDistance()					{ return last_warp_distance; }
+	float GetWarpThreshold()				{ return warp_threshold; }
 	
 	bool IsLoggingEnabled() const { return(logging_enabled); }
 	void EnableLogging() { logging_enabled = true; }
@@ -715,15 +718,14 @@ bool logpos;
 
 	
 	int					GetCurWp(){ return cur_wp; }
-#ifdef ENABLE_FEAR_PATHING
-	void SetFeared(Mob *caster, int32 duration, bool flee = false);
+
+	//old fear function
+	//void SetFeared(Mob *caster, int32 duration, bool flee = false);
 	float GetFearSpeed();
-#ifdef FLEE_HP_RATIO
-	inline void StartFleeing() { SetFeared(GetHateTop(), FLEE_RUN_DURATION, true); }
+	//old fear: inline void StartFleeing() { SetFeared(GetHateTop(), FLEE_RUN_DURATION, true); }
+	inline void StartFleeing() { flee_mode = true; CalculateNewFearpoint(); }
 	void ProcessFlee();
 	void CheckFlee();
-#endif
-#endif
 	
 	inline bool			CheckAggro(Mob* other) {return hate_list.IsOnHateList(other);}
     sint8				CalculateHeadingToTarget(float in_x, float in_y);
@@ -784,6 +786,11 @@ bool logpos;
 	Shielders_Struct shielder[MAX_SHIELDERS];
 	Trade* trade;
 	
+	Timer cheat_timer; //Lieka:  Timer used to check for movement exemptions/client-based, unsolicited zone exemptions
+	Timer threshold_timer;  //Null:  threshold timer
+	float warp_threshold;   //Null:  threshold for warp detector
+	float last_warp_distance;  //Null:  last distance logged as a warp, used for logs and #showstats	
+
 	//temporary:
 	bool fix_pathing;
 	inline float GetCWPX() const { return(cur_wp_x); }
@@ -986,17 +993,14 @@ protected:
 	std::map<uint32,sint32> faction_bonuses; // Primary FactionID, Bonus
 	void	AddFactionBonus(uint32 pFactionID,sint32 bonus);
 	sint32	GetFactionBonus(uint32 pFactionID);
-#ifdef ENABLE_FEAR_PATHING
+
 	void CalculateFearPosition();
-	bool FearTryStraight(Mob *caster, int32 duration, bool flee, VERTEX &hit, VERTEX &fv);
+	//bool FearTryStraight(Mob *caster, int32 duration, bool flee, VERTEX &hit, VERTEX &fv);
 //	VERTEX fear_vector;
-	FearState fear_state;
-	MobFearState *fear_path_state;
+	//FearState fear_state;
+	//MobFearState *fear_path_state;
 	bool flee_mode;
-#ifdef FLEE_HP_RATIO
 	Timer flee_timer;
-#endif
-#endif
 	
 	bool	pAIControlled;
 	bool	roamer;

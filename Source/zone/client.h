@@ -152,6 +152,13 @@ typedef enum {
 	EvacToSafeCoords
 } ZoneMode;
 
+typedef enum {
+	MQWarp,
+	MQZone,
+	MQGate,
+	MQGhost
+} CheatTypes;
+
 class ClientFactory {
 public:
 	Client *MakeClient(EQStream* ieqs);
@@ -175,6 +182,8 @@ public:
 	void	Trader_StartTrader();
 	int8	WithCustomer();
 	bool	CheckCheat();
+	void	CheatDetected(CheatTypes Cheat);
+	bool	WarpDetection(bool CTimer, float Distance);	
 	virtual bool IsClient() const { return true; }
 	virtual void DBAWComplete(int8 workpt_b1, DBAsyncWork* dbaw);
 	bool	FinishConnState2(DBAsyncWork* dbaw);

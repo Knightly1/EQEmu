@@ -942,6 +942,15 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 		if(IsClient())
 		{
 			this->CastToClient()->CheckSongSkillIncrease(spell_id);
+			//Lieka start Edit:  Fixing Warp Detector triggered for Bard Songs
+			if ((IsGateSpell(spell_id)) ||//Lieka Edit Begin:  Checking effects within the spell, rather than hardcoding Spell IDs.
+				(IsTeleportSpell(spell_id)) ||
+				(IsSuccorSpell(spell_id)) ||
+				(IsShadowStepSpell(spell_id)) ||
+				(IsGateSpell(spell_id)))
+				{
+						this->cheat_timer.Start(2000,false);
+				}
 		}
 		// go again in 6 seconds
 //this is handled with bardsong_timer
@@ -971,6 +980,14 @@ void Mob::CastedSpellFinished(int16 spell_id, int32 target_id, int16 slot, int16
 				c->CheckIncreaseSkill(CHANNELING, regain_conc ? 5 : 0);
 				
 				c->CheckSpecializeIncrease(spell_id);
+				if ((IsGateSpell(spell_id)) ||//Lieka Edit Begin:  Checking effects within the spell, rather than hardcoding Spell IDs.
+					(IsTeleportSpell(spell_id)) ||
+					(IsSuccorSpell(spell_id)) ||
+					(IsShadowStepSpell(spell_id)) ||
+					(IsGateSpell(spell_id)))
+					{
+					c->cheat_timer.Start(2000,false); 
+					}				
 			}
 			
 			
@@ -2266,6 +2283,16 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 	action->instrument_mod = GetInstrumentMod(spell_id);
 	action->buff_unknown = 0;
 
+
+	if ((IsGateSpell(spell_id)) ||
+		(IsTeleportSpell(spell_id)) ||
+		(IsSuccorSpell(spell_id)) ||
+		(IsShadowStepSpell(spell_id)) ||
+		(IsGateSpell(spell_id)))
+		{
+				spelltar->cheat_timer.Start(2000,false);
+		}	
+	
 	if(spelltar->IsClient())	// send to target
 		spelltar->CastToClient()->QueuePacket(action_packet);
 	if(IsClient())	// send to caster
@@ -2650,7 +2677,7 @@ bool Mob::IsImmuneToSpell(int16 spell_id, Mob *caster)
 			mlog(SPELLS__RESISTS, "We are immune to Fear spells.");
 			caster->Message_StringID(MT_Shout, IMMUNE_FEAR);
 			return true;
-		} else if(IsClient() && caster->IsClient())
+		} else if(IsClient() && caster->IsClient() && (caster->CastToClient()->GetGM() == false))
 		{
 			mlog(SPELLS__RESISTS, "Clients cannot fear eachother!");
 			caster->Message_StringID(MT_Shout, IMMUNE_FEAR);

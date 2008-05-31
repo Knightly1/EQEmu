@@ -772,6 +772,64 @@ void Client::Handle_Connect_OP_UpdateAA(const EQApplicationPacket *app) {
 	SendAATable();
 }
 
+bool Client::WarpDetection(bool CTimer, float distance)
+{	
+	float last_distance;
+	if (threshold_timer.GetRemainingTime() < 1 && ((RuleR(Zone, MQWarpThresholdTimer)) != -1)) {   //Null:  If the timer is done, reset threshold, then reset timer //Lieka:  Integrated into Rules System.
+		warp_threshold = (RuleR(Zone, MQWarpLagThreshold));  //Lieka:  Integrated warp_threshold value into Rules System.  Original Value was 140.
+		threshold_timer.Start((RuleR(Zone, MQWarpThresholdTimer)), false); //Lieka:  Integrated timer duration value into the Rules System.  Original Value was 90000 (90 seconds).
+	}
+	if ((CTimer))
+		return false;
+	else
+	{
+		//Null Edit:  made warp detector fire only when the sum of all the warps in a period of time are greater than a threshold
+		//this makes the warp detector more lax on small warps, but still drops the hammer on the big ones.
+		if (distance>140.0f) {
+			last_distance = (distance-140.0f);
+			warp_threshold -= last_distance;
+			last_warp_distance = last_distance;
+		}
+	   return (warp_threshold < 0); //Null:  If the threshold is met, hit them with the hammer
+	}
+}
+
+void Client::CheatDetected(CheatTypes CheatType)
+{ //[Paddy] ToDo: Break warp down for special zones. Some zones have special teleportation pads or bad .map files which can trigger the detector without a legit zone request.
+	switch (CheatType)
+	{
+		case MQWarp://Some zones have serious issues, turning off warp flags for these zones.
+			if(!((zone->GetZoneID()==2)/*qeynos2*/ || (zone->GetZoneID()==9)/*freportw*/|| (zone->GetZoneID()==10)/*freporte*/ || (zone->GetZoneID()==34)/*nro*/ || (zone->GetZoneID()==24)/*erudin*/ || (zone->GetZoneID()==75)/*Paineel*/ || (zone->GetZoneID()==62)/*Felwitheb*/) && (RuleB(Zone, EnableMQWarpDetector) && ((this->Admin() < RuleI(Zone, MQWarpExemptStatus) || (RuleI(Zone, MQWarpExemptStatus)) == -1)))) //Lieka:  Exempt these zones from the MQWarp detector (This may be depricated now, but these zones were problems in the past)
+			{
+				char hString[250];
+				sprintf(hString, "/MQWarp with location %.2f, %.2f, %.2f", GetX(), GetY(), GetZ());
+				database.SetMQDetectionFlag(this->account_name,this->name, hString, zone->GetShortName());
+				warp_threshold = 1;   //Null:  bringing the detector back up to one to avoid chain detections.
+			}
+			break;
+		case MQZone:
+			if(!( (zone->GetZoneID()==31)/*sola*/ || (zone->GetZoneID()==32)/*solb*/ || (zone->GetZoneID()==25)/*nek*/ || (zone->GetZoneID()==27)/*lava*/ ) && (RuleB(Zone, EnableMQZoneDetector))&& ((this->Admin() < RuleI(Zone, MQZoneExemptStatus) || (RuleI(Zone, MQZoneExemptStatus)) == -1))) //Lieka:  Exempt these zones from the MQZone detector (This may be depricated now, but were problems in the past)
+			{
+				char hString[250];
+				sprintf(hString, "/MQZone used at %.2f, %.2f, %.2f", GetX(), GetY(), GetZ());
+				database.SetMQDetectionFlag(this->account_name,this->name, hString, zone->GetShortName());
+			}
+			break;
+		case MQGate:
+			if (RuleB(Zone, EnableMQGateDetector)&& ((this->Admin() < RuleI(Zone, MQGateExemptStatus) || (RuleI(Zone, MQGateExemptStatus)) == -1))) {
+				Message(13, "Illegal gate request.");
+				database.SetMQDetectionFlag(this->account_name,this->name, "/MQGate", zone->GetShortName());
+				this->SetZone(this->GetZoneID()); //Lieka:  Prevent the player from zoning, place him back in the zone where he tried to originally /gate.
+			}
+			break;
+		case MQGhost: //Lieka:  Not currently implemented, but the framework is in place - just needs detection scenarios identified
+			if (RuleB(Zone, EnableMQGhostDetector) && ((this->Admin() < RuleI(Zone, MQGhostExemptStatus) || (RuleI(Zone, MQGhostExemptStatus)) == -1))) {
+				database.SetMQDetectionFlag(this->account_name,this->name, "/MQGhost", zone->GetShortName());
+			}
+			break;
+	}
+}
+
 void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 {
 	if (IsAIControlled())
@@ -796,8 +854,25 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 	dist += tmp*tmp;
 	tmp = y_pos - ppu->y_pos;
 	dist += tmp*tmp;
-	tmp = z_pos - ppu->z_pos;
-	dist += tmp*tmp;
+	dist = sqrt(dist);
+	/*[Paddy] Cutting out the Z-Axis check. Not necessary and prevents long falls from triggering */
+	//tmp = z_pos - ppu->z_pos;
+	//dist += tmp*tmp;
+	
+	/* Begin Cheat Detection*/
+	if ((this->cheat_timer.GetRemainingTime())>1 && (this->cheat_timer.Enabled())) //Lieka:  Check to see if the cheat (exemption) timer is active - this is for debugging
+	{
+		//Spell timer is currently active
+		//worldserver.SendEmoteMessage(0,0,0,13,"Timer is Active.  %d True: %s",this->cheat_timer.GetRemainingTime(), (this->cheat_timer.GetRemainingTime()>1)? "true" : "false"); //Leika Edit:  Enable this to get debug messages.
+	}
+	else //Timer has elapsed or hasn't started, let's do a Warp Check
+	{
+		if ((WarpDetection(false, dist)) && ((admin <= RuleI(Zone, MQWarpExemptStatus)) || (RuleI(Zone, MQWarpExemptStatus) == -1))) //Exempt from warp detection if admin level is >  Rule:Zone:MQWarpExemptStatus
+		{
+			printf("Warping Detected by %S Acct: %s Distance: %f.", GetName(), AccountName(), GetLWDistance());
+			CheatDetected(MQWarp); //Lieka:  Execute MQWarp function on offending player
+		}
+	}
 	if(dist > 50.0f*50.0f) {
 		printf("%s: Large position change: %f units\n", GetName(), sqrtf(dist));
 		printf("Coords: (%.4f, %.4f, %.4f) -> (%.4f, %.4f, %.4f)\n",
@@ -3154,6 +3229,7 @@ void Client::Handle_OP_GMSummon(const EQApplicationPacket *app)
 		cout << "Wrong size on OP_GMSummon. Got: " << app->size << ", Expected: " << sizeof(GMSummon_Struct) << endl;
 		return;
 	}
+	cheat_timer.Start(5000, false);
 	OPGMSummon(app);
 	return;
 }
@@ -6029,7 +6105,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 // vesuvias - appearence fix
 	beard		= m_pp.beard;
 	
-	
+	cheat_timer.Start(2500,false);
 	
 	//if we zone in with invalid Z, fix it.
 	if (zone->map != NULL) {
@@ -6675,6 +6751,7 @@ void Client::CompleteConnect()
 		}
 	}
 	
+	cheat_timer.Start(2500,false);
 	client_data_loaded = true;
 	int x;
 	for(x=0;x<8;x++)

@@ -102,19 +102,6 @@ Zone extensions and features
 #define QUEST_TEMPLATES_DIRECTORY "templates"
 #endif
 
-//Warning: this does not work very well:
-//Uncomment to enable map based fear pathing
-//#define ENABLE_FEAR_PATHING 1
-
-#ifdef ENABLE_FEAR_PATHING
-//Uncomment to cause fear to violate LOS if all else failes
-//as opposed to make the mob stand there.
-#define FORCE_FEAR_TO_RUN 1
-
-//both of these require fear pathing enabled.
-//the HP ratio, below which mobs walk away from their attacker
-//comment this out to disable it.
-//#define FLEE_HP_RATIO 25
 //the min ratio at which a mob's speed is reduced
 #define FLEE_HP_MINSPEED 10
 //number of tics to try to run straight away before looking again
@@ -122,7 +109,6 @@ Zone extensions and features
 //number of miliseconds between when a mob will check its flee state
 //this is only checked when the mob is damaged.
 #define FLEE_CHECK_TIMER 2000
-#endif
 
 //enable functionality to send log message to the client
 //it still needs to be enabled with the #logs command

@@ -34,12 +34,13 @@ Copyright (C) 2001-2002  EQEMu Development Team (http://eqemu.org)
 #define snprintf	_snprintf
 #endif
 
+extern Zone* zone;
+
 //Do we believe the normals from the map file?
 //you want this enabled if it dosent break things.
 //#define TRUST_MAPFILE_NORMALS
 
 //#define OPTIMIZE_QT_LOOKUPS
-extern Zone* zone;
 #define EPS 0.002f	//acceptable error
 
 //#define DEBUG_SEEK 1
@@ -856,7 +857,6 @@ void Map::Normalize(VERTEX *p) {
 	p->y /= len;
 	p->z /= len;
 }
-
 
 bool Map::LineIntersectsZoneNoZLeaps(VERTEX start, VERTEX end, float step_mag, VERTEX *result, FACE **on) {
 	float z = -999999;
