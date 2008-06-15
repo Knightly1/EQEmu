@@ -115,22 +115,19 @@ void Mob::ProcessFlee() {
 
 float Mob::GetFearSpeed() {
     if(flee_mode) {
-	//we know ratio < FLEE_HP_RATIO
-	float speed = GetRunspeed();
-	float ratio = GetHPRatio();
- 
-	if(ratio < FLEE_HP_MINSPEED) {
-		ratio = RuleI(Combat, FleeHPRatio)-FLEE_HP_MINSPEED;
-	} else {
-		ratio = ratio - FLEE_HP_MINSPEED;
-	}
- 
-	speed -= speed * 0.8 * ratio / (RuleI(Combat, FleeHPRatio)-FLEE_HP_MINSPEED);
-	return(speed);
-	}
-	return(GetRunspeed());
-}
+        //we know ratio < FLEE_HP_RATIO
+        float speed = GetRunspeed();
+        float ratio = GetHPRatio();
 
+        if(ratio < FLEE_HP_MINSPEED) 
+                ratio = FLEE_HP_MINSPEED;
+
+        speed = speed * 0.8 * ratio / 100;
+ 
+        return(speed);
+    }
+    return(GetRunspeed());
+}
 
 void Mob::CalculateNewFearpoint()
 {

@@ -149,6 +149,7 @@ typedef enum {
 	ZoneUnsolicited,
 	GateToBindPoint,		// Always send RequestClientZoneChange_Struct to client: Gate spell or Translocate To Bind Point spell
 	SummonPC,				// In-zone GMMove() always: Call of the Hero spell or some other type of in zone only summons
+	Rewind,					// Lieka:  Summon to /rewind location.
 	EvacToSafeCoords
 } ZoneMode;
 

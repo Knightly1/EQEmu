@@ -1,5 +1,21 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==06/14/2008
+Scorpious2k(Trevius): Door names can now go beyond the 16 char limit to allow doors and other objects from later expansions
+                       to be used. The new max is 32 characters.
+Scorpious2k(Derision): New fear adjustment to cause mobs to flee at the correct rates instead of running very fast at certain
+                        percentages of health.
+Scorpious2k(TheLieka): Limit the number of connections for an IP address There are 2 new rule values.
+                World:MaxClientsPerIP = Maximum number of simultaneous EQ Client connections allowed per IP address.
+                  Set the rule value to -1 to disable this feature.
+                World:ExemptMaxClientsStatus = Minimum Account status to exempt the MaxClientsPerIP rule. This is
+                  helpful for the inevitable random family of 16 that live together, and all want to play on your server,
+                  as well as GMs, Devs, and QA staff. Again, set the rule value to -1 to disable this feature.
+Scorpious2k(TheLieka): Added /rewind command
+Scorpious2k(Striat): Quest Commands for Temp Race, Texture, Size and Gender Changes
+
+Required sql:
+ALTER TABLE `doors` MODIFY COLUMN `name` VARCHAR(32) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL;
 
 ==05/30/2008
 Scorpious2k: (Derision/Wiz) Added code to implement fear.

@@ -314,6 +314,7 @@ void MapOpcodes() {
 	ConnectedOpcodes[OP_WorldUnknown001] = &Client::Handle_OP_Ignore;
 	ConnectedOpcodes[OP_LoadSpellSet] = &Client::Handle_OP_LoadSpellSet;
 	ConnectedOpcodes[OP_AutoFire] = &Client::Handle_OP_AutoFire;
+	ConnectedOpcodes[OP_Rewind] = &Client::Handle_OP_Rewind;
 	
 }
 
@@ -880,7 +881,35 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 		printf("Deltas: (%.2f, %.2f, %.2f) -> (%.2f, %.2f, %.2f)\n",
 			delta_x, delta_y, delta_z, ppu->delta_x, ppu->delta_y, ppu->delta_z);
 	}
-	
+
+//Lieka:  Check to see if PPU should trigger an update to the rewind position.
+	float rewind_x_diff = 0;
+	float rewind_y_diff = 0;
+	float rewind_z_diff = 0;
+
+	rewind_x_diff = ppu->x_pos - rewind_x;
+	rewind_x_diff *= rewind_x_diff;
+	rewind_y_diff = ppu->y_pos - rewind_y;
+	rewind_y_diff *= rewind_y_diff;
+
+	//Lieka:  We only need to store updated values if the player has moved.
+	//If the player has moved more than  units for x or y, then we'll store
+	//his pre-PPU x and y for /rewind, in case he gets stuck.
+	if ((rewind_x_diff > 750) || (rewind_y_diff > 750)) { 
+		rewind_x = x_pos;
+		rewind_y = y_pos;
+		rewind_z = z_pos;	
+	}
+
+	//Lieka:  If the PPU was a large jump, such as a cross zone gate or Call of Hero, 
+	//just update rewind coords to the new ppu coords.  This will prevent exploitation.
+
+	if ((rewind_x_diff > 5000) || (rewind_y_diff > 5000)) { 
+		rewind_x = ppu->x_pos;
+		rewind_y = ppu->y_pos;
+		rewind_z = ppu->z_pos;	
+	}	
+
 	// solar: a very low chance to improve at sense heading, since
 	// the client doesn't send an opcode for the key anymore, ever
 	// since they made it useless on live
@@ -949,6 +978,7 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 			sa_out->parameter = 0;
 			entity_list.QueueClients(this, outapp, true);
 			safe_delete(outapp);
+			rewind_timer.Start(30000, true);
 		}
 	}
 	
@@ -6917,4 +6947,13 @@ void Client::Handle_OP_AutoFire(const EQApplicationPacket *app)
 	bool *af = (bool*)app->pBuffer;
 	auto_fire = *af;
 	SetAttackTimer();
+}
+void Client::Handle_OP_Rewind(const EQApplicationPacket *app)
+{
+	if ((rewind_timer.GetRemainingTime() > 1 && rewind_timer.Enabled())) {
+			Message_StringID(MT_System, 4059); //You must wait a bit longer before using the rewind command again. 
+	} else {
+		CastToClient()->MovePC(zone->GetZoneID(), rewind_x, rewind_y, rewind_z, 0, 2, Rewind);	
+		rewind_timer.Start(30000, true);
+	}
 }

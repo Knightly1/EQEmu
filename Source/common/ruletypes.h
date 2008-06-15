@@ -67,6 +67,8 @@ RULE_CATEGORY_END()
 RULE_CATEGORY( World )
 RULE_INT ( World, ZoneAutobootTimeoutMS, 60000 )
 RULE_INT ( World, ClientKeepaliveTimeoutMS, 65000 )
+RULE_INT ( World, MaxClientsPerIP, -1 ) //Lieka Edit: Maximum number of clients allowed to connect per IP address.  Default value: -1 (feature disabled)
+RULE_INT ( World, ExemptMaxClientsStatus, -1 ) //Lieka Edit: Exempt accounts from the MaxClientsPerIP rule, if their status is >= this value.  Default value: -1 (feature disabled)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Zone )

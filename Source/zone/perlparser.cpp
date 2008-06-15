@@ -1644,6 +1644,118 @@ XS(XS__repopzone)
 	XSRETURN_EMPTY;
 }
 
+XS(XS__npcrace);
+XS(XS__npcrace)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: npcrace(race_id)");
+
+	int	race_id = (int)SvIV(ST(0));
+
+	quest_manager.npcrace(race_id);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__npcgender);
+XS(XS__npcgender)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: npcgender(gender_id)");
+
+	int	gender_id= (int)SvIV(ST(0));
+
+	quest_manager.npcgender(gender_id);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__npcsize);
+XS(XS__npcsize)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: npcsize(newsize)");
+
+	int	newsize = (int)SvIV(ST(0));
+
+	quest_manager.npcsize(newsize);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__npctexture);
+XS(XS__npctexture)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: npctexture(newtexture)");
+
+	int	newtexture = (int)SvIV(ST(0));
+
+	quest_manager.npctexture(newtexture);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__playerrace);
+XS(XS__playerrace)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: playerrace(race_id)");
+
+	int	race_id = (int)SvIV(ST(0));
+
+	quest_manager.playerrace(race_id);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__playergender);
+XS(XS__playergender)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: playergender(gender_id)");
+
+	int	gender_id= (int)SvIV(ST(0));
+
+	quest_manager.playergender(gender_id);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__playersize);
+XS(XS__playersize)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: playersize(newsize)");
+
+	int	newsize = (int)SvIV(ST(0));
+
+	quest_manager.playersize(newsize);
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__playertexture);
+XS(XS__playertexture)
+{
+	dXSARGS;
+	if (items != 1)
+		Perl_croak(aTHX_ "Usage: playertexture(newtexture)");
+
+	int	newtexture = (int)SvIV(ST(0));
+
+	quest_manager.playertexture(newtexture);
+
+	XSRETURN_EMPTY;
+}
+
 /*
 
 This is the callback perl will look for to setup the
@@ -1760,6 +1872,14 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "depopall"), XS__depopall, file);
 		newXS(strcpy(buf, "depopzone"), XS__depopzone, file);
 		newXS(strcpy(buf, "repopzone"), XS__repopzone, file);
+		newXS(strcpy(buf, "npcrace"), XS__npcrace, file);
+		newXS(strcpy(buf, "npcgender"), XS__npcgender, file);
+		newXS(strcpy(buf, "npcsize"), XS__npcsize, file);
+		newXS(strcpy(buf, "npctexture"), XS__npctexture, file);
+		newXS(strcpy(buf, "playerrace"), XS__playerrace, file);
+		newXS(strcpy(buf, "playergender"), XS__playergender, file);
+		newXS(strcpy(buf, "playersize"), XS__playersize, file);
+		newXS(strcpy(buf, "playertexture"), XS__playertexture, file);
 	XSRETURN_YES;
 }
 

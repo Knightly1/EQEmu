@@ -96,6 +96,28 @@ ClientListEntry* ClientList::GetCLE(int32 iID) {
 	return 0;
 }
 
+ //Lieka Edit Begin:  Check current CLE Entry IPs against incoming connection
+
+void ClientList::GetCLEIP(int32 iIP) {
+	ClientListEntry* countCLEIPs = 0;
+	LinkedListIterator<ClientListEntry*> iterator(clientlist);
+
+	int IPInstances = 0;
+	iterator.Reset();
+	while(iterator.MoreElements()) {
+		countCLEIPs = iterator.GetData();
+		if ((countCLEIPs->GetIP() == iIP) && ((countCLEIPs->Admin() <= (RuleI(World, ExemptMaxClientsStatus))) || (RuleI(World, ExemptMaxClientsStatus) < 0))) {
+			IPInstances++;
+			if (IPInstances > (RuleI(World, MaxClientsPerIP))){
+				countCLEIPs->SetOnline(CLE_Status_Offline);
+				iterator.RemoveCurrent();
+			}
+		}
+		iterator.Advance();
+	}
+}
+//Lieka Edit End
+
 ClientListEntry* ClientList::FindCharacter(const char* name) {
 	LinkedListIterator<ClientListEntry*> iterator(clientlist);
 

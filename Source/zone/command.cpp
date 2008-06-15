@@ -3312,9 +3312,9 @@ void command_fixmob(Client *c, const Seperator *sep)
 		c->Message(0,"Error: this command requires an NPC target");
 	else if (strcasecmp(sep->arg[1], "nextrace") == 0) {
 		// Set to next race
-		if (target->GetRace() == 329) {
-			target->SendIllusionPacket(1);
-			c->Message(0, "Race=1");
+		if (target->GetRace() == 473) {
+			target->SendIllusionPacket(0);
+			c->Message(0, "Race=0");
 		}
 		else {
 			target->SendIllusionPacket(target->GetRace()+1);
@@ -3323,9 +3323,9 @@ void command_fixmob(Client *c, const Seperator *sep)
 	}
 	else if (strcasecmp(sep->arg[1], "prevrace") == 0) {
 		// Set to previous race
-		if (target->GetRace() == 1) {
-			target->SendIllusionPacket(329);
-			c->Message(0, "Race=%i",329);
+		if (target->GetRace() == 0) {
+			target->SendIllusionPacket(473);
+			c->Message(0, "Race=%i",473);
 		}
 		else {
 			target->SendIllusionPacket(target->GetRace()-1);
@@ -3335,8 +3335,8 @@ void command_fixmob(Client *c, const Seperator *sep)
 	else if (strcasecmp(sep->arg[1], "gender") == 0) {
 		// Cycle through the 3 gender modes
 		if (target->GetGender() == 0) {
-			target->SendIllusionPacket(target->GetRace(), 3);
-			c->Message(0, "Gender=%i",3);
+			target->SendIllusionPacket(target->GetRace(), 2);
+			c->Message(0, "Gender=%i",2);
 		}
 		else {
 			target->SendIllusionPacket(target->GetRace(), target->GetGender()-1);
@@ -3346,8 +3346,8 @@ void command_fixmob(Client *c, const Seperator *sep)
 	else if (strcasecmp(sep->arg[1], "nexttexture") == 0) {
 		// Set to next texture
 		if (target->GetTexture() == 25) {
-			target->SendIllusionPacket(target->GetRace(), target->GetGender(), 1);
-			c->Message(0, "Texture=1");
+			target->SendIllusionPacket(target->GetRace(), target->GetGender(), 0);
+			c->Message(0, "Texture=0");
 		}
 		else {
 			target->SendIllusionPacket(target->GetRace(), target->GetGender(), target->GetTexture()+1);
@@ -3356,7 +3356,7 @@ void command_fixmob(Client *c, const Seperator *sep)
 	}
 	else if (strcasecmp(sep->arg[1], "prevtexture") == 0) {
 		// Set to previous texture
-		if (target->GetTexture() == 1) {
+		if (target->GetTexture() == 0) {
 			target->SendIllusionPacket(target->GetRace(), target->GetGender(), 25);
 			c->Message(0, "Texture=%i",25);
 		}
@@ -3368,8 +3368,8 @@ void command_fixmob(Client *c, const Seperator *sep)
 	else if (strcasecmp(sep->arg[1], "nexthelm") == 0) {
 		// Set to next helm.  Only noticed a difference on giants.
 		if (target->GetHelmTexture() == 25) {
-			target->SendIllusionPacket(target->GetRace(), target->GetGender(), target->GetTexture(), 1);
-			c->Message(0, "HelmTexture=1");
+			target->SendIllusionPacket(target->GetRace(), target->GetGender(), target->GetTexture(), 0);
+			c->Message(0, "HelmTexture=0");
 		}
 		else {
 			target->SendIllusionPacket(target->GetRace(), target->GetGender(), target->GetTexture(), target->GetHelmTexture()+1);
@@ -3378,7 +3378,7 @@ void command_fixmob(Client *c, const Seperator *sep)
 	}
 	else if (strcasecmp(sep->arg[1], "prevhelm") == 0) {
 		// Set to previous helm.  Only noticed a difference on giants.
-		if (target->GetHelmTexture() == 1) {
+		if (target->GetHelmTexture() == 0) {
 			target->SendIllusionPacket(target->GetRace(), target->GetGender(), target->GetTexture(), 25);
 			c->Message(0, "HelmTexture=%i",25);
 		}
@@ -3388,7 +3388,6 @@ void command_fixmob(Client *c, const Seperator *sep)
 		}
 	}
 }
-
 void command_gmspeed(Client *c, const Seperator *sep)
 {
 	bool state=atobool(sep->arg[1]);

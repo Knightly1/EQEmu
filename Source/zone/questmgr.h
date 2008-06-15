@@ -138,6 +138,14 @@ public:
 	void forcedooropen(int32 doorid);
 	void forcedoorclose(int32 doorid);
 	bool isdooropen(int32 doorid);
+	void npcrace(int race_id);
+	void npcgender(int gender_id);
+	void npcsize(int newsize);
+	void npctexture(int newtexture);
+	void playerrace(int race_id);
+	void playergender(int gender_id);
+	void playersize(int newsize);
+	void playertexture(int newtexture);
 	
 	//not in here because it retains perl types
 	//thing ChooseRandom(array_of_things)

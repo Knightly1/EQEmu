@@ -456,6 +456,11 @@ bool Client::HandlePacket(const EQApplicationPacket *app) {
 				eqs->Close();
 				break;
 			}
+
+			if (RuleI(World, MaxClientsPerIP) >= 0) {
+            client_list.GetCLEIP(this->GetIP());  //Lieka Edit Begin:  Check current CLE Entry IPs against incoming connection
+            }
+
 			EnterWorld_Struct *ew=(EnterWorld_Struct *)app->pBuffer;
 			strncpy(char_name, ew->name, 64);
 			

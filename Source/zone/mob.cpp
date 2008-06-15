@@ -102,6 +102,7 @@ Mob::Mob(const char*   in_name,
 		threshold_timer(0),
 		mana_timer(2000),
 		spellend_timer(0),
+		rewind_timer(30000), //Lieka:  Timer used for determining amount of time between actual player position updates for /rewind.
 		stunned_timer(0),
 		bardsong_timer(6000),
 		flee_timer(FLEE_CHECK_TIMER),
@@ -126,6 +127,9 @@ Mob::Mob(const char*   in_name,
 	AI_Init();
 	SetMoving(false);
 	moved=false;
+ 	rewind_x = 0;		//Lieka: Stored x_pos for /rewind
+ 	rewind_y = 0;		//Lieka: Stored y_pos for /rewind
+ 	rewind_z = 0;		//Lieka: Stored z_pos for /rewind
 
 	warp_threshold = 140;
 	last_warp_distance = 0;	

@@ -39,7 +39,7 @@ Doors::Doors(const Door* door)
 	db_id = door->db_id;
 	door_id = door->door_id;
 	strncpy(zone_name,door->zone_name,16);
-	strncpy(door_name,door->door_name,16);
+	strncpy(door_name,door->door_name,32);
 	pos_x = door->pos_x;
 	pos_y = door->pos_y;
 	pos_z = door->pos_z;
@@ -458,7 +458,7 @@ bool ZoneDatabase::LoadDoors(sint32 iDoorCount, Door *into, const char *zone_nam
 			into[r].db_id = atoi(row[0]);
 			into[r].door_id = atoi(row[1]);
 			strncpy(into[r].zone_name,row[2],16);
-			strncpy(into[r].door_name,row[3],16);
+			strncpy(into[r].door_name,row[3],32);
 			into[r].pos_x = (float)atof(row[4]);
 			into[r].pos_y = (float)atof(row[5]);
 			into[r].pos_z = (float)atof(row[6]);

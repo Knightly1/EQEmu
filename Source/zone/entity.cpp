@@ -664,7 +664,7 @@ bool EntityList::MakeDoorSpawnPacket(EQApplicationPacket* app)
 		door = iterator.GetData();
 		if(door && strlen(door->GetDoorName()) > 3){
 			memset(&nd, 0, sizeof(nd));
-			memcpy(nd.name, door->GetDoorName(), 16);
+			memcpy(nd.name, door->GetDoorName(), 32);
 			nd.xPos = door->GetX();
 			nd.yPos = door->GetY();
 			nd.zPos = door->GetZ();

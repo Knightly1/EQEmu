@@ -431,6 +431,10 @@ void Client::ProcessMovePC(int32 zoneID, float x, float y, float z, float headin
 			Message(15, "You have been summoned!");
 			ZonePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
 			break;
+		case Rewind:
+			Message(15, "Rewinding to previous location.");
+			ZonePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
+			break;
 		default:
 			LogFile->write(EQEMuLog::Error, "Client::ProcessMovePC received a reguest to perform an unsupported client zone operation.");
 			break;
@@ -495,6 +499,13 @@ void Client::ZonePC(int32 zoneID, float x, float y, float z, float heading, int8
 			break;
 		case SummonPC:
 			cheat_timer.Start(2500,false);
+			zonesummon_x = x_pos = x;
+			zonesummon_y = y_pos = y;
+			zonesummon_z = z_pos = z;
+			heading = heading;
+			break;
+		case Rewind:
+			LogFile->write(EQEMuLog::Debug, "%s has requested a /rewind from %f, %f, %f, to %f, %f, %f in %s", GetName(), x_pos, y_pos, z_pos, rewind_x, rewind_y, rewind_z, zone->GetShortName());
 			zonesummon_x = x_pos = x;
 			zonesummon_y = y_pos = y;
 			zonesummon_z = z_pos = z;

@@ -1348,3 +1348,38 @@ bool QuestManager::isdooropen(int32 doorid) {
 	}
 	return false;
 }
+void QuestManager::npcrace(int race_id)
+{
+		owner->SendIllusionPacket(race_id);
+}
+
+void QuestManager::npcgender(int gender_id)
+{
+		owner->SendIllusionPacket(owner->GetRace(), gender_id);
+}
+void QuestManager::npcsize(int newsize)
+{
+				owner->ChangeSize(newsize, true);
+}
+void QuestManager::npctexture(int newtexture)
+{
+			owner->SendIllusionPacket(owner->GetRace(), 0xFF, newtexture);
+}
+
+void QuestManager::playerrace(int race_id)
+{
+			initiator->SendIllusionPacket(race_id);
+}
+
+void QuestManager::playergender(int gender_id)
+{
+			initiator->SendIllusionPacket(initiator->GetRace(), gender_id);
+}
+void QuestManager::playersize(int newsize)
+{
+			initiator->ChangeSize(newsize, true);
+}
+void QuestManager::playertexture(int newtexture)
+{
+			initiator->SendIllusionPacket(initiator->GetRace(), 0xFF, newtexture);
+}
