@@ -81,6 +81,7 @@ bool ZoneDatabase::GetZoneCFG(int32 zoneid, NewZone_Struct *zone_data, bool &can
 	MYSQL_RES *result;
 	MYSQL_ROW row;
 	int i=0;
+	int b=0;
 	bool good = false;
 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT ztype,"
 		"fog_red,fog_green,fog_blue,fog_minclip,fog_maxclip,"
@@ -117,7 +118,9 @@ bool ZoneDatabase::GetZoneCFG(int32 zoneid, NewZone_Struct *zone_data, bool &can
 //not in the DB yet:
 			zone_data->gravity = 0.4;
 			
-			can_bind = atoi(row[r++])==0?false:true;
+			b = atoi(row[r++]);
+			can_bind = b==0?false:true;
+			is_city = b==2?true:false;
 			can_combat = atoi(row[r++])==0?false:true;
             can_levitate = atoi(row[r++])==0?false:true;
 			can_castoutdoor = atoi(row[r++])==0?false:true;

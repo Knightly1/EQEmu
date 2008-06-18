@@ -457,6 +457,15 @@ bool Client::HandlePacket(const EQApplicationPacket *app) {
 				break;
 			}
 
+//Lieka Edit Begin
+			if (RuleI(World, UseBannedIPsTable) == 1) 
+			{
+				if (database.CheckBannedIPs(this->GetIP())) 
+				{	//Lieka Edit: Check banned_ips table against incoming connection
+					client_list.RemoveBannedIPs(this->GetIP());	//Lieka Edit:  Terminate all sessions with this IP address.
+					clog(WORLD__CLIENT,"IP Address banned.");
+				}
+			}	//Lieka Edit End
 			if (RuleI(World, MaxClientsPerIP) >= 0) {
             client_list.GetCLEIP(this->GetIP());  //Lieka Edit Begin:  Check current CLE Entry IPs against incoming connection
             }

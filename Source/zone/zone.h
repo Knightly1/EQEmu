@@ -170,6 +170,7 @@ public:
 
 	void	weatherSend();
 	bool	CanBind() const { return(can_bind); }
+	bool	IsCity() const { return(is_city); }
 	bool	CanDoCombat() const { return(can_combat); }
 	bool	CanLevitate() const {return(can_levitate); } // Magoth78
 	bool    CanCastOutdoor() const {return(can_castoutdoor);} //qadar
@@ -207,6 +208,7 @@ private:
 	float	psafe_x, psafe_y, psafe_z;
 	int32	pMaxClients;
 	bool	can_bind;
+	bool	is_city;
 	bool	can_combat;
 	bool    can_castoutdoor;
 	bool	can_levitate;

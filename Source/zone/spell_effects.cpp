@@ -657,9 +657,27 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #endif
 				if (IsClient())
 				{
-					if(!zone->CanBind() && !CastToClient()->GetGM()) {
+					if(!zone->CanBind() && !CastToClient()->GetGM()) 
+					{
 						Message(13, "You are not allowed to bind here!");
-					} else {
+					}
+					else if (!zone->IsCity()
+					  && ((GetClass() != DRUID 
+					    && GetClass() != CLERIC
+						&& GetClass() != SHAMAN 
+						&& GetClass() != WIZARD 
+						&& GetClass() != ENCHANTER 
+						&& GetClass() != MAGICIAN 
+						&& GetClass() != NECROMANCER)
+						|| caster != caster->GetTarget())
+					  && !CastToClient()->GetGM()))
+					{
+						Message_StringID(13,CANNOT_BIND);
+//						Message(13, "You cannot form an affinity with this area.  Try a city.");
+						break;					
+					} 
+					else 
+					{
 						CastToClient()->SetBindPoint();
 						Save();
 					}

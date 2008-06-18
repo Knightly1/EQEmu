@@ -1944,8 +1944,7 @@ struct CloseContainer_Struct {
 */
 struct Door_Struct
 {
-/*0000*/ char    name[16];            // Filename of Door // Was 10char long before... added the 6 in the next unknown to it: Daeken M. BlackBlade
-/*0016*/ char    unknown0016[16];
+/*0000*/ char    name[32];            // Filename of Door // Was 10char long before... added the 6 in the next unknown to it: Daeken M. BlackBlade
 /*0032*/ float   yPos;               // y loc
 /*0036*/ float   xPos;               // x loc
 /*0040*/ float   zPos;               // z loc

@@ -118,6 +118,23 @@ void ClientList::GetCLEIP(int32 iIP) {
 }
 //Lieka Edit End
 
+ //Lieka Edit Begin:  Terminate all active sessions that exist with a banned IP.
+void ClientList::RemoveBannedIPs(int32 bIP) {
+	ClientListEntry* countCLEIPs = 0;
+	LinkedListIterator<ClientListEntry*> iterator(clientlist);
+
+	iterator.Reset();
+	while (iterator.MoreElements()) {
+		countCLEIPs = iterator.GetData();
+		if (countCLEIPs->GetIP() == bIP) {
+			countCLEIPs->SetOnline(CLE_Status_Offline);
+			iterator.RemoveCurrent();
+		}
+		iterator.Advance();
+	}
+}
+//Lieka Edit End
+
 ClientListEntry* ClientList::FindCharacter(const char* name) {
 	LinkedListIterator<ClientListEntry*> iterator(clientlist);
 

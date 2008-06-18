@@ -182,5 +182,5 @@
 #define EATING_MESSAGE 1091	//Chomp, chomp, chomp...  %1 takes a bite from a %2.
 #define DRINKING_MESSAGE 1093 //Glug, glug, glug...  %1 takes a drink from a %2.
 #define MORE_SKILLED_THAN_I 12931 //%1 tells you, 'You are more skilled than I!  What could I possibly teach you?'
-
+#define CANNOT_BIND 105  // "You cannot form an affinity with this area.  Try a city."
 #endif

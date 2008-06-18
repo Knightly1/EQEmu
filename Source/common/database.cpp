@@ -205,6 +205,41 @@ int32 Database::CheckLogin(const char* name, const char* password, sint16* oStat
 	return 0;
 }
 
+
+//Lieka Edit:  Get Banned IP Address List - Only return false if the incoming connection's IP address is not present in the banned_ips table.
+bool Database::CheckBannedIPs(int32 loginIP)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT ip_address FROM Banned_IPs WHERE ip_address='%i'", loginIP), errbuf, &result)) {
+		safe_delete_array(query);
+		if (mysql_num_rows(result) == 1)
+		{
+			mysql_free_result(result);
+			return true;
+		}
+		else
+		{
+			mysql_free_result(result);
+			return false;
+		}
+		mysql_free_result(result);
+	}
+	else
+	{
+		cerr << "Error in CheckBannedIPs query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return true;
+	}
+	
+	return true;
+}
+//End Lieka Edit
+
+
 sint16 Database::CheckStatus(int32 account_id)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];

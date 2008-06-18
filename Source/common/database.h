@@ -138,7 +138,8 @@ public:
 	void	GetCharName(int32 char_id, char* name);
 	int32	GetCharacterInfo(const char* iName, int32* oAccID = 0, int32* oZoneID = 0, float* oX = 0, float* oY = 0, float* oZ = 0);
 	int32	GetCharacterID(const char *name);
-	
+	bool	CheckBannedIPs(int32 loginIP); //Lieka Edit:  Check incomming connection against banned IP table.
+
 	/*
 	 * Account Related
 	 */

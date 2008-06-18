@@ -1,5 +1,22 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==06/17/2008
+Scorpious2k (TheLieka): Ban by IP
+Scorpious2k (cavedude/TheLieka): Ability to limit melee guys from being bound in certain zones. This changes the canbind
+            column of the zone table. Value 0 means noone can bind, value 1 means only casters can bind, value 2 means
+            anyone can bind in the zone (ie cities).
+
+Required SQL:
+CREATE TABLE `Banned_IPs` (
+  `ip_address` VARCHAR(32) NOT NULL,
+  PRIMARY KEY (`ip_address`)
+)
+ENGINE = InnoDB;
+
+Optional SQL:
+Insert into rule_values values (0, 'World:UseBannedIPsTable', 0);
+Update zone set canbind = 2 where zoneidnumber in (1,2,3,8,9,10,19,23,24,29,40,41,42,45,49,52,54,55,60,61,62,67,75,82,83,106,155);
+
 ==06/14/2008
 Scorpious2k(Trevius): Door names can now go beyond the 16 char limit to allow doors and other objects from later expansions
                        to be used. The new max is 32 characters.
