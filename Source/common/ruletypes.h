@@ -131,6 +131,7 @@ RULE_BOOL ( Combat, UseIntervalAC, false)
 RULE_INT ( Combat, PetAttackMagicLevel, 30)
 RULE_BOOL ( Combat, EnableFearPathing, true)
 RULE_INT ( Combat, FleeHPRatio, 25)
+RULE_BOOL ( Combat, FleeIfNotAlone, false) // If false, mobs won't flee if other mobs are in combat with it.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( NPC )

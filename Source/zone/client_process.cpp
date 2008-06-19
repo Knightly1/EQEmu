@@ -801,6 +801,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 	const Item_Struct *item;
 	std::list<MerchantList> merlist = zone->merchanttable[merchant_id];
 	std::list<MerchantList>::const_iterator itr;
+	Mob* merch = entity_list.GetMobByNpcTypeID(npcid);
 	if(merlist.size()==0){ //Attempt to load the data, it might have been missed if someone spawned the merchant after the zone was loaded
 		zone->LoadNewMerchantData(merchant_id);
 		merlist = zone->merchanttable[merchant_id];
@@ -827,7 +828,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 				charges=item->MaxCharges;
 			ItemInst* inst = database.CreateItem(item, charges);
 			if (inst) {
-				inst->SetPrice(item->Price*127/100);
+				inst->SetPrice((item->Price*(1/.884)*Client::CalcPriceMod(merch,false)));
 				inst->SetMerchantSlot(ml.slot);
 				inst->SetMerchantCount(-1);		//unlimited
 				if(charges > 0)
@@ -858,7 +859,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 				charges = item->MaxCharges;
 			ItemInst* inst = database.CreateItem(item, charges);
 			if (inst) {
-				inst->SetPrice(item->Price*127/100);
+				inst->SetPrice((item->Price*(1/.884)*Client::CalcPriceMod(merch,false)));
 				inst->SetMerchantSlot(ml.slot);
 				inst->SetMerchantCount(1);
 				if(charges > 0)
@@ -874,7 +875,6 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 	}
 	//this resets the slot
 	zone->tmpmerchanttable[npcid] = tmp_merlist;
-	Mob* merch = entity_list.GetMobByNpcTypeID(npcid);
 	if(merch != NULL && handyitem){
 		char handy_id[8]={0};
 		int greeting=rand()%5;

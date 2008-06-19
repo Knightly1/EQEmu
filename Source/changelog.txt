@@ -1,5 +1,15 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==06/18/2008
+Scorpious2k (Derision): Fix for flee runspeed - linear flee speed reduction as HP drops
+Scorpious2k (Derision): Rule to prevent mobs from fleeing if they are being helped by other NPCs
+Scorpious2k (haecz): Distance check for corpse dragging
+Scorpious2k (haecz): Distance check for taunt
+Scorpious2k (greggg230): Merchant price faction/charisma fix
+Scorpious2k (greggg230): Faction will now show on /con for agnostic players
+Scorpious2k (BatCountry): Correction of a zone crash caused by reloading rules
+Scorpious2k (Congdar): Eliminated array index error/zone crash in spells
+
 ==06/17/2008
 Scorpious2k (TheLieka): Ban by IP
 Scorpious2k (cavedude/TheLieka): Ability to limit melee guys from being bound in certain zones. This changes the canbind

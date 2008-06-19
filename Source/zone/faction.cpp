@@ -654,7 +654,7 @@ bool ZoneDatabase::GetFactionData(FactionMods* fm, uint32 class_mod, uint32 race
 		case 161: modr_tmp = 19;break;
 		case 330: modr_tmp = 20;break;
 	}
-	if (deity_mod == 140 ) 
+	if (deity_mod == 140 || deity_mod == 396) 
 		modd_tmp = 0;
 	else
 		modd_tmp = deity_mod - 200;

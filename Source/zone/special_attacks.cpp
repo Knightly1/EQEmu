@@ -1146,7 +1146,11 @@ void Mob::Taunt(NPC* who, bool always_succeed) {
 	
 	if(DivineAura())
 		return;
-	
+
+// Range check to Taunts (depends on race. range 10-25)
+	if(!CombatRange(who))
+		return;
+
 	if (!always_succeed && IsClient())
 		CastToClient()->CheckIncreaseSkill(TAUNT);
 	

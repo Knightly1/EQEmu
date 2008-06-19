@@ -56,6 +56,7 @@ public:
 
     bool IsEmpty();
 	void PrintToClient(Client *c);
+	int32 GetHatedCount(Mob* hater, bool CountGreens=false, bool CountFearedOrMezzed=false, bool RangeCheck=true);
 
 protected:
     tHateEntry *Find(Mob *ent);

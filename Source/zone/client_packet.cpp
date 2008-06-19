@@ -3744,7 +3744,7 @@ void Client::Handle_OP_ShopRequest(const EQApplicationPacket *app)
 	mco->npcid = mc->npcid;
 	mco->playerid = 0;
 	mco->command = action; // Merchant command 0x01 = open
-	mco->rate = 1.6;	//dosent currently work
+	mco->rate = 1/(.884*Client::CalcPriceMod(tmp,true)); // works
 
 	outapp->priority = 6;
 	QueuePacket(outapp);
@@ -3869,7 +3869,7 @@ void Client::Handle_OP_ShopPlayerBuy(const EQApplicationPacket *app)
 		}
 	}
 	
-	mpo->price = (item->Price*127/100)*mp->quantity;
+	mpo->price = (item->Price*(1/.884)*Client::CalcPriceMod(tmp,false))*mp->quantity;
 	if(freeslotid == SLOT_INVALID || !TakeMoneyFromPP(mpo->price))
 	{
 		safe_delete(outapp);
@@ -3974,7 +3974,7 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 	}
 
 	if (item){
-		price=(int)((item->Price*mp->quantity)*.884);
+		price=(int)((item->Price*mp->quantity)*.884*Client::CalcPriceMod(vendor,true)+0.5); // need to round up, because client does it automatically when displaying price
 		AddMoneyToPP(price,false);
 		if (zone->merchantvar!=0){
 			if (zone->merchantvar==7) {
@@ -4028,7 +4028,7 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 		charges = inst->GetCharges();
 	if((freeslot = zone->SaveTempItem(vendor->CastToNPC()->MerchantType, vendor->GetNPCTypeID(),itemid,charges,true)) > 0){
 		ItemInst* inst2 = inst->Clone();
-		inst2->SetPrice(item->Price*127/100);
+		inst2->SetPrice(item->Price*(1/.884)*Client::CalcPriceMod(vendor,false));
 		inst2->SetMerchantSlot(freeslot);
 		if(inst2->IsStackable())
 			inst2->SetCharges(mp->quantity);

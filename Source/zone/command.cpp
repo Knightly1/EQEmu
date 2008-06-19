@@ -6883,7 +6883,7 @@ void command_rules(Client *c, const Seperator *sep) {
 			c->Message(0, "(%d) %s", cur->first, cur->second.c_str());
 		}
 	} else if(!strcasecmp(sep->arg[1], "reload")) {
-		rules->LoadRules(&database);
+		rules->LoadRules(&database, rules->GetActiveRuleset());
 		c->Message(0, "The active ruleset (%s (%d)) has been reloaded", rules->GetActiveRuleset(), rules->GetActiveRulesetID());
 	} else if(!strcasecmp(sep->arg[1], "switch")) {
 		//make sure this is a valid rule set..

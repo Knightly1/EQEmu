@@ -1065,16 +1065,26 @@ void Corpse::Summon(Client* client,bool spell) {
 			else
 				client->Message(0, "Corpse is too far away.");
 		}
-		else {
+		else 
+		{
 			bool consented = false;
 			std::list<std::string>::iterator itr;
-			for(itr = client->consent_list.begin(); itr != client->consent_list.end(); itr++) {
-				if(strcmp(this->GetOwnerName(), itr->c_str()) == 0) {
+			for(itr = client->consent_list.begin(); itr != client->consent_list.end(); itr++)
+			{
+				if(strcmp(this->GetOwnerName(), itr->c_str()) == 0)
+				{
+					if (DistNoRootNoZ(*client) <= dist2)
+					{
 						GMMove(client->GetX(), client->GetY(), client->GetZ());
 						pIsChanged = true;
-					consented = true;
 					}
+					else
+					{
+						client->Message(0, "Corpse is too far away.");
+					}
+					consented = true;
 				}
+			}
 			if(!consented)
 				client->Message(0, "You do not have permission to move this corpse.");
 		}

@@ -83,8 +83,11 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 		}
 #endif
 
-		buffs[buffslot].melee_rune = 0;
-		buffs[buffslot].magic_rune = 0;
+		 if(buffslot >= 0) 
+		 {
+			 buffs[buffslot].melee_rune = 0;
+			 buffs[buffslot].magic_rune = 0;
+		 }
 
 	// iterate through the effects in the spell
 	for (i = 0; i < EFFECT_COUNT; i++)

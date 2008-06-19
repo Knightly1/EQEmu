@@ -89,8 +89,18 @@ void Mob::CheckFlee() {
 			run_ratio = RuleI(Combat, FleeHPRatio) * 4 / 10;
 			break;
 	}
-	if(ratio < run_ratio) {
-		StartFleeing();
+	if(ratio < run_ratio)
+	{
+		// Get the number of mobs on our most hated persons hate list
+		// excluding green cons, feared/fleeing/mezzed mobs and mobs out of aggro range.
+		//
+		// If the count is <=1, we are fighting on our own, so run, else we
+		// have buddies, so don't run.
+		// NB: The count can be zero if we are green to the attacker.
+		if( RuleB(Combat, FleeIfNotAlone) 
+		  || ( !RuleB(Combat, FleeIfNotAlone) 
+		    && hate_top->hate_list.GetHatedCount(hate_top, false, false, true)< 2 ) )
+			StartFleeing();
 	}
 }
 
