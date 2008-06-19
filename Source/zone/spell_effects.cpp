@@ -3194,8 +3194,7 @@ bool Mob::TryDeathSave() {
 				SetHP(300);
 			}
 
-			// WildcardX: If anyone finds out what the real text for this is suppose to be, please change it here.
-			entity_list.MessageClose(this, false, 200, MT_CritMelee, "The Gods smile upon %s.", GetCleanName());
+			entity_list.MessageClose_StringID(this, false, 200, MT_CritMelee, DIVINE_INTERVENTION, GetCleanName());
 
 			// Fade the buff
 			BuffFadeBySlot(buffSlot);

@@ -1,5 +1,8 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==06/19/2008
+Scorpious2k (Knightly): Correction of divine intervention text
+
 ==06/18/2008
 Scorpious2k (Derision): Fix for flee runspeed - linear flee speed reduction as HP drops
 Scorpious2k (Derision): Rule to prevent mobs from fleeing if they are being helped by other NPCs
