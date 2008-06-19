@@ -266,6 +266,7 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 	}
 	AA_mod += 3*GetAA(aaPhysicalEnhancement);
 	AA_mod += 2*GetAA(aaLightningReflexes);
+	AA_mod += GetAA(aaReflexiveMastery);
 	chancetohit -= chancetohit * AA_mod / 100;
 	
 	// Chance to hit;   Max 95%, Min 30%
@@ -456,6 +457,7 @@ void Mob::MeleeMitigation(Mob *attacker, sint32 &damage, sint32 minhit)
 
 	totalMit += GetAA(aaPhysicalEnhancement)*2;
 	totalMit += GetAA(aaInnateDefense);
+	totalMit += GetAA(aaDefensiveInstincts)*0.5;
 
 	if(RuleB(Combat, UseIntervalAC)){
 		//AC Mitigation

@@ -904,7 +904,7 @@ void Zone::ReloadStaticData() {
 
 bool Zone::LoadZoneCFG(const char* filename, bool DontLoadDefault) {
 	memset(&newzone_data, 0, sizeof(NewZone_Struct));
-	if(!database.GetZoneCFG(database.GetZoneID(filename), &newzone_data, can_bind, can_combat, can_levitate, can_castoutdoor)) {
+	if(!database.GetZoneCFG(database.GetZoneID(filename), &newzone_data, can_bind, can_combat, can_levitate, can_castoutdoor, is_city)) {
 		cout << "Error while loading Zone Config!\n";
 		cout << "IF YOU HAVENT DONE SO, SOURCE THE ZONECFG.SQL FILE!!!!!!\n";
 		return false;

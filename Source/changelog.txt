@@ -2,6 +2,7 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 ==06/19/2008
 Scorpious2k (Knightly): Correction of divine intervention text
+Scorpious2k (LordKahel): Support for defensive Instinct and Reflexive Mastery AA
 
 ==06/18/2008
 Scorpious2k (Derision): Fix for flee runspeed - linear flee speed reduction as HP drops

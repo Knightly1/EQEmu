@@ -673,7 +673,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 						&& GetClass() != MAGICIAN 
 						&& GetClass() != NECROMANCER)
 						|| caster != caster->GetTarget())
-					  && !CastToClient()->GetGM()))
+					  && !CastToClient()->GetGM())
 					{
 						Message_StringID(13,CANNOT_BIND);
 //						Message(13, "You cannot form an affinity with this area.  Try a city.");

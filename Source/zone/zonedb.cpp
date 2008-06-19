@@ -75,7 +75,7 @@ bool ZoneDatabase::SaveZoneCFG(int32 zoneid,NewZone_Struct* zd){
 	return true;
 }
 
-bool ZoneDatabase::GetZoneCFG(int32 zoneid, NewZone_Struct *zone_data, bool &can_bind, bool &can_combat, bool &can_levitate, bool &can_castoutdoor) {
+bool ZoneDatabase::GetZoneCFG(int32 zoneid, NewZone_Struct *zone_data, bool &can_bind, bool &can_combat, bool &can_levitate, bool &can_castoutdoor, bool &is_city) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	char *query = 0;
 	MYSQL_RES *result;
