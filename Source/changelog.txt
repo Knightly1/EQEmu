@@ -1,5 +1,8 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+==06/21/2008
+KLS: Belated updates to azone including (derision)EQG fixes and some changes to make it easier to compile under windows.
+
 ==06/19/2008
 Scorpious2k (Knightly): Correction of divine intervention text
 Scorpious2k (LordKahel): Support for defensive Instinct and Reflexive Mastery AA
