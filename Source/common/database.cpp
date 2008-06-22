@@ -206,38 +206,53 @@ int32 Database::CheckLogin(const char* name, const char* password, sint16* oStat
 }
 
 
-//Lieka Edit:  Get Banned IP Address List - Only return false if the incoming connection's IP address is not present in the banned_ips table.
-bool Database::CheckBannedIPs(int32 loginIP)
+//Lieka:  Get Banned IP Address List - Only return false if the incoming connection's IP address is not present in the banned_ips table.
+bool Database::CheckBannedIPs(const char* loginIP)
 {
-	char errbuf[MYSQL_ERRMSG_SIZE];
+ 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
     MYSQL_RES *result;
     MYSQL_ROW row;
-	
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT ip_address FROM Banned_IPs WHERE ip_address='%i'", loginIP), errbuf, &result)) {
-		safe_delete_array(query);
-		if (mysql_num_rows(result) == 1)
-		{
-			mysql_free_result(result);
-			return true;
-		}
-		else
-		{
-			mysql_free_result(result);
-			return false;
-		}
-		mysql_free_result(result);
-	}
-	else
-	{
-		cerr << "Error in CheckBannedIPs query '" << query << "' " << errbuf << endl;
-		safe_delete_array(query);
-		return true;
-	}
-	
-	return true;
+ 	//cout << "Checking against Banned IPs table."<< endl; //Lieka:  Debugging
+ 	if (RunQuery(query, MakeAnyLenString(&query, "SELECT ip_address FROM Banned_IPs WHERE ip_address='%s'", loginIP), errbuf, &result)) {
+ 		safe_delete_array(query);
+ 		if (mysql_num_rows(result) != 0)
+ 		{
+ 			//cout << loginIP << " was present in the banned IPs table" << endl; //Lieka:  Debugging
+ 			mysql_free_result(result);
+ 			return true;
+ 		}
+ 		else
+ 		{
+ 			//cout << loginIP << " was not present in the banned IPs table." << endl; //Lieka:  Debugging
+ 			mysql_free_result(result);
+ 			return false;
+ 		}
+ 		mysql_free_result(result);
+ 	}
+ 	else
+ 	{
+ 		cerr << "Error in CheckBannedIPs query '" << query << "' " << errbuf << endl;
+ 		safe_delete_array(query);
+ 		return true;
+ 	}
+ 	return true;
 }
-//End Lieka Edit
+ 
+bool Database::AddBannedIP(char* bannedIP, const char* notes)
+{
+ 	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+ 	
+ 	if (!RunQuery(query, MakeAnyLenString(&query, "INSERT into Banned_IPs SET ip_address='%s', notes='%s'", bannedIP, notes), errbuf)) {
+ 		cerr << "Error in ReserveName query '" << query << "' " << errbuf << endl;
+ 		safe_delete_array(query);
+ 		return false;
+ 	}
+ 	safe_delete_array(query);
+ 	return true;
+}
+ //End Lieka Edit
 
 
 sint16 Database::CheckStatus(int32 account_id)

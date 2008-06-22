@@ -1,5 +1,10 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
+
+==06/22/2008
+KLS: Changed world/clientlist.cpp's line endings back to unix style line endings
+KLS: Fixed up ipban based on updated code from TheLieka.
+
 ==06/21/2008
 KLS: Belated updates to azone including (derision)EQG fixes and some changes to make it easier to compile under windows.
 KLS: Fixed inconsistant line endings in ruletypes.h; there are probably more line ending changes I didn't catch, please try to keep your line endings consistant with what's in the repo.

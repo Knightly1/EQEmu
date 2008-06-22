@@ -358,10 +358,24 @@ int main(int argc, char** argv) {
 			//now that we know what patch they are running, start up their client object
 			struct in_addr	in;
 			in.s_addr = eqsi->GetRemoteIP();
-			_log(WORLD__CLIENT, "New client from %s:%d", inet_ntoa(in), ntohs(eqsi->GetRemotePort()));
-			Client* client = new Client(eqsi);
-			// @merth: client->zoneattempt=0;
-			client_list.Add(client);
+ 			if (RuleB(World, UseBannedIPsTable)){ //Lieka:  Check to see if we have the responsibility for blocking IPs.
+				_log(WORLD__CLIENT, "Checking inbound connection %s against BannedIPs table", inet_ntoa(in));
+ 				if (!database.CheckBannedIPs(inet_ntoa(in))){ //Lieka:  Check inbound IP against banned IP table.
+ 					_log(WORLD__CLIENT, "Connection %s PASSED banned IPs check.  Processing connection.", inet_ntoa(in));
+ 					Client* client = new Client(eqsi);
+ 					// @merth: client->zoneattempt=0;
+ 					client_list.Add(client);
+ 				} else {
+ 					_log(WORLD__CLIENT, "Connection from %s FAILED banned IPs check.  Closing connection.", inet_ntoa(in));
+ 					eqsi->Close(); //Lieka:  If the inbound IP is on the banned table, close the EQStream.
+ 				}
+ 			}
+ 			if (!RuleB(World, UseBannedIPsTable)){
+ 					_log(WORLD__CLIENT, "New connection from %s:%d, processing connection", inet_ntoa(in), ntohs(eqsi->GetRemotePort()));
+ 					Client* client = new Client(eqsi);
+ 					// @merth: client->zoneattempt=0;
+ 					client_list.Add(client);
+ 			}
 		}
 		
 		client_list.Process();

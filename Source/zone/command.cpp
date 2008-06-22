@@ -360,6 +360,7 @@ int command_init(void) {
 		command_add("nologs","[status|normal|error|debug|quest|all] - Unsubscribe to a log type",250,command_nologs) ||
 		command_add("datarate","[rate] - Query/set datarate",100,command_datarate) ||
 		command_add("ban","[name] - Ban by character name",150,command_ban) ||
+		command_add("ipban","[IP address] - Ban IP by character name",200,command_ipban) ||
 		command_add("oocmute","[1/0] - Mutes OOC chat",200,command_oocmute) ||
 		command_add("revoke","[charname] [1/0] - Makes charname unable to talk on OOC",200,command_revoke) ||
 		command_add("checklos","- Check for line of sight to your target",50,command_checklos) ||
@@ -5149,6 +5150,21 @@ void command_ban(Client *c, const Seperator *sep)
 		}
 	}
 }
+
+void command_ipban(Client *c, const Seperator *sep)
+{
+	if(sep->arg[1] == 0)
+	{
+		c->Message(0, "Usage:  #ipban [xxx.xxx.xxx.xxx]");
+	} else {
+		if(database.AddBannedIP(sep->arg[1], c->GetName())) {
+			c->Message(0, "%s has been successfully added to the Banned_IPs table by %s",sep->arg[1], c->GetName());
+		} else {
+			c->Message(0, "IPBan Failed (IP address is possibly already in the table?)");
+		}
+	}
+}
+
 void command_revoke(Client *c, const Seperator *sep)
 {
 	char errbuf[MYSQL_ERRMSG_SIZE];

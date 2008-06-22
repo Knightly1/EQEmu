@@ -50,7 +50,6 @@ public:
 	ClientListEntry* FindCLEByAccountID(int32 iAccID);
 	ClientListEntry* FindCLEByCharacterID(int32 iAccID);
 	ClientListEntry* GetCLE(int32 iID);
-	void	RemoveBannedIPs(int32 bIP); //Lieka Edit
 	void	GetCLEIP(int32 iIP);
 	void	CLCheckStale();
 	void	CLEKeepAlive(int32 numupdates, int32* wid);

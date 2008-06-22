@@ -69,7 +69,7 @@ RULE_INT ( World, ZoneAutobootTimeoutMS, 60000 )
 RULE_INT ( World, ClientKeepaliveTimeoutMS, 65000 )
 RULE_INT ( World, MaxClientsPerIP, -1 ) //Lieka Edit: Maximum number of clients allowed to connect per IP address.  Default value: -1 (feature disabled)
 RULE_INT ( World, ExemptMaxClientsStatus, -1 ) //Lieka Edit: Exempt accounts from the MaxClientsPerIP rule, if their status is >= this value.  Default value: -1 (feature disabled)
-RULE_INT ( World, UseBannedIPsTable, 0 ) //Lieka Edit: Toggle whether or not to check incoming client connections against the Banned_IPs table. Set this value to 0 to disable this feature.
+RULE_BOOL ( World, UseBannedIPsTable, false ) //Lieka Edit: Toggle whether or not to check incoming client connections against the Banned_IPs table. Set this value to false to disable this feature.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Zone )
