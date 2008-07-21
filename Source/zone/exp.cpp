@@ -387,6 +387,9 @@ uint32 Client::GetEXPForLevel(int16 check_level)
 void Group::SplitExp(uint32 exp, Mob* other) {
 	if( other->CastToNPC()->MerchantType != 0 ) // Ensure NPC isn't a merchant
 	  return;
+
+	if(other->GetOwner() && other->GetOwner()->IsClient()) // Ensure owner isn't pc
+		return;
 	
 	int i; 
 	uint32 groupexp = exp; 

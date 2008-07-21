@@ -572,7 +572,7 @@ bool NPC::Process()
 		}
     }
 
-	if (sendhpupdate_timer.Check() && IsTargeted()) {
+	if (sendhpupdate_timer.Check() && (IsTargeted() || (IsPet() && GetOwner() && GetOwner()->IsClient()))) {
 		if(!IsFullHP || cur_hp<max_hp){
 			SendHPUpdate();
 		}

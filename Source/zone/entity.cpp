@@ -2757,8 +2757,7 @@ void EntityList::AddHealAggro(Mob* target, Mob* caster, int16 thedam)
 	while(iterator.MoreElements())
 	{
 		cur = iterator.GetData();
-		if (!cur->IsMezzed() && !cur->IsStunned() 
-			&& cur->CheckAggro(target))
+		if (!cur->IsMezzed() && !cur->IsStunned())
 		{
 			if(cur->IsPet()){
 				if(caster){
@@ -2767,8 +2766,12 @@ void EntityList::AddHealAggro(Mob* target, Mob* caster, int16 thedam)
 				}
 			}
 			else{
-				if(caster)
-					cur->AddToHateList(caster, thedam);
+				if(caster){
+					if(cur->CheckAggro(caster))
+						cur->AddToHateList(caster, 1);
+					else
+						cur->AddToHateList(caster, thedam);
+				}
 			}
 		}
 		iterator.Advance();

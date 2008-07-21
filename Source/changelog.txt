@@ -1,6 +1,14 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==07/21/2008
+KLS: (irv0) Fix for out of order ack not being sent in some situations.
+KLS: (Derision) Pet bar OOC update fix.
+KLS: Should have made client pets unable to give experience, untested but should work.
+KLS: Healing aggro should function better for people not on the hate list.
+KLS: Some work on public tradeskill objects saving their content between uses.
+KLS: 
+
 ==06/22/2008
 KLS: Changed world/clientlist.cpp's line endings back to unix style line endings
 KLS: Fixed up ipban based on updated code from TheLieka.

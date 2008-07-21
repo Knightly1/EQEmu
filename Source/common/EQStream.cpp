@@ -176,8 +176,7 @@ uint32 processed=0,subpacket_length=0;
 			} else if (check == SeqPast) {
 				_log(NET__DEBUG, _L "Duplicate OP_Packet: Expecting Seq=%d, but got Seq=%d" __L, NextInSeq, seq);
 				_raw(NET__DEBUG, seq, p);
-				//kludge to see if it helps:
-				//SendAck(GetLastAckSent());
+				SendOutOfOrderAck(seq);  //we already got this packet but it was out of order
 			} else {
 				// In case we did queue one before as well.
 				EQProtocolPacket *qp=RemoveQueue(seq);
@@ -222,6 +221,7 @@ uint32 processed=0,subpacket_length=0;
 			} else if (check == SeqPast) {
 				_log(NET__DEBUG, _L "Duplicate OP_Fragment: Expecting Seq=%d, but got Seq=%d" __L, NextInSeq, seq);
 				_raw(NET__DEBUG, seq, p);
+				SendOutOfOrderAck(seq);
 			} else {
 				// In case we did queue one before as well.
 				EQProtocolPacket *qp=RemoveQueue(seq);

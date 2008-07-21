@@ -1735,7 +1735,11 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skill) 
 				int conlevel = give_exp->GetLevelCon(GetLevel());
 				if (conlevel != CON_GREEN)
 				{
-					give_exp_client->AddEXP((EXP_FORMULA), conlevel); // Pyro: Comment this if NPC death crashes zone
+					if(GetOwner() && GetOwner()->IsClient()){
+					}
+					else{
+						give_exp_client->AddEXP((EXP_FORMULA), conlevel); // Pyro: Comment this if NPC death crashes zone
+					}
 				}
 				 /* Send the EVENT_KILLED_MERIT event */
 				parse->Event(EVENT_KILLED_MERIT, GetNPCTypeID(), "killed", this, give_exp_client);

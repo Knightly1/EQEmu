@@ -187,6 +187,7 @@ protected:
 	bool			m_ground_spawn;
 	
 	Client *user;
+	Client *last_user;
 	
 	Timer respawn_timer;
 	Timer decay_timer;

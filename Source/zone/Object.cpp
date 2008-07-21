@@ -41,6 +41,7 @@ Object::Object(uint32 id, uint32 type, uint32 icon, const Object_Struct& object,
 {
 	
 	user = NULL;
+	last_user = NULL;
 	
 	// Initialize members
 	m_id = id;
@@ -69,6 +70,7 @@ Object::Object(const ItemInst* inst, char* name,float max_x,float min_x,float ma
 {
 	
 	user = NULL;
+	last_user = NULL;
 	m_max_x=max_x;
 	m_max_y=max_y;
 	m_min_x=min_x;
@@ -104,6 +106,7 @@ Object::Object(Client* client, const ItemInst* inst)
  : respawn_timer(0), decay_timer(1800000)
 {
 	user = NULL;
+	last_user = NULL;
 	
 	// Initialize members
 	m_id	= 0;
@@ -227,13 +230,14 @@ void Object::PutItem(uint8 index, const ItemInst* inst)
 		}
 		database.SaveWorldContainer(zone->GetZoneID(),m_id,m_inst);
 		// This is _highly_ inefficient, but for now it will work: Save entire object to database
-		//Save();
+		Save();
 	}
 }
 
 void Object::Close() {
 	m_inuse = false;
 	if(user != NULL) {
+		last_user = user;
 		user->SetTradeskillObject(NULL);
 	}
 	user = NULL;
@@ -384,9 +388,9 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 
 		if (m_inst && m_inst->IsType(ItemClassContainer)) {
 
-			//Clear out no-drop and no-rent items first
-			//TODO: should/could only do this if a different player opens it
-			m_inst->ClearByFlags(byFlagSet, byFlagSet);
+			//Clear out no-drop and no-rent items first if different player opens it
+			if(user != last_user)
+				m_inst->ClearByFlags(byFlagSet, byFlagSet);
 			
 			EQApplicationPacket* outapp=new EQApplicationPacket(OP_ClientReady,0);
 			sender->QueuePacket(outapp);
