@@ -637,9 +637,9 @@ void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 
 	ns->spawn.haircolor = haircolor ? haircolor : 0xFF;
 	ns->spawn.beardcolor = beardcolor ? beardcolor : 0xFF;
-	ns->spawn.eyecolor1 = eyecolor1 ? eyecolor1 : 0xFF;
-	ns->spawn.eyecolor2 = eyecolor2 ? eyecolor2 : 0xFF;
-	ns->spawn.hairstyle = hairstyle ? hairstyle : 0xFF;
+	ns->spawn.eyecolor1 = eyecolor1;// ? eyecolor1 : 0xFF;
+	ns->spawn.eyecolor2 = eyecolor2;
+	ns->spawn.hairstyle = hairstyle;
 	ns->spawn.face = luclinface;
 	ns->spawn.beard = beard ? beard : 0xFF;
 	ns->spawn.equip_chest2  = texture;
@@ -2060,6 +2060,11 @@ void Mob::Emote(const char *format, ...)
 		GENERIC_EMOTE, GetCleanName(), buf);
 }
 
+void Mob::QuestJournalledSay(Client *QuestInitiator, const char *str)
+{
+        entity_list.QuestJournalledSayClose(this, QuestInitiator, 200, GetCleanName(), str);
+}
+
 const char *Mob::GetCleanName()
 {
 	if(!strlen(clean_name))
@@ -2292,9 +2297,3 @@ float Mob::FindGroundZ(float new_x, float new_y, float z_offset)
 	}
 	return ret;
 }
-
-
-
-
-
-

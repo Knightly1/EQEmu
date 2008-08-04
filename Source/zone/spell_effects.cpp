@@ -413,6 +413,84 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				break;
 			}
 
+			case SE_SkillAttack:
+			{
+				const ItemInst* itm = NULL;
+				sint32 dam = 0;
+				if(spells[spell_id].skill == ARCHERY || spells[spell_id].skill == THROWING)
+				{
+					if(caster->IsClient())
+					{
+						itm = caster->CastToClient()->GetInv().GetItem(SLOT_RANGE);
+					}
+					if(itm)
+						dam = effect_value + itm->GetItem()->Damage * 2 + (itm->GetItem()->Damage * (GetSkill(spells[spell_id].skill) + GetDEX()) / 225);
+					else
+						dam = effect_value;
+				}
+				else if (spells[spell_id].skill == BASH)
+				{
+					if(caster->IsClient())
+					{
+						itm = caster->CastToClient()->GetInv().GetItem(SLOT_SECONDARY);
+					}
+					if(itm)
+						dam = effect_value + ((itm->GetItem()->AC/4)+1) * 2 + (((itm->GetItem()->AC/4)+1) * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
+					else
+						dam = effect_value;
+				}
+				else if (spells[spell_id].skill == KICK || spells[spell_id].skill == FLYING_KICK || spells[spell_id].skill == ROUND_KICK)
+				{
+					if(caster->IsClient())
+					{
+						itm = caster->CastToClient()->GetInv().GetItem(SLOT_FEET);
+					}
+					if(itm)
+						dam = effect_value + ((itm->GetItem()->AC / 2) + 1) * 2 + (((itm->GetItem()->AC / 2) + 1) * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
+					else
+						dam = effect_value;
+				}
+				else if (spells[spell_id].skill == HAND_TO_HAND || spells[spell_id].skill == EAGLE_STRIKE || spells[spell_id].skill == TIGER_CLAW)
+				{
+					if(caster->IsClient())
+					{
+						itm = caster->CastToClient()->GetInv().GetItem(SLOT_HANDS);
+					}
+					if(itm)
+						dam = effect_value + ((itm->GetItem()->AC / 2) + 1) + (((itm->GetItem()->AC / 2) + 1) * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
+					else
+						dam = effect_value;
+				}
+				else
+				{
+					if(caster->IsClient())
+					{
+						itm = caster->CastToClient()->GetInv().GetItem(SLOT_PRIMARY);
+					}
+					if(itm)
+						dam = effect_value + itm->GetItem()->Damage * 2 + (itm->GetItem()->Damage * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
+					else
+						dam = effect_value;
+				}
+				int wpnD = caster->GetWeaponDamage(this, itm);
+				if(wpnD){
+					if(CheckHitChance(caster, spells[spell_id].skill, 13))
+					{
+						if(RuleB(Combat, UseIntervalAC))
+							caster->DoSpecialAttackDamage(this, spells[spell_id].skill, dam, 1);
+						else
+							caster->DoSpecialAttackDamage(this, spells[spell_id].skill, MakeRandomInt(1, dam), 1);
+
+					}
+					else{
+						caster->DoSpecialAttackDamage(this, spells[spell_id].skill, 0, 1);
+					}
+				}
+				else
+					caster->DoSpecialAttackDamage(this, spells[spell_id].skill, -5, 1);
+				break;
+			}
+
 			case SE_AttackSpeed:
 			case SE_AttackSpeed2:
 			case SE_AttackSpeed3:
@@ -590,8 +668,19 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				//Need to handle the case where the charmed mob has a pet...
 				//SetPet(NULL);
 
+				if(caster->IsClient()){
+					EQApplicationPacket *app = new EQApplicationPacket(OP_Charm, sizeof(Charm_Struct));
+					Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
+					ps->owner_id = caster->GetID();
+					ps->pet_id = this->GetID();
+					ps->command = 1;
+					entity_list.QueueClients(this, app);
+					safe_delete(app);
+					SendPetBuffsToClient();
+				}
+
 				// tell caster it has a pet
-				if(caster->IsClient())
+				/*if(caster->IsClient())
 				{
 					EQApplicationPacket *app = new EQApplicationPacket(OP_Charm, sizeof(Charm_Struct));
 					Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
@@ -599,7 +688,7 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 					ps->pet_id = this->GetID();
 					ps->command = 1;
 					caster->CastToClient()->FastQueuePacket(&app);
-				}
+				}*/
 
 				if (IsClient()) {
 					AI_Start();
@@ -2249,6 +2338,27 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				break;
 			}
 
+			case SE_ImprovedDamage:
+			case SE_ImprovedHeal:
+			case SE_IncreaseSpellHaste:
+			case SE_IncreaseSpellDuration:
+			case SE_IncreaseRange:
+			case SE_ReduceSpellHate:
+			case SE_ReduceReagentCost:
+			case SE_ReduceManaCost:
+			case SE_LimitMaxLevel:
+			case SE_LimitResist:
+			case SE_LimitTarget:
+			case SE_LimitEffect:
+			case SE_LimitSpellType:
+			case SE_LimitSpell:
+			case SE_LimitMinDur:
+			case SE_LimitInstant:
+			case SE_LimitMinLevel:
+			case SE_LimitCastTime:
+			{
+				break;
+			}
 			//currently missing effects:
 			//SE_SummonItem2
 			//SE_ReduceSpellHate
@@ -2846,7 +2956,9 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 					ps->owner_id = tempmob->GetID();
 					ps->pet_id = this->GetID();
 					ps->command = 0;
-					tempmob->CastToClient()->FastQueuePacket(&app);
+					entity_list.QueueClients(this, app);
+					safe_delete(app);
+					//tempmob->CastToClient()->FastQueuePacket(&app);
 				}
 				if(IsClient())
 				{
@@ -2897,6 +3009,9 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 	}
 
 	buffs[slot].spellid = SPELL_UNKNOWN;
+	if(IsPet() && GetOwner() && GetOwner()->IsClient()) {
+		SendPetBuffsToClient();
+	}
 
 	if (iRecalcBonuses)
 		CalcBonuses();

@@ -2137,6 +2137,10 @@ int Mob::AddBuff(Mob *caster, int16 spell_id, int duration)
 		buffs[emptyslot].UpdateClient = true;
 		
 	mlog(SPELLS__BUFFS, "Buff %d added to slot %d with caster level %d", spell_id, emptyslot, caster_level);
+	if(IsPet() && GetOwner() && GetOwner()->IsClient()) {
+		SendPetBuffsToClient();
+	}
+	
 	
 	// recalculate bonuses since we stripped/added buffs
 	CalcBonuses();
@@ -2486,7 +2490,7 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 			}
 		}
 	}
-	else if (IsBeneficialSpell(spell_id) && spelltar->GetHateAmount(this) > 1)
+	else if (IsBeneficialSpell(spell_id))
 		entity_list.AddHealAggro(spelltar, this, CheckHealAggroAmount(spell_id));
 
 	// cause the effects to the target
@@ -3831,4 +3835,31 @@ void Client::SendBuffDurationPacket(int16 spell_id, int duration, int inlevel)
 	sbf->bufffade = 0;
 	sbf->duration = duration;
 	FastQueuePacket(&outapp);
+}
+
+void Mob::SendPetBuffsToClient()
+{
+	// Don't really need this check, as it should be checked before this method is called, but it doesn't hurt
+	// too much to check again.
+	if(!(GetOwner() && GetOwner()->IsClient())) return;
+
+	int PetBuffCount = 0;
+
+
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_PetBuffWindow,sizeof(PetBuff_Struct));
+	PetBuff_Struct* pbs=(PetBuff_Struct*)outapp->pBuffer;
+	memset(outapp->pBuffer,0,outapp->size);
+	pbs->petid=GetID();
+
+	for(int buffslot = 0; buffslot < BUFF_COUNT; buffslot++) {
+		if(buffs[buffslot].spellid != SPELL_UNKNOWN) {
+			pbs->spellid[PetBuffCount] = buffs[buffslot].spellid;
+			pbs->ticsremaining[PetBuffCount] = buffs[buffslot].ticsremaining;
+			PetBuffCount++;
+		}
+	}
+
+	pbs->buffcount=PetBuffCount;
+	GetOwner()->CastToClient()->QueuePacket(outapp);
+	safe_delete(outapp);
 }

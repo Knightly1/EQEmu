@@ -73,6 +73,7 @@ using namespace std;
 #include "parser.h"
 #include "event_codes.h"
 #include "guild_mgr.h"
+#include "../common/rulesys.h"
 
 
 extern Zone* zone;
@@ -193,7 +194,11 @@ void QuestManager::echo(const char *str) {
 }
 
 void QuestManager::say(const char *str) {
-	owner->Say(str);
+
+       if(RuleB(NPC, EnableNPCQuestJournal) && initiator)
+               owner->QuestJournalledSay(initiator, str);
+       else
+               owner->Say(str);
 }
 
 void QuestManager::me(const char *str) {

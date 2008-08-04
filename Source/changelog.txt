@@ -1,13 +1,33 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/04/2008
+KLS: (Derision) Pet Buff Window Implemented.
+KLS: Charmed pets should now function with the pet window, as well as appear correctly in group.
+KLS: Added rule Character:SkillUpModifier (100) to govern how fasts skill ups happen on a server.  100% = normal chance, 200% = double normal chance.
+KLS: (Derision) Implemented quest journal npc say.
+KLS: (Derision) Fix for npc not always facing attacker.
+KLS: (Derision) Stop Pets Fleeing
+KLS: (CodeMephit) Hunger and thirst for new characters.
+KLS: Upped food/water eat/drink gains by a lot.
+KLS: (greggg230) Aggro LOS fix.
+KLS: Fix for bald characters hopefully.
+KLS: (kraeger) RNG name fix.
+KLS: Big bug fixes with healing aggro.
+KLS: Charm spells will stop making a cha check after a certain resist adj threshold
+KLS: Adjusted melee hit chances to be more forgiving.
+KLS: Changed how +hit mods are applied
+KLS: Roughly implemented Skill Attack spell effect.
+
+Required:
+patch_6.2.conf and patch_Titanium.conf files have changed be sure to update them.
+
 ==07/21/2008
 KLS: (irv0) Fix for out of order ack not being sent in some situations.
 KLS: (Derision) Pet bar OOC update fix.
 KLS: Should have made client pets unable to give experience, untested but should work.
 KLS: Healing aggro should function better for people not on the hate list.
-KLS: Some work on public tradeskill objects saving their content between uses.
-KLS: 
+KLS: Some work on public tradeskill objects saving their content between uses. 
 
 ==06/22/2008
 KLS: Changed world/clientlist.cpp's line endings back to unix style line endings

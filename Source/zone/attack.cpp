@@ -179,7 +179,7 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 		bonus = 0;
 		if(pvpmode){
 			if(skilldiff > 10){
-				bonus = -(5 + ((defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse) - 10) / 10));
+				bonus = -(2 + ((defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse) - 10) / 10));
 			}
 			else if(skilldiff <= 10 && skilldiff > 0){
 				bonus = -(1 + ((defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse)) / 25));
@@ -190,7 +190,7 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 		}
 		else{
 			if(skilldiff > 10){
-				bonus = -(10 + ((defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse) - 10) * 2 / 5));
+				bonus = -(4 + ((defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse) - 10) * 1 / 5));
 			}
 			else if(skilldiff <= 10 && skilldiff > 0){
 				bonus = -(2 + ((defender->GetSkill(DEFENSE) - attacker->GetSkill(skillinuse)) / 10));
@@ -209,7 +209,7 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 		int skilldiff = defender->GetSkill(DEFENSE) - atkSkill;
 		bonus = 0;
 		if(skilldiff > 10){
-			bonus = -(10 + ((defender->GetSkill(DEFENSE) - atkSkill - 10) * 2 / 5));
+			bonus = -(4 + ((defender->GetSkill(DEFENSE) - atkSkill - 10) * 1 / 5));
 		}
 		else if(skilldiff <= 10 && skilldiff > 0){
 			bonus = -(2 + ((defender->GetSkill(DEFENSE) - atkSkill) / 10));
@@ -228,17 +228,6 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 	if(attacker->itembonuses.MeleeSkillCheckSkill == skillinuse || attacker->itembonuses.MeleeSkillCheckSkill == 255) {
 		chancetohit += attacker->itembonuses.MeleeSkillCheck;
 		mlog(COMBAT__TOHIT, "Applied item melee skill bonus %d, yeilding %.2f", attacker->spellbonuses.MeleeSkillCheck, chancetohit);
-	}
-	
-	//add in our hit chance bonuses if we are using the right skill
-	//does the hit chance cap apply to spell bonuses from disciplines?
-	if(attacker->spellbonuses.HitChanceSkill == 255 || attacker->spellbonuses.HitChanceSkill == skillinuse) {
-		chancetohit += attacker->spellbonuses.HitChance / 15.0f;
-		mlog(COMBAT__TOHIT, "Applied spell melee hit chance %d/15, yeilding %.2f", attacker->spellbonuses.HitChance, chancetohit);
-	}
-	if(attacker->itembonuses.HitChanceSkill == 255 || attacker->itembonuses.HitChanceSkill == skillinuse) {
-		chancetohit += attacker->itembonuses.HitChance / 15.0f;
-		mlog(COMBAT__TOHIT, "Applied item melee hit chance %d/15, yeilding %.2f", attacker->itembonuses.HitChance, chancetohit);
 	}
 	
 	//subtract off avoidance by the defender
@@ -269,6 +258,17 @@ bool Mob::CheckHitChance(Mob* other, SkillType skillinuse, int Hand)
 	AA_mod += GetAA(aaReflexiveMastery);
 	chancetohit -= chancetohit * AA_mod / 100;
 	
+	//add in our hit chance bonuses if we are using the right skill
+	//does the hit chance cap apply to spell bonuses from disciplines?
+	if(attacker->spellbonuses.HitChanceSkill == 255 || attacker->spellbonuses.HitChanceSkill == skillinuse) {
+		chancetohit += (chancetohit * (attacker->spellbonuses.HitChance / 15.0f) / 100);
+		mlog(COMBAT__TOHIT, "Applied spell melee hit chance %d/15, yeilding %.2f", attacker->spellbonuses.HitChance, chancetohit);
+	}
+	if(attacker->itembonuses.HitChanceSkill == 255 || attacker->itembonuses.HitChanceSkill == skillinuse) {
+		chancetohit += (chancetohit * (attacker->itembonuses.HitChance / 15.0f) / 100);
+		mlog(COMBAT__TOHIT, "Applied item melee hit chance %d/15, yeilding %.2f", attacker->itembonuses.HitChance, chancetohit);
+	}
+
 	// Chance to hit;   Max 95%, Min 30%
 	if(chancetohit > 1000) {
 		//if chance to hit is crazy high, that means a discipline is in use, and let it stay there
@@ -1526,7 +1526,7 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 			if(!other->CheckHitChance(this, skillinuse, Hand)) {
 				damage = 0;	//miss
 			} else {	//hit, check for damage avoidance
-				hate = damage;
+				hate = damage+eleBane;
 				other->AvoidDamage(this, damage);
 				other->MeleeMitigation(this, damage, min_dmg+eleBane);
 				ApplyMeleeDamageBonus(skillinuse, damage);
@@ -1642,7 +1642,7 @@ void NPC::Damage(Mob* other, sint32 damage, int16 spell_id, SkillType attack_ski
 	
 	if(damage > 0) {
 		//see if we are gunna start fleeing
-		CheckFlee();
+		if(!IsPet()) CheckFlee();
 	}
 }
 

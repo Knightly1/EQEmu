@@ -819,6 +819,46 @@ void Client::Message(uint32 type, const char* message, ...) {
 	safe_delete_array(buffer);
 }
 
+void Client::QuestJournalledMessage(const char *npcname, const char* message) {
+
+       // npcnames longer than 60 characters crash the client when they log back in
+       const int MaxNPCNameLength = 60;
+       // I assume there is an upper safe limit on the message length. Don't know what it is, but 4000 doesn't crash
+       // the client.
+       const int MaxMessageLength = 4000;
+
+       char OutNPCName[MaxNPCNameLength+1];
+       char OutMessage[MaxMessageLength+1];
+
+       // Apparently Visual C++ snprintf is not C99 compliant and doesn't put the null terminator
+       // in if the formatted string >= the maximum length, so we put it in.
+       //
+       snprintf(OutNPCName, MaxNPCNameLength, "%s", npcname); OutNPCName[MaxNPCNameLength]='\0';
+       snprintf(OutMessage, MaxMessageLength, "%s", message); OutMessage[MaxMessageLength]='\0';
+
+       uint32 len_packet = sizeof(SpecialMesg_Struct) + strlen(OutNPCName) + strlen(OutMessage);
+       EQApplicationPacket* app = new EQApplicationPacket(OP_SpecialMesg, len_packet);
+       SpecialMesg_Struct* sm=(SpecialMesg_Struct*)app->pBuffer;
+
+       sm->header[0] = 0;
+       sm->header[1] = 2;
+       sm->header[2] = 0;
+       sm->msg_type = 0x0a;
+       sm->target_spawn_id = GetID();
+
+       char *dest = &sm->sayer[0];
+
+       sprintf(dest, "%s", OutNPCName);
+
+       dest = dest + strlen(OutNPCName) + 13;
+
+       sprintf(dest, "%s", OutMessage);
+
+       QueuePacket(app);
+
+       safe_delete(app);
+}
+
 void Client::SetMaxHP() {
 	if(dead)
 		return;
@@ -1688,7 +1728,7 @@ bool Client::CheckIncreaseSkill(SkillType skillid, int chancemodi) {
 		sint16 Chance = 10 + chancemodi + ((252 - skillval) / 20);
 		if (Chance < 1)
 			Chance = 1; // Make it always possible
-		if(MakeRandomFloat(0, 99) < Chance)
+		if(MakeRandomFloat(0, 99) < (Chance * RuleI(Character, SkillUpModifier) / 100))
 		{
 			SetSkill(skillid, GetRawSkill(skillid) + 1);
 			_log(SKILLS__GAIN, "Skill %d at value %d successfully gain with %.4f%%chance (mod %d)", skillid, skillval, Chance, chancemodi);
@@ -3235,10 +3275,4 @@ void Client::SetHoTT(int32 mobid) {
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
-
-
-
-
-
-
 

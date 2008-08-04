@@ -419,7 +419,7 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 				{
 					//attacking someone on same faction, or a friend
 					//Father Nitwit:  make sure we can see them.
-					if(mob->CheckLosFN(attacker)) {
+					if(mob->CheckLosFN(sender)) {
 #if (EQDEBUG>=5) 
 						LogFile->write(EQEMuLog::Debug, "AIYellForHelp(\"%s\",\"%s\") %s attacking %s Dist %f Z %f", 
 						sender->GetName(), attacker->GetName(), mob->GetName(), attacker->GetName(), mob->DistNoRoot(*sender), fabs(sender->GetZ()+mob->GetZ()));
@@ -1212,13 +1212,13 @@ sint32 Mob::CheckHealAggroAmount(int16 spellid) {
 			case SE_CurrentHP:{
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
 				if(val > 0)
-					AggroAmount += val/3;
+					AggroAmount += val*2/3;
 				break;
 			}
 			case SE_HealOverTime: {
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
 				if(val > 0)
-					AggroAmount += val/6;
+					AggroAmount += val*1/3;
 				break;
 			}
 			default:{
@@ -1256,6 +1256,9 @@ void Mob::ClearFeignMemory() {
 
 bool Mob::PassCharismaCheck(Mob* caster, Mob* spellTarget, int16 spell_id) {
 	bool Result = false;
+
+	if(spells[spell_id].ResistDiff <= -600)
+		return true;
 
 	float r1 = ((((float)spellTarget->GetMR() + spellTarget->GetLevel()) / 3) / spellTarget->GetMaxMR()) + ((float)MakeRandomFloat(-10, 10) / 100.0f);
 	float r2 = 0.0f;

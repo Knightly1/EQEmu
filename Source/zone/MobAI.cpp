@@ -612,6 +612,7 @@ void Mob::AI_Process() {
 			{
 				SetMoving(false);
 				moved=false;
+				SetHeading(CalculateHeadingToTarget(target->GetX(), target->GetY()));
 				/*while(DistNoZ(*target)<10){ //dont want them too close
 					x_pos -= tar_vx*.2;
 					y_pos -= tar_vy*.2;

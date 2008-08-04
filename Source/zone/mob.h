@@ -553,6 +553,7 @@ bool logpos;
 	void Say_StringID(int32 string_id, const char *message3 = 0, const char *message4 = 0, const char *message5 = 0, const char *message6 = 0, const char *message7 = 0, const char *message8 = 0, const char *message9 = 0);
 	void Shout(const char *format, ...);
 	void Emote(const char *format, ...);
+	void QuestJournalledSay(Client *QuestInitiator, const char *str);
 
 
 	virtual void SpellProcess();
@@ -570,6 +571,7 @@ bool logpos;
 	void	BardPulse(uint16 spell_id, Mob *caster);
 	bool	DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_center, CastAction_type &CastAction);
 	int		CalcBuffDuration(Mob *caster, Mob *target, int16 spell_id);
+	void	SendPetBuffsToClient();
 //	int		CheckAddBuff(Mob* caster, const int16& spell_id, const int& caster_level, int* buffdur, int ticsremaining = -1);
 	int		AddBuff(Mob *caster, const int16 spell_id, int duration = 0);
 	bool	SpellEffect(Mob* caster, int16 spell_id, float partial = 100);

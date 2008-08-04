@@ -332,10 +332,10 @@ bool Client::HandlePacket(const EQApplicationPacket *app) {
 		{
 // SCORPIOUS2K - added random name generator
 			// creates up to a 10 char name
-			char vowels[17]="aeiouyaeiouaeioe";
-			char cons[47]="bcdfghjklmnpqrstvwxzybcdgklmnprstvwbcdgkpstrkd";
+			char vowels[18]="aeiouyaeiouaeioe";
+			char cons[48]="bcdfghjklmnpqrstvwxzybcdgklmnprstvwbcdgkpstrkd";
 			char rndname[17]="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-			char paircons[31]="ngrkndstshthphsktrdrbrgrfrclcr";
+			char paircons[33]="ngrkndstshthphsktrdrbrgrfrclcr";
 			int rndnum=rand()%76,n=1;
 			bool dlc=false;
 			bool vwl=false;
@@ -956,6 +956,10 @@ bool Client::OPCharCreate(char *name, CharCreate_Struct *cc)
 	pp.cur_hp			= 1000; // 1k hp during dev only
 	//what was the point of this? zone dosent handle this:
 	//pp.expAA			= 0xFFFFFFFF;
+
+	pp.hunger_level = 6000;
+	pp.thirst_level = 6000;
+
 
 	// FIXME: FV roleplay, database goodness...
 

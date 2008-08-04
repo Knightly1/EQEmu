@@ -46,6 +46,7 @@ RULE_INT ( Character, ItemSpellShieldingCap, 35)
 RULE_INT ( Character, ItemDoTShieldingCap, 35)
 RULE_INT ( Character, ItemStunResistCap, 35)
 RULE_INT ( Character, ItemStrikethroughCap, 35)
+RULE_INT ( Character, SkillUpModifier, 100) //skill ups are at 100%
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Guild )
@@ -141,6 +142,7 @@ RULE_BOOL (NPC, UseItemBonusesForNonPets, true)
 RULE_INT ( NPC, SayPauseTimeInSec, 5)
 RULE_INT ( NPC, OOCRegen, 0)
 RULE_BOOL ( NPC, BuffFriends, false )
+RULE_BOOL ( NPC, EnableNPCQuestJournal, false)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY ( Aggro )

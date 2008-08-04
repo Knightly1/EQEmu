@@ -1260,7 +1260,7 @@ void Client::Handle_OP_Consume(const EQApplicationPacket *app)
 		return;
 	}
 	Consume_Struct* pcs = (Consume_Struct*)app->pBuffer;
-	uint16 cons_mod = 30;
+	uint16 cons_mod = 180;
 
 	switch(GetAA(aaInnateMetabolism)){
 		case 1:
@@ -6792,6 +6792,10 @@ void Client::CompleteConnect()
 			pet->SendWearChange(x);
 	}
 	zoneinpacket_timer.Start();
+
+	if(GetPet()){
+		GetPet()->SendPetBuffsToClient();
+	}
 	
 	conn_state = ClientConnectFinished;
 

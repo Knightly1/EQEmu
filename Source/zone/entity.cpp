@@ -2757,6 +2757,11 @@ void EntityList::AddHealAggro(Mob* target, Mob* caster, int16 thedam)
 	while(iterator.MoreElements())
 	{
 		cur = iterator.GetData();
+		if(!cur->CheckAggro(target)){
+			iterator.Advance();
+			continue;
+		}
+
 		if (!cur->IsMezzed() && !cur->IsStunned())
 		{
 			if(cur->IsPet()){
@@ -2767,7 +2772,7 @@ void EntityList::AddHealAggro(Mob* target, Mob* caster, int16 thedam)
 			}
 			else{
 				if(caster){
-					if(cur->CheckAggro(caster))
+					if(!cur->CheckAggro(caster))
 						cur->AddToHateList(caster, 1);
 					else
 						cur->AddToHateList(caster, thedam);
@@ -3110,7 +3115,28 @@ bool Entity::CheckCoordLosNoZLeaps(float cur_x, float cur_y, float cur_z, float 
 	return false;
 }
 
+void EntityList::QuestJournalledSayClose(Mob *sender, Client *QuestInitiator, float dist, const char* mobname, const char* message)
+{
+       Client *c;
+       LinkedListIterator<Client*> iterator(client_list);
+       float dist2 = dist * dist;
 
+       // Send the message to the quest initiator such that the client will enter it into the NPC Quest Journal
+       if(QuestInitiator) {
+
+               char *buf = new char[strlen(mobname) + strlen(message) + 10];
+               sprintf(buf, "%s says, '%s'", mobname, message);
+               QuestInitiator->QuestJournalledMessage(mobname, buf);
+               safe_delete_array(buf);
+       }
+       // Use the old method for all other nearby clients
+       for(iterator.Reset(); iterator.MoreElements(); iterator.Advance())
+       {
+               c = iterator.GetData();
+               if(c && (c != QuestInitiator) && c->DistNoRoot(*sender) <= dist2)
+                       c->Message_StringID(10, GENERIC_SAY, mobname, message);
+       }
+}
 
 
 

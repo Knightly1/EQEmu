@@ -489,6 +489,19 @@ struct SpellBuffFade_Struct {
 /*032*/
 };
 
+struct PetBuff_Struct {
+/*000*/ uint32 petid;
+/*004*/ uint32 spellid[BUFF_COUNT];
+/*104*/ uint32 unknown700;	
+/*108*/ uint32 unknown701;
+/*112*/ uint32 unknown702;
+/*116*/ uint32 unknown703;
+/*120*/ uint32 unknown704;
+/*124*/ uint32 ticsremaining[BUFF_COUNT];
+/*224*/ uchar unknown705[20];
+/*244*/ uint32 buffcount;
+};
+
 struct ItemNamePacket_Struct {
 /*000*/	uint32 item_id;
 /*004*/	uint32 unkown004;
