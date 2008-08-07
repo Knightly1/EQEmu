@@ -1,6 +1,9 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/07/2008
+KLS: Bald char fix revert, will try something else.
+
 ==08/04/2008
 KLS: (Derision) Pet Buff Window Implemented.
 KLS: Charmed pets should now function with the pet window, as well as appear correctly in group.

@@ -637,9 +637,9 @@ void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 
 	ns->spawn.haircolor = haircolor ? haircolor : 0xFF;
 	ns->spawn.beardcolor = beardcolor ? beardcolor : 0xFF;
-	ns->spawn.eyecolor1 = eyecolor1;// ? eyecolor1 : 0xFF;
-	ns->spawn.eyecolor2 = eyecolor2;
-	ns->spawn.hairstyle = hairstyle;
+	ns->spawn.eyecolor1 = eyecolor1 ? eyecolor1 : 0xFF;
+	ns->spawn.eyecolor2 = eyecolor2 ? eyecolor2 : 0xFF;
+	ns->spawn.hairstyle = hairstyle ? hairstyle : 0xFF;
 	ns->spawn.face = luclinface;
 	ns->spawn.beard = beard ? beard : 0xFF;
 	ns->spawn.equip_chest2  = texture;
