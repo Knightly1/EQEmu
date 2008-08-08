@@ -284,6 +284,8 @@ public:
 	Mob*	AICheckCloseAggro(Mob* sender, float iAggroRange, float iAssistRange);
 	void	AIYellForHelp(Mob* sender, Mob* attacker);
 	bool	AICheckCloseBeneficialSpells(NPC* caster, int8 iChance, float iRange, int16 iSpellTypes);
+
+	Corpse* GetClosestCorpse(Mob* sender);
 protected:
 	friend class Zone;
 	void	Depop(bool StartSpawnTimer = true);

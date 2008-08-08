@@ -543,6 +543,196 @@ void Mob::TemporaryPets(int16 spell_id, Mob *targ, const char *name_override, ui
 		targ->AddToHateList(this, 1, 0);
 }
 
+void Mob::WakeTheDead(int16 spell_id, Mob *target, uint32 duration)
+{
+	Corpse *CorpseToUse = NULL;
+	CorpseToUse = entity_list.GetClosestCorpse(this);
+
+	if(!CorpseToUse)
+		return;
+
+	//assuming we have pets in our table; we take the first pet as a base type.
+	const NPCType *base_type = database.GetNPCType(500);
+	NPCType *make_npc = new NPCType;
+	memcpy(make_npc, base_type, sizeof(NPCType));
+	
+	//combat stats
+	make_npc->AC = ((GetLevel() * 7) + 550);
+	make_npc->ATK = GetLevel();
+	make_npc->max_dmg = (GetLevel() * 4) + 2;
+	make_npc->min_dmg = 1;
+
+	//base stats
+	make_npc->cur_hp = (GetLevel() * 55);
+	make_npc->max_hp = (GetLevel() * 55);
+	make_npc->STR = 85 + (GetLevel() * 3);
+	make_npc->STA = 85 + (GetLevel() * 3);
+	make_npc->DEX = 85 + (GetLevel() * 3);
+	make_npc->AGI = 85 + (GetLevel() * 3);
+	make_npc->INT = 85 + (GetLevel() * 3);
+	make_npc->WIS = 85 + (GetLevel() * 3);
+	make_npc->CHA = 85 + (GetLevel() * 3);
+	make_npc->MR = 25;
+	make_npc->FR = 25;
+	make_npc->CR = 25;
+	make_npc->DR = 25;
+	make_npc->PR = 25;
+
+	//level class and gender
+	make_npc->level = GetLevel(); 
+	make_npc->class_ = CorpseToUse->class_;
+	make_npc->race = CorpseToUse->race;
+	make_npc->gender = CorpseToUse->gender;
+	make_npc->loottable_id = 0;
+	//name
+	char NewName[64];
+	sprintf(NewName, "%s`s Animated Corpse", GetCleanName());
+	strcpy(make_npc->name, NewName);
+
+	//appearance
+	make_npc->beard = CorpseToUse->beard;
+	make_npc->beardcolor = CorpseToUse->beardcolor;
+	make_npc->eyecolor1 = CorpseToUse->eyecolor1;
+	make_npc->eyecolor2 = CorpseToUse->eyecolor2;
+	make_npc->haircolor = CorpseToUse->haircolor;
+	make_npc->hairstyle = CorpseToUse->hairstyle;
+	make_npc->helmtexture = CorpseToUse->helmtexture;
+	make_npc->luclinface = CorpseToUse->luclinface;
+	make_npc->size = CorpseToUse->size;
+	make_npc->texture = CorpseToUse->texture;
+
+	//cast stuff.. based off of PEQ's if you want to change 
+	//it you'll have to mod this code, but most likely
+	//most people will be using PEQ style for the first 
+	//part of their spell list; can't think of any smooth
+	//way to do this
+	//some basic combat mods here too since it's convienent
+	switch(CorpseToUse->class_)
+	{
+	case CLERIC:
+		make_npc->npc_spells_id = 1;
+		break;
+	case WIZARD:
+		make_npc->npc_spells_id = 2;
+		break;
+	case NECROMANCER:
+		make_npc->npc_spells_id = 3;
+		break;
+	case MAGICIAN:
+		make_npc->npc_spells_id = 4;
+		break;
+	case ENCHANTER:
+		make_npc->npc_spells_id = 5;
+		break;
+	case SHAMAN:
+		make_npc->npc_spells_id = 6;
+		break;
+	case DRUID:
+		make_npc->npc_spells_id = 7;
+		break;
+	case PALADIN:
+		make_npc->npc_attacks[0] = 'T';
+		make_npc->cur_hp = make_npc->cur_hp * 150 / 100;
+		make_npc->max_hp = make_npc->max_hp * 150 / 100;
+		make_npc->npc_spells_id = 8;
+		break;
+	case SHADOWKNIGHT:
+		make_npc->npc_attacks[0] = 'T';
+		make_npc->cur_hp = make_npc->cur_hp * 150 / 100;
+		make_npc->max_hp = make_npc->max_hp * 150 / 100;
+		make_npc->npc_spells_id = 9;
+		break;
+	case RANGER:
+		make_npc->npc_attacks[0] = 'Q';
+		make_npc->cur_hp = make_npc->cur_hp * 135 / 100;
+		make_npc->max_hp = make_npc->max_hp * 135 / 100;
+		make_npc->npc_spells_id = 10;
+		break;
+	case BARD:
+		make_npc->npc_attacks[0] = 'T';
+		make_npc->cur_hp = make_npc->cur_hp * 110 / 100;
+		make_npc->max_hp = make_npc->max_hp * 110 / 100;
+		make_npc->npc_spells_id = 11;
+		break;
+	case BEASTLORD:
+		make_npc->npc_attacks[0] = 'Q';
+		make_npc->cur_hp = make_npc->cur_hp * 110 / 100;
+		make_npc->max_hp = make_npc->max_hp * 110 / 100;
+		make_npc->npc_spells_id = 12;
+		break;
+	case ROGUE:
+		make_npc->npc_attacks[0] = 'Q';
+		make_npc->max_dmg = make_npc->max_dmg * 150 /100;
+		make_npc->cur_hp = make_npc->cur_hp * 110 / 100;
+		make_npc->max_hp = make_npc->max_hp * 110 / 100;
+		break;
+	case MONK:
+		make_npc->npc_attacks[0] = 'Q';
+		make_npc->max_dmg = make_npc->max_dmg * 150 /100;
+		make_npc->cur_hp = make_npc->cur_hp * 135 / 100;
+		make_npc->max_hp = make_npc->max_hp * 135 / 100;
+		break;
+	case WARRIOR:
+	case BERSERKER:
+		make_npc->npc_attacks[0] = 'Q';
+		make_npc->max_dmg = make_npc->max_dmg * 150 /100;
+		make_npc->cur_hp = make_npc->cur_hp * 175 / 100;
+		make_npc->max_hp = make_npc->max_hp * 175 / 100;
+		break;
+	default:
+		make_npc->npc_spells_id = 0;
+		break;
+	}
+	
+	make_npc->loottable_id = 0;
+	make_npc->merchanttype = 0;
+	make_npc->d_meele_texture1 = 0;
+	make_npc->d_meele_texture2 = 0;
+
+	TempPets(true);
+
+	NPC* npca = new NPC(make_npc, 0, GetX(), GetY(), GetZ(), GetHeading());
+
+	if(!npca->GetSwarmInfo()){
+		AA_SwarmPetInfo* nSI = new AA_SwarmPetInfo;
+		npca->SetSwarmInfo(nSI);
+		npca->GetSwarmInfo()->duration = new Timer(duration*1000);
+	}
+	else{
+		npca->GetSwarmInfo()->duration->Start(duration*1000);
+	}
+
+	npca->GetSwarmInfo()->owner = this;
+
+	//give the pet somebody to "love"
+	if(target != NULL){
+		npca->AddToHateList(target, 100000);
+		npca->GetSwarmInfo()->target = target->GetID();
+	}
+
+	//gear stuff, need to make sure there's
+	//no situation where this stuff can be duped
+	for(int x = 0; x < 21; x++)
+	{
+		uint32 sitem = 0;
+		sitem = CorpseToUse->GetWornItem(x);
+		if(sitem){
+			const Item_Struct * itm = database.GetItem(sitem);
+			npca->AddLootDrop(itm, &npca->itemlist, 1, true, true);
+		}
+	}
+
+	//we allocated a new NPC type object, give the NPC ownership of that memory
+	if(make_npc != NULL)
+		npca->GiveNPCTypeData(make_npc);
+
+	entity_list.AddNPC(npca);
+
+	//the target of these swarm pets will take offense to being cast on...
+	if(target != NULL)
+		target->AddToHateList(this, 1, 0);
+}
+
 //turn on an AA effect
 //duration == 0 means no time limit, used for one-shot deals, etc..
 void Client::EnableAAEffect(aaEffectType type, int32 duration) {

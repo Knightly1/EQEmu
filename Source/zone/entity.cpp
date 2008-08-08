@@ -3138,5 +3138,30 @@ void EntityList::QuestJournalledSayClose(Mob *sender, Client *QuestInitiator, fl
        }
 }
 
+Corpse* EntityList::GetClosestCorpse(Mob* sender)
+{
+	if(!sender) 
+		return NULL;
+
+	uint32 dist = 4294967295;
+	Corpse* nc = NULL;
+
+	LinkedListIterator<Corpse*> iterator(corpse_list);
+	iterator.Reset();
+
+	while(iterator.MoreElements())
+	{
+		uint32 nd = ((iterator.GetData()->GetY() - sender->GetY()) * (iterator.GetData()->GetY() - sender->GetY())) + 
+			((iterator.GetData()->GetX() - sender->GetX()) * (iterator.GetData()->GetX() - sender->GetX()));
+		if(nd < dist){
+			dist = nd;
+			nc = iterator.GetData();
+
+		}
+		iterator.Advance();
+	}
+	return nc;
+}
+
 
 

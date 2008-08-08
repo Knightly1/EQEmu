@@ -19,6 +19,7 @@
 #define RAIDS_H
 
 #include "../common/types.h"
+#include "../common/linked_list.h"
 #include "groups.h"
 #include <vector>
 #include <string>
@@ -50,22 +51,33 @@ enum {	//raid packet types:
 class Raid : public GroupIDConsumer {
 public:
 	Raid(Client *leader);
-	
-	bool	Process();
+	Raid(uint32 raidID);
+	~Raid();
+
+	bool	Process();	
+	bool	IsRaid() { return true; }
 	
 	//packet stuff
 	void	Message(Client* sender,const char* message);
+	void	Message_StringID(Mob* sender, int32 type, int32 string_id, const char* message,const char* message2=0,const char* message3=0,const char* message4=0,const char* message5=0,const char* message6=0,const char* message7=0,const char* message8=0,const char* message9=0, int32 distance = 0);
+	
 	void	QueuePacket(const EQApplicationPacket *app, bool ack_req = true);
 	EQApplicationPacket	*BuildFullUpdate(Client *for_who);
 	
 	//leadership stuff
 	void	SetLeader(Client* newleader){ leader=newleader; };
+	Mob*	GetLeader() { return leader; }
 	bool	IsLeader(Mob* leadertest) { return leadertest==leader; };
+	void	DisbandRaid();
 	
 	//group management
 	void	AddGroup(Group *g);
+	void	RemoveGroup(Group *g);
+	void	TeleportRaid(Mob* sender, int32 zoneID, float x, float y, float z, float heading);
 	
 	//member stuff
+	int32	GetTotalRaidDamage(Mob* other);
+	void	SplitMoney(uint32 copper, uint32 silver, uint32 gold, uint32 platinum, Client *splitter = NULL);	
 	bool	ContainsMember(const char *name);
 	bool	ContainsMember(Client *who);
 	int8	GroupCount();
@@ -73,6 +85,12 @@ public:
 	int32	GetLowestLevel();
 	//Loads up the structure from the database
 	bool	LearnMembers();
+	bool	VerifyRaid();
+	
+	void UpdateRaid(); //updates everyone in raid on a change
+
+	Mob *members[MAX_RAID_GROUPS*6];
+	char membername[MAX_RAID_GROUPS*6][64];
 	
 protected:
 	Client *leader;

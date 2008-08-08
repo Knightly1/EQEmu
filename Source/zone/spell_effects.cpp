@@ -413,84 +413,6 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 				break;
 			}
 
-			case SE_SkillAttack:
-			{
-				const ItemInst* itm = NULL;
-				sint32 dam = 0;
-				if(spells[spell_id].skill == ARCHERY || spells[spell_id].skill == THROWING)
-				{
-					if(caster->IsClient())
-					{
-						itm = caster->CastToClient()->GetInv().GetItem(SLOT_RANGE);
-					}
-					if(itm)
-						dam = effect_value + itm->GetItem()->Damage * 2 + (itm->GetItem()->Damage * (GetSkill(spells[spell_id].skill) + GetDEX()) / 225);
-					else
-						dam = effect_value;
-				}
-				else if (spells[spell_id].skill == BASH)
-				{
-					if(caster->IsClient())
-					{
-						itm = caster->CastToClient()->GetInv().GetItem(SLOT_SECONDARY);
-					}
-					if(itm)
-						dam = effect_value + ((itm->GetItem()->AC/4)+1) * 2 + (((itm->GetItem()->AC/4)+1) * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
-					else
-						dam = effect_value;
-				}
-				else if (spells[spell_id].skill == KICK || spells[spell_id].skill == FLYING_KICK || spells[spell_id].skill == ROUND_KICK)
-				{
-					if(caster->IsClient())
-					{
-						itm = caster->CastToClient()->GetInv().GetItem(SLOT_FEET);
-					}
-					if(itm)
-						dam = effect_value + ((itm->GetItem()->AC / 2) + 1) * 2 + (((itm->GetItem()->AC / 2) + 1) * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
-					else
-						dam = effect_value;
-				}
-				else if (spells[spell_id].skill == HAND_TO_HAND || spells[spell_id].skill == EAGLE_STRIKE || spells[spell_id].skill == TIGER_CLAW)
-				{
-					if(caster->IsClient())
-					{
-						itm = caster->CastToClient()->GetInv().GetItem(SLOT_HANDS);
-					}
-					if(itm)
-						dam = effect_value + ((itm->GetItem()->AC / 2) + 1) + (((itm->GetItem()->AC / 2) + 1) * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
-					else
-						dam = effect_value;
-				}
-				else
-				{
-					if(caster->IsClient())
-					{
-						itm = caster->CastToClient()->GetInv().GetItem(SLOT_PRIMARY);
-					}
-					if(itm)
-						dam = effect_value + itm->GetItem()->Damage * 2 + (itm->GetItem()->Damage * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
-					else
-						dam = effect_value;
-				}
-				int wpnD = caster->GetWeaponDamage(this, itm);
-				if(wpnD){
-					if(CheckHitChance(caster, spells[spell_id].skill, 13))
-					{
-						if(RuleB(Combat, UseIntervalAC))
-							caster->DoSpecialAttackDamage(this, spells[spell_id].skill, dam, 1);
-						else
-							caster->DoSpecialAttackDamage(this, spells[spell_id].skill, MakeRandomInt(1, dam), 1);
-
-					}
-					else{
-						caster->DoSpecialAttackDamage(this, spells[spell_id].skill, 0, 1);
-					}
-				}
-				else
-					caster->DoSpecialAttackDamage(this, spells[spell_id].skill, -5, 1);
-				break;
-			}
-
 			case SE_AttackSpeed:
 			case SE_AttackSpeed2:
 			case SE_AttackSpeed3:
@@ -2196,12 +2118,103 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 			}
 
 
-			case SE_WakeTheDead:		//Dook- Wake the Dead
+			case SE_SkillAttack:
+			{
+#ifdef SPELL_EFFECT_SPAM
+				snprintf(effect_desc, _EDLEN, "Skill Attack");
+#endif
+				const ItemInst* itm = NULL;
+				sint32 dam = 0;
+				if(spells[spell_id].skill == ARCHERY || spells[spell_id].skill == THROWING)
+				{
+					if(caster->IsClient())
+					{
+						itm = caster->CastToClient()->GetInv().GetItem(SLOT_RANGE);
+					}
+					if(itm)
+						dam = effect_value + itm->GetItem()->Damage * 2 + (itm->GetItem()->Damage * (GetSkill(spells[spell_id].skill) + GetDEX()) / 225);
+					else
+						dam = effect_value;
+				}
+				else if (spells[spell_id].skill == BASH)
+				{
+					if(caster->IsClient())
+					{
+						itm = caster->CastToClient()->GetInv().GetItem(SLOT_SECONDARY);
+					}
+					if(itm)
+						dam = effect_value + ((itm->GetItem()->AC/4)+1) * 2 + (((itm->GetItem()->AC/4)+1) * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
+					else
+						dam = effect_value;
+				}
+				else if (spells[spell_id].skill == KICK || spells[spell_id].skill == FLYING_KICK || spells[spell_id].skill == ROUND_KICK)
+				{
+					if(caster->IsClient())
+					{
+						itm = caster->CastToClient()->GetInv().GetItem(SLOT_FEET);
+					}
+					if(itm)
+						dam = effect_value + ((itm->GetItem()->AC / 2) + 1) * 2 + (((itm->GetItem()->AC / 2) + 1) * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
+					else
+						dam = effect_value;
+				}
+				else if (spells[spell_id].skill == HAND_TO_HAND || spells[spell_id].skill == EAGLE_STRIKE || spells[spell_id].skill == TIGER_CLAW)
+				{
+					if(caster->IsClient())
+					{
+						itm = caster->CastToClient()->GetInv().GetItem(SLOT_HANDS);
+					}
+					if(itm)
+						dam = effect_value + ((itm->GetItem()->AC / 2) + 1) + (((itm->GetItem()->AC / 2) + 1) * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
+					else
+						dam = effect_value;
+				}
+				else
+				{
+					if(caster->IsClient())
+					{
+						itm = caster->CastToClient()->GetInv().GetItem(SLOT_PRIMARY);
+					}
+					if(itm)
+						dam = effect_value + itm->GetItem()->Damage * 2 + (itm->GetItem()->Damage * (GetSkill(spells[spell_id].skill) + GetSTR()) / 225);
+					else
+						dam = effect_value;
+				}
+				int wpnD = caster->GetWeaponDamage(this, itm);
+				if(wpnD){
+					if(CheckHitChance(caster, spells[spell_id].skill, 13))
+					{
+						if(RuleB(Combat, UseIntervalAC))
+							caster->DoSpecialAttackDamage(this, spells[spell_id].skill, dam, 1);
+						else
+							caster->DoSpecialAttackDamage(this, spells[spell_id].skill, MakeRandomInt(1, dam), 1);
+
+					}
+					else{
+						caster->DoSpecialAttackDamage(this, spells[spell_id].skill, 0, 1);
+					}
+				}
+				else
+					caster->DoSpecialAttackDamage(this, spells[spell_id].skill, -5, 1);
+				break;
+			}
+
+			case SE_WakeTheDead:
 			{
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Wake The Dead");
 #endif
-				if(caster) caster->Message(13, "Wake The Dead is not implemented yet.");
+				//meh dupe issue with npc casting this
+				if(caster->IsClient()){
+					//this spell doesn't appear to actually contain the information on duration inside of it oddly
+					int dur = 60;
+					if(spell_id == 3269)
+						dur += 15;
+					else if(spell_id == 3270)
+						dur += 30;
+
+					caster->WakeTheDead(spell_id, caster->GetTarget(), dur);
+				}
 				break;
 			}
 

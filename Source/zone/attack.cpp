@@ -1751,7 +1751,7 @@ void NPC::Death(Mob* other, sint32 damage, int16 spell, SkillType attack_skill) 
 	if(give_exp_client)
 		hate_list.DoFactionHits(GetNPCFactionID());
 	
-	if (!HasOwner() && class_ != MERCHANT && class_ != ADVENTUREMERCHANT 
+	if (!HasOwner() && class_ != MERCHANT && class_ != ADVENTUREMERCHANT && !GetSwarmInfo()
 		&& MerchantType == 0 && killer && (killer->IsClient() || (killer->HasOwner() && killer->GetOwner()->IsClient()) ||
 		(killer->IsNPC() && killer->CastToNPC()->GetSwarmInfo() && killer->CastToNPC()->GetSwarmInfo()->owner && killer->CastToNPC()->GetSwarmInfo()->owner->IsClient()))) {
 		Corpse* corpse = new Corpse(this, &itemlist, GetNPCTypeID(), &NPCTypedata,level>54?RuleI(NPC,MajorNPCCorpseDecayTimeMS):RuleI(NPC,MinorNPCCorpseDecayTimeMS));
