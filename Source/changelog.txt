@@ -4,6 +4,7 @@ EQEMu Changelog (Started on Sept 24, 2003 15:50)
 ==08/07/2008
 KLS: Bald char fix revert, will try something else.
 KLS: Wake The Dead initial implementation.
+KLS: Hopefully better bald character fix base on kraeger's findings.
 
 ==08/04/2008
 KLS: (Derision) Pet Buff Window Implemented.

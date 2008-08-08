@@ -5,6 +5,7 @@
 #include "../logsys.h"
 #include "../EQStreamIdent.h"
 #include "../crc32.h"
+#include "../races.h"
 
 #include "../eq_packet_structs.h"
 #include "../MiscFunctions.h"
@@ -468,6 +469,11 @@ ENCODE(OP_ZoneSpawns) {
 //		eq->unknown0140[4] = emu->unknown0140[4];
 		eq->is_npc = emu->is_npc;
 		eq->hairstyle = emu->hairstyle;
+
+		if(emu->gender == 1){
+			eq->hairstyle = eq->hairstyle == 0xFF ? 0 : eq->hairstyle;
+		}
+
 		eq->beard = emu->beard;
 //		eq->unknown0147[4] = emu->unknown0147[4];
 		eq->level = emu->level;
