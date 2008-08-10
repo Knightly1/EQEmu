@@ -1211,18 +1211,24 @@ sint32 Mob::CheckHealAggroAmount(int16 spellid) {
 			case SE_Rune:
 			case SE_CurrentHP:{
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
-				if(val > 0)
-					AggroAmount += val*2/3;
+				if(val > 0){
+					if(val > 3000){
+						AggroAmount += 2000 + (val - 3000) * 1 / 10;
+					}
+					else{
+						AggroAmount += val*2/3;
+					}
+				}
 				break;
 			}
 			case SE_HealOverTime: {
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], this->GetLevel(), spell_id);
 				if(val > 0)
-					AggroAmount += val*1/3;
+					AggroAmount += val*2/3;
 				break;
 			}
 			default:{
-				AggroAmount += 1;
+				AggroAmount += 0;
  				break;
  			}
 		}
@@ -1233,7 +1239,11 @@ sint32 Mob::CheckHealAggroAmount(int16 spellid) {
 		AggroAmount = AggroAmount * RuleI(Aggro, PetSpellAggroMod) / 100;
 
 	AggroAmount = (AggroAmount * RuleI(Aggro, SpellAggroMod))/100;
-	return AggroAmount;
+
+	if(AggroAmount < 0)
+		return 0;
+	else
+		return AggroAmount;
 }
 
 void Mob::AddFeignMemory(Client* attacker) {
