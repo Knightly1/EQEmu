@@ -166,6 +166,10 @@ public:
 	void	ClearGroup(int32 gid = 0);
 	char*	GetGroupLeaderForLogin(const char* name,char* leaderbuf);
 	
+	void	SetGroupLeaderName(int32 gid, const char* name);
+	char	*GetGroupLeaderName(int32 gid, char* leaderbuf);
+	void	ClearGroupLeader(int32 gid = 0);
+
 	/*
 	 * Database Varaibles
 	 */

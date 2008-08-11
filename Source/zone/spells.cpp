@@ -229,7 +229,7 @@ bool Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
 		int fizzle_msg = IsBardSong(spell_id) ? MISS_NOTE : SPELL_FIZZLE;
 		InterruptSpell(fizzle_msg, 0x121, spell_id);
 		
-		uint32 use_mana = mana_cost / 4;
+		uint32 use_mana = ((spells[spell_id].mana) / 4);
 		mlog(SPELLS__CASTING_ERR, "Spell casting canceled: fizzled. %d mana has been consumed", use_mana);
 		
 		// fizzle 1/4 the mana away
@@ -498,25 +498,25 @@ bool Client::CheckFizzle(int16 spell_id)
 	if (GetAA(aaMasteryofthePast)) {
 		switch (GetAA(aaMasteryofthePast)) {
 			case 1:
-				no_fizzle_level = 55;
+				no_fizzle_level = 53;
 				break;
 			case 2:
-				no_fizzle_level = 60;
+				no_fizzle_level = 55;
 				break;
 			case 3:
-				no_fizzle_level = 65;
+				no_fizzle_level = 57;
 				break;
 		}
 	} else {
 		switch (GetAA(aaSpellCastingExpertise)) {
 			case 1:
-				no_fizzle_level = 20;
+				no_fizzle_level = 19;
 				break;
 			case 2:
-				no_fizzle_level = 35;
+				no_fizzle_level = 34;
 				break;
 			case 3:
-				no_fizzle_level = 52;
+				no_fizzle_level = 51;
 				break;
 		}
 	}
@@ -2378,6 +2378,16 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 		mlog(SPELLS__RESISTS, "Spell %d can't take hold due to immunity %s -> %s", spell_id, GetName(), spelltar->GetName());
 		safe_delete(action_packet);
 		return false;
+	}
+
+	//check for AE_Undead
+	if(spells[spell_id].targettype == ST_UndeadAE){
+		if(spelltar->GetBodyType() != BT_SummonedUndead && 
+			spelltar->GetBodyType() != BT_Undead && 
+			spelltar->GetBodyType() != BT_Vampire)
+		{
+			return false;
+		}
 	}
 
 

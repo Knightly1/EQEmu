@@ -273,7 +273,11 @@ public:
 	 */
 	int8	GetZoneWeather(int32 zoneid);
 	bool	SetZoneWeather(int32 zoneid, int8 w);
-	
+	/*
+	 * Group
+	 */
+	void RefreshGroupFromDB(Client *c);
+
 	/*
 	 * Misc stuff.
 	 * PLEASE DO NOT ADD TO THIS COLLECTION OF CRAP UNLESS YOUR METHOD 

@@ -1,6 +1,25 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/11/2008
+KLS: Group leader info should transfer to a new zone when the leader transfers to that zone.
+KLS: Will now force a group update to players not in zone, text not correct.
+KLS: Added #refreshgroup command - will refresh group visually from DB
+KLS: Deleting stale corpses will now bury corpses instead of make them decay if shadowrest is enabled.
+KLS: Small change to temp merchant lists with regards to charges.
+KLS: Initial implementation of Technique of Master Wu
+KLS: Spell's fizzles will now base their mana cost on the correct amount.
+KLS: Tweak to spell casting expertise and mastery of the past
+KLS: Hopefully fix to AEUndead spells hitting more than undead
+
+Required SQL (Your groups will probably break completely without this):
+CREATE TABLE `Group_Leaders` (
+  `gid` int(4) NOT NULL,
+  `leadername` varchar(64) NOT NULL,
+  PRIMARY KEY (`gid`)
+)
+ENGINE = InnoDB;
+
 ==08/09/2008
 KLS: Minor tweaks to heal aggro.
 

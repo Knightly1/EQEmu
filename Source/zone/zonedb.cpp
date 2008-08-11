@@ -6,6 +6,8 @@
 #include "../common/guilds.h"
 #include "../common/rulesys.h"
 #include "zone.h"
+#include "client.h"
+#include "groups.h"
 #include <iostream>
 
 using namespace std;
@@ -1290,65 +1292,69 @@ bool ZoneDatabase::GetAccountInfoForLogin(int32 account_id, sint16* admin, char*
 	return false;
 }
 
+void ZoneDatabase::RefreshGroupFromDB(Client *c){
+	if(!c){
+		return;
+	}
 
+	Group *g = c->GetGroup();
 
+	if(!g){
+		return;
+	}
 
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupUpdate2_Struct));
+	GroupUpdate2_Struct* gu = (GroupUpdate2_Struct*)outapp->pBuffer;	
+	gu->action = 7;
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+	MYSQL_ROW row;
 
+	char leadername[64];
 
+	strcpy(gu->yourname, c->GetName());
+	strcpy(leadername, GetGroupLeaderName(g->GetID(), leadername));
+	strcpy(gu->leadersname, leadername);
 
+	int index = 0;
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT name from character_ where groupid=%d", g->GetID()), errbuf, &result)) {
+		while(row = mysql_fetch_row(result)){
+			if(index < 6){
+				if(strcmp(c->GetName(), row[0]) != 0){
+					strcpy(gu->membername[index], row[0]);
+					index++;
+				}
+			}
+		}
+		mysql_free_result(result);
+	}
+	else
+	{
+		printf("Error in group update query: %s\n", errbuf);
+	}
+	safe_delete_array(query);
 
+	//todo: fix this
+	/*char errbuf2[MYSQL_ERRMSG_SIZE];
+    char *query2 = 0;
+    MYSQL_RES *result2;
+	MYSQL_ROW row2;
+	PlayerProfile_Struct pp;
+	if (RunQuery(query2, MakeAnyLenString(&query, "SELECT profile from character_ where name='%s'", gu->leadersname), errbuf2, &result2)) {
+		row2 = mysql_fetch_row(result2);
+		unsigned long* lengths = mysql_fetch_lengths(result2);
+		if (lengths[0] == sizeof(PlayerProfile_Struct)) {
+			//memcpy(&pp, row2[0], sizeof(PlayerProfile_Struct));
+			//memcpy(&gu->leader_aas, &pp.leader_abilities, sizeof(GroupLeadershipAA_Struct));
+		}
+		mysql_free_result(result2);
+	}
+	else{
+			printf("Unable to get pp from leader: %s\n",errbuf2);
+	}
+	safe_delete_array(query2);*/
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	c->QueuePacket(outapp);
+	safe_delete(outapp);
+}

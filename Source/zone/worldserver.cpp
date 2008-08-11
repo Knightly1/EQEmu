@@ -761,6 +761,18 @@ printf("Got successful group leave message for '%s'\n", sgl->member_name);
 #endif
 			break;
 		}
+
+		case ServerOP_ForceGroupUpdate: {
+			ServerForceGroupUpdate_Struct* fgu = (ServerForceGroupUpdate_Struct*)pack->pBuffer;
+			if(zone){
+				if(fgu->origZoneID == zone->GetZoneID())
+					break;
+
+				entity_list.ForceGroupUpdate(fgu->gid);
+			}
+			break;
+		}
+
 		case ServerOP_SpawnPlayerCorpse: {
 			SpawnPlayerCorpse_Struct* s = (SpawnPlayerCorpse_Struct*)pack->pBuffer;
 			Corpse* NewCorpse = database.LoadPlayerCorpse(s->player_corpse_id);

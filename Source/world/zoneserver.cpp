@@ -226,6 +226,12 @@ bool ZoneServer::Process() {
 			client_list.SendPacket(sgl->member_name, pack);
 			break;
 		}
+		case ServerOP_ForceGroupUpdate: {
+			if(pack->size != sizeof(ServerForceGroupUpdate_Struct))
+				break;
+			zoneserver_list.SendPacket(pack); //bounce it to all zones
+			break;
+		}
 		case ServerOP_SpawnCondition: {
 			if(pack->size != sizeof(ServerSpawnCondition_Struct))
 				break;

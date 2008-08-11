@@ -286,6 +286,7 @@ public:
 	bool	AICheckCloseBeneficialSpells(NPC* caster, int8 iChance, float iRange, int16 iSpellTypes);
 
 	Corpse* GetClosestCorpse(Mob* sender);
+	void	ForceGroupUpdate(int32 gid);
 protected:
 	friend class Zone;
 	void	Depop(bool StartSpawnTimer = true);

@@ -394,7 +394,8 @@ int command_init(void) {
 		command_add("setgraveyard","[zone name] - Creates a graveyard for the specified zone based on your target's LOC.", 200, command_setgraveyard) ||
 		command_add("deletegraveyard","[zone name] - Deletes the graveyard for the specified zone.", 200, command_deletegraveyard) ||
 		command_add("getplayerburriedcorpsecount","- Get the target's total number of burried player corpses.", 100, command_getplayerburriedcorpsecount) ||
-		command_add("summonburriedplayercorpse","- Summons the target's oldest burried corpse, if any exist.", 100, command_summonburriedplayercorpse)
+		command_add("summonburriedplayercorpse","- Summons the target's oldest burried corpse, if any exist.", 100, command_summonburriedplayercorpse) ||
+		command_add("refreshgroup","- Refreshes Group.", 0, command_refreshgroup)		
 		)
 	{
 		command_deinit();
@@ -7265,4 +7266,18 @@ void command_getplayerburriedcorpsecount(Client *c, const Seperator *sep)
 		c->Message(0, "Your target doesn't have any burried corpses.");
 
 	return;
+}
+
+void command_refreshgroup(Client *c, const Seperator *sep)
+{
+	if(!c)
+		return;
+
+	Group *g = c->GetGroup();
+
+	if(!g)
+		return;
+
+	database.RefreshGroupFromDB(c);
+	//g->SendUpdate(7, c);
 }

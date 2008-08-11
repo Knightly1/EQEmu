@@ -44,6 +44,7 @@ members array.
 Group::Group(int32 gid) 
 : GroupIDConsumer(gid)
 {
+	leader = NULL;
 	memset(members,0,sizeof(Mob*) * MAX_GROUP_MEMBERS);
 	uint32 i;
 	for(i=0;i<MAX_GROUP_MEMBERS;i++)

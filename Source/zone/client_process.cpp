@@ -853,17 +853,17 @@ void Client::BulkSendMerchantInventory(int merchant_id, int16 npcid) {
 			else
 				handychance--;
 			int charges=1;
-			if(item->ItemClass==ItemClassCommon && (sint16)ml.charges <= item->MaxCharges)
-				charges=ml.charges;
-			else
-				charges = item->MaxCharges;
+			//if(item->ItemClass==ItemClassCommon && (sint16)ml.charges <= item->MaxCharges)
+			//	charges=ml.charges;
+			//else
+			charges = item->MaxCharges;
 			ItemInst* inst = database.CreateItem(item, charges);
 			if (inst) {
 				inst->SetPrice((item->Price*(1/.884)*Client::CalcPriceMod(merch,false)));
 				inst->SetMerchantSlot(ml.slot);
-				inst->SetMerchantCount(1);
+				inst->SetMerchantCount(ml.charges);
 				if(charges > 0)
-					inst->SetCharges(charges);
+					inst->SetCharges(item->MaxCharges);//inst->SetCharges(charges);
 				else
 					inst->SetCharges(1);
 				SendItemPacket(ml.slot-1, inst, ItemPacketMerchant);

@@ -32,6 +32,7 @@ enum {	//Group  action fields
 	groupActLeave = 1,
 	groupActDisband = 6,
 	groupActUpdate = 7,
+	groupActMakeLeader = 8,
 	groupActInviteInitial = 9
 };
 

@@ -4508,6 +4508,7 @@ void Client::Handle_OP_GroupFollow2(const EQApplicationPacket *app)
 			
 			//now we have a group id, can set inviter's id
 			database.SetGroupID(inviter->GetName(), group->GetID());
+			database.SetGroupLeaderName(group->GetID(), inviter->GetName());
 			
 			//Invite the inviter into the group first.....dont ask
 			EQApplicationPacket* outapp=new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
@@ -4526,8 +4527,17 @@ void Client::Handle_OP_GroupFollow2(const EQApplicationPacket *app)
 		if(!group->AddMember(this))
 			return;
 
-		group->SendUpdate(7,this);
+		//group->SendUpdate(7,this);
+		database.RefreshGroupFromDB(this);
 		group->SendHPPacketsTo(this);
+
+		//send updates to clients out of zone...
+		ServerPacket* pack = new ServerPacket(ServerOP_ForceGroupUpdate, sizeof(ServerForceGroupUpdate_Struct));
+		ServerForceGroupUpdate_Struct* fgu = (ServerForceGroupUpdate_Struct*)pack->pBuffer;
+		fgu->gid = group->GetID();
+		fgu->origZoneID = zone->GetZoneID();
+		worldserver.SendPacket(pack);
+		safe_delete(pack);
 	}
 	return;
 }
@@ -6442,6 +6452,19 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 			memset(m_pp.groupMembers[xy], 0, 64);
 	}
 
+	if(group){
+		if(!group->GetLeader()){
+			char ln[64];
+			memset(ln, 0, 64);
+			strcpy(ln, database.GetGroupLeaderName(group->GetID(), ln));
+			Client *c = entity_list.GetClientByName(ln);
+			if(c){
+				group->SetLeader(c);
+			}
+		}
+	}
+
+	
 	if(m_pp.z <= zone->newzone_data.underworld) {
 		m_pp.x = zone->newzone_data.safe_x;
 		m_pp.y = zone->newzone_data.safe_y;

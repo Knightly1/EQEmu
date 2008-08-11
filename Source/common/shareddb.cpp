@@ -3,6 +3,7 @@
 #include "../common/Item.h"
 #include "../common/EMuShareMem.h"
 #include "../common/classes.h"
+#include "../common/rulesys.h"
 #include "MiscFunctions.h"
 #include "eq_packet_structs.h"
 #include "guilds.h"
@@ -1176,13 +1177,22 @@ sint32 SharedDatabase::DeleteStalePlayerCorpses() {
     char *query = 0;
 	int32 affected_rows = 0;
 
-	// 604800 seconds = 1 week
-	if (!RunQuery(query, MakeAnyLenString(&query, "Delete from player_corpses where (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(timeofdeath)) > 604800 and not timeofdeath=0"), errbuf, 0, &affected_rows)) {
-		safe_delete_array(query);
-		return -1;
+	if(RuleB(Zone, EnableShadowrest))
+	{
+		if (!RunQuery(query, MakeAnyLenString(&query, "UPDATE player_corpses SET IsBurried = 1 WHERE (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(timeofdeath)) > %d and not timeofdeath=0", RuleI(Character, CorpseDecayTimeMS)), errbuf, 0, &affected_rows)) {
+			safe_delete_array(query);
+			return -1;
+		}
 	}
+	else
+	{
+		if (!RunQuery(query, MakeAnyLenString(&query, "Delete from player_corpses where (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(timeofdeath)) > %d and not timeofdeath=0", RuleI(Character, CorpseDecayTimeMS)), errbuf, 0, &affected_rows)) {
+			safe_delete_array(query);
+			return -1;
+		}
+	}
+
 	safe_delete_array(query);
-	
 	return affected_rows;
 }
 

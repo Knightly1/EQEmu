@@ -63,7 +63,7 @@ int Mob::GetBashDamage() const {
 void Mob::DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage, sint32 min_damage) {
 	//this really should go through the same code as normal melee damage to
 	//pick up all the special behavior there
-	
+
 	sint32 hate = max_damage;
 	if(max_damage > 0) {
 		who->AvoidDamage(this, max_damage);
@@ -76,6 +76,17 @@ void Mob::DoSpecialAttackDamage(Mob *who, SkillType skill, sint32 max_damage, si
 		}
 		else
 			who->AddToHateList(this, 0);
+	
+		if(max_damage > 0 && GetClass() == MONK && skill != THROWING)
+		{
+			int specl = GetAA(aaTechniqueofMasterWu) * 20;
+			if(specl == 100 || specl >= MakeRandomInt(0,100))
+			{
+				Attack(who);
+				if(20 > MakeRandomInt(0,100))
+					Attack(who);
+			}
+		}
 	}
 	who->Damage(this, max_damage, SPELL_UNKNOWN, skill, false);
 	
@@ -351,6 +362,7 @@ int Mob::MonkSpecialAttack(Mob* other, int8 unchecked_type)
 	}
 	
 	DoSpecialAttackDamage(other, skill_type, ndamage, min_dmg);
+
 	if(unchecked_type == DRAGON_PUNCH && GetAA(aaDragonPunch) && MakeRandomInt(0, 99) < 25){
 		SpellFinished(904, other);
 		other->Stun(100);

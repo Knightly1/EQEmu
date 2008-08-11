@@ -3163,5 +3163,23 @@ Corpse* EntityList::GetClosestCorpse(Mob* sender)
 	return nc;
 }
 
-
+void EntityList::ForceGroupUpdate(int32 gid) {
+	printf("forcing group update...\n");
+	LinkedListIterator<Client*> iterator(client_list); 
+	
+	iterator.Reset(); 
+	while(iterator.MoreElements()) {
+		if(iterator.GetData()){
+			Group *g = NULL;
+			g = iterator.GetData()->GetGroup();
+			if(g){
+				if(g->GetID() == gid)
+				{
+					database.RefreshGroupFromDB(iterator.GetData());
+				}
+			}
+		}
+		iterator.Advance(); 
+	} 
+}
 

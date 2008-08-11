@@ -72,6 +72,7 @@
 #define ServerOP_SpawnPlayerCorpse	0x0038
 #define ServerOP_Consent			0x0039
 #define ServerOP_Consent_Response	0x0040
+#define ServerOP_ForceGroupUpdate	0x0041
 
 #define ServerOP_WhoAll				0x0210
 
@@ -529,6 +530,11 @@ struct ServerGroupIDReply_Struct {
 
 struct ServerGroupLeave_Struct {
 	char member_name[64];	//kick this member from their group
+};
+
+struct ServerForceGroupUpdate_Struct {
+	int32 origZoneID;
+	int32 gid;
 };
 
 struct SimpleName_Struct{

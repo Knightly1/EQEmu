@@ -1686,6 +1686,7 @@ void  Database::SetGroupID(const char* name,int32 id){
 }
 
 void Database::ClearGroup(int32 gid) {
+	ClearGroupLeader(gid);
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	if(gid == 0) {  //clear all groups
@@ -1740,6 +1741,53 @@ char* Database::GetGroupLeaderForLogin(const char* name,char* leaderbuf){
 	}
 	safe_delete_array(query);
 	return leaderbuf;
+}
+
+void Database::SetGroupLeaderName(int32 gid, const char* name){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	if (!RunQuery(query, MakeAnyLenString(&query, "Replace into group_leaders set gid=%i, leadername='%s'",gid,name), errbuf))
+		printf("Unable to set group leader: %s\n",errbuf);	
+
+	safe_delete_array(query);
+}
+
+char *Database::GetGroupLeaderName(int32 gid, char* leaderbuf){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+	char* query = 0;
+	MYSQL_RES* result;
+	MYSQL_ROW row;
+	//bool ret = false;
+	//char leaderbuf[64];
+	//memset(leaderbuf, 0, 64);
+
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT leadername FROM group_leaders WHERE gid=%i",gid), errbuf, &result)) {
+		safe_delete_array(query);
+		
+		row = mysql_fetch_row(result);
+		strcpy(leaderbuf, row[0]);
+		mysql_free_result(result);
+		return leaderbuf;
+	}
+	else
+	{
+		safe_delete_array(query);
+	}
+	strcpy(leaderbuf, "UNKNOWN");
+	return leaderbuf;
+}
+
+void Database::ClearGroupLeader(int32 gid){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+	if(gid == 0) {  //clear all group leaders
+		if (!RunQuery(query, MakeAnyLenString(&query, "DELETE from group_leaders"), errbuf))
+			printf("Unable to clear group leaders: %s\n",errbuf);
+	} else {	//clear a specific group leader
+		if (!RunQuery(query, MakeAnyLenString(&query, "DELETE from group_leaders where gid = %lu", gid), errbuf))
+			printf("Unable to clear group leader: %s\n",errbuf);
+	}
+	safe_delete_array(query);
 }
 
 bool FetchRowMap(MYSQL_RES *result, map<string,string> &rowmap)
