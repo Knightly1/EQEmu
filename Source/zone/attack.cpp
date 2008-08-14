@@ -1512,12 +1512,11 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 		    damage = (max_dmg+eleBane);
 		}
 		
-		sint32 hate = 0;
+		sint32 hate = damage;
 		//THIS IS WHERE WE CHECK TO SEE IF WE HIT:
 		if(other->IsClient() && other->CastToClient()->IsSitting()) {
 			mlog(COMBAT__DAMAGE, "Client %s is sitting. Hitting for max damage (%d).", other->GetName(), (max_dmg+eleBane));
 			damage = (max_dmg+eleBane);
-			hate = damage;
 
 			mlog(COMBAT__HITS, "Generating hate %d towards %s", hate, GetName());
 			// now add done damage to the hate list
@@ -1526,7 +1525,6 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte)	 // Kaiyodo - base functio
 			if(!other->CheckHitChance(this, skillinuse, Hand)) {
 				damage = 0;	//miss
 			} else {	//hit, check for damage avoidance
-				hate = damage+eleBane;
 				other->AvoidDamage(this, damage);
 				other->MeleeMitigation(this, damage, min_dmg+eleBane);
 				ApplyMeleeDamageBonus(skillinuse, damage);

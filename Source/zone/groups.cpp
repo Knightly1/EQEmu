@@ -53,7 +53,8 @@ Group::Group(int32 gid)
 	for (i = 0; i < MAX_GROUP_LINKS; i++) {
 		link[i] = 0;
 	}
-#endif
+#endif		
+
 	if(gid != 0) {
 		if(!LearnMembers())
 			SetID(0);
@@ -64,6 +65,8 @@ Group::Group(int32 gid)
 Group::Group(Mob* leader)
 : GroupIDConsumer()
 {
+	database.ClearGroup(GetID());
+	database.ClearGroupLeader(GetID());
 	memset(members, 0, sizeof(members));
 	members[0] = leader;
 	leader->SetGrouped(true);
@@ -74,6 +77,7 @@ Group::Group(Mob* leader)
 		link[i] = 0;
 	}
 #endif
+
 	for(i=0;i<MAX_GROUP_MEMBERS;i++)
 		memset(membername[i],0,64);
 	strcpy(membername[0],leader->GetName());
@@ -356,6 +360,14 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 		  }
 	}
 
+	ServerPacket* pack = new ServerPacket(ServerOP_GroupLeave, sizeof(ServerGroupLeave_Struct));
+	ServerGroupLeave_Struct* gl = (ServerGroupLeave_Struct*)pack->pBuffer;
+	gl->gid = GetID();
+	gl->zoneid = zone->GetZoneID();
+	strcpy(gl->member_name, oldmember->GetName());
+	worldserver.SendPacket(pack);
+	safe_delete(pack);
+
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 	GroupJoin_Struct* gu = (GroupJoin_Struct*) outapp->pBuffer;
 	gu->action = groupActLeave;
@@ -525,16 +537,11 @@ bool Group::IsGroupMember(Mob* client)
 	return false;
 }
 
-void Group::GroupMessage(Mob* sender,const char* message) {
+void Group::GroupMessage(Mob* sender, const char* message) {
 	uint32 i;
 	for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
-		if(!members[i]) {
-			//they are not in zone, send using world.
-			if(strlen(membername[i])>1){
-				worldserver.SendChannelMessage(sender->CastToClient(), membername[i], 2, 0, 0, message);
-			}
+		if(!members[i])
 			continue;
-		}
 
 		if (members[i]->IsClient() && members[i]->CastToClient()->GetFilter(FILTER_GROUP)!=0)
 			members[i]->CastToClient()->ChannelMessageSend(sender->GetName(),members[i]->GetName(),2,0,message);
@@ -544,7 +551,7 @@ void Group::GroupMessage(Mob* sender,const char* message) {
 				//InteractiveChat(int8 chan_num, int8 language, const char * message, const char* targetname,Mob* sender);
   		 #endif
 	}
-	
+
 #ifdef ENABLE_GROUP_LINKING
 	uint32 j;
 	for (j = 0; j < MAX_GROUP_LINKS; j++) {
@@ -574,6 +581,15 @@ void Group::GroupMessage(Mob* sender,const char* message) {
 		}
 	}
 #endif
+
+	ServerPacket* pack = new ServerPacket(ServerOP_OOZGroupMessage, sizeof(ServerGroupChannelMessage_Struct) + strlen(message) + 1);
+	ServerGroupChannelMessage_Struct* gcm = (ServerGroupChannelMessage_Struct*)pack->pBuffer;
+	gcm->zoneid = zone->GetZoneID();
+	gcm->groupid = GetID();
+	strcpy(gcm->from, sender->GetName());
+	strcpy(gcm->message, message);
+	worldserver.SendPacket(pack);
+	safe_delete(pack);	
 }
 
 int32 Group::GetTotalGroupDamage(Mob* other) {
@@ -598,17 +614,6 @@ void Group::DisbandGroup() {
 	uint32 i;
 	 for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if (members[i] == NULL) {
-			if(membername[i][0] == '\0')
-				continue;	//no member at all
-			
-			//member is not in this zone, have world boot them.
-			ServerPacket* pack = new ServerPacket(ServerOP_GroupLeave, sizeof(ServerGroupLeave_Struct));
-			ServerGroupLeave_Struct* sgl = (ServerGroupLeave_Struct*)pack->pBuffer;
-			
-			strncpy(sgl->member_name, membername[i], 64);
-			
-			worldserver.SendPacket(pack);
-			safe_delete(pack);
 			continue;
 		}
 		if (members[i]->IsClient()) {
@@ -621,6 +626,13 @@ void Group::DisbandGroup() {
 		membername[i][0] = '\0';
 	}
 	
+	ServerPacket* pack = new ServerPacket(ServerOP_DisbandGroup, sizeof(ServerDisbandGroup_Struct));
+	ServerDisbandGroup_Struct* dg = (ServerDisbandGroup_Struct*)pack->pBuffer;
+	dg->zoneid = zone->GetZoneID();
+	dg->groupid = GetID();
+	worldserver.SendPacket(pack);
+	safe_delete(pack);	
+
 	entity_list.RemoveGroup(GetID());
 	if(GetID() != 0)
 		 database.ClearGroup(GetID());
@@ -665,17 +677,7 @@ void Group::SendUpdate(int32 type, Mob* member){
 }
 
 int8 Group::GroupCount() {
-	int count = 0;
-	uint32 i;
-	for (i = 0; i < MAX_GROUP_MEMBERS; i++)
-	 {
-		if (strlen(membername[i])>0)
-		  {
-			count++;
-		  }
-	}
-
-	return count;
+	return (database.GroupCount(GetID()));
 }
 
 int32 Group::GetHighestLevel()
@@ -751,7 +753,6 @@ void Group::EstablishLink(int32 link_id)
 	}
 }
 #endif
-
 
 void Group::TeleportGroup(Mob* sender, int32 zoneID, float x, float y, float z, float heading)
 {

@@ -474,25 +474,16 @@ sint32 Mob::CalcMaxMana()
 {
 	switch (GetCasterClass()) {
 		case 'I':
-			max_mana = (((GetINT()/5)+2) * GetLevel()) + spellbonuses.Mana + itembonuses.Mana;
+			max_mana = (((GetINT()/2)+1) * GetLevel()) + spellbonuses.Mana + itembonuses.Mana;
 			break;
 		case 'W':
-			max_mana = (((GetWIS()/5)+2) * GetLevel()) + spellbonuses.Mana + itembonuses.Mana;
+			max_mana = (((GetWIS()/2)+1) * GetLevel()) + spellbonuses.Mana + itembonuses.Mana;
 			break;
 		case 'N':
 		default:
-#ifdef GUILDWARS
-			max_mana = GetLevel()*50;
-#else
 			max_mana = 0;
-#endif
 			break;
 	}
-
-#if EQDEBUG >= 11
-	if(IsClient())
-		LogFile->write(EQEMuLog::Debug, "Mob::CalcMaxMana() called for %s - returning %d", GetName(), max_mana);
-#endif
 
 	return max_mana;
 }
@@ -2296,4 +2287,22 @@ float Mob::FindGroundZ(float new_x, float new_y, float z_offset)
 		}
 	}
 	return ret;
+}
+
+//helper function for npc AI; needs to be mob:: cause we need to be able to count buffs on other clients and npcs
+int Mob::CountDispellableBuffs()
+{
+	int val = 0;
+	for(int x = 0; x < BUFF_COUNT; x++)
+	{
+		if(buffs[x].diseasecounters || buffs[x].poisoncounters || buffs[x].cursecounters)
+			continue;
+		
+		if(spells[buffs[x].spellid].goodEffect == 0)
+			continue;
+
+		if(buffs[x].spellid != SPELL_UNKNOWN &&	buffs[x].durationformula != DF_Permanent)
+			val++;
+	}
+	return val;
 }

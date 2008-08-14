@@ -1,6 +1,26 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/13/2008
+KLS: Added dispel field for npc spells as 512.
+KLS: NPCs should be smarter about when they choose to cast certain spells; namely dots, lifetaps and dispels.
+KLS: NPCs should continue to cast nuke spells for a longer period of time.
+KLS: NPCs will no longer have a 2-3 sec forced delay between spell casts; it is now whatever the recovery time of the spell is just like players, beware.
+KLS: (trevius) Change to npcAI recast delay cap 1000->10000 seconds.
+KLS: Increased amount of mana npcs gain from int and wis.
+KLS: New rule: NPC:CorpseUnlockTimer (150000) 2.5 min default on corpses being unlocked after loot instead of decay time / 2
+KLS: New rule: NPC:EmptyNPCCorpseDecayTimeMS (0) empty npc corpses will decay after this long + 1000MS on the ground.
+KLS: More changes to groups: text should now be correct in *almost* all situations.
+KLS: Groups should stay synced in almost all situations and leader disbanding should be smoother.
+KLS: Groups will clear their info on the aquisition of a reused id.
+KLS: .conf file from earlier /rewind change should be correct now make sure to update it if you want it to function.
+
+Optional SQL:
+UPDATE npc_spells_entries SET type='512' WHERE spellid='48';
+UPDATE npc_spells_entries SET type='512' WHERE spellid='49';
+UPDATE npc_spells_entries SET type='512' WHERE spellid='1526';
+UPDATE npc_spells_entries SET type='512' WHERE spellid='1697';
+
 ==08/11/2008
 KLS: Group leader info should transfer to a new zone when the leader transfers to that zone.
 KLS: Will now force a group update to players not in zone, text not correct.
@@ -13,7 +33,7 @@ KLS: Tweak to spell casting expertise and mastery of the past
 KLS: Hopefully fix to AEUndead spells hitting more than undead
 
 Required SQL (Your groups will probably break completely without this):
-CREATE TABLE `Group_Leaders` (
+CREATE TABLE `group_leaders` (
   `gid` int(4) NOT NULL,
   `leadername` varchar(64) NOT NULL,
   PRIMARY KEY (`gid`)

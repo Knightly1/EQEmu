@@ -73,6 +73,9 @@
 #define ServerOP_Consent			0x0039
 #define ServerOP_Consent_Response	0x0040
 #define ServerOP_ForceGroupUpdate	0x0041
+#define ServerOP_OOZGroupMessage	0x0042
+#define ServerOP_DisbandGroup		0x0043 //for disbanding a whole group cross zone
+#define ServerOP_GroupJoin			0x0044 //for joining ooz folks
 
 #define ServerOP_WhoAll				0x0210
 
@@ -529,12 +532,32 @@ struct ServerGroupIDReply_Struct {
 };
 
 struct ServerGroupLeave_Struct {
-	char member_name[64];	//kick this member from their group
+	int32 zoneid;
+	int32 gid;
+	char member_name[64];	//kick this member from the group
+};
+
+struct ServerGroupJoin_Struct {
+	int32 zoneid;
+	int32 gid;
+	char member_name[64];	//this person is joining the group
 };
 
 struct ServerForceGroupUpdate_Struct {
 	int32 origZoneID;
 	int32 gid;
+};
+
+struct ServerGroupChannelMessage_Struct {
+	int32 zoneid;
+	int32 groupid;
+    char  from[64];
+	char  message[0];
+};
+
+struct ServerDisbandGroup_Struct {
+	int32 zoneid;
+	int32 groupid;
 };
 
 struct SimpleName_Struct{

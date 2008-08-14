@@ -4527,15 +4527,15 @@ void Client::Handle_OP_GroupFollow2(const EQApplicationPacket *app)
 		if(!group->AddMember(this))
 			return;
 
-		//group->SendUpdate(7,this);
 		database.RefreshGroupFromDB(this);
 		group->SendHPPacketsTo(this);
 
 		//send updates to clients out of zone...
-		ServerPacket* pack = new ServerPacket(ServerOP_ForceGroupUpdate, sizeof(ServerForceGroupUpdate_Struct));
-		ServerForceGroupUpdate_Struct* fgu = (ServerForceGroupUpdate_Struct*)pack->pBuffer;
-		fgu->gid = group->GetID();
-		fgu->origZoneID = zone->GetZoneID();
+		ServerPacket* pack = new ServerPacket(ServerOP_GroupJoin, sizeof(ServerGroupJoin_Struct));
+		ServerGroupJoin_Struct* gj = (ServerGroupJoin_Struct*)pack->pBuffer;
+		gj->gid = group->GetID();
+		gj->zoneid = zone->GetZoneID();
+		strcpy(gj->member_name, GetName());
 		worldserver.SendPacket(pack);
 		safe_delete(pack);
 	}
@@ -4558,15 +4558,22 @@ void Client::Handle_OP_GroupDisband(const EQApplicationPacket *app)
 	if(!group)
 		return;
 	
-	if((group->IsLeader(this) && target == 0) || (group->GroupCount()<3)) {
+	if((group->IsLeader(this) && (target == 0 || target == this)) || (group->GroupCount()<3)) {
 		group->DisbandGroup();
 	} else {
-		Mob* memberToDisband = entity_list.GetMob(gd->name2);
-		if(memberToDisband)
+		Mob* memberToDisband = NULL;
+		memberToDisband = GetTarget();
+		
+		if(!memberToDisband)
+			memberToDisband = entity_list.GetMob(gd->name2);
+		
+		if(memberToDisband){
 			group->DelMember(memberToDisband,false);
+		}
 		else
 			LogFile->write(EQEMuLog::Error, "Failed to remove player from group. Unable to find player named %s in player group", gd->name2);
 	}
+
 	return;
 }
 
@@ -6819,6 +6826,9 @@ void Client::CompleteConnect()
 	if(GetPet()){
 		GetPet()->SendPetBuffsToClient();
 	}
+
+	if(GetGroup())
+		database.RefreshGroupFromDB(this);
 	
 	conn_state = ClientConnectFinished;
 

@@ -116,8 +116,8 @@ Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, const NPC
 	 in_npc->GetTexture(),in_npc->GetHelmTexture(),
 	 0,0,0,0,0,0,0,0,0,
 	 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0,0,0,0,0,0,0),
-	corpse_decay_timer(in_decaytime),
-	corpse_delay_timer(in_decaytime/2),
+	 corpse_decay_timer(in_decaytime),
+	corpse_delay_timer(RuleI(NPC, CorpseUnlockTimer)),
 	corpse_graveyard_timer(0)
 {
 	corpse_graveyard_timer.Disable();
@@ -133,6 +133,11 @@ Corpse::Corpse(NPC* in_npc, ItemList* in_itemlist, int32 in_npctypeid, const NPC
 	
 	SetCash(in_npc->GetCopper(), in_npc->GetSilver(), in_npc->GetGold(), in_npc->GetPlatinum());
 	
+	if(IsEmpty())
+	{
+		corpse_decay_timer.SetTimer(RuleI(NPC,EmptyNPCCorpseDecayTimeMS)+1000);
+	}
+
 	npctype_id = in_npctypeid;
 	SetPKItem(0);
 	charid = 0;
@@ -205,7 +210,7 @@ Corpse::Corpse(Client* client, sint32 in_rezexp)
 	0	// qglobal
 ),
 	corpse_decay_timer(RuleI(Character, CorpseDecayTimeMS)),
-	corpse_delay_timer(600000),
+	corpse_delay_timer(RuleI(NPC, CorpseUnlockTimer)),
 	corpse_graveyard_timer(RuleI(Zone, GraveyardTimeMS))
 {
 	int i;
@@ -313,7 +318,7 @@ Corpse::Corpse(int32 in_dbid, int32 in_charid, char* in_charname, ItemList* in_i
 	 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 	 0,0,0,0,0,0,0),
 	corpse_decay_timer(RuleI(Character, CorpseDecayTimeMS)),
-	corpse_delay_timer(600000),
+	corpse_delay_timer(RuleI(NPC, CorpseUnlockTimer)),
 	corpse_graveyard_timer(RuleI(Zone, GraveyardTimeMS))
 {
 	if(!zone->HasGraveyard() || wasAtGraveyard)
@@ -586,7 +591,7 @@ bool Corpse::Process() {
 		corpse_delay_timer.Disable();
 		return true;
 	}
-	
+
 	if(corpse_graveyard_timer.Check()) {
 		if(zone->HasGraveyard()) {
 			Save();

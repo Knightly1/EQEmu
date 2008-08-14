@@ -277,6 +277,7 @@ public:
 	 * Group
 	 */
 	void RefreshGroupFromDB(Client *c);
+	int8 GroupCount(int32 groupid);
 
 	/*
 	 * Misc stuff.

@@ -434,6 +434,7 @@ bool logpos;
 	bool	FindBuff(int16 spellid);
 	bool	FindType(int8 type, bool bOffensive = false, int16 threshold = 100);
 	sint8	GetBuffSlotFromType(int8 type);
+	int		CountDispellableBuffs();
 
 	void	MakePet(int16 spell_id, const char* pettype, const char *petname = NULL);
 //	inline void	MakePetType(int16 spell_id, const char* pettype, const char *petname = NULL) { MakePet(spell_id, pettype, petname); }	//for perl

@@ -739,26 +739,24 @@ void WorldServer::Process() {
 			break;
 		}
 		case ServerOP_GroupLeave: {
-			ServerGroupLeave_Struct* sgl = (ServerGroupLeave_Struct*) pack->pBuffer;
-			Client* client = entity_list.GetClientByName(sgl->member_name);
-			if(client) {
-				Group *theirgroup = client->GetGroup();
-				if(theirgroup) {
-#ifdef _EQDEBUG
-printf("Got successful group leave message for '%s'\n", sgl->member_name);
-#endif
-					theirgroup->DelMember(client, false);
-				} 
-#ifdef _EQDEBUG
-				else {
-					cout << "Got GroupLeave message for " << sgl->member_name << " but they are not in a group." << endl;
-				}
-#endif
+			ServerGroupLeave_Struct* gl = (ServerGroupLeave_Struct*)pack->pBuffer;
+			if(zone){
+				if(gl->zoneid == zone->GetZoneID())
+					break;
+
+				entity_list.SendGroupLeave(gl->gid, gl->member_name);
 			}
-#ifdef _EQDEBUG
-			else
-				cout << "Got GroupLeave message for " << sgl->member_name << " but they are not in this zone." << endl;
-#endif
+			break;
+		}
+
+		case ServerOP_GroupJoin: {
+			ServerGroupJoin_Struct* gj = (ServerGroupJoin_Struct*)pack->pBuffer;
+			if(zone){
+				if(gj->zoneid == zone->GetZoneID())
+					break;
+
+				entity_list.SendGroupJoin(gj->gid, gj->member_name);
+			}
 			break;
 		}
 
@@ -769,6 +767,29 @@ printf("Got successful group leave message for '%s'\n", sgl->member_name);
 					break;
 
 				entity_list.ForceGroupUpdate(fgu->gid);
+			}
+			break;
+		}
+
+		case ServerOP_OOZGroupMessage: {
+			ServerGroupChannelMessage_Struct* gcm = (ServerGroupChannelMessage_Struct*)pack->pBuffer;
+			if(zone){
+				if(gcm->zoneid == zone->GetZoneID())
+					break;
+
+				entity_list.GroupMessage(gcm->groupid, gcm->from, gcm->message);
+			}
+			break;							   
+		}
+		case ServerOP_DisbandGroup: {
+			ServerDisbandGroup_Struct* sd = (ServerDisbandGroup_Struct*)pack->pBuffer;
+			if(zone){
+				if(sd->zoneid == zone->GetZoneID())
+					break;
+
+				Group *g = entity_list.GetGroupByID(sd->groupid);
+				if(g)
+					g->DisbandGroup();
 			}
 			break;
 		}

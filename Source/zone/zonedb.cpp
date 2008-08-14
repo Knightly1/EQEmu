@@ -1358,3 +1358,20 @@ void ZoneDatabase::RefreshGroupFromDB(Client *c){
 	c->QueuePacket(outapp);
 	safe_delete(outapp);
 }
+
+int8 ZoneDatabase::GroupCount(int32 groupid){
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	int8 count=0;
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(id) FROM character_ WHERE groupid=%d", groupid), errbuf, &result)) {
+		if((row = mysql_fetch_row(result))!=NULL)
+			count = atoi(row[0]);
+		mysql_free_result(result);
+	} else {
+		LogFile->write(EQEMuLog::Error, "Error in ZoneDatabase::GroupCount query '%s': %s", query, errbuf);		
+	}
+	safe_delete_array(query);
+	return count;
+}

@@ -3164,7 +3164,6 @@ Corpse* EntityList::GetClosestCorpse(Mob* sender)
 }
 
 void EntityList::ForceGroupUpdate(int32 gid) {
-	printf("forcing group update...\n");
 	LinkedListIterator<Client*> iterator(client_list); 
 	
 	iterator.Reset(); 
@@ -3176,6 +3175,73 @@ void EntityList::ForceGroupUpdate(int32 gid) {
 				if(g->GetID() == gid)
 				{
 					database.RefreshGroupFromDB(iterator.GetData());
+				}
+			}
+		}
+		iterator.Advance(); 
+	} 
+}
+
+void EntityList::SendGroupLeave(int32 gid, const char *name) {
+	LinkedListIterator<Client*> iterator(client_list); 
+	iterator.Reset(); 
+	while(iterator.MoreElements()) {
+		if(iterator.GetData()){
+			Group *g = NULL;
+			g = iterator.GetData()->GetGroup();
+			if(g){
+				if(g->GetID() == gid)
+				{
+					EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+					GroupJoin_Struct* gj = (GroupJoin_Struct*) outapp->pBuffer;	
+					strcpy(gj->membername, name);
+					gj->action = groupActLeave;
+					strcpy(gj->yourname, name);
+					iterator.GetData()->QueuePacket(outapp);
+					safe_delete(outapp);
+				}
+			}
+		}
+		iterator.Advance(); 
+	} 
+}
+
+void EntityList::SendGroupJoin(int32 gid, const char *name) {
+	LinkedListIterator<Client*> iterator(client_list); 
+	iterator.Reset(); 
+	while(iterator.MoreElements()) {
+		if(iterator.GetData()){
+			Group *g = NULL;
+			g = iterator.GetData()->GetGroup();
+			if(g){
+				if(g->GetID() == gid)
+				{
+					EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
+					GroupJoin_Struct* gj = (GroupJoin_Struct*) outapp->pBuffer;	
+					strcpy(gj->membername, name);
+					gj->action = groupActJoin;
+					strcpy(gj->yourname, iterator.GetData()->GetName());
+					iterator.GetData()->QueuePacket(outapp);
+					safe_delete(outapp);
+				}
+			}
+		}
+		iterator.Advance(); 
+	} 
+}
+
+void EntityList::GroupMessage(int32 gid, const char *from, const char *message)
+{
+	LinkedListIterator<Client*> iterator(client_list); 
+	iterator.Reset(); 
+	while(iterator.MoreElements()) {
+		if(iterator.GetData()){
+			Group *g = NULL;
+			g = iterator.GetData()->GetGroup();
+			if(g){
+				if(g->GetID() == gid)
+				{
+					iterator.GetData()->ChannelMessageSend(from, iterator.GetData()->GetName(),2,0,message);
 				}
 			}
 		}

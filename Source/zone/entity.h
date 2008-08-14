@@ -216,6 +216,7 @@ public:
 	void    SendZoneObjects(Client* client);
 	void	DuelMessage(Mob* winner, Mob* loser, bool flee);
 	void    QuestJournalledSayClose(Mob *sender, Client *QuestIntiator, float dist, const char* mobname, const char* message);
+	void	GroupMessage(int32 gid, const char *from, const char *message);
 
 
 	void    RemoveFromTargets(Mob* mob);
@@ -287,6 +288,8 @@ public:
 
 	Corpse* GetClosestCorpse(Mob* sender);
 	void	ForceGroupUpdate(int32 gid);
+	void	SendGroupLeave(int32 gid, const char *name);
+	void	SendGroupJoin(int32 gid, const char *name);
 protected:
 	friend class Zone;
 	void	Depop(bool StartSpawnTimer = true);

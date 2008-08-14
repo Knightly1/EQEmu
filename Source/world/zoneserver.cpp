@@ -220,18 +220,36 @@ bool ZoneServer::Process() {
 		case ServerOP_GroupLeave: {
 			if(pack->size != sizeof(ServerGroupLeave_Struct))
 				break;
-			//bounce the group leave structure to the correct zone server
-			ServerGroupLeave_Struct* sgl = (ServerGroupLeave_Struct*)pack->pBuffer;
-			sgl->member_name[63] = '\0';
-			client_list.SendPacket(sgl->member_name, pack);
+			zoneserver_list.SendPacket(pack); //bounce it to all zones
 			break;
 		}
+
+		case ServerOP_GroupJoin: {
+			if(pack->size != sizeof(ServerGroupJoin_Struct))
+				break;
+			zoneserver_list.SendPacket(pack); //bounce it to all zones
+			break;
+		}
+
 		case ServerOP_ForceGroupUpdate: {
 			if(pack->size != sizeof(ServerForceGroupUpdate_Struct))
 				break;
 			zoneserver_list.SendPacket(pack); //bounce it to all zones
 			break;
 		}
+
+		case ServerOP_OOZGroupMessage: {
+			zoneserver_list.SendPacket(pack); //bounce it to all zones
+			break;
+		}
+
+		case ServerOP_DisbandGroup: {
+			if(pack->size != sizeof(ServerDisbandGroup_Struct))
+				break;
+			zoneserver_list.SendPacket(pack); //bounce it to all zones
+			break;
+		}
+
 		case ServerOP_SpawnCondition: {
 			if(pack->size != sizeof(ServerSpawnCondition_Struct))
 				break;
