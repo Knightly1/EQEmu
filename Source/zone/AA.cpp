@@ -23,6 +23,7 @@ Copyright (C) 2001-2004  EQEMu Development Team (http://eqemulator.net)
 #include "mob.h"
 #include "client.h"
 #include "groups.h"
+#include "raids.h"
 #include "spdat.h"
 #include "object.h"
 #include "doors.h"

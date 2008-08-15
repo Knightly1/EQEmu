@@ -230,7 +230,7 @@ bool Group::AddMember(Mob* newmember)
 	
 	if(newmember->IsClient()) {
 		newmember->CastToClient()->Save();
-		database.SetGroupID(newmember->GetName(), GetID());
+		database.SetGroupID(newmember->GetName(), GetID(), newmember->CastToClient()->CharacterID());
 	}
 	
 	safe_delete(outapp);
@@ -398,7 +398,7 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender){
 		oldmember->CastToClient()->QueuePacket(outapp);
 	 }
 
-	database.SetGroupID(oldmember->GetName(), 0);
+	database.SetGroupID(oldmember->GetName(), 0, oldmember->CastToClient()->CharacterID());
 	
 	oldmember->SetGrouped(false);
 	disbandcheck = true;
@@ -618,7 +618,7 @@ void Group::DisbandGroup() {
 		}
 		if (members[i]->IsClient()) {
 			strcpy(gu->yourname, members[i]->GetName());
-			database.SetGroupID(members[i]->GetName(), 0);
+			database.SetGroupID(members[i]->GetName(), 0, members[i]->CastToClient()->CharacterID());
 			members[i]->CastToClient()->QueuePacket(outapp);
 		}
 		members[i]->SetGrouped(false);
@@ -775,7 +775,7 @@ bool Group::LearnMembers() {
     char* query = 0;
 	MYSQL_RES *result;
 	MYSQL_ROW row;
-	if (database.RunQuery(query,MakeAnyLenString(&query, "SELECT name FROM character_ WHERE groupid=%lu", GetID()),errbuf,&result)){
+	if (database.RunQuery(query,MakeAnyLenString(&query, "SELECT name FROM group_id WHERE groupid=%lu", GetID()),errbuf,&result)){
 		safe_delete_array(query);
 		if(mysql_num_rows(result) < 1) {	//could prolly be 2
 			mysql_free_result(result);
@@ -863,7 +863,7 @@ void Client::LeaveGroup() {
 			g->DelMember(this);
 	} else {
 		//force things a little
-		database.SetGroupID(GetName(), 0);
+		database.SetGroupID(GetName(), 0, CharacterID());
 	}
 	
 	isgrouped = false;

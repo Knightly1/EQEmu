@@ -470,6 +470,8 @@ int main(int argc, char** argv) {
 						entity_list.CorpseProcess();
 					if(net.trap_timer.Enabled() && net.trap_timer.Check())
 						entity_list.TrapProcess();
+					if(net.raid_timer.Enabled() && net.raid_timer.Check())
+						entity_list.RaidProcess();
 					error2 = 98;
 					error2 = 96;
 					entity_list.Process();
@@ -689,12 +691,14 @@ NetConnection::NetConnection()
 	door_timer(5000),
 	corpse_timer(2000),
 	group_timer(1000),
+	raid_timer(1000),
 	trap_timer(1000)
 {
 	ZonePort = 0;
 	ZoneAddress = 0;
 	WorldAddress = 0;
 	group_timer.Disable();
+	raid_timer.Disable();
 	corpse_timer.Disable();
 	door_timer.Disable();
 	object_timer.Disable();

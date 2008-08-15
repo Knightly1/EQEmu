@@ -45,6 +45,7 @@ using namespace std;
 #include "parser.h"
 #include "../common/dbasync.h"
 #include "guild_mgr.h"
+#include "raids.h"
 
 #ifdef WIN32
 #define snprintf	_snprintf
@@ -371,6 +372,25 @@ void EntityList::GroupProcess() {
 #endif
 }
 
+void EntityList::RaidProcess() {
+	list<Raid *>::iterator iterator;
+	int32 count = 0;
+
+	if(numclients < 1)
+		return;
+	_ZP(EntityList_RaidProcess);
+
+	iterator = raid_list.begin();
+	while(iterator != raid_list.end())
+	{
+		count++;
+		(*iterator)->Process();
+		iterator++;
+	}
+	if(count == 0)
+		net.raid_timer.Disable();//No groups in list, disable until one is added
+}
+
 void EntityList::DoorProcess() {
 #ifdef IDLE_WHEN_EMPTY
 	if(numclients < 1)
@@ -501,6 +521,26 @@ void EntityList::AddGroup(Group* group, int32 gid) {
 	CheckGroupList (__FILE__, __LINE__);
 #endif
 }
+
+void EntityList::AddRaid(Raid* raid) {
+	if(raid == NULL)
+		return;
+	
+	int32 gid = worldserver.NextGroupID();
+	if(gid == 0) {
+		LogFile->write(EQEMuLog::Error, "Unable to get new group ID from world server. group is going to be broken.");
+		return;
+	}
+	
+	AddRaid(raid, gid);
+}
+void EntityList::AddRaid(Raid* raid, int32 gid) {
+	raid->SetID(gid);
+	raid_list.push_back(raid);
+	if(!net.raid_timer.Enabled())
+		net.raid_timer.Start();
+}
+
 
 void EntityList::AddCorpse(Corpse* corpse, int32 in_id) {
 	if (corpse == 0)
@@ -1515,6 +1555,53 @@ Group* EntityList::GetGroupByClient(Client* client)
 	return 0; 
 } 
 
+Raid* EntityList::GetRaidByMob(Mob* mob) 
+{ 
+	list<Raid *>::iterator iterator;
+
+	iterator = raid_list.begin();
+
+	while(iterator != raid_list.end())
+	{ 
+		iterator++;
+	} 
+	return 0; 
+}
+Raid* EntityList::GetRaidByLeaderName(const char *leader){
+	list<Raid *>::iterator iterator;
+
+	iterator = raid_list.begin();
+
+	while(iterator != raid_list.end())
+	{ 
+		iterator++;
+	} 
+	return 0;
+}
+Raid* EntityList::GetRaidByID(int32 group_id){
+	list<Raid *>::iterator iterator;
+
+	iterator = raid_list.begin();
+
+	while(iterator != raid_list.end())
+	{ 
+		iterator++;
+	} 
+	return 0;
+}
+Raid* EntityList::GetRaidByClient(Client* client) 
+{ 
+	list<Raid *>::iterator iterator;
+
+	iterator = raid_list.begin();
+
+	while(iterator != raid_list.end())
+	{ 
+		iterator++;
+	} 
+	return 0; 
+} 
+
 Client* EntityList::GetClientByAccID(int32 accid) 
 { 
 	LinkedListIterator<Client*> iterator(client_list); 
@@ -1751,6 +1838,12 @@ void EntityList::RemoveAllGroups(){
 	CheckGroupList (__FILE__, __LINE__);
 #endif
 }
+
+void EntityList::RemoveAllRaids(){
+	while (raid_list.size())
+		raid_list.pop_front();
+}
+
 void EntityList::RemoveAllDoors(){
 	LinkedListIterator<Doors*> iterator(door_list);
 	iterator.Reset();
@@ -1913,6 +2006,23 @@ bool EntityList::RemoveGroup(int32 delete_id){
 #endif
 	return false;
 }
+
+bool EntityList::RemoveRaid(int32 delete_id){
+	list<Raid *>::iterator iterator;
+
+	iterator = raid_list.begin();
+
+	while(iterator != raid_list.end())
+	{
+		if((*iterator)->GetID() == delete_id) {
+			raid_list.remove (*iterator);
+			return true;
+		}
+		iterator++;
+	}
+	return false;
+}
+
 void EntityList::Clear()
 {
 	RemoveAllClients();
@@ -1923,7 +2033,7 @@ void EntityList::Clear()
 	entity_list.RemoveAllDoors();
 	entity_list.RemoveAllObjects();
 	entity_list.RemoveAllTraps();
-	entity_list.RemoveAllTraps();
+	entity_list.RemoveAllRaids();
 	entity_list.RemoveAllLocalities();
 	last_insert_id = 0;
 }

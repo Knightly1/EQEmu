@@ -8,6 +8,7 @@
 #include "zone.h"
 #include "client.h"
 #include "groups.h"
+#include "raids.h"
 #include <iostream>
 
 using namespace std;
@@ -1318,7 +1319,7 @@ void ZoneDatabase::RefreshGroupFromDB(Client *c){
 	strcpy(gu->leadersname, leadername);
 
 	int index = 0;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT name from character_ where groupid=%d", g->GetID()), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT name from group_id where groupid=%d", g->GetID()), errbuf, &result)) {
 		while(row = mysql_fetch_row(result)){
 			if(index < 6){
 				if(strcmp(c->GetName(), row[0]) != 0){
@@ -1365,7 +1366,7 @@ int8 ZoneDatabase::GroupCount(int32 groupid){
     MYSQL_RES *result;
     MYSQL_ROW row;
 	int8 count=0;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(id) FROM character_ WHERE groupid=%d", groupid), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT count(charid) FROM group_id WHERE groupid=%d", groupid), errbuf, &result)) {
 		if((row = mysql_fetch_row(result))!=NULL)
 			count = atoi(row[0]);
 		mysql_free_result(result);

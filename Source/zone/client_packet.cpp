@@ -4467,7 +4467,7 @@ void Client::Handle_OP_GroupCancelInvite(const EQApplicationPacket *app)
 	if(inviter != NULL && inviter->IsClient())
 		inviter->CastToClient()->QueuePacket(app);
 
-	database.SetGroupID(GetName(), 0);
+	database.SetGroupID(GetName(), 0, CharacterID());
 	return;
 }
 
@@ -4507,7 +4507,7 @@ void Client::Handle_OP_GroupFollow2(const EQApplicationPacket *app)
 			}
 			
 			//now we have a group id, can set inviter's id
-			database.SetGroupID(inviter->GetName(), group->GetID());
+			database.SetGroupID(inviter->GetName(), group->GetID(), inviter->CastToClient()->CharacterID());
 			database.SetGroupLeaderName(group->GetID(), inviter->GetName());
 			
 			//Invite the inviter into the group first.....dont ask
@@ -6450,7 +6450,7 @@ bool Client::FinishConnState2(DBAsyncWork* dbaw) {
 		if(group)
 			group->UpdatePlayer(this);
 		else
-			database.SetGroupID(GetName(), 0);	//cannot re-establish group, kill it
+			database.SetGroupID(GetName(), 0, CharacterID());	//cannot re-establish group, kill it
 		
 	} else {	//no group id
 		//clear out the group junk in our PP

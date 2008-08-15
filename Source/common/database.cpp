@@ -1674,11 +1674,17 @@ bool Database::GetLiveChar(int32 account_id, char* cname) {
 	return false;
 }
 
-void  Database::SetGroupID(const char* name,int32 id){
+void  Database::SetGroupID(const char* name,int32 id, int32 charid){
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
-	if (!RunQuery(query, MakeAnyLenString(&query, "update character_ set groupid=%i where name='%s'",id,name), errbuf))
+	if(id == 0){ //removing you from table
+	if (!RunQuery(query, MakeAnyLenString(&query, "delete from group_id where charid=%i",charid), errbuf))
+		printf("Unable to get group id: %s\n",errbuf);		
+	}
+	else{
+	if (!RunQuery(query, MakeAnyLenString(&query, "replace into group_id set charid=%i, groupid=%i, name='%s'",charid, id, name), errbuf))
 		printf("Unable to get group id: %s\n",errbuf);	
+	}
 #ifdef _EQDEBUG
 	printf("Set group id on '%s' to %d\n", name, id);
 #endif
@@ -1690,10 +1696,12 @@ void Database::ClearGroup(int32 gid) {
 	char errbuf[MYSQL_ERRMSG_SIZE];
     char *query = 0;
 	if(gid == 0) {  //clear all groups
-		if (!RunQuery(query, MakeAnyLenString(&query, "update character_ set groupid=0 where groupid!=0"), errbuf))
+		//if (!RunQuery(query, MakeAnyLenString(&query, "update group_id set groupid=0 where groupid!=0"), errbuf))
+		if (!RunQuery(query, MakeAnyLenString(&query, "delete from group_id"), errbuf))
 			printf("Unable to clear groups: %s\n",errbuf);
 	} else {	//clear a specific group
-		if (!RunQuery(query, MakeAnyLenString(&query, "update character_ set groupid=0 where groupid = %lu", gid), errbuf))
+		//if (!RunQuery(query, MakeAnyLenString(&query, "update group_id set groupid=0 where groupid = %lu", gid), errbuf))
+		if (!RunQuery(query, MakeAnyLenString(&query, "delete from group_id where groupid = %lu", gid), errbuf))
 			printf("Unable to clear groups: %s\n",errbuf);
 	}
 	safe_delete_array(query);
@@ -1705,7 +1713,7 @@ int32 Database::GetGroupID(const char* name){
     MYSQL_RES *result;
 	MYSQL_ROW row;
 	int32 groupid=0;
-	if (RunQuery(query, MakeAnyLenString(&query, "SELECT groupid from character_ where name='%s'", name), errbuf, &result)) {
+	if (RunQuery(query, MakeAnyLenString(&query, "SELECT groupid from group_id where name='%s'", name), errbuf, &result)) {
 		if((row = mysql_fetch_row(result)))
 		{
 			if(row[0])

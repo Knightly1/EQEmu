@@ -487,7 +487,7 @@ bool Client::HandlePacket(const EQApplicationPacket *app) {
 			}
 			
 			if(!pZoning)
-				database.SetGroupID(char_name,0);
+				database.SetGroupID(char_name, 0, charid);
 			else{
 				int32 groupid=database.GetGroupID(char_name);
 				if(groupid>0){

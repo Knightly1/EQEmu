@@ -1,6 +1,19 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/14/2008
+KLS: Very basic work on raids.
+KLS: Moved group id calls to their own database as to not be blocked by long character_ selects and such.
+
+Required SQL (Your groups will break completely without this):
+CREATE TABLE `group_id` (
+  `groupid` int(4) NOT NULL,
+  `charid` int(4) NOT NULL,
+  `name` varchar(64) NOT NULL,
+  PRIMARY KEY (`groupid`, `charid`)
+)
+ENGINE = InnoDB;
+
 ==08/13/2008
 KLS: Added dispel field for npc spells as 512.
 KLS: NPCs should be smarter about when they choose to cast certain spells; namely dots, lifetaps and dispels.
