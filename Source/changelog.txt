@@ -1,6 +1,11 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==08/15/2008
+KLS: Fix for groups clearing on new group create.
+KLS: Fix for null row access in Database::GetLeaderName()
+KLS: CountDispellableBuffs now will validate buffs spells.
+
 ==08/14/2008
 KLS: Very basic work on raids.
 KLS: Moved group id calls to their own database as to not be blocked by long character_ selects and such.

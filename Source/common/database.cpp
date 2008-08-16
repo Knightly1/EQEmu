@@ -1773,9 +1773,11 @@ char *Database::GetGroupLeaderName(int32 gid, char* leaderbuf){
 		safe_delete_array(query);
 		
 		row = mysql_fetch_row(result);
-		strcpy(leaderbuf, row[0]);
-		mysql_free_result(result);
-		return leaderbuf;
+		if(row != NULL){
+			strcpy(leaderbuf, row[0]);
+			mysql_free_result(result);
+			return leaderbuf;
+		}
 	}
 	else
 	{

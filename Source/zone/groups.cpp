@@ -65,8 +65,6 @@ Group::Group(int32 gid)
 Group::Group(Mob* leader)
 : GroupIDConsumer()
 {
-	database.ClearGroup(GetID());
-	database.ClearGroupLeader(GetID());
 	memset(members, 0, sizeof(members));
 	members[0] = leader;
 	leader->SetGrouped(true);

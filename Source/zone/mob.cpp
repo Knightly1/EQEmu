@@ -2295,6 +2295,9 @@ int Mob::CountDispellableBuffs()
 	int val = 0;
 	for(int x = 0; x < BUFF_COUNT; x++)
 	{
+		if(!IsValidSpell(buffs[x].spellid))
+			continue;
+
 		if(buffs[x].diseasecounters || buffs[x].poisoncounters || buffs[x].cursecounters)
 			continue;
 		
