@@ -226,7 +226,7 @@ Client::Client(EQStreamInterface* ieqs)
 	// Kaiyodo - initialise haste variable
 	m_tradeskill_object = NULL;
 	delaytimer = false;
-	pendingrezzexp = 0;
+	pendingrezzexp = -1;
 	numclients++;
 	// emuerror;
 	UpdateWindowTitle();
@@ -2493,21 +2493,21 @@ float Client::CalcPriceMod(Mob* other, bool reverse)
 		int factionlvl = GetFactionLevel(CharacterID(), other->CastToNPC()->GetNPCTypeID(), GetRace(), GetClass(), GetDeity(), other->CastToNPC()->GetPrimaryFaction(), other);
 		switch (factionlvl)
 		{
-			case 9: //Apprehensive
-				chaformula += 10;
-				break;
-			case 4: //Amiable
-				chaformula -= 2;
-				break;
-			case 3: //Warmly
-				chaformula -= 5;
-				break;
-			case 2: //Kindly
-				chaformula -= 8;
-				break;
-			case 1: //Ally
-				chaformula -= 10;
-				break;
+		case 9: //Apprehensive
+			chaformula += 10;
+			break;
+		case 4: //Amiable
+			chaformula -= 3;
+			break;
+		case 3: //Warmly
+			chaformula -= 4;
+			break;
+		case 2: //Kindly
+			chaformula -= 5;
+			break;
+		case 1: //Ally
+			chaformula -= 6;
+			break;
 		}
 	}
 	if (reverse)

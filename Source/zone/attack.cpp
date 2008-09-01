@@ -2360,7 +2360,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 				if ((spell_id != SPELL_UNKNOWN) && damage>0) {
 					//special crap for spell damage, looks hackish to me
 					char val1[20]={0};
-					owner->Message_StringID(4,OTHER_HIT_NONMELEE,GetCleanName(),ConvertArray(damage,val1));
+					owner->Message_StringID(MT_NonMelee,OTHER_HIT_NONMELEE,GetCleanName(),ConvertArray(damage,val1));
 			    } else {
 			    	if(damage > 0) {
 						if(spell_id != SPELL_UNKNOWN)
@@ -2383,7 +2383,7 @@ void Mob::CommonDamage(Mob* attacker, sint32 &damage, const int16 spell_id, cons
 				if ((spell_id != SPELL_UNKNOWN) && damage>0) {
 					//special crap for spell damage, looks hackish to me
 					char val1[20]={0};
-					attacker->Message_StringID(4,OTHER_HIT_NONMELEE,GetCleanName(),ConvertArray(damage,val1));
+					attacker->Message_StringID(MT_NonMelee,OTHER_HIT_NONMELEE,GetCleanName(),ConvertArray(damage,val1));
 			    } else {
 			    	if(damage > 0) {
 						if(spell_id != SPELL_UNKNOWN)

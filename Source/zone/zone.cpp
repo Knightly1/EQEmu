@@ -696,6 +696,9 @@ Zone::Zone(int32 in_zoneid, const char* in_short_name)
 	weather_type = 0;
 	zone_weather = 0;
 	
+	blocked_spells = NULL;
+	totalBS = 0;
+
 	aas = NULL;
 	totalAAs = 0;
 }
@@ -715,6 +718,7 @@ Zone::~Zone() {
 	safe_delete(Weather_Timer);
 	zone_point_list.Clear();
 	entity_list.Clear();
+	ClearBlockedSpells();
 //	safe_delete_array(aa_buffer);
 	if(aas != NULL) {
 		int r;
@@ -806,6 +810,7 @@ bool Zone::Init(bool iStaticZone) {
 	
 	//load up the zone's doors (prints inside)
 	zone->LoadZoneDoors(zone->GetShortName());
+	zone->LoadBlockedSpells(zone->GetZoneID());
 	
 	//clear trader items if we are loading the bazaar
 	if(strncasecmp(short_name,"bazaar",6)==0)
@@ -894,6 +899,8 @@ void Zone::ReloadStaticData() {
 	
 	entity_list.RemoveAllDoors();
 	zone->LoadZoneDoors(zone->GetShortName());
+
+	zone->LoadBlockedSpells(zone->GetZoneID());
 	
 	//load the zone config file.
 	if (!LoadZoneCFG(zone->GetShortName(), true)) // try loading the zone name...
@@ -1791,4 +1798,92 @@ void Zone::SetGraveyard(int32 zoneid, int32 x, int32 y, int32 z, int32 heading) 
 	pgraveyard_y = y;
 	pgraveyard_z = z;
 	pgraveyard_heading = heading;
+}
+
+void Zone::LoadBlockedSpells(int32 zoneid)
+{
+	if(!blocked_spells)
+	{
+		totalBS = database.GetBlockedSpellsCount(zoneid);
+		if(totalBS > 0){
+			blocked_spells = new ZoneSpellsBlocked[totalBS];
+			if(!database.LoadBlockedSpells(totalBS, blocked_spells, zoneid))
+			{
+				LogFile->write(EQEMuLog::Error, "... Failed to load blocked spells.");
+				ClearBlockedSpells();
+			}
+		}
+	}
+}
+
+void Zone::ClearBlockedSpells()
+{
+	if(blocked_spells){
+		safe_delete_array(blocked_spells);
+		totalBS = 0;
+	}
+}
+
+bool Zone::IsSpellBlocked(int32 spell_id, float nx, float ny, float nz)
+{
+	if(blocked_spells){
+		for(int x = 0; x < totalBS; x++)
+		{
+			if(spell_id != blocked_spells[x].spellid)
+				continue;
+
+			switch(blocked_spells[x].type){
+				case 1:{
+					return true;
+					break;
+				}
+
+				case 2:{
+					if((( nx >= (blocked_spells[x].x-blocked_spells[x].xdiff)) && (nx <= (blocked_spells[x].x+blocked_spells[x].xdiff))) &&
+						(( ny >= (blocked_spells[x].y-blocked_spells[x].ydiff)) && (ny <= (blocked_spells[x].y+blocked_spells[x].ydiff))) &&
+						(( nz >= (blocked_spells[x].z-blocked_spells[x].zdiff)) && (nz <= (blocked_spells[x].z+blocked_spells[x].zdiff))))
+					{
+						return true;
+					}
+					break;
+				}
+				default:
+					continue;
+					break;
+			}
+		}
+	}
+	return false;
+}
+
+const char* Zone::GetSpellBlockedMessage(int32 spell_id, float nx, float ny, float nz)
+{
+	if(blocked_spells){
+		for(int x = 0; x < totalBS; x++)
+		{
+			if(spell_id != blocked_spells[x].spellid)
+				continue;
+
+			switch(blocked_spells[x].type){
+				case 1:{
+					return blocked_spells[x].message;
+					break;
+				}
+
+				case 2:{
+					if((( nx > (blocked_spells[x].x-blocked_spells[x].xdiff)) && (nx < (blocked_spells[x].x+blocked_spells[x].xdiff))) &&
+						(( ny > (blocked_spells[x].y-blocked_spells[x].ydiff)) && (ny < (blocked_spells[x].y+blocked_spells[x].ydiff))) &&
+						(( nz > (blocked_spells[x].z-blocked_spells[x].zdiff)) && (nz < (blocked_spells[x].z+blocked_spells[x].zdiff))))
+					{
+						return blocked_spells[x].message;
+					}
+					break;
+				}
+				default:
+					continue;
+					break;
+			}
+		}
+	}
+	return "Error: Message String Not Found\0";
 }

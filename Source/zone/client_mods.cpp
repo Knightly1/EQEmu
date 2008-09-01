@@ -45,10 +45,11 @@ sint16 Client::GetMaxStat() const {
 		base =  255 + 5 * (level - 60);
 	}
 	else {
-		base = 280;
+		base = 330;
 	}
 	
 	base += GetAA(aaPlanarPower) * 5;
+	base += GetAA(aaChaoticPotential) * 5;
 	
 	return(base);
 }

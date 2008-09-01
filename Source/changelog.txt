@@ -1,6 +1,36 @@
 EQEMu Changelog (Started on Sept 24, 2003 15:50)
 -------------------------------------------------------
 
+==09/01/2008
+KLS: (derision) Crash Fix.
+KLS: (haecz) Non-Melee damage filter.
+KLS: (LordKahel) Lore Slotted Augment.
+KLS: (Spider 661 via trevius) Chaotic Potential AA
+KLS: (Derision) OP_Sound update for titanium.
+KLS: (ndnet via trevius) MQ Illegal Item Equip Detection
+KLS: Modified faction modifiers for buying/selling.
+KLS: (AndMetal) Spell blocking implementation
+KLS: (Derision) Resurrection confirmation
+KLS: (Cripp) Delete stale corpse backup typos
+KLS: (AndMetal) CHA stacking buff bug resolved.
+
+Required SQL:
+CREATE TABLE `blocked_spells` (
+  `id` int(11) NOT NULL auto_increment,
+  `spellid` mediumint(8) unsigned NOT NULL default '0',
+  `type` tinyint(4) NOT NULL default '0',
+  `zoneid` int(4) NOT NULL default '0',
+  `x` float NOT NULL default '0',
+  `y` float NOT NULL default '0',
+  `z` float NOT NULL default '0',
+  `x_diff` float NOT NULL default '0',
+  `y_diff` float NOT NULL default '0',
+  `z_diff` float NOT NULL default '0',
+  `message` varchar(255) NOT NULL default 'You cannot cast that spell here',
+  `description` varchar(255) default NULL,
+  PRIMARY KEY  (`id`)
+)
+
 ==08/15/2008
 KLS: Fix for groups clearing on new group create.
 KLS: Fix for null row access in Database::GetLeaderName()

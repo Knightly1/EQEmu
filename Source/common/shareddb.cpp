@@ -1202,7 +1202,7 @@ sint32 SharedDatabase::DeleteStalePlayerBackups() {
 	int32 affected_rows = 0;
 
 	// 1209600 seconds = 2 weeks
-	if (!RunQuery(query, MakeAnyLenString(&query, "Delete from player_corpses where (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(timeofdeath)) > 1209600"), errbuf, 0, &affected_rows)) {
+	if (!RunQuery(query, MakeAnyLenString(&query, "Delete from player_corpses_backup where (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(timeofdeath)) > 1209600"), errbuf, 0, &affected_rows)) {
 		safe_delete_array(query);
 		return -1;
 	}

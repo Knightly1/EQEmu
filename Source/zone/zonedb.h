@@ -49,6 +49,18 @@ struct PetRecord {
 	bool temporary;
 };
 
+struct ZoneSpellsBlocked {
+	int32 spellid;
+	sint8 type;
+	float x;
+	float y;
+	float z;
+	float xdiff;
+	float ydiff;
+	float zdiff;
+	char message[256];
+};
+
 class ItemInst;
 struct FactionMods;
 struct FactionValue;
@@ -256,6 +268,13 @@ public:
 	void	UpdateDoorGuildID(int doorid, int guild_id);
 	sint32	GetDoorsCount(int32* oMaxID, const char *zone_name);
 	
+	/*
+	 * Blocked Spells
+	 */
+
+	sint32	GetBlockedSpellsCount(int32 zoneid);
+	bool	LoadBlockedSpells(sint32 blockedSpellsCount, ZoneSpellsBlocked* into, int32 zoneid);
+
 	/*
 	 * Traps
 	 */

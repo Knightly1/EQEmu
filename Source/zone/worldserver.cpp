@@ -571,64 +571,37 @@ void WorldServer::Process() {
 			else if (sus->status == 1) petition_list.ReadDatabase(); // Until I fix this to be better....
 			break;
 		}
-		case ServerOP_RezzPlayerAccept:{
-			SimpleName_Struct* name = (SimpleName_Struct*)pack->pBuffer;
-			Corpse* corpse = entity_list.GetCorpseByName(name->name);
-			if(corpse){
-				corpse->Rezzed(true);
-				corpse->Save();
-			}
-			break;
-		};
 		case ServerOP_RezzPlayer: {
 			RezzPlayer_Struct* srs = (RezzPlayer_Struct*) pack->pBuffer;
 			if (srs->rezzopcode == OP_RezzRequest){
 				Client* client = entity_list.GetClientByName(srs->rez.your_name);
 				if (client){
-					//client->SetZoneSummonCoords(srs->x_pos, srs->y_pos, srs->z_pos);
-                    //client->pendingrezzexp = srs->exp;
-                    if (srs->rez.spellid != 994) {
-                      _log(ZONE__WORLD, "Sending player cast rez spellid:%i", srs->rez.spellid);
-                      // Not gm resurrection
-                        client->BuffFadeAll();
-                        client->SpellOnTarget(756,client);
-						if(srs->rez.spellid != 2168)
-							client->SetEXP((client->GetEXP()+srs->exp), client->GetAAXP(), true);
-                    }
-                    else {
-                      // GM resurrection
-                      _log(ZONE__WORLD, "Sending gm cast rez");
-					    client->SetEXP((client->GetEXP()+srs->exp), client->GetAAXP(), true);
-                    }
-					ServerPacket* pack = new ServerPacket(ServerOP_RezzPlayerAccept,sizeof(SimpleName_Struct));
-					SimpleName_Struct* corpse = (SimpleName_Struct*)pack->pBuffer;
-					strcpy(corpse->name,srs->rez.corpse_name);
-					SendPacket(pack);
-					safe_delete(pack);
-
-                    pack = new ServerPacket(ServerOP_ZonePlayer, sizeof(ServerZonePlayer_Struct));
-                    ServerZonePlayer_Struct* szp = (ServerZonePlayer_Struct*) pack->pBuffer;
-                    strcpy(szp->adminname, srs->rez.corpse_name);
-                    szp->adminrank = 0;//entity_list.GetClientByName(rezz->rezzer_name)->Admin();
-                    szp->ignorerestrictions = 2;
-                    strcpy(szp->name, srs->rez.your_name);
-                    strcpy(szp->zone, database.GetZoneName(srs->rez.zone_id));
-                    szp->x_pos = srs->rez.x;
-                    szp->y_pos = srs->rez.y;
-                    szp->z_pos = srs->rez.z;
-                    SendPacket(pack);
-                    safe_delete(pack);
-                    
-					//EQApplicationPacket* outapp = new EQApplicationPacket(srs->rezzopcode, sizeof(Resurrect_Struct));
-					//memcpy(outapp->pBuffer,srs->packet, sizeof(srs->packet));
-					//client->QueuePacket(outapp);
-					//safe_delete(outapp);
+					//pendingrezexp is the amount of XP on the corpse. Setting it to a value >= 0
+					//also serves to inform Client::OPRezzAnswer to expect a packet.
+					client->pendingrezzexp = srs->exp;
+					_log(SPELLS__REZ, "OP_RezzRequest in zone %s for %s, spellid:%i", zone->GetShortName(), client->GetName(), srs->rez.spellid);
+					
+					EQApplicationPacket* outapp = new EQApplicationPacket(OP_RezzRequest, sizeof(Resurrect_Struct));
+					memcpy(outapp->pBuffer, &srs->rez, sizeof(Resurrect_Struct));
+					client->QueuePacket(outapp);
+					_pkt(SPELLS__REZ, outapp);
+					safe_delete(outapp);
+					break;	
 				}
 			}
 			if (srs->rezzopcode == OP_RezzComplete){
-				Mob* corpse =entity_list.GetMob(srs->rez.corpse_name);
-				if (corpse && corpse->IsCorpse())
-					corpse->CastToCorpse()->CompleteRezz();
+				// We get here when the Rezz complete packet has come back via the world server
+				// to the zone that the corpse is in.
+				Corpse* corpse = entity_list.GetCorpseByName(srs->rez.corpse_name);
+				if (corpse && corpse->IsCorpse()) {
+					_log(SPELLS__REZ, "OP_RezzComplete received in zone %s for corpse %s",
+							  zone->GetShortName(), srs->rez.corpse_name);
+
+					_log(SPELLS__REZ, "Found corpse. Marking corpse as rezzed.");
+					// I don't know why Rezzed is not set to true in CompleteRezz().
+					corpse->Rezzed(true);
+					corpse->CompleteRezz();
+				}
 			}
 			
 			break;
@@ -943,19 +916,18 @@ bool WorldServer::SendEmoteMessage(const char* to, int32 to_guilddbid, sint16 to
 }
 
 bool WorldServer::RezzPlayer(EQApplicationPacket* rpack,int32 rezzexp, int16 opcode) {
+	_log(SPELLS__REZ, "WorldServer::RezzPlayer rezzexp is %i (0 is normal for RezzComplete", rezzexp);
 	ServerPacket* pack = new ServerPacket(ServerOP_RezzPlayer, sizeof(RezzPlayer_Struct));
 	RezzPlayer_Struct* sem = (RezzPlayer_Struct*) pack->pBuffer;
 	sem->rezzopcode = opcode;
-	//memcpy(sem->packet,rpack->pBuffer,sizeof(sem->packet));
 	sem->rez = *(Resurrect_Struct*) rpack->pBuffer;
 	sem->exp = rezzexp;
-	//Resurrect_Struct* rezz = (Resurrect_Struct*) rpack->pBuffer;
 	bool ret = SendPacket(pack);
 	safe_delete(pack);
 	if (ret)
-     _log(ZONE__WORLD, "Sending player rezz packet to world spellid:%i", sem->rez.spellid);
-    else
-     _log(ZONE__WORLD, "NOT Sending player rezz packet to world");
+		_log(SPELLS__REZ, "Sending player rezz packet to world spellid:%i", sem->rez.spellid);
+	else
+		_log(SPELLS__REZ, "NOT Sending player rezz packet to world");
 	return ret;
 }
 

@@ -190,6 +190,12 @@ public:
 	bool	HasGraveyard();
 	void	SetGraveyard(int32 zoneid, int32 x, int32 y, int32 z, int32 heading);
 
+	void		LoadBlockedSpells(int32 zoneid);
+	void		ClearBlockedSpells();
+	bool		IsSpellBlocked(int32 spell_id, float nx, float ny, float nz);
+	const char *GetSpellBlockedMessage(int32 spell_id, float nx, float ny, float nz);
+	int			GetTotalBlockedSpells() { return totalBS; }
+
 #ifdef GUILDWARS
 	LinkedList<Spawn2*> spawn2_list; // CODER new spawn list
 	Timer* db_update;
@@ -214,6 +220,9 @@ private:
 	bool	can_levitate;
 	int32	pgraveyard_id, pgraveyard_zoneid;
 	float	pgraveyard_x, pgraveyard_y, pgraveyard_z, pgraveyard_heading;
+
+	int	totalBS;
+	ZoneSpellsBlocked *blocked_spells;
 	
 	int		totalAAs;
 	SendAA_Struct **aas;	//array of AA structs

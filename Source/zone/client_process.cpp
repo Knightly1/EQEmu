@@ -917,21 +917,45 @@ int8 Client::WithCustomer(){
 	}
 }
 void Client::OPRezzAnswer(const EQApplicationPacket* app) {
-	if (!pendingrezzexp)
-		return;
+
 	const Resurrect_Struct* ra = (const Resurrect_Struct*) app->pBuffer;
+
+	_log(SPELLS__REZ, "Received OP_RezzAnswer from client. Pendingrezzexp is %i, action is %s", 
+		          pendingrezzexp, ra->action ? "ACCEPT" : "DECLINE");
+
+	_pkt(SPELLS__REZ, app);
+
+	if(pendingrezzexp < 0) {
+		// pendingrezexp is set to -1 if we are not expecting an OP_RezzAnswer
+		_log(SPELLS__REZ, "Unexpected OP_RezzAnswer. Ignoring it.");
+		return;
+	}
+
 	if (ra->action == 1) {
 		cheat_timer.Start(3500, false);
-		cout << "Player " << this->name << " got a " << (int16)spells[ra->spellid].base[0] << "% Rezz" << endl;
+		_log(SPELLS__REZ, "Player %s got a %i Rezz, spellid %i", 
+				  this->name, (int16)spells[ra->spellid].base[0],
+				  ra->spellid);
+
 		this->BuffFadeAll();
 		SetMana(0);
 		SetHP(GetMaxHP()/5);
+		SpellOnTarget(756,this);
 		EQApplicationPacket* outapp = app->Copy();
+		// Send the OP_RezzComplete to the world server. This finds it's way to the zone that
+		// the rezzed corpse is in to mark the corpse as rezzed.
 		outapp->SetOpcode(OP_RezzComplete);
 		worldserver.RezzPlayer(outapp,0,OP_RezzComplete);
-		cout << "pe: " << pendingrezzexp << endl;
-		SetEXP(((int)(GetEXP()+((float)((pendingrezzexp/100)*spells[ra->spellid].base[0])))),GetAAXP(),true);
-		pendingrezzexp = 0;
+		
+		if (ra->spellid != 994) { // Spell 994 is Customer Service 100% Rez.
+			if(ra->spellid != 2168) // Spell 2168 is Reanimate 0% Rez.
+				SetEXP(((int)(GetEXP()+((float)((pendingrezzexp/100)*spells[ra->spellid].base[0])))),
+				       GetAAXP(),true);
+		}
+		else {
+			SetEXP((GetEXP()+pendingrezzexp), GetAAXP(), true);
+		}
+		pendingrezzexp = -1;
 		
 		//they are gunna be trying to zone soon.
 		zonesummon_x = ra->x;
@@ -940,6 +964,8 @@ void Client::OPRezzAnswer(const EQApplicationPacket* app) {
 		zonesummon_id = ra->zone_id;
 		zone_mode = ZoneSolicited;
 		
+		// We also send the OP_RezzComplete packet to the client. This is what makes them zone to their corpse.
+		_pkt(SPELLS__REZ, outapp);
 		this->FastQueuePacket(&outapp);
 	}
 }

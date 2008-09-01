@@ -1376,3 +1376,75 @@ int8 ZoneDatabase::GroupCount(int32 groupid){
 	safe_delete_array(query);
 	return count;
 }
+
+sint32 ZoneDatabase::GetBlockedSpellsCount(int32 zoneid)
+{
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+	query = new char[256];
+	sprintf(query, "SELECT count(*) FROM blocked_spells WHERE zoneid=%d", zoneid);
+	if (RunQuery(query, strlen(query), errbuf, &result)) {
+		safe_delete_array(query);
+		row = mysql_fetch_row(result);
+		if (row != NULL && row[0] != 0) {
+			sint32 ret = atoi(row[0]);
+			mysql_free_result(result);
+			return ret;
+		}
+		mysql_free_result(result);
+	}
+	else {
+		cerr << "Error in GetBlockedSpellsCount query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return -1;
+	}
+	
+	return -1;
+}
+
+bool ZoneDatabase::LoadBlockedSpells(sint32 blockedSpellsCount, ZoneSpellsBlocked* into, int32 zoneid)
+{
+	LogFile->write(EQEMuLog::Status, "Loading Blocked Spells from database...");
+
+	char errbuf[MYSQL_ERRMSG_SIZE];
+    char *query = 0;
+    MYSQL_RES *result;
+    MYSQL_ROW row;
+
+	MakeAnyLenString(&query, "SELECT id, spellid, type, x, y, z, x_diff, y_diff, z_diff, message "
+		"FROM blocked_spells WHERE zoneid=%d ORDER BY id asc", zoneid);
+	if (RunQuery(query, strlen(query), errbuf, &result)) {
+		safe_delete_array(query);
+		sint32 r;
+		for(r = 0; (row = mysql_fetch_row(result)); r++) {
+			if(r >= blockedSpellsCount) {
+				cerr << "Error, Blocked Spells Count of " << blockedSpellsCount << " exceeded." << endl;
+				break;
+			}
+			memset(&into[r], 0, sizeof(ZoneSpellsBlocked));
+			if(row){
+				into[r].spellid = atoi(row[1]);
+				into[r].type = atoi(row[2]);
+				into[r].x = atof(row[3]);
+				into[r].y = atof(row[4]);
+				into[r].z = atof(row[5]);
+				into[r].xdiff = atof(row[6]);
+				into[r].ydiff = atof(row[7]);
+				into[r].zdiff = atof(row[8]);
+				strncpy(into[r].message, row[9], 255);
+				into[r].message[255] = '\0';
+			}
+		}
+		mysql_free_result(result);
+	}
+	else
+	{
+		cerr << "Error in LoadBlockedSpells query '" << query << "' " << errbuf << endl;
+		safe_delete_array(query);
+		return false;
+	}
+	return true;
+}

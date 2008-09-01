@@ -1206,8 +1206,13 @@ bool Mob::SpellEffect(Mob* caster, int16 spell_id, float partial)
 #ifdef SPELL_EFFECT_SPAM
 				snprintf(effect_desc, _EDLEN, "Revive");	// heh the corpse won't see this
 #endif
-				if (IsCorpse() && CastToCorpse()->IsPlayerCorpse())
+				if (IsCorpse() && CastToCorpse()->IsPlayerCorpse()) {
+
+					if(caster)
+						mlog(SPELLS__REZ, " corpse being rezzed using spell %i by %s", spell_id, caster->GetName());
+
 					CastToCorpse()->CastRezz(spell_id, caster);
+				}
 				break;
 			}
 

@@ -243,6 +243,26 @@ bool Mob::CastSpell(int16 spell_id, int16 target_id, int16 slot,
         _StopSong();
     }
 
+	/*------------------------------
+	Added to prevent MQ2 
+	exploitation of equipping 
+	normally-unequippable items 
+	with effects and clicking them
+	for benefits. - ndnet
+	---------------------------------*/
+	if(item_slot && IsClient() && slot == USE_ITEM_SPELL_SLOT)
+	{
+		ItemInst *itm = CastToClient()->GetInv().GetItem(item_slot);
+		int bitmask = 1;
+		bitmask = bitmask << (CastToClient()->GetClass() - 1);
+		if( itm && itm->GetItem()->Classes != 65535 && (itm->GetItem()->Click.Type == ET_EquipClick) && !( itm->GetItem()->Classes & bitmask ) ){
+			// They are casting a spell on an item that requires equipping but shouldn't let them equip it
+			LogFile->write(EQEMuLog::Error, "HACKER: %s (account: %s) attempted to click an equip-only effect on item %s (id: %d) which they shouldn't be able to equip!", CastToClient()->GetCleanName(), CastToClient()->AccountName(), itm->GetItem()->Name, itm->GetItem()->ID);
+			database.SetHackerFlag(CastToClient()->AccountName(), CastToClient()->GetCleanName(), "Clicking equip-only item with an invalid class");
+			return(false);
+		}
+	}	
+	
 	return(DoCastSpell(spell_id, target_id, slot, cast_time, mana_cost, oSpellWillFinish, item_slot));
 }
 
@@ -1262,6 +1282,22 @@ bool Mob::SpellFinished(int16 spell_id, Mob *spell_target, int16 slot, int16 man
 			}
 		}
 
+	if(IsClient() && !CastToClient()->GetGM()){
+
+		if(zone->IsSpellBlocked(spell_id, GetX(), GetY(), GetZ())){
+			const char *msg = zone->GetSpellBlockedMessage(spell_id, GetX(), GetY(), GetZ());
+			if(msg){
+				Message(13, msg);
+				return false;
+			}
+			else{
+				Message(13, "You can't cast this spell here.");
+				return false;
+			}
+			
+		}
+	}
+
 	if
 	(
 		this->IsClient() && 
@@ -1910,7 +1946,7 @@ int Mob::CheckStackConflict(int16 spellid1, int caster_level1, int16 spellid2, i
 	bool will_overwrite = false;
 	for(i = 0; i < EFFECT_COUNT; i++)
 	{
-		if(IsBlankSpellEffect(spellid1, i))
+		if(IsBlankSpellEffect(spellid1, i) || IsBlankSpellEffect(spellid2, i))
 			continue;
 
 		effect1 = sp1.effectid[i];
@@ -2548,12 +2584,9 @@ bool Mob::SpellOnTarget(int16 spell_id, Mob* spelltar)
 }
 
 void Corpse::CastRezz(int16 spellid, Mob* Caster){
-/*
-	if (!rezzexp) {
-		Caster->Message(4, "You cannot resurrect this corpse");
-		return;
-	}
-*/
+
+	_log(SPELLS__REZ, "Corpse::CastRezz spellid %i, Rezzed() is %i, rezzexp is %i", spellid,Rezzed(),rezzexp);
+
 	if(Rezzed()){
 		if(Caster && Caster->IsClient())
 			Caster->Message(13,"This character has already been resurrected.");
@@ -2562,6 +2595,7 @@ void Corpse::CastRezz(int16 spellid, Mob* Caster){
 
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_RezzRequest, sizeof(Resurrect_Struct));
 	Resurrect_Struct* rezz = (Resurrect_Struct*) outapp->pBuffer;
+	//as pointed out by derision this is odd behavior here: copy 30 bytes from a 64 to a 64
 	memcpy(rezz->your_name,this->orgname,30);
 	memcpy(rezz->corpse_name,this->name,30);
 	memcpy(rezz->rezzer_name,Caster->GetName(),30);
@@ -2569,9 +2603,13 @@ void Corpse::CastRezz(int16 spellid, Mob* Caster){
 	rezz->spellid = spellid;
 	rezz->x = this->x_pos;
 	rezz->y = this->y_pos;
-	rezz->z = (float)this->z_pos;
+	rezz->z = this->z_pos;
+	rezz->unknown000 = 0x00000000;
+	rezz->unknown020 = 0x00000000;
+	rezz->unknown088 = 0x00000000;
+
 	worldserver.RezzPlayer(outapp, rezzexp, OP_RezzRequest);
-	//DumpPacket(outapp);
+	_pkt(SPELLS__REZ, outapp);
 	safe_delete(outapp);
 }
 

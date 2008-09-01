@@ -2127,18 +2127,19 @@ struct Underworld_Struct {
 };
 
 struct Resurrect_Struct	{
-	int32	unknown00;
-	int16	zone_id;
-	int16	instance_id;
-	float	y;
-	float	x;
-	float	z;
-	char	your_name[64];
-	int32	unknown88;
-	char	rezzer_name[64];
-	int32	spellid;
-	char	corpse_name[64];
-	int32	action;
+/*000*/	int32	unknown000;
+/*004*/	int16	zone_id;
+/*006*/	int16	instance_id;
+/*008*/	float	y;
+/*012*/	float	x;
+/*016*/	float	z;
+/*020*/	int32   unknown020;
+/*024*/	char	your_name[64];
+/*088*/	int32	unknown088;
+/*092*/	char	rezzer_name[64];
+/*156*/	int32	spellid;
+/*160*/	char	corpse_name[64];
+/*224*/	int32	action;
 /* 228 */
 };
 

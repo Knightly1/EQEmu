@@ -990,12 +990,18 @@ sint16 Inventory::_HasItem(map<sint16, ItemInst*>& bucket, uint32 item_id, uint8
 	// Check item: After failed checks, check bag contents (if bag)
 	for (it=bucket.begin(); it!=bucket.end(); it++) {
 		inst = it->second;
-		if (inst && (inst->GetID() == item_id)) {
-			quantity_found += (inst->GetCharges()<=0) ? 1 : inst->GetCharges();
-			if (quantity_found >= quantity)
-				return it->first;
+		if (inst) {
+			if (inst->GetID() == item_id) {
+				quantity_found += (inst->GetCharges()<=0) ? 1 : inst->GetCharges();
+				if (quantity_found >= quantity)
+					return it->first;
+			}
+		 
+			for(int i = 0; i < MAX_AUGMENT_SLOTS; i++) {
+				if (inst->GetAugmentItemID(i) == item_id && quantity <= 1) 
+					return SLOT_AUGMENT; // Only one augment per slot.
+			}
 		}
-		
 		// Go through bag, if bag
 		if (inst && inst->IsType(ItemClassContainer)) {
 			
@@ -1005,6 +1011,10 @@ sint16 Inventory::_HasItem(map<sint16, ItemInst*>& bucket, uint32 item_id, uint8
 					quantity_found += (baginst->GetCharges()<=0) ? 1 : baginst->GetCharges();
 					if (quantity_found >= quantity)
 						return Inventory::CalcSlotId(it->first, itb->first);
+				}
+				for(int i = 0; i < MAX_AUGMENT_SLOTS; i++) {
+					if (baginst->GetAugmentItemID(i) == item_id && quantity <= 1) 
+						return SLOT_AUGMENT; // Only one augment per slot.
 				}
 			}
 		}
@@ -1024,12 +1034,18 @@ sint16 Inventory::_HasItem(ItemInstQueue& iqueue, uint32 item_id, uint8 quantity
 	// Read-only iteration of queue
 	for (it=iqueue.begin(); it!=iqueue.end(); it++) {
 		ItemInst* inst = *it;
-		if (inst && (inst->GetID() == item_id)) {
-			quantity_found += (inst->GetCharges()<=0) ? 1 : inst->GetCharges();
-			if (quantity_found >= quantity)
-				return SLOT_CURSOR;
+		if (inst)
+		{
+			if (inst->GetID() == item_id) {
+				quantity_found += (inst->GetCharges()<=0) ? 1 : inst->GetCharges();
+				if (quantity_found >= quantity)
+					return SLOT_CURSOR;
+			}
+			for(int i = 0; i < MAX_AUGMENT_SLOTS; i++) {
+				if (inst->GetAugmentItemID(i) == item_id && quantity <= 1) 
+					return SLOT_AUGMENT; // Only one augment per slot.
+			}
 		}
-		
 		// Go through bag, if bag
 		if (inst && inst->IsType(ItemClassContainer)) {
 			
@@ -1040,6 +1056,11 @@ sint16 Inventory::_HasItem(ItemInstQueue& iqueue, uint32 item_id, uint8 quantity
 					if (quantity_found >= quantity)
 						return Inventory::CalcSlotId(SLOT_CURSOR, itb->first);
 				}
+				for(int i = 0; i < MAX_AUGMENT_SLOTS; i++) {
+					if (baginst->GetAugmentItemID(i) == item_id && quantity <= 1) 
+						return SLOT_AUGMENT; // Only one augment per slot.
+				}
+
 			}
 		}
 	}
